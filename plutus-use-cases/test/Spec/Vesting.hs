@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns -fno-warn-unused-do-bind -fno-warn-name-shadowing #-}
-module Spec.Vesting (tests, prop_Vesting, prop_CheckNoLockedFundsProof, retrieveFundsTrace) where
+module Spec.Vesting (VestingModel, tests, prop_Vesting, prop_CheckNoLockedFundsProof, retrieveFundsTrace) where
 
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
@@ -257,10 +257,14 @@ tests =
     , HUnit.testCaseSteps "script size is reasonable" $ \step -> reasonable' step (vestingScript $ vesting startTime) 33000
     , testProperty "prop_Vesting" $ withMaxSuccess 20 prop_Vesting
     , testProperty "prop_CheckNoLockedFundsProof" $ withMaxSuccess 20 prop_CheckNoLockedFundsProof
+    , testProperty "prop_doubleSatisfaction" $ withMaxSuccess 20 prop_doubleSatisfaction
     ]
 
     where
         startTime = TimeSlot.scSlotZeroTime def
+
+prop_doubleSatisfaction :: Actions VestingModel -> Property
+prop_doubleSatisfaction = checkDoubleSatisfaction
 
 retrieveFundsTrace :: EmulatorTrace ()
 retrieveFundsTrace = do

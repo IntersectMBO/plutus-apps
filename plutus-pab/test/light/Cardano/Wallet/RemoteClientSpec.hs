@@ -99,7 +99,7 @@ runRemoteWalletEffects params slot is cidM action = do
         $ runReader (pProtocolParams params)
         $ runReader is
         $ interpret (handleNodeClient params slot)
-        $ handleWalletClient def cidM action
+        $ handleWalletClient cidM action
 
 -- | Handle NodeClientEffect for testing purposes.
 handleNodeClient :: Params -> Slot -> NodeClientEffect ~> Eff effs

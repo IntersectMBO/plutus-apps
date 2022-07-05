@@ -22,7 +22,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut (TxOut), ValidationPhase (..), Value,
-               consumableInputs, eitherTx, outValue, txInRef, txOutRefId, txOutRefIdx, txOutValue, txOutputs)
+               consumableInputs, eitherTx, outValue, txInRef, txOutRefId, txOutRefIdx, txOutValue)
 import Ledger.Tx qualified as Tx
 import PlutusTx.Monoid (inv)
 import Wallet.Emulator.Chain (ChainEvent (..))
@@ -49,8 +49,8 @@ annotateTransaction sequenceId tx = do
                          Just txOut -> pure $ DereferencedInput txIn txOut
                          Nothing    -> pure $ InputNotFound key)
             (Set.toList $ consumableInputs tx)
-    let txId = eitherTx Tx.txId Tx.txId tx
-        txOuts = eitherTx (const []) txOutputs tx
+    let txId = eitherTx Tx.getCardanoTxId Tx.getCardanoTxId tx
+        txOuts = eitherTx (const []) Tx.getCardanoTxOutputs tx
         newOutputs =
             ifoldr
                 (\outputIndex ->
@@ -81,11 +81,13 @@ annotateTransaction sequenceId tx = do
         AnnotatedTx
             { sequenceId
             , txId
-            , tx = eitherTx id id tx
+            , tx = eitherTx getEmulatorTx getEmulatorTx tx
             , dereferencedInputs
             , balances = newBalances
             , valid = eitherTx (const False) (const True) tx
             }
+    where
+        getEmulatorTx = Tx.onCardanoTx id (error "Wallet.Rollup.annotateTransaction: Expecting a mock tx, not an Alonzo tx.")
 
 annotateChainSlot :: Monad m => Int -> Block -> StateT Rollup m [AnnotatedTx]
 annotateChainSlot slotIndex =
@@ -112,11 +114,9 @@ getAnnotatedTransactions = groupBy (equating (slotIndex . sequenceId)) . reverse
 handleChainEvent :: RollupState -> ChainEvent -> RollupState
 handleChainEvent s = \case
     SlotAdd _                           -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
-    TxnValidate _ tx _                  -> Tx.onCardanoTx (addTx s . Valid) cardanoTxErr tx
-    TxnValidationFail Phase2 _ tx _ _ _ -> Tx.onCardanoTx (addTx s . Invalid) cardanoTxErr tx
+    TxnValidate _ tx _                  -> addTx s (Valid tx)
+    TxnValidationFail Phase2 _ tx _ _ _ -> addTx s (Invalid tx)
     _                                   -> s
-    where
-        cardanoTxErr _ = error "Wallet.Rollup.handleChainEvent: Expecting a mock tx, not an Alonzo tx"
 
 addTx :: RollupState -> OnChainTx -> RollupState
 addTx s tx =

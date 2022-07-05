@@ -19,6 +19,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost        #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -32,6 +33,7 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE ViewPatterns               #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints -fno-warn-name-shadowing #-}
 
 module Plutus.Contract.Test.ContractModel.Internal
@@ -158,7 +160,20 @@ module Plutus.Contract.Test.ContractModel.Internal
     , defaultWhitelist
     , checkErrorWhitelist
     , checkErrorWhitelistWithOptions
+    -- * Internals
+    , IMap(..)
+    , AssetMap
+    , ContractMonadState(..)
+    , getEnvContract
+    , envContractInstanceTag
+    , finalChecks
+    , finalPredicate
+    , initiateWallets
+    , toStateModelActions
+    , runEmulatorAction
+    , bucket
     ) where
+
 
 import Control.DeepSeq
 import Control.Monad.Freer.Error (Error)
@@ -195,10 +210,11 @@ import Data.Row.Records (labels')
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
-import Ledger.Ada qualified as Ada
-import Ledger.Params ()
 
-import Ledger.Index
+import Ledger.Ada qualified as Ada
+import Ledger.Index as Index
+import Ledger.Params ()
+import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Value (AssetClass)
 import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
@@ -210,9 +226,8 @@ import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, freezeContractInstance,
                                        runEmulatorStream, waitNSlots, walletInstanceTag)
 import Plutus.Trace.Emulator.Types (unContractInstanceTag)
-import Plutus.V1.Ledger.Scripts
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Coverage
+import PlutusTx.Coverage hiding (_coverageIndex)
 import PlutusTx.ErrorCodes
 import Streaming qualified as S
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL
@@ -240,6 +255,13 @@ import Plutus.Contract.Types (IsContract (..))
 import Prettyprinter
 
 import Data.Generics.Uniplate.Data (universeBi)
+
+bucket :: (Num a, Ord a, Show a, Integral a) => a -> a -> [String]
+bucket _ 0 = ["0"]
+bucket size n | n < size = [ "<" ++ show size ]
+              | size <= n, n < size*10 = [bucketIn size n]
+              | otherwise = bucket (size*10) n
+  where bucketIn size n = let b = n `div` size in show (b*size) ++ "-" ++ show (b*size+(size - 1))
 
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
@@ -902,13 +924,6 @@ instance ContractModel state => StateModel (ModelState state) where
       tabulate "Wait interval" (bucket 10 diff) .
       tabulate "Wait until" (bucket 10 _n)
       where Slot diff = n - s0 ^. currentSlot
-            bucket size n | n < size = [ "<" ++ show size ]
-                          | size <= n
-                          , n < size*10 = [bucketIn size n]
-                          | otherwise = bucket (size*10) n
-            bucketIn size n =
-              let b = n `div` size in
-              show (b*size) ++ "-" ++ show (b*size+(size - 1))
     monitoring _ _ _ _ = id
 
 -- We present a simplified view of test sequences, and DL test cases, so
@@ -1378,7 +1393,7 @@ instance GetModelState (DL state) where
 data CoverageOptions = CoverageOptions { _checkCoverage       :: Bool
                                        , _endpointCoverageReq :: ContractInstanceTag -> String -> Double
                                        , _coverageIndex       :: CoverageIndex
-                                       , _coverageIORef       :: Maybe (IORef CoverageReport)
+                                       , _coverageIORef       :: Maybe (IORef CoverageData)
                                        }
 
 makeLenses ''CoverageOptions
@@ -1408,8 +1423,9 @@ quickCheckWithCoverageAndResult qcargs copts prop = do
   case copts ^. coverageIORef of
     Nothing -> fail "Unreachable case in quickCheckWithCoverage"
     Just ref -> do
-      report <- readIORef ref
-      when (chatty qcargs) $ putStrLn . show $ pprCoverageReport (copts ^. coverageIndex) report
+      covdata <- readIORef ref
+      let report = CoverageReport (copts ^. coverageIndex) covdata
+      when (chatty qcargs) $ putStrLn . show $ pretty report
       return (report, res)
 
 finalChecks :: ContractModel state
@@ -1475,7 +1491,6 @@ addEndpointCoverage copts keys es pm
                          , e <- eps ]
     endpointCovers `deepseq`
       (QC.monitor . foldr (.) id $ endpointCovers)
-    QC.monitor QC.checkCoverage
     return x
   | otherwise = pm
 
@@ -1534,8 +1549,7 @@ propRunActions = propRunActionsWithOptions defaultCheckOptionsContractModel defa
 -- options :: `Map` `Wallet` `Value` -> `Slot` -> `Control.Monad.Freer.Extras.Log.LogLevel` -> `CheckOptions`
 -- options dist slot logLevel =
 --     `defaultCheckOptions` `&` `emulatorConfig` . `Plutus.Trace.Emulator.initialChainState` `.~` `Left` dist
---                         `&` `maxSlot`                            `.~` slot
---                         `&` `minLogLevel`                        `.~` logLevel
+--                           `&` `minLogLevel`                        `.~` logLevel
 -- @
 --
 propRunActionsWithOptions ::
@@ -1554,6 +1568,19 @@ initiateWallets = do
   setHandles $ lift (activateWallets (\ _ -> error "activateWallets: no sym tokens should have been created yet") initialInstances)
   return ()
 
+finalPredicate :: ContractModel state
+               => ModelState state
+               -> (ModelState state -> TracePredicate)
+               -> [SomeContractInstanceKey state]
+               -> Env
+               -> TracePredicate
+finalPredicate finalState predicate keys' outerEnv =
+        predicate finalState
+        .&&. checkBalances finalState outerEnv
+        .&&. checkNoCrashes keys'
+        .&&. checkNoOverlappingTokens
+        .&&. checkSlot finalState
+
 propRunActionsWithOptions' :: forall state.
     ContractModel state
     => CheckOptions                          -- ^ Emulator options
@@ -1563,16 +1590,11 @@ propRunActionsWithOptions' :: forall state.
     -> Property
 propRunActionsWithOptions' opts copts predicate actions =
     asserts finalState QC..&&.
-    (monadic (flip State.evalState mempty) $ finalChecks opts copts finalPredicate $ do
+    (monadic (flip State.evalState mempty) $ finalChecks opts copts (finalPredicate finalState predicate) $ do
             QC.run initiateWallets
             snd <$> runActionsInState StateModel.initialState actions)
     where
         finalState = StateModel.stateAfter actions
-        finalPredicate :: [SomeContractInstanceKey state] -> Env {- Outer env -} -> TracePredicate
-        finalPredicate keys' outerEnv = predicate finalState .&&. checkBalances finalState outerEnv
-                                                             .&&. checkNoCrashes keys'
-                                                             .&&. checkNoOverlappingTokens
-                                                             .&&. checkSlot finalState
 
 asserts :: ModelState state -> Property
 asserts finalState = foldr (QC..&&.) (property True) [ counterexample ("assertSpec failed: " ++ s) b
@@ -1903,3 +1925,4 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts (\ _ _ -> check) $ do
                         QC.run initiateWallets
                         snd <$> runActionsInState StateModel.initialState (toStateModelActions actions)
+

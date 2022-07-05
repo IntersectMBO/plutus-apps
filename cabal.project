@@ -15,6 +15,7 @@ packages: doc
           plutus-pab-executables
           plutus-playground-server
           plutus-script-utils
+          plutus-tx-constraints
           plutus-use-cases
           plutus-streaming
           quickcheck-dynamic
@@ -106,7 +107,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
+  tag: 69ab98c384703172f898eb5bcad1078ded521426
   subdir:
     plutus-core
     plutus-ledger-api
@@ -341,4 +342,4 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/raduom/hysterical-screams
-  tag: f3bbd38a19f99de5c8ddc650c94330b2d09a865b
+  tag: 4c523469e9efd3f0d10d17da3304923b7b0e0674

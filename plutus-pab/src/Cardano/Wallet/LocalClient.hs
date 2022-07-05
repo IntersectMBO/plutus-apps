@@ -11,7 +11,6 @@ module Cardano.Wallet.LocalClient where
 
 import Cardano.Api qualified
 import Cardano.Api.Shelley qualified as Cardano.Api
-import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types (PABServerConfig (pscPassphrase))
 import Cardano.Wallet.Api qualified as C
 import Cardano.Wallet.Api.Client qualified as C
@@ -73,7 +72,7 @@ handleWalletClient
     -> WalletEffect
     ~> Eff effs
 handleWalletClient config (Wallet _ (WalletId walletId)) event = do
-    Params{pNetworkId = networkId, pProtocolParams = protocolParams} <- liftIO $ Params.fromPABServerConfig config
+    params@Params{pNetworkId = networkId, pProtocolParams = protocolParams} <- WAPI.getClientParams
     let mpassphrase = pscPassphrase config
     clientEnv <- ask @ClientEnv
     let
@@ -109,8 +108,7 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do
-            Params { pSlotConfig } <- WAPI.getClientParams
-            case export protocolParams networkId pSlotConfig utx of
+            case export params utx of
                 Left err -> do
                     logWarn $ BalanceTxError $ show $ pretty err
                     throwOtherError $ pretty err

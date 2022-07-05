@@ -52,9 +52,8 @@ import Data.Map qualified as Map
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Set qualified as Set
 import Data.Text qualified as T
-import Ledger.Address (Address)
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
-import Ledger.Tx (TxIn (txInRef), TxOutRef, txId)
+import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _citxOutputs, _citxTxId),
                           ChainIndexTxOut (ChainIndexTxOut, citoAddress), ChainIndexTxOutputs (InvalidTx, ValidTx),
                           RollbackState (Committed), TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid),
@@ -79,6 +78,7 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), Co
                                     addEventInstanceState, emptyInstanceState, instanceIdThreads, toInstanceState)
 import Plutus.Trace.Scheduler (MessageCall (Message, WaitForMessage), Priority (Frozen, Normal, Sleeping), ThreadId,
                                mkAgentSysCall)
+import Plutus.V1.Ledger.Address (Address)
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
@@ -313,8 +313,8 @@ updateTxStatus txns = do
     -- Check whether the contract instance is waiting for a status change of any
     -- of the new transactions. If that is the case, call 'addResponse' to send the
     -- response.
-    let txWithStatus (Invalid tx) = (txId tx, TxInvalid)
-        txWithStatus (Valid tx)   = (txId tx, TxValid)
+    let txWithStatus (Invalid tx) = (getCardanoTxId tx, TxInvalid)
+        txWithStatus (Valid tx)   = (getCardanoTxId tx, TxValid)
         statusMap = Map.fromList $ fmap txWithStatus txns
     hks <- mapMaybe (traverse (preview E._AwaitTxStatusChangeReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txid} =

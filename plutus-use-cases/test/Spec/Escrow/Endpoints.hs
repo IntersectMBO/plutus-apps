@@ -57,4 +57,3 @@ badRefund inst pk = do
                            ) tx'
     handleError (\err -> logError $ "Caught error: " ++ unpack err) $
       adjustUnbalancedTx utx >>= void . submitUnbalancedTx
-

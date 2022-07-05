@@ -1,108 +1,131 @@
 cabal-version: 2.2
-name: plutus-chain-index
-version: 0.1.0.0
-license: Apache-2.0
+name:          plutus-chain-index
+version:       0.1.0.0
+license:       Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: sjoerd.visscher@iohk.io
-author: Sjoerd Visscher
-homepage: https://github.com/iohk/plutus#readme
-bug-reports: https://github.com/iohk/plutus/issues
+
+maintainer:    sjoerd.visscher@iohk.io
+author:        Sjoerd Visscher
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
-build-type: Simple
+  Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
+
+build-type:    Simple
 
 source-repository head
-    type: git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 common lang
-    default-language: Haskell2010
-    default-extensions: ExplicitForAll ScopedTypeVariables
-                        DeriveGeneric StandaloneDeriving DeriveLift
-                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable ImportQualifiedPost
-    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities -Wmissing-import-lists
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities -Wmissing-import-lists
 
 library
-    import: lang
-    exposed-modules:
-        Plutus.ChainIndex.App
-        Plutus.ChainIndex.Events
-        Plutus.ChainIndex.CommandLine
-        Plutus.ChainIndex.Config
-        Plutus.ChainIndex.Lib
-        Plutus.ChainIndex.Logging
-        Plutus.ChainIndex.SyncStats
-        Marconi.Index.Datum
-    other-modules:
-        Control.Concurrent.STM.TBMQueue
-    hs-source-dirs: src
-    build-depends:
-        plutus-ledger -any,
-        plutus-ledger-api >= 1.0.0,
-        plutus-chain-index-core -any,
-        freer-extras -any
-    build-depends:
-        aeson -any,
-        async -any,
-        base >=4.7 && <5,
-        beam-sqlite -any,
-        beam-migrate -any,
-        cardano-api -any,
-        contra-tracer -any,
-        clock -any,
-        data-default -any,
-        freer-simple -any,
-        iohk-monitoring -any,
-        lens -any,
-        optparse-applicative -any,
-        ouroboros-network -any,
-        prettyprinter >=1.1.0.1,
-        resource-pool -any,
-        sqlite-simple -any,
-        stm -any,
-        time-units -any,
-        yaml -any,
-        serialise -any,
-        hysterical-screams -any,
-        bytestring -any,
+  import:          lang
+  exposed-modules:
+    Plutus.ChainIndex.App
+    Plutus.ChainIndex.CommandLine
+    Plutus.ChainIndex.Config
+    Plutus.ChainIndex.Events
+    Plutus.ChainIndex.Lib
+    Plutus.ChainIndex.Logging
+    Plutus.ChainIndex.SyncStats
+
+  other-modules:   Control.Concurrent.STM.TBMQueue
+  hs-source-dirs:  src
+  build-depends:
+    , freer-extras
+    , plutus-chain-index-core
+    , plutus-ledger
+    , plutus-ledger-api        >=1.0.0
+
+  build-depends:
+    , aeson
+    , async
+    , base                  >=4.7     && <5
+    , beam-migrate
+    , beam-sqlite
+    , cardano-api
+    , clock
+    , contra-tracer
+    , data-default
+    , freer-simple
+    , iohk-monitoring
+    , lens
+    , optparse-applicative
+    , ouroboros-network
+    , prettyprinter         >=1.1.0.1
+    , resource-pool
+    , sqlite-simple
+    , stm
+    , time-units
+    , yaml
 
 executable plutus-chain-index
-  main-is: Main.hs
-  hs-source-dirs: app
-  default-language: Haskell2010
+  main-is:            Main.hs
+  hs-source-dirs:     app
+  default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
   ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-  build-depends:
-    base >=4.9 && <5,
-    plutus-chain-index -any
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0
 
-executable plutus-indexer
-  main-is: Indexer.hs
-  hs-source-dirs: app
-  default-language: Haskell2010
+  build-depends:
+    , base                >=4.9 && <5
+    , plutus-chain-index
+
+executable marconi
+  main-is:            Marconi.hs
+  hs-source-dirs:     app
+  other-modules:
+    Marconi.Index.Datum
+    Marconi.Index.Utxo
+    Marconi.Logging
+    Marconi.Orphans
+
+  default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
   ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0
+    -Wunused-packages
+
   build-depends:
-    base >=4.9 && <5,
-    plutus-chain-index -any,
-    iohk-monitoring -any,
-    cardano-api -any,
-    plutus-ledger -any,
-    plutus-chain-index-core -any,
-    plutus-script-utils -any,
-    containers -any,
-    lens -any,
-    hysterical-screams -any,
-    text -any,
-    optparse-applicative -any,
+    , base                  >=4.9 && <5
+    , bytestring
+    , cardano-api
+    , containers
+    , hysterical-screams
+    , iohk-monitoring
+    , lens
+    , optparse-applicative
+    , plutus-ledger
+    , plutus-script-utils
+    , plutus-streaming
+    , prettyprinter
+    , serialise
+    , sqlite-simple
+    , stm
+    , streaming
+    , text
+    , time

@@ -3,6 +3,7 @@ module Plutus.ChainIndex.Types where
 
 import Prelude
 
+import Cardano.Api.Script (ScriptInAnyLang)
 import Control.Lazy (defer)
 import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
@@ -17,13 +18,21 @@ import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
+import Data.Map (Map)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.RawJson (RawJson)
+import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Blockchain (BlockId)
 import Ledger.Slot (Slot)
-import Plutus.V1.Ledger.Tx (TxId)
+import Plutus.V1.Ledger.Address (Address)
+import Plutus.V1.Ledger.Interval (Interval)
+import Plutus.V1.Ledger.Scripts (DatumHash)
+import Plutus.V1.Ledger.Tx (TxId, TxIn)
+import Plutus.V1.Ledger.Value (Value)
+import Plutus.V2.Ledger.Tx (OutputDatum)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -53,6 +62,166 @@ derive instance Newtype BlockNumber _
 
 _BlockNumber :: Iso' BlockNumber { unBlockNumber :: BigInt }
 _BlockNumber = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype ChainIndexTx = ChainIndexTx
+  { _citxTxId :: TxId
+  , _citxInputs :: Set TxIn
+  , _citxOutputs :: ChainIndexTxOutputs
+  , _citxValidRange :: Interval Slot
+  , _citxData :: Map DatumHash String
+  , _citxRedeemers :: Map String String
+  , _citxScripts :: Map String String
+  , _citxCardanoTx :: Maybe RawJson
+  }
+
+derive instance Eq ChainIndexTx
+
+instance Show ChainIndexTx where
+  show a = genericShow a
+
+instance EncodeJson ChainIndexTx where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _citxTxId: E.value :: _ TxId
+        , _citxInputs: E.value :: _ (Set TxIn)
+        , _citxOutputs: E.value :: _ ChainIndexTxOutputs
+        , _citxValidRange: E.value :: _ (Interval Slot)
+        , _citxData: (E.dictionary E.value E.value) :: _ (Map DatumHash String)
+        , _citxRedeemers: (E.dictionary E.value E.value) :: _ (Map String String)
+        , _citxScripts: (E.dictionary E.value E.value) :: _ (Map String String)
+        , _citxCardanoTx: (E.maybe E.value) :: _ (Maybe RawJson)
+        }
+    )
+
+instance DecodeJson ChainIndexTx where
+  decodeJson = defer \_ -> D.decode $
+    ( ChainIndexTx <$> D.record "ChainIndexTx"
+        { _citxTxId: D.value :: _ TxId
+        , _citxInputs: D.value :: _ (Set TxIn)
+        , _citxOutputs: D.value :: _ ChainIndexTxOutputs
+        , _citxValidRange: D.value :: _ (Interval Slot)
+        , _citxData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
+        , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map String String)
+        , _citxScripts: (D.dictionary D.value D.value) :: _ (Map String String)
+        , _citxCardanoTx: (D.maybe D.value) :: _ (Maybe RawJson)
+        }
+    )
+
+derive instance Generic ChainIndexTx _
+
+derive instance Newtype ChainIndexTx _
+
+--------------------------------------------------------------------------------
+
+_ChainIndexTx :: Iso' ChainIndexTx { _citxTxId :: TxId, _citxInputs :: Set TxIn, _citxOutputs :: ChainIndexTxOutputs, _citxValidRange :: Interval Slot, _citxData :: Map DatumHash String, _citxRedeemers :: Map String String, _citxScripts :: Map String String, _citxCardanoTx :: Maybe RawJson }
+_ChainIndexTx = _Newtype
+
+citxTxId :: Lens' ChainIndexTx TxId
+citxTxId = _Newtype <<< prop (Proxy :: _ "_citxTxId")
+
+citxInputs :: Lens' ChainIndexTx (Set TxIn)
+citxInputs = _Newtype <<< prop (Proxy :: _ "_citxInputs")
+
+citxOutputs :: Lens' ChainIndexTx ChainIndexTxOutputs
+citxOutputs = _Newtype <<< prop (Proxy :: _ "_citxOutputs")
+
+citxValidRange :: Lens' ChainIndexTx (Interval Slot)
+citxValidRange = _Newtype <<< prop (Proxy :: _ "_citxValidRange")
+
+citxData :: Lens' ChainIndexTx (Map DatumHash String)
+citxData = _Newtype <<< prop (Proxy :: _ "_citxData")
+
+citxRedeemers :: Lens' ChainIndexTx (Map String String)
+citxRedeemers = _Newtype <<< prop (Proxy :: _ "_citxRedeemers")
+
+citxScripts :: Lens' ChainIndexTx (Map String String)
+citxScripts = _Newtype <<< prop (Proxy :: _ "_citxScripts")
+
+citxCardanoTx :: Lens' ChainIndexTx (Maybe RawJson)
+citxCardanoTx = _Newtype <<< prop (Proxy :: _ "_citxCardanoTx")
+
+--------------------------------------------------------------------------------
+
+newtype ChainIndexTxOut = ChainIndexTxOut
+  { citoAddress :: Address
+  , citoValue :: Value
+  , citoDatum :: OutputDatum
+  , citoRefScript :: ReferenceScript
+  }
+
+derive instance Eq ChainIndexTxOut
+
+instance Show ChainIndexTxOut where
+  show a = genericShow a
+
+instance EncodeJson ChainIndexTxOut where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { citoAddress: E.value :: _ Address
+        , citoValue: E.value :: _ Value
+        , citoDatum: E.value :: _ OutputDatum
+        , citoRefScript: E.value :: _ ReferenceScript
+        }
+    )
+
+instance DecodeJson ChainIndexTxOut where
+  decodeJson = defer \_ -> D.decode $
+    ( ChainIndexTxOut <$> D.record "ChainIndexTxOut"
+        { citoAddress: D.value :: _ Address
+        , citoValue: D.value :: _ Value
+        , citoDatum: D.value :: _ OutputDatum
+        , citoRefScript: D.value :: _ ReferenceScript
+        }
+    )
+
+derive instance Generic ChainIndexTxOut _
+
+derive instance Newtype ChainIndexTxOut _
+
+--------------------------------------------------------------------------------
+
+_ChainIndexTxOut :: Iso' ChainIndexTxOut { citoAddress :: Address, citoValue :: Value, citoDatum :: OutputDatum, citoRefScript :: ReferenceScript }
+_ChainIndexTxOut = _Newtype
+
+--------------------------------------------------------------------------------
+
+data ChainIndexTxOutputs
+  = InvalidTx
+  | ValidTx (Array ChainIndexTxOut)
+
+derive instance Eq ChainIndexTxOutputs
+
+instance Show ChainIndexTxOutputs where
+  show a = genericShow a
+
+instance EncodeJson ChainIndexTxOutputs where
+  encodeJson = defer \_ -> case _ of
+    InvalidTx -> encodeJson { tag: "InvalidTx", contents: jsonNull }
+    ValidTx a -> E.encodeTagged "ValidTx" a E.value
+
+instance DecodeJson ChainIndexTxOutputs where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ChainIndexTxOutputs"
+    $ Map.fromFoldable
+        [ "InvalidTx" /\ pure InvalidTx
+        , "ValidTx" /\ D.content (ValidTx <$> D.value)
+        ]
+
+derive instance Generic ChainIndexTxOutputs _
+
+--------------------------------------------------------------------------------
+
+_InvalidTx :: Prism' ChainIndexTxOutputs Unit
+_InvalidTx = prism' (const InvalidTx) case _ of
+  InvalidTx -> Just unit
+  _ -> Nothing
+
+_ValidTx :: Prism' ChainIndexTxOutputs (Array ChainIndexTxOut)
+_ValidTx = prism' ValidTx case _ of
+  (ValidTx a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
 
@@ -129,6 +298,44 @@ _PointAtGenesis = prism' (const PointAtGenesis) case _ of
 _Point :: Prism' Point { pointSlot :: Slot, pointBlockId :: BlockId }
 _Point = prism' Point case _ of
   (Point a) -> Just a
+  _ -> Nothing
+
+--------------------------------------------------------------------------------
+
+data ReferenceScript
+  = ReferenceScriptNone
+  | ReferenceScriptInAnyLang ScriptInAnyLang
+
+derive instance Eq ReferenceScript
+
+instance Show ReferenceScript where
+  show a = genericShow a
+
+instance EncodeJson ReferenceScript where
+  encodeJson = defer \_ -> case _ of
+    ReferenceScriptNone -> encodeJson { tag: "ReferenceScriptNone", contents: jsonNull }
+    ReferenceScriptInAnyLang a -> E.encodeTagged "ReferenceScriptInAnyLang" a E.value
+
+instance DecodeJson ReferenceScript where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ReferenceScript"
+    $ Map.fromFoldable
+        [ "ReferenceScriptNone" /\ pure ReferenceScriptNone
+        , "ReferenceScriptInAnyLang" /\ D.content (ReferenceScriptInAnyLang <$> D.value)
+        ]
+
+derive instance Generic ReferenceScript _
+
+--------------------------------------------------------------------------------
+
+_ReferenceScriptNone :: Prism' ReferenceScript Unit
+_ReferenceScriptNone = prism' (const ReferenceScriptNone) case _ of
+  ReferenceScriptNone -> Just unit
+  _ -> Nothing
+
+_ReferenceScriptInAnyLang :: Prism' ReferenceScript ScriptInAnyLang
+_ReferenceScriptInAnyLang = prism' ReferenceScriptInAnyLang case _ of
+  (ReferenceScriptInAnyLang a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------

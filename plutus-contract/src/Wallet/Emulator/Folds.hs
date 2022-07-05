@@ -65,12 +65,11 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger (Block, OnChainTx (Invalid, Valid), TxId)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address)
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), getCardanoTxFee, onCardanoTx)
+import Ledger.Tx (CardanoTx, TxOut (txOutValue), getCardanoTxFee)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
@@ -82,6 +81,7 @@ import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventIn
                                                instContractState, instEvents, instHandlersHistory)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,
                                     UserThreadMsg, _HandledRequest, cilMessage, cilTag, toInstanceState)
+import Plutus.V1.Ledger.Address (Address)
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
@@ -255,14 +255,13 @@ utxoAtAddress addr =
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
         step = \case
-            TxnValidate _ txn _                  -> onCardanoTx (AM.updateAddresses . Valid) cardanoTxErr txn
-            TxnValidationFail Phase2 _ txn _ _ _ -> onCardanoTx (AM.updateAddresses . Invalid) cardanoTxErr txn
+            TxnValidate _ txn _                  -> AM.updateAddresses (Valid txn)
+            TxnValidationFail Phase2 _ txn _ _ _ -> AM.updateAddresses (Invalid txn)
             _                                    -> id
-        cardanoTxErr _ = error "Wallet.Emulator.Folds.utxoAtAddress: Expecting a mock tx, not an Alonzo tx"
 
 -- | The total value of unspent outputs at an address
 valueAtAddress :: Address -> EmulatorEventFold Value
-valueAtAddress = fmap (foldMap (txOutValue . txOutTxOut)) . utxoAtAddress
+valueAtAddress = fmap (foldMap (txOutValue . snd)) . utxoAtAddress
 
 -- | The funds belonging to a wallet
 walletFunds :: Wallet -> EmulatorEventFold Value
@@ -294,15 +293,12 @@ blockchain :: EmulatorEventFold [Block]
 blockchain =
     let step (currentBlock, otherBlocks) = \case
             SlotAdd _                            -> ([], currentBlock : otherBlocks)
-            TxnValidate _ txn _                  -> (add currentBlock Valid txn, otherBlocks)
+            TxnValidate _ txn _                  -> (Valid txn : currentBlock, otherBlocks)
             TxnValidationFail Phase1 _ _   _ _ _ -> (currentBlock, otherBlocks)
-            TxnValidationFail Phase2 _ txn _ _ _ -> (add currentBlock Invalid txn, otherBlocks)
+            TxnValidationFail Phase2 _ txn _ _ _ -> (Invalid txn : currentBlock, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
             (currentBlock : otherBlocks)
-        add currentBlock val = onCardanoTx
-            ((: currentBlock) . val)
-            (\_ -> error "Wallet.Emulator.Folds: Expecting a mock tx, not an Alonzo tx")
     in preMapMaybe (preview (eteEvent . chainEvent))
         $ Fold step initial extract
 

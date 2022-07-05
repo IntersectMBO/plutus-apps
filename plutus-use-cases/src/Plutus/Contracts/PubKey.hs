@@ -17,6 +17,7 @@
 module Plutus.Contracts.PubKey(pubKeyContract, typedValidator, PubKeyError(..), AsPubKeyError(..)) where
 
 import Control.Lens
+import Control.Monad (void)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
@@ -84,6 +85,18 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     case refs of
         []                   -> throwing _ScriptOutputMissing pk
         [outRef] -> do
+            -- TODO: THE FOLLOWING SHOULD BE REMOVED EVENTUALLY.
+            -- Currently, the PAB indexes information about the status of
+            -- transaction outputs. However, even if the transaction is
+            -- confirmed, it might take some time in order for the chain-index
+            -- to update it's database with the new confirmed transaction.
+            -- Ultimately, the solution is to move indexed information by the
+            -- PAB to the chain-index, so that we get a single source of truth.
+            -- The `waitNSlots 1` only works if you have a chain-index closely
+            -- synced to the local node. If the chain-index is not synced with
+            -- the local node, `unspentTxOutFromRef outRef` will always return
+            -- `Nothing`.
+            void $ waitNSlots 1
             ciTxOut <- unspentTxOutFromRef outRef
             pure (outRef, ciTxOut, inst)
         _                    -> throwing _MultipleScriptOutputs pk

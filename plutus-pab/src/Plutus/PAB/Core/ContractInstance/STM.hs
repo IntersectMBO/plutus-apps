@@ -16,6 +16,7 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , waitForTxStatusChange
     , waitForTxOutStatusChange
     , currentSlot
+    , lastSyncedBlockSlot
     -- * State of a contract instance
     , InstanceState(..)
     , emptyInstanceState
@@ -148,12 +149,13 @@ data OpenTxOutProducedRequest =
 --   may be interested in.
 data BlockchainEnv =
     BlockchainEnv
-        { beRollbackHistory :: Maybe Int -- ^ How much history do we retain in the environment. Zero signifies no trimming is done.
-        , beCurrentSlot     :: TVar Slot -- ^ Current slot
-        , beTxChanges       :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
-        , beTxOutChanges    :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
-        , beCurrentBlock    :: TVar BlockNumber -- ^ Current block.
-        , beParams          :: Params -- ^ The set of parameters, like protocol parameters and slot configuration.
+        { beRollbackHistory     :: Maybe Int -- ^ How much history do we retain in the environment. Zero signifies no trimming is done.
+        , beCurrentSlot         :: TVar Slot -- ^ Actual current slot
+        , beLastSyncedBlockSlot :: TVar Slot -- ^ Slot of the last synced block from 'startNodeClient'
+        , beLastSyncedBlockNo   :: TVar BlockNumber -- ^ Last synced block number from 'startNodeClient'.
+        , beTxChanges           :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
+        , beTxOutChanges        :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
+        , beParams              :: Params -- ^ The set of parameters, like protocol parameters and slot configuration.
         }
 
 -- | Initialise an empty 'BlockchainEnv' value
@@ -161,9 +163,10 @@ emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv
 emptyBlockchainEnv rollbackHistory params =
     BlockchainEnv rollbackHistory
         <$> STM.newTVar 0
-        <*> STM.newTVar mempty
-        <*> STM.newTVar mempty
+        <*> STM.newTVar 0
         <*> STM.newTVar (BlockNumber 0)
+        <*> STM.newTVar mempty
+        <*> STM.newTVar mempty
         <*> pure params
 
 -- | Wait until the current slot is greater than or equal to the
@@ -392,9 +395,9 @@ insertInstance instanceID state (InstancesState m) = STM.modifyTVar m (Map.inser
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange :: TxStatus -> TxId -> BlockchainEnv -> STM TxStatus
-waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beCurrentBlock} = do
+waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beLastSyncedBlockNo} = do
     txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar beTxChanges
-    blockNumber <- STM.readTVar beCurrentBlock
+    blockNumber <- STM.readTVar beLastSyncedBlockNo
     let txStatus = transactionStatus blockNumber txIdState tx
     -- Succeed only if we _found_ a status and it was different; if
     -- the status hasn't changed, _or_ there was an error computing
@@ -405,10 +408,10 @@ waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beCurrentBlock} = 
 
 -- | Wait for the status of a transaction output to change.
 waitForTxOutStatusChange :: TxOutStatus -> TxOutRef -> BlockchainEnv -> STM TxOutStatus
-waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutChanges, beCurrentBlock} = do
+waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutChanges, beLastSyncedBlockNo} = do
     txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar beTxChanges
     txOutBalance <- _usTxUtxoData . utxoState <$> STM.readTVar beTxOutChanges
-    blockNumber   <- STM.readTVar beCurrentBlock
+    blockNumber   <- STM.readTVar beLastSyncedBlockNo
     let txOutStatus = transactionOutputStatus blockNumber txIdState txOutBalance txOutRef
     -- Succeed only if we _found_ a status and it was different; if
     -- the status hasn't changed, _or_ there was an error computing
@@ -420,6 +423,9 @@ waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutCh
 -- | The current slot number
 currentSlot :: BlockchainEnv -> STM Slot
 currentSlot BlockchainEnv{beCurrentSlot} = STM.readTVar beCurrentSlot
+
+lastSyncedBlockSlot :: BlockchainEnv -> STM Slot
+lastSyncedBlockSlot BlockchainEnv{beLastSyncedBlockSlot} = STM.readTVar beLastSyncedBlockSlot
 
 -- | The IDs of contract instances with their statuses
 instancesWithStatuses :: InstancesState -> STM (Map ContractInstanceId Wallet.ContractActivityStatus)

@@ -7,7 +7,7 @@
 
 module Main(main) where
 
-import Control.Lens (toListOf)
+import Control.Lens (toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (ask)
@@ -111,7 +111,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
       Left _ ->
           Hedgehog.failure
       Right utx -> do
-          let outputs = txOutputs (OC.unBalancedTxTx utx)
+          let outputs = txOutputs (view OC.tx utx)
           let stakingCreds = mapMaybe stakePaymentPubKeyHash outputs
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) skh)
@@ -133,7 +133,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
       Left _ ->
           Hedgehog.failure
       Right utx -> do
-          let outputs = txOutputs (OC.unBalancedTxTx utx)
+          let outputs = txOutputs (view OC.tx utx)
           let stakingCreds = mapMaybe stakeValidatorHash outputs
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) svh)
@@ -155,15 +155,14 @@ testScriptInputs
     -> Property
 testScriptInputs lookups txc = property $ do
     tx <- either (\err -> do Hedgehog.annotateShow err; Hedgehog.failure)
-                 (pure . unBalancedTxTx)
+                 (pure . view OC.tx)
                  $ mkTx lookups txc
     let valM = do
             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
-            idx <- Ledger.vctxIndex <$> ask
-            pure (Nothing, idx)
+            pure Nothing
     case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
-        ((Nothing, _), _) -> pure ()
-        ((Just err, _), _) -> do
+        (Nothing, _) -> pure ()
+        (Just err, _) -> do
             Hedgehog.annotateShow err
             Hedgehog.failure
 

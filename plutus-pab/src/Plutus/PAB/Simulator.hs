@@ -99,7 +99,7 @@ import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
 import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId,
-               TxOut (TxOut, txOutAddress, txOutValue), eitherTx, getCardanoTxFee, getCardanoTxId, txId)
+               TxOut (TxOut, txOutAddress, txOutValue), eitherTx, getCardanoTxFee, getCardanoTxId)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -702,7 +702,7 @@ walletFees :: forall t. Wallet -> Simulation t Value
 walletFees wallet = succeededFees <$> walletSubmittedFees <*> blockchain
     where
         succeededFees :: Map TxId Value -> Blockchain -> Value
-        succeededFees submitted = foldMap . foldMap $ fold . (submitted Map.!?) . eitherTx txId txId
+        succeededFees submitted = foldMap . foldMap $ fold . (submitted Map.!?) . eitherTx getCardanoTxId getCardanoTxId
         walletSubmittedFees = do
             SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)
             result <- liftIO $ STM.atomically $ do

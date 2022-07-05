@@ -1,173 +1,238 @@
-cabal-version: 3.0
-name: plutus-ledger
-version: 1.0.0
-license: Apache-2.0
+cabal-version:   3.0
+name:            plutus-ledger
+version:         1.0.0
+license:         Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: michael.peyton-jones@iohk.io
-author: Michael Peyton Jones, Jann Mueller
-synopsis: Wallet API
-description:
-    Plutus ledger library
-category: Language
-build-type: Simple
+
+maintainer:      michael.peyton-jones@iohk.io
+author:          Michael Peyton Jones, Jann Mueller
+synopsis:        Wallet API
+description:     Plutus ledger library
+category:        Language
+build-type:      Simple
 extra-doc-files: README.md
 
 source-repository head
-    type: git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 common lang
-    default-language: Haskell2010
-    default-extensions: ExplicitForAll ScopedTypeVariables
-                        DeriveGeneric StandaloneDeriving DeriveLift
-                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses FlexibleContexts
-                        ImportQualifiedPost
-    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  -- See Plutus Tx readme for why we need the following flags:
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
-    default: False
-    manual: True
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+  default:     False
+  manual:      True
 
 library
-    import: lang
-    hs-source-dirs: src
-    default-language: Haskell2010
-    exposed-modules:
-        Data.Time.Units.Extra
-        Prettyprinter.Extras
-        Data.Aeson.Extras
-        Ledger
-        Ledger.Ada
-        Ledger.Address
-        Ledger.Address.Orphans
-        Ledger.AddressMap
-        Ledger.Builtins.Orphans
-        Ledger.Blockchain
-        Ledger.CardanoWallet
-        Ledger.Credential.Orphans
-        Ledger.Crypto
-        Ledger.Crypto.Orphans
-        Ledger.Fee
-        Ledger.Generators
-        Ledger.Index
-        Ledger.Index.Internal
-        Ledger.Scripts
-        Ledger.Scripts.Orphans
-        Ledger.Slot
-        Ledger.Orphans
-        Ledger.Params
-        Ledger.TimeSlot
-        Ledger.Tokens
-        Ledger.Tx
-        Ledger.Tx.CardanoAPI
-        Ledger.Tx.Internal
-        Ledger.Tx.Orphans
-        Ledger.Tx.Orphans.V1
-        Ledger.Tx.Orphans.V2
-        Ledger.Typed.Scripts
-        Ledger.Typed.Scripts.Validators
-        Ledger.Typed.Tx
-        Ledger.Typed.TypeUtils
-        Ledger.Value
-        Ledger.Value.Orphans
-        Ledger.Validation
-    reexported-modules:
-        Plutus.V1.Ledger.Bytes as Ledger.Bytes,
-        Plutus.V1.Ledger.Credential as Ledger.Credential,
-        Plutus.V1.Ledger.DCert as Ledger.DCert,
-        Plutus.V1.Ledger.Interval as Ledger.Interval,
-        Plutus.V1.Ledger.Time as Ledger.Time,
-        -- The rest of the plutus-ledger-api modules are reexported from within
-        -- the Haskell modules and not in the current cabal file.
-        -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
-    other-modules:
-        Ledger.Tx.CardanoAPITemp
-        Codec.CBOR.Extras
+  import:             lang
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+  exposed-modules:
+    Data.Aeson.Extras
+    Data.Time.Units.Extra
+    Ledger
+    Ledger.Ada
+    Ledger.Address
+    Ledger.Address.Orphans
+    Ledger.AddressMap
+    Ledger.Blockchain
+    Ledger.Builtins.Orphans
+    Ledger.CardanoWallet
+    Ledger.Credential.Orphans
+    Ledger.Crypto
+    Ledger.Crypto.Orphans
+    Ledger.Fee
+    Ledger.Generators
+    Ledger.Index
+    Ledger.Index.Internal
+    Ledger.Orphans
+    Ledger.Params
+    Ledger.Scripts
+    Ledger.Scripts.Orphans
+    Ledger.Slot
+    Ledger.Test
+    Ledger.TimeSlot
+    Ledger.Tokens
+    Ledger.Tx
+    Ledger.Tx.CardanoAPI
+    Ledger.Tx.Internal
+    Ledger.Tx.Orphans
+    Ledger.Tx.Orphans.V1
+    Ledger.Tx.Orphans.V2
+    Ledger.Typed.Scripts
+    Ledger.Typed.Scripts.Validators
+    Ledger.Typed.Tx
+    Ledger.Typed.TypeUtils
+    Ledger.Validation
+    Ledger.Value
+    Ledger.Value.Orphans
+    Prettyprinter.Extras
 
-    build-depends:
-        base >=4.9 && <5,
-        base16-bytestring >= 1,
-        aeson -any,
-        array -any,
-        bytestring -any,
-        cardano-api -any,
-        cardano-api:gen -any,
-        cardano-crypto -any,
-        cardano-crypto-class -any,
-        cardano-ledger-alonzo -any,
-        cardano-ledger-babbage -any,
-        cardano-ledger-byron -any,
-        cardano-ledger-core -any,
-        cardano-ledger-shelley,
-        cardano-ledger-shelley-ma -any,
-        cardano-slotting -any,
-        deepseq -any,
-        cborg -any,
-        containers -any,
-        cryptonite >=0.25,
-        data-default -any,
-        flat -any,
-        hashable -any,
-        hedgehog -any,
-        iohk-monitoring -any,
-        plutus-core >= 1.0.0,
-        plutus-ledger-api >= 1.0.0,
-        memory -any,
-        mtl -any,
-        newtype-generics -any,
-        ouroboros-consensus-shelley -any,
-        prettyprinter -any,
-        plutus-script-utils -any,
-        plutus-tx >= 1.0.0,
-        serialise -any,
-        scientific -any,
-        strict-containers -any,
-        tagged -any,
-        template-haskell -any,
-        text -any,
-        time -any,
-        time-units -any,
-        transformers -any,
-        lens -any,
-        http-api-data -any,
-        servant -any,
-        deepseq -any,
-        openapi3 -any,
-        freer-extras,
+  reexported-modules:
+    Plutus.V1.Ledger.Bytes as Ledger.Bytes,
+    Plutus.V1.Ledger.Credential as Ledger.Credential,
+    Plutus.V1.Ledger.DCert as Ledger.DCert,
+    Plutus.V1.Ledger.Interval as Ledger.Interval,
+    Plutus.V1.Ledger.Time as Ledger.Time,
 
-    ghc-options: -fprint-potential-instances
+  -- The rest of the plutus-ledger-api modules are reexported from within
+  -- the Haskell modules and not in the current cabal file.
+  -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
+  other-modules:
+    Codec.CBOR.Extras
+    Ledger.Tx.CardanoAPITemp
 
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  build-depends:
+    , aeson
+    , array
+    , base                            >=4.9   && <5
+    , base16-bytestring               >=1
+    , bytestring
+    , cardano-api:{cardano-api, gen}
+    , cardano-crypto
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-byron
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , cardano-slotting
+    , cborg
+    , containers
+    , cryptonite                      >=0.25
+    , data-default
+    , deepseq
+    , flat
+    , freer-extras
+    , hashable
+    , hedgehog
+    , http-api-data
+    , iohk-monitoring
+    , lens
+    , memory
+    , mtl
+    , newtype-generics
+    , openapi3
+    , ouroboros-consensus-shelley
+    , plutus-core                     >=1.0.0
+    , plutus-ledger-api               >=1.0.0
+    , plutus-script-utils
+    , plutus-tx                       >=1.0.0
+    , prettyprinter
+    , scientific
+    , serialise
+    , servant
+    , strict-containers
+    , tagged
+    , template-haskell
+    , text
+    , time
+    , time-units
+    , transformers
+
+  -- The rest of the plutus-ledger-api modules are reexported from within
+  -- the Haskell modules and not in the current cabal file.
+  -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
+  other-modules:      Ledger.Tx.CardanoAPITemp
+  build-depends:
+    , aeson
+    , array
+    , base                            >=4.9  && <5
+    , bytestring
+    , cardano-api:{cardano-api, gen}
+    , cardano-crypto
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-byron
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , cardano-slotting
+    , cborg
+    , containers
+    , cryptonite                      >=0.25
+    , data-default
+    , deepseq
+    , freer-extras
+    , hashable
+    , hedgehog
+    , http-api-data
+    , iohk-monitoring
+    , lens
+    , memory
+    , mtl
+    , openapi3
+    , ouroboros-consensus-shelley
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-script-utils
+    , plutus-tx
+    , prettyprinter
+    , scientific
+    , serialise
+    , servant
+    , strict-containers
+    , template-haskell
+    , text
+    , time
+    , time-units
+    , transformers
+
+  ghc-options:        -fprint-potential-instances
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 test-suite plutus-ledger-test
-    import: lang
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    hs-source-dirs: test
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    other-modules:
-        Ledger.Tx.CardanoAPISpec
-    build-depends:
-        aeson -any,
-        base >=4.9 && <5,
-        bytestring -any,
-        cardano-api -any,
-        cardano-api:gen -any,
-        containers -any,
-        hedgehog -any,
-        plutus-ledger -any,
-        plutus-tx >= 1.0.0,
-        tasty -any,
-        tasty-hedgehog >= 1.2.0.0,
-        tasty-hunit -any,
+  import:             lang
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  other-modules:      Ledger.Tx.CardanoAPISpec
+  build-depends:
+    , aeson
+    , base                            >=4.9   && <5
+    , bytestring
+    , cardano-api:{cardano-api, gen}
+    , containers
+    , data-default
+    , hedgehog
+    , plutus-ledger
+    , plutus-ledger-api               >=1.0.0
+    , plutus-script-utils
+    , plutus-tx                       >=1.0.0
+    , tasty
+    , tasty-hedgehog
+    , tasty-hunit

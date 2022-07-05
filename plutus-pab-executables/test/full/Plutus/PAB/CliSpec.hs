@@ -265,7 +265,7 @@ restoreContractStateTests =
 
           -- Then, check 'ping' works on a different PAB instance (that will
           -- have restored from the same DB.)
-          let newConfig = bumpConfig 50 "db1" pabConfig
+          let newConfig = bumpConfig 10 "db1" pabConfig
           startSecondaryPab (secondaryConfig pabConfig newConfig)
 
           runPabInstanceEndpoints newConfig ci [Succeed "ping"]

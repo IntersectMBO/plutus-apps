@@ -1,6 +1,7 @@
 module Plutus.Contract.Test.Coverage.ReportCoverage(writeCoverageReport) where
 
 import Control.Exception
+import Control.Lens (view)
 import Data.Function
 import Data.List
 import Data.Map qualified as Map
@@ -23,18 +24,68 @@ predPos (l,c) = (l,c-1)
 
 succPos (l,c) = (l,c+1)
 
-data Status = AlwaysTrue | AlwaysFalse | Uncovered | OffChain | Covered
-  -- Covered comes last, because this means that all of the other status
-  -- take precedence when there are two swipes for the same interval
-  -- (one from the base coverage, and the other from the "uncovered" set)
+data CoverStatus = NotCovered | HasBeenHere | HasBeenFalse | HasBeenTrue | HasBeenBoth
   deriving (Eq, Ord, Show)
 
+data IgnoreStatus = NotIgnored | IgnoredIfFalse | IgnoredIfTrue | AlwaysIgnored
+  deriving (Eq, Ord, Show)
+
+data Status = OnChain CoverStatus IgnoreStatus
+  deriving (Eq, Ord, Show)
+
+instance Semigroup CoverStatus where
+  HasBeenBoth  <> _            = HasBeenBoth
+  _            <> HasBeenBoth  = HasBeenBoth
+  HasBeenFalse <> HasBeenTrue  = HasBeenBoth
+  HasBeenTrue  <> HasBeenFalse = HasBeenBoth
+  HasBeenFalse <> _            = HasBeenFalse
+  _            <> HasBeenFalse = HasBeenFalse
+  HasBeenTrue  <> _            = HasBeenTrue
+  _            <> HasBeenTrue  = HasBeenTrue
+  HasBeenHere  <> _            = HasBeenHere
+  _            <> HasBeenHere  = HasBeenHere
+  NotCovered   <> NotCovered   = NotCovered
+
+instance Monoid CoverStatus where
+  mempty = NotCovered
+
+instance Semigroup IgnoreStatus where
+  AlwaysIgnored  <> _              = AlwaysIgnored
+  _              <> AlwaysIgnored  = AlwaysIgnored
+  IgnoredIfFalse <> IgnoredIfTrue  = AlwaysIgnored
+  IgnoredIfTrue  <> IgnoredIfFalse = AlwaysIgnored
+  IgnoredIfTrue  <> _              = IgnoredIfTrue
+  _              <> IgnoredIfTrue  = IgnoredIfTrue
+  IgnoredIfFalse <> _              = IgnoredIfFalse
+  _              <> IgnoredIfFalse = IgnoredIfFalse
+  NotIgnored     <> NotIgnored     = NotIgnored
+
+instance Monoid IgnoreStatus where
+  mempty = NotIgnored
+
+-- The Semigroup instance is used to combine swipes over identical ranges.
+instance Semigroup Status where
+  OnChain c i <> OnChain c' i' = OnChain (c <> c') (i <> i')
+
+instance Monoid Status where
+  mempty = OnChain mempty mempty
+
 statusStyle :: Status -> String
-statusStyle Covered     = "background-color:white;color:black"
-statusStyle AlwaysTrue  = "background-color:lightgreen;color:black"
-statusStyle AlwaysFalse = "background-color:lightpink;color:black"
-statusStyle Uncovered   = "background-color:black;color:orangered"
-statusStyle OffChain    = "background-color:lightgray;color:gray"
+statusStyle (OnChain HasBeenHere _)             = "background-color:white;color:black"
+statusStyle (OnChain HasBeenBoth _)             = "background-color:white;color:black"
+statusStyle (OnChain HasBeenTrue i)
+  | elem i [IgnoredIfFalse, AlwaysIgnored]      = "background-color:white;color:lightgreen"
+  | otherwise                                   = "background-color:lightgreen;color:black"
+statusStyle (OnChain HasBeenFalse i)
+  | elem i [IgnoredIfTrue, AlwaysIgnored]       = "background-color:white;color:lightpink"
+  | otherwise                                   = "background-color:lightpink;color:black"
+statusStyle (OnChain NotCovered NotIgnored)     = "background-color:black;color:orangered"
+statusStyle (OnChain NotCovered IgnoredIfFalse) = "background-color:lightpink;color:black"
+statusStyle (OnChain NotCovered IgnoredIfTrue)  = "background-color:lightgreen;color:black"
+statusStyle (OnChain NotCovered AlwaysIgnored)  = "background-color:white;color:orangered"
+
+offChainStyle :: String
+offChainStyle = "background-color:lightgray;color:gray"
 
 -- A "swipe" represents colouring a region of a file with a
 -- status. Our overall approach is to convert coverage information
@@ -59,9 +110,6 @@ data Swipe = Swipe { swipeStart  :: Pos,
 instance Ord Swipe where
   (<=) = (<=) `on` \(Swipe start end status) -> (end, Down start, status)
 
-precedes :: Swipe -> Swipe -> Bool
-precedes sw sw' = swipeEnd sw < swipeStart sw'
-
 -- Is the first swipe nested within the second?
 
 nested :: Swipe -> Swipe -> Bool
@@ -72,10 +120,12 @@ nested (Swipe from to _) (Swipe from' to' _) = from >= from' && to <= to'
 -- second.
 
 combineNestedSwipes :: Swipe -> Swipe -> [Swipe]
-combineNestedSwipes (Swipe from to s) (Swipe from' to' s') =
-  [Swipe from' (predPos from) s' | from /= from'] ++
-  [Swipe from to s] ++
-  [Swipe (succPos to) to' s' | to /= to']
+combineNestedSwipes (Swipe from to s) (Swipe from' to' s')
+  | (from, to) == (from', to') = [Swipe from to (s <> s')]
+  | otherwise =
+    [Swipe from' (predPos from) s' | from /= from'] ++
+    [Swipe from to s] ++
+    [Swipe (succPos to) to' s' | to /= to']
 
 -- Flatten an ordered list of swipes, to get a non-overlapping list.
 -- Nested swipes "swipe over" the outer swipe. Because of the custom
@@ -164,16 +214,27 @@ encode = unpack . text . pack
 
 -- Read source files and extract coverage information.
 
-type FileInfo = (String, [String], Set CoverageAnnotation, Set CoverageAnnotation)
+data FileInfo = FileInfo
+  { fiName    :: String
+  , fiLines   :: [String]
+  , fiAllAnns :: Set CoverageAnnotation
+  , fiCovered :: Set CoverageAnnotation
+  , fiIgnored :: Set CoverageAnnotation }
 
-files :: CoverageIndex -> CoverageReport -> IO [FileInfo]
-files ci@(CoverageIndex metadataMap) (CoverageReport annots) = sequence [file n | n <- fileNames ci]
+files :: CoverageReport -> IO [FileInfo]
+files (CoverageReport ci@(CoverageIndex metadataMap) (CoverageData annots)) = sequence [file n | n <- fileNames ci]
   where file name = do
           body <- either (const "" :: IOException -> String) id <$>
                     try (readFile name)
-          return (name, lines body, covx name, covs name)
+          return FileInfo{ fiName    = name
+                         , fiLines   = lines body
+                         , fiAllAnns = covx name
+                         , fiCovered = covs name
+                         , fiIgnored = covi name }
+        ignoredMap = Map.filter (Set.member IgnoredAnnotation . view metadataSet) metadataMap
         covx name = Set.filter ((==name) . _covLocFile . getCovLoc) . Map.keysSet $ metadataMap
         covs name = Set.filter ((==name) . _covLocFile . getCovLoc) annots
+        covi name = Set.filter ((==name) . _covLocFile . getCovLoc) . Map.keysSet $ ignoredMap
 
 fileNames :: CoverageIndex -> [String]
 fileNames (CoverageIndex metadataMap) =
@@ -183,61 +244,48 @@ getCovLoc :: CoverageAnnotation -> CovLoc
 getCovLoc (CoverLocation c) = c
 getCovLoc (CoverBool c _)   = c
 
-locSwipe :: CovLoc -> Status -> Swipe
-locSwipe loc status =
-  Swipe (_covLocStartLine loc, _covLocStartCol loc)
-        (_covLocEndLine loc,   _covLocEndCol   loc)
-        status
-
 -- Generate the coverage report and write to an HTML file.
 
-writeCoverageReport :: String -> CoverageIndex -> CoverageReport -> IO ()
-writeCoverageReport name ci cr = do
-  fs <- files ci cr
+writeCoverageReport :: String -> CoverageReport -> IO ()
+writeCoverageReport name cr = do
+  fs <- files cr
   writeFile (name++".html") . coverageReportHtml $ fs
 
 coverageReportHtml :: [FileInfo] -> String
 coverageReportHtml fs = element "body" [] $ report
   where
-    report = header ++ concat ["<hr>"++file name body covx annots | (name, body, covx, annots) <- fs]
+    report = header ++ concat ["<hr>"++file name body covx annots covi | FileInfo name body covx annots covi <- fs]
     header =
       element "h1" [] "Files" ++
       element "ul" []
         (concat [element "li" [] . element "a" [("href",quote ("#"++name))] $ name
-                | (name,_,_,_) <- fs])
-    file name body covx annots =
-      let uncovered = covx Set.\\ annots
-          swipes    = [ Swipe (_covLocStartLine loc,_covLocStartCol loc)
-                              (_covLocEndLine   loc,_covLocEndCol   loc) $
-                        case (CoverBool loc True  `Set.member` uncovered,
-                              CoverBool loc False `Set.member` uncovered) of
-                          (True,  True)  -> Uncovered
-                          (False, True)  -> AlwaysTrue
-                          (True,  False) -> AlwaysFalse
-                          (False, False) -> Uncovered
-                      | loc <- Set.toList . Set.map getCovLoc $ uncovered ]
-          base    = baseCoverage covx
-          swipes' = flattenSwipes . sort $ swipes ++ base
+                | FileInfo{fiName = name} <- fs])
+    file name body covx annots covi =
+      let uncovered  = covx Set.\\ annots
+          status ann = OnChain (ifM c covS) (ifM i ignS)
+            where
+              i = Set.member ann covi
+              c = Set.notMember ann uncovered
+              ifM False _ = mempty
+              ifM True  m = m
+              covS = case ann of
+                CoverBool _ True  -> HasBeenTrue
+                CoverBool _ False -> HasBeenFalse
+                CoverLocation{}   -> HasBeenHere
+              ignS = case ann of
+                CoverBool _ True  -> IgnoredIfTrue
+                CoverBool _ False -> IgnoredIfFalse
+                CoverLocation{}   -> AlwaysIgnored
+          swipe loc s = Swipe (_covLocStartLine loc, _covLocStartCol loc)
+                              (_covLocEndLine   loc, _covLocEndCol   loc) s
+          swipes = flattenSwipes . sort $
+                   [ swipe (getCovLoc ann) $ status ann | ann <- Set.toList covx ]
       in
       element "h2" [("id",quote name)] name ++
       element "pre" [] (unlines
         (annotateLines
           (zip [1..] body)
-          (fillSmallGaps . includeNearby . swipesByLine $ swipes')))
-
--- Convert a coverage index into a list of swipes that colour all the
--- text in the index "Covered". This is the starting point for adding
--- colours indicating *lack* of coverage. At this point we discard
--- nested coverage locations.
-
-baseCoverage :: Set CoverageAnnotation -> [Swipe]
-baseCoverage covs =
-  outermost . sort . map (`locSwipe` Covered) . Set.toList . Set.map getCovLoc $ covs
-  where outermost = reverse . removeNested . reverse
-        removeNested (sw:sw':swipes)
-          | nested   sw' sw = removeNested (sw:swipes)
-          | precedes sw' sw = sw:removeNested (sw':swipes)
-        removeNested swipes = swipes
+          (fillSmallGaps . includeNearby . swipesByLine $ swipes)))
 
 -- Apply swipes to the selected contents of a file
 
@@ -259,9 +307,9 @@ annotateLine n line swipes =
   showLineNo n++"    "++swipeLine 1 line swipes
 
 swipeLine :: Int -> String -> [Swipe] -> String
-swipeLine _ line [] = element "span" [("style",statusStyle OffChain)] $ encode line
+swipeLine _ line [] = element "span" [("style",offChainStyle)] $ encode line
 swipeLine c line s@(Swipe (_,from) (_,to) stat:swipes)
-  | c < from  = element "span" [("style",statusStyle OffChain)] (encode $ take (from-c) line) ++
+  | c < from  = element "span" [("style",offChainStyle)] (encode $ take (from-c) line) ++
                 swipeLine from (drop (from-c) line) s
   | otherwise = element "span" [("style",statusStyle stat)] (encode $ take (to+1-from) line) ++
                 swipeLine (to+1) (drop (to+1-from) line) swipes
