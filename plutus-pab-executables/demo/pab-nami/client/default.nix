@@ -50,7 +50,19 @@ let
     ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile webserver
   '';
 
-  cleanSrc = gitignore-nix.gitignoreSource ./.;
+  cleanSrc = pkgs.lib.sources.sourceByRegex ./. [
+    "static.*"
+    "generated.*"
+    "test.*"
+    "src.*"
+    "entry.js"
+    "index.html"
+    "package-lock.json"
+    "package.json"
+    "spago-packages.nix"
+    "spago.dhall"
+    "webpack.config.js"
+  ];
 
   nodeModules = buildNodeModules {
     projectDir = filterNpm cleanSrc;

@@ -63,10 +63,22 @@ let
     ${playground-exe}/bin/plutus-playground-server webserver "$@"
   '';
 
-  cleanSrc = gitignore-nix.gitignoreSource ./.;
+  cleanSrc = pkgs.lib.sources.sourceByRegex ./. [
+    "e2e-tests.*"
+    "static.*"
+    "generated.*"
+    "test.*"
+    "src.*"
+    "entry.js"
+    "package-lock.json"
+    "package.json"
+    "spago-packages.nix"
+    "spago.dhall"
+    "webpack.config.js"
+  ];
 
   nodeModules = buildNodeModules {
-    projectDir = filterNpm cleanSrc;
+    projectDir = filterNpm ./.;
     packageJson = ./package.json;
     packageLockJson = ./package-lock.json;
   };
@@ -74,7 +86,7 @@ let
   client = pkgs.lib.overrideDerivation
     (buildPursPackage {
       inherit pkgs nodeModules;
-      src = cleanSrc;
+      src = ./.;
       name = "plutus-playground-client";
       # ideally we would just use `npm run test` but
       # this executes `spago` which *always* attempts to download
