@@ -1,6 +1,6 @@
 -- | Calculating transaction fees in the emulator.
 module Ledger.Fee(
-  evaluateTransactionFee,
+  estimateTransactionFee,
   makeTransactionBodyAutoBalance
 ) where
 
@@ -16,13 +16,13 @@ import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
 import Ledger.Value (Value)
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 
-evaluateTransactionFee
+estimateTransactionFee
   :: Params
   -> UTxO EmulatorEra
   -> [PaymentPubKeyHash]
   -> Tx
   -> Either CardanoLedgerError Value
-evaluateTransactionFee params utxo requiredSigners tx = do
+estimateTransactionFee params utxo requiredSigners tx = do
   txBodyContent <- first Right $ toCardanoTxBodyContent params requiredSigners tx
   let nkeys = C.Api.estimateTransactionKeyWitnessCount (getCardanoBuildTx txBodyContent)
   txBody <- makeTransactionBody params utxo txBodyContent
