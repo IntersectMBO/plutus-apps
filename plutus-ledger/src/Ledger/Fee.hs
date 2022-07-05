@@ -38,17 +38,35 @@ makeTransactionBodyAutoBalance
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
 makeTransactionBodyAutoBalance params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
   cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
-  C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ C.Api.makeTransactionBodyAutoBalance
-    C.Api.AlonzoEraInCardanoMode
-    (systemStart $ emulatorGlobals params)
-    (emulatorEraHistory params)
-    (pProtocolParams params)
-    mempty
-    (fromLedgerUTxO utxo)
-    txBodyContent
-    cChangeAddr
-    Nothing
+  -- Compute the change.
+  C.Api.BalancedTxBody _ change _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr []
+  let
+    -- Recompute execution units with full set of UTxOs, including change.
+    trial = balance cChangeAddr [change]
+    -- Correct for a negative balance in cases where execution units, and hence fees, have increased.
+    change' =
+      case (change, trial) of
+        (C.Api.TxOut addr (C.Api.TxOutValue vtype value) datum, Left (C.Api.TxBodyErrorAdaBalanceNegative delta)) ->
+          C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> C.Api.lovelaceToValue delta) datum
+        _ -> change
+  -- Construct the body with correct execution units and fees.
+  C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr [change']
   pure $ C.Api.makeSignedTransaction [] txBody
+  where
+    eh = emulatorEraHistory params
+    ss = systemStart $ emulatorGlobals params
+    utxo' = fromLedgerUTxO utxo
+    balance cChangeAddr extraOuts = C.Api.makeTransactionBodyAutoBalance
+      C.Api.AlonzoEraInCardanoMode
+      ss
+      eh
+      (pProtocolParams params)
+      mempty
+      utxo'
+      txBodyContent { C.Api.txOuts = C.Api.txOuts txBodyContent ++ extraOuts }
+      cChangeAddr
+      Nothing
+
 
 fromLedgerUTxO :: UTxO EmulatorEra
                -> C.Api.UTxO C.Api.AlonzoEra
