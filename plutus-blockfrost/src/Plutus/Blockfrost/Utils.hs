@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -12,6 +13,7 @@ import Data.Aeson
 import Data.Aeson.QQ
 import Data.ByteString qualified as BS (unpack)
 import Data.Maybe (fromJust)
+import Data.Proxy (Proxy (..))
 import Data.String
 import Data.Text (Text, drop, pack, take, unpack)
 import Data.Text.Encoding
@@ -23,8 +25,8 @@ import Cardano.Api hiding (AssetId, Block, Value)
 import Cardano.Api.Shelley qualified as Api
 import Ledger.Tx (TxOutRef (..))
 import Ledger.Tx.CardanoAPI
-import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, defaultDecimalConf, discreteToDecimal,
-              someDiscreteAmount, someDiscreteCurrency)
+import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
+              scale, someDiscreteAmount, someDiscreteCurrency)
 import Plutus.V1.Ledger.Address qualified as LA
 import Plutus.V1.Ledger.Api (Credential (..), PubKeyHash, adaSymbol, adaToken, fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
@@ -120,13 +122,16 @@ discreteCurrencyToValue sd = singleton pid tn quant
     quant = someDiscreteAmount sd
 
 lovelaceDecimalConfig :: Money.DecimalConf
-lovelaceDecimalConfig = Money.defaultDecimalConf { Money.decimalConf_digits = 0}
+lovelaceDecimalConfig = Money.defaultDecimalConf
+  { Money.decimalConf_digits = 0
+  , Money.decimalConf_scale =
+        Money.scale (Proxy @(Money.UnitScale "ADA" "lovelace"))
+  }
 
 lovelacesToMInt :: Lovelaces -> Maybe Integer
 lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceDecimalConfig Money.Round
 
--- TODO: FIX 1 million
 lovelacesToValue :: Lovelaces -> Ledger.Value
 lovelacesToValue lov = case lovelacesToMInt lov of
   Nothing  -> singleton adaSymbol adaToken 0
-  Just int -> singleton adaSymbol adaToken (1_000_000 * int)
+  Just int -> singleton adaSymbol adaToken int
