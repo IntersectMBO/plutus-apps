@@ -10,7 +10,7 @@ module Plutus.Blockfrost.Responses (
     , processGetValidator
     , processUnspentTxOut
     , processIsUtxo
-    , processGetUtxoAtAddress
+    , processGetUtxos
     ) where
 
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
@@ -122,8 +122,8 @@ processIsUtxo (block, isUtxo) = do
                 }
                 |]
 
-processGetUtxoAtAddress :: PageQuery TxOutRef -> (Block, [AddressUtxo]) ->  IO UtxosResponse
-processGetUtxoAtAddress pq (block, xs) = do
+processGetUtxos :: PageQuery TxOutRef -> (Block, [AddressUtxo]) ->  IO UtxosResponse
+processGetUtxos pq (block, xs) = do
     tip <- processTip block
     return ((fromSucceed $ JSON.fromJSON $ hcJSON tip) :: UtxosResponse)
   where

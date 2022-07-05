@@ -34,7 +34,8 @@ library
         plutus-ledger-api -any,
     build-depends:
         aeson -any,
-        aeson-qq, 
+        aeson-qq,
+        async,
         base >=4.7 && <5,
         bech32,
         blockfrost-client,

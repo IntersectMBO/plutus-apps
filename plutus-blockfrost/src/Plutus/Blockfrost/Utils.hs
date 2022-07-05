@@ -10,10 +10,12 @@ module Plutus.Blockfrost.Utils where
 
 import Data.Aeson
 import Data.Aeson.QQ
+import Data.ByteString qualified as BS (unpack)
 import Data.Maybe (fromJust)
 import Data.String
 import Data.Text (Text, drop, pack, take, unpack)
-import Text.Hex (decodeHex)
+import Data.Text.Encoding
+import Text.Hex (decodeHex, encodeHex)
 import Text.Read (readMaybe)
 
 import Blockfrost.Client as Blockfrost
@@ -56,6 +58,17 @@ toBlockfrostTxHash = TxHash . pack . show . txOutRefId
 
 toBlockfrostRef :: TxOutRef -> (TxHash, Integer)
 toBlockfrostRef ref = (toBlockfrostTxHash ref, txOutRefIdx ref)
+
+toBlockfrostAssetId :: AssetClass -> AssetId
+toBlockfrostAssetId ac = fromString (polId ++ name)
+  where
+    (cs, tn) = unAssetClass ac
+
+    polId :: String
+    polId = (unpack . encodeHex . fromBuiltin . unCurrencySymbol) cs
+
+    name :: String
+    name = (unpack . encodeHex . fromBuiltin . unTokenName) tn
 
 textToDatumHash :: Text -> PS.DatumHash
 textToDatumHash dHash = fromSucceed $ fromJSON dHashJson
@@ -112,6 +125,7 @@ lovelaceDecimalConfig = Money.defaultDecimalConf { Money.decimalConf_digits = 0}
 lovelacesToMInt :: Lovelaces -> Maybe Integer
 lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceDecimalConfig Money.Round
 
+-- TODO: FIX 1 million
 lovelacesToValue :: Lovelaces -> Ledger.Value
 lovelacesToValue lov = case lovelacesToMInt lov of
   Nothing  -> singleton adaSymbol adaToken 0

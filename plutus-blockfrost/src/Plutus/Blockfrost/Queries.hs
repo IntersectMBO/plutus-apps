@@ -9,9 +9,12 @@ module Plutus.Blockfrost.Queries (
     , getUnspentTxOutBlockfrost
     , getIsUtxoBlockfrost
     , getUtxoAtAddressBlockfrost
+    , getUtxoSetWithCurrency
     ) where
 
+import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
+import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Value)
 import Data.Functor ((<&>))
 
@@ -39,11 +42,21 @@ getIsUtxoBlockfrost ref = do
     isUtxo <- checkIsUtxo ref
     return (tip, isUtxo)
 
+-- TODO: Pagination Support
 getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
 getUtxoAtAddressBlockfrost pq addr =  do
     tip <- getTipBlockfrost
     utxos <- getAddressUtxos' addr (paged 50 1) def
-    return(tip, utxos)
+    return (tip, utxos)
+
+-- TODO: Pagination Support
+getUtxoSetWithCurrency :: MonadBlockfrost m => PageQuery a -> AssetId -> m (Block, [AddressUtxo])
+getUtxoSetWithCurrency _ asset = do
+    tip <- getTipBlockfrost
+    xs <- getAssetAddresses asset
+    utxos <- liftIO $ mapConcurrently (flip getAddressUtxosAsset asset . _assetAddressAddress) xs
+    let retUtxos = (take 50 . concat) utxos
+    return (tip, retUtxos)
 
 -- UTIL FUNCTIONS
 
