@@ -57,8 +57,8 @@ handleBlockfrostClient event = liftIO $ do
         MintingPolicyFromHash d  -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         StakeValidatorFromHash d -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         UnspentTxOutFromRef r    -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostRef) r     >>= processUnspentTxOut
-        UtxoSetMembership r      -> (runClient . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
+        UtxoSetMembership r      -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
         UtxoSetAtAddress pq a    -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxos pq
         UtxoSetWithCurrency pq a -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
-        TxoSetAtAddress pq a     -> ioError (userError "TODO")
+        TxoSetAtAddress _ _      -> ioError (userError "TODO")
         GetTip                   -> runClient getTipBlockfrost >>= processTip

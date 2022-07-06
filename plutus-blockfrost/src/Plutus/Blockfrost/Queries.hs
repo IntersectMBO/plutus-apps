@@ -11,6 +11,7 @@ module Plutus.Blockfrost.Queries (
     , getUtxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
     , defaultGetUtxo
+    , defaultIsUtxo
     ) where
 
 import Control.Concurrent.Async (mapConcurrently)
@@ -80,3 +81,8 @@ defaultGetUtxo :: MonadBlockfrost m => m (Block, [AddressUtxo])
 defaultGetUtxo = do
     tip <- getTipBlockfrost
     return (tip, [])
+
+defaultIsUtxo :: MonadBlockfrost m => m (Block, Bool)
+defaultIsUtxo = do
+    tip <- getTipBlockfrost
+    return(tip, False)
