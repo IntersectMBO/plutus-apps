@@ -28,6 +28,7 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInWitness
   , fromCardanoTxOut
   , fromCardanoTxOutDatum
+  , fromCardanoAddressInEra
   , fromCardanoAddress
   , fromCardanoMintValue
   , fromCardanoValue
@@ -51,7 +52,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxOutUnsafe
   , toCardanoTxOutDatumHash
   , toCardanoTxOutValue
-  , toCardanoAddress
+  , toCardanoAddressInEra
   , toCardanoMintValue
   , toCardanoValue
   , toCardanoFee
@@ -475,7 +476,7 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError P.TxOut
 fromCardanoTxOut (C.TxOut addr value datum) =
     P.TxOut
-    <$> fromCardanoAddress addr
+    <$> fromCardanoAddressInEra addr
     <*> pure (fromCardanoTxOutValue value)
     <*> pure (fromCardanoTxOutDatum datum)
 
@@ -485,7 +486,7 @@ toCardanoTxOut
     -> P.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.AlonzoEra)
 toCardanoTxOut networkId fromHash (P.TxOut addr value datumHash) =
-    C.TxOut <$> toCardanoAddress networkId addr
+    C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValue value
             <*> fromHash datumHash
 
@@ -495,7 +496,7 @@ toCardanoTxOutUnsafe
     -> P.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.AlonzoEra)
 toCardanoTxOutUnsafe networkId fromHash (P.TxOut addr value datumHash) =
-    C.TxOut <$> toCardanoAddress networkId addr
+    C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValueUnsafe value
             <*> fromHash datumHash
 
@@ -505,8 +506,12 @@ lookupDatum datums datumHash =
         Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
         Nothing    -> toCardanoTxOutDatumHash datumHash
 
-fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
-fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address)) =
+fromCardanoAddressInEra :: C.AddressInEra era -> Either FromCardanoError P.Address
+fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
+fromCardanoAddressInEra (C.AddressInEra _ address)                      = fromCardanoAddress address
+
+fromCardanoAddress :: C.Address addrtype -> Either FromCardanoError P.Address
+fromCardanoAddress (C.ByronAddress address) =
     Right $ P.Address plutusCredential Nothing
     where
       plutusCredential :: Credential.Credential
@@ -515,13 +520,12 @@ fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress addres
         $ P.PubKeyHash
         $ PlutusTx.toBuiltin
         $ addrToBase58 address
-
-fromCardanoAddress (C.AddressInEra _ (C.ShelleyAddress _ paymentCredential stakeAddressReference)) =
+fromCardanoAddress (C.ShelleyAddress _ paymentCredential stakeAddressReference) =
     P.Address (fromCardanoPaymentCredential (C.fromShelleyPaymentCredential paymentCredential))
         <$> fromCardanoStakeAddressReference (C.fromShelleyStakeReference stakeAddressReference)
 
-toCardanoAddress :: C.NetworkId -> P.Address -> Either ToCardanoError (C.AddressInEra C.AlonzoEra)
-toCardanoAddress networkId (P.Address addressCredential addressStakingCredential) =
+toCardanoAddressInEra :: C.NetworkId -> P.Address -> Either ToCardanoError (C.AddressInEra C.AlonzoEra)
+toCardanoAddressInEra networkId (P.Address addressCredential addressStakingCredential) =
     C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) <$>
         (C.makeShelleyAddress networkId
             <$> toCardanoPaymentCredential addressCredential

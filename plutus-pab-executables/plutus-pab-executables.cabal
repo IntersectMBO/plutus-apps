@@ -40,7 +40,7 @@ common lang
     ScopedTypeVariables
     StandaloneDeriving
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
@@ -121,6 +121,7 @@ executable plutus-pab-examples
     , playground-common
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-pab
     , plutus-pab-executables
@@ -230,6 +231,7 @@ executable plutus-pab-test-psgenerator
     , playground-common
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-pab
     , plutus-use-cases
@@ -276,6 +278,7 @@ test-suite plutus-pab-test-full
     , plutus-chain-index-core
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-pab
     , plutus-pab-executables
@@ -330,6 +333,7 @@ test-suite plutus-pab-test-full-long-running
     , plutus-chain-index-core
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-pab
     , plutus-pab-executables

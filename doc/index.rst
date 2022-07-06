@@ -1,12 +1,10 @@
-The Plutus Platform and Marlowe
+The Plutus Platform
 ===============================
 
 The Plutus Platform is an application development platform for the Cardano blockchain.
 To read more about the Platform, see :ref:`what_is_the_plutus_platform`.
 To get started using the Platform see :ref:`plutus_getting_started`.
 
-Marlowe is the flagship product built on top of the Plutus Platform, consisting of a domain-specific language for writing financial smart contracts.
-To read more about Marlowe, see the :ref:`Marlowe tutorials<marlowe_tutorials>`.
 
 .. toctree::
    :caption: Explore Plutus
@@ -18,10 +16,10 @@ To read more about Marlowe, see the :ref:`Marlowe tutorials<marlowe_tutorials>`.
    plutus/troubleshooting
 
 .. toctree::
-   :caption: Explore Marlowe
-   :maxdepth: 2
+   :caption: Architecture design records
+   :maxdepth: 1
 
-   marlowe/tutorials/index
+   adr/index
 
 .. toctree::
    :caption: Reference

@@ -258,7 +258,7 @@ pay ::
     -- ^ How much money to pay in
     -> Contract w s e TxId
 pay inst escrow vl = do
-    pk <- ownPaymentPubKeyHash
+    pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
     mkTxConstraints (Constraints.typedValidatorLookups inst) tx
@@ -330,7 +330,7 @@ refund ::
     -> EscrowParams Datum
     -> Contract w s EscrowError RefundSuccess
 refund inst escrow = do
-    pk <- ownPaymentPubKeyHash
+    pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let flt _ ciTxOut = either id datumHash (Tx._ciTxOutDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund

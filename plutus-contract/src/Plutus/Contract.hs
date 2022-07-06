@@ -62,8 +62,12 @@ module Plutus.Contract(
     , Request.utxosAt
     , Request.utxosTxOutTxFromTx
     , Request.getTip
-    -- * Wallet's own public key
+    -- * Wallet's information
     , Request.ownPaymentPubKeyHash
+    , Request.ownPaymentPubKeyHashes
+    , Request.ownFirstPaymentPubKeyHash
+    , Request.ownAddresses
+    , Request.ownUtxos
     -- * Contract instance Id
     , Wallet.Types.ContractInstanceId
     , Request.ownInstanceId

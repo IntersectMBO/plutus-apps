@@ -58,7 +58,7 @@ mirror ::
     => Contract w s MirrorError ()
 mirror = do
     logInfo @String "mirror started"
-    authority <- mapError SetupError $ CredentialAuthority <$> ownPaymentPubKeyHash
+    authority <- mapError SetupError $ CredentialAuthority <$> ownFirstPaymentPubKeyHash
     forever $ do
         logInfo @String "waiting for 'issue' call"
         selectList [createTokens authority, revokeToken authority]

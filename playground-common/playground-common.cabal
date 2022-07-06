@@ -71,6 +71,7 @@ library
     , plutus-ledger
     , plutus-ledger-api
     , plutus-ledger-constraints
+    , plutus-script-utils
     , plutus-tx
     , prettyprinter
     , process

@@ -23,9 +23,9 @@ import Ledger.Slot (Slot)
 import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.TxId (TxId)
-import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
+import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.V1.Ledger.Api (ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
@@ -264,7 +264,7 @@ instance Arbitrary PABReq where
             , pure CurrentSlotReq
             , pure OwnContractInstanceIdReq
             , ExposeEndpointReq <$> arbitrary
-            , pure OwnPaymentPublicKeyHashReq
+            , pure OwnAddressesReq
             -- TODO This would need an Arbitrary Tx instance:
             -- , BalanceTxRequest <$> arbitrary
             -- , WriteBalancedTxRequest <$> arbitrary
@@ -299,7 +299,7 @@ instance Arbitrary ActiveEndpoint where
 -- 'Maybe' because we can't (yet) create a generator for every request
 -- type.
 genResponse :: PABReq -> Maybe (Gen PABResp)
-genResponse (AwaitSlotReq slot)        = Just . pure . AwaitSlotResp $ slot
-genResponse (ExposeEndpointReq _)      = Just $ ExposeEndpointResp <$> arbitrary <*> (EndpointValue <$> arbitrary)
-genResponse OwnPaymentPublicKeyHashReq = Just $ OwnPaymentPublicKeyHashResp <$> arbitrary
-genResponse _                          = Nothing
+genResponse (AwaitSlotReq slot)   = Just . pure . AwaitSlotResp $ slot
+genResponse (ExposeEndpointReq _) = Just $ ExposeEndpointResp <$> arbitrary <*> (EndpointValue <$> arbitrary)
+genResponse OwnAddressesReq       = Just $ OwnAddressesResp <$> arbitrary
+genResponse _                     = Nothing

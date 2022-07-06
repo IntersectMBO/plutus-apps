@@ -31,8 +31,8 @@ if rtd_version not in ["stable", "latest"]:
 
 # -- Project information -----------------------------------------------------
 
-project = 'The Plutus Platform and Marlowe'
-copyright = '2021, IOHK'
+project = 'The Plutus Platform'
+copyright = '2022, IOHK'
 author = 'IOHK'
 
 # The full version, including alpha/beta/rc tags

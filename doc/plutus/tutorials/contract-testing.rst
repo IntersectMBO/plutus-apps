@@ -21,7 +21,7 @@ example here_, and the `final test code is here <GameModel_>`_.
 
 The game is played as follows:
 
-.. _here: https://github.com/input-output-hk/plutus/blob/master/plutus-use-cases/src/Plutus/Contracts/GameStateMachine.hs
+.. _here: https://github.com/input-output-hk/plutus-apps/blob/master/plutus-use-cases/src/Plutus/Contracts/GameStateMachine.hs
 
  - The first player locks a sum of Ada in the contract, which is
    donated as a prize. The prize is protected by a secret password.
@@ -1213,14 +1213,14 @@ we could instead write:
    :end-before: END unitTest v2
 
 Here :hsobj:`Plutus.Contract.Test.ContractModel.forAllQ` lets us generate a random value using
-:hsobj:`Test.QuickCheck.DynamicLogic.Quantify.chooseQ`:
+`Test.QuickCheck.DynamicLogic.Quantify.chooseQ` from `quickcheck-dynamic`:
 
 .. literalinclude:: GameModel.hs
    :start-after: START chooseQ type
    :end-before: END chooseQ type
 
 :hsobj:`Plutus.Contract.Test.ContractModel.forAllQ` takes a
-:hsobj:`Test.QuickCheck.DynamicLogic.Quantify.Quantification`, which resembles a QuickCheck
+`Test.QuickCheck.DynamicLogic.Quantify.Quantification`, which resembles a QuickCheck
 generator, but with a more limited API to support its use in dynamic
 logic.
 
@@ -1642,7 +1642,7 @@ In addition to the model for the `Game <GameModel_>`_ contract presented in this
 tutorial, there are also models for the `Prism`_ and the `Auction`_ example
 contracts in the ``plutus-use-cases`` project.
 
-.. _GameModel: https://github.com/input-output-hk/plutus/blob/master/plutus-use-cases/test/Spec/GameStateMachine.hs
-.. _Prism: https://github.com/input-output-hk/plutus/blob/master/plutus-use-cases/test/Spec/Prism.hs
-.. _Auction: https://github.com/input-output-hk/plutus/blob/master/plutus-use-cases/test/Spec/Auction.hs
+.. _GameModel: https://github.com/input-output-hk/plutus-apps/blob/master/plutus-use-cases/test/Spec/GameStateMachine.hs
+.. _Prism: https://github.com/input-output-hk/plutus-apps/blob/master/plutus-use-cases/test/Spec/Prism.hs
+.. _Auction: https://github.com/input-output-hk/plutus-apps/blob/master/plutus-use-cases/test/Spec/Auction.hs
 

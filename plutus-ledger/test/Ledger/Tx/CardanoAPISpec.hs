@@ -8,11 +8,20 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash)
                     NetworkMagic (NetworkMagic), PaymentCredential (PaymentCredentialByKey),
                     StakeAddressReference (NoStakeAddress, StakeAddressByValue), StakeCredential, makeShelleyAddress,
                     shelleyAddressInEra)
-import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
-import Ledger ()
-import Ledger.Tx.CardanoAPI (fromCardanoAddress, toCardanoAddress)
-
+import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
 import Gen.Cardano.Api.Typed qualified as Gen
+import Ledger.Test (someValidator)
+import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra)
+import Ledger.Validation (fromPlutusTxToTxBodyContent)
+import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.V1.Ledger.Scripts (unitRedeemer)
+
+import Data.Default (def)
+import Data.Map qualified as Map
+import Data.Set qualified as Set
 import Hedgehog (Gen, Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -23,6 +32,7 @@ import Test.Tasty.Hedgehog (testProperty)
 tests :: TestTree
 tests = testGroup "Ledger.CardanoAPI"
     [ testProperty "Cardano Address -> Plutus Address roundtrip" addressRoundTripSpec
+    , testProperty "Tx conversion retains minting policy scripts" convertMintingTx
     ]
 
 -- | From a cardano address, we should be able to convert it to a plutus address,
@@ -33,10 +43,10 @@ addressRoundTripSpec = property $ do
     shelleyAddr <- shelleyAddressInEra
                <$> forAll (makeShelleyAddress networkId <$> genPaymentCredential
                                                         <*> genStakeAddressReference)
-    case fromCardanoAddress shelleyAddr of
+    case fromCardanoAddressInEra shelleyAddr of
         Left _ -> Hedgehog.assert False
         Right plutusAddr ->
-            case toCardanoAddress networkId plutusAddr of
+            case toCardanoAddressInEra networkId plutusAddr of
                 Left _      -> Hedgehog.assert False
                 Right cAddr -> cAddr === shelleyAddr
 
@@ -70,3 +80,23 @@ genNetworkId =
 -- Copied from Gen.Cardano.Api.Typed, because it's not exported.
 genNetworkMagic :: Gen NetworkMagic
 genNetworkMagic = NetworkMagic <$> Gen.word32 Range.constantBounded
+
+
+convertMintingTx :: Property
+convertMintingTx = property $ do
+  let vHash = validatorHash someValidator
+      mps  = MPS.mkForwardingMintingPolicy vHash
+      vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
+      tx   = mempty
+        { txMint = vL 1
+        , txMintScripts = Set.singleton mps
+        , txRedeemers = Map.singleton (RedeemerPtr Mint 0) unitRedeemer
+        }
+      ectx = fromPlutusTxToTxBodyContent def [] tx >>= makeTransactionBody mempty
+  case ectx of
+    -- Check that the converted tx contains exactly one script
+    Right (ShelleyTxBody _ _ [_script] _ _ _) -> do
+      Hedgehog.success
+    msg -> do
+      Hedgehog.annotateShow msg
+      Hedgehog.failure

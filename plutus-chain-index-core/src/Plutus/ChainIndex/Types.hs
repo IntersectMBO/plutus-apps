@@ -162,6 +162,8 @@ data Tip =
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
+makePrisms ''Tip
+
 -- | When performing a rollback the chain sync protocol does not provide a block
 --   number where to resume from.
 data Point =

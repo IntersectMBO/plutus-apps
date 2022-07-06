@@ -36,6 +36,7 @@ import Control.Concurrent.STM qualified as STM
 import Data.Aeson.Types qualified as JSON
 import Data.Default (def)
 import Data.Either (isRight)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Monoid qualified as M
@@ -79,7 +80,7 @@ import PlutusTx.Monoid (Group (inv))
 import Test.QuickCheck.Instances.UUID ()
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
-import Wallet.API (WalletAPIError, ownPaymentPubKeyHash)
+import Wallet.API (WalletAPIError, ownAddresses)
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
@@ -335,8 +336,7 @@ guessingGameTest =
               let openingBalance = 100_000_000_000
                   lockAmount = 15_000_000
                   pubKeyHashFundsChange cid msg delta = do
-                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet (Just cid) ownPaymentPubKeyHash
-                                                     <*> pure Nothing
+                        address <- NonEmpty.head <$> Simulator.handleAgentThread defaultWallet (Just cid) ownAddresses
                         balance <- Simulator.valueAt address
                         fees <- Simulator.walletFees defaultWallet
                         assertEqual msg

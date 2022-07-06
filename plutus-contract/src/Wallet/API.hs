@@ -24,6 +24,9 @@ module Wallet.API(
     WalletEffect,
     submitTxn,
     ownPaymentPubKeyHash,
+    ownPaymentPubKeyHashes,
+    ownFirstPaymentPubKeyHash,
+    ownAddresses,
     balanceTx,
     yieldUnbalancedTx,
     NodeClientEffect,
@@ -62,19 +65,50 @@ import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logWarn)
 import Data.Default (Default (def))
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
-import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), Params (..), PaymentPubKeyHash, PubKey (PubKey, getPubKey),
-               PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after, always, before, contains,
-               interval, isEmpty, member, singleton, width)
+import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), Params (..), PaymentPubKeyHash (PaymentPubKeyHash),
+               PubKey (PubKey, getPubKey), PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after,
+               always, before, contains, interval, isEmpty, member, singleton, width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (adjustUnbalancedTx)
 import Ledger.TimeSlot qualified as TimeSlot
-import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownPaymentPubKeyHash,
+import Plutus.V1.Ledger.Address (toPubKeyHash)
+import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownAddresses,
                        publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (AdjustingUnbalancedTx))
-import Wallet.Error (WalletAPIError (PaymentMkTxError, ToCardanoError))
+import Wallet.Error (WalletAPIError (NoPaymentPubKeyHashError, PaymentMkTxError, ToCardanoError))
 import Wallet.Error qualified
+
+{-# DEPRECATED ownPaymentPubKeyHash "Use ownFirstPaymentPubKeyHash, ownPaymentPubKeyHashes or ownAddresses instead" #-}
+
+ownPaymentPubKeyHash ::
+    ( Member WalletEffect effs
+    , Member (Error WalletAPIError) effs
+    )
+    => Eff effs PaymentPubKeyHash
+ownPaymentPubKeyHash = ownFirstPaymentPubKeyHash
+
+ownPaymentPubKeyHashes ::
+    ( Member WalletEffect effs
+    )
+    => Eff effs [PaymentPubKeyHash]
+ownPaymentPubKeyHashes = do
+    addrs <- ownAddresses
+    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ NonEmpty.toList addrs
+
+ownFirstPaymentPubKeyHash ::
+    ( Member WalletEffect effs
+    , Member (Error WalletAPIError) effs
+    )
+    => Eff effs PaymentPubKeyHash
+ownFirstPaymentPubKeyHash = do
+    pkhs <- ownPaymentPubKeyHashes
+    case pkhs of
+      []      -> throwError NoPaymentPubKeyHashError
+      (pkh:_) -> pure pkh
 
 -- | Transfer some funds to an address locked by a public key, returning the
 --   transaction that was submitted.

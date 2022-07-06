@@ -36,7 +36,7 @@ common lang
     ScopedTypeVariables
     StandaloneDeriving
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wunused-packages
@@ -63,16 +63,20 @@ library
     Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
     Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators
     Plutus.Script.Utils.V1.Typed.Scripts.Validators
+    Plutus.Script.Utils.V1.Typed.TypeUtils
 
   build-depends:
+    , aeson
     , base                   >=4.9  && <5
     , bytestring
     , cardano-api            >=1.34
     , cardano-ledger-alonzo
+    , mtl
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
+    , prettyprinter
     , serialise
 
   ghc-options:      -fprint-potential-instances
