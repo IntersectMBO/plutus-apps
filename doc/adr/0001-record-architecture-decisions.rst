@@ -3,7 +3,7 @@ ADR 1: Record architectural decisions
 
 Date: 2022-06-08
 
-Author(s)
+Authors
 ---------
 
 koslambrou <konstantinos.lambrou@iohk.io>
@@ -83,6 +83,15 @@ What follows is the ADR format (adapted from the book).
 |                      | For example, "ADR 1: Deployment on Ruby on Rails 3.0.10"                  |
 |                      | or "ADR 9: LDAP for Multitenant Integration"                              |
 +----------------------+---------------------------------------------------------------------------+
+| Authors              | List each author's name and email.                                        |
++----------------------+---------------------------------------------------------------------------+
+| Status               | State the status of the decision, such as "draft" if the decision is      |
+|                      | still being written, as "proposed" if the project stakeholders haven't    |
+|                      | agreed with it yet, "accepted" once it is agreed. If a later ADR changes  |
+|                      | or reverses a decision, it may be marked as "deprecated" or "superseded"  |
+|                      | with a reference to its replacement. (This is not the status of           |
+|                      | implementing the decision.)                                               |
++----------------------+---------------------------------------------------------------------------+
 | Issue (or context)   | This section describes the architectural design issue being addressed.    |
 |                      | This description should leave no questions as to why this issue needs to  |
 |                      | be addressed now. The language in this section is value-neutral. It is    |
@@ -91,13 +100,6 @@ What follows is the ADR format (adapted from the book).
 | Decision             | Clearly state the solution chosen. It is the selection of one of the      |
 |                      | positions that the architect could have taken. It is stated in full       |
 |                      | sentences, with active voice. "We will …"                                 |
-+----------------------+---------------------------------------------------------------------------+
-| Status               | State the status of the decision, such as "draft" if the decision is      |
-|                      | still being written, as "proposed" if the project stakeholders haven't    |
-|                      | agreed with it yet, "accepted" once it is agreed. If a later ADR changes  |
-|                      | or reverses a decision, it may be marked as "deprecated" or "superseded"  |
-|                      | with a reference to its replacement. (This is not the status of           |
-|                      | implementing the decision.)                                               |
 +----------------------+---------------------------------------------------------------------------+
 | Tags                 | Add one or more tags to the decision. Useful for organizing the set of    |
 |                      | decision.                                                                 |
