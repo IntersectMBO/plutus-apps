@@ -70,7 +70,7 @@ getAddressFromReference (tHash, idx) = getTxUtxos tHash <&> (getAddress . _trans
 
 -- TODO: Support addresses with more than 100 utxos
 checkIsUtxo :: MonadBlockfrost m => (TxHash, Integer) -> m Bool
-checkIsUtxo ref@(tHash, idx) = getAddressFromReference ref >>= (maybe (pure []) getAddressUtxos) <&> any matchUtxo
+checkIsUtxo ref@(tHash, idx) = getAddressFromReference ref >>= maybe (pure []) getAddressUtxos <&> any matchUtxo
   where
     matchUtxo :: AddressUtxo -> Bool
     matchUtxo AddressUtxo{..} = (tHash == _addressUtxoTxHash) && (idx == _addressUtxoOutputIndex)

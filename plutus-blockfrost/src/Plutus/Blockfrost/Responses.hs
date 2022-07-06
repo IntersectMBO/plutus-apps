@@ -19,13 +19,15 @@ import Data.Aeson.QQ
 import Data.Maybe (fromJust)
 import Data.Text (Text)
 import Data.Text qualified as Text (drop)
+import Text.Hex (decodeHex)
 
 import Blockfrost.Client
 import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
+import Ledger.Slot qualified as Ledger (Slot)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
 import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse)
-import Plutus.ChainIndex.Types (Tip (..))
+import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, StakeValidator, Validator, ValidatorHash, unitDatum)
@@ -62,27 +64,18 @@ processGetDatum sdt = case sdt of
     decodeData = PlutusTx.fromBuiltinData . PlutusTx.dataToBuiltinData . Shelley.toPlutusData
 
 processTip :: Block -> IO Tip
-processTip Block{..} = return ((fromSucceed $ JSON.fromJSON hcJSON) :: Tip)
+processTip Block{..} = return $ Tip { tipSlot = slotNumber
+                                    , tipBlockId = blockId
+                                    , tipBlockNo = blockNo}
   where
-      slotNumber :: Slot
-      slotNumber = fromJust _blockSlot
+    slotNumber :: Ledger.Slot
+    slotNumber = fromIntegral $ unSlot $ fromJust _blockSlot
 
-      blockNo :: Integer
-      blockNo = fromJust _blockHeight
+    blockNo :: BlockNumber
+    blockNo = BlockNumber $ fromIntegral $ fromJust  _blockHeight
 
-      blockId :: Text
-      blockId = unBlockHash _blockHash
-
-      hcJSON :: JSON.Value
-      hcJSON = [aesonQQ|{
-                "tag": "Tip",
-                "tipBlockNo": #{blockNo},
-                "tipBlockId": #{blockId},
-                "tipSlot": {
-                    "getSlot": #{slotNumber}
-                }
-                }
-                |]
+    blockId :: BlockId
+    blockId =  BlockId $ fromJust $ decodeHex $ unBlockHash _blockHash
 
 processGetValidator :: PlutusValidator a => Maybe ScriptCBOR -> IO (Maybe a)
 processGetValidator = maybe (pure Nothing) buildResponse
@@ -99,7 +92,7 @@ processUnspentTxOut idx (Just outs) =
   case filterByIndex of
     []  -> pure Nothing
     [x] -> buildResponse x
-    _   -> ioError $ (userError "Multiple UTxOs with the same index found!!!")
+    _   -> ioError (userError "Multiple UTxOs with the same index found!!!")
   where
     filterByIndex :: [UtxoOutput]
     filterByIndex = filter ((==) idx . _utxoOutputOutputIndex) outs
