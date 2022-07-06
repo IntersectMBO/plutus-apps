@@ -114,7 +114,7 @@ library
     , base                            >=4.9   && <5
     , base16-bytestring               >=1
     , bytestring
-    , cardano-api:{cardano-api, gen}
+    , cardano-api:{cardano-api, gen}  >=1.35
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
@@ -130,7 +130,7 @@ library
     , data-default
     , deepseq
     , flat
-    , freer-extras
+    , freer-extras                    >=1.0.0
     , hashable
     , hedgehog
     , http-api-data
@@ -143,7 +143,7 @@ library
     , ouroboros-consensus-shelley
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
-    , plutus-script-utils
+    , plutus-script-utils             >=1.0.0
     , plutus-tx                       >=1.0.0
     , prettyprinter
     , scientific
@@ -164,9 +164,9 @@ library
   build-depends:
     , aeson
     , array
-    , base                            >=4.9  && <5
+    , base                            >=4.9   && <5
     , bytestring
-    , cardano-api:{cardano-api, gen}
+    , cardano-api:{cardano-api, gen}  >=1.35
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
@@ -180,7 +180,7 @@ library
     , cryptonite                      >=0.25
     , data-default
     , deepseq
-    , freer-extras
+    , freer-extras                    >=1.0.0
     , hashable
     , hedgehog
     , http-api-data
@@ -190,10 +190,10 @@ library
     , mtl
     , openapi3
     , ouroboros-consensus-shelley
-    , plutus-core
-    , plutus-ledger-api
-    , plutus-script-utils
-    , plutus-tx
+    , plutus-core                     >=1.0.0
+    , plutus-ledger-api               >=1.0.0
+    , plutus-script-utils             >=1.0.0
+    , plutus-tx                       >=1.0.0
     , prettyprinter
     , scientific
     , serialise
@@ -208,7 +208,7 @@ library
   ghc-options:        -fprint-potential-instances
 
   if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
+    build-depends: plutus-tx-plugin >=1.0.0
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -225,13 +225,13 @@ test-suite plutus-ledger-test
     , aeson
     , base                            >=4.9   && <5
     , bytestring
-    , cardano-api:{cardano-api, gen}
+    , cardano-api:{cardano-api, gen}  >=1.35
     , containers
     , data-default
     , hedgehog
-    , plutus-ledger
+    , plutus-ledger                   >=1.0.0
     , plutus-ledger-api               >=1.0.0
-    , plutus-script-utils
+    , plutus-script-utils             >=1.0.0
     , plutus-tx                       >=1.0.0
     , tasty
     , tasty-hedgehog

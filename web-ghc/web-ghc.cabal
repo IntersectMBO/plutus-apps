@@ -1,6 +1,6 @@
 cabal-version: 2.0
 name:          web-ghc
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -43,12 +43,12 @@ library
 
   build-depends:
       aeson
-    , base               >=4.7 && <5
+    , base               >=4.7   && <5
     , exceptions
     , filepath
     , mtl
     , newtype-generics
-    , playground-common
+    , playground-common  >=1.0.0
     , servant-client
     , servant-server
     , temporary
@@ -68,11 +68,11 @@ executable web-ghc-server
     -Wunused-packages
 
   build-depends:
-      base                  >=4.7 && <5
+      base                  >=4.7   && <5
     , data-default-class
     , monad-logger
     , optparse-applicative
-    , playground-common
+    , playground-common     >=1.0.0
     , prometheus
     , servant-server
     , text

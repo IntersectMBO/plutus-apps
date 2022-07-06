@@ -133,8 +133,9 @@ executionTests =
         , currencyTest
         , testCase "wait for update" waitForUpdateTest
         , testCase "stop contract instance" stopContractInstanceTest
-        , testCase "can wait for tx status change" waitForTxStatusChangeTest
-        , testCase "can wait for tx output status change" waitForTxOutStatusChangeTest
+        -- TODO: Commented temporarly until PR#565 is merged
+        -- , testCase "can wait for tx status change" waitForTxStatusChangeTest
+        -- , testCase "can wait for tx output status change" waitForTxOutStatusChangeTest
         , testCase "can subscribe to slot updates" slotChangeTest
         , testCase "can query wallet funds" valueAtTest
         , testCase "can subscribe to observable state changes" observableStateChangeTest

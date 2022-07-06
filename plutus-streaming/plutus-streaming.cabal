@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               plutus-streaming
-version:            0.1.0.0
+version:            1.0.0.0
 author:             Andrea Bedini
 maintainer:         andrea.bedini@iohk.io
 extra-source-files: CHANGELOG.md
@@ -33,8 +33,8 @@ library
   exposed-modules: Plutus.Streaming
   build-depends:
     , async
-    , base               >=4.9 && <5
-    , cardano-api
+    , base               >=4.9  && <5
+    , cardano-api        >=1.35
     , ouroboros-network
     , stm
     , streaming
@@ -49,10 +49,10 @@ executable plutus-streaming-example-1
 
   build-depends:
     , aeson
-    , base                  >=4.9 && <5
+    , base                  >=4.9  && <5
     , base16-bytestring
     , bytestring
-    , cardano-api
+    , cardano-api           >=1.35
     , optparse-applicative
     , plutus-streaming
     , streaming
@@ -68,13 +68,13 @@ executable plutus-streaming-example-2
 
   build-depends:
     , aeson
-    , base                  >=4.9 && <5
+    , base                  >=4.9   && <5
     , base16-bytestring
     , bytestring
-    , cardano-api
+    , cardano-api           >=1.35
     , optparse-applicative
-    , plutus-ledger
-    , plutus-script-utils
+    , plutus-ledger         >=1.0.0
+    , plutus-script-utils   >=1.0.0
     , plutus-streaming
     , streaming
 
@@ -88,11 +88,11 @@ executable plutus-streaming-example-3
 
   build-depends:
     , aeson
-    , base                     >=4.9 && <5
+    , base                     >=4.9   && <5
     , base16-bytestring
     , bytestring
-    , cardano-api
+    , cardano-api              >=1.35
     , optparse-applicative
-    , plutus-chain-index-core
+    , plutus-chain-index-core  >=1.0.0
     , plutus-streaming
     , streaming
