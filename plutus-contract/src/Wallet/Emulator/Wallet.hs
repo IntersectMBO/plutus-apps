@@ -56,7 +56,7 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Ledger.Fee (estimateTransactionFee, makeTransactionBodyAutoBalance)
+import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (makeTransactionBody)
 import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
@@ -341,7 +341,7 @@ handleBalance utx' = do
             pure $ Tx.Both tx (Tx.CardanoApiEmulatorEraTx cTx)
         Left txBodyContent -> do
             ownPaymentPubKey <- gets ownPaymentPublicKey
-            cTx <- handleError eitherTx $ makeTransactionBodyAutoBalance params cUtxoIndex txBodyContent (Ledger.pubKeyAddress ownPaymentPubKey Nothing)
+            cTx <- handleError eitherTx $ makeAutoBalancedTransaction params cUtxoIndex txBodyContent (Ledger.pubKeyAddress ownPaymentPubKey Nothing)
             pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
     where
         handleError tx (Left (Left (ph, ve))) = do

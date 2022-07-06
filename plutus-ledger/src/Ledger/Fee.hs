@@ -1,7 +1,7 @@
 -- | Calculating transaction fees in the emulator.
 module Ledger.Fee(
   estimateTransactionFee,
-  makeTransactionBodyAutoBalance
+  makeAutoBalancedTransaction
 ) where
 
 import Cardano.Api.Shelley qualified as C.Api
@@ -29,14 +29,15 @@ estimateTransactionFee params utxo requiredSigners tx = do
   case C.Api.evaluateTransactionFee (pProtocolParams params) txBody nkeys 0 of
     C.Api.Lovelace fee -> pure $ lovelaceValueOf fee
 
-
-makeTransactionBodyAutoBalance
+-- | Creates a balanced transaction by calculating the execution units, the fees and the change,
+-- which is assigned to the given address.
+makeAutoBalancedTransaction
   :: Params
-  -> UTxO EmulatorEra
+  -> UTxO EmulatorEra -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoBuildTx
-  -> Address
+  -> Address -- ^ Change address
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
-makeTransactionBodyAutoBalance params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
+makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
   cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
   -- Compute the change.
   C.Api.BalancedTxBody _ change _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr []
