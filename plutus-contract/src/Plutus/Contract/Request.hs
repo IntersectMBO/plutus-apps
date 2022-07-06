@@ -414,6 +414,7 @@ utxoRefsWithCurrency pq assetClass = do
     E.UtxoSetWithCurrencyResponse r -> pure r
     r                               -> throwError $ review _ChainIndexContractError ("UtxoSetWithCurrencyResponse", r)
 
+
 -- | Fold through each 'Page's of unspent 'TxOutRef's at a given 'Address', and
 -- accumulate the result.
 foldUtxoRefsAt ::
