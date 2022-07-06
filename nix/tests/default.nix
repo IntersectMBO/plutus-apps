@@ -49,7 +49,7 @@ pkgs.recurseIntoAttrs {
     inherit fixPngOptimization;
   };
 
-  # vmTests = pkgs.callPackage ./vm.nix {
-  #   inherit vmCompileTests plutus-playground web-ghc docs;
-  # };
+  vmTests = pkgs.callPackage ./vm.nix {
+    inherit vmCompileTests plutus-playground web-ghc docs;
+  };
 }
