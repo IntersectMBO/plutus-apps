@@ -33,10 +33,8 @@ getDatumBlockfrost dHash = getScriptDatum dHash <&> _scriptDatumJsonValue
 getValidatorBlockfrost :: MonadBlockfrost m => ScriptHash -> m ScriptCBOR
 getValidatorBlockfrost = getScriptCBOR
 
-getUnspentTxOutBlockfrost :: MonadBlockfrost m => (TxHash, Integer) -> m UtxoOutput
-getUnspentTxOutBlockfrost (txHash, idx) = do
-    utxos <- getTxUtxos txHash
-    return $ _transactionUtxosOutputs utxos !! fromIntegral idx
+getUnspentTxOutBlockfrost :: MonadBlockfrost m => TxHash -> m [UtxoOutput]
+getUnspentTxOutBlockfrost tHash = getTxUtxos tHash <&> _transactionUtxosOutputs
 
 getIsUtxoBlockfrost :: MonadBlockfrost m => (TxHash, Integer) -> m (Block, Bool)
 getIsUtxoBlockfrost ref = do

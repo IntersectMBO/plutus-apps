@@ -4,19 +4,16 @@
 
 module Plutus.Blockfrost.Client(handleBlockfrostClient) where
 
-import Blockfrost.Client (Address, BlockfrostClientT, BlockfrostError (BlockfrostNotFound), projectFromFile,
-                          runBlockfrost)
-import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
-import Control.Monad.Freer.Error (Error, throwError)
-import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
+import Blockfrost.Client (BlockfrostClientT, BlockfrostError (BlockfrostNotFound), projectFromFile, runBlockfrost)
+import Control.Monad.Freer (Eff, LastMember, type (~>))
 import Control.Monad.IO.Class (MonadIO (..))
+import Ledger.Tx (TxOutRef (..))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
-
-import Plutus.V1.Ledger.Api (Credential (..), TxOutRef)
 
 import Plutus.Blockfrost.Queries
 import Plutus.Blockfrost.Responses
 import Plutus.Blockfrost.Utils
+
 
 -- | Handle 'ChainIndexQueryEffect' by making HTTP calls to the remote
 --   blockfrost server.
@@ -56,7 +53,7 @@ handleBlockfrostClient event = liftIO $ do
         ValidatorFromHash d      -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         MintingPolicyFromHash d  -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         StakeValidatorFromHash d -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-        UnspentTxOutFromRef r    -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostRef) r     >>= processUnspentTxOut
+        UnspentTxOutFromRef r    -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostTxHash) r  >>= processUnspentTxOut (txOutRefIdx r)
         UtxoSetMembership r      -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
         UtxoSetAtAddress pq a    -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxos pq
         UtxoSetWithCurrency pq a -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq

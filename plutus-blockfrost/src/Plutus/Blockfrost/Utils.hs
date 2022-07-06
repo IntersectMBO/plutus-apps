@@ -15,7 +15,8 @@ import Data.ByteString qualified as BS (unpack)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.String
-import Data.Text (Text, drop, pack, take, unpack)
+import Data.Text (Text, pack, unpack)
+import Data.Text qualified as Text (drop, take)
 import Data.Text.Encoding
 import Text.Hex (decodeHex, encodeHex)
 import Text.Read (readMaybe)
@@ -113,23 +114,23 @@ discreteCurrencyToValue :: Money.SomeDiscrete -> Ledger.Value
 discreteCurrencyToValue sd = singleton pid tn quant
   where
     pid :: CurrencySymbol
-    pid = fromString $ unpack $ Data.Text.take 56 $ someDiscreteCurrency sd
+    pid = fromString $ unpack $ Text.take 56 $ someDiscreteCurrency sd
 
     tn :: TokenName
-    tn =  TokenName $ toBuiltin $ fromJust $ decodeHex $ Data.Text.drop 56 $ someDiscreteCurrency sd
+    tn =  TokenName $ toBuiltin $ fromJust $ decodeHex $ Text.drop 56 $ someDiscreteCurrency sd
 
     quant :: Integer
     quant = someDiscreteAmount sd
 
-lovelaceDecimalConfig :: Money.DecimalConf
-lovelaceDecimalConfig = Money.defaultDecimalConf
+lovelaceConfig :: Money.DecimalConf
+lovelaceConfig = Money.defaultDecimalConf
   { Money.decimalConf_digits = 0
   , Money.decimalConf_scale =
         Money.scale (Proxy @(Money.UnitScale "ADA" "lovelace"))
   }
 
 lovelacesToMInt :: Lovelaces -> Maybe Integer
-lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceDecimalConfig Money.Round
+lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceConfig Money.Round
 
 lovelacesToValue :: Lovelaces -> Ledger.Value
 lovelacesToValue lov = case lovelacesToMInt lov of
