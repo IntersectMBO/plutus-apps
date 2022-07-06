@@ -10,14 +10,11 @@
 module Plutus.Blockfrost.Utils where
 
 import Data.Aeson
-import Data.Aeson.QQ
-import Data.ByteString qualified as BS (unpack)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.String
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as Text (drop, take)
-import Data.Text.Encoding
 import Text.Hex (decodeHex, encodeHex)
 import Text.Read (readMaybe)
 
@@ -29,7 +26,7 @@ import Ledger.Tx.CardanoAPI
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
 import Plutus.V1.Ledger.Address qualified as LA
-import Plutus.V1.Ledger.Api (Credential (..), PubKeyHash, adaSymbol, adaToken, fromBuiltin, toBuiltin)
+import Plutus.V1.Ledger.Api (Credential (..), adaSymbol, adaToken, fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
 import Plutus.V1.Ledger.Scripts qualified as PS
 import Plutus.V1.Ledger.Value hiding (Value)
@@ -63,31 +60,28 @@ toBlockfrostRef :: TxOutRef -> (TxHash, Integer)
 toBlockfrostRef ref = (toBlockfrostTxHash ref, txOutRefIdx ref)
 
 toBlockfrostAssetId :: AssetClass -> AssetId
-toBlockfrostAssetId ac = fromString (polId ++ name)
+toBlockfrostAssetId ac = fromString (polId ++ tName)
   where
     (cs, tn) = unAssetClass ac
 
     polId :: String
     polId = (unpack . encodeHex . fromBuiltin . unCurrencySymbol) cs
 
-    name :: String
-    name = (unpack . encodeHex . fromBuiltin . unTokenName) tn
+    tName :: String
+    tName = (unpack . encodeHex . fromBuiltin . unTokenName) tn
 
 textToDatumHash :: Text -> PS.DatumHash
-textToDatumHash dHash = fromSucceed $ fromJSON dHashJson
-  where
-    dHashJson :: Value
-    dHashJson = [aesonQQ| #{dHash} |]
+textToDatumHash = PS.DatumHash . toBuiltin . fromJust . decodeHex
 
 toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
-toPlutusAddress addr = case deserialized of
+toPlutusAddress bAddr = case deserialized of
     Nothing -> Left "Error deserializing the Address"
     Just des -> case fromCardanoAddress (Api.shelleyAddressInEra @ShelleyEra des) of
         Left err   -> Left ("Error parsing address " ++ show err)
         Right addr -> Right addr
   where
     deserialized :: Maybe (Api.Address ShelleyAddr)
-    deserialized = deserialiseAddress AsShelleyAddress (unAddress addr)
+    deserialized = deserialiseAddress AsShelleyAddress (unAddress bAddr)
 
 credentialToAddress :: Credential -> Blockfrost.Address
 credentialToAddress c = case toCardanoAddress netId pAddress of
