@@ -15,7 +15,7 @@ module Plutus.Blockfrost.Queries (
     ) where
 
 import Control.Concurrent.Async (mapConcurrently)
-import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
+import Control.Monad.Freer.Extras.Pagination (PageQuery (..))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Value)
 import Data.Functor ((<&>))
@@ -44,34 +44,36 @@ getIsUtxoBlockfrost ref = do
 
 -- TODO: Pagination Support
 getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
-getUtxoAtAddressBlockfrost pq addr = do
+getUtxoAtAddressBlockfrost _ addr = do
     tip <- getTipBlockfrost
     utxos <- getAddressUtxos' addr (paged 50 1) def
     return (tip, utxos)
 
 -- TODO: Pagination Support
 getUtxoSetWithCurrency :: MonadBlockfrost m => PageQuery a -> AssetId -> m (Block, [AddressUtxo])
-getUtxoSetWithCurrency _ asset = do
+getUtxoSetWithCurrency _ assetId = do
     tip <- getTipBlockfrost
-    xs <- getAssetAddresses asset
-    utxos <- liftIO $ mapConcurrently (flip getAddressUtxosAsset asset . _assetAddressAddress) xs
+    xs <- getAssetAddresses assetId
+    utxos <- liftIO $ mapConcurrently (flip getAddressUtxosAsset assetId . _assetAddressAddress) xs
     let retUtxos = (take 50 . concat) utxos
     return (tip, retUtxos)
 
 -- UTIL FUNCTIONS
 
-getAddressFromReference :: MonadBlockfrost m => (TxHash, Integer) -> m Address
-getAddressFromReference (txHash, idx) = getTxUtxos txHash <&> (getAddress . _transactionUtxosOutputs)
+getAddressFromReference :: MonadBlockfrost m => (TxHash, Integer) -> m (Maybe Address)
+getAddressFromReference (tHash, idx) = getTxUtxos tHash <&> (getAddress . _transactionUtxosOutputs)
   where
-    getAddress :: [UtxoOutput] -> Address
-    getAddress list = _utxoOutputAddress (list !! fromIntegral idx)
+    getAddress :: [UtxoOutput] -> Maybe Address
+    getAddress outs = case filter ((==) idx . _utxoOutputOutputIndex) outs of
+        [out] -> Just $ _utxoOutputAddress out
+        _     -> Nothing
 
 -- TODO: Support addresses with more than 100 utxos
 checkIsUtxo :: MonadBlockfrost m => (TxHash, Integer) -> m Bool
-checkIsUtxo ref@(txHash, idx) = getAddressFromReference ref >>= getAddressUtxos <&> any matchUtxo
+checkIsUtxo ref@(tHash, idx) = getAddressFromReference ref >>= (maybe (pure []) getAddressUtxos) <&> any matchUtxo
   where
     matchUtxo :: AddressUtxo -> Bool
-    matchUtxo AddressUtxo{..} = (txHash == _addressUtxoTxHash) && (idx == _addressUtxoOutputIndex)
+    matchUtxo AddressUtxo{..} = (tHash == _addressUtxoTxHash) && (idx == _addressUtxoOutputIndex)
 
 -- DEFAULT RESPONSES
 
