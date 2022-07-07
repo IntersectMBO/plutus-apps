@@ -138,6 +138,21 @@ Can we provide example queries?
 
 ### Installation Procedures
 
+The `marconi` executable is available as a nix flake.
+
+You may either clone the [`plutus-apps`](https://github.com/input-output-hk/plutus-apps)
+repository and run from the top-level:
+``` 
+nix build .#marconi
+``` 
+Or you may run from anywhere:
+```
+nix build github:input-output-hk/plutus-apps#marconi
+``` 
+
+Both commands will produce a `result` directory containing the executable 
+`result/bin/marconi`.
+
 ### Configuration Procedures
 
 ## How to Contribute

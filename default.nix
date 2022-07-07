@@ -64,6 +64,8 @@ rec {
 
   plutus-chain-index = plutus-apps.haskell.packages.plutus-chain-index.components.exes.plutus-chain-index;
 
+  marconi = plutus-apps.haskell.packages.plutus-chain-index.components.exes.marconi;
+
   tests = import ./nix/tests/default.nix {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;
