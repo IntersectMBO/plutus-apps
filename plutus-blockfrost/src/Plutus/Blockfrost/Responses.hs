@@ -13,7 +13,7 @@ module Plutus.Blockfrost.Responses (
     , processGetUtxos
     ) where
 
-import Control.Monad.Freer.Extras.Pagination (PageQuery (..))
+import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
 import Data.Aeson qualified as JSON
 import Data.Aeson.QQ
 import Data.Maybe (fromJust)
@@ -26,13 +26,16 @@ import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
-import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse)
+import Plutus.ChainIndex.Api (IsUtxoResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
+import Plutus.V1.Ledger.Api (toBuiltin)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, StakeValidator, Validator, ValidatorHash, unitDatum)
 import Plutus.V1.Ledger.Scripts qualified as Ledger (DatumHash)
+import Plutus.V1.Ledger.TxId qualified as Ledger
 import Plutus.V1.Ledger.Value qualified as Ledger
+
 import PlutusTx qualified
 
 import Plutus.Blockfrost.Utils
@@ -78,7 +81,8 @@ processTip Block{..} = return $ Tip { tipSlot = slotNumber
     blockId =  BlockId $ fromJust $ decodeHex $ unBlockHash _blockHash
 
 processGetValidator :: PlutusValidator a => Maybe ScriptCBOR -> IO (Maybe a)
-processGetValidator = maybe (pure Nothing) buildResponse
+processGetValidator Nothing = pure Nothing
+processGetValidator (Just val) = buildResponse val
   where
     buildResponse :: PlutusValidator a => ScriptCBOR -> IO (Maybe a)
     buildResponse = maybe (pure Nothing) retFromCbor . _scriptCborCbor
@@ -124,43 +128,27 @@ processUnspentTxOut idx (Just outs) =
 processIsUtxo :: (Block, Bool) -> IO IsUtxoResponse
 processIsUtxo (blockN, isUtxo) = do
     tip <- processTip blockN
-    return ((fromSucceed $ JSON.fromJSON $ hcJSON tip) :: IsUtxoResponse)
-  where
-    hcJSON :: Tip -> JSON.Value
-    hcJSON tip = [aesonQQ|{
-                "currentTip": #{tip},
-                "isUtxo": #{isUtxo}
-                }
-                |]
+    return $ IsUtxoResponse {currentTip=tip, isUtxo=isUtxo}
 
 processGetUtxos :: PageQuery TxOutRef -> (Block, [AddressUtxo]) ->  IO UtxosResponse
 processGetUtxos pq (blockN, xs) = do
     tip <- processTip blockN
-    return ((fromSucceed $ JSON.fromJSON $ hcJSON tip) :: UtxosResponse)
+    return $ UtxosResponse {currentTip=tip, page=page}
   where
-      hcJSON :: Tip -> JSON.Value
-      hcJSON tip = [aesonQQ| {
-                  "currentTip": #{tip},
-                  "page": {
-                    "currentPageQuery" : #{pq},
-                    "nextPageQuery": #{nextItem},
-                    "pageItems": #{items}
-                  }
-                }
-                 |]
-
-      nextItem :: Maybe TxOutRef
-      nextItem = Nothing
+      page :: Page TxOutRef
+      page = Page {currentPageQuery=pq
+                  , nextPageQuery=Nothing
+                  , pageItems=items}
 
       items :: [TxOutRef]
       items = map transform xs
 
       transform :: AddressUtxo -> TxOutRef
-      transform utxo = fromSucceed $ JSON.fromJSON $ txRefJSON utxo
+      transform utxo =
+        TxOutRef {txOutRefId=toTxId utxo
+                 ,txOutRefIdx=_addressUtxoOutputIndex utxo}
 
-      txRefJSON :: AddressUtxo -> JSON.Value
-      txRefJSON utxo = [aesonQQ| {
-                          "txOutRefId":{ "getTxId" : #{_addressUtxoTxHash utxo}},
-                          "txOutRefIdx": #{_addressUtxoOutputIndex utxo}
-                          }
-                        |]
+      toTxId :: AddressUtxo -> Ledger.TxId
+      toTxId utxo =
+        Ledger.TxId {getTxId=toBuiltin $ fromJust $ decodeHex $ unTxHash $ _addressUtxoTxHash utxo}
+
