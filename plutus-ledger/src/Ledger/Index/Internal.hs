@@ -4,15 +4,9 @@
 {-# LANGUAGE DerivingVia         #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ledger.Index.Internal where
-
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
 
 import Prelude hiding (lookup)
 
@@ -36,8 +30,6 @@ newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
     deriving stock (Show, Generic)
     deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON, NFData)
-
-type EmulatorEra = AlonzoEra StandardCrypto
 
 
 -- | A reason why a transaction is invalid.

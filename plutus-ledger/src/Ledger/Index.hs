@@ -29,7 +29,6 @@ module Ledger.Index(
     ValidationError(..),
     ValidationErrorInPhase,
     ValidationPhase(..),
-    EmulatorEra,
     InOutMatch(..),
     minFee,
     maxFee,

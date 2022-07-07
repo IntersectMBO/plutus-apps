@@ -21,7 +21,7 @@
 
 module Wallet.Emulator.Wallet where
 
-import Cardano.Api.Shelley (protocolParamCollateralPercent)
+import Cardano.Api.Shelley (makeSignedTransaction, protocolParamCollateralPercent)
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
 import Control.Monad (foldM, (<=<))
@@ -56,8 +56,10 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
+import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
+import Ledger.Tx.CardanoAPI (makeTransactionBody)
+import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -317,29 +319,41 @@ handleBalance utx' = do
     utxo <- get >>= ownOutputs
     params@Params { pSlotConfig } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
-    let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-    cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
-    -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
-    let calcFee n fee = do
-            tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-            newFee <- handleError tx $ evaluateTransactionFee params cUtxoIndex requiredSigners tx
-            if newFee /= fee
-                then if n == (0 :: Int)
-                    -- If we don't reach a fixed point, pick the larger fee
-                    then pure (newFee PlutusTx.\/ fee)
-                    else calcFee (n - 1) newFee
-                else pure newFee
-    -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
-    theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
-    tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-    cTx <- handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
-    pure $ Tx.Both tx' (Tx.CardanoApiEmulatorEraTx cTx)
+        requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+        eitherTx = view U.cardanoTx utx
+    cUtxoIndex <- handleError eitherTx $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
+    case eitherTx of
+        Right _ -> do
+            -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
+            let calcFee n fee = do
+                    tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
+                    newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
+                    if newFee /= fee
+                        then if n == (0 :: Int)
+                            -- If we don't reach a fixed point, pick the larger fee
+                            then pure (newFee PlutusTx.\/ fee)
+                            else calcFee (n - 1) newFee
+                        else pure newFee
+            -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
+            theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
+            tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
+            cTx <- handleError (Right tx) $ fromPlutusTx params cUtxoIndex requiredSigners tx
+            pure $ Tx.Both tx (Tx.CardanoApiEmulatorEraTx cTx)
+        Left txBodyContent -> do
+            ownPaymentPubKey <- gets ownPaymentPublicKey
+            cTx <- handleError eitherTx $ makeAutoBalancedTransaction params cUtxoIndex txBodyContent (Ledger.pubKeyAddress ownPaymentPubKey Nothing)
+            pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
     where
         handleError tx (Left (Left (ph, ve))) = do
+            tx' <- either (throwError . WAPI.ToCardanoError)
+                           pure
+                 $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction []) . makeTransactionBody mempty)
+                            (pure . Tx.EmulatorTx)
+                 $ tx
             let sves = case ve of
                     Ledger.ScriptFailure f -> [Ledger.ScriptValidationResultOnlyEvent (Left f)]
                     _                      -> []
-            logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve sves mempty
+            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve sves mempty
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v

@@ -24,10 +24,6 @@ nodeServerConfig:
   pscSlotConfig:
     scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
     scSlotLength: 1000 # In milliseconds
-  pscFeeConfig:
-    fcConstantFee:
-      getLovelace: 10 # Constant fee per transaction in lovelace
-    fcScriptsFeeFactor: 1.0 # Factor by which to multiply size-dependent scripts fee in lovelace
   pscInitialTxWallets: []
   pscNodeMode: AlonzoNode
 

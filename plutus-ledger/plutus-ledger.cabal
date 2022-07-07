@@ -124,6 +124,7 @@ library
     , memory
     , mtl
     , openapi3
+    , ouroboros-consensus
     , ouroboros-consensus-shelley
     , plutus-core
     , plutus-ledger-api

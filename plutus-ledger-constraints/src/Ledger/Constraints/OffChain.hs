@@ -56,6 +56,7 @@ module Ledger.Constraints.OffChain(
     , addMintingRedeemers
     , addMissingValueSpent
     , updateUtxoIndex
+    , lookupTxOutRef
     ) where
 
 import Control.Lens (Traversal', _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
