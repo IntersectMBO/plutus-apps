@@ -145,7 +145,7 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
 import Data.Foldable (fold)
 import Data.List.NonEmpty qualified as NonEmpty
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse (page), paget)
+import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse (..), TxosResponse, UtxosResponse (page), paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
@@ -439,6 +439,32 @@ ownUtxos = do
     addrs <- ownAddresses
     fold <$> mapM utxosAt (NonEmpty.toList addrs)
 
+-- | Go through each 'Page's of 'QueryResponse', and collect the results.
+collectQueryResponse ::
+    forall w s e a.
+    (PageQuery TxOutRef -> Contract w s e (QueryResponse a)) -- ^ query response function
+    -> Contract w s e [a]
+collectQueryResponse q = go (Just def)
+  where
+    go Nothing = pure []
+    go (Just pq) = do
+      res <- q pq
+      (queryResult res :) <$> go (nextQuery res)
+
+-- | Get all the unspent transaction output at an address w.r.t. a page query TxOutRef
+queryUnspentTxOutsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> PageQuery TxOutRef
+    -> Contract w s e (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+queryUnspentTxOutsAt addr pq = do
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  case cir of
+    E.UnspentTxOutsAtResponse r -> pure r
+    r                           -> throwError $ review _ChainIndexContractError ("UnspentTxOutAtResponse", r)
+
 -- | Get the unspent transaction outputs at an address.
 utxosAt ::
     forall w s e.
@@ -446,16 +472,8 @@ utxosAt ::
     )
     => Address
     -> Contract w s e (Map TxOutRef ChainIndexTxOut)
-utxosAt addr = do
-  foldUtxoRefsAt f Map.empty addr
-  where
-    f acc page = do
-      let utxoRefs = pageItems page
-      txOuts <- traverse unspentTxOutFromRef utxoRefs
-      let utxos = Map.fromList
-                $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
-                $ zip utxoRefs txOuts
-      pure $ acc <> utxos
+utxosAt addr =
+  Map.fromList . concat <$> collectQueryResponse (queryUnspentTxOutsAt addr)
 
 -- | Get unspent transaction outputs with transaction from address.
 utxosTxOutTxAt ::
