@@ -32,4 +32,4 @@ The general process for creating an ADR is:
 
    0001-record-architecture-decisions
    0002-repository-standardization
-   0003-separate-marconi-repository
+   0003-marconi-monorepo
