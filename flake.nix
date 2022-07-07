@@ -84,7 +84,7 @@
   };
 
   outputs = { self, flake-utils, ... }@inputs:
-    (flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
+    (flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
         topLevel = import ./. {
           inherit system;
@@ -94,6 +94,11 @@
       {
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
+
+        # legacyPackages."x86_64-darwin".marconi = (import ./. {
+        #   system = "x86_64-darwin";
+        #   sources = inputs;
+        # }).marconi;
       }));
 
   nixConfig = {
