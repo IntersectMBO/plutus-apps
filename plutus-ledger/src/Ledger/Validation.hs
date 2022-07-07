@@ -15,7 +15,6 @@ module Ledger.Validation(
   EmulatorEra,
   CardanoLedgerError,
   initialState,
-  evaluateTransactionFee,
   evaluateMinLovelaceOutput,
   getRequiredSigners,
   addSignature,
@@ -25,7 +24,7 @@ module Ledger.Validation(
   makeBlock,
   setSlot,
   nextSlot,
-  UTxO,
+  UTxO(..),
   setUtxo,
   -- * Conversion from Plutus types
   fromPlutusTx,
@@ -33,7 +32,6 @@ module Ledger.Validation(
   fromPlutusTxOut,
   fromPlutusTxOutUnsafe,
   fromPlutusTxOutRef,
-  fromPlutusTxToTxBodyContent,
   -- * Lenses
   ledgerEnv,
   memPoolState,
@@ -43,11 +41,11 @@ module Ledger.Validation(
   emulatorGlobals
   ) where
 
-import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, shelleyGenesisDefaults,
-                            toShelleyTxId, toShelleyTxOut)
+import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, toShelleyTxId,
+                            toShelleyTxOut)
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
-import Cardano.Ledger.Alonzo.PParams (PParams' (..), retractPP)
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
@@ -55,15 +53,13 @@ import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..))
-import Cardano.Ledger.Core (PParams, Tx)
+import Cardano.Ledger.Core (Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId, TxIn (TxIn), UTxO (UTxO),
-                                   Validated, epochInfo, mkShelleyGlobals)
+                                   Validated, epochInfo)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
-import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
-import Cardano.Slotting.Time (mkSlotLength)
+import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Lens (_1, makeLenses, over, (&), (.~), (^.))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
@@ -75,13 +71,11 @@ import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as P
 import Ledger.Crypto qualified as P
-import Ledger.Index.Internal (EmulatorEra)
 import Ledger.Index.Internal qualified as P
+import Ledger.Params (EmulatorEra, emulatorGlobals, emulatorPParams)
 import Ledger.Params qualified as P
-import Ledger.TimeSlot qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
-import Ledger.Value qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
@@ -196,25 +190,6 @@ applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
-genesisDefaultsFromParams :: P.Params -> C.Ledger.ShelleyGenesis EmulatorEra
-genesisDefaultsFromParams P.Params { P.pSlotConfig, P.pProtocolParams, P.pNetworkId } = shelleyGenesisDefaults
-  { C.Ledger.sgSystemStart = P.posixTimeToUTCTime $ P.scSlotZeroTime pSlotConfig
-  , C.Ledger.sgNetworkMagic = case pNetworkId of C.Api.Testnet (C.Api.NetworkMagic nm) -> nm; _ -> 0
-  , C.Ledger.sgNetworkId = case pNetworkId of C.Api.Testnet _ -> C.Ledger.Testnet; C.Api.Mainnet -> C.Ledger.Mainnet
-  , C.Ledger.sgProtocolParams = retractPP (Coin 0) $ C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
-  }
-
-{-| A sensible default 'Globals' value for the emulator
--}
-emulatorGlobals :: P.Params -> Globals
-emulatorGlobals params@P.Params { P.pSlotConfig, P.pProtocolParams } = mkShelleyGlobals
-  (genesisDefaultsFromParams params)
-  (fixedEpochInfo (EpochSize 432000) (mkSlotLength $ P.posixTimeToNominalDiffTime $ P.POSIXTime $ P.scSlotLength pSlotConfig))
-  (fst $ C.Api.protocolParamProtocolVersion pProtocolParams)
-
-emulatorPParams :: P.Params -> PParams EmulatorEra
-emulatorPParams P.Params { P.pProtocolParams } = C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
-
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
 hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
   case res of
@@ -225,7 +200,6 @@ hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
     res = do
       vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (fst (_memPoolState state)) tx)
       applyTx params state vtx
-
 
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
@@ -256,18 +230,6 @@ makeTransactionBody params utxo txBodyContent = do
   exUnits <- getTxExUnits params utxo txTmp
   first Right $ P.makeTransactionBody exUnits txBodyContent
 
-evaluateTransactionFee
-  :: P.Params
-  -> UTxO EmulatorEra
-  -> [P.PaymentPubKeyHash]
-  -> P.Tx
-  -> Either CardanoLedgerError P.Value
-evaluateTransactionFee params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ fromPlutusTxToTxBodyContent params requiredSigners tx
-  let nkeys = C.Api.estimateTransactionKeyWitnessCount (P.getCardanoBuildTx txBodyContent)
-  txBody <- makeTransactionBody params utxo txBodyContent
-  case C.Api.evaluateTransactionFee (P.pProtocolParams params) txBody nkeys 0 of
-    C.Api.Lovelace fee -> pure $ P.lovelaceValueOf fee
 
 evaluateMinLovelaceOutput :: P.Params -> TxOut EmulatorEra -> P.Ada
 evaluateMinLovelaceOutput params = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput (emulatorPParams params)
@@ -282,16 +244,8 @@ fromPlutusTx
   -> P.Tx
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
 fromPlutusTx params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ fromPlutusTxToTxBodyContent params requiredSigners tx
+  txBodyContent <- first Right $ P.toCardanoTxBodyContent params requiredSigners tx
   makeSignedTransaction [] <$> makeTransactionBody params utxo txBodyContent
-
-fromPlutusTxToTxBodyContent
-  :: P.Params
-  -> [P.PaymentPubKeyHash]
-  -> P.Tx
-  -> Either P.ToCardanoError P.CardanoBuildTx
-fromPlutusTxToTxBodyContent params requiredSigners =
-  P.toCardanoTxBodyContent requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 
 getRequiredSigners :: C.Api.Tx C.Api.AlonzoEra -> [P.PaymentPubKeyHash]
 getRequiredSigners (C.Api.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =

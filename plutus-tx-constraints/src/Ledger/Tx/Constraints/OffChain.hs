@@ -52,11 +52,12 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Control.Lens (Lens', Traversal', _Left, coerced, makeLensesFor, use, (<>=))
-import Control.Monad.Except (MonadError (throwError), runExcept)
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT))
-import Control.Monad.State (MonadState, execStateT)
+import Control.Monad.Except (Except, mapExcept, runExcept, throwError)
+import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
+import Control.Monad.State (StateT, execStateT, mapStateT)
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Bifunctor (first)
 import Data.Foldable (traverse_)
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
@@ -69,6 +70,7 @@ import Ledger.Address (pubKeyHashAddress)
 import Ledger.Constraints.TxConstraints (TxConstraint, TxConstraints (TxConstraints, txConstraints))
 import Ledger.Orphans ()
 import Ledger.Scripts (getDatum)
+import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
 
@@ -77,8 +79,12 @@ import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalanc
 import Ledger.Constraints.OffChain qualified as P
 
 makeLensesFor
-    [ ("txOuts", "txOuts'")
+    [ ("txIns", "txIns'")
+    , ("txOuts", "txOuts'")
     ] ''C.TxBodyContent
+
+txIns :: Lens' C.CardanoBuildTx [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.AlonzoEra))]
+txIns = coerced . txIns'
 
 txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.AlonzoEra]
 txOuts = coerced . txOuts'
@@ -116,14 +122,16 @@ initialState params = P.ConstraintProcessingState
     , P.cpsParams = params
     }
 
-data MkTxError =
-    ToCardanoError C.ToCardanoError
+data MkTxError
+    = ToCardanoError C.ToCardanoError
+    | LedgerMkTxError P.MkTxError
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty MkTxError where
     pretty = \case
-        ToCardanoError err -> "ToCardanoError" <> colon <+> pretty err
+        ToCardanoError err  -> "ToCardanoError" <> colon <+> pretty err
+        LedgerMkTxError err -> pretty err
 
 -- | Given a list of 'SomeLookupsAndConstraints' describing the constraints
 --   for several scripts, build a single transaction that runs all the scripts.
@@ -145,12 +153,10 @@ processLookupsAndConstraints
     :: ( -- FromData (DatumType a)
     --    , ToData (DatumType a)
     --    , ToData (RedeemerType a)
-         MonadState P.ConstraintProcessingState m
-       , MonadError MkTxError m
        )
     => P.ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
-    -> m ()
+    -> StateT P.ConstraintProcessingState (Except MkTxError) ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints} =
         flip runReaderT lookups $ do
             traverse_ processConstraint txConstraints
@@ -176,20 +182,25 @@ mkTx
     -> Either MkTxError UnbalancedTx
 mkTx params lookups txc = mkSomeTx params [P.SomeLookupsAndConstraints lookups txc]
 
-throwLeft :: MonadError MkTxError m => (a -> MkTxError) -> Either a r -> m r
+throwLeft :: (b -> MkTxError) -> Either b r -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) r
 throwLeft f = either (throwError . f) pure
 
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
 processConstraint
-    :: ( MonadReader (P.ScriptLookups a) m
-       , MonadError MkTxError m
-       , MonadState P.ConstraintProcessingState m
-       )
-    => TxConstraint
-    -> m ()
+    :: TxConstraint
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) ()
 processConstraint = \case
+    P.MustSpendPubKeyOutput txo -> do
+        txout <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo
+        case txout of
+          Tx.PublicKeyChainIndexTxOut {} -> do
+              txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+              unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
+            --   valueSpentInputs <>= provided _ciTxOutValue
+          _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+
     P.MustPayToPubKeyAddress pk mskh md vl -> do
 
         -- valueSpentOutputs <>= P.provided vl
