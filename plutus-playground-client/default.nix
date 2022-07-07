@@ -8,25 +8,29 @@ let
   #
   # Note: We need to add ghc to the path because the purescript generator
   # actually invokes ghc to generate test data so we need ghc with the necessary deps
-  generate-purescript = pkgs.writeShellScriptBin "plutus-playground-generate-purs" ''
-    if [ ! -d plutus-playground-client ]; then 
-      echo Please run plutus-playground-generate-purs from the root of the repository
+  generate-purescript = pkgs.writeShellScript "plutus-playground-generate-purs" ''
+    if [ "$#" -ne 1 ]; then
+      echo usage: plutus-playground-generate-purs GENERATED_DIR
       exit 1
     fi
+
+    generatedDir="$1"
+    rm -rf $generatedDir
 
     GHC_WITH_PKGS=${ghcWithPlutus}
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
-    generatedDir=./plutus-playground-client/generated
-    rm -rf $generatedDir
-
     echo Generating purescript files in $generatedDir
     ${playground-exe}/bin/plutus-playground-server psgenerator $generatedDir
-    echo -e Done generating purescript files
-
+    echo Done generating purescript files
+    echo
     echo Formatting purescript files in $generatedDir
     ${purs-tidy}/bin/purs-tidy format-in-place $generatedDir
     echo Done formatting purescript files
+  '';
+
+  purescript-generated = pkgs.runCommand "plutus-playground-generate-purs" { } ''
+    ${generate-purescript} $out
   '';
 
   # start-backend: script to start the plutus-playground-server
@@ -40,19 +44,19 @@ let
     fi
 
     generatedDir=./plutus-playground-client/generated
-    if [ ! -d $generatedDir ]; then 
-      echo $generatedDir not found
-      plutus-playground-generate-purs
-    elif [ $# == 0 ]; then 
-      dirAge=$(datediff now $(date -r $generatedDir +%F))
-      echo Using Purescript files in $generatedDir which are $dirAge days old. 
-      echo Run plutus-playground-generate-purs -g to regenerate
-    elif [ "$1" == "-g" ]; then 
-       plutus-playground-generate-purs
+
+    if [ ! -d $generatedDir ] || [ "$1" == "-g" ]; then 
+      ${generate-purescript} $generatedDir
     fi 
 
+    dirAge=$(datediff now $(date -r $generatedDir +%F))
     echo
-    echo "plutus-playground-server: for development use only"
+    echo "*** Using Purescript files in $generatedDir which are $dirAge days old."
+    echo "*** To regenerate, run plutus-playground-server -g"
+    echo
+    echo
+    echo plutus-playground-server: for development use only
+    
     GHC_WITH_PKGS=${ghcWithPlutus}
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
@@ -60,22 +64,13 @@ let
     export WEBGHC_URL=http://localhost:8080
     export GITHUB_CALLBACK_PATH=https://localhost:8009/api/oauth/github/callback
 
+    test "$1" == "-g" && shift 1 # takes care of the -g flag
     ${playground-exe}/bin/plutus-playground-server webserver "$@"
   '';
 
-  cleanSrc = pkgs.lib.sources.sourceByRegex ./. [
-    "e2e-tests.*"
-    "static.*"
-    "generated.*"
-    "test.*"
-    "src.*"
-    "entry.js"
-    "package-lock.json"
-    "package.json"
-    "spago-packages.nix"
-    "spago.dhall"
-    "webpack.config.js"
-  ];
+  # Note that this ignores the generated folder too, but it's fine since it is 
+  # added via extraSrcs 
+  cleanSrc = gitignore-nix.gitignoreSource ./.;
 
   nodeModules = buildNodeModules {
     projectDir = filterNpm cleanSrc;
@@ -87,6 +82,9 @@ let
     (buildPursPackage {
       inherit pkgs nodeModules;
       src = cleanSrc;
+      extraSrcs = {
+        generated = purescript-generated;
+      };
       name = "plutus-playground-client";
       # ideally we would just use `npm run test` but
       # this executes `spago` which *always* attempts to download
@@ -101,6 +99,6 @@ let
     });
 in
 {
-  inherit client generate-purescript start-backend;
+  inherit client start-backend;
   server = playground-exe;
 }
