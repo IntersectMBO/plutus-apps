@@ -20,12 +20,13 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
+import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.TimeSlot (SlotConversionError)
 import Ledger.Tx (CardanoTx, ChainIndexTxOut)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
-import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
+import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Types (ChainIndexTx, RollbackState, Tip, TxOutState)
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Credential (Credential)
@@ -129,6 +130,7 @@ data ChainIndexQuery
   | TxFromTxId TxId
   | UtxoSetMembership TxOutRef
   | UtxoSetAtAddress (PageQuery TxOutRef) Credential
+  | UnspentTxOutSetAtAddress (PageQuery TxOutRef) Credential
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds (Array TxId)
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
@@ -151,6 +153,7 @@ instance EncodeJson ChainIndexQuery where
     TxFromTxId a -> E.encodeTagged "TxFromTxId" a E.value
     UtxoSetMembership a -> E.encodeTagged "UtxoSetMembership" a E.value
     UtxoSetAtAddress a b -> E.encodeTagged "UtxoSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
+    UnspentTxOutSetAtAddress a b -> E.encodeTagged "UnspentTxOutSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
     UtxoSetWithCurrency a b -> E.encodeTagged "UtxoSetWithCurrency" (a /\ b) (E.tuple (E.value >/\< E.value))
     TxsFromTxIds a -> E.encodeTagged "TxsFromTxIds" a E.value
     TxoSetAtAddress a b -> E.encodeTagged "TxoSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
@@ -170,6 +173,7 @@ instance DecodeJson ChainIndexQuery where
         , "TxFromTxId" /\ D.content (TxFromTxId <$> D.value)
         , "UtxoSetMembership" /\ D.content (UtxoSetMembership <$> D.value)
         , "UtxoSetAtAddress" /\ D.content (D.tuple $ UtxoSetAtAddress </$\> D.value </*\> D.value)
+        , "UnspentTxOutSetAtAddress" /\ D.content (D.tuple $ UnspentTxOutSetAtAddress </$\> D.value </*\> D.value)
         , "UtxoSetWithCurrency" /\ D.content (D.tuple $ UtxoSetWithCurrency </$\> D.value </*\> D.value)
         , "TxsFromTxIds" /\ D.content (TxsFromTxIds <$> D.value)
         , "TxoSetAtAddress" /\ D.content (D.tuple $ TxoSetAtAddress </$\> D.value </*\> D.value)
@@ -230,6 +234,11 @@ _UtxoSetAtAddress = prism' (\{ a, b } -> (UtxoSetAtAddress a b)) case _ of
   (UtxoSetAtAddress a b) -> Just { a, b }
   _ -> Nothing
 
+_UnspentTxOutSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
+_UnspentTxOutSetAtAddress = prism' (\{ a, b } -> (UnspentTxOutSetAtAddress a b)) case _ of
+  (UnspentTxOutSetAtAddress a b) -> Just { a, b }
+  _ -> Nothing
+
 _UtxoSetWithCurrency :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: AssetClass }
 _UtxoSetWithCurrency = prism' (\{ a, b } -> (UtxoSetWithCurrency a b)) case _ of
   (UtxoSetWithCurrency a b) -> Just { a, b }
@@ -263,6 +272,7 @@ data ChainIndexResponse
   | TxIdResponse (Maybe ChainIndexTx)
   | UtxoSetMembershipResponse IsUtxoResponse
   | UtxoSetAtResponse UtxosResponse
+  | UnspentTxOutsAtResponse (QueryResponse (Array (Tuple TxOutRef ChainIndexTxOut)))
   | UtxoSetWithCurrencyResponse UtxosResponse
   | TxIdsResponse (Array ChainIndexTx)
   | TxoSetAtResponse TxosResponse
@@ -285,6 +295,7 @@ instance EncodeJson ChainIndexResponse where
     TxIdResponse a -> E.encodeTagged "TxIdResponse" a (E.maybe E.value)
     UtxoSetMembershipResponse a -> E.encodeTagged "UtxoSetMembershipResponse" a E.value
     UtxoSetAtResponse a -> E.encodeTagged "UtxoSetAtResponse" a E.value
+    UnspentTxOutsAtResponse a -> E.encodeTagged "UnspentTxOutsAtResponse" a E.value
     UtxoSetWithCurrencyResponse a -> E.encodeTagged "UtxoSetWithCurrencyResponse" a E.value
     TxIdsResponse a -> E.encodeTagged "TxIdsResponse" a E.value
     TxoSetAtResponse a -> E.encodeTagged "TxoSetAtResponse" a E.value
@@ -304,6 +315,7 @@ instance DecodeJson ChainIndexResponse where
         , "TxIdResponse" /\ D.content (TxIdResponse <$> (D.maybe D.value))
         , "UtxoSetMembershipResponse" /\ D.content (UtxoSetMembershipResponse <$> D.value)
         , "UtxoSetAtResponse" /\ D.content (UtxoSetAtResponse <$> D.value)
+        , "UnspentTxOutsAtResponse" /\ D.content (UnspentTxOutsAtResponse <$> D.value)
         , "UtxoSetWithCurrencyResponse" /\ D.content (UtxoSetWithCurrencyResponse <$> D.value)
         , "TxIdsResponse" /\ D.content (TxIdsResponse <$> D.value)
         , "TxoSetAtResponse" /\ D.content (TxoSetAtResponse <$> D.value)
@@ -362,6 +374,11 @@ _UtxoSetMembershipResponse = prism' UtxoSetMembershipResponse case _ of
 _UtxoSetAtResponse :: Prism' ChainIndexResponse UtxosResponse
 _UtxoSetAtResponse = prism' UtxoSetAtResponse case _ of
   (UtxoSetAtResponse a) -> Just a
+  _ -> Nothing
+
+_UnspentTxOutsAtResponse :: Prism' ChainIndexResponse (QueryResponse (Array (Tuple TxOutRef ChainIndexTxOut)))
+_UnspentTxOutsAtResponse = prism' UnspentTxOutsAtResponse case _ of
+  (UnspentTxOutsAtResponse a) -> Just a
   _ -> Nothing
 
 _UtxoSetWithCurrencyResponse :: Prism' ChainIndexResponse UtxosResponse
