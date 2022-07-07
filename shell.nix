@@ -150,6 +150,8 @@ haskell.project.shellFor {
   withHoogle = false;
 
   shellHook = ''
+    export LC_ALL=C.utf8
+    
     ${pre-commit-check.shellHook}
   ''
   # Work around https://github.com/NixOS/nix/issues/3345, which makes
