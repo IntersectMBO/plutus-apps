@@ -15,6 +15,7 @@ let
   cleanSrc = gitignore-nix.gitignoreSource src;
 in
 pkgs.recurseIntoAttrs {
+
   shellcheck = pkgs.callPackage ./shellcheck.nix { src = cleanSrc; };
 
   stylishHaskell = pkgs.callPackage ./stylish-haskell.nix {
