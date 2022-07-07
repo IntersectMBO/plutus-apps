@@ -94,11 +94,6 @@
       {
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
-
-        # legacyPackages."x86_64-darwin".marconi = (import ./. {
-        #   system = "x86_64-darwin";
-        #   sources = inputs;
-        # }).marconi;
       }));
 
   nixConfig = {
