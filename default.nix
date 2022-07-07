@@ -43,7 +43,7 @@ rec {
       inherit (plutus-apps) purs-tidy;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
       inherit haskell webCommon;
-    }) client server start-backend generate-purescript generate-purescript2;
+    }) client server start-backend;
   };
 
   # TODO: Fails for now because of webpack can't include `nami-wallet` lib in it's bundle.
@@ -53,7 +53,7 @@ rec {
       inherit (plutus-apps) purs-tidy;
       inherit pkgs haskell webCommon;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
-    }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator generate-purescript start-backend;
+    }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator start-backend;
   };
 
   plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {
