@@ -6,7 +6,7 @@
 }:
 let
   inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
-  inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
+  inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt glibcLocales;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cabal-fmt;
 
   # Feed cardano-wallet, cardano-cli & cardano-node to our shell.
