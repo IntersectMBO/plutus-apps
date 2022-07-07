@@ -19,10 +19,12 @@ module Plutus.ChainIndex.Api
   , TxosResponse(..)
   , QueryAtAddressRequest (..)
   , QueryResponse(..)
+  , collectQueryResponse
   ) where
 
 import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
 import Data.Aeson (FromJSON, ToJSON, Value)
+import Data.Default (def)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
@@ -196,3 +198,15 @@ swagger = swaggerSchemaUIServer (toOpenApi (Proxy @API))
 
 -- We don't include `SwaggerAPI` into `API` to exclude it from the effects code.
 type FullAPI = API :<|> SwaggerAPI
+
+-- | Go through each 'Page's of 'QueryResponse', and collect the results.
+collectQueryResponse ::
+    ( Monad m )
+    => (PageQuery TxOutRef -> m (QueryResponse a)) -- ^ query response function
+    -> m [a]
+collectQueryResponse q = go (Just def)
+  where
+    go Nothing = pure []
+    go (Just pq) = do
+      res <- q pq
+      (queryResult res :) <$> go (nextQuery res)

@@ -46,6 +46,7 @@ module Plutus.Contract.Request(
     , txoRefsAt
     , txsAt
     , getTip
+    , collectQueryResponse
     -- ** Waiting for changes to the UTXO set
     , fundsAtAddressGt
     , fundsAtAddressGeq
@@ -145,7 +146,8 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
 import Data.Foldable (fold)
 import Data.List.NonEmpty qualified as NonEmpty
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse (..), TxosResponse, UtxosResponse (page), paget)
+import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse (page), collectQueryResponse,
+                              paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
@@ -438,18 +440,6 @@ ownUtxos :: forall w s e. (AsContractError e) => Contract w s e (Map TxOutRef Ch
 ownUtxos = do
     addrs <- ownAddresses
     fold <$> mapM utxosAt (NonEmpty.toList addrs)
-
--- | Go through each 'Page's of 'QueryResponse', and collect the results.
-collectQueryResponse ::
-    forall w s e a.
-    (PageQuery TxOutRef -> Contract w s e (QueryResponse a)) -- ^ query response function
-    -> Contract w s e [a]
-collectQueryResponse q = go (Just def)
-  where
-    go Nothing = pure []
-    go (Just pq) = do
-      res <- q pq
-      (queryResult res :) <$> go (nextQuery res)
 
 -- | Get all the unspent transaction output at an address w.r.t. a page query TxOutRef
 queryUnspentTxOutsAt ::

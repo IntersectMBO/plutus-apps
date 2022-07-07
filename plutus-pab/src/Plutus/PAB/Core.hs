@@ -95,7 +95,6 @@ import Control.Monad.Freer.Extras.Modify qualified as Modify
 import Control.Monad.Freer.Reader (Reader (Ask), ask, asks, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
-import Data.Default (Default (def))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -583,17 +582,10 @@ finalResult instanceId = do
 valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
   handleAgentThread wallet Nothing $ do
-    txOutsM <- getAllTxOuts def
-    pure $ foldMap (view ciTxOutValue . snd) txOutsM
+    txOutsM <- ChainIndex.collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq cred)
+    pure $ foldMap (view ciTxOutValue . snd) $ concat txOutsM
   where
     cred = addressCredential $ mockWalletAddress wallet
-    getAllTxOuts pq = do
-      txOutsResp <- ChainIndex.unspentTxOutSetAtAddress pq cred
-      case ChainIndex.nextQuery txOutsResp of
-        Nothing -> pure $ ChainIndex.queryResult txOutsResp
-        Just newPageQuery -> do
-          restOfTxOuts <- getAllTxOuts newPageQuery
-          pure $ ChainIndex.queryResult txOutsResp <> restOfTxOuts
 
 -- | Wait until the contract is done, then return
 --   the error (if any)
