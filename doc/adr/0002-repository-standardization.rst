@@ -1,3 +1,5 @@
+.. _repository_standardization:
+
 ADR 2: Repository Standardization
 =======================================
 
@@ -36,7 +38,7 @@ Decision
 * Standardization of the repositories has been deemed a worthwhile endeavour, 
   though of very low priority. 
 * Phase 1 of the standardization process will be carried out in parallel with 
-  :ref:`Move Marconi to a separate repository <separate_marconi_repository>`.
+  :ref:`Move Marconi to a separate repository <marconi_monorepo>`.
   A separate repository will be created for Marconi, and from the very beginning 
   it will use `std`. This way the benefits, limitations and integration costs of 
   `std` can be experienced and measured, and an informed, definitive decision on 
