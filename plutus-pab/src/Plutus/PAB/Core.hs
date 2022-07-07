@@ -99,7 +99,6 @@ import Data.Default (Default (def))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
@@ -110,7 +109,7 @@ import Ledger.TxId (TxId)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
 import Plutus.ChainIndex qualified as ChainIndex
-import Plutus.ChainIndex.Api (UtxosResponse (page))
+import Plutus.ChainIndex.Api qualified as ChainIndex
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), PABReq)
 import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
@@ -584,18 +583,17 @@ finalResult instanceId = do
 valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
   handleAgentThread wallet Nothing $ do
-    utxoRefs <- getAllUtxoRefs def
-    txOutsM <- traverse ChainIndex.unspentTxOutFromRef utxoRefs
-    pure $ foldMap (view ciTxOutValue) $ catMaybes txOutsM
+    txOutsM <- getAllTxOuts def
+    pure $ foldMap (view ciTxOutValue . snd) txOutsM
   where
     cred = addressCredential $ mockWalletAddress wallet
-    getAllUtxoRefs pq = do
-      utxoRefsPage <- page <$> ChainIndex.utxoSetAtAddress pq cred
-      case ChainIndex.nextPageQuery utxoRefsPage of
-        Nothing -> pure $ ChainIndex.pageItems utxoRefsPage
+    getAllTxOuts pq = do
+      txOutsResp <- ChainIndex.unspentTxOutSetAtAddress pq cred
+      case ChainIndex.nextQuery txOutsResp of
+        Nothing -> pure $ ChainIndex.queryResult txOutsResp
         Just newPageQuery -> do
-          restOfUtxoRefs <- getAllUtxoRefs newPageQuery
-          pure $ ChainIndex.pageItems utxoRefsPage <> restOfUtxoRefs
+          restOfTxOuts <- getAllTxOuts newPageQuery
+          pure $ ChainIndex.queryResult txOutsResp <> restOfTxOuts
 
 -- | Wait until the contract is done, then return
 --   the error (if any)
