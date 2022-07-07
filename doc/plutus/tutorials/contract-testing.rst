@@ -1213,14 +1213,14 @@ we could instead write:
    :end-before: END unitTest v2
 
 Here :hsobj:`Plutus.Contract.Test.ContractModel.forAllQ` lets us generate a random value using
-:hsobj:`Test.QuickCheck.DynamicLogic.Quantify.chooseQ`:
+`Test.QuickCheck.DynamicLogic.Quantify.chooseQ` from `quickcheck-dynamic`:
 
 .. literalinclude:: GameModel.hs
    :start-after: START chooseQ type
    :end-before: END chooseQ type
 
 :hsobj:`Plutus.Contract.Test.ContractModel.forAllQ` takes a
-:hsobj:`Test.QuickCheck.DynamicLogic.Quantify.Quantification`, which resembles a QuickCheck
+`Test.QuickCheck.DynamicLogic.Quantify.Quantification`, which resembles a QuickCheck
 generator, but with a more limited API to support its use in dynamic
 logic.
 
