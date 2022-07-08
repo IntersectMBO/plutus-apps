@@ -22,8 +22,8 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.ChainIndex (RunRequirements, runChainIndexEffects)
-import Plutus.ChainIndex.Api (API, FromHashAPI, FullAPI, TxoAtAddressRequest (TxoAtAddressRequest),
-                              UtxoAtAddressRequest (UtxoAtAddressRequest),
+import Plutus.ChainIndex.Api (API, FromHashAPI, FullAPI, QueryAtAddressRequest (QueryAtAddressRequest),
+                              TxoAtAddressRequest (TxoAtAddressRequest), UtxoAtAddressRequest (UtxoAtAddressRequest),
                               UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), swagger)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as E
@@ -66,6 +66,7 @@ serveChainIndex =
     :<|> (E.txFromTxId >=> handleMaybe)
     :<|> E.utxoSetMembership
     :<|> (\(UtxoAtAddressRequest pq c) -> E.utxoSetAtAddress (fromMaybe def pq) c)
+    :<|> (\(QueryAtAddressRequest pq c) -> E.unspentTxOutSetAtAddress (fromMaybe def pq) c)
     :<|> (\(UtxoWithCurrencyRequest pq c) -> E.utxoSetWithCurrency (fromMaybe def pq) c)
     :<|> E.txsFromTxIds
     :<|> (\(TxoAtAddressRequest pq c) -> E.txoSetAtAddress (fromMaybe def pq) c)

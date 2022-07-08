@@ -4,7 +4,7 @@ module Plutus.ChainIndex.Api where
 import Prelude
 
 import Control.Lazy (defer)
-import Control.Monad.Freer.Extras.Pagination (Page)
+import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
 import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
@@ -59,6 +59,43 @@ derive instance Newtype IsUtxoResponse _
 
 _IsUtxoResponse :: Iso' IsUtxoResponse { currentTip :: Tip, isUtxo :: Boolean }
 _IsUtxoResponse = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype QueryResponse a = QueryResponse
+  { queryResult :: a
+  , nextQuery :: Maybe (PageQuery TxOutRef)
+  }
+
+derive instance (Eq a) => Eq (QueryResponse a)
+
+instance (Show a) => Show (QueryResponse a) where
+  show a = genericShow a
+
+instance (EncodeJson a) => EncodeJson (QueryResponse a) where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { queryResult: E.value :: _ a
+        , nextQuery: (E.maybe E.value) :: _ (Maybe (PageQuery TxOutRef))
+        }
+    )
+
+instance (DecodeJson a) => DecodeJson (QueryResponse a) where
+  decodeJson = defer \_ -> D.decode $
+    ( QueryResponse <$> D.record "QueryResponse"
+        { queryResult: D.value :: _ a
+        , nextQuery: (D.maybe D.value) :: _ (Maybe (PageQuery TxOutRef))
+        }
+    )
+
+derive instance Generic (QueryResponse a) _
+
+derive instance Newtype (QueryResponse a) _
+
+--------------------------------------------------------------------------------
+
+_QueryResponse :: forall a. Iso' (QueryResponse a) { queryResult :: a, nextQuery :: Maybe (PageQuery TxOutRef) }
+_QueryResponse = _Newtype
 
 --------------------------------------------------------------------------------
 

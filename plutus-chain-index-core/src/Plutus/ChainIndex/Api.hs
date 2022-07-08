@@ -17,10 +17,14 @@ module Plutus.ChainIndex.Api
   , swagger
   , TxoAtAddressRequest(..)
   , TxosResponse(..)
+  , QueryAtAddressRequest (..)
+  , QueryResponse(..)
+  , collectQueryResponse
   ) where
 
 import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
 import Data.Aeson (FromJSON, ToJSON, Value)
+import Data.Default (def)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
@@ -144,6 +148,26 @@ data TxosResponse = TxosResponse
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
+
+data QueryAtAddressRequest = QueryAtAddressRequest
+    { pageQuery  :: Maybe (PageQuery TxOutRef)
+    , credential :: Credential
+    }
+    deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
+
+-- | generic response type endpoint
+-- This type is introduced to avoid querying the chain index twice to obtain the expected info.
+-- Indeed, it returns the next page query if more items are available
+data QueryResponse a = QueryResponse
+    { queryResult :: a
+    , nextQuery   :: Maybe (PageQuery TxOutRef)
+    }
+    deriving (Show, Generic, Eq)
+
+deriving instance (FromJSON a, Generic a) => FromJSON (QueryResponse a)
+deriving instance (ToJSON a, Generic a) => ToJSON (QueryResponse a)
+deriving instance (OpenApi.ToSchema a, Generic a) => OpenApi.ToSchema (QueryResponse a)
+
 type API
     = "healthcheck" :> Description "Is the server alive?" :> Get '[JSON] NoContent
     :<|> "from-hash" :> FromHashAPI
@@ -152,6 +176,7 @@ type API
     :<|> "tx" :> Description "Get a transaction from its id." :> ReqBody '[JSON] TxId :> Post '[JSON] ChainIndexTx
     :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
     :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
+    :<|> "unspent-txouts-at-address" :> Description "Get all unspent transaction output at an address." :> ReqBody '[JSON] QueryAtAddressRequest :> Post '[JSON] (QueryResponse [(TxOutRef, ChainIndexTxOut)])
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse
     :<|> "txs" :> Description "Get transactions from a list of their ids." :> ReqBody '[JSON] [TxId] :> Post '[JSON] [ChainIndexTx]
     :<|> "txo-at-address" :> Description "Get TxOs at an address." :> ReqBody '[JSON] TxoAtAddressRequest :> Post '[JSON] TxosResponse
@@ -173,3 +198,15 @@ swagger = swaggerSchemaUIServer (toOpenApi (Proxy @API))
 
 -- We don't include `SwaggerAPI` into `API` to exclude it from the effects code.
 type FullAPI = API :<|> SwaggerAPI
+
+-- | Go through each 'Page's of 'QueryResponse', and collect the results.
+collectQueryResponse ::
+    ( Monad m )
+    => (PageQuery TxOutRef -> m (QueryResponse a)) -- ^ query response function
+    -> m [a]
+collectQueryResponse q = go (Just def)
+  where
+    go Nothing = pure []
+    go (Just pq) = do
+      res <- q pq
+      (queryResult res :) <$> go (nextQuery res)
