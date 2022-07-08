@@ -95,6 +95,7 @@ let
     nixpkgs-fmt
     nodejs
     plantuml
+    pre-commit
     shellcheck
     sqlite-interactive
     stack

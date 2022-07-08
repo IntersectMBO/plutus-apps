@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -w #-}
 
 -- | An index of unspent transaction outputs, and some functions for validating
 --   transactions using the index.
@@ -358,7 +359,7 @@ checkMatch txinfo = \case
         let
             ptx' = ScriptContext { scriptContextTxInfo = txinfo, scriptContextPurpose = Spending txOutRef }
             vd = Context (toBuiltinData ptx')
-        case runExcept $ runScript vd vl d r of
+        case runExcept $ undefined vd vl d r of
             Left e -> do
                 tell [validatorScriptValidationEvent vd vl d r (Left e)]
                 throwError $ ScriptFailure e
