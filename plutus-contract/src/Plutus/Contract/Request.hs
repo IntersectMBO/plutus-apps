@@ -104,6 +104,7 @@ module Plutus.Contract.Request(
 
 import Control.Lens (Prism', preview, review, view)
 import Control.Monad.Freer.Error qualified as E
+import Control.Monad.Trans.State.Strict (StateT (..), evalStateT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Types qualified as JSON
@@ -146,8 +147,7 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
 import Data.Foldable (fold)
 import Data.List.NonEmpty qualified as NonEmpty
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse (page), collectQueryResponse,
-                              paget)
+import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse, collectQueryResponse, paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
@@ -416,25 +416,6 @@ utxoRefsWithCurrency pq assetClass = do
     E.UtxoSetWithCurrencyResponse r -> pure r
     r                               -> throwError $ review _ChainIndexContractError ("UtxoSetWithCurrencyResponse", r)
 
-
--- | Fold through each 'Page's of unspent 'TxOutRef's at a given 'Address', and
--- accumulate the result.
-foldUtxoRefsAt ::
-    forall w s e a.
-    ( AsContractError e
-    )
-    => (a -> Page TxOutRef -> Contract w s e a) -- ^ Accumulator function
-    -> a -- ^ Initial value
-    -> Address -- ^ Address which contain the UTXOs
-    -> Contract w s e a
-foldUtxoRefsAt f ini addr = go ini (Just def)
-  where
-    go acc Nothing = pure acc
-    go acc (Just pq) = do
-      page <- page <$> utxoRefsAt pq addr
-      newAcc <- f acc page
-      go newAcc (nextPageQuery page)
-
 -- | Get all utxos belonging to the wallet that runs this contract.
 ownUtxos :: forall w s e. (AsContractError e) => Contract w s e (Map TxOutRef ChainIndexTxOut)
 ownUtxos = do
@@ -473,36 +454,29 @@ utxosTxOutTxAt ::
     => Address
     -> Contract w s e (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
 utxosTxOutTxAt addr = do
-  snd <$> foldUtxoRefsAt (\acc page -> go acc (pageItems page)) (mempty, mempty) addr
+  utxos <- utxosAt addr
+  evalStateT (Map.traverseMaybeWithKey go utxos) mempty
   where
-    go :: (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-       -> [TxOutRef]
-       -> Contract w s e (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-    go acc [] = pure acc
-    go (lookupTx, oldResult) (ref:refs) = do
-      outM <- unspentTxOutFromRef ref
-      case outM of
-        Just out -> do
-          let txid = txOutRefId ref
-          -- Lookup the txid in the lookup table. If it's present, we don't need
-          -- to query the chain index again. If it's not, we query the chain
-          -- index and store the result in the lookup table.
-          case Map.lookup txid lookupTx of
-            Just tx -> do
-              let result = oldResult <> Map.singleton ref (out, tx)
-              go (lookupTx, result) refs
-            Nothing -> do
-              -- We query the chain index for the tx and store it in the lookup
-              -- table if it is found.
-              txM <- txFromTxId txid
-              case txM of
-                Just tx -> do
-                  let newLookupTx = lookupTx <> Map.singleton txid tx
-                  let result = oldResult <> Map.singleton ref (out, tx)
-                  go (newLookupTx, result) refs
-                Nothing ->
-                  go (lookupTx, oldResult) refs
-        Nothing -> go (lookupTx, oldResult) refs
+    go :: TxOutRef
+       -> ChainIndexTxOut
+       -> StateT (Map TxId ChainIndexTx) (Contract w s e) (Maybe (ChainIndexTxOut, ChainIndexTx))
+    go ref out = StateT $ \lookupTx -> do
+      let txid = txOutRefId ref
+      -- Lookup the txid in the lookup table. If it's present, we don't need
+      -- to query the chain index again. If it's not, we query the chain
+      -- index and store the result in the lookup table.
+      case Map.lookup txid lookupTx of
+        Just tx ->
+          pure (Just (out, tx), lookupTx)
+        Nothing -> do
+          -- We query the chain index for the tx and store it in the lookup
+          -- table if it is found.
+          txM <- txFromTxId txid
+          case txM of
+            Just tx ->
+              pure (Just (out, tx), Map.insert txid tx lookupTx)
+            Nothing ->
+              pure (Nothing, lookupTx)
 
 
 -- | Get the unspent transaction outputs from a 'ChainIndexTx'.
