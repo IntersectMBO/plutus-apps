@@ -9,23 +9,24 @@
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
-module Plutus.Script.Utils.V2.Scripts.StakeValidators
+module Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators
     ( UntypedStakeValidator
     , mkUntypedStakeValidator
     , mkForwardingStakeValidator
     , forwardToValidator
     ) where
 
-import Plutus.Script.Utils.V1.Scripts.StakeValidators (UntypedStakeValidator)
-import Plutus.V2.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), StakeValidator,
+import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), StakeValidator,
                              ValidatorHash, mkStakeValidatorScript)
-import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
+import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
                                   ScriptPurpose (Certifying, Rewarding), TxInfo (TxInfo, txInfoInputs))
-import Plutus.V2.Ledger.Contexts qualified as PV2
-import Plutus.V2.Ledger.Tx (TxOut (TxOut, txOutAddress))
+import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V1.Ledger.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx (UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx qualified
-import PlutusTx.Prelude (Bool (False), any, check, ($), (.), (==))
+import PlutusTx.Prelude (Bool (False), BuiltinData, any, check, ($), (.), (==))
+
+type UntypedStakeValidator = BuiltinData -> BuiltinData -> ()
 
 -- TODO: we should add a TypedStakeValidator interface here
 
@@ -37,8 +38,8 @@ import PlutusTx.Prelude (Bool (False), any, check, ($), (.), (==))
 --
 -- @
 --   import PlutusTx qualified
---   import Plutus.V2.Ledger.Scripts qualified as Plutus
---   import Plutus.Script.Utils.V2.Scripts (mkUntypedStakeValidator)
+--   import Plutus.V1.Ledger.Scripts qualified as Plutus
+--   import Plutus.Script.Utils.V1.Scripts (mkUntypedStakeValidator)
 --
 --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
 --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
@@ -54,7 +55,7 @@ import PlutusTx.Prelude (Bool (False), any, check, ($), (.), (==))
 -- @
 mkUntypedStakeValidator
     :: UnsafeFromData r
-    => (r -> PV2.ScriptContext -> Bool)
+    => (r -> PV1.ScriptContext -> Bool)
     -> UntypedStakeValidator
 -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
 mkUntypedStakeValidator f r p = check $ f (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
@@ -74,7 +75,7 @@ forwardToValidator :: ValidatorHash -> () -> ScriptContext -> Bool
 forwardToValidator h _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose} =
     let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential vh}} = vh == h
         checkHash _                                                                  = False
-        result = any (checkHash . PV2.txInInfoResolved) txInfoInputs
+        result = any (checkHash . PV1.txInInfoResolved) txInfoInputs
     in case scriptContextPurpose of
         Rewarding _  -> result
         Certifying _ -> result

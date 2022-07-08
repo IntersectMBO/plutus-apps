@@ -18,13 +18,14 @@ import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
-import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxId)
+import Ledger.Tx (RedeemerPtr, ScriptTag, Tx)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
-import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
-import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, TxOut, TxOutRef, ValidatorHash (ValidatorHash))
+import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
+import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, TxId, TxOut, TxOutRef,
+                             ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
 import Plutus.V1.Ledger.Tx (TxIn, TxInType)
 import PlutusTx qualified
@@ -263,7 +264,7 @@ instance Arbitrary PABReq where
             , pure CurrentSlotReq
             , pure OwnContractInstanceIdReq
             , ExposeEndpointReq <$> arbitrary
-            , pure OwnPaymentPublicKeyHashReq
+            , pure OwnAddressesReq
             -- TODO This would need an Arbitrary Tx instance:
             -- , BalanceTxRequest <$> arbitrary
             -- , WriteBalancedTxRequest <$> arbitrary
@@ -298,7 +299,7 @@ instance Arbitrary ActiveEndpoint where
 -- 'Maybe' because we can't (yet) create a generator for every request
 -- type.
 genResponse :: PABReq -> Maybe (Gen PABResp)
-genResponse (AwaitSlotReq slot)        = Just . pure . AwaitSlotResp $ slot
-genResponse (ExposeEndpointReq _)      = Just $ ExposeEndpointResp <$> arbitrary <*> (EndpointValue <$> arbitrary)
-genResponse OwnPaymentPublicKeyHashReq = Just $ OwnPaymentPublicKeyHashResp <$> arbitrary
-genResponse _                          = Nothing
+genResponse (AwaitSlotReq slot)   = Just . pure . AwaitSlotResp $ slot
+genResponse (ExposeEndpointReq _) = Just $ ExposeEndpointResp <$> arbitrary <*> (EndpointValue <$> arbitrary)
+genResponse OwnAddressesReq       = Just $ OwnAddressesResp <$> arbitrary
+genResponse _                     = Nothing

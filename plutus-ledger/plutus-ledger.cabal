@@ -86,6 +86,7 @@ library
     Ledger.Tx.Orphans.V1
     Ledger.Tx.Orphans.V2
     Ledger.Typed.Scripts
+    Ledger.Typed.Scripts.Orphans
     Ledger.Typed.Scripts.Validators
     Ledger.Typed.Tx
     Ledger.Typed.TypeUtils

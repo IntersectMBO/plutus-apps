@@ -58,7 +58,7 @@ module Ledger.Constraints.OffChain(
     , updateUtxoIndex
     ) where
 
-import Control.Lens (At (at), Traversal', _Right, alaf, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
+import Control.Lens (Traversal', _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -100,13 +100,13 @@ import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), 
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
-import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
+import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
+                             ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Typed.Tx (ConnectionError)
-import Ledger.Typed.Tx qualified as Typed
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, validatorHash)
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Validator,
                              ValidatorHash)
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
@@ -494,9 +494,14 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     ScriptLookups{slTxOutputs, slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     typedOutRef <-
-        either (throwError . TypeCheckFailed) pure
-        $ runExcept @ConnectionError
-        $ Typed.typeScriptTxOutRef (`Map.lookup` slTxOutputs) inst icTxOutRef
+      either (throwError . TypeCheckFailed) pure
+      $ runExcept @Typed.ConnectionError
+      $ do
+          (txOut, datum) <- maybe (throwError UnknownRef) pure $ do
+                                ciTxOut <- Map.lookup icTxOutRef slTxOutputs
+                                datum <- ciTxOut ^? Tx.ciTxOutDatum . _Right
+                                pure (Tx.toTxOut ciTxOut, datum)
+          Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     unbalancedTx . tx . Tx.inputs %= Set.insert (Typed.tyTxInTxIn txIn)
@@ -522,7 +527,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue} = do
     valueSpentOutputs <>= provided ocValue
 
 data MkTxError =
-    TypeCheckFailed ConnectionError
+    TypeCheckFailed Typed.ConnectionError
     | TxOutRefNotFound TxOutRef
     | TxOutRefWrongType TxOutRef
     | DatumNotFound DatumHash

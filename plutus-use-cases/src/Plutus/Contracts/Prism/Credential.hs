@@ -24,7 +24,7 @@ import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contracts.TokenAccount (Account (..))
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash)
-import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api (ScriptContext (..))
 import Plutus.V1.Ledger.Contexts (txSignedBy)
 import Plutus.V1.Ledger.Scripts qualified as Scripts

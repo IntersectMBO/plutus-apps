@@ -97,6 +97,7 @@ library
     , lens
     , openapi3
     , playground-common          >=1.0.0
+    , plutus-chain-index-core    >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-core                >=1.0.0
     , plutus-ledger              >=1.0.0

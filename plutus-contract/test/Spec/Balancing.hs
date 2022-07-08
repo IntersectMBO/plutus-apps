@@ -20,6 +20,7 @@ import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, 
                              checkPredicate, checkPredicateOptions, defaultCheckOptions, w1, w2)
 import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as TypedScripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
 import PlutusTx qualified
@@ -65,7 +66,7 @@ balanceTxnMinAda2 :: TestTree
 balanceTxnMinAda2 =
     let vA n = someTokenValue "A" n
         vB n = someTokenValue "B" n
-        mps  = Scripts.mkForwardingMintingPolicy vHash
+        mps  = TypedScripts.mkForwardingMintingPolicy vHash
         vL n = Value.singleton (Value.mpsSymbol $ Scripts.mintingPolicyHash mps) "L" n
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
@@ -110,7 +111,7 @@ balanceTxnNoExtraOutput =
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
         mintingOperation = do
-            pkh <- Con.ownPaymentPubKeyHash
+            pkh <- Con.ownFirstPaymentPubKeyHash
 
             let val = vL 200
                 lookups = Constraints.mintingPolicy coinMintingPolicy

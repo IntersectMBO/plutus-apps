@@ -74,8 +74,10 @@ import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.API qualified as WAPI
 
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Wallet.Effects (NodeClientEffect,
-                       WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
+                       WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
 import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
@@ -245,7 +247,7 @@ handleWallet ::
     => WalletEffect ~> Eff effs
 handleWallet = \case
     SubmitTxn tx          -> submitTxnH tx
-    OwnPaymentPubKeyHash  -> ownPaymentPubKeyHashH
+    OwnAddresses          -> ownAddressesH
     BalanceTx utx         -> balanceTxH utx
     WalletAddSignature tx -> walletAddSignatureH tx
     TotalFunds            -> totalFundsH
@@ -257,8 +259,10 @@ handleWallet = \case
         logInfo $ SubmittingTx tx
         publishTx tx
 
-    ownPaymentPubKeyHashH :: (Member (State WalletState) effs) => Eff effs PaymentPubKeyHash
-    ownPaymentPubKeyHashH = gets (CW.paymentPubKeyHash . _mockWallet)
+    ownAddressesH :: (Member (State WalletState) effs) => Eff effs (NonEmpty Address)
+    ownAddressesH = do
+        mw <- gets _mockWallet
+        pure $ NonEmpty.fromList [CW.mockWalletAddress mw]
 
     balanceTxH ::
         ( Member NodeClientEffect effs

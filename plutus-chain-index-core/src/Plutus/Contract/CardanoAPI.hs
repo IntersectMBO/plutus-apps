@@ -64,7 +64,7 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) = do
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError ChainIndexTxOut
 fromCardanoTxOut (C.TxOut addr val datum refScript) =
     ChainIndexTxOut
-        <$> fromCardanoAddress addr
+        <$> fromCardanoAddressInEra addr
         <*> (pure $ fromCardanoValue $ C.txOutValueToValue val)
         <*> (pure $ fromCardanoTxOutDatum datum)
         <*> (pure $ fromCardanoTxOutRefScript refScript)

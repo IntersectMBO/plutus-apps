@@ -7,7 +7,7 @@ module Ledger.Test where
 
 import Ledger qualified
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V1.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V1.Ledger.Api (Address, Validator)
 import PlutusTx qualified
 import Prelude hiding (not)

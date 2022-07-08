@@ -60,26 +60,38 @@ library
     Plutus.Script.Utils.V1.Address
     Plutus.Script.Utils.V1.Generators
     Plutus.Script.Utils.V1.Scripts
-    Plutus.Script.Utils.V1.Scripts.MonetaryPolicies
-    Plutus.Script.Utils.V1.Scripts.StakeValidators
-    Plutus.Script.Utils.V1.Scripts.Validators
     Plutus.Script.Utils.V1.Tx
+    Plutus.Script.Utils.V1.Typed.Scripts
+    Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
+    Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators
+    Plutus.Script.Utils.V1.Typed.Scripts.Validators
+    Plutus.Script.Utils.V1.Typed.TypeUtils
     Plutus.Script.Utils.V2.Address
     Plutus.Script.Utils.V2.Generators
     Plutus.Script.Utils.V2.Scripts
-    Plutus.Script.Utils.V2.Scripts.MonetaryPolicies
-    Plutus.Script.Utils.V2.Scripts.StakeValidators
-    Plutus.Script.Utils.V2.Scripts.Validators
     Plutus.Script.Utils.V2.Tx
+    Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies
+    Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators
+    Plutus.Script.Utils.V2.Typed.Scripts.Validators
 
   build-depends:
-    , base               >=4.9   && <5
+    , aeson                  >=2
+    , base                   >=4.9   && <5
     , bytestring
-    , cardano-api        >=1.35
-    , plutus-ledger-api  >=1.0.0
-    , plutus-tx          >=1.0.0
-    , plutus-tx-plugin   >=1.0.0
+    , cardano-api            >=1.35
+    , cardano-ledger-alonzo
+    , cborg
+    , flat
+    , hashable
+    , lens
+    , mtl
+    , plutus-core            >=1.0.0
+    , plutus-ledger-api      >=1.0.0
+    , plutus-tx              >=1.0.0
+    , plutus-tx-plugin       >=1.0.0
+    , prettyprinter
     , serialise
+    , text
 
   -- TODO This needs to be changed to 1.35 once cardano-node creates the tag
   ghc-options:      -fprint-potential-instances

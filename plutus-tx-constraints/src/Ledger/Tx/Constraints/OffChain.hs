@@ -200,7 +200,7 @@ processConstraint = \case
 
         networkId <- use (P.paramsL . networkIdL)
         out <- throwLeft ToCardanoError $ C.TxOut
-            <$> C.toCardanoAddress networkId (pubKeyHashAddress pk mskh)
+            <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
             <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInAlonzoEra . C.toCardanoScriptData . getDatum) md)
             <*> pure C.ReferenceScriptNone

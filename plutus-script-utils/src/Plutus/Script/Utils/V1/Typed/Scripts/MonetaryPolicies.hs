@@ -10,23 +10,24 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 
-module Plutus.Script.Utils.V2.Scripts.MonetaryPolicies
+module Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
     ( UntypedMintingPolicy
     , mkUntypedMintingPolicy
     , mkForwardingMintingPolicy
     , forwardToValidator
     ) where
 
-import Plutus.Script.Utils.V1.Scripts.MonetaryPolicies (UntypedMintingPolicy)
-import Plutus.V2.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
+import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
                              ValidatorHash, mkMintingPolicyScript)
-import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
+import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
                                   ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
-import Plutus.V2.Ledger.Contexts qualified as PV2
-import Plutus.V2.Ledger.Tx (TxOut (TxOut, txOutAddress))
+import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V1.Ledger.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx (UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx qualified
-import PlutusTx.Prelude (Bool (False), any, check, ($), (.), (==))
+import PlutusTx.Prelude (Bool (False), BuiltinData, any, check, ($), (.), (==))
+
+type UntypedMintingPolicy = BuiltinData -> BuiltinData -> ()
 
 -- TODO: we should add a TypedMintingPolicy interface here
 
@@ -38,8 +39,8 @@ import PlutusTx.Prelude (Bool (False), any, check, ($), (.), (==))
 --
 -- @
 --   import PlutusTx qualified
---   import Plutus.V2.Ledger.Scripts qualified as Plutus
---   import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy)
+--   import Plutus.V1.Ledger.Scripts qualified as Plutus
+--   import Plutus.Script.Utils.V1.Scripts (mkUntypedMintingPolicy)
 --
 --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
 --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
@@ -55,7 +56,7 @@ import PlutusTx.Prelude (Bool (False), any, check, ($), (.), (==))
 -- @
 mkUntypedMintingPolicy
     :: UnsafeFromData r
-    => (r -> PV2.ScriptContext -> Bool)
+    => (r -> PV1.ScriptContext -> Bool)
     -> UntypedMintingPolicy
 -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
 mkUntypedMintingPolicy f r p =
@@ -72,10 +73,10 @@ mkForwardingMintingPolicy vshsh =
        `PlutusTx.applyCode` PlutusTx.liftCode vshsh
 
 {-# INLINABLE forwardToValidator #-}
-forwardToValidator :: ValidatorHash -> () -> PV2.ScriptContext -> Bool
+forwardToValidator :: ValidatorHash -> () -> PV1.ScriptContext -> Bool
 forwardToValidator h _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Minting _} =
     let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential vh}} = vh == h
         checkHash _                                                                  = False
-    in any (checkHash . PV2.txInInfoResolved) txInfoInputs
+    in any (checkHash . PV1.txInInfoResolved) txInfoInputs
 forwardToValidator _ _ _ = False
 
