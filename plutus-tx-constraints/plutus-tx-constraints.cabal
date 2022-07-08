@@ -51,18 +51,31 @@ library
     Ledger.Tx.Constraints
     Ledger.Tx.Constraints.OffChain
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api        >=1.35
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                       >=4.9   && <5
-    , cardano-api                >=1.35
+    , base           >=4.9 && <5
     , containers
     , lens
     , mtl
     , openapi3
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-tx                  >=1.0.0
     , prettyprinter
     , transformers
 
@@ -72,21 +85,35 @@ test-suite plutus-tx-constraints-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , base                   >=4.9   && <5
+    , plutus-ledger          >=1.0.0
+    , plutus-script-utils    >=1.0.0
+    , plutus-tx-constraints  >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api        >=1.35
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+    , plutus-tx-plugin   >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base              >=4.9 && <5
     , bytestring
-    , cardano-api            >=1.35
     , containers
     , data-default
     , hedgehog
     , lens
     , mtl
-    , plutus-ledger          >=1.0.0
-    , plutus-ledger-api      >=1.0.0
-    , plutus-script-utils    >=1.0.0
-    , plutus-tx              >=1.0.0
-    , plutus-tx-constraints  >=1.0.0
-    , plutus-tx-plugin       >=1.0.0
     , tasty
     , tasty-hedgehog
     , template-haskell

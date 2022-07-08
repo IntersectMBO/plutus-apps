@@ -87,6 +87,29 @@ library
     -Wredundant-constraints -Widentities -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      playground-common          >=1.0.0
+    , plutus-chain-index-core    >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-core                >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+    , plutus-tx-plugin   >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
     , base
@@ -96,16 +119,6 @@ library
     , hashable
     , lens
     , openapi3
-    , playground-common          >=1.0.0
-    , plutus-chain-index-core    >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-core                >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-script-utils        >=1.0.0
-    , plutus-tx                  >=1.0.0
-    , plutus-tx-plugin           >=1.0.0
     , prettyprinter
     , semigroups
     , streaming
@@ -162,24 +175,38 @@ test-suite plutus-use-cases-test
     -rtsopts -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-      playground-common              >=1.0.0
+      freer-extras                   >=1.0.0
+    , playground-common              >=1.0.0
     , plutus-contract                >=1.0.0
     , plutus-contract-certification  >=1.0.0
     , plutus-ledger                  >=1.0.0
-    , plutus-ledger-api              >=1.0.0
     , plutus-ledger-constraints      >=1.0.0
     , plutus-script-utils            >=1.0.0
-    , plutus-tx                      >=1.0.0
     , plutus-use-cases               >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       base              >=4.9     && <5
     , bytestring
     , containers
     , data-default
     , foldl
-    , freer-extras      >=1.0.0
     , freer-simple
     , lens
     , mtl
@@ -192,9 +219,6 @@ test-suite plutus-use-cases-test
     , tasty-hunit
     , tasty-quickcheck
     , text
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin >=1.0.0
 
 -- runs emulator traces from plutus-use-cases-tests and
 -- writes all applied validator scripts to a folder
@@ -233,26 +257,42 @@ executable plutus-use-cases-scripts
     -rtsopts -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-      base                           >=4.9   && <5
+      freer-extras                   >=1.0.0
+    , plutus-contract                >=1.0.0
+    , plutus-contract-certification  >=1.0.0
+    , plutus-ledger                  >=1.0.0
+    , plutus-ledger-constraints      >=1.0.0
+    , plutus-script-utils            >=1.0.0
+    , plutus-use-cases               >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      cardano-api        >=1.35
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+      base                  >=4.9 && <5
     , bytestring
-    , cardano-api                    >=1.35
     , containers
     , data-default
     , foldl
-    , freer-extras                   >=1.0.0
     , freer-simple
     , lens
     , mtl
     , optparse-applicative
-    , plutus-contract                >=1.0.0
-    , plutus-contract-certification  >=1.0.0
-    , plutus-ledger                  >=1.0.0
-    , plutus-ledger-api              >=1.0.0
-    , plutus-ledger-constraints      >=1.0.0
-    , plutus-script-utils            >=1.0.0
-    , plutus-tx                      >=1.0.0
-    , plutus-use-cases               >=1.0.0
     , prettyprinter
     , QuickCheck
     , streaming
@@ -261,6 +301,3 @@ executable plutus-use-cases-scripts
     , tasty-hunit
     , tasty-quickcheck
     , text
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin >=1.0.0

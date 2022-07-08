@@ -64,9 +64,32 @@ library
     -Wredundant-constraints -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      playground-common          >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
-    , base                       >=4.7   && <5
+    , base                 >=4.7  && <5
     , bytestring
     , containers
     , data-default
@@ -79,16 +102,9 @@ library
     , monad-logger
     , mtl
     , newtype-generics
-    , playground-common          >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-script-utils        >=1.0.0
-    , plutus-tx                  >=1.0.0
     , regex-compat
     , row-types
-    , servant                    >=0.16
+    , servant              >=0.16
     , servant-client
     , servant-client-core
     , servant-server
@@ -98,9 +114,6 @@ library
     , transformers
     , wai-cors
     , web-ghc
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin >=1.0.0
 
 library plutus-playground-usecases
   hs-source-dirs:     usecases
@@ -130,30 +143,43 @@ library plutus-playground-usecases
     -Wno-missing-signatures -Wno-missing-import-lists -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-      aeson
-    , base                       >=4.7   && <5
-    , bytestring
-    , containers
-    , data-default
-    , lens
-    , mtl
-    , playground-common          >=1.0.0
+      playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-script-utils        >=1.0.0
-    , plutus-tx                  >=1.0.0
-    , row-types
-    , text
-    , transformers
+
+  --------------------
+  -- IOG dependencies
+  --------------------
+  build-depends:
+      plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+      aeson
+    , base          >=4.7 && <5
+    , bytestring
+    , containers
+    , data-default
+    , lens
+    , mtl
+    , row-types
+    , text
+    , transformers
 
 executable plutus-playground-server
   main-is:            Main.hs
@@ -187,30 +213,46 @@ executable plutus-playground-server
     -Wno-missing-import-lists -Wredundant-constraints -O0 -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      freer-extras                >=1.0.0
+    , playground-common           >=1.0.0
+    , plutus-contract             >=1.0.0
+    , plutus-ledger               >=1.0.0
+    , plutus-ledger-constraints   >=1.0.0
+    , plutus-playground-server
+    , plutus-playground-usecases
+    , plutus-script-utils         >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
     , aeson-pretty
-    , base                        >=4.7   && <5
+    , base                  >=4.7 && <5
     , bytestring
     , containers
     , data-default
     , data-default-class
     , exceptions
     , filepath
-    , freer-extras                >=1.0.0
     , lens
     , monad-logger
     , mtl
     , optparse-applicative
-    , playground-common           >=1.0.0
-    , plutus-contract             >=1.0.0
-    , plutus-ledger               >=1.0.0
-    , plutus-ledger-api           >=1.0.0
-    , plutus-ledger-constraints   >=1.0.0
-    , plutus-playground-server    >=1.0.0
-    , plutus-playground-usecases  >=1.0.0
-    , plutus-script-utils         >=1.0.0
-    , plutus-tx                   >=1.0.0
     , purescript-bridge
     , row-types
     , servant
@@ -221,9 +263,6 @@ executable plutus-playground-server
     , transformers
     , warp
     , web-ghc
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin >=1.0.0
 
 test-suite plutus-playground-server-test
   type:               exitcode-stdio-1.0
@@ -246,17 +285,25 @@ test-suite plutus-playground-server-test
     -Wincomplete-record-updates -Wno-missing-import-lists
     -Wredundant-constraints -fprint-potential-instances
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      playground-common           >=1.0.0
+    , plutus-contract             >=1.0.0
+    , plutus-ledger               >=1.0.0
+    , plutus-playground-server
+    , plutus-playground-usecases
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
-    , base                        >=4.7   && <5
+    , base              >=4.7 && <5
     , bytestring
     , mtl
     , newtype-generics
-    , playground-common           >=1.0.0
-    , plutus-contract             >=1.0.0
-    , plutus-ledger               >=1.0.0
-    , plutus-playground-server    >=1.0.0
-    , plutus-playground-usecases  >=1.0.0
     , tasty
     , tasty-hunit
     , text

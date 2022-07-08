@@ -163,11 +163,18 @@ library
   -- the Haskell modules and not in the current cabal file.
   -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
   other-modules:      Ledger.Tx.CardanoAPITemp
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , array
-    , base                            >=4.9   && <5
-    , bytestring
+    , freer-extras
+    , plutus-script-utils
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
     , cardano-api:{cardano-api, gen}  >=1.35
     , cardano-crypto
     , cardano-crypto-class
@@ -177,26 +184,33 @@ library
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
-    , cborg
-    , containers
-    , cryptonite                      >=0.25
-    , data-default
-    , deepseq
-    , freer-extras                    >=1.0.0
-    , hashable
-    , hedgehog
-    , http-api-data
     , iohk-monitoring
-    , lens
-    , memory
-    , mtl
-    , openapi3
     , ouroboros-consensus
     , ouroboros-consensus-shelley
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
-    , plutus-script-utils             >=1.0.0
     , plutus-tx                       >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , array
+    , base               >=4.9  && <5
+    , bytestring
+    , cborg
+    , containers
+    , cryptonite         >=0.25
+    , data-default
+    , deepseq
+    , hashable
+    , hedgehog
+    , http-api-data
+    , lens
+    , memory
+    , mtl
+    , openapi3
     , prettyprinter
     , scientific
     , serialise
@@ -224,18 +238,32 @@ test-suite plutus-ledger-test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
   other-modules:      Ledger.Tx.CardanoAPISpec
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-ledger
+    , plutus-script-utils  >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}  >=1.35
+    , plutus-ledger-api               >=1.0.0
+    , plutus-tx                       >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                            >=4.9   && <5
+    , base            >=4.9 && <5
     , bytestring
-    , cardano-api:{cardano-api, gen}  >=1.35
     , containers
     , data-default
     , hedgehog
-    , plutus-ledger                   >=1.0.0
-    , plutus-ledger-api               >=1.0.0
-    , plutus-script-utils             >=1.0.0
-    , plutus-tx                       >=1.0.0
     , tasty
     , tasty-hedgehog
     , tasty-hunit

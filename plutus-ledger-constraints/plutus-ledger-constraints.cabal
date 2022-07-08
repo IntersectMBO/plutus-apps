@@ -53,18 +53,31 @@ library
     Ledger.Constraints.OnChain
     Ledger.Constraints.TxConstraints
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-ledger        >=1.0.0
+    , plutus-script-utils  >=1.0.0
+
+  ---------------------------
+  -- Other IOG dependencies
+  ---------------------------
+  build-depends:
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                 >=4.9   && <5
+    , base           >=4.9 && <5
     , containers
     , data-default
     , lens
     , mtl
     , openapi3
-    , plutus-ledger        >=1.0.0
-    , plutus-ledger-api    >=1.0.0
-    , plutus-script-utils  >=1.0.0
-    , plutus-tx            >=1.0.0
     , prettyprinter
     , transformers
 
@@ -74,20 +87,34 @@ test-suite plutus-ledger-constraints-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , base                       >=4.9   && <5
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints
+    , plutus-script-utils        >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+    , plutus-tx-plugin   >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base              >=4.9 && <5
     , bytestring
     , containers
     , data-default
     , hedgehog
     , lens
     , mtl
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-script-utils        >=1.0.0
-    , plutus-tx                  >=1.0.0
-    , plutus-tx-plugin           >=1.0.0
     , tasty
     , tasty-hedgehog
     , template-haskell

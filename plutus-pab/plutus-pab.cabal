@@ -120,6 +120,10 @@ library
 
   other-modules:   Servant.Extra
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , freer-extras               >=1.0.0
     , playground-common          >=1.0.0
@@ -127,21 +131,13 @@ library
     , plutus-chain-index-core    >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-script-utils        >=1.0.0
-    , plutus-tx                  >=1.0.0
-    , plutus-tx-plugin           >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
   build-depends:
-    , aeson
-    , aeson-pretty
-    , async
-    , base                             >=4.7     && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
-    , bytestring
     , cardano-addresses
     , cardano-api                      >=1.35
     , cardano-ledger-core
@@ -151,6 +147,27 @@ library
     , cardano-wallet-core
     , cardano-wallet-core-integration
     , cardano-wallet-launcher
+    , iohk-monitoring
+    , lobemo-backend-ekg
+    , ouroboros-network
+    , ouroboros-network-framework
+    , plutus-ledger-api                >=1.0.0
+    , plutus-tx                        >=1.0.0
+    , plutus-tx-plugin                 >=1.0.0
+    , Win32-network
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , async
+    , base                  >=4.7     && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
     , containers
     , contra-tracer
     , cryptonite
@@ -163,18 +180,14 @@ library
     , generic-arbitrary
     , http-client
     , http-client-tls
-    , iohk-monitoring
     , lens
-    , lobemo-backend-ekg
     , memory
     , monad-logger
     , mtl
     , network-mux
     , openapi3
     , optparse-applicative
-    , ouroboros-network
-    , ouroboros-network-framework
-    , prettyprinter                    >=1.1.0.1
+    , prettyprinter         >=1.1.0.1
     , QuickCheck
     , quickcheck-instances
     , random
@@ -201,7 +214,6 @@ library
     , wai-cors
     , warp
     , websockets
-    , Win32-network
     , yaml
 
 test-suite plutus-pab-test-light
@@ -218,21 +230,34 @@ test-suite plutus-pab-test-light
     Control.Concurrent.STM.ExtrasSpec
     Plutus.PAB.ArbitrarySpec
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-contract            >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-pab                 >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}  >=1.35
+    , plutus-tx                       >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , async
-    , base                            >=4.9   && <5
+    , base                  >=4.9 && <5
     , bytestring
-    , cardano-api:{cardano-api, gen}  >=1.35
     , data-default
     , freer-simple
     , hedgehog
     , hedgehog-quickcheck
-    , plutus-contract                 >=1.0.0
-    , plutus-ledger                   >=1.0.0
-    , plutus-ledger-constraints       >=1.0.0
-    , plutus-pab                      >=1.0.0
-    , plutus-tx                       >=1.0.0
     , QuickCheck
     , quickcheck-instances
     , smallcheck
