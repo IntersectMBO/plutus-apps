@@ -216,8 +216,8 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
     -- But for now just return a zero execution cost so it will run later where we do handle failing transactions.
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs) =
-      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs "CekEvaluationFailure"))
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
+      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
     toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
 
 makeTransactionBody
