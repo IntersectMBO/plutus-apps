@@ -41,10 +41,31 @@ library
     -Wincomplete-record-updates -Wmissing-import-lists
     -Wredundant-constraints
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      freer-extras
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-script-utils
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api
+    , plutus-tx
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
     , aeson-casing
-    , base                       >=4.7  && <5
+    , base                  >=4.7  && <5
     , bytestring
     , containers
     , cookie
@@ -53,7 +74,6 @@ library
     , deriving-compat
     , exceptions
     , foldl
-    , freer-extras
     , freer-simple
     , hashable
     , http-client
@@ -66,20 +86,13 @@ library
     , mtl
     , newtype-generics
     , openapi3
-    , plutus-chain-index-core
-    , plutus-contract
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
     , prettyprinter
     , process
-    , prometheus                 >=2
+    , prometheus            >=2
     , purescript-bridge
-    , recursion-schemes          <5.2
+    , recursion-schemes     <5.2
     , row-types
-    , servant                    >=0.16
+    , servant               >=0.16
     , servant-client
     , servant-purescript
     , servant-server
@@ -115,14 +128,22 @@ test-suite playground-common-test
     -Wmissing-import-lists -Wredundant-constraints
     -fprint-potential-instances -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      playground-common
+    , plutus-contract
+    , plutus-ledger
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
     , base               >=4.7 && <5
     , bytestring
     , freer-simple
-    , playground-common
-    , plutus-contract
-    , plutus-ledger
     , recursion-schemes  <5.2
     , tasty
     , tasty-hunit

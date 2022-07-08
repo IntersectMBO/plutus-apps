@@ -30,11 +30,20 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules: Plutus.Streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
   build-depends:
-    , async
-    , base               >=4.9 && <5
     , cardano-api
     , ouroboros-network
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , async
+    , base       >=4.9 && <5
     , stm
     , streaming
 
@@ -46,14 +55,25 @@ executable plutus-streaming-example-1
     Common
     Orphans
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:  plutus-streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , base                  >=4.9 && <5
     , base16-bytestring
     , bytestring
-    , cardano-api
     , optparse-applicative
-    , plutus-streaming
     , streaming
     , text
 
@@ -65,16 +85,28 @@ executable plutus-streaming-example-2
     Common
     Orphans
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-ledger
+    , plutus-script-utils
+    , plutus-streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , base                  >=4.9 && <5
     , base16-bytestring
     , bytestring
-    , cardano-api
     , optparse-applicative
-    , plutus-ledger
-    , plutus-script-utils
-    , plutus-streaming
     , streaming
 
 executable plutus-streaming-example-3
@@ -85,13 +117,25 @@ executable plutus-streaming-example-3
     Common
     Orphans
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , base                     >=4.9 && <5
-    , base16-bytestring
-    , bytestring
-    , cardano-api
-    , optparse-applicative
     , plutus-chain-index-core
     , plutus-streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , base16-bytestring
+    , bytestring
+    , optparse-applicative
     , streaming

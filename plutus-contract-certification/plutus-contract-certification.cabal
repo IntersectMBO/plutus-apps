@@ -33,7 +33,7 @@ common lang
     ScopedTypeVariables
     StandaloneDeriving
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wunused-packages
@@ -48,15 +48,27 @@ library
     Plutus.Contract.Test.Certification.Run
 
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:   plutus-contract
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:   plutus-tx
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base             >=4.7 && <5
+    , base        >=4.7 && <5
     , bytestring
     , containers
     , lens
     , mtl
-    , plutus-contract
-    , plutus-tx
     , QuickCheck
     , splitmix
     , stm

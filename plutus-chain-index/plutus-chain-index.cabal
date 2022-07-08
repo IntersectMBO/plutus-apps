@@ -51,27 +51,39 @@ library
 
   other-modules:   Control.Concurrent.STM.TBMQueue
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , freer-extras
     , plutus-chain-index-core
     , plutus-ledger
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
+    , ouroboros-network
     , plutus-ledger-api
 
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , async
     , base                  >=4.7     && <5
     , beam-migrate
     , beam-sqlite
-    , cardano-api
     , clock
     , contra-tracer
     , data-default
     , freer-simple
-    , iohk-monitoring
     , lens
     , optparse-applicative
-    , ouroboros-network
     , prettyprinter         >=1.1.0.1
     , resource-pool
     , sqlite-simple
@@ -110,18 +122,31 @@ executable marconi
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , base                  >=4.9 && <5
-    , bytestring
-    , cardano-api
-    , containers
     , hysterical-screams
-    , iohk-monitoring
-    , lens
-    , optparse-applicative
     , plutus-ledger
     , plutus-script-utils
     , plutus-streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base                  >=4.9 && <5
+    , bytestring
+    , containers
+    , lens
+    , optparse-applicative
     , prettyprinter
     , serialise
     , sqlite-simple

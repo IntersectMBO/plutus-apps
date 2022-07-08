@@ -65,17 +65,25 @@ library
     Plutus.Script.Utils.V1.Typed.Scripts.Validators
     Plutus.Script.Utils.V1.Typed.TypeUtils
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
   build-depends:
-    , aeson
-    , base                   >=4.9  && <5
-    , bytestring
     , cardano-api            >=1.34
     , cardano-ledger-alonzo
-    , mtl
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base           >=4.9 && <5
+    , bytestring
+    , mtl
     , prettyprinter
     , serialise
 
@@ -91,6 +99,10 @@ test-suite plutus-ledger-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , base   >=4.9 && <5
     , tasty
