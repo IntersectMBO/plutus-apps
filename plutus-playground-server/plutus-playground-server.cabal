@@ -56,7 +56,7 @@ library
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
@@ -64,9 +64,32 @@ library
     -Wredundant-constraints -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-script-utils
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api
+    , plutus-tx
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
-    , base                       >=4.7  && <5
+    , base                 >=4.7  && <5
     , bytestring
     , containers
     , data-default
@@ -79,16 +102,9 @@ library
     , monad-logger
     , mtl
     , newtype-generics
-    , playground-common
-    , plutus-contract
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
     , regex-compat
     , row-types
-    , servant                    >=0.16
+    , servant              >=0.16
     , servant-client
     , servant-client-core
     , servant-server
@@ -98,9 +114,6 @@ library
     , transformers
     , wai-cors
     , web-ghc
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
 
 library plutus-playground-usecases
   hs-source-dirs:     usecases
@@ -122,7 +135,7 @@ library plutus-playground-usecases
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
@@ -130,30 +143,43 @@ library plutus-playground-usecases
     -Wno-missing-signatures -Wno-missing-import-lists -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-      aeson
-    , base                       >=4.7 && <5
-    , bytestring
-    , containers
-    , data-default
-    , lens
-    , mtl
-    , playground-common
+      playground-common
     , plutus-contract
     , plutus-ledger
-    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-script-utils
+
+  --------------------
+  -- IOG dependencies
+  --------------------
+  build-depends:
+      plutus-ledger-api
     , plutus-tx
-    , row-types
-    , text
-    , transformers
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+      aeson
+    , base          >=4.7 && <5
+    , bytestring
+    , containers
+    , data-default
+    , lens
+    , mtl
+    , row-types
+    , text
+    , transformers
 
 executable plutus-playground-server
   main-is:            Main.hs
@@ -179,7 +205,7 @@ executable plutus-playground-server
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
@@ -187,30 +213,46 @@ executable plutus-playground-server
     -Wno-missing-import-lists -Wredundant-constraints -O0 -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      freer-extras
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-playground-server
+    , plutus-playground-usecases
+    , plutus-script-utils
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      plutus-ledger-api
+    , plutus-tx
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
     , aeson-pretty
-    , base                        >=4.7 && <5
+    , base                  >=4.7 && <5
     , bytestring
     , containers
     , data-default
     , data-default-class
     , exceptions
     , filepath
-    , freer-extras
     , lens
     , monad-logger
     , mtl
     , optparse-applicative
-    , playground-common
-    , plutus-contract
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-playground-server
-    , plutus-playground-usecases
-    , plutus-script-utils
-    , plutus-tx
     , purescript-bridge
     , row-types
     , servant
@@ -221,9 +263,6 @@ executable plutus-playground-server
     , transformers
     , warp
     , web-ghc
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
 
 test-suite plutus-playground-server-test
   type:               exitcode-stdio-1.0
@@ -246,17 +285,25 @@ test-suite plutus-playground-server-test
     -Wincomplete-record-updates -Wno-missing-import-lists
     -Wredundant-constraints -fprint-potential-instances
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-      aeson
-    , base                        >=4.7 && <5
-    , bytestring
-    , mtl
-    , newtype-generics
-    , playground-common
+      playground-common
     , plutus-contract
     , plutus-ledger
     , plutus-playground-server
     , plutus-playground-usecases
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+      aeson
+    , base              >=4.7 && <5
+    , bytestring
+    , mtl
+    , newtype-generics
     , tasty
     , tasty-hunit
     , text

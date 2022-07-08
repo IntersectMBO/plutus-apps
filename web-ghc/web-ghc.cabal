@@ -41,14 +41,21 @@ library
     -Wincomplete-record-updates -Wno-missing-import-lists
     -Wredundant-constraints
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:      playground-common
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       aeson
-    , base               >=4.7 && <5
+    , base              >=4.7 && <5
     , exceptions
     , filepath
     , mtl
     , newtype-generics
-    , playground-common
     , servant-client
     , servant-server
     , temporary
@@ -67,12 +74,19 @@ executable web-ghc-server
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:      playground-common
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       base                  >=4.7 && <5
     , data-default-class
     , monad-logger
     , optparse-applicative
-    , playground-common
     , prometheus
     , servant-server
     , text
@@ -95,6 +109,9 @@ test-suite web-ghc-test
     -Wno-missing-import-lists -Wredundant-constraints
     -fprint-potential-instances -Wunused-packages
 
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
       base   >=4.7 && <5
     , tasty

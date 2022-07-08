@@ -116,27 +116,41 @@ library
     Wallet.Types
 
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , freer-extras
     , plutus-chain-index-core
-    , plutus-core
     , plutus-ledger
-    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-script-utils
-    , plutus-tx
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
   build-depends:
     , cardano-api
     , cardano-crypto
     , cardano-ledger-core
+    , cardano-wallet-core
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , quickcheck-dynamic
 
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson                 >=1.5.2
     , aeson-pretty
     , base                  >=4.7     && <5
     , bytestring
-    , cardano-wallet-core
     , containers
     , cryptonite            >=0.25
     , data-default
@@ -159,7 +173,6 @@ library
     , prettyprinter         >=1.1.0.1
     , profunctors
     , QuickCheck
-    , quickcheck-dynamic
     , row-types             >=1.0.1.0
     , semigroupoids
     , serialise
@@ -173,9 +186,6 @@ library
     , uniplate
     , unordered-containers
     , uuid
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -198,6 +208,9 @@ library
       Plutus.Contract.Test.Coverage.ReportCoverage
       Plutus.Contract.Test.MissingLovelace
 
+    ------------------------
+    -- Non-IOG dependencies
+    ------------------------
     build-depends:
       , tasty
       , tasty-golden
@@ -233,29 +246,45 @@ test-suite plutus-contract-test
     Spec.ThreadToken
     Spec.TimeValidity
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , freer-extras
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-script-utils
+    , plutus-tx-constraints
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                            >=4.9 && <5
+    , base                >=4.9 && <5
     , bytestring
-    , cardano-api:{cardano-api, gen}
     , containers
     , data-default
     , deepseq
     , extensible-effects
-    , freer-extras
     , freer-simple
     , hedgehog
     , lens
     , mtl
-    , plutus-chain-index-core
-    , plutus-contract
-    , plutus-core
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
-    , plutus-tx-constraints
     , pretty
     , prettyprinter
     , QuickCheck
@@ -272,6 +301,3 @@ test-suite plutus-contract-test
     , text
     , transformers
     , utf8-string
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin

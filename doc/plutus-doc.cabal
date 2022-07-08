@@ -39,7 +39,7 @@ common lang
     ScopedTypeVariables
     StandaloneDeriving
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
@@ -76,34 +76,47 @@ executable doc-doctests
     HelloWorldApp
     WriteScriptsTo
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , freer-extras
+    , playground-common
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-script-utils
+    , plutus-tx-constraints
+    , plutus-use-cases
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , quickcheck-dynamic
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                       >=4.9      && <5
+    , base              >=4.9      && <5
     , bytestring
     , containers
     , data-default
     , flat
-    , freer-extras
     , lens
-    , playground-common
-    , plutus-chain-index-core
-    , plutus-contract
-    , plutus-core
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
-    , plutus-tx-constraints
-    , plutus-use-cases
     , QuickCheck
-    , quickcheck-dynamic
     , random
     , serialise
     , tasty
     , tasty-quickcheck
-    , template-haskell           >=2.13.0.0
+    , template-haskell  >=2.13.0.0
     , text
-
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
