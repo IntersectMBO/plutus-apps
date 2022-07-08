@@ -25,6 +25,7 @@ import Plutus.V1.Ledger.Address qualified as LA
 import Plutus.V1.Ledger.Api (Credential (..), adaSymbol, adaToken, fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
 import Plutus.V1.Ledger.Scripts qualified as PS
+import Plutus.V1.Ledger.TxId qualified as Ledger
 import Plutus.V1.Ledger.Value hiding (Value)
 import Plutus.V1.Ledger.Value qualified as Ledger (Value)
 
@@ -91,6 +92,15 @@ credentialToAddress c = case toCardanoAddress netId pAddress of
 
     netId :: NetworkId
     netId = fromNetworkMagic $ NetworkMagic {unNetworkMagic = 1097911063}
+
+utxoToRef :: AddressUtxo -> TxOutRef
+utxoToRef utxo = TxOutRef { txOutRefId=utxoToTxId utxo
+                          , txOutRefIdx=_addressUtxoOutputIndex utxo
+                          }
+
+utxoToTxId :: AddressUtxo -> Ledger.TxId
+utxoToTxId utxo =
+    Ledger.TxId $ toBuiltin $ fromJust $ decodeHex $ unTxHash $ _addressUtxoTxHash utxo
 
 amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
 amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)

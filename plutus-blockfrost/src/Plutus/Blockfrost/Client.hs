@@ -48,14 +48,15 @@ handleBlockfrostClient event = liftIO $ do
                 Left e                  -> ioError (userError $ show e)
 
     case event of
-        DatumFromHash d          -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
-        RedeemerFromHash d       -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
-        ValidatorFromHash d      -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-        MintingPolicyFromHash d  -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-        StakeValidatorFromHash d -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-        UnspentTxOutFromRef r    -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostTxHash) r  >>= processUnspentTxOut (txOutRefIdx r)
-        UtxoSetMembership r      -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
-        UtxoSetAtAddress pq a    -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxos pq
-        UtxoSetWithCurrency pq a -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
-        TxoSetAtAddress _ _      -> ioError (userError "TODO")
-        GetTip                   -> runClient getTipBlockfrost >>= processTip
+        DatumFromHash d               -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
+        RedeemerFromHash d            -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
+        ValidatorFromHash d           -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
+        MintingPolicyFromHash d       -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
+        StakeValidatorFromHash d      -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
+        UnspentTxOutFromRef r         -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostTxHash) r  >>= processUnspentTxOut (txOutRefIdx r)
+        UtxoSetMembership r           -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
+        UtxoSetAtAddress pq a         -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxos pq
+        UtxoSetWithCurrency pq a      -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
+        TxoSetAtAddress _ _           -> ioError (userError "TODO")
+        GetTip                        -> runClient getTipBlockfrost >>= processTip
+        UnspentTxOutSetAtAddress pq a -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processUnspentTxOutSetAtAddress pq a

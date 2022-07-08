@@ -11,6 +11,7 @@ module Plutus.Blockfrost.Responses (
     , processUnspentTxOut
     , processIsUtxo
     , processGetUtxos
+    , processUnspentTxOutSetAtAddress
     ) where
 
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
@@ -26,7 +27,7 @@ import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
-import Plutus.ChainIndex.Api (IsUtxoResponse (..), UtxosResponse (..))
+import Plutus.ChainIndex.Api (IsUtxoResponse (..), UnspentTxOutSetResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Api (toBuiltin)
@@ -130,7 +131,7 @@ processIsUtxo (blockN, isUtxo) = do
     tip <- processTip blockN
     return $ IsUtxoResponse {currentTip=tip, isUtxo=isUtxo}
 
-processGetUtxos :: PageQuery TxOutRef -> (Block, [AddressUtxo]) ->  IO UtxosResponse
+processGetUtxos :: PageQuery TxOutRef -> (Block, [AddressUtxo]) -> IO UtxosResponse
 processGetUtxos pq (blockN, xs) = do
     tip <- processTip blockN
     return $ UtxosResponse {currentTip=tip, page=page}
@@ -138,17 +139,56 @@ processGetUtxos pq (blockN, xs) = do
       page :: Page TxOutRef
       page = Page {currentPageQuery=pq
                   , nextPageQuery=Nothing
-                  , pageItems=items}
+                  , pageItems=items
+                  }
 
       items :: [TxOutRef]
-      items = map transform xs
+      items = map utxoToRef xs
 
-      transform :: AddressUtxo -> TxOutRef
-      transform utxo =
-        TxOutRef {txOutRefId=toTxId utxo
-                 ,txOutRefIdx=_addressUtxoOutputIndex utxo}
+processUnspentTxOutSetAtAddress ::
+    PageQuery (TxOutRef, ChainIndexTxOut)
+    -> Credential
+    -> (Block, [AddressUtxo])
+    -> IO UnspentTxOutSetResponse
+processUnspentTxOutSetAtAddress pq cred (blockN, xs) = do
+    tip <- processTip blockN
+    return $ UnspentTxOutSetResponse {currentTip = tip, pageu = pageu}
+  where
+    pageu :: Page (TxOutRef, ChainIndexTxOut)
+    pageu = Page { currentPageQuery=pq
+                 , nextPageQuery=Nothing
+                 , pageItems=items
+                 }
 
-      toTxId :: AddressUtxo -> Ledger.TxId
-      toTxId utxo =
-        Ledger.TxId {getTxId=toBuiltin $ fromJust $ decodeHex $ unTxHash $ _addressUtxoTxHash utxo}
+    items :: [(TxOutRef, ChainIndexTxOut)]
+    items = map transform xs
 
+    transform :: AddressUtxo -> (TxOutRef, ChainIndexTxOut)
+    transform utxo = (utxoToRef utxo, buildResponse utxo)
+
+    add :: Ledger.Address
+    add = case cred of
+      PubKeyCredential pkh     -> Ledger.pubKeyHashAddress pkh
+      ScriptCredential valHash -> Ledger.scriptHashAddress valHash
+
+    buildResponse :: AddressUtxo -> ChainIndexTxOut
+    buildResponse utxo = case cred of
+        PubKeyCredential _       -> buildPublicKeyTxOut add utxo
+        ScriptCredential valHash -> buildScriptTxOut add utxo valHash
+
+    buildScriptTxOut :: Ledger.Address -> AddressUtxo -> ValidatorHash -> ChainIndexTxOut
+    buildScriptTxOut addr utxo val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
+                                                           , _ciTxOutValidator=Left val
+                                                           , _ciTxOutDatum=utxoDatumHash utxo
+                                                           , _ciTxOutValue=utxoValue utxo
+                                                           }
+
+    buildPublicKeyTxOut :: Ledger.Address -> AddressUtxo -> ChainIndexTxOut
+    buildPublicKeyTxOut addr utxo = PublicKeyChainIndexTxOut { _ciTxOutAddress=addr
+                                                             , _ciTxOutValue=utxoValue utxo}
+
+    utxoValue :: AddressUtxo -> Ledger.Value
+    utxoValue = amountsToValue . _addressUtxoAmount
+
+    utxoDatumHash :: AddressUtxo -> Either Ledger.DatumHash Datum
+    utxoDatumHash = maybe (Right unitDatum) (Left . textToDatumHash) . _addressUtxoDataHash
