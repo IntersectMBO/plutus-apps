@@ -12,11 +12,11 @@ import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (Shel
 import Gen.Cardano.Api.Typed qualified as Gen
 import Ledger.Test (someValidator)
 import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra)
-import Ledger.Validation (fromPlutusTxToTxBodyContent)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
+                             toCardanoTxBodyContent)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
-import Plutus.Script.Utils.V1.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
 
 import Data.Default (def)
@@ -92,7 +92,7 @@ convertMintingTx = property $ do
         , txMintScripts = Set.singleton mps
         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) unitRedeemer
         }
-      ectx = fromPlutusTxToTxBodyContent def [] tx >>= makeTransactionBody mempty
+      ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody mempty
   case ectx of
     -- Check that the converted tx contains exactly one script
     Right (ShelleyTxBody _ _ [_script] _ _ _) -> do

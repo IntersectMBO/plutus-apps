@@ -1,38 +1,79 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE NamedFieldPuns #-}
-
--- | Configuring and calculating transaction fees in the emulator.
+-- | Calculating transaction fees in the emulator.
 module Ledger.Fee(
-  FeeConfig (..)
-, calcFees
+  estimateTransactionFee,
+  makeAutoBalancedTransaction
 ) where
 
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (Default (def))
-import GHC.Generics (Generic)
-import Ledger.Ada (Ada)
-import Ledger.Ada qualified as Ada
-import Ledger.Index (minFee)
+import Cardano.Api.Shelley qualified as C.Api
+import Cardano.Ledger.BaseTypes (Globals (systemStart))
+import Data.Bifunctor (bimap, first)
+import Data.Map qualified as Map
+import Ledger.Ada (lovelaceValueOf)
+import Ledger.Address (Address, PaymentPubKeyHash)
+import Ledger.Params (EmulatorEra, Params (pNetworkId, pProtocolParams), emulatorEraHistory, emulatorGlobals)
+import Ledger.Tx (ToCardanoError (TxBodyError), Tx)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoTxBodyContent)
+import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
+import Ledger.Value (Value)
 
--- | Datatype to configure the fee in a transaction.
---
--- The fee for a transaction is typically: 'fcConstantFee + 'fcScriptsFeeFactor' *
--- <SIZE_DEPENDANT_SCRIPTS_FEE>.
-data FeeConfig =
-    FeeConfig
-        { fcConstantFee      :: Ada    -- ^ Constant fee per transaction in lovelace
-        , fcScriptsFeeFactor :: Double -- ^ Factor by which to multiply the size-dependent scripts fee
-        }
-    deriving (Show, Eq, Generic, ToJSON, FromJSON)
+estimateTransactionFee
+  :: Params
+  -> UTxO EmulatorEra
+  -> [PaymentPubKeyHash]
+  -> Tx
+  -> Either CardanoLedgerError Value
+estimateTransactionFee params utxo requiredSigners tx = do
+  txBodyContent <- first Right $ toCardanoTxBodyContent params requiredSigners tx
+  let nkeys = C.Api.estimateTransactionKeyWitnessCount (getCardanoBuildTx txBodyContent)
+  txBody <- makeTransactionBody params utxo txBodyContent
+  case C.Api.evaluateTransactionFee (pProtocolParams params) txBody nkeys 0 of
+    C.Api.Lovelace fee -> pure $ lovelaceValueOf fee
 
-instance Default FeeConfig where
-  def = FeeConfig { fcConstantFee = Ada.fromValue $ minFee mempty
-                  , fcScriptsFeeFactor = 1.0
-                  }
+-- | Creates a balanced transaction by calculating the execution units, the fees and the change,
+-- which is assigned to the given address.
+makeAutoBalancedTransaction
+  :: Params
+  -> UTxO EmulatorEra -- ^ Just the transaction inputs, not the entire 'UTxO'.
+  -> CardanoBuildTx
+  -> Address -- ^ Change address
+  -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
+makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
+  cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
+  -- Compute the change.
+  C.Api.BalancedTxBody _ change _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr []
+  let
+    -- Recompute execution units with full set of UTxOs, including change.
+    trial = balance cChangeAddr [change]
+    -- Correct for a negative balance in cases where execution units, and hence fees, have increased.
+    change' =
+      case (change, trial) of
+        (C.Api.TxOut addr (C.Api.TxOutValue vtype value) datum _referenceScript, Left (C.Api.TxBodyErrorAdaBalanceNegative delta)) ->
+          C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> C.Api.lovelaceToValue delta) datum _referenceScript
+        _ -> change
+  -- Construct the body with correct execution units and fees.
+  C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr [change']
+  pure $ C.Api.makeSignedTransaction [] txBody
+  where
+    eh = emulatorEraHistory params
+    ss = systemStart $ emulatorGlobals params
+    utxo' = fromLedgerUTxO utxo
+    balance cChangeAddr extraOuts = C.Api.makeTransactionBodyAutoBalance
+      C.Api.AlonzoEraInCardanoMode
+      ss
+      eh
+      (pProtocolParams params)
+      mempty
+      utxo'
+      txBodyContent { C.Api.txOuts = C.Api.txOuts txBodyContent ++ extraOuts }
+      cChangeAddr
+      Nothing
 
-calcFees :: FeeConfig
-         -> Integer -- ^ Scripts fee in lovelace
-         -> Ada -- ^ Fees in lovelace
-calcFees FeeConfig { fcConstantFee , fcScriptsFeeFactor } scriptsFee =
-     fcConstantFee
-  <> Ada.lovelaceOf (floor $ fcScriptsFeeFactor * fromIntegral scriptsFee)
+
+fromLedgerUTxO :: UTxO EmulatorEra
+               -> C.Api.UTxO C.Api.AlonzoEra
+fromLedgerUTxO (UTxO utxo) =
+    C.Api.UTxO
+  . Map.fromList
+  . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraAlonzo))
+  . Map.toList
+  $ utxo

@@ -31,9 +31,9 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), ScriptValidationEvent, Slot (..),
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
-               getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
+import Ledger (Block, Blockchain, CardanoTx (..), EmulatorEra, OnChainTx (..), Params (..), ScriptValidationEvent,
+               Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxId, TxIn (txInRef), TxOut (txOutValue), Value,
+               eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
                mergeCardanoTxWith)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
@@ -197,7 +197,7 @@ mkValidationEvent idx t result events =
 validateEm
     :: S.MonadState Index.ValidationCtx m
     => Slot
-    -> Validation.UTxO Index.EmulatorEra
+    -> Validation.UTxO EmulatorEra
     -> CardanoTx
     -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateEm h cUtxoIndex txn = do
@@ -216,7 +216,7 @@ validateEm h cUtxoIndex txn = do
 validateL
     :: Params
     -> Slot
-    -> Validation.UTxO Index.EmulatorEra
+    -> Validation.UTxO EmulatorEra
     -> SomeCardanoApiTx
     -> (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateL params slot idx (CardanoApiEmulatorEraTx tx) = (Validation.hasValidationErrors params (fromIntegral slot) idx tx, [])

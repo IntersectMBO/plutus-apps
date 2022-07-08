@@ -255,6 +255,7 @@ test-suite plutus-contract-test
     , plutus-ledger-constraints       >=1.0.0
     , plutus-script-utils             >=1.0.0
     , plutus-tx                       >=1.0.0
+    , plutus-tx-constraints           >=1.0.0
     , pretty
     , prettyprinter
     , QuickCheck
