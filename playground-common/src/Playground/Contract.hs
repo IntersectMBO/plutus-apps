@@ -42,6 +42,9 @@ module Playground.Contract
     , type (.\/)
     , interval
     , ownPaymentPubKeyHash
+    , ownFirstPaymentPubKeyHash
+    , ownPaymentPubKeyHashes
+    , ownAddresses
     , awaitSlot
     , modifiesUtxoSet
     , utxosAt
@@ -66,8 +69,9 @@ import Playground.Interpreter.Util
 import Playground.Schema (endpointsToSchemas)
 import Playground.TH (ensureKnownCurrencies, mkFunction, mkFunctions, mkKnownCurrencies, mkSchemaDefinitions)
 import Playground.Types (Expression, FunctionSchema, KnownCurrency (KnownCurrency), adaCurrency)
-import Plutus.Contract (AsContractError, Contract, Endpoint, awaitSlot, endpoint, ownPaymentPubKeyHash, submitTx,
-                        type (.\/), utxosAt, watchAddressUntilSlot)
+import Plutus.Contract (AsContractError, Contract, Endpoint, awaitSlot, endpoint, ownAddresses,
+                        ownFirstPaymentPubKeyHash, ownPaymentPubKeyHash, ownPaymentPubKeyHashes, submitTx, type (.\/),
+                        utxosAt, watchAddressUntilSlot)
 import Plutus.Contract.Trace (TraceError (..))
 import Schema (FormSchema, ToArgument, ToSchema)
 import Wallet.Emulator.Types (Wallet (..))

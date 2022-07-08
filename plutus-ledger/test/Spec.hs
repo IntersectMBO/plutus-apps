@@ -23,7 +23,6 @@ import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBo
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Bytes as Bytes
-import Ledger.Fee (FeeConfig (..), calcFees)
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig (..))
@@ -81,9 +80,6 @@ tests = testGroup "all tests" [
                 in byteStringJson vlJson vlValue)),
     testGroup "Tx" [
         testPropertyNamed "TxOut fromTxOut/toTxOut" "ciTxOutRoundTrip" ciTxOutRoundTrip
-        ],
-    testGroup "Fee" [
-        testPropertyNamed "calcFees" "calcFeesTest" calcFeesTest
         ],
     testGroup "TimeSlot" [
         testPropertyNamed "time range of starting slot" "initialSlotToTimeProp," initialSlotToTimeProp,
@@ -234,11 +230,6 @@ ciTxOutRoundTrip = property $ do
   txOuts <- Map.elems . Gen.mockchainUtxo <$> forAll Gen.genMockchain
   forM_ txOuts $ \txOut -> do
     Hedgehog.assert $ Tx.toTxOut (fromJust $ Tx.fromTxOut txOut) == txOut
-
-calcFeesTest :: Property
-calcFeesTest = property $ do
-    let feeCfg = FeeConfig 10 0.3
-    Hedgehog.assert $ calcFees feeCfg 11 == Ada.lovelaceOf 13
 
 -- | Asserting that time range of 'scSlotZeroTime' to 'scSlotZeroTime + scSlotLength'
 -- is 'Slot 0' and the time after that is 'Slot 1'.

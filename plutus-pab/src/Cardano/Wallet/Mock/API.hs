@@ -6,9 +6,11 @@ module Cardano.Wallet.Mock.API
     ) where
 
 import Cardano.Wallet.Mock.Types (WalletInfo)
-import Ledger (Value)
+import Data.List.NonEmpty (NonEmpty)
+import Ledger (PaymentPubKeyHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx (CardanoTx)
+import Plutus.V1.Ledger.Api (Address, Value)
 import Servant.API (Capture, Get, JSON, NoContent, Post, QueryParam, ReqBody, (:<|>), (:>))
 import Wallet.Emulator.Error (WalletAPIError)
 
@@ -36,7 +38,9 @@ PSGenerator we specialise it to 'Text'.
 type API walletId -- see note [WalletID type in wallet API]
     = "create" :> QueryParam "funds" Integer :> Post '[JSON] WalletInfo
       :<|> Capture "walletId" walletId :> "submit-txn" :> ReqBody '[JSON] CardanoTx :> Post '[JSON] NoContent
-      :<|> Capture "walletId" walletId :> "own-payment-public-key" :> Get '[JSON] WalletInfo
+      -- TODO: Should we removed in favor of 'own-addresses'. However, how do we deprecate an HTTP request?
+      :<|> Capture "walletId" walletId :> "own-payment-public-key-hash" :> Get '[JSON] PaymentPubKeyHash
+      :<|> Capture "walletId" walletId :> "own-addresses" :> Get '[JSON] (NonEmpty Address)
       :<|> Capture "walletId" walletId :> "balance-tx" :> ReqBody '[JSON] UnbalancedTx :> Post '[JSON] (Either WalletAPIError CardanoTx)
       :<|> Capture "walletId" walletId :> "total-funds" :> Get '[JSON] Value
       :<|> Capture "walletId" walletId :> "sign" :> ReqBody '[JSON] CardanoTx :> Post '[JSON] CardanoTx

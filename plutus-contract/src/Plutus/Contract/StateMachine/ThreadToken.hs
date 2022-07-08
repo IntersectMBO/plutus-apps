@@ -27,7 +27,7 @@ import Ledger.Scripts
 import Ledger.Value (TokenName (..), Value (..))
 import Ledger.Value qualified as Value
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
-import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified
 import Prelude qualified as Haskell

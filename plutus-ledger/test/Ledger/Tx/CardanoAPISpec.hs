@@ -9,19 +9,19 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash)
                     StakeAddressReference (NoStakeAddress, StakeAddressByValue), StakeCredential, makeShelleyAddress,
                     shelleyAddressInEra)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
+import Gen.Cardano.Api.Typed qualified as Gen
+import Ledger.Test (someValidator)
+import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
+                             toCardanoTxBodyContent)
+import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.V1.Ledger.Scripts (unitRedeemer)
+
 import Data.Default (def)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Ledger.Test (someValidator)
-import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
-import Ledger.Tx.CardanoAPI (fromCardanoAddress, makeTransactionBody, toCardanoAddress)
-import Ledger.Validation (fromPlutusTxToTxBodyContent)
-import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
-import Plutus.Script.Utils.V1.Scripts.MonetaryPolicies qualified as MPS
-import Plutus.V1.Ledger.Scripts (unitRedeemer)
-
-import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog (Gen, Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -43,10 +43,10 @@ addressRoundTripSpec = property $ do
     shelleyAddr <- shelleyAddressInEra
                <$> forAll (makeShelleyAddress networkId <$> genPaymentCredential
                                                         <*> genStakeAddressReference)
-    case fromCardanoAddress shelleyAddr of
+    case fromCardanoAddressInEra shelleyAddr of
         Left _ -> Hedgehog.assert False
         Right plutusAddr ->
-            case toCardanoAddress networkId plutusAddr of
+            case toCardanoAddressInEra networkId plutusAddr of
                 Left _      -> Hedgehog.assert False
                 Right cAddr -> cAddr === shelleyAddr
 
@@ -92,7 +92,7 @@ convertMintingTx = property $ do
         , txMintScripts = Set.singleton mps
         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) unitRedeemer
         }
-      ectx = fromPlutusTxToTxBodyContent def [] tx >>= makeTransactionBody mempty
+      ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody mempty
   case ectx of
     -- Check that the converted tx contains exactly one script
     Right (ShelleyTxBody _ _ [_script] _ _ _) -> do

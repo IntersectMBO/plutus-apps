@@ -1914,7 +1914,7 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     checkOffchain = assertFailedTransaction (\ _ _ -> all (either checkEvent (const True) . sveResult))
 
     checkEvent :: ScriptError -> Bool
-    checkEvent (EvaluationError log "CekEvaluationFailure") = listToMaybe (reverse log) `isAcceptedBy` whitelist
+    checkEvent (EvaluationError log msg) | "CekEvaluationFailure" `isPrefixOf` msg = listToMaybe (reverse log) `isAcceptedBy` whitelist
     checkEvent (EvaluationError _ msg) | "BuiltinEvaluationFailure" `isPrefixOf` msg = False
     checkEvent _                                            = False
 

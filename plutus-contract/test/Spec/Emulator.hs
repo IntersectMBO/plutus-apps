@@ -35,8 +35,8 @@ import Ledger.Index qualified as Index
 import Ledger.Params ()
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
-import Plutus.Script.Utils.V1.Scripts (mkUntypedValidator)
 import Plutus.Script.Utils.V1.Tx (scriptTxOut)
+import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (ScriptContext, TxOut (txOutValue), Validator, Value, mkValidatorScript)

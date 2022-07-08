@@ -86,6 +86,7 @@ library
     Ledger.Tx.Orphans.V1
     Ledger.Tx.Orphans.V2
     Ledger.Typed.Scripts
+    Ledger.Typed.Scripts.Orphans
     Ledger.Typed.Scripts.Validators
     Ledger.Typed.Tx
     Ledger.Typed.TypeUtils
@@ -140,6 +141,7 @@ library
     , mtl
     , newtype-generics
     , openapi3
+    , ouroboros-consensus
     , ouroboros-consensus-shelley
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
@@ -189,6 +191,7 @@ library
     , memory
     , mtl
     , openapi3
+    , ouroboros-consensus
     , ouroboros-consensus-shelley
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0

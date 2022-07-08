@@ -44,7 +44,7 @@ import Data.Either
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
-import Ledger.Params (Params)
+import Ledger.Params (EmulatorEra, Params)
 
 import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
 import Ledger.Crypto

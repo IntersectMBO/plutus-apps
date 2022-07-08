@@ -2,13 +2,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
-{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
@@ -30,6 +28,7 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxOut
   , fromCardanoTxOutDatumHash
   , fromCardanoTxOutDatum
+  , fromCardanoAddressInEra
   , fromCardanoAddress
   , fromCardanoMintValue
   , fromCardanoValue
@@ -55,7 +54,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxOutDatumHash
   , toCardanoTxOutDatumHashBabbage
   , toCardanoTxOutValue
-  , toCardanoAddress
+  , toCardanoAddressInEra
   , toCardanoMintValue
   , toCardanoValue
   , toCardanoFee
@@ -108,6 +107,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Address qualified as P
+import Ledger.Params qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
@@ -377,15 +377,14 @@ fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
    in either (const Nothing) Just script
 
 toCardanoTxBodyContent
-    :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
-    -> C.NetworkId -- ^ Network ID
+    :: P.Params -- ^ Parameters to use.
+    -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
+toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
+    txOuts <- traverse (toCardanoTxOut pNetworkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -400,7 +399,7 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith protocolParams
+        , txProtocolParams = C.BuildTxWith $ Just pProtocolParams
         , txScriptValidity = C.TxScriptValidityNone
         , txExtraKeyWits
         -- unused:
@@ -412,13 +411,12 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
         }
 
 toCardanoTxBody ::
-    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
-    -> C.NetworkId -- ^ Network ID
+    P.Params -- ^ Parameters to use.
+    -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-toCardanoTxBody sigs protocolParams networkId tx = do
-    txBodyContent <- toCardanoTxBodyContent sigs protocolParams networkId tx
+toCardanoTxBody params sigs tx = do
+    txBodyContent <- toCardanoTxBodyContent params sigs tx
     makeTransactionBody mempty txBodyContent
 
 makeTransactionBody
@@ -484,7 +482,7 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError PV1.TxOut
 fromCardanoTxOut (C.TxOut addr value datumHash _) =
     PV1.TxOut
-    <$> fromCardanoAddress addr
+    <$> fromCardanoAddressInEra addr
     <*> pure (fromCardanoTxOutValue value)
     <*> pure (fromCardanoTxOutDatumHash datumHash)
 
@@ -505,7 +503,7 @@ toCardanoTxOut
     -> PV1.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.AlonzoEra)
 toCardanoTxOut networkId fromHash (PV1.TxOut addr value datumHash) =
-    C.TxOut <$> toCardanoAddress networkId addr
+    C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValue value
             <*> fromHash datumHash
             <*> pure C.ReferenceScriptNone
@@ -516,7 +514,7 @@ toCardanoTxOutUnsafe
     -> PV1.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.AlonzoEra)
 toCardanoTxOutUnsafe networkId fromHash (PV1.TxOut addr value datumHash) =
-    C.TxOut <$> toCardanoAddress networkId addr
+    C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValueUnsafe value
             <*> fromHash datumHash
             <*> pure C.ReferenceScriptNone
@@ -527,8 +525,12 @@ lookupDatum datums datumHash =
         Just datum -> pure $ C.TxOutDatumInTx C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
         Nothing    -> toCardanoTxOutDatumHash datumHash
 
-fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
-fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address)) =
+fromCardanoAddressInEra :: C.AddressInEra era -> Either FromCardanoError P.Address
+fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
+fromCardanoAddressInEra (C.AddressInEra _ address)                      = fromCardanoAddress address
+
+fromCardanoAddress :: C.Address addrtype -> Either FromCardanoError P.Address
+fromCardanoAddress (C.ByronAddress address) =
     Right $ P.Address plutusCredential Nothing
     where
       plutusCredential :: Credential.Credential
@@ -537,13 +539,12 @@ fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress addres
         $ PV1.PubKeyHash
         $ PlutusTx.toBuiltin
         $ addrToBase58 address
-
-fromCardanoAddress (C.AddressInEra _ (C.ShelleyAddress _ paymentCredential stakeAddressReference)) =
+fromCardanoAddress (C.ShelleyAddress _ paymentCredential stakeAddressReference) =
     P.Address (fromCardanoPaymentCredential (C.fromShelleyPaymentCredential paymentCredential))
         <$> fromCardanoStakeAddressReference (C.fromShelleyStakeReference stakeAddressReference)
 
-toCardanoAddress :: C.NetworkId -> P.Address -> Either ToCardanoError (C.AddressInEra C.AlonzoEra)
-toCardanoAddress networkId (P.Address addressCredential addressStakingCredential) =
+toCardanoAddressInEra :: C.NetworkId -> P.Address -> Either ToCardanoError (C.AddressInEra C.AlonzoEra)
+toCardanoAddressInEra networkId (P.Address addressCredential addressStakingCredential) =
     C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) <$>
         (C.makeShelleyAddress networkId
             <$> toCardanoPaymentCredential addressCredential

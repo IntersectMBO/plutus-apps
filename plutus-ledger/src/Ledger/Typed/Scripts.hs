@@ -4,6 +4,6 @@ module Ledger.Typed.Scripts
     ( module Export
     ) where
 
-import Ledger.Typed.Scripts.Validators as Export
-import Ledger.Typed.TypeUtils as Export
-import Plutus.Script.Utils.V1.Scripts as Export hiding (validatorHash)
+import Ledger.Typed.Scripts.Orphans as Export ()
+import Plutus.Script.Utils.V1.Typed.Scripts as Export
+import Plutus.Script.Utils.V1.Typed.TypeUtils as Export

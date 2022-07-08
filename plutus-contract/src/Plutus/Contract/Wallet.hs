@@ -114,7 +114,7 @@ handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 -- | Get an unspent output belonging to the wallet.
 getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
 getUnspentOutput = do
-    ownPkh <- Contract.ownPaymentPubKeyHash
+    ownPkh <- Contract.ownFirstPaymentPubKeyHash
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
@@ -253,7 +253,7 @@ export params utx =
             utxo <- fromPlutusIndex params (P.UtxoIndex unBalancedTxUtxoIndex)
             makeTransactionBody params utxo ctx
      in ExportTx
-        <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . mkPartialTx requiredSigners params) unBalancedTxTx)
+        <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . CardanoAPI.toCardanoTxBody params requiredSigners) unBalancedTxTx)
         <*> first Right (mkInputs (P.pNetworkId params) unBalancedTxUtxoIndex)
         <*> either (const $ Right []) (first Right . mkRedeemers) unBalancedTxTx
 
@@ -262,14 +262,6 @@ finalize slotConfig utx =
      utx & U.tx
          . P.validRange
          .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
-
-mkPartialTx
-    :: [P.PaymentPubKeyHash]
-    -> P.Params
-    -> P.Tx
-    -> Either CardanoAPI.ToCardanoError (C.TxBody C.AlonzoEra)
-mkPartialTx requiredSigners params =
-    CardanoAPI.toCardanoTxBody requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 
 mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
@@ -281,7 +273,7 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId
         <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> CardanoAPI.toCardanoAddress networkId txOutAddress
+        <*> CardanoAPI.toCardanoAddressInEra networkId txOutAddress
         <*> pure (C.selectLovelace cardanoValue)
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
         <*> pure otherQuantities

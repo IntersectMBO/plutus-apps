@@ -7,12 +7,12 @@
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 
-module Plutus.Script.Utils.V2.Scripts.Validators
+module Plutus.Script.Utils.V2.Typed.Scripts.Validators
     ( UntypedValidator
     , mkUntypedValidator
     ) where
 
-import Plutus.Script.Utils.V1.Scripts.Validators (UntypedValidator)
+import Plutus.Script.Utils.V1.Typed.Scripts.Validators (UntypedValidator)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx (UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx.Prelude (check)

@@ -84,7 +84,7 @@
   };
 
   outputs = { self, flake-utils, ... }@inputs:
-    (flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
+    (flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
         topLevel = import ./. {
           inherit system;
@@ -95,4 +95,16 @@
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
       }));
+
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.iog.io"
+      "https://hydra.iohk.io"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    ];
+    allow-import-from-derivation = true;
+    accept-flake-config = true;
+  };
 }

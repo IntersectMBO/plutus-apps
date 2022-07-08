@@ -84,7 +84,6 @@ import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
@@ -119,10 +118,6 @@ generatorModel =
     { gmInitialBalance = Map.fromList $ zip pubKeys (repeat vl)
     , gmPubKeys        = Set.fromList pubKeys
     }
-
--- | Estimate a constant fee for all transactions.
-constantFee :: FeeConfig
-constantFee = def { fcScriptsFeeFactor = 0 }
 
 -- | Blockchain for testing the emulator implementation and traces.
 --
@@ -181,17 +176,16 @@ genInitialTransaction GeneratorModel{..} =
 genValidTransaction :: MonadGen m
     => Mockchain
     -> m Tx
-genValidTransaction = genValidTransaction' generatorModel constantFee
+genValidTransaction = genValidTransaction' generatorModel
 
 -- | Generate a valid transaction, using the unspent outputs provided.
 --   Fails if the there are no unspent outputs, or if the total value
 --   of the unspent outputs is smaller than the estimated fee.
 genValidTransaction' :: MonadGen m
     => GeneratorModel
-    -> FeeConfig
     -> Mockchain
     -> m Tx
-genValidTransaction' g feeCfg (Mockchain _ ops _) = do
+genValidTransaction' g (Mockchain _ ops _) = do
     -- Take a random number of UTXO from the input
     nUtxo <- if Map.null ops
                 then Gen.discard
@@ -199,27 +193,26 @@ genValidTransaction' g feeCfg (Mockchain _ ops _) = do
     let ins = Set.fromList $ pubKeyTxIn . fst <$> inUTXO
         inUTXO = take nUtxo $ Map.toList ops
         totalVal = foldl' (<>) mempty $ map (txOutValue . snd) inUTXO
-    genValidTransactionSpending' g feeCfg ins totalVal
+    genValidTransactionSpending' g ins totalVal
 
 genValidTransactionSpending :: MonadGen m
     => Set.Set TxIn
     -> Value
     -> m Tx
-genValidTransactionSpending = genValidTransactionSpending' generatorModel constantFee
+genValidTransactionSpending = genValidTransactionSpending' generatorModel
 
 genValidTransactionSpending' :: MonadGen m
     => GeneratorModel
-    -> FeeConfig
     -> Set.Set TxIn
     -> Value
     -> m Tx
-genValidTransactionSpending' g feeCfg ins totalVal = do
+genValidTransactionSpending' g ins totalVal = do
     mintAmount <- toInteger <$> Gen.int (Range.linear 0 maxBound)
     mintTokenName <- genTokenName
     let mintValue = if mintAmount == 0
                        then Nothing
                        else Just $ ScriptGen.someTokenValue mintTokenName mintAmount
-        fee' = calcFees feeCfg 0
+        fee' = Ada.lovelaceOf 10
         numOut = Set.size (gmPubKeys g) - 1
         totalValAda = Ada.fromValue totalVal
         totalValTokens = if Value.isZero (Value.noAdaValue totalVal) then Nothing else Just (Value.noAdaValue totalVal)

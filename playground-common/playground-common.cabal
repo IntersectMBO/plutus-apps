@@ -71,6 +71,7 @@ library
     , plutus-ledger              >=1.0.0
     , plutus-ledger-api          >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-tx                  >=1.0.0
     , prettyprinter
     , process
@@ -116,12 +117,12 @@ test-suite playground-common-test
 
   build-depends:
       aeson
-    , base               >=4.7 && <5
+    , base               >=4.7   && <5
     , bytestring
     , freer-simple
-    , playground-common
-    , plutus-contract
-    , plutus-ledger
+    , playground-common  >=1.0.0
+    , plutus-contract    >=1.0.0
+    , plutus-ledger      >=1.0.0
     , recursion-schemes  <5.2
     , tasty
     , tasty-hunit
