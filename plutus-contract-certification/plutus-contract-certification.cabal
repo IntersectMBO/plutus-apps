@@ -48,15 +48,27 @@ library
     Plutus.Contract.Test.Certification.Run
 
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:   plutus-contract >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:   plutus-tx >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base             >=4.7   && <5
+    , base        >=4.7 && <5
     , bytestring
     , containers
     , lens
     , mtl
-    , plutus-contract  >=1.0.0
-    , plutus-tx        >=1.0.0
     , QuickCheck
     , splitmix
     , stm

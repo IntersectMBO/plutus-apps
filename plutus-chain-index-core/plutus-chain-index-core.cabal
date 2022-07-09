@@ -67,22 +67,43 @@ library
     Plutus.Monitoring.Util
 
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , freer-extras         >=1.0.0
     , plutus-ledger        >=1.0.0
-    , plutus-ledger-api    >=1.0.0
     , plutus-script-utils  >=1.0.0
-    , plutus-tx            >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api                  >=1.35
+    , cardano-ledger-byron
+    , io-classes
+    , iohk-monitoring
+    , ouroboros-consensus
+    , ouroboros-consensus-byron
+    , ouroboros-consensus-cardano
+    , ouroboros-consensus-shelley
+    , ouroboros-network
+    , ouroboros-network-framework
+    , plutus-ledger-api            >=1.0.0
+    , plutus-tx                    >=1.0.0
+    , typed-protocols
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                         >=4.7     && <5
+    , base                  >=4.7     && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
     , bytestring
-    , cardano-api                  >=1.35
-    , cardano-ledger-byron
     , containers
     , contra-tracer
     , cryptonite
@@ -91,20 +112,12 @@ library
     , fingertree
     , freer-simple
     , http-types
-    , io-classes
-    , iohk-monitoring
     , lens
     , memory
     , mtl
     , nothunks
     , openapi3
-    , ouroboros-consensus
-    , ouroboros-consensus-byron
-    , ouroboros-consensus-cardano
-    , ouroboros-consensus-shelley
-    , ouroboros-network
-    , ouroboros-network-framework
-    , prettyprinter                >=1.1.0.1
+    , prettyprinter         >=1.1.0.1
     , resource-pool
     , retry
     , semigroups
@@ -119,7 +132,6 @@ library
     , stm
     , text
     , text-class
-    , typed-protocols
     , unordered-containers
     , warp
 
@@ -135,12 +147,24 @@ test-suite plutus-chain-index-test
     Plutus.ChainIndex.HandlersSpec
     Util
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , plutus-chain-index-core
-    , plutus-ledger
-    , plutus-ledger-api        >=1.0.0
-    , plutus-tx                >=1.0.0
+    , freer-extras             >=1.0.0
+    , plutus-chain-index-core  >=1.0.0
+    , plutus-ledger            >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , base            >=4.9 && <5
     , beam-migrate
@@ -150,7 +174,6 @@ test-suite plutus-chain-index-test
     , contra-tracer
     , data-default
     , fingertree
-    , freer-extras
     , freer-simple
     , hedgehog
     , lens

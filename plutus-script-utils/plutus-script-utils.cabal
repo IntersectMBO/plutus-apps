@@ -74,21 +74,25 @@ library
     Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators
     Plutus.Script.Utils.V2.Typed.Scripts.Validators
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
   build-depends:
-    , aeson                  >=2
-    , base                   >=4.9   && <5
-    , bytestring
     , cardano-api            >=1.35
     , cardano-ledger-alonzo
-    , cborg
-    , flat
-    , hashable
-    , lens
-    , mtl
     , plutus-core            >=1.0.0
     , plutus-ledger-api      >=1.0.0
     , plutus-tx              >=1.0.0
     , plutus-tx-plugin       >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base           >=4.9 && <5
+    , bytestring
+    , mtl
     , prettyprinter
     , serialise
     , text
@@ -106,6 +110,10 @@ test-suite plutus-ledger-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , base   >=4.9 && <5
     , tasty

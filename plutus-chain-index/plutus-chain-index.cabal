@@ -51,27 +51,39 @@ library
 
   other-modules:   Control.Concurrent.STM.TBMQueue
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , freer-extras             >=1.0.0
     , plutus-chain-index-core  >=1.0.0
     , plutus-ledger            >=1.0.0
-    , plutus-ledger-api        >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api        >=1.35
+    , iohk-monitoring
+    , ouroboros-network
+    , plutus-ledger-api  >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , async
     , base                  >=4.7     && <5
     , beam-migrate
     , beam-sqlite
-    , cardano-api           >=1.35
     , clock
     , contra-tracer
     , data-default
     , freer-simple
-    , iohk-monitoring
     , lens
     , optparse-applicative
-    , ouroboros-network
     , prettyprinter         >=1.1.0.1
     , resource-pool
     , sqlite-simple
@@ -90,8 +102,8 @@ executable plutus-chain-index
     -Wno-missing-import-lists -Wredundant-constraints -O0
 
   build-depends:
-    , base                >=4.9   && <5
-    , plutus-chain-index  >=1.0.0
+    , base                >=4.9 && <5
+    , plutus-chain-index
 
 executable marconi
   main-is:            Marconi.hs
@@ -110,18 +122,31 @@ executable marconi
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , base                  >=4.9   && <5
-    , bytestring
-    , cardano-api           >=1.35
-    , containers
     , hysterical-screams
+    , plutus-ledger        >=1.0.0
+    , plutus-script-utils  >=1.0.0
+    , plutus-streaming     >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api      >=1.35
     , iohk-monitoring
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base                  >=4.9 && <5
+    , bytestring
+    , containers
     , lens
     , optparse-applicative
-    , plutus-ledger         >=1.0.0
-    , plutus-script-utils   >=1.0.0
-    , plutus-streaming      >=1.0.0
     , prettyprinter
     , serialise
     , sqlite-simple

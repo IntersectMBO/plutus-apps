@@ -47,15 +47,22 @@ library
     Control.Monad.Freer.Extras.State
     Control.Monad.Freer.Extras.Stream
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:   iohk-monitoring
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base             >=4.7 && <5
+    , base           >=4.7 && <5
     , beam-core
     , beam-sqlite
     , containers
     , data-default
     , freer-simple
-    , iohk-monitoring
     , lens
     , mtl
     , openapi3
@@ -74,21 +81,26 @@ test-suite freer-extras-test
     Control.Monad.Freer.Extras.BeamSpec
     Control.Monad.Freer.Extras.PaginationSpec
 
-  build-depends:
-    , hedgehog
-    , tasty
-    , tasty-hedgehog
+  ----------------------------
+  -- Local components
+  ----------------------------
+  build-depends:  freer-extras
 
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
-    , base           >=4.7 && <5
+    , base            >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
     , containers
     , contra-tracer
-    , freer-extras
     , freer-simple
+    , hedgehog
     , lens
     , resource-pool
     , semigroups
     , sqlite-simple
+    , tasty
+    , tasty-hedgehog

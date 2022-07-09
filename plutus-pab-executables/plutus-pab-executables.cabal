@@ -61,10 +61,17 @@ library
     , plutus-contract    >=1.0.0
     , plutus-pab         >=1.0.0
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:   playground-common >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
-    , base                >=4.7   && <5
+    , base                >=4.7 && <5
     , lens
-    , playground-common   >=1.0.0
     , purescript-bridge
     , servant-purescript
     , text
@@ -81,14 +88,26 @@ executable plutus-pab-setup
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-contract  >=1.0.0
+    , plutus-pab       >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:      iohk-monitoring
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                  >=4.9   && <5
-    , iohk-monitoring
+    , base                  >=4.9 && <5
     , monad-logger
     , optparse-applicative
-    , plutus-contract       >=1.0.0
-    , plutus-pab            >=1.0.0
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
 -- depend on plutus-use-cases anymore.
@@ -110,22 +129,29 @@ executable plutus-pab-examples
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , playground-common          >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-pab                 >=1.0.0
+    , plutus-pab-executables     >=1.0.0
+    , plutus-use-cases           >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
-    , base                       >=4.9   && <5
+    , base               >=4.9 && <5
     , containers
     , data-default
     , freer-simple
     , lens
     , openapi3
-    , playground-common          >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-pab-executables     >=1.0.0
-    , plutus-use-cases           >=1.0.0
     , prettyprinter
     , purescript-bridge
     , row-types
@@ -145,17 +171,25 @@ executable plutus-uniswap
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , base              >=4.9   && <5
-    , containers
-    , data-default
-    , freer-simple
-    , openapi3
     , plutus-contract   >=1.0.0
     , plutus-ledger     >=1.0.0
     , plutus-pab        >=1.0.0
     , plutus-use-cases  >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base           >=4.9 && <5
+    , containers
+    , data-default
+    , freer-simple
+    , openapi3
     , prettyprinter
     , text
 
@@ -179,16 +213,26 @@ executable plutus-pab-local-cluster
     -Wno-missing-import-lists -Wredundant-constraints -O0
     -Wunused-packages
 
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
     , plutus-use-cases           >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:      plutus-ledger-api >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , base               >=4.9 && <5
@@ -216,25 +260,37 @@ executable plutus-pab-test-psgenerator
     Plutus.PAB.Simulator.Test
 
   -- TODO plutus-use-cases dep needs to be removed
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , freer-extras               >=1.0.0
+    , playground-common          >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-pab                 >=1.0.0
+    , plutus-use-cases           >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:      plutus-ledger-api >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , aeson-pretty
-    , base                       >=4.9   && <5
+    , base                >=4.9 && <5
     , bytestring
     , containers
     , data-default
     , filepath
-    , freer-extras               >=1.0.0
     , freer-simple
     , lens
     , mtl
-    , playground-common          >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-use-cases           >=1.0.0
     , prettyprinter
     , purescript-bridge
     , row-types
@@ -261,29 +317,42 @@ test-suite plutus-pab-test-full
     Plutus.PAB.Simulator.Test
 
   -- TODO plutus-use-cases dep needs to be removed
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , async
-    , base                       >=4.9   && <5
-    , containers
-    , data-default
     , freer-extras               >=1.0.0
-    , freer-simple
-    , http-client
-    , iohk-monitoring
-    , lens
-    , mtl
-    , openapi3
     , playground-common          >=1.0.0
     , plutus-chain-index-core    >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
-    , plutus-tx                  >=1.0.0
     , plutus-use-cases           >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , iohk-monitoring
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , async
+    , base                  >=4.9 && <5
+    , containers
+    , data-default
+    , freer-simple
+    , http-client
+    , lens
+    , mtl
+    , openapi3
     , prettyprinter
     , purescript-bridge
     , quickcheck-instances
@@ -316,28 +385,41 @@ test-suite plutus-pab-test-full-long-running
     Plutus.PAB.Simulator.Test
 
   -- TODO plutus-use-cases dep needs to be removed
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , async
-    , base                       >=4.9   && <5
-    , containers
-    , data-default
     , freer-extras               >=1.0.0
-    , freer-simple
-    , http-client
-    , iohk-monitoring
-    , lens
-    , mtl
-    , openapi3
     , playground-common          >=1.0.0
     , plutus-chain-index-core    >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
-    , plutus-ledger-api          >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
     , plutus-use-cases           >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , iohk-monitoring
+    , plutus-ledger-api  >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , async
+    , base               >=4.9 && <5
+    , containers
+    , data-default
+    , freer-simple
+    , http-client
+    , lens
+    , mtl
+    , openapi3
     , prettyprinter
     , purescript-bridge
     , row-types
@@ -355,8 +437,20 @@ executable tx-inject
   hs-source-dirs:   tx-inject
   other-modules:    TxInject.RandomTx
   default-language: Haskell2010
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , base                  >=4.9   && <5
+    , plutus-contract  >=1.0.0
+    , plutus-ledger    >=1.0.0
+    , plutus-pab       >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base                  >=4.9 && <5
     , clock
     , containers
     , data-default
@@ -364,9 +458,6 @@ executable tx-inject
     , lens
     , mwc-random
     , optparse-applicative
-    , plutus-contract       >=1.0.0
-    , plutus-ledger         >=1.0.0
-    , plutus-pab            >=1.0.0
     , pretty-simple
     , primitive
     , rate-limit
@@ -381,15 +472,29 @@ executable sync-client
   main-is:          Main.hs
   hs-source-dirs:   sync-client
   default-language: Haskell2010
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , base                     >=4.9   && <5
-    , cardano-api              >=1.35
+    , plutus-chain-index-core  >=1.0.0
+    , plutus-ledger            >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api       >=1.35
     , cardano-slotting
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base                  >=4.9 && <5
     , contra-tracer
     , either
     , optparse-applicative
-    , plutus-chain-index-core  >=1.0.0
-    , plutus-ledger            >=1.0.0
     , text
 
 executable plutus-pab-nami-demo
@@ -398,16 +503,25 @@ executable plutus-pab-nami-demo
   hs-source-dirs: demo/pab-nami/pab/app
   other-modules:  DemoContract
   ghc-options:    -threaded
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , base                       >=4.9   && <5
-    , openapi3
     , playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base               >=4.9 && <5
+    , openapi3
     , prettyprinter
     , purescript-bridge
 
@@ -417,17 +531,26 @@ executable plutus-pab-nami-demo-generator
   hs-source-dirs: demo/pab-nami/pab/app
   other-modules:  DemoContract
   ghc-options:    -threaded
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
-    , aeson
-    , base                       >=4.9   && <5
-    , openapi3
-    , optparse-applicative
     , playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , openapi3
+    , optparse-applicative
     , prettyprinter
     , purescript-bridge
 
@@ -441,22 +564,31 @@ executable pab-cli
     Types
 
   ghc-options:    -threaded -Wmissing-import-lists -Wunused-packages
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , plutus-chain-index-core  >=1.0.0
     , plutus-ledger            >=1.0.0
     , plutus-pab               >=1.0.0
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
   build-depends:
     , cardano-api                  >=1.35
     , cardano-ledger-shelley
     , ouroboros-consensus-shelley
 
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , async
-    , base            >=4.9  && <5
+    , base            >=4.9 && <5
     , bytestring
-    , cardano-api     >=1.35
     , data-default
     , directory
     , docopt
