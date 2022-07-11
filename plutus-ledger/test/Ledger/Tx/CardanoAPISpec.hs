@@ -4,22 +4,27 @@
 {-# OPTIONS_GHC -Wmissing-import-lists #-}
 module Ledger.Tx.CardanoAPISpec(tests) where
 
-import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash), NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), PaymentCredential (PaymentCredentialByKey),
+import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), CardanoEra (AlonzoEra), Key (verificationKeyHash),
+                    NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic),
+                    PaymentCredential (PaymentCredentialByKey),
                     StakeAddressReference (NoStakeAddress, StakeAddressByValue), StakeCredential, makeShelleyAddress,
                     shelleyAddressInEra)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
 import Gen.Cardano.Api.Typed qualified as Gen
 import Ledger.Test (someValidator)
-import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
+import Ledger.Tx (CardanoTx (CardanoApiTx), RedeemerPtr (RedeemerPtr), ScriptTag (Mint),
+                  SomeCardanoApiTx (CardanoApiEmulatorEraTx), Tx (txMint, txMintScripts, txRedeemers),
+                  getCardanoTxInputs)
 import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
                              toCardanoTxBodyContent)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
+import Plutus.V1.Ledger.Tx (TxIn (TxIn))
 
 import Data.Default (def)
+import Data.Foldable (for_)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Hedgehog (Gen, Property, forAll, property, (===))
@@ -29,10 +34,13 @@ import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
+import Debug.Trace
+
 tests :: TestTree
 tests = testGroup "Ledger.CardanoAPI"
     [ testProperty "Cardano Address -> Plutus Address roundtrip" addressRoundTripSpec
     , testProperty "Tx conversion retains minting policy scripts" convertMintingTx
+    , testProperty "getCardanoTxInputs has TxInType values" getCardanoTxInputsHasTxInType
     ]
 
 -- | From a cardano address, we should be able to convert it to a plutus address,
@@ -49,6 +57,14 @@ addressRoundTripSpec = property $ do
             case toCardanoAddressInEra networkId plutusAddr of
                 Left _      -> Hedgehog.assert False
                 Right cAddr -> cAddr === shelleyAddr
+
+getCardanoTxInputsHasTxInType :: Property
+getCardanoTxInputsHasTxInType = property $ do
+  tx <- forAll $ Gen.genTx AlonzoEra
+  let txIns = getCardanoTxInputs $ CardanoApiTx $ CardanoApiEmulatorEraTx tx
+  for_ (traceShowId txIns) $ \(TxIn _ txInType') -> case txInType' of
+    Just _  -> Hedgehog.success
+    Nothing -> Hedgehog.failure
 
 -- Copied from Gen.Cardano.Api.Typed, because it's not exported.
 genPaymentCredential :: Gen PaymentCredential
