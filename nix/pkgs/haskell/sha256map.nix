@@ -4,10 +4,10 @@
   "https://github.com/input-output-hk/cardano-base"."0f3a867493059e650cda69e20a5cbf1ace289a57" = "0p0az3sbkhb7njji8xxdrfb0yx2gc8fmrh872ffm8sfip1w29gg1";
   "https://github.com/input-output-hk/cardano-config"."1646e9167fab36c0bff82317743b96efa2d3adaa" = "sha256-TNbpnR7llUgBN2WY7CryMxNVupBIUH01h1hRNHoxboY=";
   "https://github.com/input-output-hk/cardano-crypto"."f73079303f663e028288f9f4a9e08bcca39a923e" = "1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q";
-  "https://github.com/input-output-hk/cardano-ledger"."ce3057e0863304ccb3f79d78c77136219dc786c6" = "19ijcy1sl1iqa7diy5nsydnjsn3281kp75i2i42qv0fpn58238s9";
-  "https://github.com/input-output-hk/cardano-node"."1.35.0" = "06arx9hv7dn3qxfy83f0b6018rxbsvh841nvfyg5w6qclm1hddj7";
+  "https://github.com/input-output-hk/cardano-ledger"."3be8a19083fc13d9261b1640e27dd389b51bb08e" = "0dvm9l43mp1i34bcywmznd0660hhcfxwgawypk9q1hjkml1i41z3";
+  "https://github.com/input-output-hk/cardano-node"."1.35.1" = "1z0zv1i58ikmbqg878f9z573jkwp4lzhmmswshm6c96rq6lprzh8";
   "https://github.com/input-output-hk/cardano-prelude"."bb4ed71ba8e587f672d06edf9d2e376f4b055555" = "sha256-kgX3DKyfjBb8/XcDEd+/adlETsFlp5sCSurHWgsFAQI=";
-  "https://github.com/input-output-hk/cardano-wallet"."a73d8c9717dc4e174745f8568d6f3fe84f0f9d76" = "19srmc3rg8db73mfqnpdacmlpbp2x5mb4pi82mv14innhdl01jlx";
+  "https://github.com/input-output-hk/cardano-wallet"."7bac5971aef5e3b62b19b79ec6f22bd7fa2e094d" = "16l5384wc1sxzri56wr6r6hpnnf9lmgrikcw9f2pyax4axggvlna";
   "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba" = "17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg";
   "https://github.com/input-output-hk/hedgehog-extras"."967d79533c21e33387d0227a5f6cc185203fe658" = "0rbqb7a64aya1qizlr3im06hdydg9zr6sl3i8bvqqlf7kpa647sd";
   "https://github.com/input-output-hk/iohk-monitoring-framework"."066f7002aac5a0efc20e49643fea45454f226caa" = "0s6x4in11k5ba7nl7la896g28sznf9185xlqg9c604jqz58vj9nj";
