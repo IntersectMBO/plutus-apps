@@ -66,7 +66,7 @@ rec {
 
   marconi = plutus-apps.haskell.packages.plutus-chain-index.components.exes.marconi;
 
-  create-script-context = plutus-apps.haskell.packages.plutus-examples.components.exes.create-script-context;
+  create-script-context = plutus-apps.haskell.packages.plutus-example.components.exes.create-script-context;
 
   tests = import ./nix/tests/default.nix {
     inherit pkgs docs;
