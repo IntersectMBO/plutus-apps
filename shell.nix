@@ -6,7 +6,7 @@
 }:
 let
   inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
-  inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
+  inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt glibcLocales;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cabal-fmt;
 
   # Feed cardano-wallet, cardano-cli & cardano-node to our shell.
@@ -163,4 +163,10 @@ haskell.project.shellFor {
   + ''
     export WEB_COMMON_SRC=${webCommon.cleanSrc}
   '';
+
+  # This is no longer set automatically as of more recent `haskell.nix` revisions,
+  # but is useful for users with LANG settings.
+  LOCALE_ARCHIVE = lib.optionalString
+    (stdenv.hostPlatform.libc == "glibc")
+    "${glibcLocales}/lib/locale/locale-archive";
 }
