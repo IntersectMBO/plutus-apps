@@ -100,16 +100,16 @@ open
   -> Depth
   -> IO UtxoIndex
 open dbPath (Depth k) = do
+<<<<<<< HEAD
   -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
   -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
   -- queries due to batching more events together.
+=======
+>>>>>>> 1bc87132f (Fix utxo sync delay.)
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS utxos (address TEXT NOT NULL, txId TEXT NOT NULL, inputIx INT NOT NULL)"
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS spent (txId TEXT NOT NULL, inputIx INT NOT NULL)"
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_address ON utxos (address)"
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_refs ON utxos (txId, inputIx)"
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS spent_refs ON spent (txId, inputIx)"
   pure ix
 
 query
@@ -121,7 +121,9 @@ query ix addr updates = do
   -- SELECT all utxos that have not been spent.
   let c = ix ^. Ix.handle
   -- Create indexes initially. When created this should be a no-op.
-
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_address ON utxos (address)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_refs ON utxos (txId, inputIx)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS spent_refs ON spent (txId, inputIx)"
 
   -- Perform the db query
   storedUtxos <- SQL.query c "SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?" (Only addr)
