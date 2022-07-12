@@ -634,6 +634,13 @@ tests = testGroup "uniswap" [
     , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
     , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
     , testProperty "prop_NLFP" $ withMaxSuccess 250 prop_CheckNoLockedFundsProofFast
+    , testProperty "newTest"
+        $ withMaxSuccess 1
+        $ forAllDL newTest
+        $ propRunActionsWithOptions
+              (defaultCheckOptionsContractModel & allowBigTransactions)
+              defaultCoverageOptions
+              (\ _ -> pure True)
     ]
 
 runTestsWithCoverage :: IO ()
@@ -654,6 +661,18 @@ runTestsWithCoverage = do
                             .&&. assertNoFailedTransactions)
                             Uniswap.uniswapTrace
                           ]
+
+newTest :: DL UniswapModel ()
+newTest = do
+  action Start
+  action SetupTokens
+  UniswapModel {_exchangeableTokens = toList -> [a,b,c,d]} <- getContractState
+  action $ CreatePool w6 a 1 b 1
+  action $ CreatePool w3 c 1 d 1
+  action $ CreatePool w6 c 1 b 1
+  action $ AddLiquidity w6 d 0 c 3
+  action $ AddLiquidity w6 a 0 b 3
+
 
 -- | Certification.
 certification :: Certification UniswapModel
