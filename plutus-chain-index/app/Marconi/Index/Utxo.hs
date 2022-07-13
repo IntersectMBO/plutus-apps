@@ -100,12 +100,9 @@ open
   -> Depth
   -> IO UtxoIndex
 open dbPath (Depth k) = do
-<<<<<<< HEAD
   -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
   -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
   -- queries due to batching more events together.
-=======
->>>>>>> 1bc87132f (Fix utxo sync delay.)
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS utxos (address TEXT NOT NULL, txId TEXT NOT NULL, inputIx INT NOT NULL)"
