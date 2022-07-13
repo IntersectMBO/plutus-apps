@@ -51,6 +51,10 @@ cardano-node run \
     --port 3003
 ```
 
+The configuration files are available here: 
+
+[`configuration-files`](https://hydra.iohk.io/build/7654130/download/1/index.html)
+
 ## Marconi executable
 
 The `marconi` executable is available as a nix flake.
