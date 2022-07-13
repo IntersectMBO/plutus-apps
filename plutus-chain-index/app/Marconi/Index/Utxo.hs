@@ -100,10 +100,16 @@ open
   -> Depth
   -> IO UtxoIndex
 open dbPath (Depth k) = do
+  -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
+  -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
+  -- queries due to batching more events together.
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS utxos (address TEXT NOT NULL, txId TEXT NOT NULL, inputIx INT NOT NULL)"
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS spent (txId TEXT NOT NULL, inputIx INT NOT NULL)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_address ON utxos (address)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_refs ON utxos (txId, inputIx)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS spent_refs ON spent (txId, inputIx)"
   pure ix
 
 query
@@ -115,9 +121,7 @@ query ix addr updates = do
   -- SELECT all utxos that have not been spent.
   let c = ix ^. Ix.handle
   -- Create indexes initially. When created this should be a no-op.
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_address ON utxos (address)"
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_refs ON utxos (txId, inputIx)"
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS spent_refs ON spent (txId, inputIx)"
+
 
   -- Perform the db query
   storedUtxos <- SQL.query c "SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?" (Only addr)
@@ -144,9 +148,9 @@ store ix = do
     SQL.execute c "INSERT INTO spent (txId, inputIx) VALUES (?, ?)"
   SQL.execute_ c "COMMIT"
 
-  rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 200)
+  -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
+  rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
   when (rndCheck == 42) $ do
-    putStrLn "<<< VACUUM >>>"
     SQL.execute_ c "DELETE FROM utxos WHERE utxos.rowid IN (SELECT utxos.rowid FROM utxos LEFT JOIN spent on utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE spent.txId IS NOT NULL)"
     SQL.execute_ c "VACUUM"
 
