@@ -26,7 +26,7 @@ Any indexing solution must deal with blockchain rollbacks, which can happen as t
 
 Managing rollbacks is very simple and fast. Marconi drops the events that were rolled back. Because the events that can be rolled back are stored in memory, no complicated logic is required to undo the projection of the list of events on disk, which Marconi would need if it stored everything on disk as quickly as possible. 
 
-Making `K` configurable makes the design quite scalable. Developers do not usually need to guard themselves against rollbacks by `K` blocks, so they can choose to store only 10 events in memory, for example, thereby sacrificing the speed by which Marconi handles rollbacks (since rollbacks on data that is persisted on disk is more expensive than data that is in memory). 
+Making `K` configurable makes the design quite scalable. Developers do not usually need to guard themselves against rollbacks by `K` blocks, so they can choose to store only 10 events in memory, for example, thereby sacrificing the correctness of handling rollbacks for memory usage.
 
 In the event of a restart, recovery is very simple. Marconi stores only fully confirmed transactions, so there is nothing to do other than to load the state persisted on disk and to follow the blockchain from the corresponding chain-point. 
 
