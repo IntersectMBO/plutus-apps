@@ -4,6 +4,11 @@ let
 
   ghcWithPlutus = haskell.project.ghcWithPackages (ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ]);
 
+
+  # We need this because we are not allowed to reference plutus-ledger inside 
+  # the nix shell.   
+  build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./.. {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
+
   # generate-purescript: script to create purescript bridge code
   #
   # Note: We need to add ghc to the path because the purescript generator
@@ -17,7 +22,7 @@ let
     generatedDir="$1"
     rm -rf $generatedDir
 
-    GHC_WITH_PKGS=${ghcWithPlutus}
+    GHC_WITH_PKGS=${build-ghc-with-plutus}
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
     echo Generating purescript files in $generatedDir
@@ -57,7 +62,7 @@ let
     echo
     echo plutus-playground-server: for development use only
     
-    GHC_WITH_PKGS=${ghcWithPlutus}
+    GHC_WITH_PKGS=${build-ghc-with-plutus}
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
     export FRONTEND_URL=https://localhost:8009
