@@ -32,7 +32,7 @@ In the event of a restart, recovery is very simple. Marconi stores only fully co
 
 ## Queries
 
-The indexed data is accessible through queries. There are no constraints on the format of queries or on the results. Both are identified by a type variable that the indexer exposes. The user, such as a dApp developer, provides the code for both. 
+The indexed data is accessible through queries. There are no constraints on the format of queries or on the results. Both are identified by a type variable that the indexer exposes. The user, such as a dApp developer, provides the code for the query, result types and the functions used to query and store events on disk. 
 
 This is currently the only area where you can customize the indexer by providing functions that handle queries and storage. Note that the queries have to run on both the in-memory data and the data that is stored.
 
