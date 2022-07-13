@@ -69,7 +69,7 @@ Both commands will produce a `result` directory containing the executable
 `result/bin/marconi`.
 
 ## Example command for launching Marconi
-
+The synchronisation should take about 3.5h and it will consume around 9Gb of RAM, when synchronising both indexers at the same time.
 ```
 ./result/bin/marconi --socket-path /tmp/node-mainnet.sock --mainnet --datum-db datum.sqlite3 --utxo-db utxo.sqlite3
 ```
