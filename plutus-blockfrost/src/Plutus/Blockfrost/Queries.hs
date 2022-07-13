@@ -46,7 +46,7 @@ getIsUtxoBlockfrost ref = do
 getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
 getUtxoAtAddressBlockfrost _ addr = do
     tip <- getTipBlockfrost
-    utxos <- getAddressUtxos' addr (paged 50 1) def
+    utxos <- getAddressUtxos' addr (paged 100 1) def
     return (tip, utxos)
 
 -- TODO: Pagination Support
@@ -55,7 +55,7 @@ getUtxoSetWithCurrency _ assetId = do
     tip <- getTipBlockfrost
     xs <- getAssetAddresses assetId
     utxos <- liftIO $ mapConcurrently (flip getAddressUtxosAsset assetId . _assetAddressAddress) xs
-    let retUtxos = (take 50 . concat) utxos
+    let retUtxos = (take 100 . concat) utxos
     return (tip, retUtxos)
 
 -- UTIL FUNCTIONS

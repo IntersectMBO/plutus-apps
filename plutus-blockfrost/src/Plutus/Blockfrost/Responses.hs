@@ -30,11 +30,9 @@ import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), UnspentTxOutSetResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
-import Plutus.V1.Ledger.Api (toBuiltin)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, StakeValidator, Validator, ValidatorHash, unitDatum)
 import Plutus.V1.Ledger.Scripts qualified as Ledger (DatumHash)
-import Plutus.V1.Ledger.TxId qualified as Ledger
 import Plutus.V1.Ledger.Value qualified as Ledger
 
 import PlutusTx qualified
@@ -134,13 +132,13 @@ processIsUtxo (blockN, isUtxo) = do
 processGetUtxos :: PageQuery TxOutRef -> (Block, [AddressUtxo]) -> IO UtxosResponse
 processGetUtxos pq (blockN, xs) = do
     tip <- processTip blockN
-    return $ UtxosResponse {currentTip=tip, page=page}
+    return $ UtxosResponse {currentTip=tip, page=nPage}
   where
-      page :: Page TxOutRef
-      page = Page {currentPageQuery=pq
-                  , nextPageQuery=Nothing
-                  , pageItems=items
-                  }
+      nPage :: Page TxOutRef
+      nPage = Page {currentPageQuery=pq
+                   , nextPageQuery=Nothing
+                   , pageItems=items
+                   }
 
       items :: [TxOutRef]
       items = map utxoToRef xs
