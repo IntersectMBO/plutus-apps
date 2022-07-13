@@ -8,7 +8,7 @@ Marconi is a lightweight, customizable chain follower application and library fo
 
 ## Introduction
 
-Marconi is a blockchain query solution that you can configure for the types of information that you need to index and according to how you need to structure your database schema. Marconi provides a way for Plutus off-chain code to have access to data that has already been stored on-chain by indexing portions of the blockchain. 
+Marconi is a blockchain follower application and library that you can configure for the types of information that you need to index and according to how you need to structure your database schema. Marconi provides a way for dApps to have access to data that has already been stored on-chain by indexing portions of the blockchain. 
 
 Marconi gives you the ability to customize the set of data that is indexed. It provides a library of functionality with which you can do the following:
 * build your own indexers, 
