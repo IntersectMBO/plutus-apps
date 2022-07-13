@@ -23,7 +23,7 @@ main = do
     printJson . S.map (fmap extractData)
   where
     extractData (Cardano.Api.BlockInMode (Cardano.Api.Block _header txs) eim) =
-      flip map txs $ \tx@(Cardano.Api.Tx txBody _keyWidnesses) ->
+      flip map txs $ \tx@(Cardano.Api.Tx txBody _) ->
         let scriptData = Ledger.Tx.CardanoAPI.scriptDataFromCardanoTxBody txBody
             txId = Ledger.Tx.CardanoAPI.fromCardanoTxId $ Cardano.Api.getTxId txBody
             txOutRefs = Ledger.Tx.CardanoAPI.txOutRefs (workaround (Ledger.Tx.CardanoAPI.SomeTx tx) eim)
