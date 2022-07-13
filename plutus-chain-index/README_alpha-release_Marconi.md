@@ -4,7 +4,7 @@
 
 ## The Cardano blockchain indexer for dApp developers
 
-Marconi is a lightweight, customizable solution for dApp developers who need to index and query the Cardano blockchain.
+Marconi is a lightweight, customizable chain follower application and library for dApp developers who need to index and query the Cardano blockchain.
 
 ## Introduction
 
