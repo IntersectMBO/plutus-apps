@@ -24,7 +24,7 @@ The philosophy behind Marconi is to maintain scalability by customizing the solu
 
 Any indexing solution must deal with blockchain rollbacks, which can happen as the network achieves consensus. Marconi is designed to deal with rollbacks as elegantly as possible while simultaneously finding an effective balance between memory, disk and CPU usage. 
 
-Managing rollbacks is very simple and fast. Marconi drops the events that were rolled back. No complicated logic is required to undo the projection of the list of events on disk, which Marconi would need if it stored everything on disk as quickly as possible. 
+Managing rollbacks is very simple and fast. Marconi drops the events that were rolled back. Because the events that can be rolled back are stored in memory, no complicated logic is required to undo the projection of the list of events on disk, which Marconi would need if it stored everything on disk as quickly as possible. 
 
 Making `K` configurable makes the design quite scalable. Developers do not usually need to guard themselves against rollbacks by `K` blocks, so they can choose to store only 10 events in memory, for example, thereby sacrificing the speed by which Marconi handles rollbacks (since rollbacks on data that is persisted on disk is more expensive than data that is in memory). 
 
