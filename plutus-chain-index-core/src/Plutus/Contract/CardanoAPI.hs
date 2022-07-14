@@ -18,7 +18,6 @@ module Plutus.Contract.CardanoAPI(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.List (sort)
-import Data.Set qualified as Set
 import Ledger qualified as P
 import Ledger.Tx.CardanoAPI as Export
 import Plutus.ChainIndex.Types (ChainIndexTx (..), ChainIndexTxOutputs (..))
