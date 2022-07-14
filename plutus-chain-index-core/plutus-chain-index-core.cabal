@@ -121,6 +121,7 @@ library
     , lens
     , memory
     , mtl
+    , mwc-random
     , nothunks
     , openapi3
     , prettyprinter         >=1.1.0.1
