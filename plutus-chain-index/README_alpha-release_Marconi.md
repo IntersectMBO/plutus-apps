@@ -111,3 +111,15 @@ CREATE INDEX utxo_refs ON utxos (txId, inputIx);
 CREATE INDEX spent_refs ON spent (txId, inputIx);
 ```
 
+Then, to match inputs and outputs and trim the database:
+
+```
+DELETE FROM utxos WHERE utxos.rowid IN (SELECT utxos.rowid FROM utxos LEFT JOIN spent on utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE spent.txId IS NOT NULL);
+VACUUM;
+```
+
+And we can run the query using:
+
+```
+SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?
+```
