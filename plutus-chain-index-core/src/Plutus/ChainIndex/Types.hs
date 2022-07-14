@@ -75,7 +75,7 @@ import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
 import Ledger.TxId (TxId)
-import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash)
+import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Script, ScriptHash)
 import Plutus.V1.Ledger.Tx (Redeemers)
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter
