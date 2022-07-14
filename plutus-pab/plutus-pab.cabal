@@ -167,6 +167,7 @@ library
     , base                  >=4.7     && <5
     , beam-core
     , beam-migrate
+    , beam-postgres
     , beam-sqlite
     , bytestring
     , containers
@@ -189,6 +190,7 @@ library
     , network-mux
     , openapi3
     , optparse-applicative
+    , postgresql-simple
     , prettyprinter         >=1.1.0.1
     , QuickCheck
     , quickcheck-instances

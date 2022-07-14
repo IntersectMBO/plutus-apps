@@ -55,8 +55,11 @@ import Data.Pool qualified as Pool
 import Data.Text (Text, pack, unpack)
 import Data.Typeable (Typeable)
 import Database.Beam.Migrate.Simple (autoMigrate)
+import Database.Beam.Postgres qualified as Postgres
+import Database.Beam.Postgres.Migrate qualified as Postgres
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
+import Database.PostgreSQL.Simple qualified as Postgres
 import Database.SQLite.Simple qualified as Sqlite
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), managerModifyRequest, newManager,
                             responseTimeoutMicro, setRequestIgnoreStatus)
@@ -69,7 +72,7 @@ import Plutus.PAB.Core.ContractInstance.STM as Instances (InstancesState, emptyI
 import Plutus.PAB.Db.Beam.ContractStore qualified as BeamEff
 import Plutus.PAB.Db.Memory.ContractStore (InMemInstances, initialInMemInstances)
 import Plutus.PAB.Db.Memory.ContractStore qualified as InMem
-import Plutus.PAB.Db.Schema (checkedSqliteDb)
+import Plutus.PAB.Db.Schema (checkedPostgresDb)
 import Plutus.PAB.Effects.Contract (ContractDefinition (AddDefinition, GetDefinitions))
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (BuiltinHandler, contractHandler),
                                             HasDefinitions (getDefinitions))
@@ -93,7 +96,7 @@ import Wallet.Types (ContractInstanceId)
 -- | Application environment with a contract type `a`.
 data AppEnv a =
     AppEnv
-        { dbPool                :: Pool Sqlite.Connection
+        { dbPool                :: Pool Postgres.Connection
         , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
@@ -285,17 +288,32 @@ migrate trace config = do
 
 runBeamMigration
   :: Trace IO (PABLogMsg (Builtin a))
-  -> Sqlite.Connection
+  -> Postgres.Connection
   -> IO ()
-runBeamMigration trace conn = Sqlite.runBeamSqliteDebug (logDebugString trace . pack) conn $ do
-  autoMigrate Sqlite.migrationBackend checkedSqliteDb
+runBeamMigration trace conn = Postgres.runBeamPostgresDebug (logDebugString trace . pack) conn $ do
+  autoMigrate Postgres.migrationBackend checkedPostgresDb
 
 -- | Connect to the database.
-dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Sqlite.Connection)
+dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Postgres.Connection)
 dbConnect trace DbConfig {dbConfigFile, dbConfigPoolSize} = do
-  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
-  logDebugString trace $ "Connecting to DB: " <> dbConfigFile
+  pool <- Pool.createPool
+    (Postgres.connect Postgres.ConnectInfo {
+      connectHost="127.0.0.1",
+      connectPort=5432,
+      connectUser="postgres",
+      connectPassword="jgf41nbk9u",
+      connectDatabase="pab"
+    })
+    Postgres.close
+    dbConfigPoolSize
+    5_000_000
+    5
+  logDebugString trace "Connecting to DB: AAAAAHHHHHH"
   return pool
+-- do
+--   pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
+--   logDebugString trace $ "Connecting to DB: " <> dbConfigFile
+--   return pool
 
 handleContractDefinition ::
   forall a effs. HasDefinitions a
