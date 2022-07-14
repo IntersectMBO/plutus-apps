@@ -25,7 +25,6 @@ handleBlockfrostClient ::
     => ChainIndexQueryEffect
     ~> Eff effs
 handleBlockfrostClient event = liftIO $ do
-    print "------- HANDLE BLOCKFROST CLIENT -------"
     prj <- projectFromFile "./testnet-token"
     let
         runClient :: forall a. BlockfrostClientT IO a -> IO a
