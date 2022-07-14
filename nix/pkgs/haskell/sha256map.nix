@@ -7,7 +7,7 @@
   "https://github.com/input-output-hk/cardano-ledger"."3be8a19083fc13d9261b1640e27dd389b51bb08e" = "0dvm9l43mp1i34bcywmznd0660hhcfxwgawypk9q1hjkml1i41z3";
   "https://github.com/input-output-hk/cardano-node"."1.35.1" = "1z0zv1i58ikmbqg878f9z573jkwp4lzhmmswshm6c96rq6lprzh8";
   "https://github.com/input-output-hk/cardano-prelude"."bb4ed71ba8e587f672d06edf9d2e376f4b055555" = "sha256-kgX3DKyfjBb8/XcDEd+/adlETsFlp5sCSurHWgsFAQI=";
-  "https://github.com/input-output-hk/cardano-wallet"."7bac5971aef5e3b62b19b79ec6f22bd7fa2e094d" = "16l5384wc1sxzri56wr6r6hpnnf9lmgrikcw9f2pyax4axggvlna";
+  "https://github.com/input-output-hk/cardano-wallet"."108ae5851ba4a3466adf606a319ad35af72579f3" = "sha256-oDWhRuzHIjsdnc5pbvv5cqJOZnp0agjSj9pFbU/3+r8=";
   "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba" = "17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg";
   "https://github.com/input-output-hk/hedgehog-extras"."967d79533c21e33387d0227a5f6cc185203fe658" = "0rbqb7a64aya1qizlr3im06hdydg9zr6sl3i8bvqqlf7kpa647sd";
   "https://github.com/input-output-hk/iohk-monitoring-framework"."066f7002aac5a0efc20e49643fea45454f226caa" = "0s6x4in11k5ba7nl7la896g28sznf9185xlqg9c604jqz58vj9nj";
