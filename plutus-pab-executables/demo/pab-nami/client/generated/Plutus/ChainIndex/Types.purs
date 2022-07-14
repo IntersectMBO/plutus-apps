@@ -21,14 +21,13 @@ import Data.Map (Map)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.RawJson (RawJson)
-import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Blockchain (BlockId)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash)
 import Plutus.V1.Ledger.Slot (Slot)
-import Plutus.V1.Ledger.Tx (TxIn, TxOut)
+import Plutus.V1.Ledger.Tx (RedeemerPtr, TxIn, TxOut)
 import Plutus.V1.Ledger.TxId (TxId)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
@@ -64,11 +63,11 @@ _BlockNumber = _Newtype
 
 newtype ChainIndexTx = ChainIndexTx
   { _citxTxId :: TxId
-  , _citxInputs :: Set TxIn
+  , _citxInputs :: Array TxIn
   , _citxOutputs :: ChainIndexTxOutputs
   , _citxValidRange :: Interval Slot
   , _citxData :: Map DatumHash String
-  , _citxRedeemers :: Map String String
+  , _citxRedeemers :: Map RedeemerPtr String
   , _citxScripts :: Map String String
   , _citxCardanoTx :: Maybe RawJson
   }
@@ -82,11 +81,11 @@ instance EncodeJson ChainIndexTx where
   encodeJson = defer \_ -> E.encode $ unwrap >$<
     ( E.record
         { _citxTxId: E.value :: _ TxId
-        , _citxInputs: E.value :: _ (Set TxIn)
+        , _citxInputs: E.value :: _ (Array TxIn)
         , _citxOutputs: E.value :: _ ChainIndexTxOutputs
         , _citxValidRange: E.value :: _ (Interval Slot)
         , _citxData: (E.dictionary E.value E.value) :: _ (Map DatumHash String)
-        , _citxRedeemers: (E.dictionary E.value E.value) :: _ (Map String String)
+        , _citxRedeemers: (E.dictionary E.value E.value) :: _ (Map RedeemerPtr String)
         , _citxScripts: (E.dictionary E.value E.value) :: _ (Map String String)
         , _citxCardanoTx: (E.maybe E.value) :: _ (Maybe RawJson)
         }
@@ -96,11 +95,11 @@ instance DecodeJson ChainIndexTx where
   decodeJson = defer \_ -> D.decode $
     ( ChainIndexTx <$> D.record "ChainIndexTx"
         { _citxTxId: D.value :: _ TxId
-        , _citxInputs: D.value :: _ (Set TxIn)
+        , _citxInputs: D.value :: _ (Array TxIn)
         , _citxOutputs: D.value :: _ ChainIndexTxOutputs
         , _citxValidRange: D.value :: _ (Interval Slot)
         , _citxData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
-        , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map String String)
+        , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map RedeemerPtr String)
         , _citxScripts: (D.dictionary D.value D.value) :: _ (Map String String)
         , _citxCardanoTx: (D.maybe D.value) :: _ (Maybe RawJson)
         }
@@ -112,13 +111,13 @@ derive instance Newtype ChainIndexTx _
 
 --------------------------------------------------------------------------------
 
-_ChainIndexTx :: Iso' ChainIndexTx { _citxTxId :: TxId, _citxInputs :: Set TxIn, _citxOutputs :: ChainIndexTxOutputs, _citxValidRange :: Interval Slot, _citxData :: Map DatumHash String, _citxRedeemers :: Map String String, _citxScripts :: Map String String, _citxCardanoTx :: Maybe RawJson }
+_ChainIndexTx :: Iso' ChainIndexTx { _citxTxId :: TxId, _citxInputs :: Array TxIn, _citxOutputs :: ChainIndexTxOutputs, _citxValidRange :: Interval Slot, _citxData :: Map DatumHash String, _citxRedeemers :: Map RedeemerPtr String, _citxScripts :: Map String String, _citxCardanoTx :: Maybe RawJson }
 _ChainIndexTx = _Newtype
 
 citxTxId :: Lens' ChainIndexTx TxId
 citxTxId = _Newtype <<< prop (Proxy :: _ "_citxTxId")
 
-citxInputs :: Lens' ChainIndexTx (Set TxIn)
+citxInputs :: Lens' ChainIndexTx (Array TxIn)
 citxInputs = _Newtype <<< prop (Proxy :: _ "_citxInputs")
 
 citxOutputs :: Lens' ChainIndexTx ChainIndexTxOutputs
@@ -130,7 +129,7 @@ citxValidRange = _Newtype <<< prop (Proxy :: _ "_citxValidRange")
 citxData :: Lens' ChainIndexTx (Map DatumHash String)
 citxData = _Newtype <<< prop (Proxy :: _ "_citxData")
 
-citxRedeemers :: Lens' ChainIndexTx (Map String String)
+citxRedeemers :: Lens' ChainIndexTx (Map RedeemerPtr String)
 citxRedeemers = _Newtype <<< prop (Proxy :: _ "_citxRedeemers")
 
 citxScripts :: Lens' ChainIndexTx (Map String String)
