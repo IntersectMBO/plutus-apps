@@ -338,6 +338,7 @@ handleBalance utx' = do
             theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
             cTx <- handleError (Right tx) $ fromPlutusTx params cUtxoIndex requiredSigners tx
+            -- pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
             pure $ Tx.Both tx (Tx.CardanoApiEmulatorEraTx cTx)
         Left txBodyContent -> do
             ownPaymentPubKey <- gets ownPaymentPublicKey
