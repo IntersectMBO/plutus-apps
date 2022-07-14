@@ -150,7 +150,7 @@ processUnspentTxOutSetAtAddress ::
     -> IO UnspentTxOutSetResponse
 processUnspentTxOutSetAtAddress pq cred (blockN, xs) = do
     tip <- processTip blockN
-    return $ UnspentTxOutSetResponse {currentTip = tip, pageu = pageu}
+    return $ UnspentTxOutSetResponse {currentTipu = tip, pageu = pageu}
   where
     pageu :: Page (TxOutRef, ChainIndexTxOut)
     pageu = Page { currentPageQuery=pq
