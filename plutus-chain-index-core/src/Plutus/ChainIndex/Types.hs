@@ -90,8 +90,6 @@ data ChainIndexTxOutputs =
 
 makePrisms ''ChainIndexTxOutputs
 
-newtype RedeemerIx = RedeemerIx { getRedeemerIx :: Integer }
-
 data ChainIndexTx = ChainIndexTx {
     _citxTxId       :: TxId,
     -- ^ The id of this transaction.
