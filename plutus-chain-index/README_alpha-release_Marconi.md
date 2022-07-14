@@ -76,3 +76,38 @@ Both commands will produce a `result` directory containing the executable
 The synchronisation should take about 3.5h and it will consume around 9Gb of RAM, when synchronising both indexers at the same time.
 ```
 ./result/bin/marconi --socket-path /tmp/node-mainnet.sock --mainnet --datum-db datum.sqlite3 --utxo-db utxo.sqlite3
+```
+## Querying the SQL Database
+A. Datum indexer
+
+The database contains only one table defined as:
+
+```
+CREATE TABLE kv_datumhsh_datum (datumHash TEXT PRIMARY KEY, datum BLOB, slotNo INT);
+```
+
+The basic query that you can run is:
+
+```
+SELECT datum from kv_datumhsh_datum WHERE datumHash = ?;
+```
+
+B. Utxo indexer
+
+The database contains two tables, one for unspent transactions and one for spent inputs. They are defined as follows:
+
+```
+CREATE TABLE utxos (address TEXT NOT NULL, txId TEXT NOT NULL, inputIx INT NOT NULL);
+CREATE TABLE spent (txId TEXT NOT NULL, inputIx INT NOT NULL);
+```
+
+After you are fully synchronised you may run a couple of SQL statements to make sure that the query speed is optimised.
+
+First, to create indices:
+
+```
+CREATE INDEX utxo_address ON utxos (address);
+CREATE INDEX utxo_refs ON utxos (txId, inputIx);
+CREATE INDEX spent_refs ON spent (txId, inputIx);
+```
+
