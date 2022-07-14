@@ -5,6 +5,10 @@ let
 
   pab-setup-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-setup;
 
+  build-pab-nami-demo-generator = "$(nix-build default.nix -A pab-nami-demo.pab-nami-demo-generator)";
+
+  build-pab-nami-demo-invoker = "$(nix-build default.nix --quiet --no-build-output -A pab-nami-demo.pab-nami-demo-invoker)";
+
   generate-purescript = pkgs.writeShellScript "pab-nami-demo-generate-purs" ''
     if [ "$#" -ne 1 ]; then
       echo usage: pab-nami-demo-generate-purs GENERATED_DIR
@@ -15,7 +19,7 @@ let
     rm -rf $generatedDir
 
     echo Generating purescript files in $generatedDir
-    ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
+    ${build-pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
     echo Done generating purescript files
     echo
     echo Formatting purescript files in $generatedDir
@@ -49,8 +53,8 @@ let
 
     configFile=./plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
 
-    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile migrate
-    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile webserver
+    ${build-pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile migrate
+    ${build-pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile webserver
   '';
 
   # Note that this ignores the generated folder too, but it's fine since it is 

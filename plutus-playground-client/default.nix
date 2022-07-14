@@ -4,10 +4,11 @@ let
 
   ghcWithPlutus = haskell.project.ghcWithPackages (ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ]);
 
-
-  # We need this because we are not allowed to reference plutus-ledger inside 
+  # We need these because we are not allowed to reference plutus-ledger inside 
   # the nix shell.   
   build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./.. {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
+
+  build-playground-exe = "$(nix-build default.nix -A plutus-apps.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
 
   # generate-purescript: script to create purescript bridge code
   #
@@ -26,7 +27,7 @@ let
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
     echo Generating purescript files in $generatedDir
-    ${playground-exe}/bin/plutus-playground-server psgenerator $generatedDir
+    ${build-playground-exe}/bin/plutus-playground-server psgenerator $generatedDir
     echo Done generating purescript files
     echo
     echo Formatting purescript files in $generatedDir
@@ -70,7 +71,7 @@ let
     export GITHUB_CALLBACK_PATH=https://localhost:8009/api/oauth/github/callback
 
     test "$1" == "-g" && shift 1 # takes care of the -g flag
-    ${playground-exe}/bin/plutus-playground-server webserver "$@"
+    ${build-playground-exe}/bin/plutus-playground-server webserver "$@"
   '';
 
   # Note that this ignores the generated folder too, but it's fine since it is 
