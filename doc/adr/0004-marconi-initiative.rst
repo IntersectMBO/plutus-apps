@@ -50,7 +50,7 @@ We opted for a design where we keep K blocks in memory as the list of events tha
 
 This architectural decision has some desirable effects:
 
-  1. Managing rollbacks is very simple and fast. We drop the events that were rolled back. (no complicated logic is required to undo the projection of the list of events on disk, which we would need if we would want to store everything on disk as fast as possible). 
+  1. Managing rollbacks is very simple and fast. We drop the events that were rolled back. (no need to undo the application of blocks on the state stored on disk, which would be necessary if we were to store everything on disk as fast as possible).
   
   2. Making 'K' configurable makes the design already quite scalable. Developers do not usually need to guard themselves against rollbacks by K blocks so they can choose to only store 10 events in memory thus sacrificing chain integrity for RAM.
   
