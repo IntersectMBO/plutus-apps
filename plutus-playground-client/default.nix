@@ -6,7 +6,7 @@ let
 
   # We need these because we are not allowed to reference plutus-ledger inside 
   # the nix shell.   
-  build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./default.nix {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
+  build-ghc-with-plutus = "$(nix-build --no-build-output -E '(import ./default.nix {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
 
   build-playground-exe = "$(nix-build default.nix -A plutus-apps.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
 
@@ -14,30 +14,36 @@ let
   #
   # Note: We need to add ghc to the path because the purescript generator
   # actually invokes ghc to generate test data so we need ghc with the necessary deps
-  generate-purescript = pkgs.writeShellScript "plutus-playground-generate-purs" ''
-    if [ "$#" -ne 1 ]; then
-      echo usage: plutus-playground-generate-purs GENERATED_DIR
-      exit 1
-    fi
+  generate-purescript = pkgs.writeShellApplication {
+    name = "plutus-playground-generate-purs";
+    runtimeInputs = [ pkgs.nix ];
+    text = ''
+      echo aaaaaaajklsjdlaksjdlajldsj
+      if [ "$#" -ne 1 ]; then
+        echo usage: plutus-playground-generate-purs GENERATED_DIR
+        exit 1
+      fi
 
-    generatedDir="$1"
-    rm -rf $generatedDir
+      generatedDir="$1"
+      rm -rf "$generatedDir"
 
-    GHC_WITH_PKGS=${build-ghc-with-plutus}
-    export PATH=$GHC_WITH_PKGS/bin:$PATH
+      GHC_WITH_PKGS="${build-ghc-with-plutus}"
+      export PATH=$GHC_WITH_PKGS/bin:$PATH
 
-    echo Generating purescript files in $generatedDir
-    ${build-playground-exe}/bin/plutus-playground-server psgenerator $generatedDir
-    echo Done generating purescript files
-    echo
-    echo Formatting purescript files in $generatedDir
-    ${purs-tidy}/bin/purs-tidy format-in-place $generatedDir
-    echo Done formatting purescript files
-  '';
+      echo Generating purescript files in "$generatedDir"
+      "${build-playground-exe}"/bin/plutus-playground-server psgenerator "$generatedDir"
+      echo Done generating purescript files
+      echo
+      echo Formatting purescript files in "$generatedDir"
+      ${purs-tidy}/bin/purs-tidy format-in-place "$generatedDir"
+      echo Done formatting purescript files
+    '';
+  };
 
   purescript-generated = pkgs.runCommand "plutus-playground-generate-purs" { } ''
-    mkdir -p $out
-    ${generate-purescript} $out
+    GHC_WITH_PKGS="${ghcWithPlutus}"
+    export PATH=$GHC_WITH_PKGS/bin:$PATH
+    "${playground-exe}"/bin/plutus-playground-server psgenerator $out
   '';
 
   # start-backend: script to start the plutus-playground-server
@@ -52,11 +58,11 @@ let
 
     generatedDir=./plutus-playground-client/generated
 
-    if [ ! -d $generatedDir ] || [ "$1" == "-g" ]; then 
-      ${generate-purescript} $generatedDir
+    if [ ! -d "$generatedDir" ] || [ "$1" == "-g" ]; then 
+      ${generate-purescript} "$generatedDir"
     fi 
 
-    dirAge=$(datediff now $(date -r $generatedDir +%F))
+    dirAge=$(datediff now "$(date -r "$generatedDir" +%F)")
     echo
     echo "*** Using Purescript files in $generatedDir which are $dirAge days old."
     echo "*** To regenerate, run plutus-playground-server -g"
@@ -64,7 +70,7 @@ let
     echo
     echo plutus-playground-server: for development use only
     
-    GHC_WITH_PKGS=${build-ghc-with-plutus}
+    GHC_WITH_PKGS="${build-ghc-with-plutus}"
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
     export FRONTEND_URL=https://localhost:8009
@@ -72,7 +78,7 @@ let
     export GITHUB_CALLBACK_PATH=https://localhost:8009/api/oauth/github/callback
 
     test "$1" == "-g" && shift 1 # takes care of the -g flag
-    ${build-playground-exe}/bin/plutus-playground-server webserver "$@"
+    "${build-playground-exe}"/bin/plutus-playground-server webserver "$@"
   '';
 
   # Note that this ignores the generated folder too, but it's fine since it is 
