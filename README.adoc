@@ -88,7 +88,7 @@ There are two protected branches in `plutus-apps`:
 ** The version of transitive dependencies (`plutus`, `cardano-ledger`, `ouroboros-network`, etc.) should be pinned to the ones from `cardano-node` (or better, `cardano-wallet`)
 ** Changes will be backported form `main` to `next-node`
 * `next-node` branch: should always target the next node release.
-** This branch will eventually be merged in `main` after the Cardano mainnet HF and deleted. Once the next HF is planned, it will be recreated and will contain an upgrade node version.
+** This branch will eventually be merged in `main` after the Cardano mainnet HF and deleted. Once the next HF is planned, it will be recreated and it will contain an upgraded `cardano-node` version.
 
 === Dependency update
 
