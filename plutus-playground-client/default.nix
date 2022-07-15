@@ -6,7 +6,7 @@ let
 
   # We need these because we are not allowed to reference plutus-ledger inside 
   # the nix shell.   
-  build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./.. {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
+  build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./default.nix {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
 
   build-playground-exe = "$(nix-build default.nix -A plutus-apps.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
 
@@ -36,6 +36,7 @@ let
   '';
 
   purescript-generated = pkgs.runCommand "plutus-playground-generate-purs" { } ''
+    mkdir -p $out
     ${generate-purescript} $out
   '';
 
