@@ -60,7 +60,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (listToMaybe, mapMaybe)
-import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void, absurd)
@@ -77,7 +76,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex (ChainIndexTx (_citxInputs))
+import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
 import Plutus.Contract (AsContractError (_ConstraintResolutionContractError, _ContractError), Contract, ContractError,
                         Promise, adjustUnbalancedTx, awaitPromise, isSlot, isTime, logWarn, mapError, never,
                         ownFirstPaymentPubKeyHash, ownUtxos, promiseBind, select, submitTxConfirmed, utxoIsProduced,
@@ -128,8 +127,9 @@ getInput ::
     -> ChainIndexTx
     -> Maybe i
 getInput outRef tx = do
-    (_validator, Ledger.Redeemer r, _) <-
-      listToMaybe $ mapMaybe Tx.inScripts $ filter (\Tx.TxIn{Tx.txInRef} -> outRef == txInRef) $ Set.toList $ _citxInputs tx
+    -- We retrieve the correspondent redeemer according to the index of txIn in the list
+    let findRedeemer (ix, _) = Map.lookup (Tx.RedeemerPtr Tx.Spend ix) (_citxRedeemers tx)
+    Ledger.Redeemer r <- listToMaybe $ mapMaybe findRedeemer $ filter (\(_, Tx.TxIn{Tx.txInRef}) -> outRef == txInRef) $ zip [0..] $ _citxInputs tx
     PlutusTx.fromBuiltinData r
 
 getStates
