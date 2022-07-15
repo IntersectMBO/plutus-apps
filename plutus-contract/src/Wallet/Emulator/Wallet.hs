@@ -519,10 +519,11 @@ addCollateral mp vl tx = do
 -- of @a@ such that their total value is greater than or equal to the target.
 selectCoin ::
     ( Member (Error WAPI.WalletAPIError) effs
+    , Eq a
     )
-    => [(a, Value)]
-    -> Value
-    -> Eff effs ([(a, Value)], Value)
+    => [(a, Value)] -- ^ Possible inputs to choose from
+    -> Value -- ^ The target value
+    -> Eff effs ([(a, Value)], Value) -- ^ The chosen inputs and the change
 selectCoin fnds vl =
     let
         total = foldMap snd fnds
@@ -538,25 +539,35 @@ selectCoin fnds vl =
     in  if not (total `Value.geq` vl)
         then err
         else
-            let
-                -- Given the funds of a wallet, we take enough just enough such
-                -- that it's geq the target value, and if the resulting change
-                -- is not between 0 and the minimum Ada per tx output.
-                isTotalValueEnough totalVal =
-                    vl `Value.leq` totalVal && valueIsZeroOrHasMinAda (totalVal PlutusTx.- vl)
-                fundsWithTotal = zip fnds (drop 1 $ scanl (<>) mempty $ fmap snd fnds)
-                fundsToSpend   = takeUntil (isTotalValueEnough . snd) fundsWithTotal
-                totalSpent     = maybe PlutusTx.zero snd $ listToMaybe $ reverse fundsToSpend
-                change         = totalSpent PlutusTx.- vl
-             -- Make sure that the change is not less than the minimum amount
-             -- of lovelace per tx output.
-             in if valueIsZeroOrHasMinAda change
-                   then pure (fst <$> fundsToSpend, change)
-                   else throwError $ WAPI.ChangeHasLessThanNAda change Ledger.minAdaTxOut
+            -- Select inputs per asset class, sorting so we do Ada last.
+            -- We want to do the non-Ada asset classes first, because utxo's often contain
+            -- extra Ada because of fees or minAda constraints. So when we are done with the
+            -- non-Ada asset classes we probably already have picked some Ada too.
+            let (usedFinal, remainderFinal) = foldl' step ([], vl) (sortOn Down $ Value.flattenValue vl)
+                step (used, remainder) (cur, tok, _) =
+                    let (used', remainder') = selectCoinSingle cur tok (fnds \\ used) remainder
+                    in (used <> used', remainder')
+            in pure (usedFinal, PlutusTx.negate remainderFinal)
 
--- | Check that a value is a proper TxOut value or is zero (i.e. the absence of a TxOut)
-valueIsZeroOrHasMinAda :: Value -> Bool
-valueIsZeroOrHasMinAda v = Value.isZero v || Ada.fromValue v >= Ledger.minAdaTxOut
+selectCoinSingle
+    :: Value.CurrencySymbol
+    -> Value.TokenName
+    -> [(a, Value)] -- ^ Possible inputs to choose from
+    -> Value -- ^ The target value
+    -> ([(a, Value)], Value) -- ^ The chosen inputs and the remainder
+selectCoinSingle cur tok fnds' vl =
+    let
+        -- We only want the values that contain the given asset class,
+        -- and want the single currency values first,
+        -- so that we're picking inputs that contain *only* the given asset class when possible.
+        fnds = sortOn (length . Value.symbols . snd) $ filter (\(_, v) -> Value.valueOf v cur tok > 0) fnds'
+        -- Given the funds of a wallet, we take enough just enough from
+        -- the target value such that the asset class value of the remainder is <= 0.
+        fundsWithRemainder = zip fnds (drop 1 $ scanl (PlutusTx.-) vl $ fmap snd fnds)
+        fundsToSpend       = takeUntil (\(_, v) -> Value.valueOf v cur tok <= 0) fundsWithRemainder
+        remainder          = maybe vl snd $ listToMaybe $ reverse fundsToSpend
+    in (fst <$> fundsToSpend, remainder)
+
 
 -- | Removes transaction outputs with empty datum and empty value.
 removeEmptyOutputs :: Tx -> Tx
