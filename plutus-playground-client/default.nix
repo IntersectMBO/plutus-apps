@@ -18,7 +18,6 @@ let
     name = "plutus-playground-generate-purs";
     runtimeInputs = [ pkgs.nix ];
     text = ''
-      echo aaaaaaajklsjdlaksjdlajldsj
       if [ "$#" -ne 1 ]; then
         echo usage: plutus-playground-generate-purs GENERATED_DIR
         exit 1
@@ -59,7 +58,7 @@ let
     generatedDir=./plutus-playground-client/generated
 
     if [ ! -d "$generatedDir" ] || [ "$1" == "-g" ]; then 
-      ${generate-purescript} "$generatedDir"
+      ${generate-purescript}/bin/plutus-playground-generate-purs "$generatedDir"
     fi 
 
     dirAge=$(datediff now "$(date -r "$generatedDir" +%F)")

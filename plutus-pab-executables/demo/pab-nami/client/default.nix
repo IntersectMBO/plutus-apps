@@ -44,7 +44,7 @@ let
     generatedDir=./plutus-pab-executables/demo/pab-nami/client/generated
 
     if [ ! -d "$generatedDir" ] || [ "$1" == "-g" ]; then 
-      ${generate-purescript} "$generatedDir"
+      ${generate-purescript}/bin/pab-nami-demo-generate-purs "$generatedDir"
     fi 
 
     dirAge=$(datediff now "$(date -r "$generatedDir" +%F)")
@@ -90,5 +90,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend;
+  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend pab-nami-demo-generator;
 }
