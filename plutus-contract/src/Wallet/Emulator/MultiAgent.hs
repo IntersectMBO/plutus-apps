@@ -38,6 +38,7 @@ import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
+import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
@@ -302,12 +303,17 @@ emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
             , txData = mempty
             }
     -- See [Creating wallets with multiple outputs]
-    mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (Wallet.splitOffAdaOnlyValue vl)
+    mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (splitOffAdaOnlyValue vl)
     splitHeadinto10 []       = []
     splitHeadinto10 (vl:vls) = replicate (fromIntegral count) (Ada.toValue . (`div` count) . Ada.fromValue $ vl) ++ vls
         where
             -- Make sure we don't make the outputs too small
             count = min 10 $ Ada.fromValue vl `div` minAdaTxOut
+    -- | Split value into an ada-only and an non-ada-only value, making sure each has at least minAdaTxOut.
+    splitOffAdaOnlyValue :: Value -> [Value]
+    splitOffAdaOnlyValue vl = if Value.isAdaOnlyValue vl || ada < minAdaTxOut then [vl] else [Ada.toValue ada, vl <> Ada.toValue (-ada)]
+        where
+            ada = Ada.fromValue vl - minAdaTxOut
     mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =
