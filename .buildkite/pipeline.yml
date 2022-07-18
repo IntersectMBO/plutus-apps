@@ -1,6 +1,7 @@
 steps:
   - label: ':shipit: deploy devcontainer image for plutus-starter'
-    branches: "plutus-starter-devcontainer/v*"
+    # For example, "v0.1.0" will match, but not "plutus-starter-devcontainer/v0.1.0" or "v0.1.0-rc1"
+    branches: "v*.*.* !v*-*"
     command:
       - "./.buildkite/plutus-starter-devcontainer-push.sh"
     concurrency: 1

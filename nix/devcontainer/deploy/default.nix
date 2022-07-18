@@ -15,9 +15,10 @@ pkgs.writeScript "docker-build-push-devcontainer" ''
 
   tag="''${BUILDKITE_TAG:-}"
   echo "Git tag: ''${tag}."
-    
+
   # Pick out only the version component of a tag like:
   # "plutus-starter-devcontainer/v1.0" -> "v1.0"
+  # "v1.0" -> "v1.0"
   version="$(echo $tag | sed -e 's/.*[\/]//')"
 
   # Construct a tag to push up to dockerHub
