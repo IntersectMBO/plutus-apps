@@ -478,11 +478,13 @@ calculateTxChanges
     :: ( Member (Error WAPI.WalletAPIError) effs
        )
     => Params
-    -> Address
+    -> Address -- ^ The address for the change output
     -> Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
     -> (Value, Value) -- ^ The unbalanced tx's negative and positive balance.
     -> Eff effs ((Value, [TxIn]), (Value, [TxOut]))
 calculateTxChanges params addr utxos (neg, pos) = do
+
+    -- Calculate the change output with minimal ada
     (newNeg, newPos, extraTxOuts) <- if Value.isZero pos
         then pure (neg, pos, [])
         else do
@@ -490,15 +492,26 @@ calculateTxChanges params addr utxos (neg, pos) = do
                 either (throwError . WAPI.ToCardanoError) pure
                 $ U.adjustTxOut params (TxOut addr pos Nothing)
             let missingValue = Ada.toValue (fold missing)
-            pure $ (neg <> missingValue, pos <> missingValue, [extraTxOut])
+            -- Add the missing ada to both sides to keep the balance.
+            pure (neg <> missingValue, pos <> missingValue, [extraTxOut])
+
+    -- Calculate the extra inputs needed
     (spend, change) <- if Value.isZero newNeg
         then pure ([], mempty)
         else selectCoin (second (view Ledger.ciTxOutValue) <$> Map.toList utxos) newNeg
+
     if Value.isZero change
         then do
+            -- No change, so the new inputs and outputs have balanced the transaction
             pure ((newNeg, Tx.pubKeyTxIn . fst <$> spend), (newPos, extraTxOuts))
-        else if Value.isZero pos
+        else if null extraTxOuts
+            -- We have change so we need an extra output, if we didn't have that yet,
+            -- first make one with an estimated minimal amount of ada
+            -- which then will calculate a more exact set of inputs
             then calculateTxChanges params addr utxos (neg <> Ada.toValue Ledger.minAdaTxOut, Ada.toValue Ledger.minAdaTxOut)
+            -- Else recalculate with the change added to both sides
+            -- Ideally this creates the same inputs and outputs and then the change will be zero
+            -- But possibly the minimal Ada increases and then we also want to compute a new set of inputs
             else calculateTxChanges params addr utxos (newNeg <> change, newPos <> change)
 
 addCollateral
