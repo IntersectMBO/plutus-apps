@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StrictData         #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
@@ -17,9 +18,9 @@ import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
-import Data.Aeson (FromJSON, ToJSON, Value (..), parseJSON, (.:), (.:?))
-import Data.Aeson.Types (Object, Parser)
+import Data.Aeson (FromJSON, ToJSON, Value (..), object, parseJSON, toJSON, (.:), (.:?), (.=))
 import Data.Default (Default, def)
+import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Text (Text)
@@ -119,20 +120,24 @@ instance Default DbConfig where
 data ChainQueryConfig = ChainIndexConfig ChainIndex.ChainIndexConfig
                       | BlockfrostConfig Blockfrost.BlockfrostConfig
     deriving stock (Show, Eq, Generic)
-    deriving anyclass (FromJSON, ToJSON)
+
+instance FromJSON ChainQueryConfig where
+    parseJSON (Object obj) = do
+        ci <- obj .:? "chainIndexConfig"
+        bf <- obj .:? "blockfrostConfig"
+        case (ci, bf) of
+            (Just a, Nothing)  -> pure $ ChainIndexConfig a
+            (Nothing, Just a)  -> pure $ BlockfrostConfig a
+            (Nothing, Nothing) -> error "No configuration available"
+            (Just _, Just _)   -> error "Cant have ChainIndex and Blockfrost configuration"
+    parseJSON _            = fail "Can´t parse ChainQueryConfig from a non-object Value"
+
+instance ToJSON ChainQueryConfig where
+    toJSON (ChainIndexConfig cfg) = object ["chainIndexConfig" .= cfg]
+    toJSON (BlockfrostConfig cfg) = object ["blockfrostConfig" .= cfg]
 
 instance Default ChainQueryConfig where
     def = ChainIndexConfig def
-
-parseChainQuery :: Object -> Parser ChainQueryConfig
-parseChainQuery obj = do
-    ci <- obj .:? "chainIndexConfig"
-    bf <- obj .:? "blockfrostConfig"
-    case (ci, bf) of
-        (Just a, Nothing)  -> pure $ ChainIndexConfig a
-        (Nothing, Just a)  -> pure $ BlockfrostConfig a
-        (Nothing, Nothing) -> error "No configuration available"
-        (Just _, Just _)   -> error "Cant have ChainIndex and Blockfrost configuration"
 
 data Config =
     Config
@@ -144,17 +149,33 @@ data Config =
         , requestProcessingConfig :: RequestProcessingConfig
         , developmentOptions      :: DevelopmentOptions
         }
-    deriving (Show, Eq, Generic, ToJSON)
+    deriving (Show, Eq, Generic)
 
 instance FromJSON Config where
-    parseJSON (Object obj) = Config <$> obj .: "dbConfig"
+    parseJSON val@(Object obj) = Config <$> obj .: "dbConfig"
                                     <*> obj .: "walletServerConfig"
                                     <*> obj .: "nodeServerConfig"
                                     <*> obj .: "pabWebserverConfig"
-                                    <*> parseChainQuery obj
+                                    <*> parseJSON val
                                     <*> obj .: "requestProcessingConfig"
                                     <*> obj .: "developmentOptions"
     parseJSON val = fail $ "Unexpected value: " ++ show val
+
+
+instance ToJSON Config where
+    toJSON Config {..}=
+        object
+        [ "dbConfig" .= dbConfig
+        , "walletServerConfig" .= walletServerConfig
+        , "nodeServerConfig" .= nodeServerConfig
+        , "pabWebserverConfig" .= pabWebserverConfig
+        , "requestProcessingConfig" .= requestProcessingConfig
+        , "developmentOptions" .= developmentOptions
+        ] `mergeObjects` (toJSON chainIndexConfig)
+
+mergeObjects :: Value -> Value -> Value
+mergeObjects (Object o1) (Object o2) = Object $ HML.union o1 o2
+mergeObjects _ _                     = error "Value must be an object"
 
 defaultConfig :: Config
 defaultConfig =
