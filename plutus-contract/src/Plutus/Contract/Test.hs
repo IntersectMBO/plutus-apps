@@ -71,7 +71,7 @@ module Plutus.Contract.Test(
     , minLogLevel
     , emulatorConfig
     , changeInitialWalletValue
-    , allowBigTransactions
+    , increaseTransactionLimits
     -- * Etc
     , goldenPir
     ) where
@@ -189,8 +189,8 @@ changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Le
 -- | Set higher limits on transaction size and execution units.
 -- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
 -- Note that if you need this your Plutus script will probably not validate on Mainnet.
-allowBigTransactions :: CheckOptions -> CheckOptions
-allowBigTransactions = over (emulatorConfig . params) Ledger.allowBigTransactions
+increaseTransactionLimits :: CheckOptions -> CheckOptions
+increaseTransactionLimits = over (emulatorConfig . params) Ledger.increaseTransactionLimits
 
 -- | Check if the emulator trace meets the condition
 checkPredicate ::
