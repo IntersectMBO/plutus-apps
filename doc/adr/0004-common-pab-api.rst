@@ -50,7 +50,9 @@ Decision
   By moving the Contract API out of the plutus-apps monorepository, any tool could update to newer version to their discretion.
   Without many dependencies, many tools could utilize the Contract API without having to depend on the whole plutus-apps monorepo.
 
-* TODO: What about governance? Maybe IOG will still be the maintainer of this API for the time being. Then, we can create a new ADR where we make the decision to make this a community driven project.
+* We (the Plutus Tools at IO Global) will continue to be the main maintainers of this new repository. However, a new ADR will need to be created if we ever decide to make this a community driven project.
+
+* TODO: What about governance? How do we decide which interface changes are accepted? ADRs? Who ultimately accepts and rejects them?
 
 Implications
 ------------
