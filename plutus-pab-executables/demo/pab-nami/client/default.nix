@@ -31,9 +31,17 @@ let
     '';
   };
 
-  purescript-generated = pkgs.runCommand "pab-nami-demo-generate-purs" { } ''
-    "${pab-nami-demo-generator}"/bin/plutus-pab-nami-demo-generator --output-dir "$out"
-  '';
+  purescript-generated = pkgs.stdenv.mkDerivation {
+    name = "purescript-generated";
+    phases = [ "installPhase" ];
+    installPhase = ''
+      "${pab-nami-demo-generator}"/bin/plutus-pab-nami-demo-generator --output-dir "$out"
+    '';
+  };
+
+  # purescript-generated = pkgs.runCommand "pab-nami-demo-generate-purs" { } ''
+  #   "${pab-nami-demo-generator}"/bin/plutus-pab-nami-demo-generator --output-dir "$out"
+  # '';
 
   start-backend = pkgs.writeShellScriptBin "pab-nami-demo-server" ''
     if [ ! -d plutus-pab-executables ]; then 

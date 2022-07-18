@@ -2,7 +2,7 @@
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
-  ghcWithPlutus = haskell.project.ghcWithPackages (ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ]);
+  ghc-with-plutus = haskell.project.ghcWithPackages (ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ]);
 
   # We need these because we are not allowed to reference plutus-ledger inside 
   # the nix shell.   
@@ -39,14 +39,14 @@ let
     '';
   };
 
-  purescript-generated = pkgs.writeShellApplication {
+  purescript-generated = pkgs.stdenv.mkDerivation {
     name = "purescript-generated";
-    runtimeInputs = [ pkgs.nix ];
-    checkPhase = "";
-    text = ''
-      GHC_WITH_PKGS="${build-ghc-with-plutus}"
+    phases = [ "installPhase" ];
+    installPhase = ''
+      mkdir -p $out
+      GHC_WITH_PKGS="${ghc-with-plutus}"
       export PATH=$GHC_WITH_PKGS/bin:$PATH
-      "${build-playground-exe}"/bin/plutus-playground-server psgenerator "$out"
+      "${playground-exe}"/bin/plutus-playground-server psgenerator "$out"
     '';
   };
 

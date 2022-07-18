@@ -41,7 +41,6 @@ stdenv.mkDerivation {
     chmod -R u+rw ./node_modules
 
     ${addExtraSrcs}
-
     install-spago-style
     echo building project...
     psa --strict --censor-lib --stash --is-lib=generated --is-lib=.spago ${spagoSources} ${extraPSPaths} "$src/**/*.purs"
