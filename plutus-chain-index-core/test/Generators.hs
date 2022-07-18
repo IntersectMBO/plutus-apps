@@ -182,7 +182,7 @@ genTx = do
     deleteInputs (Map.fromSet (const txId) $ Set.fromList allInputs)
 
     tx <- pure (ChainIndexTx txId)
-        <*> pure (Set.fromList $ fmap (flip TxIn Nothing) allInputs)
+        <*> pure (map (flip TxIn Nothing) allInputs)
         <*> pure (ValidTx $ (\(addr, vl) -> TxOut addr vl Nothing) <$> newOutputs)
         <*> pure Interval.always
 

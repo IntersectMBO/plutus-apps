@@ -17,7 +17,7 @@ module Plutus.Contract.CardanoAPI(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Data.Set qualified as Set
+import Data.List (sort)
 import Ledger qualified as P
 import Ledger.Tx.CardanoAPI as Export
 import Plutus.ChainIndex.Types (ChainIndexTx (..), ChainIndexTxOutputs (..))
@@ -37,7 +37,9 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) = do
     let scriptMap = plutusScriptsFromTxBody txBody
         isTxScriptValid = fromTxScriptValidity txScriptValidity
         (datums, redeemers) = scriptDataFromCardanoTxBody txBody
-        inputs =
+        -- We need to sort the inputs as the order is important
+        -- to find the corresponding redeemers
+        inputs = sort $
           if isTxScriptValid
             then fst <$> txIns
             else case txInsCollateral of
@@ -48,7 +50,7 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) = do
             { _citxTxId = fromCardanoTxId (C.getTxId txBody)
             , _citxValidRange = fromCardanoValidityRange txValidityRange
             -- If the transaction is invalid, we use collateral inputs
-            , _citxInputs = Set.fromList $ fmap ((`P.TxIn` Nothing) . fromCardanoTxIn) inputs
+            , _citxInputs = fmap ((`P.TxIn` Nothing) . fromCardanoTxIn) inputs
             -- No outputs if the one of scripts failed
             , _citxOutputs = if isTxScriptValid then ValidTx txOutputs
                                                 else InvalidTx

@@ -35,7 +35,7 @@ import GHC.Generics (Generic)
 import Ledger (Address (..), TxOut (..), TxOutRef)
 import Ledger.Credential (Credential)
 import Ledger.TxId (TxId)
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxData, citxRedeemers, citxScripts, citxTxId, txOutsWithRef)
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxData, citxScripts, citxTxId, txOutsWithRef, txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api (Datum, DatumHash, Redeemer, RedeemerHash)
@@ -139,7 +139,7 @@ fromTx tx =
         { _DataMap = view citxData tx
         , _ScriptMap = view citxScripts tx
         , _TxMap = Map.singleton (view citxTxId tx) tx
-        , _RedeemerMap = view citxRedeemers tx
+        , _RedeemerMap = txRedeemersWithHash tx
         , _AddressMap = txCredentialMap tx
         , _AssetClassMap = txAssetClassMap tx
         }
