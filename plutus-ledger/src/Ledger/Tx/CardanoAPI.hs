@@ -127,7 +127,8 @@ instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
 
 instance OpenApi.ToSchema CardanoBuildTx where
-  declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
+  -- TODO: implement the schema
+  declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
 
 instance Pretty CardanoBuildTx where
   pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent
