@@ -61,3 +61,5 @@ As an added benefit, community involvement with the API could also greatly impro
 
 A standard API for all Plutus contacts would help keeping the ecosystem on the same track with their implementation.
 As more and more off-chain tools implement the same contract interface in the future, it will be relatively easy to switch between different Plutus Application Backend implementations, or to use multiple of these tools at the same time without a need for serious code rewrites.
+
+The implementation of the Contract API interface would track a specific version of the Contract API interface. We would then need to regularly update the implementation given any interface changes.
