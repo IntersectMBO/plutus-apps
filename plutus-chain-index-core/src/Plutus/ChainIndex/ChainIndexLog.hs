@@ -5,7 +5,7 @@
 module Plutus.ChainIndex.ChainIndexLog (ChainIndexLog(..), InsertUtxoPosition(..)) where
 
 import Cardano.BM.Data.Tracer (ToObject (..))
-import Control.Monad.Freer.Extras.Beam.Sqlite (BeamLog)
+import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (TxId, TxOut, TxOutRef)

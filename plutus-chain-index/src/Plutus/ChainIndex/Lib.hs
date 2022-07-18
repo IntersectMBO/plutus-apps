@@ -45,7 +45,8 @@ module Plutus.ChainIndex.Lib (
 ) where
 
 import Control.Monad.Freer (Eff)
-import Control.Monad.Freer.Extras.Beam.Sqlite (BeamEffect, BeamLog (SqlLog))
+import Control.Monad.Freer.Extras.Beam (BeamLog (SqlLog))
+import Control.Monad.Freer.Extras.Beam.Sqlite (BeamEffect)
 import Control.Monad.Freer.Extras.Log qualified as Log
 import Data.Default (def)
 import Data.Functor (void)

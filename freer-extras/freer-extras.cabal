@@ -49,6 +49,8 @@ library
     Control.Monad.Freer.Extras.State
     Control.Monad.Freer.Extras.Stream
 
+  other-modules:   Control.Monad.Freer.Extras.Beam.Common
+
   --------------------------
   -- Other IOG dependencies
   --------------------------

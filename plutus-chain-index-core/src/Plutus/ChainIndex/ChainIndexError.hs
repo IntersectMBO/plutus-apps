@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards    #-}
 module Plutus.ChainIndex.ChainIndexError (ChainIndexError(..), InsertUtxoFailed(..), RollbackFailed(..)) where
 
-import Control.Monad.Freer.Extras.Beam.Sqlite (BeamError)
+import Control.Monad.Freer.Extras.Beam (BeamError)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Plutus.ChainIndex.Types (Point (..), Tip (..))
