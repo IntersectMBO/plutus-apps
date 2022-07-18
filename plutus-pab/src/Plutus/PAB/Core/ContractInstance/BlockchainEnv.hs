@@ -7,7 +7,6 @@
 module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   startNodeClient
   , processMockBlock
-  , processChainSyncEvent
   ) where
 
 import Cardano.Api (BlockInMode (..), ChainPoint (..))
