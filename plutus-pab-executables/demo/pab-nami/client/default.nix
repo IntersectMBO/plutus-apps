@@ -33,9 +33,11 @@ let
 
   purescript-generated = pkgs.stdenv.mkDerivation {
     name = "purescript-generated";
+    buildInputs = [ pab-nami-demo-generator ];
     phases = [ "installPhase" ];
     installPhase = ''
-      "${pab-nami-demo-generator}"/bin/plutus-pab-nami-demo-generator --output-dir "$out"
+      mkdir -p $out 
+      plutus-pab-nami-demo-generator --output-dir "$out"
     '';
   };
 
@@ -98,5 +100,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend pab-nami-demo-generator;
+  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend pab-nami-demo-generator purescript-generated;
 }
