@@ -39,11 +39,16 @@ let
     '';
   };
 
-  purescript-generated = pkgs.runCommand "plutus-playground-generate-purs" { } ''
-    GHC_WITH_PKGS="${ghcWithPlutus}"
-    export PATH=$GHC_WITH_PKGS/bin:$PATH
-    "${playground-exe}"/bin/plutus-playground-server psgenerator $out
-  '';
+  purescript-generated = pkgs.writeShellApplication {
+    name = "purescript-generated";
+    runtimeInputs = [ pkgs.nix ];
+    checkPhase = "";
+    text = ''
+      GHC_WITH_PKGS="${build-ghc-with-plutus}"
+      export PATH=$GHC_WITH_PKGS/bin:$PATH
+      "${build-playground-exe}"/bin/plutus-playground-server psgenerator "$out"
+    '';
+  };
 
   # start-backend: script to start the plutus-playground-server
   #
@@ -111,6 +116,6 @@ let
     });
 in
 {
-  inherit client start-backend;
+  inherit client start-backend generate-purescript;
   server = playground-exe;
 }
