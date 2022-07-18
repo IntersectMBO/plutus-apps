@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -16,7 +17,8 @@ import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, Value (..), parseJSON, (.:), (.:?))
+import Data.Aeson.Types (Object, Parser)
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -28,6 +30,7 @@ import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx, TxId, eitherTx, getCardanoTxId)
 import Ledger.Index (UtxoIndex (UtxoIndex))
 import Ledger.Index qualified as UtxoIndex
+import Plutus.Blockfrost.Types qualified as Blockfrost
 import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contract.Types (ContractError)
 import Plutus.PAB.Instances ()
@@ -113,17 +116,45 @@ defaultDbConfig
 instance Default DbConfig where
   def = defaultDbConfig
 
+data ChainQueryConfig = ChainIndexConfig ChainIndex.ChainIndexConfig
+                      | BlockfrostConfig Blockfrost.BlockfrostConfig
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
+instance Default ChainQueryConfig where
+    def = ChainIndexConfig def
+
+parseChainQuery :: Object -> Parser ChainQueryConfig
+parseChainQuery obj = do
+    ci <- obj .:? "chainIndexConfig"
+    bf <- obj .:? "blockfrostConfig"
+    case (ci, bf) of
+        (Just a, Nothing)  -> pure $ ChainIndexConfig a
+        (Nothing, Just a)  -> pure $ BlockfrostConfig a
+        (Nothing, Nothing) -> error "No configuration available"
+        (Just _, Just _)   -> error "Cant have ChainIndex and Blockfrost configuration"
+
 data Config =
     Config
         { dbConfig                :: DbConfig
         , walletServerConfig      :: Wallet.WalletConfig
         , nodeServerConfig        :: PABServerConfig
         , pabWebserverConfig      :: WebserverConfig
-        , chainIndexConfig        :: ChainIndex.ChainIndexConfig
+        , chainIndexConfig        :: ChainQueryConfig
         , requestProcessingConfig :: RequestProcessingConfig
         , developmentOptions      :: DevelopmentOptions
         }
-    deriving (Show, Eq, Generic, FromJSON, ToJSON)
+    deriving (Show, Eq, Generic, ToJSON)
+
+instance FromJSON Config where
+    parseJSON (Object obj) = Config <$> obj .: "dbConfig"
+                                    <*> obj .: "walletServerConfig"
+                                    <*> obj .: "nodeServerConfig"
+                                    <*> obj .: "pabWebserverConfig"
+                                    <*> parseChainQuery obj
+                                    <*> obj .: "requestProcessingConfig"
+                                    <*> obj .: "developmentOptions"
+    parseJSON val = fail $ "Unexpected value: " ++ show val
 
 defaultConfig :: Config
 defaultConfig =
