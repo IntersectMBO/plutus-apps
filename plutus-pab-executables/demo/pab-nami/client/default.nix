@@ -91,6 +91,7 @@ let
       };
       checkPhase = ''
         node -e 'require("./output/Test.Main").main()'
+        ls -la ${pab-nami-demo-generator}
       '';
       name = "pab-nami-demo";
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
@@ -100,5 +101,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend pab-nami-demo-generator purescript-generated;
+  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend pab-nami-demo-generator;
 }

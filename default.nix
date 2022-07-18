@@ -53,7 +53,7 @@ rec {
       inherit (plutus-apps) purs-tidy;
       inherit pkgs haskell webCommon;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
-    }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator start-backend purescript-generated;
+    }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator start-backend;
   };
 
   plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {
