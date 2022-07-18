@@ -25,6 +25,7 @@ library
         Plutus.Blockfrost.Queries
         Plutus.Blockfrost.Responses
         Plutus.Blockfrost.Utils
+        Plutus.Blockfrost.Types
     hs-source-dirs: src
     build-depends:
         plutus-tx -any,
