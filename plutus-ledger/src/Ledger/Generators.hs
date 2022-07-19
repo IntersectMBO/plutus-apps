@@ -48,7 +48,8 @@ module Ledger.Generators(
     signAll,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys,
-    someTokenValue
+    someTokenValue,
+    genTxInfo
     ) where
 
 import Cardano.Api qualified as C
