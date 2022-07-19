@@ -19,7 +19,6 @@ Interface to the transaction types from 'cardano-api'
 module Ledger.Tx.CardanoAPI(
   CardanoBuildTx(..)
   , SomeCardanoApiTx(..)
-  , withIsCardanoEra
   , txOutRefs
   , unspentOutputsTx
   , fromCardanoTxId
@@ -209,15 +208,6 @@ instance FromJSON SomeCardanoApiTx where
             <|> parseAlonzoEraInCardanoModeTx v
             <|> parseBabbageEraInCardanoModeTx v
             <|> parseEraInCardanoModeFail v
-
--- | Run code that needs an `IsCardanoEra` constraint while you only have an `EraInMode` value.
-withIsCardanoEra :: C.EraInMode era C.CardanoMode -> (C.IsCardanoEra era => r) -> r
-withIsCardanoEra C.ByronEraInCardanoMode r   = r
-withIsCardanoEra C.ShelleyEraInCardanoMode r = r
-withIsCardanoEra C.AllegraEraInCardanoMode r = r
-withIsCardanoEra C.MaryEraInCardanoMode r    = r
-withIsCardanoEra C.AlonzoEraInCardanoMode r  = r
-withIsCardanoEra C.BabbageEraInCardanoMode r = r
 
 parseByronInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
 parseByronInCardanoModeTx =

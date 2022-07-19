@@ -49,7 +49,7 @@ import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.UtxoState (viewTip)
-import Plutus.Contract.CardanoAPI (fromCardanoTx, withIsCardanoEra)
+import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import System.Random
 
 -- | Connect to the node and write node updates to the blockchain
@@ -129,7 +129,7 @@ processChainSyncEvent instancesState blockchainEnv event = do
   case event of
     Resume _ -> Right <$> blockAndSlot blockchainEnv
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
-      withIsCardanoEra era (processBlock instancesState header blockchainEnv transactions era)
+      processBlock instancesState header blockchainEnv transactions era
     RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
 
 data SyncActionFailure
