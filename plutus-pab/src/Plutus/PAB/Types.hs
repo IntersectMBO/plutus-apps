@@ -36,7 +36,7 @@ import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contract.Types (ContractError)
 import Plutus.PAB.Instances ()
 import Prettyprinter (Pretty, line, pretty, viaShow, (<+>))
-import Servant.Client (BaseUrl (BaseUrl), ClientError, Scheme (Http))
+import Servant.Client (BaseUrl (BaseUrl), ClientEnv, ClientError, Scheme (Http))
 import Wallet.API (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Types (ContractInstanceId (ContractInstanceId), NotificationError)
@@ -138,6 +138,18 @@ instance ToJSON ChainQueryConfig where
 
 instance Default ChainQueryConfig where
     def = ChainIndexConfig def
+
+data ChainQueryEnv = ChainIndexEnv ClientEnv
+                   | BlockfrostEnv Blockfrost.BlockfrostEnv
+
+getChainIndexEnv :: ChainQueryEnv -> ClientEnv
+getChainIndexEnv (ChainIndexEnv env) = env
+getChainIndexEnv (BlockfrostEnv _)   = error "Can't get ChainIndexEnv from BlockfrostEnv"
+
+getBlockfrostEnv :: ChainQueryEnv -> Blockfrost.BlockfrostEnv
+getBlockfrostEnv (BlockfrostEnv env) = env
+getBlockfrostEnv (ChainIndexEnv _)   = error "Can't get BlockfrostEnv from ChainIndexEnv"
+
 
 data Config =
     Config
