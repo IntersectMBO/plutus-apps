@@ -625,7 +625,7 @@ prop_Whitelist = checkErrorWhitelist defaultWhitelist
 
 tests :: TestTree
 tests = testGroup "uniswap" [
-    checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "can create a liquidity pool and add liquidity"
+    checkPredicateOptions (defaultCheckOptions & (increaseTransactionLimits . increaseTransactionLimits)) "can create a liquidity pool and add liquidity"
         (assertNotDone Uniswap.setupTokens
                        (Trace.walletInstanceTag w1)
                        "setupTokens contract should be still running"
