@@ -81,7 +81,9 @@ let
     export WEBGHC_URL=http://localhost:8080
     export GITHUB_CALLBACK_PATH=https://localhost:8009/api/oauth/github/callback
 
+    echo before "$1"
     test "$1" == "-g" && shift 1 # takes care of the -g flag
+    echo after "$1"
     "${build-playground-exe}"/bin/plutus-playground-server webserver "$@"
   '';
 

@@ -57,5 +57,6 @@ You can edit this file as you like.
 , sources =
   [ "src/**/*.purs"
   , "test/**/*.purs"
+  , "generated/**/*.purs"
   ]
 }
