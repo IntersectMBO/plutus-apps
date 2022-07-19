@@ -22,8 +22,9 @@ import Cardano.Api (CardanoMode, ConsensusMode (..), EraHistory (EraHistory), Sh
 import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo (..), ExecutionUnitPrices (..),
                             ExecutionUnits (..), Lovelace (..), NetworkId (..), NetworkMagic (..),
                             PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (retractPP)
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.PParams (retractPP)
+import Cardano.Ledger.BaseTypes (boundRational)
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (..), Globals, ShelleyGenesis (..), mkShelleyGlobals)
@@ -103,7 +104,7 @@ instance Default ProtocolParameters where
 
 
 -- | The default era for the emulator
-type EmulatorEra = AlonzoEra StandardCrypto
+type EmulatorEra = BabbageEra StandardCrypto
 
 -- | Calculate the cardano-ledger `SlotLength`
 slotLength :: Params -> SlotLength
@@ -126,12 +127,14 @@ genesisDefaultsFromParams params@Params { pSlotConfig, pNetworkId } = shelleyGen
   { sgSystemStart = posixTimeToUTCTime $ scSlotZeroTime pSlotConfig
   , sgNetworkMagic = case pNetworkId of Testnet (NetworkMagic nm) -> nm; _ -> 0
   , sgNetworkId = case pNetworkId of Testnet _ -> C.Ledger.Testnet; Mainnet -> C.Ledger.Mainnet
-  , sgProtocolParams = retractPP (Coin 0) $ emulatorPParams params
+  , sgProtocolParams = retractPP (Coin 0) d C.Ledger.NeutralNonce $ emulatorPParams params
   }
+  where
+    d = fromMaybe (error "3 % 5 should be valid UnitInterval") $ boundRational (3 % 5)
 
 -- | Convert `Params` to cardano-ledger `PParams`
 emulatorPParams :: Params -> PParams EmulatorEra
-emulatorPParams Params { pProtocolParams } = toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
+emulatorPParams Params { pProtocolParams } = toLedgerPParams ShelleyBasedEraBabbage pProtocolParams
 
 -- | A sensible default 'EraHistory' value for the emulator
 emulatorEraHistory :: Params -> EraHistory CardanoMode

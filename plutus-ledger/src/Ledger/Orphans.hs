@@ -67,8 +67,8 @@ instance BA.ByteArrayAccess TxId where
 
 instance OpenApi.ToSchema C.ScriptHash where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptHash") mempty
-instance OpenApi.ToSchema (C.AddressInEra C.AlonzoEra) where
-    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "AddressInAlonzoEra") mempty
+instance OpenApi.ToSchema (C.AddressInEra C.BabbageEra) where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "AddressInBabbageEra") mempty
 deriving instance Generic C.ScriptData
 instance OpenApi.ToSchema C.ScriptData where
     declareNamedSchema _ =

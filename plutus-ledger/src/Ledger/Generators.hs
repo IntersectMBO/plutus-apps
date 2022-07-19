@@ -288,7 +288,7 @@ genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
                                  , genShelleyEraInCardanoModeTx
                                  , genAllegraEraInCardanoModeTx
                                  , genMaryEraInCardanoModeTx
-                                 , genAlonzoEraInCardanoModeTx
+                                 , genBabbageEraInCardanoModeTx
                                  ]
 
 genByronEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
@@ -311,10 +311,10 @@ genMaryEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.MaryEra
   pure $ SomeTx tx C.MaryEraInCardanoMode
 
-genAlonzoEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genAlonzoEraInCardanoModeTx = do
-  tx <- fromGenT $ Gen.genTx C.AlonzoEra
-  pure $ SomeTx tx C.AlonzoEraInCardanoMode
+genBabbageEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genBabbageEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.BabbageEra
+  pure $ SomeTx tx C.BabbageEraInCardanoMode
 
 genAda :: MonadGen m => m Ada
 genAda = Ada.lovelaceOf <$> Gen.integral (Range.linear 0 (100000 :: Integer))

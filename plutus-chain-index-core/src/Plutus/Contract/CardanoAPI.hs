@@ -72,8 +72,8 @@ fromCardanoTxOut (C.TxOut addr val datum refScript) =
         <*> (pure $ fromCardanoTxOutRefScript refScript)
 
 setValidity :: Bool -> C.Tx era -> C.Tx era
-setValidity validity (C.Tx (C.ShelleyTxBody C.ShelleyBasedEraAlonzo txBody scripts dat aux _) era) =
-  C.Tx (C.ShelleyTxBody C.ShelleyBasedEraAlonzo txBody scripts dat aux (toTxScriptValidity validity)) era
+setValidity validity (C.Tx (C.ShelleyTxBody shelleyBasedEra txBody scripts dat aux _) era) =
+  C.Tx (C.ShelleyTxBody shelleyBasedEra txBody scripts dat aux (toTxScriptValidity shelleyBasedEra validity)) era
 setValidity _ tx = tx -- @setValidity@ only applies in Alonzo era (and newer)
 
 fromCardanoTxOutRefScript :: C.ReferenceScript era -> ReferenceScript

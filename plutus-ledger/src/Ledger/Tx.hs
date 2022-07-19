@@ -158,13 +158,13 @@ data CardanoTx
 
 makeLenses ''CardanoTx
 
-getEmulatorEraTx :: SomeCardanoApiTx -> C.Tx C.AlonzoEra
-getEmulatorEraTx (SomeTx tx C.AlonzoEraInCardanoMode) = tx
+getEmulatorEraTx :: SomeCardanoApiTx -> C.Tx C.BabbageEra
+getEmulatorEraTx (SomeTx tx C.BabbageEraInCardanoMode) = tx
 getEmulatorEraTx _                                    = error "getEmulatorEraTx: Expected an Alonzo tx"
 
-pattern CardanoApiEmulatorEraTx :: C.Tx C.AlonzoEra -> SomeCardanoApiTx
+pattern CardanoApiEmulatorEraTx :: C.Tx C.BabbageEra -> SomeCardanoApiTx
 pattern CardanoApiEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
-    CardanoApiEmulatorEraTx tx = SomeTx tx C.AlonzoEraInCardanoMode
+    CardanoApiEmulatorEraTx tx = SomeTx tx C.BabbageEraInCardanoMode
 
 {-# COMPLETE CardanoApiEmulatorEraTx #-}
 
