@@ -383,8 +383,8 @@ mkTxInfo tx = do
             { txInfoInputs = txins
             , txInfoOutputs = txOutputs tx
             -- We add zero ada to follow the intentional logic of `Cardano.Ledger.Alonzo.TxInfo.txInfo`.
-            , txInfoMint = Value.unionWith (+) (Ada.lovelaceValueOf 0) (txMint tx)
-            , txInfoFee = Value.unionWith (+) (Ada.lovelaceValueOf 0) (txFee tx)
+            , txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
+            , txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator
             , txInfoWdrl = [] -- Withdrawals not supported in emulator
             , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
