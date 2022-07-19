@@ -43,6 +43,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
 import Ledger hiding (singleton)
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
@@ -203,7 +204,7 @@ start = do
     let c    = mkCoin cs uniswapTokenName
         us   = uniswap cs
         inst = uniswapInstance us
-        tx   = mustPayToTheScript (Factory []) $ unitValue c
+        tx   = mustPayToTheScript (Factory []) $ unitValue c <> Ada.adaValueOf 2
 
     mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
       >>= adjustUnbalancedTx >>= submitTxConfirmed
@@ -226,8 +227,8 @@ create us CreateParams{..} = do
         usDat2   = Pool lp liquidity
         psC      = poolStateCoin us
         lC       = mkCoin (liquidityCurrency us) $ lpTicker lp
-        usVal    = unitValue $ usCoin us
-        lpVal    = valueOf cpCoinA cpAmountA <> valueOf cpCoinB cpAmountB <> unitValue psC
+        usVal    = unitValue (usCoin us) <> Ada.adaValueOf 2
+        lpVal    = valueOf cpCoinA cpAmountA <> valueOf cpCoinB cpAmountB <> unitValue psC <> Ada.adaValueOf 2
 
         lookups  = Constraints.plutusV1TypedValidatorLookups usInst        <>
                    Constraints.plutusV1OtherScript usScript                <>
@@ -254,7 +255,7 @@ close us CloseParams{..} = do
         usC      = usCoin us
         psC      = poolStateCoin us
         lC       = mkCoin (liquidityCurrency us) $ lpTicker lp
-        usVal    = unitValue usC
+        usVal    = unitValue usC <> Ada.adaValueOf 2
         psVal    = unitValue psC
         lVal     = valueOf lC liquidity
         redeemer = Redeemer $ PlutusTx.toBuiltinData Close
@@ -292,7 +293,7 @@ remove us RemoveParams{..} = do
         inA          = amountOf inVal rpCoinA
         inB          = amountOf inVal rpCoinB
         (outA, outB) = calculateRemoval inA inB liquidity rpDiff
-        val          = psVal <> valueOf rpCoinA outA <> valueOf rpCoinB outB
+        val          = psVal <> valueOf rpCoinA outA <> valueOf rpCoinB outB <> Ada.adaValueOf 2
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Remove
 
         lookups  = Constraints.plutusV1TypedValidatorLookups usInst          <>
@@ -332,7 +333,7 @@ add us AddParams{..} = do
         lC           = mkCoin (liquidityCurrency us) $ lpTicker lp
         psVal        = unitValue psC
         lVal         = valueOf lC delL
-        val          = psVal <> valueOf apCoinA newA <> valueOf apCoinB newB
+        val          = psVal <> valueOf apCoinA newA <> valueOf apCoinB newB <> Ada.adaValueOf 2
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Add
 
         lookups  = Constraints.plutusV1TypedValidatorLookups usInst             <>
@@ -374,7 +375,7 @@ swap us SwapParams{..} = do
     logInfo @String $ printf "oldA = %d, oldB = %d, old product = %d, newA = %d, newB = %d, new product = %d" oldA oldB (unAmount oldA * unAmount oldB) newA newB (unAmount newA * unAmount newB)
 
     let inst    = uniswapInstance us
-        val     = valueOf spCoinA newA <> valueOf spCoinB newB <> unitValue (poolStateCoin us)
+        val     = valueOf spCoinA newA <> valueOf spCoinB newB <> unitValue (poolStateCoin us) <> Ada.adaValueOf 2
 
         lookups = Constraints.plutusV1TypedValidatorLookups inst                 <>
                   Constraints.plutusV1OtherScript (Scripts.validatorScript inst) <>
