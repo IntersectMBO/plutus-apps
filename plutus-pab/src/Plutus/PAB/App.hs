@@ -183,7 +183,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             -- handle 'ChainIndexEffect'
             . flip handleError (throwError . ChainIndexError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . (case chainIndexConfig config of
+            . (case chainQueryConfig config of
                 ChainIndexConfig _ -> reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv (fromJust . chainIndexEnv))
                                       . reinterpret2 (ChainIndex.handleChainIndexClient @IO)
                 BlockfrostConfig _ -> reinterpret (Core.handleMappedReader @(AppEnv a) @BlockfrostEnv (fromJust . blockfrostEnv))
@@ -262,7 +262,7 @@ mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
              , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscNodeMode, pscNetworkId}
              , walletServerConfig
-             , chainIndexConfig
+             , chainQueryConfig
              } = do
     walletClientEnv <- maybe (pure Nothing) (fmap Just . clientEnv) $ preview Wallet._LocalWalletConfig walletServerConfig
     nodeClientEnv <- clientEnv pscBaseUrl
@@ -287,12 +287,12 @@ mkEnv appTrace appConfig@Config { dbConfig
                            , managerResponseTimeout = responseTimeoutMicro 60_000_000 }
 
     mkChainIndexEnv :: IO (Maybe ClientEnv)
-    mkChainIndexEnv = case chainIndexConfig of
+    mkChainIndexEnv = case chainQueryConfig of
       ChainIndexConfig config -> Just <$> clientEnv (ChainIndex.ciBaseUrl config)
       BlockfrostConfig _      -> return Nothing
 
     mkBlockfrostEnv :: IO (Maybe BlockfrostEnv)
-    mkBlockfrostEnv = case chainIndexConfig of
+    mkBlockfrostEnv = case chainQueryConfig of
       ChainIndexConfig _ -> return Nothing
       BlockfrostConfig config -> return $ Just $ BlockfrostEnv { envBfTokenPath = bfTokenPath config
                                                         , envNetworkId = unNetworkIdWrapper pscNetworkId}

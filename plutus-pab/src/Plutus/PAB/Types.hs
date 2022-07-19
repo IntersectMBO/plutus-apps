@@ -145,7 +145,7 @@ data Config =
         , walletServerConfig      :: Wallet.WalletConfig
         , nodeServerConfig        :: PABServerConfig
         , pabWebserverConfig      :: WebserverConfig
-        , chainIndexConfig        :: ChainQueryConfig
+        , chainQueryConfig        :: ChainQueryConfig
         , requestProcessingConfig :: RequestProcessingConfig
         , developmentOptions      :: DevelopmentOptions
         }
@@ -171,7 +171,7 @@ instance ToJSON Config where
         , "pabWebserverConfig" .= pabWebserverConfig
         , "requestProcessingConfig" .= requestProcessingConfig
         , "developmentOptions" .= developmentOptions
-        ] `mergeObjects` (toJSON chainIndexConfig)
+        ] `mergeObjects` (toJSON chainQueryConfig)
 
 mergeObjects :: Value -> Value -> Value
 mergeObjects (Object o1) (Object o2) = Object $ HML.union o1 o2
@@ -184,7 +184,7 @@ defaultConfig =
     , walletServerConfig = def
     , nodeServerConfig = def
     , pabWebserverConfig = def
-    , chainIndexConfig = def
+    , chainQueryConfig = def
     , requestProcessingConfig = def
     , developmentOptions = def
     }

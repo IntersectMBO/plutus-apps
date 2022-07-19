@@ -132,13 +132,13 @@ processIsUtxo (blockN, isUtxo) = do
 processGetUtxos :: PageQuery TxOutRef -> (Block, [AddressUtxo]) -> IO UtxosResponse
 processGetUtxos pq (blockN, xs) = do
     tip <- processTip blockN
-    return $ UtxosResponse {currentTip=tip, page=nPage}
+    return $ UtxosResponse {currentTip=tip, page=refPage}
   where
-      nPage :: Page TxOutRef
-      nPage = Page {currentPageQuery=pq
-                   , nextPageQuery=Nothing
-                   , pageItems=items
-                   }
+      refPage :: Page TxOutRef
+      refPage = Page {currentPageQuery=pq
+                  , nextPageQuery=Nothing
+                  , pageItems=items
+                  }
 
       items :: [TxOutRef]
       items = map utxoToRef xs

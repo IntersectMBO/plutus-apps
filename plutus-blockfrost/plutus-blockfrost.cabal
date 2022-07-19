@@ -42,7 +42,6 @@ library
         blockfrost-api,
         bytestring -any,
         cardano-api -any,
-        filepath,
         freer-simple -any,
         hex-text,
         safe-money, 

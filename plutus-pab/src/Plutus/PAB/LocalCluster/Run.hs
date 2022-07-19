@@ -81,7 +81,7 @@ import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
-                         Config (chainIndexConfig, dbConfig, nodeServerConfig, walletServerConfig),
+                         Config (chainQueryConfig, dbConfig, nodeServerConfig, walletServerConfig),
                          DbConfig (dbConfigFile))
 import Plutus.PAB.Types qualified as PAB.Config
 import Prettyprinter (Pretty)
@@ -280,7 +280,7 @@ launchPAB userContractHandler
                     , pscKeptBlocks = securityParam
                     }
                 , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
-                , chainIndexConfig = ChainIndexConfig def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
+                , chainQueryConfig = ChainIndexConfig def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }
     PAB.Run.runWithOpts userContractHandler (Just config) opts { cmd = Migrate }

@@ -67,7 +67,7 @@ import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartNode))
-import Plutus.PAB.Types (ChainQueryConfig (..), Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig,
+import Plutus.PAB.Types (ChainQueryConfig (..), Config (Config, dbConfig, pabWebserverConfig), chainQueryConfig,
                          nodeServerConfig, walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
@@ -124,7 +124,7 @@ runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet in remote wallet config."
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig = BlockfrostConfig _, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
+runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {chainQueryConfig = BlockfrostConfig _}} MockWallet =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet with BlockfrostConfig."
 
 -- Run mock node server
@@ -227,7 +227,7 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
       pure asyncId
 
 -- Run the chain-index service
-runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig = ChainIndexConfig ciConfig }} ChainIndex =
+runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig }} ChainIndex =
     ChainIndex.main
         (toChainIndexLog ccaTrace)
         ciConfig
@@ -236,7 +236,7 @@ runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Con
         ccaAvailability
 
 -- Run the chain-index service
-runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig = BlockfrostConfig _ }} ChainIndex =
+runConfigCommand _ ConfigCommandArgs{ccaPABConfig=Config {chainQueryConfig = BlockfrostConfig _ }} ChainIndex =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run Chain Index with BlockfrostConfig."
 
 -- Get the state of a contract
