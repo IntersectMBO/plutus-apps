@@ -105,9 +105,9 @@ data ChainIndexTxOut =
                              , _ciTxOutValue   :: V1.Value
                              }
   | ScriptChainIndexTxOut { _ciTxOutAddress   :: Address
-                          , _ciTxOutValidator :: Either V1.ValidatorHash V1.Validator
-                          , _ciTxOutDatum     :: Either V1.DatumHash V1.Datum
                           , _ciTxOutValue     :: V1.Value
+                          , _ciTxOutDatum     :: Either V1.DatumHash V1.Datum
+                          , _ciTxOutValidator :: Either V1.ValidatorHash V1.Validator
                           }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
@@ -121,8 +121,8 @@ makePrisms ''ChainIndexTxOut
 -- 'ChainIndexTxOut' loses precision ('Datum' and 'Validator' are changed to 'DatumHash' and 'ValidatorHash' respectively)
 toTxOut :: ChainIndexTxOut -> V1.Tx.TxOut
 toTxOut (PublicKeyChainIndexTxOut addr v)          = V1.Tx.TxOut addr v Nothing
-toTxOut (ScriptChainIndexTxOut addr _ (Left dh) v) = V1.Tx.TxOut addr v (Just dh)
-toTxOut (ScriptChainIndexTxOut addr _ (Right d) v) = V1.Tx.TxOut addr v (Just $ datumHash d)
+toTxOut (ScriptChainIndexTxOut addr v (Left dh) _) = V1.Tx.TxOut addr v (Just dh)
+toTxOut (ScriptChainIndexTxOut addr v (Right d) _) = V1.Tx.TxOut addr v (Just $ datumHash d)
 
 -- | Converts a plutus-ledger-api transaction output to the chain index
 -- transaction output.
@@ -132,7 +132,7 @@ fromTxOut V1.Tx.TxOut { txOutAddress, txOutValue, txOutDatumHash } =
     V1.PubKeyCredential _ -> pure $ PublicKeyChainIndexTxOut txOutAddress txOutValue
     V1.ScriptCredential vh ->
       txOutDatumHash >>= \dh ->
-        pure $ ScriptChainIndexTxOut txOutAddress (Left vh) (Left dh) txOutValue
+        pure $ ScriptChainIndexTxOut txOutAddress txOutValue (Left dh) (Left vh)
 
 instance Pretty ChainIndexTxOut where
     pretty PublicKeyChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =

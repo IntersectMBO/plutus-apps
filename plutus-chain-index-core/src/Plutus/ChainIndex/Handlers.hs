@@ -200,10 +200,10 @@ makeChainIndexTxOut txout@ChainIndexTxOut{..} =
         OutputDatumHash dh -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
           d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v d citoValue
+          pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue d v
         OutputDatum d -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v (Right d) citoValue
+          pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue (Right d) v
         NoOutputDatum -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout

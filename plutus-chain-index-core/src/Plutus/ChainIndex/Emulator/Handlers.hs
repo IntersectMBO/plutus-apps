@@ -104,10 +104,10 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
             OutputDatumHash dh -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
               let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ L.ScriptChainIndexTxOut citoAddress v d citoValue
+              pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue d v
             OutputDatum d -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              pure $ Just $ L.ScriptChainIndexTxOut citoAddress v (Right d) citoValue
+              pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue (Right d) v
             NoOutputDatum -> do
               -- If the txout comes from a script address, the Datum should not be Nothing
               logWarn $ NoDatumScriptAddr txout
@@ -138,10 +138,10 @@ getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
             OutputDatumHash dh -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
               let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) v d (citoValue txout)
+              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) (citoValue txout) d v
             OutputDatum d -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) v (Right d) (citoValue txout)
+              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) (citoValue txout) (Right d) v
             NoOutputDatum -> do
               -- If the txout comes from a script address, the Datum should not be Nothing
               logWarn $ NoDatumScriptAddr txout
