@@ -16,7 +16,7 @@ From the `nix-shell` simply run:
 ```sh
 plutus-playground-server
 ```
-If it doesn't exist, `plutus-playground-server` will generated the PureScript files inside `plutus-playground-client/generated` which are needed by the client to work properly. To re-generated the files on demand, pass a `-g` flag like so `plutus-playground-server -g`.
+If it doesn't exist, `plutus-playground-server` will generate the PureScript files inside `plutus-playground-client/generated` which are needed by the client to work properly. To re-generate the files on demand, pass a `-g` flag like so `plutus-playground-server -g`.
 
 ## Testing
 
