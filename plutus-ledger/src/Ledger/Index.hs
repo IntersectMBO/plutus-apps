@@ -219,7 +219,8 @@ the blockchain.
 checkMintingAuthorised :: ValidationMonad m => Tx -> m ()
 checkMintingAuthorised tx =
     let
-        mintedCurrencies = V.symbols (txMint tx)
+        -- See note [Mint and Fee fields must have ada symbol].
+        mintedCurrencies = filter ((/=) Ada.adaSymbol) $ V.symbols (txMint tx)
 
         mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
 
