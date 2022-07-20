@@ -22,6 +22,8 @@ Or you can use Nix which will also build the Haddock for the project and link it
 nix build -f default.nix docs.site
 ```
 
+Or you can run `build-and-serve-docs` in nix-shell to host a local instance of ReadTheDocs at http://0.0.0.0:8002/. Haddock is at http://0.0.0.0:8002/haddock.
+
 The doc site from main is built automatically and hosted [here](https://plutus-apps.readthedocs.io/en/latest).
 
 Additionally, the site is built for all PRs, and a link to a preview can be found in the PR statuses.

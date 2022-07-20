@@ -58,7 +58,7 @@ fromTx tx =
         { _tobUnspentOutputs = Set.fromList $ fmap snd $ txOutsWithRef tx
         , _tobSpentOutputs =
           Map.fromSet (const $ view citxTxId tx)
-                      $ Set.mapMonotonic txInRef (view citxInputs tx)
+                     $ Set.fromList $ map txInRef (view citxInputs tx)
         }
 
 -- | Whether a 'TxOutRef' is a member of the UTXO set (ie. unspent)
