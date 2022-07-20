@@ -18,7 +18,7 @@ fromTx :: ChainIndexTx -> TxUtxoBalance
 fromTx tx =
     TxUtxoBalance
         { _tubUnspentOutputs = Set.fromList $ fmap snd $ txOutsWithRef tx
-        , _tubUnmatchedSpentInputs = Set.mapMonotonic txInRef (view citxInputs tx)
+        , _tubUnmatchedSpentInputs = Set.fromList $ map txInRef (view citxInputs tx)
         }
 
 -- | Whether a 'TxOutRef' is a member of the UTXO set (ie. unspent)
