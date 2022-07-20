@@ -786,7 +786,6 @@ payToWallet source target = payToPaymentPublicKeyHash source (Emulator.mockWalle
 payToPaymentPublicKeyHash :: forall t.  Wallet -> PaymentPubKeyHash -> Value -> Simulation t CardanoTx
 payToPaymentPublicKeyHash source target amount = do
     Instances.BlockchainEnv{beParams} <- Core.askBlockchainEnv @t @(SimulatorState t)
---    handleDelayEffect $ delayThread (250 :: Millisecond)
     handleAgentThread source Nothing
         $ flip (handleError @WAPI.WalletAPIError) (throwError . WalletError)
         $ WAPI.payToPaymentPublicKeyHash beParams WAPI.defaultSlotRange amount target
