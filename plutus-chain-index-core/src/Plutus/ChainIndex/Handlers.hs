@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -192,18 +191,19 @@ makeChainIndexTxOut ::
   )
   => ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
-makeChainIndexTxOut txout@ChainIndexTxOut{..} =
-  case addressCredential citoAddress of
-    PubKeyCredential _ -> pure $ Just $ L.PublicKeyChainIndexTxOut citoAddress citoValue
+makeChainIndexTxOut txout@(ChainIndexTxOut address value datum _refScript) =
+  case addressCredential address of
+    PubKeyCredential _ ->
+      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum
     ScriptCredential vh ->
-      case citoDatum of
+      case datum of
         OutputDatumHash dh -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
           d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue d v
+          pure $ Just $ L.ScriptChainIndexTxOut address value d v
         OutputDatum d -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue (Right d) v
+          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) v
         NoOutputDatum -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout

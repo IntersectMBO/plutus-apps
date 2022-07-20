@@ -93,21 +93,21 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
     Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout@ChainIndexTxOut{..} -> do
+    Just txout@(ChainIndexTxOut address value datum _refScript) -> do
       -- The output might come from a public key address or a script address.
       -- We need to handle them differently.
-      case addressCredential citoAddress of
+      case addressCredential address of
         PubKeyCredential _ ->
-          pure $ Just $ L.PublicKeyChainIndexTxOut citoAddress citoValue
+          pure $ Just $ L.PublicKeyChainIndexTxOut address value datum
         ScriptCredential vh@(ValidatorHash h) -> do
-          case citoDatum of
+          case datum of
             OutputDatumHash dh -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
               let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue d v
+              pure $ Just $ L.ScriptChainIndexTxOut address value d v
             OutputDatum d -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              pure $ Just $ L.ScriptChainIndexTxOut citoAddress citoValue (Right d) v
+              pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) v
             NoOutputDatum -> do
               -- If the txout comes from a script address, the Datum should not be Nothing
               logWarn $ NoDatumScriptAddr txout
@@ -127,21 +127,21 @@ getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
     Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
+    Just txout@(ChainIndexTxOut address value datum _refScript) -> do
       -- The output might come from a public key address or a script address.
       -- We need to handle them differently.
       case addressCredential $ citoAddress txout of
         PubKeyCredential _ ->
-          pure $ Just $ L.PublicKeyChainIndexTxOut (citoAddress txout) (citoValue txout)
+          pure $ Just $ L.PublicKeyChainIndexTxOut address value datum
         ScriptCredential vh@(ValidatorHash h) -> do
-          case citoDatum txout of
+          case datum of
             OutputDatumHash dh -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
               let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) (citoValue txout) d v
+              pure $ Just $ L.ScriptChainIndexTxOut address value d v
             OutputDatum d -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) (citoValue txout) (Right d) v
+              pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) v
             NoOutputDatum -> do
               -- If the txout comes from a script address, the Datum should not be Nothing
               logWarn $ NoDatumScriptAddr txout

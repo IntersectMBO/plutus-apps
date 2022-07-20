@@ -500,7 +500,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
       $ do
           (txOut, datum) <- maybe (throwError UnknownRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.ciTxOutDatum . _Right
+                                datum <- ciTxOut ^? Tx.ciTxOutDatumScript . _Right
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
@@ -711,14 +711,14 @@ resolveScriptTxOut
        , MonadError MkTxError m
        )
     => ChainIndexTxOut -> m (Maybe (Validator, Datum, Value))
-resolveScriptTxOut Tx.ScriptChainIndexTxOut { Tx._ciTxOutValidator, Tx._ciTxOutDatum, Tx._ciTxOutValue } = do
+resolveScriptTxOut Tx.ScriptChainIndexTxOut { Tx._ciTxOutValidator, Tx._ciTxOutDatumScript, Tx._ciTxOutValue } = do
     -- first check in the 'ChainIndexTx' for the validator, then
     -- look for it in the 'slOtherScripts map.
     validator <- either lookupValidator pure _ciTxOutValidator
 
     -- first check in the 'ChainIndexTx' for the datum, then
     -- look for it in the 'slOtherData' map.
-    dataValue <- either lookupDatum pure _ciTxOutDatum
+    dataValue <- either lookupDatum pure _ciTxOutDatumScript
 
     pure $ Just (validator, dataValue, _ciTxOutValue)
 resolveScriptTxOut _ = pure Nothing
