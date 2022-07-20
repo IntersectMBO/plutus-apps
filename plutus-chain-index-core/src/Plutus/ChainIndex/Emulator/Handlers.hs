@@ -27,17 +27,18 @@ import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
-import Control.Monad.Freer.Extras.Pagination (pageOf)
+import Control.Monad.Freer.Extras.Pagination (Page (nextPageQuery, pageItems), PageQuery, pageOf)
 import Control.Monad.Freer.State (State, get, gets, modify, put)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.List qualified as List
+import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), TxId, TxOutRef (..))
 import Ledger qualified as L
 import Ledger.Scripts (ScriptHash (ScriptHash))
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
-                              UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
+                              TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
@@ -92,7 +93,7 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
     Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout@(ChainIndexTxOut{..}) -> do
+    Just txout@ChainIndexTxOut{..} -> do
       -- The output might come from a public key address or a script address.
       -- We need to handle them differently.
       case addressCredential citoAddress of
@@ -107,10 +108,67 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
             OutputDatum d -> do
               let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
               pure $ Just $ L.ScriptChainIndexTxOut citoAddress v (Right d) citoValue
-            _ -> do
+            NoOutputDatum -> do
               -- If the txout comes from a script address, the Datum should not be Nothing
               logWarn $ NoDatumScriptAddr txout
               pure Nothing
+
+
+-- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
+getUtxoutFromRef ::
+  forall effs.
+  ( Member (State ChainIndexEmulatorState) effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => TxOutRef
+  -> Eff effs (Maybe L.ChainIndexTxOut)
+getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
+  ds <- gets (view diskState)
+  -- Find the output in the tx matching the output ref
+  case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
+    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> do
+      -- The output might come from a public key address or a script address.
+      -- We need to handle them differently.
+      case addressCredential $ citoAddress txout of
+        PubKeyCredential _ ->
+          pure $ Just $ L.PublicKeyChainIndexTxOut (citoAddress txout) (citoValue txout)
+        ScriptCredential vh@(ValidatorHash h) -> do
+          case citoDatum txout of
+            OutputDatumHash dh -> do
+              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
+              let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
+              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) v d (citoValue txout)
+            OutputDatum d -> do
+              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
+              pure $ Just $ L.ScriptChainIndexTxOut (citoAddress txout) v (Right d) (citoValue txout)
+            NoOutputDatum -> do
+              -- If the txout comes from a script address, the Datum should not be Nothing
+              logWarn $ NoDatumScriptAddr txout
+              pure Nothing
+
+-- | Unspent outputs located at addresses with the given credential.
+getUtxoSetAtAddress ::
+  forall effs.
+  ( Member (State ChainIndexEmulatorState) effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => PageQuery TxOutRef
+  -> Credential
+  -> Eff effs UtxosResponse
+getUtxoSetAtAddress pageQuery cred = do
+  state <- get
+  let outRefs = view (diskState . addressMap . at cred) state
+      utxo = view (utxoIndex . to utxoState) state
+      utxoRefs = Set.filter (flip TxUtxoBalance.isUnspentOutput utxo)
+                            (fromMaybe mempty outRefs)
+      page = pageOf pageQuery utxoRefs
+  case tip utxo of
+    TipAtGenesis -> do
+      logWarn TipIsGenesis
+      pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
+    tp           -> pure (UtxosResponse tp page)
+
 
 handleQuery ::
     forall effs.
@@ -136,18 +194,17 @@ handleQuery = \case
         case tip utxo of
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxo))
-    UtxoSetAtAddress pageQuery cred -> do
-        state <- get
-        let outRefs = view (diskState . addressMap . at cred) state
-            utxo = view (utxoIndex . to utxoState) state
-            utxoRefs = Set.filter (flip TxUtxoBalance.isUnspentOutput utxo)
-                                  (fromMaybe mempty outRefs)
-            page = pageOf pageQuery utxoRefs
-        case tip utxo of
-            TipAtGenesis -> do
-                logWarn TipIsGenesis
-                pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
-            tp           -> pure (UtxosResponse tp page)
+    UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
+    UnspentTxOutSetAtAddress pageQuery cred -> do
+        (UtxosResponse tp page) <- getUtxoSetAtAddress pageQuery cred
+        case tp of
+          TipAtGenesis -> do
+            pure $ QueryResponse [] Nothing
+          _            -> do
+            mtxouts <- mapM getUtxoutFromRef (pageItems page)
+            let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
+            pure $ QueryResponse txouts (nextPageQuery page)
+
     UtxoSetWithCurrency pageQuery assetClass -> do
         state <- get
         let outRefs = view (diskState . assetClassMap . at assetClass) state

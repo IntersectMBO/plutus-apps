@@ -146,6 +146,7 @@ executable marconi
     , bytestring
     , containers
     , lens
+    , mwc-random
     , optparse-applicative
     , prettyprinter
     , serialise
