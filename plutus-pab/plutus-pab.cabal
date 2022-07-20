@@ -176,6 +176,7 @@ library
     , either
     , exceptions
     , filepath
+    , fingertree
     , freer-simple
     , generic-arbitrary
     , http-client
