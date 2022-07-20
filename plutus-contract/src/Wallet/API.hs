@@ -64,7 +64,6 @@ import Control.Monad (unless, void)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logWarn)
-import Data.Default (Default (def))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
