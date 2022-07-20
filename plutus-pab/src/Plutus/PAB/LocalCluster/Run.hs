@@ -80,8 +80,7 @@ import Plutus.PAB.Run qualified as PAB.Run
 import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
-import Plutus.PAB.Types (Config (chainIndexConfig, dbConfig, nodeServerConfig, walletServerConfig),
-                         DbConfig (dbConfigFile))
+import Plutus.PAB.Types (Config (chainIndexConfig, dbConfig, nodeServerConfig, walletServerConfig))
 import Plutus.PAB.Types qualified as PAB.Config
 import Prettyprinter (Pretty)
 import Servant qualified
@@ -255,7 +254,7 @@ launchPAB
     -> IO ()
 launchPAB userContractHandler
     passPhrase
-    dir
+    _
     walletUrl
     (RunningNode socketPath _block0 (networkParameters, _))
     (ChainIndexPort chainIndexPort) = do
@@ -278,7 +277,7 @@ launchPAB userContractHandler
                     , pscSlotConfig = slotConfig
                     , pscKeptBlocks = securityParam
                     }
-                , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
+                , dbConfig = def
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }

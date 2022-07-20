@@ -24,6 +24,7 @@ import Data.Text (Text)
 import Data.Time.Units (Second)
 import Data.UUID (UUID)
 import Data.UUID.Extras qualified as UUID
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx, TxId, eitherTx, getCardanoTxId)
 import Ledger.Index (UtxoIndex (UtxoIndex))
@@ -93,10 +94,12 @@ instance Pretty PABError where
 
 data DbConfig =
     DbConfig
-        { dbConfigFile     :: Text
-        -- ^ The path to the sqlite database file. May be absolute or relative.
+        { dbConfigUser     :: Text
+        , dbConfigPass     :: Text
+        , dbConfigHost     :: Text
+        , dbConfigPort     :: Word16
+        , dbConfigDatabase :: Text
         , dbConfigPoolSize :: Int
-        -- ^ Max number of concurrent sqlite database connections.
         }
     deriving (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -104,11 +107,14 @@ data DbConfig =
 -- | Default database config uses an in-memory sqlite database that is shared
 -- between all threads in the process.
 defaultDbConfig :: DbConfig
-defaultDbConfig
-  = DbConfig
-      { dbConfigFile = "file::memory:?cache=shared"
-      , dbConfigPoolSize = 20
-      }
+defaultDbConfig = DbConfig
+        { dbConfigUser = "postgres"
+        , dbConfigPass = ""
+        , dbConfigHost = "localhost"
+        , dbConfigPort = 5432
+        , dbConfigDatabase = "pab"
+        , dbConfigPoolSize = 20
+        }
 
 instance Default DbConfig where
   def = defaultDbConfig

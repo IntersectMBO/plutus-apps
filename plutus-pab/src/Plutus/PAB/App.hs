@@ -295,25 +295,24 @@ runBeamMigration trace conn = Postgres.runBeamPostgresDebug (logDebugString trac
 
 -- | Connect to the database.
 dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Postgres.Connection)
-dbConnect trace DbConfig {dbConfigFile, dbConfigPoolSize} = do
+dbConnect trace DbConfig{..} = do
   pool <- Pool.createPool
     (Postgres.connect Postgres.ConnectInfo {
-      connectHost="127.0.0.1",
-      connectPort=5432,
-      connectUser="postgres",
-      connectPassword="jgf41nbk9u",
-      connectDatabase="pab"
+      connectHost=unpack dbConfigHost,
+      connectPort=dbConfigPort,
+      connectUser=unpack dbConfigUser,
+      connectPassword=unpack dbConfigPass,
+      connectDatabase=unpack dbConfigDatabase
     })
     Postgres.close
     dbConfigPoolSize
     5_000_000
     5
-  logDebugString trace "Connecting to DB: AAAAAHHHHHH"
+  logDebugString trace $ "Connecting to DB: " <> databaseStr
   return pool
--- do
---   pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
---   logDebugString trace $ "Connecting to DB: " <> dbConfigFile
---   return pool
+  where
+    databaseStr :: Text
+    databaseStr = dbConfigHost <> ":" <> (pack . show) dbConfigPort
 
 handleContractDefinition ::
   forall a effs. HasDefinitions a
