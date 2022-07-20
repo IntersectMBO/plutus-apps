@@ -104,7 +104,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ isJust (V.findTxInByTxOutRef txOutRef scriptContextTxInfo)
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
-        -- We add zero ada here to be consistent with cardano-ledger behaviour.
+        -- See note [Mint and Fee fields must have ada symbol]
         $ Ada.lovelaceValueOf 0 <> Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
     MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
@@ -150,3 +150,11 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
         traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
         $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
 
+{- Note [Mint and Fee fields must have ada symbol]
+
+We follow the intentional logic of 'Cardano.Ledger.Alonzo.TxInfo.txInfo' by adding
+zero ada to both 'Mint' and 'Fee' fields to make sure that ada symbol is presented there.
+
+That makes on-chain and off-chain behaviours consistent.
+
+-}

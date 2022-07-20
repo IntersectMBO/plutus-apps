@@ -75,7 +75,6 @@ import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx (..), txId, updateUtxoCollateral)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -382,7 +381,7 @@ mkTxInfo tx = do
     let ptx = TxInfo
             { txInfoInputs = txins
             , txInfoOutputs = txOutputs tx
-            -- We add zero ada to follow the intentional logic of `Cardano.Ledger.Alonzo.TxInfo.txInfo`.
+            -- See note [Mint and Fee fields must have ada symbol]
             , txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator

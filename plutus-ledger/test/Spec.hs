@@ -327,11 +327,7 @@ signAndVerifyTest = property $ do
 
 -- | Check that `txInfoMint` and `txInfoFee` contain ada symbol.
 --
--- We follow the intentional logic of `Cardano.Ledger.Alonzo.TxInfo.txInfo` and add
--- zero ada to both fields to make on-chain and off-chain behaviours consistent.
---
--- We check here that if there was no ada in the original `txMint`, we added zero ada and it
--- has an ada symbol.
+-- See note [Mint and Fee fields must have ada symbol].
 txInfoNonEmptyAda :: Property
 txInfoNonEmptyAda = property $ do
     mockChain <- forAll Gen.genMockchain
