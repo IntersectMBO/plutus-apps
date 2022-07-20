@@ -27,7 +27,7 @@ import Plutus.ChainIndex.Types (ChainIndexTx (..), ChainIndexTxOut (..), ChainIn
 
 fromCardanoBlock :: C.BlockInMode C.CardanoMode -> Either FromCardanoError [ChainIndexTx]
 fromCardanoBlock (C.BlockInMode (C.Block C.BlockHeader {} txs) eraInMode) =
-  Export.withIsCardanoEra eraInMode (traverse (fromCardanoTx eraInMode) txs)
+  traverse (fromCardanoTx eraInMode) txs
 
 -- | Convert a Cardano API tx of any given era to a Plutus chain index tx.
 fromCardanoTx
