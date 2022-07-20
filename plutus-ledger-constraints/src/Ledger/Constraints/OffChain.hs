@@ -643,7 +643,7 @@ processConstraint = \case
     MustMintValue mpsHash red tn i -> do
         mintingPolicyScript <- lookupMintingPolicy mpsHash
         -- See note [Mint and Fee fields must have ada symbol].
-        let value = Ada.lovelaceValueOf 0 <> Value.singleton (Value.mpsSymbol mpsHash) tn
+        let value = ((<>) (Ada.lovelaceValueOf 0)) . Value.singleton (Value.mpsSymbol mpsHash) tn
         -- If i is negative we are burning tokens. The tokens burned must
         -- be provided as an input. So we add the value burnt to
         -- 'valueSpentInputs'. If i is positive then new tokens are created

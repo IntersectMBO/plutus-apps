@@ -104,8 +104,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ isJust (V.findTxInByTxOutRef txOutRef scriptContextTxInfo)
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
-        -- See note [Mint and Fee fields must have ada symbol]
-        $ Ada.lovelaceValueOf 0 <> Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
+        $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
     MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
