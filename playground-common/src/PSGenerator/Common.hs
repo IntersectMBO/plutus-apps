@@ -36,7 +36,7 @@ import Ledger.TimeSlot (SlotConfig, SlotConversionError)
 import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
 import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
 import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
-import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
+import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOutputs, ReferenceScript)
@@ -417,6 +417,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @ChainIndexQuery
     , equal . genericShow . argonaut $ mkSumType @ChainIndexResponse
     , equal . genericShow . argonaut $ mkSumType @IsUtxoResponse
+    , equal . genericShow . argonaut $ mkSumType @(QueryResponse A)
     , equal . genericShow . argonaut $ mkSumType @TxosResponse
     , equal . genericShow . argonaut $ mkSumType @UtxosResponse
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTx

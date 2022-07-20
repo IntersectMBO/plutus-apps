@@ -76,6 +76,8 @@ pkgs/.stack
 **/.spago/
 **/.spago2nix/
 **/.psa-stash
+plutus-playground-client/generated
+plutus-pab-executables/demo/pab-nami/client/generated
 
 # Backend config files
 marlowe-playground-server/playground.yaml

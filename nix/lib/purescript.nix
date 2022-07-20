@@ -39,11 +39,11 @@ stdenv.mkDerivation {
     shopt -s globstar
     cp -R ${nodeModules}/node_modules .
     chmod -R u+rw ./node_modules
-    ${addExtraSrcs}
 
+    ${addExtraSrcs}
     install-spago-style
     echo building project...
-    psa --strict --censor-lib --stash --is-lib=$src/generated --is-lib=.spago ${spagoSources} ${extraPSPaths} "$src/**/*.purs"
+    psa --strict --censor-lib --stash --is-lib=generated --is-lib=.spago ${spagoSources} ${extraPSPaths} "$src/**/*.purs"
     echo done.
     npm run build:webpack:prod
   '';

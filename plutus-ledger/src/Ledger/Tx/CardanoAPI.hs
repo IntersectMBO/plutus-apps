@@ -131,7 +131,8 @@ instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
 
 instance OpenApi.ToSchema CardanoBuildTx where
-  declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
+  -- TODO: implement the schema
+  declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
 
 instance Pretty CardanoBuildTx where
   pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent
@@ -304,7 +305,7 @@ toTxScriptValidity False = C.TxScriptValidity C.TxScriptValiditySupportedInAlonz
 -- with their hashes.
 scriptDataFromCardanoTxBody
   :: C.TxBody era
-  -> (Map P.DatumHash P.Datum, Map P.RedeemerHash P.Redeemer)
+  -> (Map P.DatumHash P.Datum, PV1.Redeemers)
 scriptDataFromCardanoTxBody C.ByronTxBody {} = (mempty, mempty)
 scriptDataFromCardanoTxBody (C.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) =
   (mempty, mempty)
@@ -319,14 +320,25 @@ scriptDataFromCardanoTxBody
                     )
              $ Map.elems dats
       redeemers = Map.fromList
-                $ fmap ( (\r -> (P.redeemerHash r, r))
-                       . P.Redeemer
-                       . fromCardanoScriptData
-                       . C.fromAlonzoData
-                       . fst
-                       )
-                $ Map.elems reds
+                $ map (\(ptr, rdmr) ->
+                        ( redeemerPtrFromCardanoRdmrPtr ptr
+                        , P.Redeemer
+                         $ fromCardanoScriptData
+                         $ C.fromAlonzoData
+                         $ fst rdmr
+                        )
+                      )
+                $ Map.toList reds
    in (datums, redeemers)
+
+redeemerPtrFromCardanoRdmrPtr :: Alonzo.RdmrPtr -> PV1.RedeemerPtr
+redeemerPtrFromCardanoRdmrPtr (Alonzo.RdmrPtr rdmrTag ptr) = PV1.RedeemerPtr t (toInteger ptr)
+  where
+    t = case rdmrTag of
+      Alonzo.Spend -> PV1.Spend
+      Alonzo.Mint  -> PV1.Mint
+      Alonzo.Cert  -> PV1.Cert
+      Alonzo.Rewrd -> PV1.Reward
 
 -- | Extract plutus scripts from a Cardano API tx body.
 --
