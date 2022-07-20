@@ -181,6 +181,7 @@ library
     , generic-arbitrary
     , http-client
     , http-client-tls
+    , hysterical-screams
     , lens
     , memory
     , monad-logger

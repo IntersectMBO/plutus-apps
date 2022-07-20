@@ -9,17 +9,24 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   , processMockBlock
   ) where
 
-import Cardano.Api (BlockInMode (..), ChainPoint (..))
+import Cardano.Api (BlockInMode (..), ChainPoint (..), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Node.Params qualified as Params
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
+import Control.Lens.Operators
 import Data.FingerTree qualified as FT
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.List (findIndex)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
+import Index.VSqlite qualified as Ix
 import Ledger (Block, Slot (..), TxId (..))
+import Marconi.Index.TxConfirmationStatus (TCSIndex)
+import Marconi.Index.TxConfirmationStatus qualified as Ix
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
@@ -76,6 +83,7 @@ startNodeClient config instancesState = do
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
             )
       AlonzoNode -> do
+        utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 2160) >>= newIORef
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
             (\block -> do
@@ -86,7 +94,7 @@ startNodeClient config instancesState = do
                 slot <- TimeSlot.currentSlot slotConfig
                 STM.atomically $ STM.writeTVar (beCurrentSlot env) slot
 
-                processChainSyncEvent instancesState env block >>= handleSyncAction'
+                processChainSyncEvent utxoIx instancesState env block >>= handleSyncAction'
             )
     pure env
 
@@ -122,17 +130,26 @@ blockAndSlot BlockchainEnv{beLastSyncedBlockNo, beLastSyncedBlockSlot} =
 
 -- | Process a chain sync event that we receive from the alonzo node client
 processChainSyncEvent
-  :: InstancesState
+  :: IORef TCSIndex
+  -> InstancesState
   -> BlockchainEnv
   -> ChainSyncEvent
   -> IO (Either SyncActionFailure (Slot, BlockNumber))
-processChainSyncEvent instancesState blockchainEnv event = do
+processChainSyncEvent utxoIx instancesState blockchainEnv event = do
   case event of
     Resume _ -> STM.atomically $ Right <$> blockAndSlot blockchainEnv
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
-      withIsCardanoEra era (processBlock instancesState header blockchainEnv transactions era)
+      withIsCardanoEra era (processBlock utxoIx instancesState header blockchainEnv transactions era)
     RollBackward chainPoint _ -> do
-      -- TODO: Index rollback
+      ix' <- readIORef utxoIx
+      events <- Ix.getEvents (ix' ^. Ix.storage)
+      -- TODO: Stop ignoring errors.
+      let nextIx = fromMaybe ix' $ do
+                     slot   <- chainPointToSlotNo chainPoint
+                     offset <- findIndex undefined events
+                     Ix.rewind offset ix'
+      writeIORef utxoIx nextIx
+
       STM.atomically $ runRollback blockchainEnv chainPoint
 
 data SyncActionFailure
@@ -171,13 +188,14 @@ txEvent tx =
 -- | Update the blockchain env. with changes from a new block of cardano
 --   transactions in any era
 processBlock :: forall era. C.IsCardanoEra era
-             => InstancesState
+             => IORef TCSIndex
+             -> InstancesState
              -> C.BlockHeader
              -> BlockchainEnv
              -> [C.Tx era]
              -> C.EraInMode era C.CardanoMode
              -> IO (Either SyncActionFailure (Slot, BlockNumber))
-processBlock instancesState header env transactions era = do
+processBlock _ instancesState header env transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
   STM.atomically $ do
     STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
