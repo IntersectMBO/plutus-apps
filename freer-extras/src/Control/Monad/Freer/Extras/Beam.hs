@@ -194,9 +194,19 @@ runBeam trace action = do
       resultEither <- try $ Sqlite.withTransaction conn $ runBeamSqliteDebug traceSql conn action
       case resultEither of
           -- 'Database.SQLite.Simple.ErrorError' corresponds to an SQL error or
-          -- missing database. When this exception is raised, we suppose it's
-          -- because the another transaction was already running.
-          Left (Sqlite.SQLError Sqlite.ErrorError _ _) | retries > 0 -> do
+          -- missing database. When this exception is raised.
+          Left e@(Sqlite.SQLError Sqlite.ErrorError _ _) | retries > 0 -> do
+              traceSql $ show e
+              threadDelay 100_000
+              loop conn (retries - 1)
+          -- 'ErrorBusy' and 'ErrorLocked' correspond to the cases when another
+          -- transaction was already running
+          Left e@(Sqlite.SQLError Sqlite.ErrorBusy _ _) | retries > 0 -> do
+              traceSql $ show e
+              threadDelay 100_000
+              loop conn (retries - 1)
+          Left e@(Sqlite.SQLError Sqlite.ErrorLocked _ _) | retries > 0 -> do
+              traceSql $ show e
               threadDelay 100_000
               loop conn (retries - 1)
           -- We handle and rethrow errors other than
