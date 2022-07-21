@@ -48,7 +48,7 @@ options :: CheckOptions
 options = defaultCheckOptions
     & changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000)
     & changeInitialWalletValue w2 (const $ Ada.adaValueOf 1000)
-    & allowBigTransactions
+    & increaseTransactionLimits
 
 tests :: TestTree
 tests =
