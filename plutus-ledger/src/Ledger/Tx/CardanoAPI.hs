@@ -237,8 +237,15 @@ parseAlonzoEraInCardanoModeTx =
 -- for 'EraInMode BabbageEra CardanoMode':
 -- https://github.com/input-output-hk/cardano-node/pull/3837
 parseBabbageEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
-parseBabbageEraInCardanoModeTx =
-    undefined
+parseBabbageEraInCardanoModeTx (Aeson.Object v) =
+    SomeTx
+    <$> (v .: "tx" >>= \envelope -> either (const $ parseFail "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx")
+                                           pure
+                                           $ C.deserialiseFromTextEnvelope (C.AsTx C.AsBabbageEra) envelope)
+    <*> pure C.BabbageEraInCardanoMode -- This is a workaround that only works because we tried all other eras first
+parseBabbageEraInCardanoModeTx invalid =
+  prependFailure "parsing SomeCardanoApiTx failed, "
+      (typeMismatch "Object" invalid)
   -- parseSomeCardanoTx "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx"
   --                    (C.AsTx C.AsBabbageEra)
 
