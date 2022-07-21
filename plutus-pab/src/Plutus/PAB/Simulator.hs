@@ -238,8 +238,7 @@ mkSimulatorHandlers params handleContractEffect =
                 $ interpret (Core.handleBlockchainEnvReader @t @(SimulatorState t))
                 $ advanceClock @t
             Core.waitUntilSlot 1
-        , onShutdown = do
-            handleDelayEffect $ delayThread (500 :: Millisecond) -- need to wait a little to avoid garbled terminal output in GHCi.
+        , onShutdown = handleDelayEffect $ delayThread (500 :: Millisecond) -- need to wait a little to avoid garbled terminal output in GHCi.
         }
 
 handleLogSimulator ::
@@ -341,7 +340,7 @@ activateContract = Core.activateContract
 callEndpointOnInstance :: forall a t. (JSON.ToJSON a) => ContractInstanceId -> String -> a -> Simulation t (Maybe NotificationError)
 callEndpointOnInstance = Core.callEndpointOnInstance'
 
--- | Wait 1 second, then add a new block.
+-- | Wait 1 slot length, then add a new block.
 makeBlock ::
     forall t effs.
     ( LastMember IO effs

@@ -104,6 +104,15 @@ runScenario sim = do
         Left err -> error (show err)
         Right _  -> pure ()
 
+-- To run scenarios with the slot's length to 1s to make the awaiting tests stable
+runScenarioWithSecondSlot :: Simulation (Builtin TestContracts) a -> IO ()
+runScenarioWithSecondSlot sim = do
+    let params = Ledger.allowBigTransactions def
+    result <- Simulator.runSimulationWithParams params sim
+    case result of
+        Left err -> error (show err)
+        Right _  -> pure ()
+
 defaultWallet :: Wallet
 defaultWallet = knownWallet 1
 
@@ -134,9 +143,8 @@ executionTests =
         , currencyTest
         , testCase "wait for update" waitForUpdateTest
         , testCase "stop contract instance" stopContractInstanceTest
-        -- TODO: Commented temporarly until PR#565 is merged
-        -- , testCase "can wait for tx status change" waitForTxStatusChangeTest
-        -- , testCase "can wait for tx output status change" waitForTxOutStatusChangeTest
+        , testCase "can wait for tx status change" waitForTxStatusChangeTest
+        , testCase "can wait for tx output status change" waitForTxOutStatusChangeTest
         , testCase "can subscribe to slot updates" slotChangeTest
         , testCase "can query wallet funds" valueAtTest
         , testCase "can subscribe to observable state changes" observableStateChangeTest
@@ -183,7 +191,7 @@ slotChangeTest = runScenario $ do
 -- | Testing whether state of a tx correctly goes from 'TentativelyConfirmed'
 -- to 'Committed'.
 waitForTxStatusChangeTest :: IO ()
-waitForTxStatusChangeTest = runScenario $ do
+waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
   -- Add funds to a wallet and create a new transaction which we will observe
   -- for a status change.
   (w1, pk1) <- Simulator.addWallet
@@ -217,7 +225,7 @@ waitForTxStatusChangeTest = runScenario $ do
 -- | Testing whether state of a tx correctly goes from 'TentativelyConfirmed'
 -- to 'Committed'.
 waitForTxOutStatusChangeTest :: IO ()
-waitForTxOutStatusChangeTest = runScenario $ do
+waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- Add funds to a wallet and create a new transaction which we will observe
   -- for a status change.
   (w1, pk1) <- Simulator.addWallet

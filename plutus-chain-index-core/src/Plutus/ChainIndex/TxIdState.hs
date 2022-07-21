@@ -28,7 +28,6 @@ import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), Point (..), Rollba
 import Plutus.ChainIndex.UtxoState (RollbackFailed (..), RollbackResult (..), UtxoIndex, UtxoState (..), rollbackWith,
                                     tip, utxoState, viewTip)
 
-
 -- | The 'TxStatus' of a transaction right after it was added to the chain
 initialStatus :: OnChainTx -> TxStatus
 initialStatus tx =
