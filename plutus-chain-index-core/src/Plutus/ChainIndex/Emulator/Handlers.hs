@@ -37,7 +37,6 @@ import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), TxId, TxOutRef (..))
 import Ledger qualified as L
 import Ledger.Scripts (ScriptHash (ScriptHash))
-import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -48,9 +47,8 @@ import Plutus.ChainIndex.Emulator.DiskState (DiskState, addressMap, assetClassMa
 import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), _ValidTx, citxOutputs)
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (ChainSyncBlock (..), Diagnostics (..), Point (PointAtGenesis),
-                                ReferenceScript (ReferenceScriptInAnyLang, ReferenceScriptNone), Tip (..),
-                                TxProcessOption (..), TxUtxoBalance (..))
+import Plutus.ChainIndex.Types (ChainSyncBlock (..), Diagnostics (..), Point (PointAtGenesis), Tip (..),
+                                TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), MintingPolicy (MintingPolicy),
@@ -115,9 +113,7 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
               logWarn $ NoDatumScriptAddr txout
               pure Nothing
       where
-        script = case refScript of
-              ReferenceScriptNone             -> Nothing
-              (ReferenceScriptInAnyLang sial) -> fromCardanoScriptInAnyLang sial
+        script = fromReferenceScript refScript
 
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
@@ -153,9 +149,7 @@ getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
               logWarn $ NoDatumScriptAddr txout
               pure Nothing
       where
-        script = case refScript of
-              ReferenceScriptNone             -> Nothing
-              (ReferenceScriptInAnyLang sial) -> fromCardanoScriptInAnyLang sial
+        script = fromReferenceScript refScript
 
 
 -- | Unspent outputs located at addresses with the given credential.

@@ -58,6 +58,7 @@ module Plutus.ChainIndex.Types(
     , citxCardanoTx
     , _InvalidTx
     , _ValidTx
+    , fromReferenceScript
     ) where
 
 import Cardano.Api qualified as C
@@ -88,6 +89,7 @@ import Ledger (Address, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..))
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
+import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Script, ScriptHash)
 import Plutus.V1.Ledger.Tx (Redeemers, TxId)
 import Plutus.V2.Ledger.Api (OutputDatum (..), Value (..))
@@ -139,6 +141,10 @@ instance Serialise C.ScriptInAnyLang where
 
 instance OpenApi.ToSchema C.ScriptInAnyLang where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptInAnyLang") mempty
+
+fromReferenceScript :: ReferenceScript -> Maybe Script
+fromReferenceScript ReferenceScriptNone             = Nothing
+fromReferenceScript (ReferenceScriptInAnyLang sial) = fromCardanoScriptInAnyLang sial
 
 data ChainIndexTxOut = ChainIndexTxOut
   { citoAddress   :: Address -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era

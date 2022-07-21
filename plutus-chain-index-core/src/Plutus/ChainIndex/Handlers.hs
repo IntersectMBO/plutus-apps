@@ -48,7 +48,6 @@ import Database.Beam.Sqlite (Sqlite)
 import Ledger (TxId)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
-import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -60,7 +59,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Tx
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
+                                TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V2.Ledger.Api (Credential (..), Datum (..), DatumHash (..), TxOutRef (..))
@@ -210,9 +209,7 @@ makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) =
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
   where
-    script = case refScript of
-          ReferenceScriptNone             -> Nothing
-          (ReferenceScriptInAnyLang sial) -> fromCardanoScriptInAnyLang sial
+    script = fromReferenceScript refScript
 
 getUtxoSetAtAddress
   :: forall effs.
