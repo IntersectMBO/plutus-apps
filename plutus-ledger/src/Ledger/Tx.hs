@@ -160,7 +160,7 @@ makeLenses ''CardanoTx
 
 getEmulatorEraTx :: SomeCardanoApiTx -> C.Tx C.BabbageEra
 getEmulatorEraTx (SomeTx tx C.BabbageEraInCardanoMode) = tx
-getEmulatorEraTx _                                    = error "getEmulatorEraTx: Expected an Alonzo tx"
+getEmulatorEraTx _                                     = error "getEmulatorEraTx: Expected a Babbage tx"
 
 pattern CardanoApiEmulatorEraTx :: C.Tx C.BabbageEra -> SomeCardanoApiTx
 pattern CardanoApiEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where

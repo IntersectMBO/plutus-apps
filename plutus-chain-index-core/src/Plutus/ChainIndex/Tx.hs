@@ -46,7 +46,7 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..), onCardanoTx,
                txId)
-import Ledger.Tx.CardanoAPI (toCardanoTxOutBabbage, toCardanoTxOutDatumHashBabbage)
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
 import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
@@ -89,7 +89,7 @@ fromOnChainTx networkId = \case
                 ChainIndexTx
                     { _citxTxId = txId tx
                     , _citxInputs = Set.toList txInputs
-                    , _citxOutputs = case traverse (toCardanoTxOutBabbage networkId toCardanoTxOutDatumHashBabbage) txOutputs of
+                    , _citxOutputs = case traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) txOutputs of
                         Right txs -> either (const InvalidTx) ValidTx $ traverse fromCardanoTxOut txs
                         Left _    -> InvalidTx
                     , _citxValidRange = txValidRange
