@@ -101,8 +101,6 @@ type PrivateKey = Crypto.XPrv
 -- This datatype was created in order to be used in
 -- 'Ledger.Constraints.processConstraint', specifically with the constraints
 -- 'MustSpendPubKeyOutput' and 'MustSpendScriptOutput'.
---
--- TODO Add 'Either DatumHash Datum' field for 'PublicKeyChainIndexTxOut'.
 data ChainIndexTxOut =
     PublicKeyChainIndexTxOut { _ciTxOutAddress         :: Address
                              , _ciTxOutValue           :: V1.Value
