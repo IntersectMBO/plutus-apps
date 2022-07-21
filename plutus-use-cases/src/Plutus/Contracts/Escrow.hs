@@ -332,7 +332,7 @@ refund ::
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = either id datumHash (Tx._ciTxOutDatumScript ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let flt _ ciTxOut = either id datumHash (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'

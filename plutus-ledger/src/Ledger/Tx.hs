@@ -23,8 +23,8 @@ module Ledger.Tx
     -- ** Lenses and Prisms
     , ciTxOutAddress
     , ciTxOutValue
-    , ciTxOutDatumPublicKey
-    , ciTxOutDatumScript
+    , ciTxOutPublicKeyDatum
+    , ciTxOutScriptDatum
     , ciTxOutReferenceScript
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
@@ -104,12 +104,12 @@ type PrivateKey = Crypto.XPrv
 data ChainIndexTxOut =
     PublicKeyChainIndexTxOut { _ciTxOutAddress         :: Address
                              , _ciTxOutValue           :: V1.Value
-                             , _ciTxOutDatumPublicKey  :: V2.OutputDatum
+                             , _ciTxOutPublicKeyDatum  :: V2.OutputDatum
                              , _ciTxOutReferenceScript :: Maybe V1.Script
                              }
   | ScriptChainIndexTxOut { _ciTxOutAddress         :: Address
                           , _ciTxOutValue           :: V1.Value
-                          , _ciTxOutDatumScript     :: Either V1.DatumHash V1.Datum
+                          , _ciTxOutScriptDatum     :: Either V1.DatumHash V1.Datum
                           , _ciTxOutReferenceScript :: Maybe V1.Script
                           , _ciTxOutValidator       :: Either V1.ValidatorHash V1.Validator
                           }

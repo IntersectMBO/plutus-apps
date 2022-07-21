@@ -186,7 +186,7 @@ findSecretWordValue =
 -- | Extract the secret word in the Datum of a given transaction output is possible
 secretWordValue :: ChainIndexTxOut -> Maybe HashedString
 secretWordValue o = do
-  Datum d <- either (const Nothing) Just (_ciTxOutDatumScript o)
+  Datum d <- either (const Nothing) Just (_ciTxOutScriptDatum o)
   PlutusTx.fromBuiltinData d
 
 contract :: AsContractError e => Contract () GameSchema e ()
