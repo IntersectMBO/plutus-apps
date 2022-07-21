@@ -1,5 +1,5 @@
 -- Bump this if you need newer packages.
-index-state: 2022-05-18T00:00:00Z
+index-state: 2022-07-01T00:00:00Z
 
 packages: doc
           freer-extras
@@ -40,6 +40,7 @@ allow-newer:
 constraints:
     aeson >= 2
   , hedgehog >= 1.1
+  , protolude >= 0.3.2
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which
@@ -106,7 +107,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 69ab98c384703172f898eb5bcad1078ded521426
+  tag: a3fba9f4e776c38bc54cb9a1c1cae82d2338b718
   subdir:
     plutus-core
     plutus-ledger-api
@@ -171,7 +172,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: 1.35.1
+  tag: 781ff37e5acb0c59034f67f57c9e639161be9d96
   --sha256: 1z0zv1i58ikmbqg878f9z573jkwp4lzhmmswshm6c96rq6lprzh8
   subdir:
     cardano-api
@@ -204,8 +205,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3be8a19083fc13d9261b1640e27dd389b51bb08e
-  --sha256: 0dvm9l43mp1i34bcywmznd0660hhcfxwgawypk9q1hjkml1i41z3
+  tag: ee64d219b220cfb373a67274a0d4c03dbacf70c2
   subdir:
     eras/alonzo/impl
     eras/babbage/impl
@@ -232,7 +232,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: a65c29b6a85e90d430c7f58d362b7eb097fd4949
+  tag: 5f882881fc1279a9ab8699721248162e2881c6ca
   --sha256: 1fmab5hmi1y8lss97xh6hhikmyhsx9x31yhvg6zpr2kcq7kc6qkf
   subdir:
     monoidal-synchronisation
@@ -288,7 +288,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
+  tag: 533aec85c1ca05c7d171da44b89341fb736ecfe5
   subdir:
     cardano-prelude
     cardano-prelude-test

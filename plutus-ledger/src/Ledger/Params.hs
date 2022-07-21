@@ -99,6 +99,7 @@ instance Default ProtocolParameters where
     , protocolParamMaxValueSize = Just 5000
     , protocolParamCollateralPercent = Just 150
     , protocolParamMaxCollateralInputs = Just 3
+    , protocolParamUTxOCostPerByte = Nothing
     }
 
 
