@@ -172,6 +172,7 @@ txOut0 = Ledger.ScriptChainIndexTxOut
           (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
           mempty
           (Right Ledger.unitDatum)
+          Nothing
           (Left alwaysSucceedValidatorHash)
 
 txOutRef0 :: Ledger.TxOutRef
@@ -206,6 +207,7 @@ txOut1 = Ledger.ScriptChainIndexTxOut
   (Ledger.Address (ScriptCredential validatorHash1) Nothing)
   mempty
   (Right Ledger.unitDatum)
+  Nothing
   (Left validatorHash1)
 
 txOutRef1 :: Ledger.TxOutRef

@@ -48,6 +48,7 @@ import Database.Beam.Sqlite (Sqlite)
 import Ledger (TxId)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
+import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -191,23 +192,27 @@ makeChainIndexTxOut ::
   )
   => ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
-makeChainIndexTxOut txout@(ChainIndexTxOut address value datum _refScript) =
+makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) =
   case addressCredential address of
     PubKeyCredential _ ->
-      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum
+      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
     ScriptCredential vh ->
       case datum of
         OutputDatumHash dh -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
           d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut address value d v
+          pure $ Just $ L.ScriptChainIndexTxOut address value d script v
         OutputDatum d -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) v
+          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
         NoOutputDatum -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
+  where
+    script = case refScript of
+          ReferenceScriptNone             -> Nothing
+          (ReferenceScriptInAnyLang sial) -> fromCardanoScriptInAnyLang sial
 
 getUtxoSetAtAddress
   :: forall effs.

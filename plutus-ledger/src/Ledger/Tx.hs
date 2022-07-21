@@ -25,6 +25,7 @@ module Ledger.Tx
     , ciTxOutValue
     , ciTxOutDatumPublicKey
     , ciTxOutDatumScript
+    , ciTxOutReferenceScript
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
@@ -103,14 +104,16 @@ type PrivateKey = Crypto.XPrv
 --
 -- TODO Add 'Either DatumHash Datum' field for 'PublicKeyChainIndexTxOut'.
 data ChainIndexTxOut =
-    PublicKeyChainIndexTxOut { _ciTxOutAddress        :: Address
-                             , _ciTxOutValue          :: V1.Value
-                             , _ciTxOutDatumPublicKey :: V2.OutputDatum
+    PublicKeyChainIndexTxOut { _ciTxOutAddress         :: Address
+                             , _ciTxOutValue           :: V1.Value
+                             , _ciTxOutDatumPublicKey  :: V2.OutputDatum
+                             , _ciTxOutReferenceScript :: Maybe V1.Script
                              }
-  | ScriptChainIndexTxOut { _ciTxOutAddress     :: Address
-                          , _ciTxOutValue       :: V1.Value
-                          , _ciTxOutDatumScript :: Either V1.DatumHash V1.Datum
-                          , _ciTxOutValidator   :: Either V1.ValidatorHash V1.Validator
+  | ScriptChainIndexTxOut { _ciTxOutAddress         :: Address
+                          , _ciTxOutValue           :: V1.Value
+                          , _ciTxOutDatumScript     :: Either V1.DatumHash V1.Datum
+                          , _ciTxOutReferenceScript :: Maybe V1.Script
+                          , _ciTxOutValidator       :: Either V1.ValidatorHash V1.Validator
                           }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
@@ -120,14 +123,15 @@ makePrisms ''ChainIndexTxOut
 -- | Converts a transaction output from the chain index to the plutus-ledger-api
 -- transaction output.
 --
--- Note that converting from 'ChainIndexTxOut' to 'TxOut' and back to
--- 'ChainIndexTxOut' loses precision ('Datum' and 'Validator' are changed to 'DatumHash' and 'ValidatorHash' respectively)
+-- Note that 'ChainIndexTxOut' supports features such inline datums and
+-- reference scripts which are not supported by V1 TxOut. Converting from
+-- 'ChainIndexTxOut' to 'TxOut' and back is therefore lossy.
 toTxOut :: ChainIndexTxOut -> V1.Tx.TxOut
-toTxOut (PublicKeyChainIndexTxOut addr v _outputDatum) =
+toTxOut (PublicKeyChainIndexTxOut addr v _outputDatum _referenceScript) =
   V1.Tx.TxOut addr v Nothing
-toTxOut (ScriptChainIndexTxOut addr v (Left dh) _)     =
+toTxOut (ScriptChainIndexTxOut addr v (Left dh) _referenceScript _validator)     =
   V1.Tx.TxOut addr v (Just dh)
-toTxOut (ScriptChainIndexTxOut addr v (Right d) _)     =
+toTxOut (ScriptChainIndexTxOut addr v (Right d) _referenceScript _validator)     =
   V1.Tx.TxOut addr v (Just $ datumHash d)
 
 -- | Converts a plutus-ledger-api transaction output to the chain index
@@ -137,10 +141,10 @@ fromTxOut V1.Tx.TxOut { txOutAddress, txOutValue, txOutDatumHash } =
   case V1.addressCredential txOutAddress of
     V1.PubKeyCredential _ ->
       -- V1 transactions don't support inline datums
-      pure $ PublicKeyChainIndexTxOut txOutAddress txOutValue V2.NoOutputDatum
+      pure $ PublicKeyChainIndexTxOut txOutAddress txOutValue V2.NoOutputDatum Nothing
     V1.ScriptCredential vh ->
       txOutDatumHash >>= \dh ->
-        pure $ ScriptChainIndexTxOut txOutAddress txOutValue (Left dh) (Left vh)
+        pure $ ScriptChainIndexTxOut txOutAddress txOutValue (Left dh) Nothing (Left vh)
 
 instance Pretty ChainIndexTxOut where
     pretty PublicKeyChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
