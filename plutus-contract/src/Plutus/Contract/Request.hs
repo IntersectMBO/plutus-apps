@@ -22,6 +22,8 @@ module Plutus.Contract.Request(
     awaitSlot
     , isSlot
     , currentSlot
+    , currentPABSlot
+    , currentNodeSlot
     , waitNSlots
     , awaitTime
     , isTime
@@ -136,7 +138,7 @@ import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPo
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
-                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentNodeSlotReq, CurrentPABSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Logging (logDebug)
@@ -212,12 +214,29 @@ isSlot ::
 isSlot = Promise . awaitSlot
 
 -- | Get the current slot number
+{-# DEPRECATED currentSlot "It was renamed to 'currentPABSlot', this function will be removed" #-}
 currentSlot ::
     forall w s e.
     ( AsContractError e
     )
     => Contract w s e Slot
-currentSlot = pabReq CurrentSlotReq E._CurrentSlotResp
+currentSlot = currentPABSlot
+
+-- | Get the current slot number of PAB
+currentPABSlot ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Contract w s e Slot
+currentPABSlot = pabReq CurrentPABSlotReq E._CurrentPABSlotResp
+
+-- | Get the current node slot number querying slot number from plutus chain index to be aligned with slot at local running node
+currentNodeSlot ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Contract w s e Slot
+currentNodeSlot = pabReq CurrentNodeSlotReq E._CurrentNodeSlotResp
 
 -- | Wait for a number of slots to pass
 waitNSlots ::

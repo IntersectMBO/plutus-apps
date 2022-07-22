@@ -261,7 +261,8 @@ instance Arbitrary PABReq where
     arbitrary =
         oneof
             [ AwaitSlotReq <$> arbitrary
-            , pure CurrentSlotReq
+            , pure CurrentPABSlotReq
+            , pure CurrentNodeSlotReq
             , pure OwnContractInstanceIdReq
             , ExposeEndpointReq <$> arbitrary
             , pure OwnAddressesReq
