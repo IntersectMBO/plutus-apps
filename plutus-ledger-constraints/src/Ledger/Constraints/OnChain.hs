@@ -149,3 +149,11 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
         traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
         $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
 
+{- Note [Mint and Fee fields must have ada symbol]
+
+We follow the intentional logic of 'Cardano.Ledger.Alonzo.TxInfo.txInfo' by adding
+zero ada to both 'Mint' and 'Fee' fields to make sure that ada symbol is presented there.
+
+That makes on-chain and off-chain behaviours consistent.
+
+-}

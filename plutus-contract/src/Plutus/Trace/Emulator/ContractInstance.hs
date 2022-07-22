@@ -341,7 +341,7 @@ updateTxOutStatus txns = do
     -- Check whether the contract instance is waiting for a status change of a
     -- transaction output of any of the new transactions. If that is the case,
     -- call 'addResponse' to sent the response.
-    let getSpentOutputs = Set.toList . Set.map txInRef . view citxInputs
+    let getSpentOutputs = map txInRef . view citxInputs
         -- If the tx is invalid, there is not outputs
         txWithTxOutStatus tx@ChainIndexTx {_citxTxId, _citxOutputs = InvalidTx} =
           fmap (, Committed TxInvalid (Spent _citxTxId)) $ getSpentOutputs tx
@@ -531,6 +531,6 @@ indexBlock :: [ChainIndexTx] -> IndexedBlock
 indexBlock = foldMap indexTx where
   indexTx otx =
     IndexedBlock
-      { ibUtxoSpent = Map.fromSet (const otx) $ Set.map txInRef $ view citxInputs otx
+      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ map txInRef $ view citxInputs otx
       , ibUtxoProduced = Map.fromListWith (<>) $ view (citxOutputs . _ValidTx) otx >>= (\TxOut{txOutAddress} -> [(txOutAddress, otx :| [])])
       }

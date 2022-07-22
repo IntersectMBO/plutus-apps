@@ -75,7 +75,8 @@ import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
 import Ledger.TxId (TxId)
-import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash)
+import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Script, ScriptHash)
+import Plutus.V1.Ledger.Tx (Redeemers)
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter
 import Prettyprinter.Extras (PrettyShow (..))
@@ -92,7 +93,7 @@ makePrisms ''ChainIndexTxOutputs
 data ChainIndexTx = ChainIndexTx {
     _citxTxId       :: TxId,
     -- ^ The id of this transaction.
-    _citxInputs     :: Set TxIn,
+    _citxInputs     :: [TxIn],
     -- ^ The inputs to this transaction.
     _citxOutputs    :: ChainIndexTxOutputs,
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
@@ -100,7 +101,7 @@ data ChainIndexTx = ChainIndexTx {
     -- ^ The 'SlotRange' during which this transaction may be validated.
     _citxData       :: Map DatumHash Datum,
     -- ^ Datum objects recorded on this transaction.
-    _citxRedeemers  :: Map RedeemerHash Redeemer,
+    _citxRedeemers  :: Redeemers,
     -- ^ Redeemers of the minting scripts.
     _citxScripts    :: Map ScriptHash Script,
     -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
@@ -116,7 +117,7 @@ makeLenses ''ChainIndexTx
 instance Pretty ChainIndexTx where
     pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = ValidTx outputs, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
         let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList _citxInputs)))
+                [ hang 2 (vsep ("inputs:" : fmap pretty _citxInputs))
                 , hang 2 (vsep ("outputs:" : fmap pretty outputs))
                 , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
                 , "validity range:" <+> viaShow _citxValidRange
@@ -126,7 +127,7 @@ instance Pretty ChainIndexTx where
         in nest 2 $ vsep ["Valid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
     pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
         let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList _citxInputs)))
+                [ hang 2 (vsep ("inputs:" : fmap pretty _citxInputs))
                 , hang 2 (vsep ["no outputs:"])
                 , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
                 , "validity range:" <+> viaShow _citxValidRange
