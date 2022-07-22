@@ -102,17 +102,35 @@ type PrivateKey = Crypto.XPrv
 -- 'Ledger.Constraints.processConstraint', specifically with the constraints
 -- 'MustSpendPubKeyOutput' and 'MustSpendScriptOutput'.
 data ChainIndexTxOut =
-    PublicKeyChainIndexTxOut { _ciTxOutAddress         :: Address
-                             , _ciTxOutValue           :: V1.Value
-                             , _ciTxOutPublicKeyDatum  :: V2.OutputDatum
-                             , _ciTxOutReferenceScript :: Maybe V1.Script
-                             }
-  | ScriptChainIndexTxOut { _ciTxOutAddress         :: Address
-                          , _ciTxOutValue           :: V1.Value
-                          , _ciTxOutScriptDatum     :: Either V1.DatumHash V1.Datum
-                          , _ciTxOutReferenceScript :: Maybe V1.Script
-                          , _ciTxOutValidator       :: Either V1.ValidatorHash V1.Validator
-                          }
+    PublicKeyChainIndexTxOut {
+      -- | Address of the transaction output. The address is protected by a
+      -- public key hash.
+      _ciTxOutAddress         :: Address,
+      -- | Value of the transaction output.
+      _ciTxOutValue           :: V1.Value,
+      -- | Optional datum attached to the transaction output.
+      _ciTxOutPublicKeyDatum  :: V2.OutputDatum,
+      -- | Optional reference script attached to the transaction output.
+      _ciTxOutReferenceScript :: Maybe V1.Script
+    }
+  | ScriptChainIndexTxOut {
+      -- | Address of the transaction output. The address is protected by a
+      -- script.
+      _ciTxOutAddress         :: Address,
+      -- | Value of the transaction output.
+      _ciTxOutValue           :: V1.Value,
+      -- | Datum attached to the transaction output, either in full or as a
+      -- hash reference. A transaction output protected by a Plutus script
+      -- is guardateed to have an associated datum.
+      _ciTxOutScriptDatum     :: Either V1.DatumHash V1.Datum,
+      -- | Optional reference script attached to the transaction output.
+      -- The reference script is, in genereal, unrelated to the validator
+      -- script althought it could also be the same.
+      _ciTxOutReferenceScript :: Maybe V1.Script,
+      -- | Validator protecting the transaction output, either in full or
+      -- as a hash reference.
+      _ciTxOutValidator       :: Either V1.ValidatorHash V1.Validator
+    }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 makeLenses ''ChainIndexTxOut
