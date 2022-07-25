@@ -89,7 +89,7 @@ fromOnChainTx networkId = \case
                 let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
                 ChainIndexTx
                     { _citxTxId = txId tx
-                    , _citxInputs = Set.toList txInputs
+                    , _citxInputs = txInputs
                     , _citxOutputs = case traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) txOutputs of
                         Right txs -> either (const InvalidTx) ValidTx $ traverse fromCardanoTxOut txs
                         Left _    -> InvalidTx
@@ -107,7 +107,7 @@ fromOnChainTx networkId = \case
                 let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
                 ChainIndexTx
                     { _citxTxId = txId tx
-                    , _citxInputs = Set.toList txCollateral
+                    , _citxInputs = txCollateral
                     , _citxOutputs = InvalidTx
                     , _citxValidRange = txValidRange
                     , _citxData = txData <> otherDataHashes
@@ -130,8 +130,8 @@ mintingPolicies = Map.fromList . fmap withHash . Set.toList
     withHash mp = let (MintingPolicyHash mph) = mintingPolicyHash mp
                    in (ScriptHash mph, getMintingPolicy mp)
 
-validators :: Set TxIn -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
-validators txIns = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) $ zip [0..] (Set.toList txIns)
+validators :: [TxIn] -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
+validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) . zip [0..]
   where
     -- TODO: the index of the txin is probably incorrect as we take it from the set.
     -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and

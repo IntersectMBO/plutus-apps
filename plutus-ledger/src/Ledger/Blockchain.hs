@@ -42,7 +42,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
 import Data.Proxy (Proxy (..))
-import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
@@ -99,7 +98,7 @@ eitherTx :: (CardanoTx -> r) -> (CardanoTx -> r) -> OnChainTx -> r
 eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
-consumableInputs :: OnChainTx -> Set.Set TxIn
+consumableInputs :: OnChainTx -> [TxIn]
 consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'

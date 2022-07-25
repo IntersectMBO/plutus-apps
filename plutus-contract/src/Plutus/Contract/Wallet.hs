@@ -41,6 +41,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
+import Data.Semigroup qualified as Semigroup
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import Data.Void (Void)
@@ -118,7 +119,7 @@ getUnspentOutput = do
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
-    case Set.lookupMin (getCardanoTxInputs tx) of
+    case (fmap Semigroup.getMin $ foldMap (Just . Semigroup.Min) $ getCardanoTxInputs tx) of
         Just inp -> pure $ txInRef inp
         Nothing  -> throwing _OtherContractError "Balanced transaction has no inputs"
 
@@ -282,7 +283,7 @@ mkRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
 mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx
 
 mkSpendingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract $ Set.toList txInputs) where
+mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract txInputs) where
     extract PV1.TxIn{PV1.txInType=Just (PV1.ConsumeScriptAddress _ redeemer _), PV1.txInRef} =
         pure [SpendingRedeemer{redeemer, redeemerOutRef=txInRef}]
     extract _ = pure []

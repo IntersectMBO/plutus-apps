@@ -191,20 +191,20 @@ genValidTransaction' g (Mockchain _ ops _) = do
     nUtxo <- if Map.null ops
                 then Gen.discard
                 else Gen.int (Range.linear 1 (Map.size ops))
-    let ins = Set.fromList $ pubKeyTxIn . fst <$> inUTXO
+    let ins = pubKeyTxIn . fst <$> inUTXO
         inUTXO = take nUtxo $ Map.toList ops
         totalVal = foldl' (<>) mempty $ map (txOutValue . snd) inUTXO
     genValidTransactionSpending' g ins totalVal
 
 genValidTransactionSpending :: MonadGen m
-    => Set.Set TxIn
+    => [TxIn]
     -> Value
     -> m Tx
 genValidTransactionSpending = genValidTransactionSpending' generatorModel
 
 genValidTransactionSpending' :: MonadGen m
     => GeneratorModel
-    -> Set.Set TxIn
+    -> [TxIn]
     -> Value
     -> m Tx
 genValidTransactionSpending' g ins totalVal = do

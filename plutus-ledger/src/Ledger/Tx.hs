@@ -204,8 +204,8 @@ pattern CardanoApiEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
 instance Pretty CardanoTx where
     pretty tx =
         let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList (getCardanoTxInputs tx))))
-                , hang 2 (vsep ("collateral inputs:" : fmap pretty (Set.toList (getCardanoTxCollateralInputs tx))))
+                [ hang 2 (vsep ("inputs:" : fmap pretty (getCardanoTxInputs tx)))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty (getCardanoTxCollateralInputs tx)))
                 , hang 2 (vsep ("outputs:" : fmap pretty (getCardanoTxOutputs tx)))
                 , "mint:" <+> pretty (getCardanoTxMint tx)
                 , "fee:" <+> pretty (getCardanoTxFee tx)
@@ -237,12 +237,12 @@ getCardanoTxId = onCardanoTx txId getCardanoApiTxId
 getCardanoApiTxId :: SomeCardanoApiTx -> V1.Tx.TxId
 getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
-getCardanoTxInputs :: CardanoTx -> Set V1.Tx.TxIn
+getCardanoTxInputs :: CardanoTx -> [V1.Tx.TxIn]
 getCardanoTxInputs = onCardanoTx txInputs
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
-        Set.fromList $ fmap ((`V1.Tx.TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
+        fmap ((`V1.Tx.TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
-getCardanoTxCollateralInputs :: CardanoTx -> Set V1.Tx.TxIn
+getCardanoTxCollateralInputs :: CardanoTx -> [V1.Tx.TxIn]
 getCardanoTxCollateralInputs = onCardanoTx txCollateral
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
@@ -257,7 +257,7 @@ getCardanoTxUnspentOutputsTx :: CardanoTx -> Map V1.Tx.TxOutRef V1.Tx.TxOut
 getCardanoTxUnspentOutputsTx = onCardanoTx unspentOutputsTx CardanoAPI.unspentOutputsTx
 
 getCardanoTxSpentOutputs :: CardanoTx -> Set V1.Tx.TxOutRef
-getCardanoTxSpentOutputs = Set.map V1.Tx.txInRef . getCardanoTxInputs
+getCardanoTxSpentOutputs = Set.fromList . map V1.Tx.txInRef . getCardanoTxInputs
 
 getCardanoTxFee :: CardanoTx -> V1.Value
 getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
@@ -286,8 +286,8 @@ getCardanoTxData = onCardanoTx txData
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =
         let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList txInputs)))
-                , hang 2 (vsep ("collateral inputs:" : fmap pretty (Set.toList txCollateral)))
+                [ hang 2 (vsep ("inputs:" : fmap pretty txInputs))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty txCollateral))
                 , hang 2 (vsep ("outputs:" : fmap pretty txOutputs))
                 , "mint:" <+> pretty txMint
                 , "fee:" <+> pretty txFee
@@ -315,7 +315,7 @@ updateUtxo tx unspent = (unspent `Map.withoutKeys` getCardanoTxSpentOutputs tx) 
 -- | Update a map of unspent transaction outputs and signatures based
 --   on the collateral inputs of a transaction (for when it is invalid).
 updateUtxoCollateral :: CardanoTx -> Map V1.Tx.TxOutRef V1.Tx.TxOut -> Map V1.Tx.TxOutRef V1.Tx.TxOut
-updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.map V1.Tx.txInRef $ getCardanoTxCollateralInputs tx)
+updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map V1.Tx.txInRef $ getCardanoTxCollateralInputs tx)
 
 -- | A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
 txOutRefs :: Tx -> [(V1.Tx.TxOut, V1.Tx.TxOutRef)]

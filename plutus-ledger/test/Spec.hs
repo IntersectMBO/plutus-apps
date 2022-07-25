@@ -5,6 +5,8 @@
 {-# LANGUAGE NumericUnderscores #-}
 module Main(main) where
 
+import Cardano.Api qualified as Api
+import Cardano.Crypto.Hash qualified as Crypto
 import Control.Monad (forM_)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
@@ -28,6 +30,7 @@ import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
 import Ledger.Value qualified as Value
 import PlutusTx.AssocMap qualified as AMap
@@ -84,6 +87,9 @@ tests = testGroup "all tests" [
         ],
     testGroup "TxInfo" [
         testPropertyNamed "TxInfo has non empty ada txMint and txFee" "txInfoNonEmptyAda" txInfoNonEmptyAda
+    ],
+    testGroup "TxIn" [
+        testPropertyNamed "Check that Ord instances of TxIn match" "txInOrdInstanceEquivalenceTest" txInOrdInstanceEquivalenceTest
     ],
     testGroup "TimeSlot" [
         testPropertyNamed "time range of starting slot" "initialSlotToTimeProp," initialSlotToTimeProp,
@@ -336,3 +342,17 @@ txInfoNonEmptyAda = property $ do
     txInfo <- forAll $ Gen.genTxInfo mockChain
     Hedgehog.assert $ (AMap.member Ada.adaSymbol . Value.getValue) $ Ledger.txInfoMint txInfo
     Hedgehog.assert $ (AMap.member Ada.adaSymbol . Value.getValue) $ Ledger.txInfoFee txInfo
+
+-- | Check that Ord instances of cardano-api's 'TxIn' and plutus-ledger-api's 'TxIn' match.
+txInOrdInstanceEquivalenceTest :: Property
+txInOrdInstanceEquivalenceTest = property $ do
+    txIns <- sort <$> forAll (Gen.list (Range.singleton 10) genTxIn)
+    let toPlutus = map ((`Tx.TxIn` Nothing) . CardanoAPI.fromCardanoTxIn)
+    let plutusTxIns = sort $ toPlutus txIns
+    Hedgehog.assert $ (toPlutus txIns) == plutusTxIns
+
+genTxIn :: Hedgehog.MonadGen m => m Api.TxIn
+genTxIn = do
+    txId <- (\t -> Api.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> (Gen.utf8 (Range.singleton 5) Gen.unicode)
+    txIx <- Api.TxIx <$> (Gen.integral (Range.linear 0 maxBound))
+    return $ Api.TxIn txId txIx
