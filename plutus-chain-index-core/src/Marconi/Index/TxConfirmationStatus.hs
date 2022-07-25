@@ -5,6 +5,7 @@
 module Marconi.Index.TxConfirmationStatus
   ( -- * UtxoIndex
     TCSIndex
+  , Event(..)
   , Depth(..)
   , open
   , Ix.insert

@@ -18,6 +18,7 @@ import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Lens.Operators
 import Data.FingerTree qualified as FT
+import Data.Foldable (foldlM)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
@@ -141,12 +142,13 @@ processChainSyncEvent utxoIx instancesState blockchainEnv event = do
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
       withIsCardanoEra era (processBlock utxoIx instancesState header blockchainEnv transactions era)
     RollBackward chainPoint _ -> do
-      ix' <- readIORef utxoIx
+      -- Rollback the index
+      ix'    <- readIORef utxoIx
       events <- Ix.getEvents (ix' ^. Ix.storage)
       -- TODO: Stop ignoring errors.
       let nextIx = fromMaybe ix' $ do
                      slot   <- chainPointToSlotNo chainPoint
-                     offset <- findIndex undefined events
+                     offset <- findIndex (\(Ix.Event _ _ sn) -> sn < slot) events
                      Ix.rewind offset ix'
       writeIORef utxoIx nextIx
 
@@ -195,25 +197,41 @@ processBlock :: forall era. C.IsCardanoEra era
              -> [C.Tx era]
              -> C.EraInMode era C.CardanoMode
              -> IO (Either SyncActionFailure (Slot, BlockNumber))
-processBlock _ instancesState header env transactions era = do
+processBlock utxoIx instancesState header env transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
-  STM.atomically $ do
+      tip = fromCardanoBlockHeader header
+      -- We ignore cardano transactions that we couldn't convert to
+      -- our 'ChainIndexTx'.
+      ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
+
+  stmResult <- STM.atomically $ do
     STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
     if null transactions
        then Right <$> blockAndSlot env
        else do
-          let tip = fromCardanoBlockHeader header
-              -- We ignore cardano transactions that we couldn't convert to
-              -- our 'ChainIndexTx'.
-              ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
-
           instEnv <- S.instancesClientEnv instancesState
           updateInstances (indexBlock ciTxs) instEnv
-
           r <- updateEmulatorTransactionState tip env (txEvent <$> ciTxs)
           STM.writeTVar (beTxChanges env) FT.empty
           pure r
 
+  ix'    <- readIORef utxoIx
+  nextIx <- foldlM (\ix'' e -> Ix.insert e ix'') ix' $
+              mkEvent tip <$> ciTxs
+  writeIORef utxoIx nextIx
+  pure stmResult
+
+mkEvent :: Tip -> ChainIndexTx -> Ix.Event
+mkEvent TipAtGenesis  tx =
+  Ix.Event { Ix.txId        = _citxTxId tx
+           , Ix.slotNumber  = fromIntegral (0 :: Int)
+           , Ix.blockNumber = fromIntegral (0 :: Int)
+           }
+mkEvent (Tip sn _ bn) tx =
+  Ix.Event { Ix.txId        = _citxTxId tx
+           , Ix.slotNumber  = fromIntegral sn
+           , Ix.blockNumber = bn
+           }
 
 -- | For the given transactions, perform the updates in the 'TxIdState', and
 -- also record that a new block has been processed.
