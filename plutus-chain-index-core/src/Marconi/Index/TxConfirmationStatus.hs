@@ -3,9 +3,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Marconi.Index.TxConfirmationStatus
-  ( -- * UtxoIndex
+  ( -- * TxConfirmationStatus
     TCSIndex
-  , Event(..)
+  , TxInfo(..)
   , Depth(..)
   , open
   , Ix.insert
@@ -39,13 +39,14 @@ import Index.VSqlite qualified as Ix
 
 type Result = Maybe TxConfirmedState
 
-data Event = Event
+data TxInfo = TxInfo
   { txId        :: TxId
   , blockNumber :: BlockNumber
   , slotNumber  :: SlotNo
   } deriving (Eq, Show, Generic)
 
 type TCSIndex = SqliteIndex Event () TxId Result
+type Event = [TxInfo]
 
 newtype Depth = Depth Int
 
@@ -63,14 +64,14 @@ deriving newtype instance FromField SlotNo
 
 deriving newtype instance ToField SlotNo
 
-instance ToRow Event where
+instance ToRow TxInfo where
   toRow t = [ toField $ txId t
             , toField $ blockNumber t
             , toField $ slotNumber t
             ]
 
-instance FromRow Event where
-  fromRow = Event <$> field <*> field <*> field
+instance FromRow TxInfo where
+  fromRow = TxInfo <$> field <*> field <*> field
 
 open
   :: FilePath
@@ -94,8 +95,8 @@ query ix txId' events = (<|>) <$> searchInMemory
     searchInMemory = do
       buffered <- Ix.getBuffer $ ix ^. Ix.storage
       let event = find (\(_, e) -> txId e == txId')
-                $ zip [1..] (events ++ buffered)
-      pure $ event <&> \ (cs, Event _ bn _) ->
+                $ zip [1..] (concat $ events ++ buffered)
+      pure $ event <&> \ (cs, TxInfo _ bn _) ->
         TxConfirmedState { timesConfirmed = Sum    cs
                          , blockAdded     = Last $ Just bn
                          , validity       = Last $ Just TxValid
@@ -103,11 +104,11 @@ query ix txId' events = (<|>) <$> searchInMemory
 
     searchOnDisk :: IO Result
     searchOnDisk = do
-      txStatus :: [Event]
+      txStatus :: [TxInfo]
         <- SQL.query (ix ^. Ix.handle) "SELECT (txId, blockNo, slotNo) FROM tx_status WHERE txId = ?" (Only txId')
       if null txStatus
          then pure Nothing
-         else let (Event _ bn _) = head txStatus
+         else let (TxInfo _ bn _) = head txStatus
               in  pure . Just $
                 TxConfirmedState { timesConfirmed = Sum 0
                                  , blockAdded     = Last $ Just bn
@@ -119,7 +120,7 @@ store ix = do
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
   let c   = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
-  forM_ buffer $ \event -> do
+  forM_ (concat buffer) $ \event -> do
     SQL.execute c "INSERT INTO tx_status (txId, blockNo, slotNo) VALUES (?, ?, ?)" event `catch` (\e -> putStrLn $ "SQL Exception: " <> show (txId event) <> " " <> show (e :: SomeException))
   SQL.execute_ c "COMMIT"
 

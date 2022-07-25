@@ -18,7 +18,6 @@ import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Lens.Operators
 import Data.FingerTree qualified as FT
-import Data.Foldable (foldlM)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
@@ -26,7 +25,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Index.VSqlite qualified as Ix
 import Ledger (Block, Slot (..), TxId (..))
-import Marconi.Index.TxConfirmationStatus (TCSIndex)
+import Marconi.Index.TxConfirmationStatus (TCSIndex, TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
@@ -84,7 +83,7 @@ startNodeClient config instancesState = do
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
             )
       AlonzoNode -> do
-        utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 100) >>= newIORef
+        utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 2160) >>= newIORef
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
             (\block -> do
@@ -144,11 +143,11 @@ processChainSyncEvent utxoIx instancesState blockchainEnv event = do
     RollBackward chainPoint _ -> do
       -- Rollback the index
       ix'    <- readIORef utxoIx
-      events <- Ix.getEvents (ix' ^. Ix.storage)
+      events <- concat <$> Ix.getEvents (ix' ^. Ix.storage)
       -- TODO: Stop ignoring errors.
       let nextIx = fromMaybe ix' $ do
                      slot   <- chainPointToSlotNo chainPoint
-                     offset <- findIndex (\(Ix.Event _ _ sn) -> sn < slot) events
+                     offset <- findIndex (\(TxInfo _ _ sn) -> sn < slot) events
                      Ix.rewind offset ix'
       writeIORef utxoIx nextIx
 
@@ -216,22 +215,21 @@ processBlock utxoIx instancesState header env transactions era = do
           pure r
 
   ix'    <- readIORef utxoIx
-  nextIx <- foldlM (\ix'' e -> Ix.insert e ix'') ix' $
-              mkEvent tip <$> ciTxs
+  nextIx <- Ix.insert (mkEvent tip <$> ciTxs) ix'
   writeIORef utxoIx nextIx
   pure stmResult
 
-mkEvent :: Tip -> ChainIndexTx -> Ix.Event
+mkEvent :: Tip -> ChainIndexTx -> TxInfo
 mkEvent TipAtGenesis  tx =
-  Ix.Event { Ix.txId        = _citxTxId tx
-           , Ix.slotNumber  = fromIntegral (0 :: Int)
-           , Ix.blockNumber = fromIntegral (0 :: Int)
-           }
+  TxInfo { txId        = _citxTxId tx
+         , slotNumber  = fromIntegral (0 :: Int)
+         , blockNumber = fromIntegral (0 :: Int)
+         }
 mkEvent (Tip sn _ bn) tx =
-  Ix.Event { Ix.txId        = _citxTxId tx
-           , Ix.slotNumber  = fromIntegral sn
-           , Ix.blockNumber = bn
-           }
+  TxInfo { txId        = _citxTxId tx
+         , slotNumber  = fromIntegral sn
+         , blockNumber = bn
+         }
 
 -- | For the given transactions, perform the updates in the 'TxIdState', and
 -- also record that a new block has been processed.
