@@ -86,3 +86,6 @@ handleContractStore = \case
         fmap _contractDef <$> liftIO (IORef.readIORef instancesTVar)
     Contract.PutStartInstance{} -> pure ()
     Contract.PutStopInstance{} -> pure ()
+    Contract.DeleteState i -> do
+      instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
+      liftIO (IORef.modifyIORef' instancesTVar (Map.delete i))

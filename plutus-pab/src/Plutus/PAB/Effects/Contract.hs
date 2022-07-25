@@ -27,6 +27,7 @@ module Plutus.PAB.Effects.Contract(
     , getContracts
     , putStartInstance
     , putStopInstance
+    , deleteState
     -- * Storing and retrieving definitions of contracts
     , ContractDefinition(..)
     , addDefinition
@@ -123,6 +124,7 @@ data ContractStore t r where
     GetState :: ContractInstanceId -> ContractStore t (State t) -- ^ Retrieve the last recorded state of the contract instance
     PutStopInstance :: ContractInstanceId -> ContractStore t () -- ^ Record the fact that a contract instance has stopped
     GetContracts :: Maybe ContractActivityStatus -> ContractStore t (Map ContractInstanceId (ContractActivationArgs (ContractDef t))) -- ^ Get contracts with their activation args by status (all by default)
+    DeleteState :: ContractInstanceId -> ContractStore t () -- ^ Delete the state of a contract instance
 
 putStartInstance ::
     forall t effs.
@@ -191,6 +193,16 @@ getContracts ::
     -> Eff effs (Map ContractInstanceId (ContractActivationArgs (ContractDef t)))
 getContracts mStatus =
     let command :: ContractStore t (Map ContractInstanceId (ContractActivationArgs (ContractDef t))) = GetContracts mStatus
+    in send command
+
+deleteState ::
+    forall t effs.
+    ( Member (ContractStore t) effs
+    )
+    => ContractInstanceId
+    -> Eff effs ()
+deleteState i =
+    let command :: ContractStore t () = DeleteState i
     in send command
 
 -- | Get the definition of a running contract

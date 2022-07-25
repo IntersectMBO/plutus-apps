@@ -23,7 +23,7 @@ import Control.Monad (join)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras (LogMsg)
-import Control.Monad.Freer.Extras.Beam (BeamEffect (..), addRows, selectList, selectOne, updateRows)
+import Control.Monad.Freer.Extras.Beam (BeamEffect (..), addRows, deleteRows, selectList, selectOne, updateRows)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Builder (toLazyByteString)
 import Data.ByteString.Char8 qualified as B
@@ -165,3 +165,9 @@ handleContractStore = \case
             Just s -> guard_ ( ci ^. contractInstanceActive ==. val_ (s == Active) )
             _      -> pure ()
           pure ci
+
+  DeleteState instanceId ->
+    deleteRows
+      $ delete
+          (_contractInstances db)
+          (\ci -> ci ^. contractInstanceId ==. val_ (uuidStr instanceId))
