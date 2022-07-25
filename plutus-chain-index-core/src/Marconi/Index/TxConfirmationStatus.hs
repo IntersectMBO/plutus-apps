@@ -14,6 +14,7 @@ module Marconi.Index.TxConfirmationStatus
 
 import Cardano.Api (SlotNo (SlotNo))
 import Control.Applicative ((<|>))
+import Control.Exception (SomeException, catch)
 import Control.Lens.Operators ((^.))
 import Data.Foldable (forM_)
 import Data.Functor ((<&>))
@@ -76,7 +77,7 @@ open
   -> Depth
   -> IO TCSIndex
 open dbPath (Depth k) = do
-  ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 4) dbPath
+  ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS tx_status (txId TEXT NOT NULL PRIMARY KEY, blockNo INT NOT NULL, slotNo INT NOT NULL)"
   pure ix
@@ -115,13 +116,11 @@ query ix txId' events = (<|>) <$> searchInMemory
 
 store :: TCSIndex -> IO ()
 store ix = do
-  events <- Ix.getEvents $ ix ^. Ix.storage
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let all' = buffer ++ events
-      c    = ix ^. Ix.handle
+  let c   = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
-  forM_ all' $
-    SQL.execute c "INSERT INTO tx_status (txId, blockNumber, slotNo) VALUES (?, ?, ?)"
+  forM_ buffer $ \event -> do
+    SQL.execute c "INSERT INTO tx_status (txId, blockNo, slotNo) VALUES (?, ?, ?)" event `catch` (\e -> putStrLn $ "SQL Exception: " <> show (txId event) <> " " <> show (e :: SomeException))
   SQL.execute_ c "COMMIT"
 
 onInsert :: TCSIndex -> Event -> IO [()]
