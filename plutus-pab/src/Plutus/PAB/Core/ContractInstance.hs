@@ -135,7 +135,7 @@ startContractInstanceThread' ::
 startContractInstanceThread' ContractInstanceState{stmState} activeContractInstanceId runAppBackend a = do
   s <- startSTMInstanceThread'
     @t @m stmState runAppBackend a activeContractInstanceId
-  ask >>= void . liftIO . STM.atomically . InstanceState.insertInstance activeContractInstanceId s
+  ask >>= liftIO . InstanceState.insertInstance activeContractInstanceId s
   pure activeContractInstanceId
 
 -- | Create a new instance of the contract

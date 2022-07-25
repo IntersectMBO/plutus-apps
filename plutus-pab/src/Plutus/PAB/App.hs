@@ -41,7 +41,6 @@ import Cardano.Wallet.LocalClient qualified as LocalWalletClient
 import Cardano.Wallet.Mock.Client qualified as WalletMockClient
 import Cardano.Wallet.RemoteClient qualified as RemoteWalletClient
 import Cardano.Wallet.Types qualified as Wallet
-import Control.Concurrent.STM qualified as STM
 import Control.Lens (preview)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, type (~>))
 import Control.Monad.Freer.Error (Error, handleError, throwError)
@@ -123,8 +122,12 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
     EffectHandlers
         { initialiseEnvironment = do
             env <- liftIO $ mkEnv trace config
+
             instancesState <- liftIO $ STM.atomically Instances.emptyInstancesState
             blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient config instancesState
+            instancesState <- liftIO Instances.emptyInstancesState
+            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient config instancesState
+>>>>>>> 82cc94946 (DJED-164: Change 'InstancesState' to 'IORef')
             pure (instancesState, blockchainEnv, env)
 
         , handleLogMessages =

@@ -211,7 +211,7 @@ mkSimulatorHandlers params handleContractEffect =
     EffectHandlers
         { initialiseEnvironment =
             (,,)
-                <$> liftIO (STM.atomically   Instances.emptyInstancesState )
+                <$> liftIO (Instances.emptyInstancesState )
                 <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing params)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
@@ -462,9 +462,9 @@ handleChainControl eff = do
               currentTip <- getTip
               appendNewTipBlock currentTip txns slot
 
-            void $ liftIO $ STM.atomically $ BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot
+        void $ liftIO (BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot >>= STM.atomically)
 
-            pure txns
+        pure txns
         Chain.ModifySlot f -> runChainEffects @t @_ params (Chain.modifySlot f)
 
 runChainEffects ::

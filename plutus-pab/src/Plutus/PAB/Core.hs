@@ -54,6 +54,7 @@ module Plutus.PAB.Core
     , instanceActivity
     -- * Querying the state
     , instanceState
+    , instanceStateInternal
     , observableState
     , waitForState
     , waitForInstanceState
@@ -85,7 +86,7 @@ module Plutus.PAB.Core
     , timed
     ) where
 
-import Control.Applicative (Alternative ((<|>)), empty)
+import Control.Applicative (empty)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens (view)
@@ -288,19 +289,14 @@ callEndpointOnInstance ::
 callEndpointOnInstance instanceID ep value = do
     state <- asks @(PABEnvironment t env) instancesState
     timeoutVar <- asks @(PABEnvironment t env) endpointTimeout >>= liftIO . Timeout.startTimeout
-    liftIO
-        $ STM.atomically
-        $ Instances.callEndpointOnInstanceTimeout timeoutVar state (EndpointDescription ep) (JSON.toJSON value) instanceID
+    liftIO (Instances.callEndpointOnInstanceTimeout timeoutVar state (EndpointDescription ep) (JSON.toJSON value) instanceID >>= STM.atomically)
 
 -- | The 'InstanceState' for the instance. Throws a 'ContractInstanceNotFound' error if the instance does not exist.
 instanceStateInternal :: forall t env. ContractInstanceId -> PABAction t env Instances.InstanceState
 instanceStateInternal instanceId = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
-    r <- liftIO $ STM.atomically $ (Left <$> Instances.instanceState instanceId instancesState)
-                               <|> (pure $ Right $ ContractInstanceNotFound instanceId)
-    case r of
-        Right err -> throwError err
-        Left s    -> pure s
+    asks @(PABEnvironment t env) instancesState
+        >>= liftIO . Instances.instanceState instanceId
+        >>= maybe (throwError $ ContractInstanceNotFound instanceId) pure
 
 -- | Stop the instance.
 stopInstance :: forall t env. ContractInstanceId -> PABAction t env ()
@@ -332,8 +328,7 @@ callEndpointOnInstance' ::
 callEndpointOnInstance' instanceID ep value = do
     state <- asks @(PABEnvironment t env) instancesState
     liftIO
-        $ STM.atomically
-        $ Instances.callEndpointOnInstance state (EndpointDescription ep) (JSON.toJSON value) instanceID
+        (Instances.callEndpointOnInstance state (EndpointDescription ep) (JSON.toJSON value) instanceID >>= STM.atomically)
 
 -- | Make a payment to a payment public key.
 payToPaymentPublicKey :: Params -> ContractInstanceId -> Wallet -> PaymentPubKeyHash -> Value -> PABAction t env CardanoTx
@@ -498,9 +493,8 @@ instanceState wallet instanceId = handleAgentThread wallet (Just instanceId) (Co
 
 -- | An STM transaction that returns the observable state of the contract instance.
 observableState :: forall t env. ContractInstanceId -> PABAction t env (STM JSON.Value)
-observableState instanceId = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
-    pure $ Instances.observableContractState instanceId instancesState
+observableState instanceId =
+    Instances.observableContractState <$> instanceStateInternal @t @env instanceId
 
 -- | Wait until the observable state of the instance matches a predicate.
 waitForState :: forall t env a. (JSON.Value -> Maybe a) -> ContractInstanceId -> PABAction t env a
@@ -564,10 +558,9 @@ waitForTxOutStatusChange t = do
 -- | The list of endpoints that are currently open
 activeEndpoints :: forall t env. ContractInstanceId -> PABAction t env (STM [OpenEndpoint])
 activeEndpoints instanceId = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
+    state <- instanceStateInternal instanceId
     pure $ do
-        is <- Instances.instanceState instanceId instancesState
-        fmap snd . Map.toList <$> Instances.openEndpoints is
+        fmap snd . Map.toList <$> Instances.openEndpoints state
 
 -- | Wait until the endpoint becomes active.
 waitForEndpoint :: forall t env. ContractInstanceId -> String -> PABAction t env ()
@@ -580,11 +573,8 @@ waitForEndpoint instanceId endpointName = do
 -- | Get exported transactions waiting to be balanced, signed and submitted by
 -- an external client.
 yieldedExportTxs :: forall t env. ContractInstanceId -> PABAction t env [ExportTx]
-yieldedExportTxs instanceId = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
-    liftIO $ STM.atomically $ do
-        is <- Instances.instanceState instanceId instancesState
-        Instances.yieldedExportTxs is
+yieldedExportTxs instanceId =
+    instanceStateInternal instanceId >>= liftIO . STM.atomically . Instances.yieldedExportTxs
 
 currentSlot :: forall t env. PABAction t env (STM Slot)
 currentSlot = do
@@ -609,14 +599,11 @@ waitNSlots i = do
 -- | The set of all active contracts.
 activeContracts :: forall t env. PABAction t env (Set ContractInstanceId)
 activeContracts = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
-    liftIO $ STM.atomically $ Instances.instanceIDs instancesState
+    asks @(PABEnvironment t env) instancesState >>= liftIO . Instances.instanceIDs
 
 -- | The final result of the instance (waits until it is available)
 finalResult :: forall t env. ContractInstanceId -> PABAction t env (STM (Maybe JSON.Value))
-finalResult instanceId = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
-    pure $ Instances.finalResult instanceId instancesState
+finalResult instanceId = Instances.finalResult <$> instanceStateInternal instanceId
 
 -- | The value in a wallet.
 --
@@ -635,7 +622,9 @@ waitUntilFinished :: forall t env. ContractInstanceId -> PABAction t env (Maybe 
 waitUntilFinished i = finalResult i >>= liftIO . STM.atomically
 
 instancesWithStatuses :: forall t env. PABAction t env (Map ContractInstanceId ContractActivityStatus)
-instancesWithStatuses = askInstancesState @t @env >>= liftIO . STM.atomically . Instances.instancesWithStatuses
+instancesWithStatuses = do
+    s <- askInstancesState @t @env
+    liftIO (Instances.instancesWithStatuses s >>= STM.atomically)
 
 -- | Read the 'env' from the environment
 askUserEnv :: forall t env effs. Member (Reader (PABEnvironment t env)) effs => Eff effs env

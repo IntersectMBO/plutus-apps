@@ -27,7 +27,7 @@ module Plutus.PAB.Webserver.WebSocket
 import Control.Concurrent.Async (Async, async, waitAnyCancel)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
-import Control.Concurrent.STM.Extras.Stream (STMStream, foldM, singleton, unfold)
+import Control.Concurrent.STM.Extras.Stream (STMStream, foldM, singleton, unfold, unfoldOn)
 import Control.Exception (SomeException, handle)
 import Control.Monad (forever, void)
 import Control.Monad.Freer.Error (throwError)
@@ -50,7 +50,7 @@ import Plutus.Contract.Effects (ActiveEndpoint)
 import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
-import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, InstancesState, OpenEndpoint (oepName))
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, OpenEndpoint (oepName))
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Events.ContractInstanceState (fromResp)
@@ -79,21 +79,20 @@ combinedUpdates :: forall t env. WSState -> PABAction t env (STMStream CombinedW
 combinedUpdates wsState =
     combinedWSStreamToClient wsState
         <$> (Core.askBlockchainEnv @t @env)
-        <*> (Core.askInstancesState @t @env)
 
 -- | The subscriptions for a websocket (wallet funds and contract instance notifications)
 data WSState = WSState
-    { wsInstances :: STM.TVar (Set ContractInstanceId) -- ^ Contract instances that we want updates for
+    { wsInstances :: STM.TVar (Map.Map ContractInstanceId Instances.InstanceState) -- ^ Contract instances that we want updates for
     , wsWallets   :: STM.TVar (Set PubKeyHash) -- ^ Wallets whose funds we are watching
     }
 
-combinedWSStreamToClient :: WSState -> BlockchainEnv -> InstancesState -> STMStream CombinedWSStreamToClient
-combinedWSStreamToClient WSState{wsInstances} blockchainEnv instancesState = do
-    instances <- unfold (STM.readTVar wsInstances)
-    let mkInstanceStream instanceId = InstanceUpdate instanceId <$> instanceUpdates instanceId instancesState
+combinedWSStreamToClient :: WSState -> BlockchainEnv -> STMStream CombinedWSStreamToClient
+combinedWSStreamToClient WSState{wsInstances} blockchainEnv = do
+    instances <- unfoldOn Map.keysSet (STM.readTVar wsInstances)
+    let mkInstanceStream (instanceId, instanceState) = InstanceUpdate instanceId <$> instanceUpdates instanceState
     fold
         [ SlotChange <$> slotChange blockchainEnv
-        , foldMap mkInstanceStream instances
+        , foldMap mkInstanceStream (Map.toList instances)
         ]
 
 initialWSState :: STM WSState
@@ -102,34 +101,27 @@ initialWSState = WSState <$> STM.newTVar mempty <*> STM.newTVar mempty
 slotChange :: BlockchainEnv -> STMStream Slot
 slotChange = unfold . Instances.currentSlot
 
-observableStateChange :: ContractInstanceId -> InstancesState -> STMStream JSON.Value
-observableStateChange contractInstanceId instancesState =
-    unfold (Instances.observableContractState contractInstanceId instancesState)
+observableStateChange :: Instances.InstanceState -> STMStream JSON.Value
+observableStateChange = unfold . Instances.observableContractState
 
-openEndpoints :: ContractInstanceId -> InstancesState -> STMStream [ActiveEndpoint]
-openEndpoints contractInstanceId instancesState = do
-    unfold $ do
-      instanceState <- Instances.instanceState contractInstanceId instancesState
-      fmap (oepName . snd) . Map.toList <$> Instances.openEndpoints instanceState
+openEndpoints :: Instances.InstanceState -> STMStream [ActiveEndpoint]
+openEndpoints instanceState =
+    unfold $ fmap (fmap (oepName . snd) . Map.toList) $ Instances.openEndpoints instanceState
 
-yieldedExportTxsChange :: ContractInstanceId -> InstancesState -> STMStream [ExportTx]
-yieldedExportTxsChange contractInstanceId instancesState =
-    unfold $ do
-      instanceState <- Instances.instanceState contractInstanceId instancesState
-      Instances.yieldedExportTxs instanceState
+yieldedExportTxsChange :: Instances.InstanceState -> STMStream [ExportTx]
+yieldedExportTxsChange = unfold . Instances.yieldedExportTxs
 
-finalValue :: ContractInstanceId -> InstancesState -> STMStream (Maybe JSON.Value)
-finalValue contractInstanceId instancesState =
-    singleton $ Instances.finalResult contractInstanceId instancesState
+finalValue :: Instances.InstanceState -> STMStream (Maybe JSON.Value)
+finalValue = singleton . Instances.finalResult
 
--- | Get a stream of instance updates for a given instance ID
-instanceUpdates :: ContractInstanceId -> InstancesState -> STMStream InstanceStatusToClient
-instanceUpdates instanceId instancesState =
-    fold
-        [ NewObservableState <$> observableStateChange instanceId instancesState
-        , NewActiveEndpoints <$> openEndpoints instanceId instancesState
-        , NewYieldedExportTxs      <$> yieldedExportTxsChange instanceId instancesState
-        , ContractFinished   <$> finalValue instanceId instancesState
+-- | Get a stream of instance updates for a given 'InstanceState'
+instanceUpdates :: Instances.InstanceState -> STMStream InstanceStatusToClient
+instanceUpdates instanceState =
+    fold $
+        [ NewObservableState  <$> observableStateChange instanceState
+        , NewActiveEndpoints  <$> openEndpoints instanceState
+        , NewYieldedExportTxs <$> yieldedExportTxsChange instanceState
+        , ContractFinished    <$> finalValue instanceState
         ]
 
 -- | Send all updates from an 'STMStream' to a websocket until it finishes.
@@ -147,8 +139,8 @@ wsHandler =
 
 sendContractInstanceUpdatesToClient :: forall t env. ContractInstanceId -> Connection -> PABAction t env ()
 sendContractInstanceUpdatesToClient instanceId connection = do
-    instancesState <- Core.askInstancesState @t @env
-    streamToWebsocket connection (instanceUpdates instanceId instancesState)
+    instanceState <- Core.instanceStateInternal @t @env instanceId
+    streamToWebsocket connection (instanceUpdates instanceState)
 
 contractInstanceUpdates :: forall t env. ContractInstanceId -> PendingConnection -> PABAction t env ()
 contractInstanceUpdates contractInstanceId pending = do
@@ -192,18 +184,21 @@ receiveMessagesFromClient connection wsState = forever $ do
     let result :: Either Text CombinedWSStreamToServer
         result = first Text.pack $ JSON.eitherDecode msg
     case result of
-        Right (Subscribe l)   -> liftIO $ STM.atomically $ either (addInstanceId wsState) (addWallet wsState) l
+        Right (Subscribe (Right l)) -> liftIO $ STM.atomically $ addWallet wsState l
+        Right (Subscribe (Left i))  -> do
+            state <- Core.instanceStateInternal i
+            liftIO $ STM.atomically $ addInstanceId wsState i state
         Right (Unsubscribe l) -> liftIO $ STM.atomically $ either (removeInstanceId wsState) (removeWallet wsState) l
         Left e                -> throwError (OtherError e)
 
-addInstanceId :: WSState -> ContractInstanceId -> STM ()
-addInstanceId WSState{wsInstances} i = STM.modifyTVar wsInstances (Set.insert i)
+addInstanceId :: WSState -> ContractInstanceId -> Instances.InstanceState -> STM ()
+addInstanceId WSState{wsInstances} k v = STM.modifyTVar wsInstances (Map.insert k v)
 
 addWallet :: WSState -> PubKeyHash -> STM ()
 addWallet WSState{wsWallets} w = STM.modifyTVar wsWallets (Set.insert w)
 
 removeInstanceId :: WSState -> ContractInstanceId -> STM ()
-removeInstanceId WSState{wsInstances} i = STM.modifyTVar wsInstances (Set.delete i)
+removeInstanceId WSState{wsInstances} i = STM.modifyTVar wsInstances (Map.delete i)
 
 removeWallet :: WSState -> PubKeyHash -> STM ()
 removeWallet WSState{wsWallets} w = STM.modifyTVar wsWallets (Set.delete w)

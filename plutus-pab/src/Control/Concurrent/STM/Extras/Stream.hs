@@ -15,6 +15,7 @@ module Control.Concurrent.STM.Extras.Stream
   , readN
   , foldM
   , unfold
+  , unfoldOn
   , singleton
   , dedupe
   ) where
@@ -105,15 +106,22 @@ dedupe = STMStream . go Nothing
              else go lastVl s'
 
 -- | Produce an infinite stream of values from an STM (i.e. watch it for
--- updates). Uses the Eq instances to not output the same value twice in a
+-- updates). Uses the Eq instance to not output the same value twice in a
 -- row.
 unfold :: forall a. Eq a => STM a -> STMStream a
-unfold tx = STMStream $ go Nothing where
-    go :: Maybe a -> STM (a, Maybe (STMStream a))
+unfold = unfoldOn id
+
+-- | Produce an infinite stream of values from an STM (i.e. watch it for
+-- updates). Uses the Eq instance of 'b' to not output the same value twice in a
+-- row.
+unfoldOn :: forall a b. Eq b => (a -> b) -> STM a -> STMStream a
+unfoldOn f tx = STMStream $ go Nothing where
+    go :: Maybe b -> STM (a, Maybe (STMStream a))
     go lastVl = do
         next <- tx
-        traverse_ (\previous -> guard (previous /= next)) lastVl
-        pure (next, Just $ STMStream $ go (Just next))
+        let next' = f next
+        traverse_ (\previous -> guard (previous /= next')) lastVl
+        pure (next, Just $ STMStream $ go (Just next'))
 
 -- | Read the first event from the stream.
 readOne :: STMStream a -> IO (a, Maybe (STMStream a))

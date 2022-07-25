@@ -89,8 +89,7 @@ startNodeClient config instancesState = do
     case pscNodeMode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
-            (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
-            )
+            (\block slot -> handleSyncAction =<< processMockBlock instancesState env block slot)
       AlonzoNode -> do
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
@@ -158,8 +157,8 @@ processChainSyncEvent instancesState env@BlockchainEnv{beTxChanges} event = do
              slot   <- chainPointToSlotNo chainPoint
              offset <- findIndex (\(TxInfo _ _ sn) -> sn < slot) events
              Ix.rewind offset txChanges
-
       STM.atomically $ runRollback env chainPoint
+
 
 data SyncActionFailure
   = RollbackFailure RollbackFailed
