@@ -171,8 +171,7 @@ handleCurrentPABSlot =
 
 handleCurrentNodeSlot ::
     forall effs a.
-    ( Member NodeClientEffect effs
-    , Member (LogObserve (LogMessage Text)) effs
+    ( Member (LogObserve (LogMessage Text)) effs
     , Member ChainIndexQueryEffect effs
     )
     => RequestHandler effs a Slot

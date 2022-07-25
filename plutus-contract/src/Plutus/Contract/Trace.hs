@@ -127,7 +127,6 @@ handleCurrentPABSlotQueries =
 
 handleCurrentNodeSlotQueries ::
     ( Member (LogObserve (LogMessage Text)) effs
-    , Member NodeClientEffect effs
     , Member ChainIndexQueryEffect effs
     )
     => RequestHandler effs PABReq PABResp
