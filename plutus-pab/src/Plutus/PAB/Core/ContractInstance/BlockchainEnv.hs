@@ -84,7 +84,7 @@ startNodeClient config instancesState = do
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
             )
       AlonzoNode -> do
-        utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 2160) >>= newIORef
+        utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 100) >>= newIORef
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
             (\block -> do
