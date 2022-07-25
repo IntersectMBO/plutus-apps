@@ -42,7 +42,7 @@ import Data.Monoid (Last (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
-import Ledger (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut, _ciTxOutDatum), ciTxOutValue,
+import Ledger (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut, _ciTxOutScriptDatum), ciTxOutValue,
                pubKeyHashAddress)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -433,8 +433,8 @@ getUniswapDatum o =
   case o of
       PublicKeyChainIndexTxOut {} ->
         throwError "no datum for a txout of a public key address"
-      ScriptChainIndexTxOut { _ciTxOutDatum } -> do
-        (Datum e) <- either getDatum pure _ciTxOutDatum
+      ScriptChainIndexTxOut { _ciTxOutScriptDatum } -> do
+        (Datum e) <- either getDatum pure _ciTxOutScriptDatum
         maybe (throwError "datum hash wrong type")
               pure
               (PlutusTx.fromBuiltinData e)

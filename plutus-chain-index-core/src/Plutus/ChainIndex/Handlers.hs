@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -60,7 +59,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Tx
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
+                                TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V2.Ledger.Api (Credential (..), Datum (..), DatumHash (..), TxOutRef (..))
@@ -192,22 +191,25 @@ makeChainIndexTxOut ::
   )
   => ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
-makeChainIndexTxOut txout@ChainIndexTxOut{..} =
-  case addressCredential citoAddress of
-    PubKeyCredential _ -> pure $ Just $ L.PublicKeyChainIndexTxOut citoAddress citoValue
+makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) =
+  case addressCredential address of
+    PubKeyCredential _ ->
+      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
     ScriptCredential vh ->
-      case citoDatum of
+      case datum of
         OutputDatumHash dh -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
           d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v d citoValue
+          pure $ Just $ L.ScriptChainIndexTxOut address value d script v
         OutputDatum d -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v (Right d) citoValue
-        _ -> do
+          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
+        NoOutputDatum -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
+  where
+    script = fromReferenceScript refScript
 
 getUtxoSetAtAddress
   :: forall effs.

@@ -37,6 +37,8 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoScriptInEra
   , fromCardanoPaymentKeyHash
   , fromCardanoScriptData
+  , fromCardanoPlutusScript
+  , fromCardanoScriptInAnyLang
   , fromTxScriptValidity
   , toTxScriptValidity
   , scriptDataFromCardanoTxBody
@@ -757,6 +759,12 @@ toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.Plu
 toCardanoPlutusScript =
     tag "toCardanoPlutusScript"
     . deserialiseFromRawBytes (C.AsPlutusScript C.AsPlutusScriptV1) . BSL.toStrict . Codec.serialise
+
+fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe P.Script
+fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _ssv _ss)) = Nothing
+fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.PlutusScript psv ps)) = Just $ case psv of
+     C.PlutusScriptV1 -> fromCardanoPlutusScript ps
+     C.PlutusScriptV2 -> fromCardanoPlutusScript ps
 
 deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
 deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType

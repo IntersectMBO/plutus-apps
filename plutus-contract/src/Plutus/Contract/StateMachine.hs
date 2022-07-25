@@ -140,7 +140,7 @@ getStates
 getStates (SM.StateMachineInstance _ si) refMap =
     flip mapMaybe (Map.toList refMap) $ \(txOutRef, ciTxOut) -> do
       let txOut = Tx.toTxOut ciTxOut
-      datum <- ciTxOut ^? Tx.ciTxOutDatum . _Right
+      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _Right
       ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef txOut datum
       pure OnChainState{ocsTxOutRef}
 
