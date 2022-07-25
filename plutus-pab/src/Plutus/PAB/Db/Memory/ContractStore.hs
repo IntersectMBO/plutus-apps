@@ -23,6 +23,8 @@ import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.IORef (IORef)
+import Data.IORef qualified as IORef
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Plutus.PAB.Effects.Contract (ContractStore)
@@ -41,10 +43,10 @@ data InMemContractInstanceState t =
         , _contractState :: TVar (Contract.State t)
         }
 
-newtype InMemInstances t = InMemInstances { unInMemInstances :: TVar (Map ContractInstanceId (InMemContractInstanceState t)) }
+newtype InMemInstances t = InMemInstances { unInMemInstances :: IORef (Map ContractInstanceId (InMemContractInstanceState t)) }
 
 initialInMemInstances :: forall t. IO (InMemInstances t)
-initialInMemInstances = InMemInstances <$> STM.newTVarIO mempty
+initialInMemInstances = InMemInstances <$> IORef.newIORef mempty
 
 -- | Handle the 'ContractStore' effect by writing the state to the
 --   TVar in 'SimulatorState'
@@ -59,21 +61,21 @@ handleContractStore ::
 handleContractStore = \case
     Contract.PutState definition instanceId state -> do
         instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
-        instances <- liftIO $ STM.readTVarIO instancesTVar
-        liftIO $ STM.atomically $ do
-          case Map.lookup instanceId instances of
-            Nothing -> do
-              -- adding new entry
-              stateTVar <- STM.newTVar state
-              let instState = InMemContractInstanceState{_contractDef = definition, _contractState = stateTVar}
-              STM.modifyTVar instancesTVar (Map.insert instanceId instState)
-            Just oldInstState -> do
-              -- only update state
+        instances <- liftIO $ IORef.readIORef instancesTVar
+        case Map.lookup instanceId instances of
+          Nothing -> do
+            -- adding new entry
+            stateTVar <- liftIO (STM.newTVarIO state)
+            let instState = InMemContractInstanceState{_contractDef = definition, _contractState = stateTVar}
+            liftIO $ IORef.modifyIORef' instancesTVar (Map.insert instanceId instState)
+          Just oldInstState -> do
+            -- only update state
+            liftIO $ STM.atomically $ do
               STM.modifyTVar (_contractState oldInstState) (\_ -> state)
 
     Contract.GetState instanceId -> do
         instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
-        instances <- liftIO $ STM.readTVarIO instancesTVar
+        instances <- liftIO $ IORef.readIORef instancesTVar
         case Map.lookup instanceId instances of
           Nothing -> throwError (ContractInstanceNotFound instanceId)
           Just instState ->
@@ -81,6 +83,6 @@ handleContractStore = \case
 
     Contract.GetContracts _ -> do
         instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
-        fmap _contractDef <$> liftIO (STM.readTVarIO instancesTVar)
+        fmap _contractDef <$> liftIO (IORef.readIORef instancesTVar)
     Contract.PutStartInstance{} -> pure ()
     Contract.PutStopInstance{} -> pure ()
