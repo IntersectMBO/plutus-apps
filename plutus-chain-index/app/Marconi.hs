@@ -56,11 +56,12 @@ import Streaming.Prelude qualified as S
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
 data Options = Options
-  { optionsSocketPath :: String,
-    optionsNetworkId  :: NetworkId,
-    optionsChainPoint :: ChainPoint,
-    optionsUtxoPath   :: Maybe FilePath,
-    optionsDatumPath  :: Maybe FilePath
+  { optionsSocketPath   :: String,
+    optionsNetworkId    :: NetworkId,
+    optionsChainPoint   :: ChainPoint,
+    optionsUtxoPath     :: Maybe FilePath,
+    optionsDatumPath    :: Maybe FilePath,
+    optionsScriptTxPath :: Maybe FilePath
   }
   deriving (Show)
 
@@ -75,6 +76,7 @@ optionsParser =
     <*> chainPointParser
     <*> optStrParser (long "utxo-db" <> help "Path to the utxo database.")
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
+    <*> optStrParser (long "script-tx-db" <> help "Path to the script transactions' database.")
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
 optStrParser fields = Just <$> strOption fields <|> pure Nothing
@@ -257,7 +259,8 @@ main = do
           , optionsNetworkId
           , optionsChainPoint
           , optionsUtxoPath
-          , optionsDatumPath } <- parseOptions
+          , optionsDatumPath
+          , optionsScriptTxPath } <- parseOptions
 
   c <- defaultConfigStdout
 
