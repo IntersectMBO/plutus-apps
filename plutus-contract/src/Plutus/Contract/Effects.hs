@@ -14,7 +14,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitUtxoSpentReq,
     _AwaitUtxoProducedReq,
     _CurrentPABSlotReq,
-    _CurrentNodeSlotReq,
+    _CurrentChainIndexSlotReq,
     _CurrentTimeReq,
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
@@ -48,7 +48,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitUtxoSpentResp,
     _AwaitUtxoProducedResp,
     _CurrentPABSlotResp,
-    _CurrentNodeSlotResp,
+    _CurrentChainIndexSlotResp,
     _CurrentTimeResp,
     _AwaitTxStatusChangeResp,
     _AwaitTxStatusChangeResp',
@@ -123,7 +123,7 @@ data PABReq =
     | AwaitTxStatusChangeReq TxId
     | AwaitTxOutStatusChangeReq TxOutRef
     | CurrentPABSlotReq
-    | CurrentNodeSlotReq
+    | CurrentChainIndexSlotReq
     | CurrentTimeReq
     | OwnContractInstanceIdReq
     | OwnAddressesReq
@@ -144,7 +144,7 @@ instance Pretty PABReq where
     AwaitUtxoSpentReq utxo                  -> "Await utxo spent:" <+> pretty utxo
     AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty a
     CurrentPABSlotReq                       -> "Current PAB slot"
-    CurrentNodeSlotReq                      -> "Current node slot"
+    CurrentChainIndexSlotReq                -> "Current node slot"
     CurrentTimeReq                          -> "Current time"
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
@@ -167,7 +167,7 @@ data PABResp =
     | AwaitTxStatusChangeResp TxId TxStatus
     | AwaitTxOutStatusChangeResp TxOutRef TxOutStatus
     | CurrentPABSlotResp Slot
-    | CurrentNodeSlotResp Slot
+    | CurrentChainIndexSlotResp Slot
     | CurrentTimeResp POSIXTime
     | OwnContractInstanceIdResp ContractInstanceId
     | OwnAddressesResp (NonEmpty Address)
@@ -188,7 +188,7 @@ instance Pretty PABResp where
     AwaitUtxoSpentResp utxo                  -> "Utxo spent:" <+> pretty utxo
     AwaitUtxoProducedResp addr               -> "Utxo produced:" <+> pretty addr
     CurrentPABSlotResp s                     -> "Current PAB slot:" <+> pretty s
-    CurrentNodeSlotResp s                    -> "Current node slot:" <+> pretty s
+    CurrentChainIndexSlotResp s              -> "Current node slot:" <+> pretty s
     CurrentTimeResp s                        -> "Current time:" <+> pretty s
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
@@ -209,7 +209,7 @@ matches a b = case (a, b) of
   (AwaitUtxoSpentReq{}, AwaitUtxoSpentResp{})              -> True
   (AwaitUtxoProducedReq{}, AwaitUtxoProducedResp{})        -> True
   (CurrentPABSlotReq, CurrentPABSlotResp{})                -> True
-  (CurrentNodeSlotReq, CurrentNodeSlotResp{})              -> True
+  (CurrentChainIndexSlotReq, CurrentChainIndexSlotResp{})              -> True
   (CurrentTimeReq, CurrentTimeResp{})                      -> True
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'

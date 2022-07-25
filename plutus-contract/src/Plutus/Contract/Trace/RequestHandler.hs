@@ -21,7 +21,7 @@ module Plutus.Contract.Trace.RequestHandler(
     , handleOwnAddresses
     , handleSlotNotifications
     , handleCurrentPABSlot
-    , handleCurrentNodeSlot
+    , handleCurrentChainIndexSlot
     , handleTimeNotifications
     , handleCurrentTime
     , handleTimeToSlotConversions
@@ -169,15 +169,15 @@ handleCurrentPABSlot =
         surroundDebug @Text "handleCurrentPABSlot" $ do
             Wallet.Effects.getClientSlot
 
-handleCurrentNodeSlot ::
+handleCurrentChainIndexSlot ::
     forall effs a.
     ( Member (LogObserve (LogMessage Text)) effs
     , Member ChainIndexQueryEffect effs
     )
     => RequestHandler effs a Slot
-handleCurrentNodeSlot =
+handleCurrentChainIndexSlot =
     RequestHandler $ \_ ->
-        surroundDebug @Text "handleCurrentNodeSlot" $ do
+        surroundDebug @Text "handleCurrentChainIndexSlot" $ do
             t <- ChainIndexEff.getTip
             case t of
                 TipAtGenesis   -> return $ Slot 0

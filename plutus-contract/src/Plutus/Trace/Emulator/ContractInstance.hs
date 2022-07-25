@@ -254,7 +254,7 @@ handleBlockchainQueries =
     <> RequestHandler.handleOwnInstanceIdQueries
     <> RequestHandler.handleSlotNotifications
     <> RequestHandler.handleCurrentPABSlotQueries
-    <> RequestHandler.handleCurrentNodeSlotQueries
+    <> RequestHandler.handleCurrentChainIndexSlotQueries
     <> RequestHandler.handleTimeNotifications
     <> RequestHandler.handleCurrentTimeQueries
     <> RequestHandler.handleTimeToSlotConversions
