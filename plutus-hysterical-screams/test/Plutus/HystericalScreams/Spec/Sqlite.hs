@@ -1,4 +1,4 @@
-module Spec.Sqlite where
+module Plutus.HystericalScreams.Spec.Sqlite where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Default
@@ -12,12 +12,12 @@ import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 import Test.QuickCheck.Monadic qualified as M
 
-import Index (Index, IndexView (..))
-import Index qualified as Ix
-import Index.Split (SplitIndex (..))
-import Index.Sqlite (SqliteIndex)
-import Index.Sqlite qualified as S
-import Spec.Index (Conversion (..))
+import Plutus.HystericalScreams.Index (Index, IndexView (..))
+import Plutus.HystericalScreams.Index qualified as Ix
+import Plutus.HystericalScreams.Index.Split (SplitIndex (..))
+import Plutus.HystericalScreams.Index.Sqlite (SqliteIndex)
+import Plutus.HystericalScreams.Index.Sqlite qualified as S
+import Plutus.HystericalScreams.Spec.Index (Conversion (..))
 
 conversion
   :: (Show e, Show n, Show a, Default a, ToField a, FromField a)
