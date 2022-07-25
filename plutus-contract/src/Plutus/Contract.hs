@@ -26,6 +26,8 @@ module Plutus.Contract(
     , Request.awaitSlot
     , Request.isSlot
     , Request.currentSlot
+    , Request.currentPABSlot
+    , Request.currentNodeSlot
     , Request.waitNSlots
     , Request.awaitTime
     , Request.isTime
