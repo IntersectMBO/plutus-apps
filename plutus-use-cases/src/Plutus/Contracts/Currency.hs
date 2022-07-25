@@ -156,7 +156,7 @@ mintContract pk amounts = mapError (review _CurrencyError) $ do
     utxos <- utxosAt (pubKeyHashAddress pk Nothing)
     let theCurrency = mkCurrency txOutRef amounts
         curVali     = curPolicy theCurrency
-        lookups     = Constraints.mintingPolicy curVali
+        lookups     = Constraints.plutusV1MintingPolicy curVali
                         <> Constraints.unspentOutputs utxos
         mintTx      = Constraints.mustSpendPubKeyOutput txOutRef
                         <> Constraints.mustMintValue (mintedValue theCurrency)

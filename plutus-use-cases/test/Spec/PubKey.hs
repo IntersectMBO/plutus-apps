@@ -20,7 +20,7 @@ theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do
   (txOutRef, ciTxOut, pkInst) <- pubKeyContract (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
   let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ciTxOut
-              <> Constraints.otherScript (Scripts.validatorScript pkInst)
+              <> Constraints.plutusV1OtherScript (Scripts.validatorScript pkInst)
   void $ submitTxConstraintsWith @Scripts.Any lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer)
 
 tests :: TestTree

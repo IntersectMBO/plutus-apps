@@ -19,11 +19,11 @@
 module Ledger.Constraints.OffChain(
     -- * Lookups
     ScriptLookups(..)
-    , typedValidatorLookups
+    , plutusV1TypedValidatorLookups
     , generalise
     , unspentOutputs
-    , mintingPolicy
-    , otherScript
+    , plutusV1MintingPolicy
+    , plutusV1OtherScript
     , otherData
     , ownPaymentPubKeyHash
     , ownStakePubKeyHash
@@ -59,12 +59,11 @@ module Ledger.Constraints.OffChain(
     , lookupTxOutRef
     ) where
 
-import Control.Lens (Traversal', _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
+import Control.Lens (Traversal', _2, _Just, _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
 import Control.Monad.State (MonadState (get, put), execStateT, gets)
-
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (def)
 import Data.Foldable (traverse_)
@@ -74,6 +73,8 @@ import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
+import Data.Semigroup (First (First, getFirst))
+import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
@@ -82,8 +83,6 @@ import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
 
-import Data.Semigroup (First (First, getFirst))
-import Data.Set (Set)
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
 import Ledger.Address qualified as Address
@@ -108,37 +107,35 @@ import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Validator,
-                                 ValidatorHash)
-import Plutus.V1.Ledger.Time (POSIXTimeRange)
-import Plutus.V1.Ledger.Value (Value)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, POSIXTimeRange, Redeemer,
+                             Validator, ValidatorHash, Value)
 import Plutus.V1.Ledger.Value qualified as Value
 
 data ScriptLookups a =
     ScriptLookups
-        { slMPS                  :: Map MintingPolicyHash MintingPolicy
+        { slMPS                    :: Map MintingPolicyHash MintingPolicy
         -- ^ Minting policies that the script interacts with
-        , slTxOutputs            :: Map TxOutRef ChainIndexTxOut
+        , slTxOutputs              :: Map TxOutRef ChainIndexTxOut
         -- ^ Unspent outputs that the script may want to spend
-        , slOtherScripts         :: Map ValidatorHash Validator
+        , slOtherScripts           :: Map ValidatorHash Validator
         -- ^ Validators of scripts other than "our script"
-        , slOtherData            :: Map DatumHash Datum
+        , slOtherData              :: Map DatumHash Datum
         -- ^ Datums that we might need
-        , slPaymentPubKeyHashes  :: Set PaymentPubKeyHash
+        , slPaymentPubKeyHashes    :: Set PaymentPubKeyHash
         -- ^ Public keys that we might need
-        , slTypedValidator       :: Maybe (TypedValidator a)
+        , slTypedPlutusV1Validator :: Maybe (TypedValidator a)
         -- ^ The script instance with the typed validator hash & actual compiled program
-        , slOwnPaymentPubKeyHash :: Maybe PaymentPubKeyHash
+        , slOwnPaymentPubKeyHash   :: Maybe PaymentPubKeyHash
         -- ^ The contract's payment public key hash, used for depositing tokens etc.
-        , slOwnStakePubKeyHash   :: Maybe StakePubKeyHash
+        , slOwnStakePubKeyHash     :: Maybe StakePubKeyHash
         -- ^ The contract's stake public key hash (optional)
         } deriving stock (Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
 
 generalise :: ScriptLookups a -> ScriptLookups Any
 generalise sl =
-    let validator = fmap Scripts.generalise (slTypedValidator sl)
-    in sl{slTypedValidator = validator}
+    let validator = fmap Scripts.generalise (slTypedPlutusV1Validator sl)
+    in sl{slTypedPlutusV1Validator = validator}
 
 instance Semigroup (ScriptLookups a) where
     l <> r =
@@ -149,7 +146,7 @@ instance Semigroup (ScriptLookups a) where
             , slOtherData = slOtherData l <> slOtherData r
             , slPaymentPubKeyHashes = slPaymentPubKeyHashes l <> slPaymentPubKeyHashes r
             -- 'First' to match the semigroup instance of Map (left-biased)
-            , slTypedValidator = fmap getFirst $ (First <$> slTypedValidator l) <> (First <$> slTypedValidator r)
+            , slTypedPlutusV1Validator = fmap getFirst $ (First <$> slTypedPlutusV1Validator l) <> (First <$> slTypedPlutusV1Validator r)
             , slOwnPaymentPubKeyHash =
                 fmap getFirst $ (First <$> slOwnPaymentPubKeyHash l)
                              <> (First <$> slOwnPaymentPubKeyHash r)
@@ -169,14 +166,14 @@ instance Monoid (ScriptLookups a) where
 -- If called multiple times, only the first typed validator is kept:
 --
 -- @
--- typedValidatorLookups tv1 <> typedValidatorLookups tv2 <> ...
---     == typedValidatorLookups tv1
+-- plutusV1TypedValidatorLookups tv1 <> plutusV1TypedValidatorLookups tv2 <> ...
+--     == plutusV1TypedValidatorLookups tv1
 -- @
-typedValidatorLookups :: TypedValidator a -> ScriptLookups a
-typedValidatorLookups inst =
+plutusV1TypedValidatorLookups :: TypedValidator a -> ScriptLookups a
+plutusV1TypedValidatorLookups inst =
     mempty
         { slMPS = Map.singleton (Scripts.forwardingMintingPolicyHash inst) (Scripts.forwardingMintingPolicy inst)
-        , slTypedValidator = Just inst
+        , slTypedPlutusV1Validator = Just inst
         }
 
 -- | A script lookups value that uses the map of unspent outputs to resolve
@@ -185,14 +182,14 @@ unspentOutputs :: Map TxOutRef ChainIndexTxOut -> ScriptLookups a
 unspentOutputs mp = mempty { slTxOutputs = mp }
 
 -- | A script lookups value with a minting policy script.
-mintingPolicy :: MintingPolicy -> ScriptLookups a
-mintingPolicy pl =
+plutusV1MintingPolicy :: MintingPolicy -> ScriptLookups a
+plutusV1MintingPolicy pl =
     let hsh = mintingPolicyHash pl in
     mempty { slMPS = Map.singleton hsh pl }
 
--- | A script lookups value with a validator script.
-otherScript :: Validator -> ScriptLookups a
-otherScript vl =
+-- | A script lookups value with a PlutusV1 validator script.
+plutusV1OtherScript :: Validator -> ScriptLookups a
+plutusV1OtherScript vl =
     let vh = validatorHash vl in
     mempty { slOtherScripts = Map.singleton vh vl }
 
@@ -492,15 +489,15 @@ addOwnInput
     => ScriptInputConstraint (RedeemerType a)
     -> m ()
 addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
-    ScriptLookups{slTxOutputs, slTypedValidator} <- ask
-    inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
+    ScriptLookups{slTxOutputs, slTypedPlutusV1Validator} <- ask
+    inst <- maybe (throwError TypedValidatorMissing) pure slTypedPlutusV1Validator
     typedOutRef <-
       either (throwError . TypeCheckFailed) pure
       $ runExcept @Typed.ConnectionError
       $ do
           (txOut, datum) <- maybe (throwError UnknownRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.ciTxOutDatum . _Right
+                                datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
@@ -519,8 +516,8 @@ addOwnOutput
     => ScriptOutputConstraint (DatumType a)
     -> m ()
 addOwnOutput ScriptOutputConstraint{ocDatum, ocValue} = do
-    ScriptLookups{slTypedValidator} <- ask
-    inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
+    ScriptLookups{slTypedPlutusV1Validator} <- ask
+    inst <- maybe (throwError TypedValidatorMissing) pure slTypedPlutusV1Validator
     let txOut = Typed.makeTypedScriptTxOut inst ocDatum ocValue
         dsV   = Datum (toBuiltinData ocDatum)
     unbalancedTx . tx . Tx.outputs %= (Typed.tyTxOutTxOut txOut :)
@@ -712,14 +709,19 @@ resolveScriptTxOut
        , MonadError MkTxError m
        )
     => ChainIndexTxOut -> m (Maybe (Validator, Datum, Value))
-resolveScriptTxOut Tx.ScriptChainIndexTxOut { Tx._ciTxOutValidator, Tx._ciTxOutDatum, Tx._ciTxOutValue } = do
-    -- first check in the 'ChainIndexTx' for the validator, then
-    -- look for it in the 'slOtherScripts map.
-    validator <- either lookupValidator pure _ciTxOutValidator
+resolveScriptTxOut
+        Tx.ScriptChainIndexTxOut
+            { Tx._ciTxOutValidator = (vh, v)
+            , Tx._ciTxOutScriptDatum = (dh, d)
+            , Tx._ciTxOutValue
+            } = do
+    -- first check in the 'ChainIndexTxOut' for the validator, then
+    -- look for it in the 'slOtherScripts' map.
+    validator <- maybe (lookupValidator vh) pure v
 
-    -- first check in the 'ChainIndexTx' for the datum, then
+    -- first check in the 'ChainIndexTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
-    dataValue <- either lookupDatum pure _ciTxOutDatum
+    dataValue <- maybe (lookupDatum dh) pure d
 
     pure $ Just (validator, dataValue, _ciTxOutValue)
 resolveScriptTxOut _ = pure Nothing

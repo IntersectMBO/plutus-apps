@@ -12,6 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TupleSections      #-}
 
 module Ledger.Tx
     ( module Export
@@ -22,7 +23,8 @@ module Ledger.Tx
     -- ** Lenses and Prisms
     , ciTxOutAddress
     , ciTxOutValue
-    , ciTxOutDatum
+    , ciTxOutPublicKeyDatum
+    , ciTxOutScriptDatum
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
@@ -94,17 +96,30 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 -- This datatype was created in order to be used in
 -- 'Ledger.Constraints.processConstraint', specifically with the constraints
 -- 'MustSpendPubKeyOutput' and 'MustSpendScriptOutput'.
---
--- TODO Add 'Either DatumHash Datum' field for 'PublicKeyChainIndexTxOut'.
 data ChainIndexTxOut =
-    PublicKeyChainIndexTxOut { _ciTxOutAddress :: Address
-                             , _ciTxOutValue   :: Value
-                             }
-  | ScriptChainIndexTxOut { _ciTxOutAddress   :: Address
-                          , _ciTxOutValidator :: Either ValidatorHash Validator
-                          , _ciTxOutDatum     :: Either DatumHash Datum
-                          , _ciTxOutValue     :: Value
-                          }
+    PublicKeyChainIndexTxOut {
+      -- | Address of the transaction output. The address is protected by a
+      -- public key hash.
+      _ciTxOutAddress        :: Address,
+      -- | Value of the transaction output.
+      _ciTxOutValue          :: Value,
+      -- | Optional datum attached to the transaction output.
+      _ciTxOutPublicKeyDatum :: Maybe (DatumHash, Maybe Datum)
+    }
+  | ScriptChainIndexTxOut {
+      -- | Address of the transaction output. The address is protected by a
+      -- script.
+      _ciTxOutAddress     :: Address,
+      -- | Value of the transaction output.
+      _ciTxOutValue       :: Value,
+      -- | Datum attached to the transaction output, either in full or as a
+      -- hash reference. A transaction output protected by a Plutus script
+      -- is guardateed to have an associated datum.
+      _ciTxOutScriptDatum :: (DatumHash, Maybe Datum),
+      -- | Validator protecting the transaction output, either in full or
+      -- as a hash reference.
+      _ciTxOutValidator   :: (ValidatorHash, Maybe Validator)
+    }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 makeLenses ''ChainIndexTxOut
@@ -116,19 +131,18 @@ makePrisms ''ChainIndexTxOut
 -- Note that converting from 'ChainIndexTxOut' to 'TxOut' and back to
 -- 'ChainIndexTxOut' loses precision ('Datum' and 'Validator' are changed to 'DatumHash' and 'ValidatorHash' respectively)
 toTxOut :: ChainIndexTxOut -> TxOut
-toTxOut (PublicKeyChainIndexTxOut addr v)          = TxOut addr v Nothing
-toTxOut (ScriptChainIndexTxOut addr _ (Left dh) v) = TxOut addr v (Just dh)
-toTxOut (ScriptChainIndexTxOut addr _ (Right d) v) = TxOut addr v (Just $ datumHash d)
+toTxOut (PublicKeyChainIndexTxOut addr v d)      = TxOut addr v (fst <$> d)
+toTxOut (ScriptChainIndexTxOut addr v (dh, _) _) = TxOut addr v (Just dh)
 
 -- | Converts a plutus-ledger-api transaction output to the chain index
 -- transaction output.
 fromTxOut :: TxOut -> Maybe ChainIndexTxOut
 fromTxOut TxOut { txOutAddress, txOutValue, txOutDatumHash } =
   case addressCredential txOutAddress of
-    PubKeyCredential _ -> pure $ PublicKeyChainIndexTxOut txOutAddress txOutValue
+    PubKeyCredential _ -> pure $ PublicKeyChainIndexTxOut txOutAddress txOutValue ((, Nothing) <$> txOutDatumHash)
     ScriptCredential vh ->
       txOutDatumHash >>= \dh ->
-        pure $ ScriptChainIndexTxOut txOutAddress (Left vh) (Left dh) txOutValue
+        pure $ ScriptChainIndexTxOut txOutAddress txOutValue (dh, Nothing) (vh, Nothing)
 
 instance Pretty ChainIndexTxOut where
     pretty PublicKeyChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =

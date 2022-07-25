@@ -85,7 +85,7 @@ redeem :: AsContractError e => Promise () Schema e ()
 redeem = endpoint @"redeem" $ \myRedeemerValue -> do
     unspentOutputs <- utxosAt contractAddress
     let redeemer = MyRedeemer myRedeemerValue
-        tx       = collectFromScript unspentOutputs redeemer
+        tx       = Constraints.collectFromTheScript unspentOutputs redeemer
     void $ submitTxConstraintsSpending starterInstance unspentOutputs tx
 
 endpoints :: AsContractError e => Contract () Schema e ()
