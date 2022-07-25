@@ -180,7 +180,7 @@ typePubKeyTxIn txIn =
     Just x                       -> throwError $ WrongInType x
     Nothing                      -> throwError MissingInType
 
--- | Create a 'PubKeyTxOUt' from an existing 'TxOut' by checking that it has the right payment type.
+-- | Create a 'PubKeyTxOut' from an existing 'TxOut' by checking that it has the right payment type.
 typePubKeyTxOut ::
   forall m.
   (MonadError ConnectionError m) =>
