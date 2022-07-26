@@ -17,6 +17,8 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , waitForTxOutStatusChange
     , currentSlot
     , lastSyncedBlockSlot
+    , getUtxoIndexTxChanges
+    , getIndexerTxChanges
     -- * State of a contract instance
     , InstanceState(..)
     , emptyInstanceState
@@ -55,7 +57,9 @@ import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard, (<=<))
 import Data.Aeson (Value)
+import Data.Either (fromLeft, fromRight)
 import Data.Foldable (fold)
+import Data.IORef (IORef)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -63,6 +67,7 @@ import Data.Set (Set)
 import Ledger (Address, Params (pSlotConfig), Slot, TxId, TxOutRef)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
+import Marconi.Index.TxConfirmationStatus (TCSIndex)
 import Plutus.ChainIndex (BlockNumber (BlockNumber), ChainIndexTx, TxIdState, TxOutBalance, TxOutStatus, TxStatus,
                           transactionStatus)
 import Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)
@@ -153,10 +158,18 @@ data BlockchainEnv =
         , beCurrentSlot         :: TVar Slot -- ^ Actual current slot
         , beLastSyncedBlockSlot :: TVar Slot -- ^ Slot of the last synced block from 'startNodeClient'
         , beLastSyncedBlockNo   :: TVar BlockNumber -- ^ Last synced block number from 'startNodeClient'.
-        , beTxChanges           :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
+        , beTxChanges           :: Either (TVar (UtxoIndex TxIdState)) (IORef TCSIndex)-- ^ Map holding metadata which determines the status of transactions.
         , beTxOutChanges        :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
         , beParams              :: Params -- ^ The set of parameters, like protocol parameters and slot configuration.
         }
+
+getUtxoIndexTxChanges :: BlockchainEnv -> TVar (UtxoIndex TxIdState)
+getUtxoIndexTxChanges BlockchainEnv{beTxChanges} =
+    fromLeft (error "Changes use an indexer for storage.") beTxChanges
+
+getIndexerTxChanges :: BlockchainEnv -> IORef TCSIndex
+getIndexerTxChanges BlockchainEnv{beTxChanges} =
+    fromRight (error "Changes use in-memory storage, not an indexer.") beTxChanges
 
 -- | Initialise an empty 'BlockchainEnv' value
 emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv
@@ -165,7 +178,7 @@ emptyBlockchainEnv rollbackHistory params =
         <$> STM.newTVar 0
         <*> STM.newTVar 0
         <*> STM.newTVar (BlockNumber 0)
-        <*> STM.newTVar mempty
+        <*> (Left <$> STM.newTVar mempty)
         <*> STM.newTVar mempty
         <*> pure params
 
@@ -395,8 +408,8 @@ insertInstance instanceID state (InstancesState m) = STM.modifyTVar m (Map.inser
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange :: TxStatus -> TxId -> BlockchainEnv -> STM TxStatus
-waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beLastSyncedBlockNo} = do
-    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar beTxChanges
+waitForTxStatusChange oldStatus tx env@BlockchainEnv{beLastSyncedBlockNo} = do
+    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar (getUtxoIndexTxChanges env)
     blockNumber <- STM.readTVar beLastSyncedBlockNo
     let txStatus = transactionStatus blockNumber txIdState tx
     -- Succeed only if we _found_ a status and it was different; if
@@ -408,8 +421,8 @@ waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beLastSyncedBlockN
 
 -- | Wait for the status of a transaction output to change.
 waitForTxOutStatusChange :: TxOutStatus -> TxOutRef -> BlockchainEnv -> STM TxOutStatus
-waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutChanges, beLastSyncedBlockNo} = do
-    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar beTxChanges
+waitForTxOutStatusChange oldStatus txOutRef env@BlockchainEnv{beTxOutChanges, beLastSyncedBlockNo} = do
+    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar (getUtxoIndexTxChanges env)
     txOutBalance <- _usTxUtxoData . utxoState <$> STM.readTVar beTxOutChanges
     blockNumber   <- STM.readTVar beLastSyncedBlockNo
     let txOutStatus = transactionOutputStatus blockNumber txIdState txOutBalance txOutRef
