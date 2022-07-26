@@ -283,7 +283,11 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePred
                 assert False
             Right r -> assert r
 
--- | A version of 'checkPredicateGen' with configurable 'CheckOptions'
+-- | A version of 'checkPredicateGen' with configurable 'CheckOptions'.
+--
+--   Note that the 'InitialChainState' in the 'EmulatorConfig' of the
+--   'CheckOptions' will be replaced with the 'mockchainInitialTxPool' generated
+--   by the model.
 checkPredicateGenOptions ::
     CheckOptions
     -> GeneratorModel

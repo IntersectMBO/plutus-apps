@@ -302,7 +302,7 @@ refund ::
 refund inst _escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = either id Ledger.datumHash (Tx._ciTxOutDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let flt _ ciTxOut = either id Ledger.datumHash (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
     if Constraints.modifiesUtxoSet tx'
     then do

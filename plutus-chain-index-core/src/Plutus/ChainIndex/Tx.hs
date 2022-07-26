@@ -14,16 +14,17 @@
 module Plutus.ChainIndex.Tx(
     ChainIndexTx(..)
     , ChainIndexTxOutputs(..)
-    , fromOnChainTx
-    , txOutRefs
-    , txOutsWithRef
-    , txOutRefMap
-    , txOutRefMapForAddr
     , ChainIndexTxOut(..)
     , ReferenceScript(..)
     , Address(..)
     , OutputDatum(..)
     , Value(..)
+    , fromOnChainTx
+    , txOutRefs
+    , txOutsWithRef
+    , txOutRefMap
+    , txOutRefMapForAddr
+    , txRedeemersWithHash
     -- ** Lenses
     , citxTxId
     , citxInputs
@@ -52,6 +53,7 @@ import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHas
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
                              Redeemer, RedeemerHash, Script, Validator (getValidator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))
+import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
 
 -- | Get tx output references from tx.
@@ -86,7 +88,7 @@ fromOnChainTx networkId = \case
                 let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
                 ChainIndexTx
                     { _citxTxId = txId tx
-                    , _citxInputs = txInputs
+                    , _citxInputs = Set.toList txInputs
                     , _citxOutputs = case traverse (toCardanoTxOutBabbage networkId toCardanoTxOutDatumHashBabbage) txOutputs of
                         Right txs -> either (const InvalidTx) ValidTx $ traverse fromCardanoTxOut txs
                         Left _    -> InvalidTx
@@ -104,7 +106,7 @@ fromOnChainTx networkId = \case
                 let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
                 ChainIndexTx
                     { _citxTxId = txId tx
-                    , _citxInputs = txCollateral
+                    , _citxInputs = Set.toList txCollateral
                     , _citxOutputs = InvalidTx
                     , _citxValidRange = txValidRange
                     , _citxData = txData <> otherDataHashes
@@ -127,13 +129,21 @@ mintingPolicies = Map.fromList . fmap withHash . Set.toList
     withHash mp = let (MintingPolicyHash mph) = mintingPolicyHash mp
                    in (ScriptHash mph, getMintingPolicy mp)
 
-validators :: Set TxIn -> (Map ScriptHash Script, Map DatumHash Datum, Map RedeemerHash Redeemer)
-validators = foldMap (maybe mempty withHash . txInType) . Set.toList
+validators :: Set TxIn -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
+validators txIns = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) $ zip [0..] (Set.toList txIns)
   where
-    withHash (ConsumeScriptAddress val red dat) =
+    -- TODO: the index of the txin is probably incorrect as we take it from the set.
+    -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
+    -- sort them by using the standard `Ord` instance.
+    withHash ix (ConsumeScriptAddress val red dat) =
       let (ValidatorHash vh) = validatorHash val
        in ( Map.singleton (ScriptHash vh) (getValidator val)
           , Map.singleton (datumHash dat) dat
-          , Map.singleton (redeemerHash red) red
+          , Map.singleton (RedeemerPtr Spend ix) red
           )
-    withHash _ = mempty
+    withHash _ _ = mempty
+
+txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
+txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
+    $ fmap (\r -> (redeemerHash r, r))
+    $ Map.elems _citxRedeemers

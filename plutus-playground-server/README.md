@@ -12,9 +12,11 @@ stack exec -- plutus-playground-server webserver
 
 ### nix
 
+From the `nix-shell` simply run:
 ```sh
-$(nix-build -A plutus-playground.server)/bin/plutus-playground-server webserver
+plutus-playground-server
 ```
+If it doesn't exist, `plutus-playground-server` will generate the PureScript files inside `plutus-playground-client/generated` which are needed by the client to work properly. To re-generate the files on demand, pass a `-g` flag like so `plutus-playground-server -g`.
 
 ## Testing
 

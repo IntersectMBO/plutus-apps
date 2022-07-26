@@ -18,38 +18,37 @@ Draft
 Context
 -------
 
-Marconi is a Haskell executable that lives in `plutus-apps/plutus-chain-index`.
+Marconi is a Haskell executable and library that lives in `plutus-chain-index`.
 
 It is desirable to move it into a separate repository for the following reasons:
 
-* Better visibility and easier to discover.
-* It wants to depend on a version of `cardano-api` different to the one in 
-  `plutus-apps`.
-* It seems to "make sense" to warrant its own repository, as it is a fairly 
-  independent component.
+* Better visibility and easier to discover
+* It wants to update the version of its `cardano-api` dependency independently of the version used by `plutus-apps`
+* It is a farily independent component, therefore it warrants its own repository
 
 However, creating a separate repository would be rather costly.
-It would involve a great deal of duplication, due to the way our current 
-nix code is structured, not to mention the added complexity and overhead 
+It would involve a great deal of duplication, due to the way our current
+nix code is structured, not to mention the added complexity and overhead
 inherent in maintaining a separate codebase.
 
 Decision
 --------
 
-* Marconi will be kept in `plutus-apps` for the time being.
+* We will put Marconi in a separate Github repository
+* Until we resolve the issues with creating a separate Github repository (see Context), we will keep Marconi as a separate project in `plutus-apps`
 
 Implications
 ------------
 
-* A nix flake will be added in `plutus-apps` so that users will be able 
-  to obtain the executable trivially.
-* The possibility to specify a separate version of `cardano-api` just for 
-  marconi **whist staying in plutus-apps** will be explored.
-  Note that the dependency on a specific version `cardano-api` won't be a 
-  problem until the next hard fork.
-* As a very low priority task, a new repository *will* be created for marconi,
-  which will use `std` from the start 
+* A nix flake will be added in `plutus-apps` so that users will be able
+  to obtain the Marconi executable trivially
+* The possibility to specify a separate version of `cardano-api` just for
+  Marconi, **while staying in plutus-apps**, will be explored
+* As a very low priority task, a new repository *will* be created for Marconi,
+  which will use `std` from the start
   (see :ref:`Repository Standardization <repository_standardization>`)
 
+Related Decisions
+-----------------
 
-
+:ref:`Repository Standardization <repository_standardization>`

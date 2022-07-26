@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -28,13 +27,14 @@ import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
-import Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..))
+import Control.Monad.Freer.Extras.Pagination (Page (Page, nextPageQuery, pageItems), PageQuery (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State (State, get, gets, put)
 import Data.ByteString (ByteString)
 import Data.FingerTree qualified as FT
+import Data.List qualified as List
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
@@ -49,8 +49,8 @@ import Ledger (TxId)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
-                              UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
+                              TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
@@ -59,7 +59,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Tx
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
+                                TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V2.Ledger.Api (Credential (..), Datum (..), DatumHash (..), TxOutRef (..))
@@ -93,6 +93,7 @@ handleQuery = \case
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
+    UnspentTxOutSetAtAddress pageQuery cred -> getTxOutSetAtAddress pageQuery cred
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
     TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
@@ -190,22 +191,25 @@ makeChainIndexTxOut ::
   )
   => ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
-makeChainIndexTxOut txout@(ChainIndexTxOut{..}) =
-  case addressCredential citoAddress of
-    PubKeyCredential _ -> pure $ Just $ L.PublicKeyChainIndexTxOut citoAddress citoValue
+makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) =
+  case addressCredential address of
+    PubKeyCredential _ ->
+      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
     ScriptCredential vh ->
-      case citoDatum of
+      case datum of
         OutputDatumHash dh -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
           d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v d citoValue
+          pure $ Just $ L.ScriptChainIndexTxOut address value d script v
         OutputDatum d -> do
           v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v (Right d) citoValue
-        _ -> do
+          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
+        NoOutputDatum -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
+  where
+    script = fromReferenceScript refScript
 
 getUtxoSetAtAddress
   :: forall effs.
@@ -238,6 +242,27 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
           let page = fmap fromDbValue outRefs
 
           pure (UtxosResponse tp page)
+
+
+getTxOutSetAtAddress ::
+  forall effs.
+  ( Member (State ChainIndexState) effs
+  , Member BeamEffect effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => PageQuery TxOutRef
+  -> Credential
+  -> Eff effs (QueryResponse [(TxOutRef, L.ChainIndexTxOut)])
+getTxOutSetAtAddress pageQuery cred = do
+  (UtxosResponse tip page) <- getUtxoSetAtAddress pageQuery cred
+  case tip of
+    TipAtGenesis -> do
+      pure (QueryResponse [] Nothing)
+    _             -> do
+      mtxouts <- mapM getUtxoutFromRef (pageItems page)
+      let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
+      pure $ QueryResponse txouts (nextPageQuery page)
+
 
 getUtxoSetWithCurrency
   :: forall effs.
@@ -514,7 +539,7 @@ fromTx :: ChainIndexTx -> Db InsertRows
 fromTx tx = mempty
     { datumRows = fromMap citxData
     , scriptRows = fromMap citxScripts
-    , redeemerRows = fromMap citxRedeemers
+    , redeemerRows = fromPairs (Map.toList . txRedeemersWithHash)
     , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
     , addressRows = fromPairs (fmap credential . txOutsWithRef)
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)

@@ -5,34 +5,74 @@ let
 
   pab-setup-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-setup;
 
-  # TODO: Use the PS generator in the demo app
-  generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
-    mkdir $out
-    ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
-    cp ${builtins.path { name = "tidyrc.json"; path = ../../../../.tidyrc.json; } } $out/.tidyrc.json
-    cp ${builtins.path { name = "tidyoperators"; path = ../../../../.tidyoperators; } } $out/.tidyoperators
-    cd $out
-    ${purs-tidy}/bin/purs-tidy format-in-place $out
-    rm $out/.tidyrc.json
-    rm $out/.tidyoperators
-  '';
+  build-pab-nami-demo-generator = "$(nix-build default.nix -A pab-nami-demo.pab-nami-demo-generator)";
 
-  generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
-    generatedDir=./generated
-    rm -rf $generatedDir
-    $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
-    cd ../../../..
-    echo Formatting files...
-    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-pab-executables/demo/pab-nami/client/generated
-    echo Done: formatted
-  '';
+  build-pab-nami-demo-invoker = "$(nix-build default.nix --no-build-output -A pab-nami-demo.pab-nami-demo-invoker)";
+
+  generate-purescript = pkgs.writeShellApplication {
+    name = "pab-nami-demo-generate-purs";
+    runtimeInputs = [ pkgs.nix ];
+    text = ''
+      if [ "$#" -ne 1 ]; then
+        echo usage: pab-nami-demo-generate-purs GENERATED_DIR
+        exit 1
+      fi
+
+      generatedDir="$1"
+      rm -rf "$generatedDir"
+
+      echo Generating purescript files in "$generatedDir"
+      "${build-pab-nami-demo-generator}"/bin/plutus-pab-nami-demo-generator --output-dir "$generatedDir"
+      echo Done generating purescript files
+      echo
+      echo Formatting purescript files in "$generatedDir"
+      ${purs-tidy}/bin/purs-tidy format-in-place "$generatedDir"
+      echo Done formatting purescript files
+    '';
+  };
+
+  purescript-generated = pkgs.stdenv.mkDerivation {
+    name = "purescript-generated";
+    buildInputs = [ pab-nami-demo-generator ];
+    phases = [ "installPhase" ];
+    installPhase = ''
+      mkdir -p $out 
+      plutus-pab-nami-demo-generator --output-dir "$out"
+    '';
+  };
+
+  # purescript-generated = pkgs.runCommand "pab-nami-demo-generate-purs" { } ''
+  #   "${pab-nami-demo-generator}"/bin/plutus-pab-nami-demo-generator --output-dir "$out"
+  # '';
 
   start-backend = pkgs.writeShellScriptBin "pab-nami-demo-server" ''
-    echo "pab-nami-demo-server: for development use only"
-    $(nix-build ../../../../default.nix --quiet --no-build-output -A pab-nami-demo.pab-nami-demo-invoker)/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml migrate
-    $(nix-build ../../../../default.nix --quiet --no-build-output -A pab-nami-demo.pab-nami-demo-invoker)/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml webserver
+    if [ ! -d plutus-pab-executables ]; then 
+      echo Please run pab-nami-demo-server from the root of the repository
+      exit 1
+    fi
+
+    generatedDir=./plutus-pab-executables/demo/pab-nami/client/generated
+
+    if [ ! -d "$generatedDir" ] || [ "$1" == "-g" ]; then 
+      ${generate-purescript}/bin/pab-nami-demo-generate-purs "$generatedDir"
+    fi 
+
+    dirAge=$(datediff now "$(date -r "$generatedDir" +%F)")
+    echo
+    echo "*** Using Purescript files in $generatedDir which are $dirAge days old."
+    echo "*** To regenerate, run pab-nami-demo-server -g"
+    echo
+    echo
+    echo pab-nami-demo-server: for development use only
+
+    configFile=./plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
+
+    "${build-pab-nami-demo-invoker}"/bin/plutus-pab-nami-demo --config "$configFile" migrate
+    "${build-pab-nami-demo-invoker}"/bin/plutus-pab-nami-demo --config "$configFile" webserver
   '';
 
+  # Note that this ignores the generated folder too, but it's fine since it is 
+  # added via extraSrcs 
   cleanSrc = gitignore-nix.gitignoreSource ./.;
 
   nodeModules = buildNodeModules {
@@ -46,8 +86,12 @@ let
     (buildPursPackage {
       inherit pkgs nodeModules;
       src = cleanSrc;
+      extraSrcs = {
+        generated = purescript-generated;
+      };
       checkPhase = ''
         node -e 'require("./output/Test.Main").main()'
+        ls -la ${pab-nami-demo-generator}
       '';
       name = "pab-nami-demo";
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
@@ -57,5 +101,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-nami-demo-generator pab-setup-invoker generate-purescript generated-purescript start-backend;
+  inherit client pab-nami-demo-invoker pab-setup-invoker start-backend pab-nami-demo-generator;
 }

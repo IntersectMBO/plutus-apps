@@ -168,7 +168,12 @@ testScriptInputs lookups txc = property $ do
 
 
 txOut0 :: Ledger.ChainIndexTxOut
-txOut0 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing) (Left alwaysSucceedValidatorHash) (Right Ledger.unitDatum) mempty
+txOut0 = Ledger.ScriptChainIndexTxOut
+          (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
+          mempty
+          (Right Ledger.unitDatum)
+          Nothing
+          (Left alwaysSucceedValidatorHash)
 
 txOutRef0 :: Ledger.TxOutRef
 txOutRef0 = Ledger.TxOutRef (Ledger.TxId "") 0
@@ -198,7 +203,12 @@ validatorHash1 :: Ledger.ValidatorHash
 validatorHash1 = Scripts.validatorHash validator1
 
 txOut1 :: Ledger.ChainIndexTxOut
-txOut1 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential validatorHash1) Nothing) (Left validatorHash1) (Right Ledger.unitDatum) mempty
+txOut1 = Ledger.ScriptChainIndexTxOut
+  (Ledger.Address (ScriptCredential validatorHash1) Nothing)
+  mempty
+  (Right Ledger.unitDatum)
+  Nothing
+  (Left validatorHash1)
 
 txOutRef1 :: Ledger.TxOutRef
 txOutRef1 = Ledger.TxOutRef (Ledger.TxId "") 1

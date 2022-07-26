@@ -238,8 +238,7 @@ mkSimulatorHandlers params handleContractEffect =
                 $ interpret (Core.handleBlockchainEnvReader @t @(SimulatorState t))
                 $ advanceClock @t
             Core.waitUntilSlot 1
-        , onShutdown = do
-            handleDelayEffect $ delayThread (500 :: Millisecond) -- need to wait a little to avoid garbled terminal output in GHCi.
+        , onShutdown = handleDelayEffect $ delayThread (500 :: Millisecond) -- need to wait a little to avoid garbled terminal output in GHCi.
         }
 
 handleLogSimulator ::
@@ -341,7 +340,7 @@ activateContract = Core.activateContract
 callEndpointOnInstance :: forall a t. (JSON.ToJSON a) => ContractInstanceId -> String -> a -> Simulation t (Maybe NotificationError)
 callEndpointOnInstance = Core.callEndpointOnInstance'
 
--- | Wait 1 second, then add a new block.
+-- | Wait 1 slot length, then add a new block.
 makeBlock ::
     forall t effs.
     ( LastMember IO effs
@@ -573,20 +572,21 @@ handleChainIndexEffect ::
     => ChainIndexQueryEffect
     ~> Eff effs
 handleChainIndexEffect = runChainIndexEffects @t . \case
-    DatumFromHash h           -> ChainIndex.datumFromHash h
-    ValidatorFromHash h       -> ChainIndex.validatorFromHash h
-    MintingPolicyFromHash h   -> ChainIndex.mintingPolicyFromHash h
-    StakeValidatorFromHash h  -> ChainIndex.stakeValidatorFromHash h
-    RedeemerFromHash h        -> ChainIndex.redeemerFromHash h
-    TxOutFromRef ref          -> ChainIndex.txOutFromRef ref
-    TxFromTxId txid           -> ChainIndex.txFromTxId txid
-    UnspentTxOutFromRef ref   -> ChainIndex.unspentTxOutFromRef ref
-    UtxoSetMembership ref     -> ChainIndex.utxoSetMembership ref
-    UtxoSetAtAddress pq addr  -> ChainIndex.utxoSetAtAddress pq addr
-    UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
-    TxoSetAtAddress pq addr   -> ChainIndex.txoSetAtAddress pq addr
-    TxsFromTxIds txids        -> ChainIndex.txsFromTxIds txids
-    GetTip                    -> ChainIndex.getTip
+    DatumFromHash h                  -> ChainIndex.datumFromHash h
+    ValidatorFromHash h              -> ChainIndex.validatorFromHash h
+    MintingPolicyFromHash h          -> ChainIndex.mintingPolicyFromHash h
+    StakeValidatorFromHash h         -> ChainIndex.stakeValidatorFromHash h
+    RedeemerFromHash h               -> ChainIndex.redeemerFromHash h
+    TxOutFromRef ref                 -> ChainIndex.txOutFromRef ref
+    TxFromTxId txid                  -> ChainIndex.txFromTxId txid
+    UnspentTxOutFromRef ref          -> ChainIndex.unspentTxOutFromRef ref
+    UtxoSetMembership ref            -> ChainIndex.utxoSetMembership ref
+    UtxoSetAtAddress pq addr         -> ChainIndex.utxoSetAtAddress pq addr
+    UnspentTxOutSetAtAddress pq addr -> ChainIndex.unspentTxOutSetAtAddress pq addr
+    UtxoSetWithCurrency pq ac        -> ChainIndex.utxoSetWithCurrency pq ac
+    TxoSetAtAddress pq addr          -> ChainIndex.txoSetAtAddress pq addr
+    TxsFromTxIds txids               -> ChainIndex.txsFromTxIds txids
+    GetTip                           -> ChainIndex.getTip
 
 -- | Start a thread that prints log messages to the terminal when they come in.
 printLogMessages ::

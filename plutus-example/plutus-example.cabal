@@ -44,6 +44,7 @@ common maybe-Win32
 
 library
   import:          common-definitions
+  hs-source-dirs:  src
 
   if os(windows)
     build-depends: Win32
@@ -51,7 +52,6 @@ library
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
-  hs-source-dirs:  src
   exposed-modules:
     PlutusExample.PlutusVersion1.AlwaysFails
     PlutusExample.PlutusVersion1.AlwaysSucceeds
@@ -62,6 +62,7 @@ library
     PlutusExample.PlutusVersion1.RedeemerContextScripts
     PlutusExample.PlutusVersion1.Sum
     PlutusExample.PlutusVersion2.MintingScript
+    PlutusExample.PlutusVersion2.RedeemerContextEquivalence
     PlutusExample.PlutusVersion2.RequireRedeemer
     PlutusExample.PlutusVersion2.StakeScript
     PlutusExample.ScriptContextChecker
@@ -78,6 +79,7 @@ library
     , cardano-api             >=1.35
     , cardano-cli             >=1.35
     , cardano-ledger-alonzo
+    , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-slotting
