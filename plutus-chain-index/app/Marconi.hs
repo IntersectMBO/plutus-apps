@@ -39,9 +39,9 @@ import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
 import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
                             metavar, option, readerError, strOption, (<**>), (<|>))
-import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
+import Plutus.V1.Ledger.Api (Datum, DatumHash)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 import Streaming.Prelude qualified as S

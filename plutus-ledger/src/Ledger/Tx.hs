@@ -78,7 +78,7 @@ import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Plutus.Script.Utils.V1.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
                              Validator, ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Slot (SlotRange)

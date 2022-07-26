@@ -104,7 +104,8 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
                              ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, validatorHash)
+import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Validator,
