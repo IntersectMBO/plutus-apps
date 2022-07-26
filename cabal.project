@@ -40,7 +40,7 @@ allow-newer:
 constraints:
     aeson >= 2
   , hedgehog >= 1.1
-  , protolude <= 0.3.1
+  , protolude < 0.3.1
   -- TODO: remove when plutus will upgrade to 0.7
   , algebraic-graphs <= 0.6.1
 
