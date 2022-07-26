@@ -1,4 +1,4 @@
-module Spec.Index where
+module Plutus.HystericalScreams.Spec.Index where
 
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (foldl', isPrefixOf, scanl')
@@ -6,7 +6,7 @@ import Data.Maybe (fromJust, isJust, isNothing, mapMaybe)
 import Test.QuickCheck.Monadic
 import Test.Tasty.QuickCheck
 
-import Index
+import Plutus.HystericalScreams.Index
 
 data Conversion m a e n = Conversion
   { cView          :: Index a e n -> m (Maybe (IndexView a))

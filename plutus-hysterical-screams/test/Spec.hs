@@ -1,11 +1,11 @@
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import Spec.Index qualified as Ix
-import Spec.Split qualified as S
-import Spec.Sqlite qualified as Sqlite
-import Spec.VSplit qualified as V
-import Spec.VSqlite qualified as VS
+import Plutus.HystericalScreams.Spec.Index qualified as Ix
+import Plutus.HystericalScreams.Spec.Split qualified as S
+import Plutus.HystericalScreams.Spec.Sqlite qualified as Sqlite
+import Plutus.HystericalScreams.Spec.VSplit qualified as V
+import Plutus.HystericalScreams.Spec.VSqlite qualified as VS
 
 tests :: TestTree
 tests = testGroup "Index" [ixProperties, siProperties, sqProperties, viProperties, vsProperties]

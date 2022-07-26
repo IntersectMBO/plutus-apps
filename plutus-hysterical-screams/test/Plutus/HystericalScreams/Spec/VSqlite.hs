@@ -1,6 +1,6 @@
 {-# LANGUAGE Strict #-}
 
-module Spec.VSqlite where
+module Plutus.HystericalScreams.Spec.VSqlite where
 
 import Control.Lens.Operators
 import Control.Monad.IO.Class (liftIO)
@@ -13,11 +13,11 @@ import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 import Test.QuickCheck.Monadic qualified as M
 
-import Index (Index, IndexView (..))
-import Index qualified as Ix
-import Index.VSqlite (SqliteIndex)
-import Index.VSqlite qualified as S
-import Spec.Index (Conversion (..))
+import Plutus.HystericalScreams.Index (Index, IndexView (..))
+import Plutus.HystericalScreams.Index qualified as Ix
+import Plutus.HystericalScreams.Index.VSqlite (SqliteIndex)
+import Plutus.HystericalScreams.Index.VSqlite qualified as S
+import Plutus.HystericalScreams.Spec.Index (Conversion (..))
 
 conversion
   :: (Show e, Show n, Show a, Default a, ToField a, FromField a)

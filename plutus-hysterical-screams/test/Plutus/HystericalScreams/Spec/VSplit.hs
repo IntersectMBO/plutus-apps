@@ -1,21 +1,27 @@
-module Spec.Split where
+module Plutus.HystericalScreams.Spec.VSplit where
 
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Default
 import Data.Maybe (catMaybes)
-import Data.Sequence (Seq, (><))
-import Data.Sequence qualified as Seq
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import Index (Index, IndexView (..))
-import Index qualified as Ix
-import Index.Split (SplitIndex (..))
-import Index.Split qualified as S
-import Spec.Index (Conversion (..))
+import Control.Lens.Operators
+import Data.Vector qualified as V
 
-conversion :: (Show s, Show e, Show n, Default s) => Conversion (PropertyM IO) s e n
+import Plutus.HystericalScreams.Index (Index, IndexView (..))
+import Plutus.HystericalScreams.Index qualified as Ix
+import Plutus.HystericalScreams.Index.VSplit (SplitIndex (..))
+import Plutus.HystericalScreams.Index.VSplit qualified as S
+import Plutus.HystericalScreams.Spec.Index (Conversion (..))
+
+conversion
+  :: Show s
+  => Show e
+  => Show n
+  => Default s
+  => Conversion (PropertyM IO) s e n
 conversion = Conversion
   { cView          = view
   , cHistory       = history
@@ -32,7 +38,7 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      v <- S.view () ix'
+      v <- S.view ix' ()
       pure $ Just v
 
 notifications
@@ -42,8 +48,7 @@ notifications
 notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
-  liftIO $ S.getNotifications ix'
-
+  pure $ S.getNotifications ix'
 
 history
   :: (Show s, Show e, Show n, Default s)
@@ -54,7 +59,7 @@ history ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- S.getHistory () ix'
+      h <- S.getHistory ix' ()
       pure $ Just h
 
 monadic
@@ -67,24 +72,27 @@ monadic = monadicIO
 run
   :: forall s e n. (Show s, Show e, Show n, Default s)
   => Index s e n
-  -> PropertyM IO (Maybe (SplitIndex IO (MVar s) e n () s))
+  -> PropertyM IO (Maybe (SplitIndex IO (MVar s) V.Vector e n () s))
 run (Ix.New f depth store) = do
+  let k' = depth - 1
   liftIO $ do
     mstore <- newMVar store
-    S.new fquery foninsert fstore depth mstore
+    S.newBoxed fquery fstore foninsert k' ((k' + 1) * 2) mstore
   where
-    fquery :: SplitIndex IO (MVar s) e n () s -> () -> Seq e -> IO s
-    fquery SplitIndex{siHandle, siBuffered} () es = do
-      oldState <- readMVar siHandle
-      pure . fst $ foldr convertIxF (oldState, []) (es >< siBuffered)
-    fstore  :: SplitIndex IO (MVar s) e n () s -> IO ()
-    fstore ix@SplitIndex{siHandle} = do
-      newState <- fquery ix () Seq.empty
-      _ <- swapMVar siHandle newState
+    fquery :: SplitIndex IO (MVar s) V.Vector e n () s -> () -> [e] -> IO s
+    fquery ix () es = do
+      oldState <- readMVar $ ix ^. S.handle
+      bufferedEvents <- S.getBuffer $ ix ^. S.storage
+      pure . fst $ foldr convertIxF (oldState, []) (es ++ bufferedEvents)
+    fstore  :: SplitIndex IO (MVar s) V.Vector e n () s -> IO ()
+    fstore ix = do
+      newState <- fquery ix () []
+      _ <- swapMVar (ix ^. S.handle) newState
       pure ()
-    foninsert :: e -> SplitIndex IO (MVar s) e n () s -> IO [n]
-    foninsert e ix@SplitIndex{siEvents} = do
-      oldState <- fquery ix () siEvents
+    foninsert :: SplitIndex IO (MVar s) V.Vector e n () s -> e -> IO [n]
+    foninsert ix e = do
+      es <- S.getEvents $ ix ^. S.storage
+      oldState <- fquery ix () es
       pure $ catMaybes [snd $ f oldState e]
     convertIxF :: e -> (s, [n]) -> (s, [n])
     convertIxF e (a', ns) =

@@ -1,4 +1,4 @@
-module Index
+module Plutus.HystericalScreams.Index
   ( Index(..)
   -- * Constructors
   , new
