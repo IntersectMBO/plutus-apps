@@ -70,7 +70,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq, lt)
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed
-import Plutus.Script.Utils.V1.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 
 import Prelude (Semigroup (..), foldMap)

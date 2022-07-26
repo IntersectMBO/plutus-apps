@@ -17,7 +17,7 @@ import Ledger.Interval (from)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Script.Utils.V1.Scripts qualified as Ledger
+import Plutus.Script.Utils.Scripts qualified as Ledger
 import Plutus.V1.Ledger.Api (Datum (Datum))
 
 import Plutus.Contract
