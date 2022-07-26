@@ -17,19 +17,19 @@ import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Lens.Operators
-import Data.FingerTree qualified as FT
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.Either (isLeft)
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Index.VSqlite qualified as Ix
 import Ledger (Block, Slot (..), TxId (..))
-import Marconi.Index.TxConfirmationStatus (TCSIndex, TxInfo (..))
+import Marconi.Index.TxConfirmationStatus (TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
-                                             emptyBlockchainEnv)
+                                             emptyBlockchainEnv, getIndexerTxChanges, getUtxoIndexTxChanges)
 import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 
@@ -84,6 +84,7 @@ startNodeClient config instancesState = do
             )
       AlonzoNode -> do
         utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 2160) >>= newIORef
+        let env' = env { beTxChanges = Right utxoIx }
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
             (\block -> do
@@ -93,8 +94,7 @@ startNodeClient config instancesState = do
                 -- useful/necessary for blocking contract actions like `awaitSlot`.
                 slot <- TimeSlot.currentSlot slotConfig
                 STM.atomically $ STM.writeTVar (beCurrentSlot env) slot
-
-                processChainSyncEvent utxoIx instancesState env block >>= handleSyncAction'
+                processChainSyncEvent instancesState env' block >>= handleSyncAction'
             )
     pure env
 
@@ -130,26 +130,25 @@ blockAndSlot BlockchainEnv{beLastSyncedBlockNo, beLastSyncedBlockSlot} =
 
 -- | Process a chain sync event that we receive from the alonzo node client
 processChainSyncEvent
-  :: IORef TCSIndex
-  -> InstancesState
+  :: InstancesState
   -> BlockchainEnv
   -> ChainSyncEvent
   -> IO (Either SyncActionFailure (Slot, BlockNumber))
-processChainSyncEvent utxoIx instancesState blockchainEnv event = do
+processChainSyncEvent instancesState blockchainEnv event = do
   case event of
     Resume _ -> STM.atomically $ Right <$> blockAndSlot blockchainEnv
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
-      withIsCardanoEra era (processBlock utxoIx instancesState header blockchainEnv transactions era)
+      withIsCardanoEra era (processBlock instancesState header blockchainEnv transactions era)
     RollBackward chainPoint _ -> do
       -- Rollback the index
-      ix'    <- readIORef utxoIx
+      ix'    <- readIORef $ getIndexerTxChanges blockchainEnv
       events <- concat <$> Ix.getEvents (ix' ^. Ix.storage)
       -- TODO: Stop ignoring errors.
       let nextIx = fromMaybe ix' $ do
                      slot   <- chainPointToSlotNo chainPoint
                      offset <- findIndex (\(TxInfo _ _ sn) -> sn < slot) events
                      Ix.rewind offset ix'
-      writeIORef utxoIx nextIx
+      writeIORef (getIndexerTxChanges blockchainEnv) nextIx
 
       STM.atomically $ runRollback blockchainEnv chainPoint
 
@@ -189,14 +188,13 @@ txEvent tx =
 -- | Update the blockchain env. with changes from a new block of cardano
 --   transactions in any era
 processBlock :: forall era. C.IsCardanoEra era
-             => IORef TCSIndex
-             -> InstancesState
+             => InstancesState
              -> C.BlockHeader
              -> BlockchainEnv
              -> [C.Tx era]
              -> C.EraInMode era C.CardanoMode
              -> IO (Either SyncActionFailure (Slot, BlockNumber))
-processBlock utxoIx instancesState header env transactions era = do
+processBlock instancesState header env transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
       tip = fromCardanoBlockHeader header
       -- We ignore cardano transactions that we couldn't convert to
@@ -210,13 +208,11 @@ processBlock utxoIx instancesState header env transactions era = do
        else do
           instEnv <- S.instancesClientEnv instancesState
           updateInstances (indexBlock ciTxs) instEnv
-          r <- updateEmulatorTransactionState tip env (txEvent <$> ciTxs)
-          STM.writeTVar (beTxChanges env) FT.empty
-          pure r
+          updateEmulatorTransactionState tip env (txEvent <$> ciTxs)
 
-  ix'    <- readIORef utxoIx
+  ix'    <- readIORef $ getIndexerTxChanges env
   nextIx <- Ix.insert (mkEvent tip <$> ciTxs) ix'
-  writeIORef utxoIx nextIx
+  writeIORef (getIndexerTxChanges env) nextIx
   pure stmResult
 
 mkEvent :: Tip -> ChainIndexTx -> TxInfo
@@ -248,8 +244,13 @@ updateEmulatorTransactionState
                      }
     xs = do
 
-    txIdStateIndex <- STM.readTVar beTxChanges
+    let useOldIndex = isLeft beTxChanges
+    txIdStateIndex <- case beTxChanges of
+                        Left c  -> STM.readTVar c
+                        Right _ -> pure mempty
+
     let txIdState = _usTxUtxoData $ utxoState txIdStateIndex
+
     txUtxoBalanceIndex <- STM.readTVar beTxOutChanges
     let txUtxoBalance = _usTxUtxoData $ utxoState txUtxoBalanceIndex
     blockNumber <- STM.readTVar beLastSyncedBlockNo
@@ -261,8 +262,8 @@ updateEmulatorTransactionState
     case (txIdStateInsert, txUtxoBalanceInsert) of
       (Right InsertUtxoSuccess{newIndex=newTxIdState}
         , Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
-
-        STM.writeTVar beTxChanges    $ trimIx beRollbackHistory newTxIdState
+        when useOldIndex $
+          STM.writeTVar (getUtxoIndexTxChanges env) $ trimIx beRollbackHistory newTxIdState
         STM.writeTVar beTxOutChanges $ trimIx beRollbackHistory newTxOutBalance
         STM.writeTVar beLastSyncedBlockNo (succ blockNumber)
         Right <$> blockAndSlot env
