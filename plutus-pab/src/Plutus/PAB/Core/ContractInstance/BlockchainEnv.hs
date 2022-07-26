@@ -23,6 +23,7 @@ import Data.List (findIndex)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
+import Data.Text (unpack)
 import Index.VSqlite qualified as Ix
 import Ledger (Block, Slot (..), TxId (..))
 import Marconi.Index.TxConfirmationStatus (TxInfo (..))
@@ -33,7 +34,8 @@ import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientE
 import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 
-import Plutus.PAB.Types (Config (Config), DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
+import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+                         DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory), dbConfig,
                          developmentOptions, nodeServerConfig)
 
 import Cardano.Node.Types (NodeMode (..),
@@ -74,6 +76,7 @@ startNodeClient config instancesState = do
                    DevelopmentOptions { pabRollbackHistory
                                       , pabResumeFrom = resumePoint
                                       }
+               , dbConfig = DbConfig { dbConfigFile = dbFile }
                } = config
     params <- Params.fromPABServerConfig $ nodeServerConfig config
     env <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
@@ -83,7 +86,7 @@ startNodeClient config instancesState = do
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
             )
       AlonzoNode -> do
-        utxoIx <- Ix.open "./utxos.sqlite3" (Ix.Depth 2160) >>= newIORef
+        utxoIx <- Ix.open (unpack dbFile) (Ix.Depth 2160) >>= newIORef
         let env' = env { beTxChanges = Right utxoIx }
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
