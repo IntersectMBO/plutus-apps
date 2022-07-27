@@ -144,7 +144,7 @@ instance Pretty PABReq where
     AwaitUtxoSpentReq utxo                  -> "Await utxo spent:" <+> pretty utxo
     AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty a
     CurrentPABSlotReq                       -> "Current PAB slot"
-    CurrentChainIndexSlotReq                -> "Current node slot"
+    CurrentChainIndexSlotReq                -> "Current chain index slot"
     CurrentTimeReq                          -> "Current time"
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
@@ -188,7 +188,7 @@ instance Pretty PABResp where
     AwaitUtxoSpentResp utxo                  -> "Utxo spent:" <+> pretty utxo
     AwaitUtxoProducedResp addr               -> "Utxo produced:" <+> pretty addr
     CurrentPABSlotResp s                     -> "Current PAB slot:" <+> pretty s
-    CurrentChainIndexSlotResp s              -> "Current node slot:" <+> pretty s
+    CurrentChainIndexSlotResp s              -> "Current chain index slot:" <+> pretty s
     CurrentTimeResp s                        -> "Current time:" <+> pretty s
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
