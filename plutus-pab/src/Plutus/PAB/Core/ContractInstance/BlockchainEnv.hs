@@ -17,13 +17,12 @@ import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Lens.Operators
-import Control.Monad (when)
+import Control.Monad (forM_, void, when)
 import Data.IORef (newIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Monoid (Last (..), Sum (..))
-import Data.Text (unpack)
 import Ledger (Block, Slot (..), TxId (..))
 import Marconi.Index.TxConfirmationStatus (TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
@@ -35,20 +34,17 @@ import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
-                         DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
-                         WebserverConfig (WebserverConfig, enableMarconi), dbConfig, developmentOptions,
-                         nodeServerConfig, pabWebserverConfig)
+import Plutus.PAB.Types (Config (Config), DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
+                         WebserverConfig (WebserverConfig, enableMarconi), developmentOptions, nodeServerConfig,
+                         pabWebserverConfig)
 
 import Cardano.Node.Types (NodeMode (..),
                            PABServerConfig (PABServerConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens
-import Control.Monad (forM_, void)
 import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
-import Data.Maybe (catMaybes, maybeToList)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
@@ -78,7 +74,6 @@ startNodeClient config instancesState = do
                    DevelopmentOptions { pabRollbackHistory
                                       , pabResumeFrom = resumePoint
                                       }
-               , dbConfig = DbConfig { dbConfigFile = dbFile }
                , pabWebserverConfig =
                    WebserverConfig { enableMarconi = useDiskIndex }
                } = config
@@ -87,7 +82,7 @@ startNodeClient config instancesState = do
       env' <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
       if useDiskIndex && nodeStartsInAlonzoMode pscNodeMode
       then do
-        utxoIx <- Ix.open (unpack dbFile) (Ix.Depth 10) >>= newIORef
+        utxoIx <- Ix.open "./marconi.sqlite" (Ix.Depth 10) >>= newIORef
         pure $ env' { beTxChanges = Right utxoIx }
       else do
         pure env'
