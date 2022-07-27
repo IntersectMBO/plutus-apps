@@ -28,7 +28,8 @@ module Plutus.Contract.Trace
     , handleSlotNotifications
     , handleTimeNotifications
     , handleOwnAddressesQueries
-    , handleCurrentSlotQueries
+    , handleCurrentPABSlotQueries
+    , handleCurrentChainIndexSlotQueries
     , handleCurrentTimeQueries
     , handleTimeToSlotConversions
     , handleUnbalancedTransactions
@@ -116,13 +117,21 @@ handleTimeNotifications ::
 handleTimeNotifications =
     generalise (preview E._AwaitTimeReq) E.AwaitTimeResp RequestHandler.handleTimeNotifications
 
-handleCurrentSlotQueries ::
+handleCurrentPABSlotQueries ::
     ( Member (LogObserve (LogMessage Text)) effs
     , Member NodeClientEffect effs
     )
     => RequestHandler effs PABReq PABResp
-handleCurrentSlotQueries =
-    generalise (preview E._CurrentSlotReq) E.CurrentSlotResp RequestHandler.handleCurrentSlot
+handleCurrentPABSlotQueries =
+    generalise (preview E._CurrentPABSlotReq) E.CurrentPABSlotResp RequestHandler.handleCurrentPABSlot
+
+handleCurrentChainIndexSlotQueries ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member ChainIndexQueryEffect effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleCurrentChainIndexSlotQueries =
+    generalise (preview E._CurrentChainIndexSlotReq) E.CurrentChainIndexSlotResp RequestHandler.handleCurrentChainIndexSlot
 
 handleCurrentTimeQueries ::
     ( Member (LogObserve (LogMessage Text)) effs

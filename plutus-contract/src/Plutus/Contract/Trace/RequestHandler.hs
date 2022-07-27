@@ -20,7 +20,8 @@ module Plutus.Contract.Trace.RequestHandler(
     , handleAdjustUnbalancedTx
     , handleOwnAddresses
     , handleSlotNotifications
-    , handleCurrentSlot
+    , handleCurrentPABSlot
+    , handleCurrentChainIndexSlot
     , handleTimeNotifications
     , handleCurrentTime
     , handleTimeToSlotConversions
@@ -49,12 +50,13 @@ import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
 
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (POSIXTime, POSIXTimeRange, Params (..), Slot, SlotRange)
+import Ledger (POSIXTime, POSIXTimeRange, Params (..), Slot (..), SlotRange)
 import Ledger.Constraints.OffChain (UnbalancedTx, adjustUnbalancedTx)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx, ToCardanoError)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as ChainIndexEff
+import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))
 import Plutus.Contract.Wallet qualified as Wallet
 import Plutus.V1.Ledger.Api (Address)
@@ -156,16 +158,30 @@ handleTimeNotifications =
             guard (currentSlot >= targetSlot_)
             pure $ TimeSlot.slotToEndPOSIXTime pSlotConfig currentSlot
 
-handleCurrentSlot ::
+handleCurrentPABSlot ::
     forall effs a.
     ( Member NodeClientEffect effs
     , Member (LogObserve (LogMessage Text)) effs
     )
     => RequestHandler effs a Slot
-handleCurrentSlot =
+handleCurrentPABSlot =
     RequestHandler $ \_ ->
-        surroundDebug @Text "handleCurrentSlot" $ do
+        surroundDebug @Text "handleCurrentPABSlot" $ do
             Wallet.Effects.getClientSlot
+
+handleCurrentChainIndexSlot ::
+    forall effs a.
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member ChainIndexQueryEffect effs
+    )
+    => RequestHandler effs a Slot
+handleCurrentChainIndexSlot =
+    RequestHandler $ \_ ->
+        surroundDebug @Text "handleCurrentChainIndexSlot" $ do
+            t <- ChainIndexEff.getTip
+            case t of
+                TipAtGenesis   -> return $ Slot 0
+                (Tip slot _ _) -> return slot
 
 handleCurrentTime ::
     forall effs a.

@@ -268,7 +268,8 @@ stmRequestHandler = fmap sequence (wrapHandler (fmap pure nonBlockingRequests) <
         <> RequestHandler.handleUnbalancedTransactions @effs
         <> RequestHandler.handlePendingTransactions @effs
         <> RequestHandler.handleOwnInstanceIdQueries @effs
-        <> RequestHandler.handleCurrentSlotQueries @effs
+        <> RequestHandler.handleCurrentPABSlotQueries @effs
+        <> RequestHandler.handleCurrentChainIndexSlotQueries @effs
         <> RequestHandler.handleCurrentTimeQueries @effs
         <> RequestHandler.handleYieldedUnbalancedTx @effs
         <> RequestHandler.handleAdjustUnbalancedTx @effs
