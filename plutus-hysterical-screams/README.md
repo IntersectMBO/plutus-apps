@@ -12,7 +12,7 @@ The model is split between constructors and observations. You can identify the c
 
 Example of a program in this algebra: `rewind 1 $ insert 1 $ new (+) 5`. We can think as the value of the accumulator at the end of running this program as an observation which has value `5`.
 
-I our case we have three constructors:
+In our case we have three constructors:
 * new => creates a new index, and takes as arguments a function used to fold events into an accumulator and an initial value for the accumulator.
 * insert => adds a new event into the index
 * rewind => returns the data structure to a previous version.
