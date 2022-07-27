@@ -28,10 +28,10 @@ import Data.Foldable (traverse_)
 import Data.Kind (Type)
 import Data.List.NonEmpty qualified as L
 import Data.Maybe (isJust, listToMaybe)
-import Database.Beam (Beamable, DatabaseEntity, FromBackendRow, HasQBuilder, Identity, MonadBeam, Projectible, Q, QExpr,
-                      SqlDelete, SqlInsert, SqlSelect, SqlUpdate, TableEntity, asc_, filter_, insertValues, limit_,
-                      orderBy_, runDelete, runInsert, runSelectReturningList, runSelectReturningOne, runUpdate, select,
-                      val_, (>.))
+import Database.Beam (Beamable, DatabaseEntity, FromBackendRow, HasQBuilder, Identity, MonadBeam, Q, QExpr, SqlDelete,
+                      SqlInsert, SqlSelect, SqlUpdate, TableEntity, asc_, filter_, insertValues, limit_, orderBy_,
+                      runDelete, runInsert, runSelectReturningList, runSelectReturningOne, runUpdate, select, val_,
+                      (>.))
 import Database.Beam.Backend.SQL (BeamSqlBackend, BeamSqlBackendSyntax, HasSqlValueSyntax,
                                   IsSql92ExpressionSyntax (Sql92ExpressionValueSyntax),
                                   IsSql92SelectSyntax (Sql92SelectSelectTableSyntax),
@@ -40,10 +40,11 @@ import Database.Beam.Backend.SQL (BeamSqlBackend, BeamSqlBackendSyntax, HasSqlVa
 import Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
 
 type Synt dbt = (Sql92ExpressionValueSyntax
-              (Sql92SelectTableExpressionSyntax
-                (Sql92SelectSelectTableSyntax
-                    (Sql92SelectSyntax
-                      (BeamSqlBackendSyntax dbt)))))
+                  (Sql92SelectTableExpressionSyntax
+                    (Sql92SelectSelectTableSyntax
+                        (Sql92SelectSyntax
+                          (BeamSqlBackendSyntax dbt)))))
+
 data BeamEffect dbt r where
   -- Workaround for "too many SQL variables" sqlite error. Provide a
   -- batch size so that we avoid the error. The maximum is 999.
@@ -79,7 +80,6 @@ data BeamEffect dbt r where
       ( FromBackendRow dbt a
       , HasSqlValueSyntax (Synt dbt) a
       , HasQBuilder dbt
-      , Projectible dbt a
       )
       => PageQuery a
       -> Q dbt db BeamThreadingArg (QExpr dbt BeamThreadingArg a)
@@ -152,7 +152,6 @@ selectPage ::
     , HasSqlValueSyntax (Synt dbt) a
     , Member (BeamEffect dbt) effs
     , HasQBuilder dbt
-    , Projectible dbt a
     )
     => PageQuery a
     -> Q dbt db BeamThreadingArg (QExpr dbt BeamThreadingArg a)
@@ -180,7 +179,7 @@ combined ops
 
 
 handleBeam ::
-  forall (dbM :: Type -> Type) dbt effs.
+  forall dbt (dbM :: Type -> Type) effs.
   ( BeamSqlBackend dbt
   , MonadBeam dbt dbM
   , BeamHasInsertOnConflict dbt
