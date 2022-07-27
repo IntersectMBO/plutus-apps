@@ -53,7 +53,7 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import Control.Lens (_Right, makeClassyPrisms, review, (^?))
+import Control.Lens (makeClassyPrisms, review)
 import Control.Monad (unless)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
@@ -135,13 +135,13 @@ getStates
     :: forall s i
     . (PlutusTx.FromData s, PlutusTx.ToData s)
     => SM.StateMachineInstance s i
-    -> Map Tx.TxOutRef Tx.ChainIndexTxOut
+    -> Map Tx.TxOutRef Tx.OffChainTxOut
     -> [OnChainState s i]
 getStates (SM.StateMachineInstance _ si) refMap =
-    flip mapMaybe (Map.toList refMap) $ \(txOutRef, ciTxOut) -> do
-      let txOut = Tx.toTxOut ciTxOut
-      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _Right
-      ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef txOut datum
+    flip mapMaybe (Map.toList refMap) $ \(txOutRef, ocTxOut) -> do
+      -- FIXME is it important to check txOut is a script?
+      datum <- Tx.ocTxOutDatum ocTxOut
+      ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef (Tx.toTxOut ocTxOut) datum
       pure OnChainState{ocsTxOutRef}
 
 -- | An invalid transition
@@ -228,7 +228,7 @@ getOnChainState ::
     , PlutusTx.ToData state
     )
     => StateMachineClient state i
-    -> Contract w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.ChainIndexTxOut))
+    -> Contract w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.OffChainTxOut))
 getOnChainState StateMachineClient{scInstance, scChooser} = mapError (review _SMContractError) $ do
     utxoTx <- utxosAt (SM.machineAddress scInstance)
     let states = getStates scInstance utxoTx

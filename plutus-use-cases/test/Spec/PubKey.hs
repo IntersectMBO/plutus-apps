@@ -18,8 +18,8 @@ import Test.Tasty
 
 theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do
-  (txOutRef, ciTxOut, pkInst) <- pubKeyContract (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
-  let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ciTxOut
+  (txOutRef, ocTxOut, pkInst) <- pubKeyContract (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
+  let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ocTxOut
               <> Constraints.otherScript (Scripts.validatorScript pkInst)
   void $ submitTxConstraintsWith @Scripts.Any lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer)
 

@@ -32,19 +32,19 @@ addressMapAndTxShouldShareTxOuts :: Property
 addressMapAndTxShouldShareTxOuts = property $ do
     chainIndexTx <- forAll $ Gen.evalTxGenState Gen.genTx
     let diskState = DiskState.fromTx chainIndexTx
-        ciTxOutRefs = Set.fromList $ fmap snd $ txOutsWithRef chainIndexTx
+        txOutRefs = Set.fromList $ fmap snd $ txOutsWithRef chainIndexTx
         addressMapTxOutRefs =
           mconcat $ diskState ^.. DiskState.addressMap . DiskState.unCredentialMap . folded
-    ciTxOutRefs === addressMapTxOutRefs
+    txOutRefs === addressMapTxOutRefs
 
 assetClassMapAndTxShouldShareTxOuts :: Property
 assetClassMapAndTxShouldShareTxOuts = property $ do
     chainIndexTx <- forAll $ Gen.evalTxGenState Gen.genTx
     let diskState = DiskState.fromTx chainIndexTx
-        ciTxOutRefs = Set.fromList
+        txOutRefs = Set.fromList
                     $ fmap snd
                     $ filter (\(ChainIndexTxOut{citoValue}, _) -> citoValue /= Ada.toValue (Ada.fromValue citoValue))
                     $ txOutsWithRef chainIndexTx
         assetClassMapTxOutRefs =
           mconcat $ diskState ^.. DiskState.assetClassMap . DiskState.unAssetClassMap . folded
-    ciTxOutRefs === assetClassMapTxOutRefs
+    txOutRefs === assetClassMapTxOutRefs

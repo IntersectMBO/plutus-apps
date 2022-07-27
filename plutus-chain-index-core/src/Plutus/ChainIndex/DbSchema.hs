@@ -36,7 +36,7 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (BlockId (..), ChainIndexTxOut (..), Slot)
+import Ledger (BlockId (..), OffChainTxOut (..), Slot)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Tx qualified as CI
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
@@ -262,7 +262,7 @@ deriving via Serialisable Redeemer instance HasDbType Redeemer
 deriving via Serialisable StakeValidator instance HasDbType StakeValidator
 deriving via Serialisable Validator instance HasDbType Validator
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
-deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
+deriving via Serialisable OffChainTxOut instance HasDbType OffChainTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
 deriving via Serialisable CI.ChainIndexTxOut instance HasDbType CI.ChainIndexTxOut
 deriving via Serialisable Credential instance HasDbType Credential

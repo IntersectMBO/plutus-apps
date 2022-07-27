@@ -48,7 +48,7 @@ import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Tx (ChainIndexTxOut (..))
+import Ledger.Tx (OffChainTxOut (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, collectFromScript, endpoint,
@@ -179,14 +179,14 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -
     yieldUnbalancedTx unbalancedTx
 
 -- | Find the secret word in the Datum of the UTxOs
-findSecretWordValue :: Map TxOutRef ChainIndexTxOut -> Maybe HashedString
+findSecretWordValue :: Map TxOutRef OffChainTxOut -> Maybe HashedString
 findSecretWordValue =
   listToMaybe . catMaybes . Map.elems . Map.map secretWordValue
 
 -- | Extract the secret word in the Datum of a given transaction output is possible
-secretWordValue :: ChainIndexTxOut -> Maybe HashedString
+secretWordValue :: OffChainTxOut -> Maybe HashedString
 secretWordValue o = do
-  Datum d <- either (const Nothing) Just (_ciTxOutScriptDatum o)
+  Datum d <- ocTxOutDatum o
   PlutusTx.fromBuiltinData d
 
 contract :: AsContractError e => Contract () GameSchema e ()

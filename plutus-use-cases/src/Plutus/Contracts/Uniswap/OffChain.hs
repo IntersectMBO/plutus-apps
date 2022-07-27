@@ -35,16 +35,15 @@ module Plutus.Contracts.Uniswap.OffChain
     , calculateRemoval, funds
     ) where
 
-import Control.Lens (view)
 import Control.Monad hiding (fmap)
 import Data.Map qualified as Map
 import Data.Monoid (Last (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
-import Ledger (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut, _ciTxOutScriptDatum), ciTxOutValue,
-               pubKeyHashAddress)
+import Ledger (pubKeyHashAddress)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
+import Ledger.Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract as Contract
@@ -291,7 +290,7 @@ remove us RemoveParams{..} = do
         lC           = mkCoin (liquidityCurrency us) $ lpTicker lp
         psVal        = unitValue psC
         lVal         = valueOf lC rpDiff
-        inVal        = view ciTxOutValue o
+        inVal        = ocTxOutValue o
         inA          = amountOf inVal rpCoinA
         inB          = amountOf inVal rpCoinB
         (outA, outB) = calculateRemoval inA inB liquidity rpDiff
@@ -318,7 +317,7 @@ add us AddParams{..} = do
     pkh                           <- Contract.ownFirstPaymentPubKeyHash
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us apCoinA apCoinB
     when (apAmountA < 0 || apAmountB < 0) $ throwError "amounts must not be negative"
-    let outVal = view ciTxOutValue o
+    let outVal = ocTxOutValue o
         oldA   = amountOf outVal apCoinA
         oldB   = amountOf outVal apCoinB
         newA   = oldA + apAmountA
@@ -361,7 +360,7 @@ swap :: forall w s. Uniswap -> SwapParams -> Contract w s Text ()
 swap us SwapParams{..} = do
     unless (spAmountA > 0 && spAmountB == 0 || spAmountA == 0 && spAmountB > 0) $ throwError "exactly one amount must be positive"
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us spCoinA spCoinB
-    let outVal = view ciTxOutValue o
+    let outVal = ocTxOutValue o
     let oldA = amountOf outVal spCoinA
         oldB = amountOf outVal spCoinB
     (newA, newB) <- if spAmountA > 0 then do
@@ -398,10 +397,10 @@ pools us = do
     utxos <- utxosAt (uniswapAddress us)
     go $ snd <$> Map.toList utxos
   where
-    go :: [ChainIndexTxOut] -> Contract w s Text [((Coin A, Amount A), (Coin B, Amount B))]
+    go :: [OffChainTxOut] -> Contract w s Text [((Coin A, Amount A), (Coin B, Amount B))]
     go []       = return []
     go (o : os) = do
-        let v = view ciTxOutValue o
+        let v = ocTxOutValue o
         if isUnity v c
             then do
                 d <- getUniswapDatum o
@@ -426,15 +425,15 @@ funds :: forall w s. Contract w s Text Value
 funds = do
     pkh <- Contract.ownFirstPaymentPubKeyHash
     os  <- map snd . Map.toList <$> utxosAt (pubKeyHashAddress pkh Nothing)
-    return $ mconcat [view ciTxOutValue o | o <- os]
+    return $ foldMap ocTxOutValue os
 
-getUniswapDatum :: ChainIndexTxOut -> Contract w s Text UniswapDatum
+getUniswapDatum :: OffChainTxOut -> Contract w s Text UniswapDatum
 getUniswapDatum o =
   case o of
-      PublicKeyChainIndexTxOut {} ->
+      PublicKeyOffChainTxOut {} ->
         throwError "no datum for a txout of a public key address"
-      ScriptChainIndexTxOut { _ciTxOutScriptDatum } -> do
-        (Datum e) <- either getDatum pure _ciTxOutScriptDatum
+      (ScriptOffChainTxOut _vh _v dh _m_va m_da _m_sc) -> do
+        (Datum e) <- maybe (getDatum dh) pure m_da
         maybe (throwError "datum hash wrong type")
               pure
               (PlutusTx.fromBuiltinData e)
@@ -449,12 +448,12 @@ findUniswapInstance ::
     Uniswap
     -> Coin b
     -> (UniswapDatum -> Maybe a)
-    -> Contract w s Text (TxOutRef, ChainIndexTxOut, a)
+    -> Contract w s Text (TxOutRef, OffChainTxOut, a)
 findUniswapInstance us c f = do
     let addr = uniswapAddress us
     logInfo @String $ printf "looking for Uniswap instance at address %s containing coin %s " (show addr) (show c)
     utxos <- utxosAt addr
-    go  [x | x@(_, o) <- Map.toList utxos, isUnity (view ciTxOutValue o) c]
+    go  [x | x@(_, o) <- Map.toList utxos, isUnity (ocTxOutValue o) c]
   where
     go [] = throwError "Uniswap instance not found"
     go ((oref, o) : xs) = do
@@ -465,12 +464,12 @@ findUniswapInstance us c f = do
                 logInfo @String $ printf "found Uniswap instance with datum: %s" (show d)
                 return (oref, o, a)
 
-findUniswapFactory :: forall w s. Uniswap -> Contract w s Text (TxOutRef, ChainIndexTxOut, [LiquidityPool])
+findUniswapFactory :: forall w s. Uniswap -> Contract w s Text (TxOutRef, OffChainTxOut, [LiquidityPool])
 findUniswapFactory us@Uniswap{..} = findUniswapInstance us usCoin $ \case
     Factory lps -> Just lps
     Pool _ _    -> Nothing
 
-findUniswapPool :: forall w s. Uniswap -> LiquidityPool -> Contract w s Text (TxOutRef, ChainIndexTxOut, Amount Liquidity)
+findUniswapPool :: forall w s. Uniswap -> LiquidityPool -> Contract w s Text (TxOutRef, OffChainTxOut, Amount Liquidity)
 findUniswapPool us lp = findUniswapInstance us (poolStateCoin us) $ \case
         Pool lp' l
             | lp == lp' -> Just l
@@ -480,8 +479,8 @@ findUniswapFactoryAndPool :: forall w s.
                           Uniswap
                           -> Coin A
                           -> Coin B
-                          -> Contract w s Text ( (TxOutRef, ChainIndexTxOut, [LiquidityPool])
-                                               , (TxOutRef, ChainIndexTxOut, LiquidityPool, Amount Liquidity)
+                          -> Contract w s Text ( (TxOutRef, OffChainTxOut, [LiquidityPool])
+                                               , (TxOutRef, OffChainTxOut, LiquidityPool, Amount Liquidity)
                                                )
 findUniswapFactoryAndPool us coinA coinB = do
     (oref1, o1, lps) <- findUniswapFactory us

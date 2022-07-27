@@ -9,7 +9,7 @@ module Plutus.Contract.Typed.Tx where
 
 import Ledger (TxOutRef)
 import Ledger.Constraints (TxConstraints, mustSpendOutputFromTheScript)
-import Ledger.Tx (ChainIndexTxOut)
+import Ledger.Tx (OffChainTxOut)
 
 import Data.Map qualified as Map
 
@@ -17,12 +17,12 @@ import Data.Map qualified as Map
 --   all the outputs that match a predicate, using the 'RedeemerValue'.
 collectFromScriptFilter ::
     forall i o
-    .  (TxOutRef -> ChainIndexTxOut -> Bool)
-    -> Map.Map TxOutRef ChainIndexTxOut
+    .  (TxOutRef -> OffChainTxOut -> Bool)
+    -> Map.Map TxOutRef OffChainTxOut
     -> i
     -> TxConstraints i o
 collectFromScriptFilter flt utxo red =
-    let ourUtxo :: Map.Map TxOutRef ChainIndexTxOut
+    let ourUtxo :: Map.Map TxOutRef OffChainTxOut
         ourUtxo = Map.filterWithKey flt utxo
     in collectFromScript ourUtxo red
 
@@ -30,7 +30,7 @@ collectFromScriptFilter flt utxo red =
 --   at the address
 collectFromScript ::
     forall i o
-    .  Map.Map TxOutRef ChainIndexTxOut
+    .  Map.Map TxOutRef OffChainTxOut
     -> i
     -> TxConstraints i o
 collectFromScript utxo redeemer =

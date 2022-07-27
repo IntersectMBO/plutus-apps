@@ -86,7 +86,6 @@ module Plutus.PAB.Core
 import Control.Applicative (Alternative ((<|>)))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
-import Control.Lens (view)
 import Control.Monad (forM, guard, void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, runM, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
@@ -103,7 +102,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (Address (addressCredential), Params, TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
-import Ledger.Tx (CardanoTx, TxId, ciTxOutValue)
+import Ledger.Tx (CardanoTx, TxId, ocTxOutValue)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -582,7 +581,7 @@ valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
   handleAgentThread wallet Nothing $ do
     txOutsM <- ChainIndex.collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq cred)
-    pure $ foldMap (view ciTxOutValue . snd) $ concat txOutsM
+    pure $ foldMap (ocTxOutValue . snd) $ concat txOutsM
   where
     cred = addressCredential $ mockWalletAddress wallet
 

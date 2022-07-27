@@ -41,7 +41,7 @@ module Plutus.Contracts.Tutorial.EscrowStrict(
     , Action(..)
     ) where
 
-import Control.Lens (makeClassyPrisms, review, view)
+import Control.Lens (makeClassyPrisms, review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -279,7 +279,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     let
         tx = Typed.collectFromScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
-    if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
+    if foldMap Tx.ocTxOutValue unspentOutputs `lt` targetTotal escrow
        then throwing _RedeemFailed NotEnoughFundsAtAddress
        else do
          utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
@@ -309,7 +309,11 @@ refund ::
 refund inst _escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = either id Ledger.datumHash (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let flt _ ocTxOut = case ocTxOut of
+                          Tx.ScriptOffChainTxOut _vh _v dh _m_va _m_da _m_rs ->
+                            dh == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+                          Tx.PublicKeyOffChainTxOut {} ->
+                            False
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
     if Constraints.modifiesUtxoSet tx'
     then do

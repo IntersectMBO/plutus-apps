@@ -37,7 +37,7 @@ module Plutus.Contracts.TokenAccount(
   , typedValidator
   ) where
 
-import Control.Lens (makeClassyPrisms, review, view)
+import Control.Lens (makeClassyPrisms, review)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
@@ -176,7 +176,7 @@ redeemTx :: forall w s e.
 redeemTx account pk = mapError (review _TAContractError) $ do
     let inst = typedValidator account
     utxos <- utxosAt (address account)
-    let totalVal = foldMap (view Ledger.ciTxOutValue) utxos
+    let totalVal = foldMap Ledger.ocTxOutValue utxos
         numInputs = Map.size utxos
     logInfo @String
         $ "TokenAccount.redeemTx: Redeeming "
@@ -214,7 +214,7 @@ balance
     -> Contract w s e Value
 balance account = mapError (review _TAContractError) $ do
     utxos <- utxosAt (address account)
-    let inner = foldMap (view Ledger.ciTxOutValue) utxos
+    let inner = foldMap Ledger.ocTxOutValue utxos
     pure inner
 
 -- | Create a new token and return its 'Account' information.

@@ -18,7 +18,7 @@
 module Plutus.Contracts.SimpleEscrow
   where
 
-import Control.Lens (makeClassyPrisms, view)
+import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -142,7 +142,7 @@ redeemEp = endpoint @"redeem" redeem
       pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
-      let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
+      let value = foldMap Tx.ocTxOutValue unspentOutputs
           tx = Typed.collectFromScript unspentOutputs Redeem
                       <> Constraints.mustValidateIn (Interval.to (Haskell.pred $ deadline params))
                       -- Pay me the output of this script

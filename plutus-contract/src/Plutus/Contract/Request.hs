@@ -12,7 +12,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -127,7 +126,7 @@ import Ledger (AssetClass, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (Payme
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
+import Ledger.Tx (CardanoTx, OffChainTxOut, getCardanoTxId, ocTxOutValue)
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
@@ -345,7 +344,7 @@ txOutFromRef ::
     ( AsContractError e
     )
     => TxOutRef
-    -> Contract w s e (Maybe ChainIndexTxOut)
+    -> Contract w s e (Maybe OffChainTxOut)
 txOutFromRef ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxOutFromRef ref) E._ChainIndexQueryResp
   case cir of
@@ -357,7 +356,7 @@ unspentTxOutFromRef ::
     ( AsContractError e
     )
     => TxOutRef
-    -> Contract w s e (Maybe ChainIndexTxOut)
+    -> Contract w s e (Maybe OffChainTxOut)
 unspentTxOutFromRef ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutFromRef ref) E._ChainIndexQueryResp
   case cir of
@@ -417,7 +416,7 @@ utxoRefsWithCurrency pq assetClass = do
     r                               -> throwError $ review _ChainIndexContractError ("UtxoSetWithCurrencyResponse", r)
 
 -- | Get all utxos belonging to the wallet that runs this contract.
-ownUtxos :: forall w s e. (AsContractError e) => Contract w s e (Map TxOutRef ChainIndexTxOut)
+ownUtxos :: forall w s e. (AsContractError e) => Contract w s e (Map TxOutRef OffChainTxOut)
 ownUtxos = do
     addrs <- ownAddresses
     fold <$> mapM utxosAt (NonEmpty.toList addrs)
@@ -429,7 +428,7 @@ queryUnspentTxOutsAt ::
     )
     => Address
     -> PageQuery TxOutRef
-    -> Contract w s e (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+    -> Contract w s e (QueryResponse [(TxOutRef, OffChainTxOut)])
 queryUnspentTxOutsAt addr pq = do
   cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
@@ -442,7 +441,7 @@ utxosAt ::
     ( AsContractError e
     )
     => Address
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract w s e (Map TxOutRef OffChainTxOut)
 utxosAt addr =
   Map.fromList . concat <$> collectQueryResponse (queryUnspentTxOutsAt addr)
 
@@ -452,14 +451,14 @@ utxosTxOutTxAt ::
     ( AsContractError e
     )
     => Address
-    -> Contract w s e (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+    -> Contract w s e (Map TxOutRef (OffChainTxOut, ChainIndexTx))
 utxosTxOutTxAt addr = do
   utxos <- utxosAt addr
   evalStateT (Map.traverseMaybeWithKey go utxos) mempty
   where
     go :: TxOutRef
-       -> ChainIndexTxOut
-       -> StateT (Map TxId ChainIndexTx) (Contract w s e) (Maybe (ChainIndexTxOut, ChainIndexTx))
+       -> OffChainTxOut
+       -> StateT (Map TxId ChainIndexTx) (Contract w s e) (Maybe (OffChainTxOut, ChainIndexTx))
     go ref out = StateT $ \lookupTx -> do
       let txid = txOutRefId ref
       -- Lookup the txid in the lookup table. If it's present, we don't need
@@ -483,13 +482,13 @@ utxosTxOutTxAt addr = do
 utxosTxOutTxFromTx ::
     AsContractError e
     => ChainIndexTx
-    -> Contract w s e [(TxOutRef, (ChainIndexTxOut, ChainIndexTx))]
+    -> Contract w s e [(TxOutRef, (OffChainTxOut, ChainIndexTx))]
 utxosTxOutTxFromTx tx =
   catMaybes <$> mapM mkOutRef (txOutRefs tx)
   where
     mkOutRef txOutRef = do
-      ciTxOutM <- unspentTxOutFromRef txOutRef
-      pure $ ciTxOutM >>= \ciTxOut -> pure (txOutRef, (ciTxOut, tx))
+      ocTxOutM <- unspentTxOutFromRef txOutRef
+      pure $ ocTxOutM >>= \ocTxOut -> pure (txOutRef, (ocTxOut, tx))
 
 foldTxoRefsAt ::
     forall w s e a.
@@ -569,7 +568,7 @@ watchAddressUntilSlot ::
     )
     => Address
     -> Slot
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract w s e (Map TxOutRef OffChainTxOut)
 watchAddressUntilSlot a slot = awaitSlot slot >> utxosAt a
 
 -- | Wait until the target time and get the unspent transaction outputs at an
@@ -580,7 +579,7 @@ watchAddressUntilTime ::
     )
     => Address
     -> POSIXTime
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract w s e (Map TxOutRef OffChainTxOut)
 watchAddressUntilTime a time = awaitTime time >> utxosAt a
 
 {-| Wait until the UTXO has been spent, returning the transaction that spends it.
@@ -633,7 +632,7 @@ fundsAtAddressGt
        )
     => Address
     -> Value
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract w s e (Map TxOutRef OffChainTxOut)
 fundsAtAddressGt addr vl =
     fundsAtAddressCondition (\presentVal -> presentVal `V.gt` vl) addr
 
@@ -643,11 +642,11 @@ fundsAtAddressCondition
        )
     => (Value -> Bool)
     -> Address
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract w s e (Map TxOutRef OffChainTxOut)
 fundsAtAddressCondition condition addr = loopM go () where
     go () = do
         cur <- utxosAt addr
-        let presentVal = foldMap (view ciTxOutValue) cur
+        let presentVal = foldMap ocTxOutValue cur
         if condition presentVal
             then pure (Right cur)
             else awaitUtxoProduced addr >> pure (Left ())
@@ -661,7 +660,7 @@ fundsAtAddressGeq
        )
     => Address
     -> Value
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract w s e (Map TxOutRef OffChainTxOut)
 fundsAtAddressGeq addr vl =
     fundsAtAddressCondition (\presentVal -> presentVal `V.geq` vl) addr
 
@@ -878,7 +877,7 @@ submitTxConstraintsSpending
   , AsContractError e
   )
   => TypedValidator a
-  -> Map TxOutRef ChainIndexTxOut
+  -> Map TxOutRef OffChainTxOut
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
 submitTxConstraintsSpending inst utxo =

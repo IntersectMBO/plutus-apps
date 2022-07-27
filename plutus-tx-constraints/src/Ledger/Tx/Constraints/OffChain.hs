@@ -199,11 +199,11 @@ processConstraint = \case
     P.MustSpendPubKeyOutput txo -> do
         txout <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo
         case txout of
-          Tx.PublicKeyChainIndexTxOut {} -> do
+          Tx.PublicKeyOffChainTxOut {} -> do
               txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
               unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
-            --   valueSpentInputs <>= provided _ciTxOutValue
-          _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+          Tx.ScriptOffChainTxOut {} ->
+            throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
 
     P.MustPayToPubKeyAddress pk mskh md vl -> do
 

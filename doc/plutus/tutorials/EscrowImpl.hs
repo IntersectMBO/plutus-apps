@@ -308,7 +308,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
                 <> Constraints.mustValidateIn valRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
-    else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
+    else if foldMap Tx.ocTxOutValue unspentOutputs `lt` targetTotal escrow
          then throwing _RedeemFailed NotEnoughFundsAtAddress
          else do
            utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
@@ -338,7 +338,11 @@ refund ::
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = either id Scripts.datumHash (Tx._ciTxOutScriptDatum ciTxOut) == Scripts.datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let flt _ ocTxOut = case ocTxOut of
+                          Tx.ScriptOffChainTxOut _vh _v dh _m_va _m_da _m_rs ->
+                            dh == Scripts.datumHash (Datum (PlutusTx.toBuiltinData pk))
+                          Tx.PublicKeyOffChainTxOut {} ->
+                            False
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
@@ -361,7 +365,7 @@ payRedeemRefund params vl = do
     let inst = typedValidator params
         go = do
             cur <- utxosAt (Scripts.validatorAddress inst)
-            let presentVal = foldMap (view Tx.ciTxOutValue) cur
+            let presentVal = foldMap Tx.ocTxOutValue cur
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do

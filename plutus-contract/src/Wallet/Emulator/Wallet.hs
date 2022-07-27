@@ -45,7 +45,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..),
+import Ledger (Address (addressCredential), CardanoTx, Params (..),
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), SomeCardanoApiTx, StakePubKey,
@@ -291,7 +291,7 @@ handleWallet = \case
         handleAddSignature txCTx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
-    totalFundsH = foldMap (view Ledger.ciTxOutValue) <$> (get >>= ownOutputs)
+    totalFundsH = foldMap Tx.ocTxOutValue <$> (get >>= ownOutputs)
 
     yieldUnbalancedTxH ::
         ( Member (Error WalletAPIError) effs
@@ -391,7 +391,7 @@ ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
     )
     => WalletState
-    -> Eff effs (Map.Map TxOutRef ChainIndexTxOut)
+    -> Eff effs (Map.Map TxOutRef Tx.OffChainTxOut)
 ownOutputs WalletState{_mockWallet} = do
     refs <- allUtxoSet (Just def)
     Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
@@ -407,7 +407,7 @@ ownOutputs WalletState{_mockWallet} = do
       nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
       pure $ ChainIndex.pageItems refPage ++ nextItems
 
-    txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, ChainIndexTxOut))
+    txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, Tx.OffChainTxOut))
     txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.unspentTxOutFromRef ref
 
 lookupValue ::
@@ -419,9 +419,10 @@ lookupValue ::
 lookupValue outputRef@TxIn {txInRef} = do
     txoutMaybe <- ChainIndex.unspentTxOutFromRef txInRef
     case txoutMaybe of
-        Just txout -> pure $ view Ledger.ciTxOutValue txout
+        Just txout ->
+          pure $ Tx.ocTxOutValue txout
         Nothing ->
-            WAPI.throwOtherError $ "Unable to find TxOut for " <> fromString (show outputRef)
+          WAPI.throwOtherError $ "Unable to find TxOut for " <> fromString (show outputRef)
 
 -- | Balance an unbalanced transaction by adding missing inputs and outputs
 handleBalanceTx ::
@@ -432,7 +433,7 @@ handleBalanceTx ::
     , Member (Error WAPI.WalletAPIError) effs
     , Member (LogMsg TxBalanceMsg) effs
     )
-    => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
+    => Map.Map TxOutRef Tx.OffChainTxOut -- ^ The current wallet's unspent transaction outputs.
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo utx = do
@@ -513,12 +514,12 @@ addOutput pk sk vl tx = tx & over Tx.outputs (++ pkos) where
 addCollateral
     :: ( Member (Error WAPI.WalletAPIError) effs
        )
-    => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
+    => Map.Map TxOutRef Tx.OffChainTxOut -- ^ The current wallet's unspent transaction outputs.
     -> Value
     -> Tx
     -> Eff effs Tx
 addCollateral mp vl tx = do
-    (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
+    (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second Tx.ocTxOutValue <$> Map.toList mp)) vl
     let addTxCollateral =
             let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
             in over Tx.collateralInputs (Set.union ins)
@@ -530,14 +531,14 @@ addCollateral mp vl tx = do
 addInputs
     :: ( Member (Error WAPI.WalletAPIError) effs
        )
-    => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
+    => Map.Map TxOutRef Tx.OffChainTxOut -- ^ The current wallet's unspent transaction outputs.
     -> PaymentPubKey
     -> Maybe StakePubKey
     -> Value
     -> Tx
     -> Eff effs Tx
 addInputs mp pk sk vl tx = do
-    (spend, change) <- selectCoin (second (view Ledger.ciTxOutValue) <$> Map.toList mp) vl
+    (spend, change) <- selectCoin (second Tx.ocTxOutValue <$> Map.toList mp) vl
     let
 
         addTxIns =

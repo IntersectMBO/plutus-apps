@@ -49,7 +49,11 @@ badRefund ::
 badRefund inst pk = do
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     current <- currentTime
-    let flt _ ciTxOut = either id Ledger.datumHash (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let flt _ ocTxOut = case ocTxOut of
+                          Tx.ScriptOffChainTxOut _vh _v dh _m_va _m_da _m_rs ->
+                            dh == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+                          Tx.PublicKeyOffChainTxOut {} ->
+                            False
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateIn (from (current - 1))
     utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst

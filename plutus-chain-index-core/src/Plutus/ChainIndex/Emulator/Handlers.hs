@@ -87,34 +87,16 @@ getTxOutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.OffChainTxOut)
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout@(ChainIndexTxOut address value datum refScript) -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential address of
-        PubKeyCredential _ ->
-          pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
-        ScriptCredential vh@(ValidatorHash h) -> do
-          case datum of
-            OutputDatumHash dh -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ L.ScriptChainIndexTxOut address value d script v
-            OutputDatum d -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
-            NoOutputDatum -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-      where
-        script = fromReferenceScript refScript
-
+    Nothing -> do
+      logWarn (TxOutNotFound ref)
+      pure Nothing
+    Just txOut ->
+      makeOffChainTxOut txOut
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
@@ -123,33 +105,51 @@ getUtxoutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.OffChainTxOut)
 getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout@(ChainIndexTxOut address value datum refScript) -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ citoAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
-        ScriptCredential vh@(ValidatorHash h) -> do
-          case datum of
-            OutputDatumHash dh -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ L.ScriptChainIndexTxOut address value d script v
-            OutputDatum d -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
-            NoOutputDatum -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-      where
-        script = fromReferenceScript refScript
+    Nothing -> do
+      logWarn (TxOutNotFound ref)
+      pure Nothing
+    Just txOut ->
+      makeOffChainTxOut txOut
+
+makeOffChainTxOut ::
+  forall effs.
+  ( Member (State ChainIndexEmulatorState) effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => ChainIndexTxOut
+  -> Eff effs (Maybe L.OffChainTxOut)
+makeOffChainTxOut txOut@(ChainIndexTxOut address value datum refScript) = do
+  ds <- gets (view diskState)
+  -- The output might come from a public key address or a script address.
+  -- We need to handle them differently.
+  case addressCredential address of
+    PubKeyCredential pkh ->
+      case datum of
+        OutputDatumHash dh ->
+          pure $ Just $ L.mkPublicKeyOffChainTxOut pkh value (Just (Left dh)) (fromReferenceScript refScript)
+        OutputDatum d ->
+          pure $ Just $ L.mkPublicKeyOffChainTxOut pkh value (Just (Right d)) (fromReferenceScript refScript)
+        NoOutputDatum ->
+          pure $ Just $ L.mkPublicKeyOffChainTxOut pkh value Nothing (fromReferenceScript refScript)
+    ScriptCredential vh@(ValidatorHash h) -> do
+      case datum of
+        OutputDatumHash dh -> do
+          let voh = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
+          let doh = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
+          pure $ Just $ L.mkScriptOffChainTxOut voh value doh (fromReferenceScript refScript)
+        OutputDatum d -> do
+          let voh = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
+          pure $ Just $ L.mkScriptOffChainTxOut voh value (Right d) (fromReferenceScript refScript)
+        NoOutputDatum -> do
+          -- If the txout comes from a script address, the Datum should not be Nothing
+          logWarn $ NoDatumScriptAddr txOut
+          pure Nothing
+
 
 
 -- | Unspent outputs located at addresses with the given credential.

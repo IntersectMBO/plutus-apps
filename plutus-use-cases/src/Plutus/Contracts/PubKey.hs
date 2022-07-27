@@ -69,7 +69,7 @@ pubKeyContract
     )
     => PaymentPubKeyHash
     -> Value
-    -> Contract w s e (TxOutRef, Maybe ChainIndexTxOut, TypedValidator PubKeyContract)
+    -> Contract w s e (TxOutRef, Maybe OffChainTxOut, TypedValidator PubKeyContract)
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     let inst = typedValidator pk
         address = Scripts.validatorAddress inst
@@ -108,8 +108,8 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
             slot <- currentSlot
             awaitChainIndexSlot slot
 
-            ciTxOut <- unspentTxOutFromRef outRef
-            pure (outRef, ciTxOut, inst)
+            ocTxOut <- unspentTxOutFromRef outRef
+            pure (outRef, ocTxOut, inst)
         _                    -> throwing _MultipleScriptOutputs pk
 
 -- | Temporary. Read TODO in 'pubKeyContract'.

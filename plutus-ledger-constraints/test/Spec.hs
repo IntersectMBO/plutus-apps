@@ -167,13 +167,13 @@ testScriptInputs lookups txc = property $ do
             Hedgehog.failure
 
 
-txOut0 :: Ledger.ChainIndexTxOut
-txOut0 = Ledger.ScriptChainIndexTxOut
-          (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
-          mempty
-          (Right Ledger.unitDatum)
-          Nothing
-          (Left alwaysSucceedValidatorHash)
+txOut0 :: Ledger.OffChainTxOut
+txOut0 =
+  Ledger.mkScriptOffChainTxOut
+    (Left alwaysSucceedValidatorHash)
+    mempty
+    (Right Ledger.unitDatum)
+    Nothing
 
 txOutRef0 :: Ledger.TxOutRef
 txOutRef0 = Ledger.TxOutRef (Ledger.TxId "") 0
@@ -202,18 +202,18 @@ validator1 = Scripts.mkTypedValidator
 validatorHash1 :: Ledger.ValidatorHash
 validatorHash1 = Scripts.validatorHash validator1
 
-txOut1 :: Ledger.ChainIndexTxOut
-txOut1 = Ledger.ScriptChainIndexTxOut
-  (Ledger.Address (ScriptCredential validatorHash1) Nothing)
-  mempty
-  (Right Ledger.unitDatum)
-  Nothing
-  (Left validatorHash1)
+txOut1 :: Ledger.OffChainTxOut
+txOut1 =
+  Ledger.mkScriptOffChainTxOut
+    (Left validatorHash1)
+    mempty
+    (Right Ledger.unitDatum)
+    Nothing
 
 txOutRef1 :: Ledger.TxOutRef
 txOutRef1 = Ledger.TxOutRef (Ledger.TxId "") 1
 
-utxo1 :: Map.Map Ledger.TxOutRef Ledger.ChainIndexTxOut
+utxo1 :: Map.Map Ledger.TxOutRef Ledger.OffChainTxOut
 utxo1 = Map.fromList [(txOutRef0, txOut0), (txOutRef1, txOut1)]
 
 {-# INLINABLE constraints1 #-}

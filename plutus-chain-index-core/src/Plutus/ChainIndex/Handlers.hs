@@ -162,13 +162,16 @@ getTxOutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.OffChainTxOut)
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   mTx <- getTxFromTxId txOutRefId
   -- Find the output in the tx matching the output ref
   case mTx ^? _Just . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx) of
-    Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> makeChainIndexTxOut txout
+    Nothing    -> do
+      logWarn (TxOutNotFound ref)
+      pure Nothing
+    Just txout ->
+      makeChainIndexTxOut txout
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
@@ -177,12 +180,15 @@ getUtxoutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.OffChainTxOut)
 getUtxoutFromRef txOutRef = do
     mTxOut <- queryOne $ queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut txOutRef
     case mTxOut of
-      Nothing    -> logWarn (TxOutNotFound txOutRef) >> pure Nothing
-      Just txout -> makeChainIndexTxOut txout
+      Nothing    -> do
+        logWarn (TxOutNotFound txOutRef)
+        pure Nothing
+      Just txout ->
+        makeChainIndexTxOut txout
 
 makeChainIndexTxOut ::
   forall effs.
@@ -190,20 +196,26 @@ makeChainIndexTxOut ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => ChainIndexTxOut
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.OffChainTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) =
   case addressCredential address of
-    PubKeyCredential _ ->
-      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
+    PubKeyCredential pkh ->
+      case datum of
+        OutputDatumHash dh ->
+          pure $ Just $ L.mkPublicKeyOffChainTxOut pkh value (Just (Left dh)) script
+        OutputDatum d ->
+          pure $ Just $ L.mkPublicKeyOffChainTxOut pkh value (Just (Right d)) script
+        NoOutputDatum ->
+          pure $ Just $ L.mkPublicKeyOffChainTxOut pkh value Nothing script
     ScriptCredential vh ->
       case datum of
         OutputDatumHash dh -> do
-          v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut address value d script v
+          voh <- maybe (Left vh) Right <$> getScriptFromHash vh
+          doh <- maybe (Left dh) Right <$> getDatumFromHash dh
+          pure $ Just $ L.mkScriptOffChainTxOut voh value doh script
         OutputDatum d -> do
-          v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
+          voh <- maybe (Left vh) Right <$> getScriptFromHash vh
+          pure $ Just $ L.mkScriptOffChainTxOut voh value (Right d) script
         NoOutputDatum -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
@@ -252,7 +264,7 @@ getTxOutSetAtAddress ::
   )
   => PageQuery TxOutRef
   -> Credential
-  -> Eff effs (QueryResponse [(TxOutRef, L.ChainIndexTxOut)])
+  -> Eff effs (QueryResponse [(TxOutRef, L.OffChainTxOut)])
 getTxOutSetAtAddress pageQuery cred = do
   (UtxosResponse tip page) <- getUtxoSetAtAddress pageQuery cred
   case tip of

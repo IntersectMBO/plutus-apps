@@ -41,11 +41,11 @@ run' :: Contract () EmptySchema IError ()
 run' = do
     logInfo @Haskell.String "Starting integration test"
     pkh <- ownFirstPaymentPubKeyHash
-    (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))
+    (txOutRef, ocTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))
     logInfo @Haskell.String "pubKey contract complete:"
     let lookups =
             Constraints.otherData (Datum $ getRedeemer unitRedeemer)
-            <> Constraints.unspentOutputs (maybe mempty (Map.singleton txOutRef) ciTxOut)
+            <> Constraints.unspentOutputs (maybe mempty (Map.singleton txOutRef) ocTxOut)
             <> Constraints.otherScript  (Scripts.validatorScript pkInst)
         constraints =
             Constraints.mustSpendScriptOutput txOutRef unitRedeemer

@@ -11,7 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Map (Map)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (UntypedConstraints)
-import Ledger.Tx (ChainIndexTxOut)
+import Ledger.Tx (OffChainTxOut)
 import Plutus.Contract.Typed.Tx qualified as Typed
 import Plutus.Script.Utils.V1.Address qualified as Address
 import Plutus.V1.Ledger.Api (Redeemer (Redeemer), TxOutRef, Validator)
@@ -21,7 +21,7 @@ import PlutusTx qualified
 --   from the address of the given validator script, using the same redeemer
 --   script for all outputs.
 collectFromScript
-    :: Map Address.Address (Map TxOutRef ChainIndexTxOut)
+    :: Map Address.Address (Map TxOutRef OffChainTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
@@ -29,8 +29,8 @@ collectFromScript = collectFromScriptFilter (\_ -> const True)
 
 -- | See
 collectFromScriptFilter
-    :: (TxOutRef -> ChainIndexTxOut -> Bool)
-    -> Map Address.Address (Map TxOutRef ChainIndexTxOut)
+    :: (TxOutRef -> OffChainTxOut -> Bool)
+    -> Map Address.Address (Map TxOutRef OffChainTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints

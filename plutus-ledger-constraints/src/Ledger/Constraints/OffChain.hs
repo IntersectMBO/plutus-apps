@@ -59,7 +59,7 @@ module Ledger.Constraints.OffChain(
     , lookupTxOutRef
     ) where
 
-import Control.Lens (Traversal', _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
+import Control.Lens (Traversal', _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -97,7 +97,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
+import Ledger.Tx (OffChainTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
@@ -118,7 +118,7 @@ data ScriptLookups a =
     ScriptLookups
         { slMPS                  :: Map MintingPolicyHash MintingPolicy
         -- ^ Minting policies that the script interacts with
-        , slTxOutputs            :: Map TxOutRef ChainIndexTxOut
+        , slTxOutputs            :: Map TxOutRef OffChainTxOut
         -- ^ Unspent outputs that the script may want to spend
         , slOtherScripts         :: Map ValidatorHash Validator
         -- ^ Validators of scripts other than "our script"
@@ -181,7 +181,7 @@ typedValidatorLookups inst =
 
 -- | A script lookups value that uses the map of unspent outputs to resolve
 --   input constraints.
-unspentOutputs :: Map TxOutRef ChainIndexTxOut -> ScriptLookups a
+unspentOutputs :: Map TxOutRef OffChainTxOut -> ScriptLookups a
 unspentOutputs mp = mempty { slTxOutputs = mp }
 
 -- | A script lookups value with a minting policy script.
@@ -499,9 +499,9 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
       $ runExcept @Typed.ConnectionError
       $ do
           (txOut, datum) <- maybe (throwError UnknownRef) pure $ do
-                                ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _Right
-                                pure (Tx.toTxOut ciTxOut, datum)
+                                ocTxOut <- Map.lookup icTxOutRef slTxOutputs
+                                datum <- Tx.ocTxOutDatum ocTxOut
+                                pure (Tx.toTxOut ocTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
@@ -563,7 +563,7 @@ lookupTxOutRef
        , MonadError MkTxError m
        )
     => TxOutRef
-    -> m ChainIndexTxOut
+    -> m OffChainTxOut
 lookupTxOutRef outRef =
     let err = throwError (TxOutRefNotFound outRef) in
     asks slTxOutputs >>= maybe err pure . view (at outRef)
@@ -619,13 +619,14 @@ processConstraint = \case
     MustSpendAtLeast vl -> valueSpentInputs <>= required vl
     MustProduceAtLeast vl -> valueSpentOutputs <>= required vl
     MustSpendPubKeyOutput txo -> do
-        txout <- lookupTxOutRef txo
-        case txout of
-          Tx.PublicKeyChainIndexTxOut { Tx._ciTxOutValue } -> do
-              -- TODO: Add the optional datum in the witness set for the pub key output
-              unbalancedTx . tx . Tx.inputs %= Set.insert (Tx.pubKeyTxIn txo)
-              valueSpentInputs <>= provided _ciTxOutValue
-          _ -> throwError (TxOutRefWrongType txo)
+        txOut <- lookupTxOutRef txo
+        case txOut of
+          (Tx.PublicKeyOffChainTxOut _pkh va _m_dh _m_da _m_sc) -> do
+            -- TODO: Add the optional datum in the witness set for the pub key output
+            unbalancedTx . tx . Tx.inputs %= Set.insert (Tx.pubKeyTxIn txo)
+            valueSpentInputs <>= provided va
+          (Tx.ScriptOffChainTxOut _vh _va _dh _m_val _m_da _m_sc) ->
+            throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red -> do
         txout <- lookupTxOutRef txo
         mscriptTXO <- resolveScriptTxOut txout
@@ -710,15 +711,18 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Validator, Datum, Value))
-resolveScriptTxOut Tx.ScriptChainIndexTxOut { Tx._ciTxOutValidator, Tx._ciTxOutScriptDatum, Tx._ciTxOutValue } = do
-    -- first check in the 'ChainIndexTx' for the validator, then
-    -- look for it in the 'slOtherScripts map.
-    validator <- either lookupValidator pure _ciTxOutValidator
+    => OffChainTxOut -> m (Maybe (Validator, Datum, Value))
+resolveScriptTxOut (Tx.PublicKeyOffChainTxOut _pkh _va _m_dh _m_da _m_sc) =
+  pure Nothing
+resolveScriptTxOut (Tx.ScriptOffChainTxOut vh va dh m_val m_da _m_sc) = do
+  -- If we don't have a validator already, look for it in the 'slOtherScripts map.
+  validator <- case m_val of
+    Just val -> pure val
+    Nothing  -> lookupValidator vh
 
-    -- first check in the 'ChainIndexTx' for the datum, then
-    -- look for it in the 'slOtherData' map.
-    dataValue <- either lookupDatum pure _ciTxOutScriptDatum
+  -- Same for the datum
+  dataValue <- case m_da of
+    Just da -> pure da
+    Nothing -> lookupDatum dh
 
-    pure $ Just (validator, dataValue, _ciTxOutValue)
-resolveScriptTxOut _ = pure Nothing
+  pure $ Just (validator, dataValue, va)

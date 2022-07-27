@@ -205,7 +205,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
     nextTime <- awaitTime 0
     unspentOutputs <- utxosAt addr
     let
-        currentlyLocked = foldMap (view Tx.ciTxOutValue) (Map.elems unspentOutputs)
+        currentlyLocked = foldMap Tx.ocTxOutValue (Map.elems unspentOutputs)
         remainingValue = currentlyLocked - payment
         mustRemainLocked = totalAmount vesting - availableAt vesting nextTime
         maxPayment = currentlyLocked - mustRemainLocked

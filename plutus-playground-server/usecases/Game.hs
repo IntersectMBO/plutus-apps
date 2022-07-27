@@ -31,7 +31,7 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Tx (ChainIndexTxOut (..))
+import Ledger.Tx (OffChainTxOut (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract
@@ -137,14 +137,15 @@ guess = endpoint @"guess" @GuessParams $ \(GuessParams theGuess) -> do
     void (submitTxConstraintsSpending gameInstance utxos tx)
 
 -- | Find the secret word in the Datum of the UTxOs
-findSecretWordValue :: Map TxOutRef ChainIndexTxOut -> Maybe HashedString
+findSecretWordValue :: Map TxOutRef OffChainTxOut -> Maybe HashedString
 findSecretWordValue =
   listToMaybe . catMaybes . Map.elems . Map.map secretWordValue
 
 -- | Extract the secret word in the Datum of a given transaction output is possible
-secretWordValue :: ChainIndexTxOut -> Maybe HashedString
+secretWordValue :: OffChainTxOut -> Maybe HashedString
 secretWordValue o = do
-  Datum d <- either (const Nothing) Just (_ciTxOutScriptDatum o)
+  -- FIXME is it important to check txOut is a script?
+  Datum d <- ocTxOutDatum o
   PlutusTx.fromBuiltinData d
 
 game :: AsContractError e => Contract () GameSchema e ()
