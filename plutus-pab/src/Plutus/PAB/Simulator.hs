@@ -46,6 +46,8 @@ module Plutus.PAB.Simulator(
     , instanceState
     , observableState
     , waitForState
+    , waitForInstanceState
+    , waitForInstanceStateWithResult
     , activeEndpoints
     , waitForEndpoint
     , waitForTxStatusChange
@@ -136,7 +138,7 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent' (ChainEvent, ChainIndexEvent),
 import Wallet.Emulator.Stream qualified as Emulator
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
 import Wallet.Emulator.Wallet qualified as Wallet
-import Wallet.Types (ContractInstanceId, NotificationError)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId, NotificationError)
 
 -- | The current state of a contract instance
 data SimulatorContractInstanceState t =
@@ -382,6 +384,16 @@ observableState = Core.observableState
 -- | Wait until the observable state of the instance matches a predicate.
 waitForState :: forall t a. (JSON.Value -> Maybe a) -> ContractInstanceId -> Simulation t a
 waitForState = Core.waitForState
+
+waitForInstanceState ::
+  forall t.
+  (Instances.InstanceState -> STM (Maybe ContractActivityStatus)) ->
+  ContractInstanceId ->
+  Simulation t ContractActivityStatus
+waitForInstanceState = Core.waitForInstanceState
+
+waitForInstanceStateWithResult :: forall t. ContractInstanceId -> Simulation t ContractActivityStatus
+waitForInstanceStateWithResult = Core.waitForInstanceStateWithResult
 
 -- | The list of endpoints that are currently open
 activeEndpoints :: forall t. ContractInstanceId -> Simulation t (STM [OpenEndpoint])
