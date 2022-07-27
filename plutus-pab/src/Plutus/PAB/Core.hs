@@ -308,6 +308,7 @@ stopInstance instanceId = do
                 Active -> STM.putTMVar issStop () >> pure Nothing
                 _      -> pure (Just $ InstanceAlreadyStopped instanceId)
     traverse_ throwError r'
+    Contract.deleteState @t instanceId
 
 -- | The 'Activity' of the instance.
 instanceActivity :: forall t env. ContractInstanceId -> PABAction t env Activity
