@@ -9,8 +9,10 @@ module Plutus.Blockfrost.Queries (
     , getUnspentTxOutBlockfrost
     , getIsUtxoBlockfrost
     , getUtxoAtAddressBlockfrost
+    , getTxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
     , defaultGetUtxo
+    , defaultGetTxo
     , defaultIsUtxo
     ) where
 
@@ -50,6 +52,15 @@ getUtxoAtAddressBlockfrost _ addr = do
     return (tip, utxos)
 
 -- TODO: Pagination Support
+getTxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [UtxoInput]
+getTxoAtAddressBlockfrost _ a = do
+    addTxs <- getAddressTransactions a
+    txUtxos <- liftIO $ mapConcurrently (getTxUtxos . _addressTransactionTxHash) addTxs
+    let txos = concat $ map _transactionUtxosInputs txUtxos
+    return $ take 100 $ filter ((==) a . _utxoInputAddress) txos
+
+
+-- TODO: Pagination Support
 getUtxoSetWithCurrency :: MonadBlockfrost m => PageQuery a -> AssetId -> m (Block, [AddressUtxo])
 getUtxoSetWithCurrency _ assetId = do
     tip <- getTipBlockfrost
@@ -81,6 +92,9 @@ defaultGetUtxo :: MonadBlockfrost m => m (Block, [AddressUtxo])
 defaultGetUtxo = do
     tip <- getTipBlockfrost
     return (tip, [])
+
+defaultGetTxo :: MonadBlockfrost m => m [UtxoInput]
+defaultGetTxo = return []
 
 defaultIsUtxo :: MonadBlockfrost m => m (Block, Bool)
 defaultIsUtxo = do

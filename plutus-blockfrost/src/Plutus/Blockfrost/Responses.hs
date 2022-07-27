@@ -11,6 +11,7 @@ module Plutus.Blockfrost.Responses (
     , processUnspentTxOut
     , processIsUtxo
     , processGetUtxos
+    , processGetTxos
     , processUnspentTxOutSetAtAddress
     ) where
 
@@ -27,7 +28,7 @@ import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
-import Plutus.ChainIndex.Api (IsUtxoResponse (..), UnspentTxOutSetResponse (..), UtxosResponse (..))
+import Plutus.ChainIndex.Api (IsUtxoResponse (..), TxosResponse (..), UnspentTxOutSetResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
@@ -142,6 +143,18 @@ processGetUtxos pq (blockN, xs) = do
 
       items :: [TxOutRef]
       items = map utxoToRef xs
+
+processGetTxos :: PageQuery TxOutRef -> [UtxoInput] -> IO TxosResponse
+processGetTxos pq xs = return $ TxosResponse {paget=refPage}
+  where
+      refPage :: Page TxOutRef
+      refPage = Page {currentPageQuery=pq
+                  , nextPageQuery=Nothing
+                  , pageItems=items
+                  }
+
+      items :: [TxOutRef]
+      items = map txoToRef xs
 
 processUnspentTxOutSetAtAddress ::
     PageQuery (TxOutRef, ChainIndexTxOut)

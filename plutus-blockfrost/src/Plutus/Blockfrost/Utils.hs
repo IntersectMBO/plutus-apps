@@ -99,6 +99,17 @@ utxoToTxId :: AddressUtxo -> Ledger.TxId
 utxoToTxId utxo =
     Ledger.TxId $ toBuiltin $ fromJust $ decodeHex $ unTxHash $ _addressUtxoTxHash utxo
 
+
+txoToRef :: UtxoInput -> TxOutRef
+txoToRef txo = TxOutRef { txOutRefId=txoToTxId txo
+                          , txOutRefIdx=_utxoInputOutputIndex txo
+                          }
+
+txoToTxId :: UtxoInput -> Ledger.TxId
+txoToTxId txo =
+    Ledger.TxId $ toBuiltin $ fromJust $ decodeHex $ _utxoInputTxHash txo
+
+
 amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
 amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)
 

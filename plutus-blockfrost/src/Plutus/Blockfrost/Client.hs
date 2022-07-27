@@ -61,6 +61,6 @@ handleBlockfrostClient event = do
             UtxoSetMembership r           -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
             UtxoSetAtAddress pq a         -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processGetUtxos pq
             UtxoSetWithCurrency pq a      -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
-            TxoSetAtAddress _ _           -> ioError (userError "TODO")
+            TxoSetAtAddress pq a          -> (runClientWithDef defaultGetTxo  . getTxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a >>= processGetTxos pq
             GetTip                        -> runClient getTipBlockfrost >>= processTip
             UnspentTxOutSetAtAddress pq a -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processUnspentTxOutSetAtAddress pq a
