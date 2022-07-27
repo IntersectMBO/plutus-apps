@@ -81,10 +81,11 @@ runChainSyncWithCfg PABServerConfig { pscSocketPath
                                     , pscNetworkId
                                     , pscSlotConfig } =
     case pscNodeMode of
-      AlonzoNode ->
+      MockNode   ->
+          Left <$> MockClient.runChainSync' pscSocketPath pscSlotConfig
+      _ ->
           Right <$> Client.runChainSync' pscSocketPath
                                          pscSlotConfig
                                          (unNetworkIdWrapper pscNetworkId)
                                          []
-      MockNode   ->
-          Left <$> MockClient.runChainSync' pscSocketPath pscSlotConfig
+

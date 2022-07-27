@@ -102,6 +102,7 @@ startNodeClient config instancesState = do
                 STM.atomically $ STM.writeTVar (beCurrentSlot env) slot
                 processChainSyncEvent instancesState env block >>= handleSyncAction'
             )
+      NoChainSyncEvents -> pure ()
     pure env
     where
       nodeStartsInAlonzoMode :: NodeMode -> Bool
