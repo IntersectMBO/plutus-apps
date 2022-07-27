@@ -26,7 +26,7 @@ import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamableDb)
-import Control.Monad.Freer.Extras.Beam.Sqlite (BeamEffect (..), combined, selectList, selectOne, selectPage)
+import Control.Monad.Freer.Extras.Beam.Effects (BeamEffect (..), combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
 import Control.Monad.Freer.Extras.Pagination (Page (Page, nextPageQuery, pageItems), PageQuery (..))
 import Control.Monad.Freer.Reader (Reader, ask)
@@ -66,14 +66,14 @@ import Plutus.V1.Ledger.Api (Credential (..), Datum, DatumHash)
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 
-getResumePoints :: Member BeamEffect effs => Eff effs [C.ChainPoint]
+getResumePoints :: Member (BeamEffect Sqlite) effs => Eff effs [C.ChainPoint]
 getResumePoints
     = fmap (mapMaybe (toCardanoPoint . tipAsPoint . fromDbValue . Just))
     . selectList . select . orderBy_ (desc_ . _tipRowSlot) . all_ $ tipRows db
 
 handleQuery ::
     ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
+    , Member (BeamEffect Sqlite) effs
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
     ) => ChainIndexQueryEffect
@@ -100,17 +100,17 @@ handleQuery = \case
     TxsFromTxIds txids -> getTxsFromTxIds txids
     GetTip -> getTip
 
-getTip :: Member BeamEffect effs => Eff effs Tip
+getTip :: Member (BeamEffect Sqlite) effs => Eff effs Tip
 getTip = fmap fromDbValue . selectOne . select $ limit_ 1 (orderBy_ (desc_ . _tipRowSlot) (all_ (tipRows db)))
 
-getDatumFromHash :: Member BeamEffect effs => DatumHash -> Eff effs (Maybe Datum)
+getDatumFromHash :: Member (BeamEffect Sqlite) effs => DatumHash -> Eff effs (Maybe Datum)
 getDatumFromHash = queryOne . queryKeyValue datumRows _datumRowHash _datumRowDatum
 
-getTxFromTxId :: Member BeamEffect effs => TxId -> Eff effs (Maybe ChainIndexTx)
+getTxFromTxId :: Member (BeamEffect Sqlite) effs => TxId -> Eff effs (Maybe ChainIndexTx)
 getTxFromTxId = queryOne . queryKeyValue txRows _txRowTxId _txRowTx
 
 getScriptFromHash ::
-    ( Member BeamEffect effs
+    ( Member (BeamEffect Sqlite) effs
     , HasDbType i
     , DbType i ~ ByteString
     , HasDbType o
@@ -120,7 +120,7 @@ getScriptFromHash ::
 getScriptFromHash = queryOne . queryKeyValue scriptRows _scriptRowHash _scriptRowScript
 
 getRedeemerFromHash ::
-    ( Member BeamEffect effs
+    ( Member (BeamEffect Sqlite) effs
     , HasDbType i
     , DbType i ~ ByteString
     , HasDbType o
@@ -142,14 +142,14 @@ queryKeyValue table getKey getValue (toDbValue -> key) =
     select $ getValue <$> filter_ (\row -> getKey row ==. val_ key) (all_ (table db))
 
 queryOne ::
-    ( Member BeamEffect effs
+    ( Member (BeamEffect Sqlite) effs
     , HasDbType o
     ) => SqlSelect Sqlite (DbType o)
     -> Eff effs (Maybe o)
 queryOne = fmap (fmap fromDbValue) . selectOne
 
 queryList ::
-    ( Member BeamEffect effs
+    ( Member (BeamEffect Sqlite) effs
     , HasDbType o
     ) => SqlSelect Sqlite (DbType o)
     -> Eff effs [o]
@@ -158,7 +158,7 @@ queryList = fmap (fmap fromDbValue) . selectList
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getTxOutFromRef ::
   forall effs.
-  ( Member BeamEffect effs
+  ( Member (BeamEffect Sqlite) effs
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
@@ -173,7 +173,7 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
   forall effs.
-  ( Member BeamEffect effs
+  ( Member (BeamEffect Sqlite) effs
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
@@ -186,7 +186,7 @@ getUtxoutFromRef txOutRef = do
 
 makeChainIndexTxOut ::
   forall effs.
-  ( Member BeamEffect effs
+  ( Member (BeamEffect Sqlite) effs
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOut
@@ -210,7 +210,7 @@ makeChainIndexTxOut txout@(TxOut address value dh) =
 getUtxoSetAtAddress
   :: forall effs.
     ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
+    , Member (BeamEffect Sqlite) effs
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
@@ -243,7 +243,7 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
 getTxOutSetAtAddress ::
   forall effs.
   ( Member (State ChainIndexState) effs
-  , Member BeamEffect effs
+  , Member (BeamEffect Sqlite) effs
   , Member (LogMsg ChainIndexLog) effs
   )
   => PageQuery TxOutRef
@@ -263,7 +263,7 @@ getTxOutSetAtAddress pageQuery cred = do
 getUtxoSetWithCurrency
   :: forall effs.
     ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
+    , Member (BeamEffect Sqlite) effs
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
@@ -294,7 +294,7 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
 
 getTxsFromTxIds
   :: forall effs.
-    ( Member BeamEffect effs
+    ( Member (BeamEffect Sqlite) effs
     )
   => [TxId]
   -> Eff effs [ChainIndexTx]
@@ -312,7 +312,7 @@ getTxsFromTxIds txIds =
 getTxoSetAtAddress
   :: forall effs.
     ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
+    , Member (BeamEffect Sqlite) effs
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
@@ -337,7 +337,7 @@ appendBlocks ::
     forall effs.
     ( Member (State ChainIndexState) effs
     , Member (Reader Depth) effs
-    , Member BeamEffect effs
+    , Member (BeamEffect Sqlite) effs
     , Member (LogMsg ChainIndexLog) effs
     )
     => [ChainSyncBlock] -> Eff effs ()
@@ -373,7 +373,7 @@ handleControl ::
     forall effs.
     ( Member (State ChainIndexState) effs
     , Member (Reader Depth) effs
-    , Member BeamEffect effs
+    , Member (BeamEffect Sqlite) effs
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
     )
@@ -428,7 +428,7 @@ batchSize = 200
 insertUtxoDb
     :: [ChainIndexTx]
     -> [UtxoState.UtxoState TxUtxoBalance]
-    -> BeamEffect ()
+    -> (BeamEffect Sqlite) ()
 insertUtxoDb txs utxoStates =
     let
         go acc (UtxoState.UtxoState _ TipAtGenesis) = acc
@@ -451,7 +451,7 @@ insertUtxoDb txs utxoStates =
         , utxoOutRefRows = InsertRows $ (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) <$> txOuts
         }
 
-reduceOldUtxoDb :: Tip -> BeamEffect ()
+reduceOldUtxoDb :: Tip -> (BeamEffect Sqlite) ()
 reduceOldUtxoDb TipAtGenesis = Combined []
 reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
     -- Delete all the tips before 'slot'
@@ -485,7 +485,7 @@ reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
                 (all_ (unmatchedInputRows db))))
     ]
 
-rollbackUtxoDb :: Point -> BeamEffect ()
+rollbackUtxoDb :: Point -> (BeamEffect Sqlite) ()
 rollbackUtxoDb PointAtGenesis = DeleteRows $ delete (tipRows db) (const (val_ True))
 rollbackUtxoDb (Point (toDbValue -> slot) _) = Combined
     [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row >. val_ slot)
@@ -500,7 +500,7 @@ rollbackUtxoDb (Point (toDbValue -> slot) _) = Combined
     , DeleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
     ]
 
-restoreStateFromDb :: Member BeamEffect effs => Eff effs ChainIndexState
+restoreStateFromDb :: Member (BeamEffect Sqlite) effs => Eff effs ChainIndexState
 restoreStateFromDb = do
     uo <- selectList . select $ all_ (unspentOutputRows db)
     ui <- selectList . select $ all_ (unmatchedInputRows db)
@@ -528,7 +528,7 @@ instance Semigroup (InsertRows te) where
 instance BeamableDb Sqlite t => Monoid (InsertRows (TableEntity t)) where
     mempty = InsertRows []
 
-insertRows :: Db InsertRows -> BeamEffect ()
+insertRows :: Db InsertRows -> (BeamEffect Sqlite) ()
 insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRowsInBatches batchSize tbl rows) db
 
 fromTx :: ChainIndexTx -> Db InsertRows
@@ -563,7 +563,7 @@ fromTx tx = mempty
 
 
 diagnostics ::
-    ( Member BeamEffect effs
+    ( Member (BeamEffect Sqlite) effs
     , Member (State ChainIndexState) effs
     ) => Eff effs Diagnostics
 diagnostics = do

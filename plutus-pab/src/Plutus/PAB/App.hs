@@ -44,7 +44,9 @@ import Control.Concurrent.STM qualified as STM
 import Control.Lens (preview)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, type (~>))
 import Control.Monad.Freer.Error (Error, handleError, throwError)
-import Control.Monad.Freer.Extras.Beam (handleBeam)
+import Control.Monad.Freer.Extras.Beam.Effects (handleBeam)
+import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (runBeam)
+import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (runBeam)
 import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
@@ -72,7 +74,7 @@ import Plutus.PAB.Core.ContractInstance.STM as Instances (InstancesState, emptyI
 import Plutus.PAB.Db.Beam.ContractStore qualified as BeamEff
 import Plutus.PAB.Db.Memory.ContractStore (InMemInstances, initialInMemInstances)
 import Plutus.PAB.Db.Memory.ContractStore qualified as InMem
-import Plutus.PAB.Db.Schema (checkedPostgresDb)
+import Plutus.PAB.Db.Schema (checkedPostgresDb, checkedSqliteDb)
 import Plutus.PAB.Effects.Contract (ContractDefinition (AddDefinition, GetDefinitions))
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (BuiltinHandler, contractHandler),
                                             HasDefinitions (getDefinitions))
@@ -91,6 +93,8 @@ import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
 import Wallet.Types (ContractInstanceId)
 
+import Database.Beam.Postgres (Postgres)
+import Database.Beam.Sqlite (Sqlite)
 ------------------------------------------------------------
 
 -- | Application environment with a contract type `a`.
@@ -148,8 +152,8 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
               . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
               . interpret (Core.handleMappedReader @(AppEnv a) dbPool)
               . flip handleError (throwError . BeamEffectError)
-              . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
-              . reinterpretN @'[_, _, _, _, _] BeamEff.handleContractStore
+              . interpret (handleBeam Postgres.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
+              . reinterpretN @'[_, _, _, _, _] (BeamEff.handleContractStore @Postgres)
 
         , handleContractDefinitionEffect =
             interpret (handleLogMsgTrace trace)
@@ -157,7 +161,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . interpret (Core.handleMappedReader @(AppEnv a) dbPool)
             . flip handleError (throwError . BeamEffectError)
-            . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
+            . interpret (handleBeam Postgres.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
             . reinterpretN @'[_, _, _, _, _] handleContractDefinition
 
         , handleServicesEffects = \wallet cidM -> do
@@ -279,23 +283,31 @@ mkEnv appTrace appConfig@Config { dbConfig
 logDebugString :: Trace IO (PABLogMsg t) -> Text -> IO ()
 logDebugString trace = logDebug trace . SMultiAgent . UserLog
 
--- | Initialize/update the database to hold our effects.
-migrate :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO ()
-migrate trace config = do
-    pool <- dbConnect trace config
-    logDebugString trace "Running beam migration"
-    Pool.withResource pool (runBeamMigration trace)
+dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Postgres.Connection)
+dbConnect = dbConnectPostgres
 
-runBeamMigration
+migrate :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO ()
+migrate = migratePostgres
+
+
+-- POSTGRES
+-- | Initialize/update the database to hold our effects.
+migratePostgres :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO ()
+migratePostgres trace config = do
+    pool <- dbConnectPostgres trace config
+    logDebugString trace "Running beam migration"
+    Pool.withResource pool (runBeamMigrationPostgres trace)
+
+runBeamMigrationPostgres
   :: Trace IO (PABLogMsg (Builtin a))
   -> Postgres.Connection
   -> IO ()
-runBeamMigration trace conn = Postgres.runBeamPostgresDebug (logDebugString trace . pack) conn $ do
+runBeamMigrationPostgres trace conn = Postgres.runBeamPostgresDebug (logDebugString trace . pack) conn $ do
   autoMigrate Postgres.migrationBackend checkedPostgresDb
 
 -- | Connect to the database.
-dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Postgres.Connection)
-dbConnect trace DbConfig{..} = do
+dbConnectPostgres :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Postgres.Connection)
+dbConnectPostgres trace DbConfig{..} = do
   pool <- Pool.createPool
     (Postgres.connect Postgres.ConnectInfo {
       connectHost=unpack dbConfigHost,
@@ -313,6 +325,26 @@ dbConnect trace DbConfig{..} = do
   where
     databaseStr :: Text
     databaseStr = dbConfigHost <> ":" <> (pack . show) dbConfigPort
+
+-- SQLITE
+migrateSqlite :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO ()
+migrateSqlite trace config = do
+    pool <- dbConnectSqlite trace config
+    logDebugString trace "Running beam migration"
+    Pool.withResource pool (runBeamMigrationSqlite trace)
+
+runBeamMigrationSqlite
+  :: Trace IO (PABLogMsg (Builtin a))
+  -> Sqlite.Connection
+  -> IO ()
+runBeamMigrationSqlite trace conn = Sqlite.runBeamSqliteDebug (logDebugString trace . pack) conn $ do
+  autoMigrate Sqlite.migrationBackend checkedSqliteDb
+
+dbConnectSqlite :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Sqlite.Connection)
+dbConnectSqlite trace DbConfig {dbConfigPoolSize} = do
+  pool <- Pool.createPool (Sqlite.open $ unpack "./plutus-pab.db") Sqlite.close dbConfigPoolSize 5_000_000 5
+  logDebugString trace $ "Connecting to DB: " <> "./plutus-pab.db"
+  return pool
 
 handleContractDefinition ::
   forall a effs. HasDefinitions a
