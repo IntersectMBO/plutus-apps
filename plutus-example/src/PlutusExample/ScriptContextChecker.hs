@@ -134,6 +134,7 @@ createAnyCustomRedeemer _ sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedE
 
 createAnyCustomRedeemer pScriptVer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraBabbage ledgerTx) = do
   let txBody = getField @"body" ledgerTx
+      mint = getField @"mint" txBody
       txins = Set.toList $ getField @"inputs" txBody
       refTxins = Set.toList $ getField @"referenceInputs" txBody
       outputs = seqToList $ getField @"outputs" txBody
@@ -146,8 +147,13 @@ createAnyCustomRedeemer pScriptVer sbe pparams utxo eInfo sStart (ShelleyTx Shel
       txwit = getField @"wits" ledgerTx
       Alonzo.Redeemers rdmrs = getField @"txrdmrs" txwit
       rdmrList = Map.toList rdmrs
-
       bUtxo = toLedgerUTxO ShelleyBasedEraBabbage utxo
+      scriptsNeeded = Alonzo.scriptsNeeded bUtxo ledgerTx
+      sPurpose = case scriptsNeeded of
+                   [(p ,_)] -> Alonzo.transScriptPurpose p
+                   needed   -> Prelude.error $ "More than one redeemer ptr: " <> show needed
+
+
       -- Plutus script context types
   case pScriptVer of
     PlutusScriptV1 -> Prelude.error "createAnyCustomRedeemer: PlutusScriptV1 custom redeemer not wired up yet"
@@ -158,6 +164,7 @@ createAnyCustomRedeemer pScriptVer sbe pparams utxo eInfo sStart (ShelleyTx Shel
 
       let _bV2fee = V2.singleton V2.adaSymbol V2.adaToken fee -- Impossible to test
           _withdrawals = PMap.fromList . Map.toList $ Alonzo.transWdrl wdrwls -- untested
+          bvtMint =  Alonzo.transValue mint
       valRange <-
         first IntervalConvError
           $ Alonzo.transVITime (toLedgerPParams sbe pparams) eInfo sStart vldt
@@ -168,13 +175,14 @@ createAnyCustomRedeemer pScriptVer sbe pparams utxo eInfo sStart (ShelleyTx Shel
             , pv2RefInputs = bV2RefIns
             , pv2Outputs = bV2Outputs
             , pv2Fee = PPrelude.mempty -- Impossible to test
-            , pv2Mint = PPrelude.mempty -- TODO: Not tested
+            , pv2Mint = bvtMint
             , pv2DCert = Prelude.map Alonzo.transDCert certs
             , pv2Wdrl = PMap.empty -- TODO: Not tested
             , pv2ValidRange = valRange -- TODO: Fails when using (/=)
             , pv2Signatories = Prelude.map Alonzo.transKeyHash reqSigners
             , pv2Redeemers = PMap.fromList redeemrs
             , pv2Data = PMap.fromList . Prelude.map Alonzo.transDataPair $ Map.toList datumHashMap
+            , pv2ScriptPurpose = Just sPurpose
             }
 
 createAnyCustomRedeemer _ _ _ _ _ _ _ = Left NoScriptsInByronEra
@@ -336,4 +344,5 @@ sampleTestV2ScriptContextDataJSON =
        , pv2Signatories = []
        , pv2Redeemers = PMap.empty
        , pv2Data = PMap.empty
+       , pv2ScriptPurpose = Nothing
        }

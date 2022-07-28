@@ -9,6 +9,8 @@ module PlutusExample.PlutusVersion2.RedeemerContextEquivalence
   ( PV2CustomRedeemer (..)
   , v2ScriptContextEquivalenceScript
   , v2ScriptContextEquivalenceSbs
+  , v2mintEquivScript
+  , v2mintEquivScriptShortBs
   ) where
 
 import Prelude hiding (($))
@@ -21,6 +23,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
 
+import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies as V2
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators as V2
 import Plutus.V2.Ledger.Api qualified as V2
 import Plutus.V2.Ledger.Contexts as V2
@@ -31,17 +34,18 @@ newtype MyCustomDatumV2 = MyCustomDatumV2 Integer
 
 data PV2CustomRedeemer
   = PV2CustomRedeemer
-      { pv2Inputs      :: [V2.TxInInfo]
-      , pv2RefInputs   :: [V2.TxInInfo]
-      , pv2Outputs     :: [V2.TxOut]
-      , pv2Fee         :: V2.Value
-      , pv2Mint        :: V2.Value
-      , pv2DCert       :: [V2.DCert]
-      , pv2Wdrl        :: V2.Map V2.StakingCredential Integer
-      , pv2ValidRange  :: V2.POSIXTimeRange
-      , pv2Signatories :: [V2.PubKeyHash]
-      , pv2Redeemers   :: V2.Map ScriptPurpose V2.Redeemer
-      , pv2Data        :: V2.Map V2.DatumHash V2.Datum
+      { pv2Inputs        :: [V2.TxInInfo]
+      , pv2RefInputs     :: [V2.TxInInfo]
+      , pv2Outputs       :: [V2.TxOut]
+      , pv2Fee           :: V2.Value
+      , pv2Mint          :: V2.Value
+      , pv2DCert         :: [V2.DCert]
+      , pv2Wdrl          :: V2.Map V2.StakingCredential Integer
+      , pv2ValidRange    :: V2.POSIXTimeRange
+      , pv2Signatories   :: [V2.PubKeyHash]
+      , pv2Redeemers     :: V2.Map ScriptPurpose V2.Redeemer
+      , pv2Data          :: V2.Map V2.DatumHash V2.Datum
+      , pv2ScriptPurpose :: Maybe V2.ScriptPurpose
       } deriving (Prelude.Eq, Show)
 
 PlutusTx.unstableMakeIsData ''MyCustomDatumV2
@@ -72,17 +76,17 @@ mkValidator _ redeemer scriptContext =
   txInfo = V2.scriptContextTxInfo scriptContext
 
   inputsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  inputsAreEquivalent (PV2CustomRedeemer inputs _ _ _ _ _ _ _ _ _ _) tInfo =
+  inputsAreEquivalent (PV2CustomRedeemer inputs _ _ _ _ _ _ _ _ _ _ _) tInfo =
     (PlutusPrelude.map txInInfoResolved $ V2.txInfoInputs tInfo) PlutusPrelude.==
     PlutusPrelude.map txInInfoResolved inputs
 
   referenceInputsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  referenceInputsAreEquivalent (PV2CustomRedeemer _ refInputs _ _ _ _ _ _ _ _ _) tInfo =
+  referenceInputsAreEquivalent (PV2CustomRedeemer _ refInputs _ _ _ _ _ _ _ _ _ _) tInfo =
     (PlutusPrelude.map txInInfoResolved $ V2.txInfoReferenceInputs tInfo) PlutusPrelude.==
     PlutusPrelude.map txInInfoResolved refInputs
 
   outputsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  outputsAreEquivalent (PV2CustomRedeemer _ _ outputs _ _ _ _ _ _ _ _) tInfo =
+  outputsAreEquivalent (PV2CustomRedeemer _ _ outputs _ _ _ _ _ _ _ _ _) tInfo =
     let scOuts = V2.txInfoOutputs tInfo
         scOutAddrs = PlutusPrelude.map V2.txOutAddress scOuts
         scOutValue = PlutusPrelude.map V2.txOutValue scOuts
@@ -110,7 +114,7 @@ mkValidator _ redeemer scriptContext =
        (PlutusPrelude.length (nub $ scOutValue PlutusPrelude.++ redeemerOutValue) PlutusPrelude.== 3)
 
   certsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  certsAreEquivalent (PV2CustomRedeemer _ _ _ _ _ certs _ _ _ _ _) tInfo =
+  certsAreEquivalent (PV2CustomRedeemer _ _ _ _ _ certs _ _ _ _ _ _) tInfo =
     V2.txInfoDCert tInfo PlutusPrelude.== certs
 
   --validtyIntervalsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
@@ -119,15 +123,15 @@ mkValidator _ redeemer scriptContext =
     -- V2.ivFrom (V2.txInfoValidRange tInfo) PlutusPrelude.== V2.ivFrom validInterval Fails
 
   reqSignersAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  reqSignersAreEquivalent (PV2CustomRedeemer _ _ _ _ _ _ _ _ reqSigners _ _) tInfo =
+  reqSignersAreEquivalent (PV2CustomRedeemer _ _ _ _ _ _ _ _ reqSigners _ _ _) tInfo =
     V2.txInfoSignatories tInfo PlutusPrelude.== reqSigners
 
   datumHashMapsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  datumHashMapsAreEquivalent (PV2CustomRedeemer _ _ _ _ _ _ _ _ _ _ datumHashMap) tInfo =
+  datumHashMapsAreEquivalent (PV2CustomRedeemer _ _ _ _ _ _ _ _ _ _ datumHashMap _) tInfo =
     V2.txInfoData tInfo PlutusPrelude.== datumHashMap
 
   correctNumberOfRedeemers :: PV2CustomRedeemer -> V2.TxInfo -> Bool
-  correctNumberOfRedeemers (PV2CustomRedeemer _ _ _ _ _ _ _ _ _ redeemers _) tInfo =
+  correctNumberOfRedeemers (PV2CustomRedeemer _ _ _ _ _ _ _ _ _ redeemers _ _) tInfo =
     PlutusPrelude.length (V2.txInfoRedeemers tInfo) PlutusPrelude.== PlutusPrelude.length redeemers
 
   -- TODO: not done yet
@@ -152,3 +156,46 @@ v2ScriptContextEquivalenceSbs =
 v2ScriptContextEquivalenceScript :: PlutusScript PlutusScriptV2
 v2ScriptContextEquivalenceScript = PlutusScriptSerialised v2ScriptContextEquivalenceSbs
 
+-- Mint field and script purpose equivalence equivalence
+
+{-# INLINABLE mkMintEquivalenceValidator #-}
+mkMintEquivalenceValidator :: PV2CustomRedeemer -> V2.ScriptContext -> Bool
+mkMintEquivalenceValidator redeemer scriptContext =
+  -- Minted value is equivalent
+  mintingFieldsAreEquivalent redeemer txInfo PlutusPrelude.&&
+  -- Script purpose is equivalent
+  scriptPurposeIsEquivalent scriptContext redeemer
+ where
+   txInfo :: V2.TxInfo
+   txInfo = V2.scriptContextTxInfo scriptContext
+
+   mintingFieldsAreEquivalent :: PV2CustomRedeemer -> V2.TxInfo -> Bool
+   mintingFieldsAreEquivalent (PV2CustomRedeemer _ _ _ _ mint _ _ _ _ _ _ _) tInfo =
+    V2.txInfoMint tInfo  PlutusPrelude.== mint
+
+   scriptPurposeIsEquivalent :: V2.ScriptContext -> PV2CustomRedeemer -> Bool
+   scriptPurposeIsEquivalent sc (PV2CustomRedeemer _ _ _ _ _ _ _ _ _ _ _ mScPurpose) =
+    case mScPurpose of
+      Just sPurp -> V2.scriptContextPurpose sc PlutusPrelude.== sPurp
+      Nothing    -> PlutusPrelude.error ()
+
+policy :: V2.MintingPolicy
+policy = V2.mkMintingPolicyScript $$(PlutusTx.compile [|| wrap ||])
+ where
+  wrap = V2.mkUntypedMintingPolicy mkMintEquivalenceValidator
+
+plutusMintEquivScript :: V2.Script
+plutusMintEquivScript =
+  V2.unMintingPolicyScript policy
+
+mintEquivValidator :: V2.Validator
+mintEquivValidator = V2.Validator plutusMintEquivScript
+
+scriptAsCbor :: LBS.ByteString
+scriptAsCbor = serialise mintEquivValidator
+
+v2mintEquivScript :: PlutusScript PlutusScriptV2
+v2mintEquivScript = PlutusScriptSerialised . SBS.toShort $ LBS.toStrict scriptAsCbor
+
+v2mintEquivScriptShortBs :: SBS.ShortByteString
+v2mintEquivScriptShortBs = SBS.toShort . LBS.toStrict $ scriptAsCbor
