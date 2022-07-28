@@ -5,7 +5,7 @@
 :reproducible:
 
 The Plutus Application Framework, part of the Plutus Platform, is a framework for developing distributed applications using the Cardano blockchain.
-For more information about the projects, see the <<user-documentation>>.
+For more information about the projects, see the <<user-documentation>>. 
 
 This repository contains:
 
@@ -157,6 +157,11 @@ The https://github.com/input-output-hk/plutus-starter[plutus-starter] project pr
 This section contains information about how to build the project's artifacts for independent usage.
 For development work see <<how-to-develop>> for more information.
 
+[NOTE]
+====
+You may also want to consult the https://plutus-community.readthedocs.io/en/latest/[Plutus community documentation] for specific details regarding your particular environment, especially if you are a MacOS user.
+====
+
 [[prerequisites]]
 ==== Prerequisites
 
@@ -225,7 +230,7 @@ If you find you are building packages that are not defined in this
 repository, or if the build seems to take a very long time then you may
 not have this set up properly.
 
-To set up the cache:
+We advise users to also consult the environment specific instructions for setting Plutus up through Nix in the https://plutus-community.readthedocs.io/en/latest/[Plutus community documentation]. At a minimum, you will need to set up the cache:
 
 . On non-NixOS, edit `/etc/nix/nix.conf` and add the following lines:
 +
