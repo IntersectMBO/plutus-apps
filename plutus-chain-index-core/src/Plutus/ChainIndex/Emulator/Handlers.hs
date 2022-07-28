@@ -7,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeOperators     #-}
 {-| Handlers for the 'ChainIndexQueryEffect' and the 'ChainIndexControlEffect'
@@ -32,8 +33,7 @@ import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), ChainIndexTxOut (..), TxId, TxOut (txOutAddress), TxOutRef (..),
-               txOutDatumHash, txOutValue)
+import Ledger (Address (addressCredential), ChainIndexTxOut (..), TxId, TxOut, TxOutRef (..))
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -49,10 +49,10 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Diagnostics (..), Point (Po
                                 TxProcessOption (..), TxUtxoBalance (..))
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), MintingPolicy (MintingPolicy),
-                             MintingPolicyHash (MintingPolicyHash), StakeValidator (StakeValidator),
-                             StakeValidatorHash (StakeValidatorHash), Validator (Validator),
-                             ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
+                             MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                             StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash), TxOut (TxOut),
+                             Validator (Validator), ValidatorHash (ValidatorHash))
 
 data ChainIndexEmulatorState =
     ChainIndexEmulatorState
@@ -63,6 +63,22 @@ data ChainIndexEmulatorState =
         deriving (Semigroup, Monoid) via (GenericSemigroupMonoid ChainIndexEmulatorState)
 
 makeLenses ''ChainIndexEmulatorState
+
+getDatumFromHash ::
+    forall effs.
+    ( Member (State ChainIndexEmulatorState) effs
+    )
+    => DatumHash
+    -> Eff effs (Maybe Datum)
+getDatumFromHash h = gets (view $ diskState . dataMap . at h)
+
+getScriptFromHash ::
+    forall effs.
+    ( Member (State ChainIndexEmulatorState) effs
+    )
+    => ScriptHash
+    -> Eff effs (Maybe Script)
+getScriptFromHash h = gets (view $ diskState . scriptMap . at h)
 
 -- | Get the 'ChainIndexTx' for a transaction ID
 getTxFromTxId ::
@@ -89,24 +105,8 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ txOutAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
-        ScriptCredential vh@(ValidatorHash h) -> do
-          case txOutDatumHash txout of
-            Nothing -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-            Just dh -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
-
+    Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> makeChainIndexTxOut txout
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
@@ -120,24 +120,31 @@ getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ txOutAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
-        ScriptCredential vh@(ValidatorHash h) -> do
-          case txOutDatumHash txout of
-            Nothing -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-            Just dh -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
+    Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> do makeChainIndexTxOut txout
 
+makeChainIndexTxOut ::
+  forall effs.
+  ( Member (State ChainIndexEmulatorState) effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => TxOut
+  -> Eff effs (Maybe ChainIndexTxOut)
+makeChainIndexTxOut txout@(TxOut address value dh) = do
+  case addressCredential address of
+    PubKeyCredential _ -> do
+      d <- maybe (pure Nothing) getDatumFromHash dh
+      pure $ Just $ PublicKeyChainIndexTxOut address value ((, d) <$> dh)
+    ScriptCredential (ValidatorHash vh) ->
+      case dh of
+        Just h -> do
+          v <- getScriptFromHash (ScriptHash vh)
+          d <- getDatumFromHash h
+          pure $ Just $ ScriptChainIndexTxOut address value (h, d) (ValidatorHash vh, Validator <$> v)
+        Nothing -> do
+          -- If the txout comes from a script address, the Datum should not be Nothing
+          logWarn $ NoDatumScriptAddr txout
+          pure Nothing
 
 -- | Unspent outputs located at addresses with the given credential.
 getUtxoSetAtAddress ::
@@ -170,13 +177,13 @@ handleQuery ::
     ) => ChainIndexQueryEffect
     ~> Eff effs
 handleQuery = \case
-    DatumFromHash h -> gets (view $ diskState . dataMap . at h)
+    DatumFromHash h -> getDatumFromHash h
     ValidatorFromHash (ValidatorHash h) ->  do
-      gets (fmap (fmap Validator) . view $ diskState . scriptMap . at (ScriptHash h))
+      fmap (fmap Validator) $ getScriptFromHash (ScriptHash h)
     MintingPolicyFromHash (MintingPolicyHash h) ->
-      gets (fmap (fmap MintingPolicy) . view $ diskState . scriptMap . at (ScriptHash h))
+      fmap (fmap MintingPolicy) $ getScriptFromHash (ScriptHash h)
     StakeValidatorFromHash (StakeValidatorHash h) ->
-      gets (fmap (fmap StakeValidator) . view $ diskState . scriptMap . at (ScriptHash h))
+      fmap (fmap StakeValidator) $ getScriptFromHash (ScriptHash h)
     UnspentTxOutFromRef ref -> getTxOutFromRef ref
     TxOutFromRef ref -> getTxOutFromRef ref
     RedeemerFromHash h -> gets (view $ diskState . redeemerMap . at h)

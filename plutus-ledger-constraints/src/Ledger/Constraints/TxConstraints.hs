@@ -13,12 +13,14 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+{-# LANGUAGE TypeApplications     #-}
 -- | Constraints for transactions
 module Ledger.Constraints.TxConstraints where
 
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (Bifunctor (bimap))
+import Data.Map (Map)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty, prettyList), defaultLayoutOptions, hang, layoutPretty, viaShow, vsep, (<+>))
@@ -30,14 +32,18 @@ import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap),
                          not, null, ($), (.), (==), (>>=), (||))
 
 import Ledger.Address (PaymentPubKeyHash, StakePubKeyHash)
+import Ledger.Address qualified as Address
+import Ledger.Tx (ChainIndexTxOut)
+import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer (Redeemer),
+                             StakeValidatorHash, TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicyHash, Redeemer, StakeValidatorHash,
-                                 ValidatorHash, unitRedeemer)
-import Plutus.V1.Ledger.Time (POSIXTimeRange)
-import Plutus.V1.Ledger.Tx (TxOutRef)
+import Plutus.V1.Ledger.Scripts (unitRedeemer)
 import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
 import Plutus.V1.Ledger.Value qualified as Value
 
+import Control.Lens (At (at), (^.))
+import Data.Function (const, flip)
+import Data.Maybe (fromMaybe)
 import Prelude qualified as Haskell
 import Prettyprinter.Render.String (renderShowS)
 
@@ -284,7 +290,7 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- output with @d@ and @v@ and adds @d@ in the transaction's datum witness set.
 -- The script address is derived from the typed validator that is provided in
 -- the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.typedValidatorLookups'.
+-- 'Ledger.Constraints.OffChain.plutusV1TypedValidatorLookups'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the new script transaction output with
@@ -411,7 +417,7 @@ mustMintCurrency mps = mustMintCurrencyWithRedeemer mps unitRedeemer
 -- The minting policy must be provided in the
 -- 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.typedValidatorLookups' or
--- 'Ledger.Constraints.OffChain.mintingPolicy'.
+-- 'Ledger.Constraints.OffChain.plutusV1MintingPolicy'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- minted currenty @mph@, @tn@ and @a@ is part of the transaction's minting
@@ -476,7 +482,7 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.unspentOutputs'. The validator must be either provided by
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
--- 'Ledger.Constraints.OffChain.otherScript'. The datum must be either provided by
+-- 'Ledger.Constraints.OffChain.plutusV1OtherScript' . The datum must be either provided by
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
 -- 'Ledger.Constraints.OffChain.otherData'.
 --
@@ -557,7 +563,7 @@ requiredDatums = foldMap f . txConstraints where
 
 {-# INLINABLE modifiesUtxoSet #-}
 -- | Check whether every transaction that satisfies the constraints has to
---   modify the UTXO set.
+-- modify the UTXO set.
 modifiesUtxoSet :: forall i o. TxConstraints i o -> Bool
 modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
     let requiresInputOutput = \case
@@ -573,3 +579,50 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
     in any requiresInputOutput txConstraints
         || not (null txOwnOutputs)
         || not (null txOwnInputs)
+
+----------------------
+-- Off-chain use only
+----------------------
+
+-- | A set of constraints for a transaction that collects script outputs
+-- from the address of the given validator script, using the same redeemer
+-- script for all outputs.
+collectFromPlutusV1Script
+    :: Map Address (Map TxOutRef ChainIndexTxOut)
+    -> Validator
+    -> Redeemer
+    -> UntypedConstraints
+collectFromPlutusV1Script= collectFromPlutusV1ScriptFilter (\_ -> const True)
+
+collectFromPlutusV1ScriptFilter
+    :: (TxOutRef -> ChainIndexTxOut -> Bool)
+    -> Map Address (Map TxOutRef ChainIndexTxOut)
+    -> Validator
+    -> Redeemer
+    -> UntypedConstraints
+collectFromPlutusV1ScriptFilter flt am vls (Redeemer red) =
+    let mp'  = fromMaybe Haskell.mempty $ am ^. at (Address.scriptAddress vls)
+    in collectFromTheScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
+
+-- | Given the pay to script address of the 'Validator', collect from it
+-- all the outputs that match a predicate, using the 'RedeemerValue'.
+collectFromTheScriptFilter ::
+    forall i o
+    .  (TxOutRef -> ChainIndexTxOut -> Bool)
+    -> Map.Map TxOutRef ChainIndexTxOut
+    -> i
+    -> TxConstraints i o
+collectFromTheScriptFilter flt utxo red =
+    let ourUtxo :: Map.Map TxOutRef ChainIndexTxOut
+        ourUtxo = Map.filterWithKey flt utxo
+    in collectFromTheScript ourUtxo red
+
+-- | A version of 'collectFromScript' that selects all outputs
+-- at the address
+collectFromTheScript ::
+    forall i o
+    .  Map.Map TxOutRef ChainIndexTxOut
+    -> i
+    -> TxConstraints i o
+collectFromTheScript utxo redeemer =
+    foldMap (flip mustSpendOutputFromTheScript redeemer) $ Map.keys utxo

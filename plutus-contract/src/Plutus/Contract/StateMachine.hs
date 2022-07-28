@@ -53,7 +53,7 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import Control.Lens (_Right, makeClassyPrisms, review, (^?))
+import Control.Lens (_2, _Just, makeClassyPrisms, review, (^?))
 import Control.Monad (unless)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
@@ -66,8 +66,8 @@ import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, Slot, TxOutRef, Value)
 import Ledger qualified
-import Ledger.Constraints (ScriptLookups, TxConstraints, mintingPolicy, mustMintValueWithRedeemer, mustPayToTheScript,
-                           mustSpendPubKeyOutput)
+import Ledger.Constraints (ScriptLookups, TxConstraints, mustMintValueWithRedeemer, mustPayToTheScript,
+                           mustSpendPubKeyOutput, plutusV1MintingPolicy)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
@@ -141,7 +141,7 @@ getStates
 getStates (SM.StateMachineInstance _ si) refMap =
     flip mapMaybe (Map.toList refMap) $ \(txOutRef, ciTxOut) -> do
       let txOut = Tx.toTxOut ciTxOut
-      datum <- ciTxOut ^? Tx.ciTxOutDatum . _Right
+      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
       ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef txOut datum
       pure OnChainState{ocsTxOutRef}
 
@@ -441,8 +441,8 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
           ttConstraints ThreadToken{ttOutRef} =
               mustMintValueWithRedeemer red (SM.threadTokenValueOrZero scInstance)
               <> mustSpendPubKeyOutput ttOutRef
-          lookups = Constraints.typedValidatorLookups typedValidator
-              <> foldMap (mintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
+          lookups = Constraints.plutusV1TypedValidatorLookups typedValidator
+              <> foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
               <> Constraints.unspentOutputs utxo
               <> customLookups
       utx <- mapError (review _ConstraintResolutionContractError) (mkTxContract lookups constraints)
@@ -539,9 +539,9 @@ mkStep client@StateMachineClient{scInstance} input = do
                 Just (newConstraints, newState)  ->
                     let isFinal = smFinal stateMachine (stateData newState)
                         lookups =
-                            Constraints.typedValidatorLookups typedValidator
+                            Constraints.plutusV1TypedValidatorLookups typedValidator
                             <> Constraints.unspentOutputs utxo
-                            <> if isFinal then foldMap (mintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine) else mempty
+                            <> if isFinal then foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine) else mempty
                         red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Burn))
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
                         outputConstraints =

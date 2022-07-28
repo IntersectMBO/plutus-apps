@@ -26,6 +26,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential)
 import Ledger.Constraints as Constraints
 import Ledger.Constraints.OffChain qualified as OC
+import Ledger.Constraints.OnChain.V1 as Constraints
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Generators qualified as Gen
@@ -34,7 +35,9 @@ import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Scripts qualified as Ledger
 import Plutus.Script.Utils.V1.Generators qualified as Gen
+import Plutus.Script.Utils.V1.Scripts qualified as Ledger
 import Plutus.V1.Ledger.Api qualified as Ledger
 import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
@@ -168,7 +171,12 @@ testScriptInputs lookups txc = property $ do
 
 
 txOut0 :: Ledger.ChainIndexTxOut
-txOut0 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing) (Left alwaysSucceedValidatorHash) (Right Ledger.unitDatum) mempty
+txOut0 =
+    Ledger.ScriptChainIndexTxOut
+        (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
+        mempty
+        (Ledger.datumHash Ledger.unitDatum, Just Ledger.unitDatum)
+        (alwaysSucceedValidatorHash, Nothing)
 
 txOutRef0 :: Ledger.TxOutRef
 txOutRef0 = Ledger.TxOutRef (Ledger.TxId "") 0
@@ -198,7 +206,12 @@ validatorHash1 :: Ledger.ValidatorHash
 validatorHash1 = Scripts.validatorHash validator1
 
 txOut1 :: Ledger.ChainIndexTxOut
-txOut1 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential validatorHash1) Nothing) (Left validatorHash1) (Right Ledger.unitDatum) mempty
+txOut1 =
+    Ledger.ScriptChainIndexTxOut
+        (Ledger.Address (ScriptCredential validatorHash1) Nothing)
+        mempty
+        (Ledger.datumHash Ledger.unitDatum, Just Ledger.unitDatum)
+        (validatorHash1, Nothing)
 
 txOutRef1 :: Ledger.TxOutRef
 txOutRef1 = Ledger.TxOutRef (Ledger.TxId "") 1
@@ -219,8 +232,8 @@ constraints1 vh =
 lookups1 :: ScriptLookups UnitTest
 lookups1
     = Constraints.unspentOutputs utxo1
-    <> Constraints.otherScript (Scripts.validatorScript alwaysSucceedValidator)
-    <> Constraints.otherScript (Scripts.validatorScript validator1)
+    <> Constraints.plutusV1OtherScript (Scripts.validatorScript alwaysSucceedValidator)
+    <> Constraints.plutusV1OtherScript (Scripts.validatorScript validator1)
 
 testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
 testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

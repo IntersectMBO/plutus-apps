@@ -146,7 +146,7 @@ All that's missing now is the code for retrieving the funds, and some glue to pu
 
 In ``unlockFunds`` you use the constraints library to build the spending transaction.
 Here, ``tx`` combines three different constraints.
-``collectFromScript`` takes the script outputs in ``unspentOutputs`` and adds them as input to the transaction, using the unit ``()`` as the redeemer.
+``Constraints.collectFromTheScript`` takes the script outputs in ``unspentOutputs`` and adds them as input to the transaction, using the unit ``()`` as the redeemer.
 The other two constraints use ``mustPayToPubKey`` to add payments for the recipients.
 
 Deploying the app on the Playground

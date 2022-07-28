@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-module Ledger.Constraints.OnChain
+module Ledger.Constraints.OnChain.V1
     ( checkScriptContext
     , checkOwnInputConstraint
     , checkOwnOutputConstraint
@@ -44,7 +44,7 @@ import Plutus.V1.Ledger.Value (leq)
 -- | Does the 'ScriptContext' satisfy the constraints?
 checkScriptContext :: forall i o. ToData o => TxConstraints i o -> ScriptContext -> Bool
 checkScriptContext TxConstraints{txConstraints, txConstraintFuns = TxConstraintFuns txCnsFuns, txOwnInputs, txOwnOutputs} ptx =
-    traceIfFalse "Ld" -- "checkScriptContext failed"
+    traceIfFalse "Ld" -- "checkV1ScriptContext failed"
     $ all (checkTxConstraint ptx) txConstraints
     && all (checkTxConstraintFun ptx) txCnsFuns
     && all (checkOwnInputConstraint ptx) txOwnInputs

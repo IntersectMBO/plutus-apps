@@ -21,7 +21,6 @@ import Plutus.Script.Utils.Scripts qualified as Ledger
 import Plutus.V1.Ledger.Api (Datum (Datum))
 
 import Plutus.Contract
-import Plutus.Contract.Typed.Tx qualified as Typed
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
@@ -49,10 +48,10 @@ badRefund ::
 badRefund inst pk = do
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     current <- currentTime
-    let flt _ ciTxOut = either id Ledger.datumHash (Tx._ciTxOutDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
-        tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
+    let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+        tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateIn (from (current - 1))
-    utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+    utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
                           <> Constraints.unspentOutputs unspentOutputs
                            ) tx'
     handleError (\err -> logError $ "Caught error: " ++ unpack err) $

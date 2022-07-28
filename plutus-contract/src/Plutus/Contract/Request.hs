@@ -12,7 +12,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -885,7 +884,7 @@ submitTxConstraints
   => TypedValidator a
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
-submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLookups inst)
+submitTxConstraints inst = submitTxConstraintsWith (Constraints.plutusV1TypedValidatorLookups inst)
 
 -- | Build a transaction that satisfies the constraints using the UTXO map
 --   to resolve any input constraints (see 'Ledger.Constraints.TxConstraints.InputConstraint')
@@ -901,7 +900,7 @@ submitTxConstraintsSpending
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
 submitTxConstraintsSpending inst utxo =
-  let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
+  let lookups = Constraints.plutusV1TypedValidatorLookups inst <> Constraints.unspentOutputs utxo
   in submitTxConstraintsWith lookups
 
 {-| A variant of 'mkTx' that runs in the 'Contract' monad, throwing errors and

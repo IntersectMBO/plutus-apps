@@ -21,11 +21,11 @@
 module Ledger.Tx.Constraints.OffChain(
     -- * Lookups
     P.ScriptLookups(..)
-    , P.typedValidatorLookups
+    , P.plutusV1TypedValidatorLookups
     , P.generalise
     , P.unspentOutputs
-    , P.mintingPolicy
-    , P.otherScript
+    , P.plutusV1MintingPolicy
+    , P.plutusV1OtherScript
     , P.otherData
     , P.ownPaymentPubKeyHash
     , P.ownStakePubKeyHash

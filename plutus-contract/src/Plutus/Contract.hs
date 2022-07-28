@@ -88,8 +88,6 @@ module Plutus.Contract(
     , Request.balanceTx
     , Request.mkTxConstraints
     , Request.yieldUnbalancedTx
-    -- ** Creating transactions
-    , module Tx
     -- ** Tx confirmation
     , Request.awaitTxConfirmed
     , Request.awaitTxStatusChange
@@ -116,7 +114,6 @@ import Plutus.Contract.Logging as Logging
 import Plutus.Contract.Request (ContractRow)
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Schema qualified as Schema
-import Plutus.Contract.Typed.Tx as Tx (collectFromScript, collectFromScriptFilter)
 import Plutus.Contract.Types (Contract (Contract), Promise, select)
 import Plutus.Contract.Types qualified
 

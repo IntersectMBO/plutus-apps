@@ -35,7 +35,6 @@ import Ledger.Value (Value, geq)
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
 
 import Plutus.Contract
-import Plutus.Contract.Typed.Tx qualified as Typed
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
@@ -129,7 +128,7 @@ lockEp = endpoint @"lock" $ \params -> do
   let valRange = Interval.to (Haskell.pred $ deadline params)
       tx = Constraints.mustPayToTheScript params (paying params)
             <> Constraints.mustValidateIn valRange
-  void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
+  void $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups escrowInstance) tx
          >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Attempts to redeem the 'Value' locked into this script by paying in from
@@ -143,7 +142,7 @@ redeemEp = endpoint @"redeem" redeem
       unspentOutputs <- utxosAt escrowAddress
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
-          tx = Typed.collectFromScript unspentOutputs Redeem
+          tx = Constraints.collectFromTheScript unspentOutputs Redeem
                       <> Constraints.mustValidateIn (Interval.to (Haskell.pred $ deadline params))
                       -- Pay me the output of this script
                       <> Constraints.mustPayToPubKey pk value
@@ -153,7 +152,7 @@ redeemEp = endpoint @"redeem" redeem
       if time >= deadline params
       then throwing _RedeemFailed DeadlinePassed
       else do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+        utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups escrowInstance
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx >>= adjustUnbalancedTx
         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
@@ -165,12 +164,12 @@ refundEp = endpoint @"refund" refund
     refund params = do
       unspentOutputs <- utxosAt escrowAddress
 
-      let tx = Typed.collectFromScript unspentOutputs Refund
+      let tx = Constraints.collectFromTheScript unspentOutputs Refund
                   <> Constraints.mustValidateIn (Interval.from (deadline params))
 
       if Constraints.modifiesUtxoSet tx
       then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+        utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups escrowInstance
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx >>= adjustUnbalancedTx
         RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
