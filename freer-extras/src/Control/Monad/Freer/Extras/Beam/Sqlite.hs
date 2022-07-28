@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -23,12 +24,36 @@ import Control.Exception (throw, try)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Extras.Beam.Common (BeamError (SqlError), BeamLog (..))
 import Control.Monad.Freer.Reader (Reader, ask)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default, def)
 import Data.Pool (Pool)
 import Data.Pool qualified as Pool
 import Data.Text qualified as Text
 import Database.Beam (MonadIO (liftIO))
 import Database.Beam.Sqlite (SqliteM, runBeamSqliteDebug)
 import Database.SQLite.Simple qualified as Sqlite
+import GHC.Generics (Generic)
+
+data DbConfig =
+    DbConfig
+    { dbConfigFile     :: Text.Text
+    -- ^ The path to the sqlite database file. May be absolute or relative.
+    , dbConfigPoolSize :: Int
+    -- ^ Max number of concurrent sqlite database connections.
+    }
+    deriving (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | Default database config uses an in-memory sqlite database that is shared
+-- between all threads in the process.
+defaultDbConfig :: DbConfig
+defaultDbConfig = DbConfig
+                  { dbConfigFile = "file::memory:?cache=shared"
+                  , dbConfigPoolSize = 20
+                  }
+
+instance Default DbConfig where
+  def = defaultDbConfig
 
 runBeam ::
   forall effs.
@@ -56,4 +81,3 @@ runBeam trace action = do
           -- 'Database.SQLite.Simple.ErrorError'.
           Left e -> throw $ SqlError $ Text.pack $ show e
           Right v -> return v
-

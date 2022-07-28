@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -21,12 +22,38 @@ import Control.Exception (throw, try)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Extras.Beam.Common (BeamError (SqlError), BeamLog (..))
 import Control.Monad.Freer.Reader (Reader, ask)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default, def)
 import Data.Pool (Pool)
 import Data.Pool qualified as Pool
 import Data.Text qualified as Text
+import Data.Word (Word16)
 import Database.Beam (MonadIO (liftIO))
 import Database.Beam.Postgres (Connection, Pg, runBeamPostgresDebug)
 import Database.PostgreSQL.Simple qualified as Postgres
+import GHC.Generics (Generic)
+
+data DbConfig =
+    DbConfig
+    { dbConfigUser     :: Text.Text
+    , dbConfigPass     :: Text.Text
+    , dbConfigHost     :: Text.Text
+    , dbConfigPort     :: Word16
+    , dbConfigDatabase :: Text.Text
+    , dbConfigPoolSize :: Int
+    }
+    deriving (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+instance Default DbConfig where
+  def = DbConfig
+        { dbConfigUser = "postgres"
+        , dbConfigPass = ""
+        , dbConfigHost = "localhost"
+        , dbConfigPort = 5432
+        , dbConfigDatabase = "pab"
+        , dbConfigPoolSize = 20
+        }
 
 runBeam ::
   forall effs.

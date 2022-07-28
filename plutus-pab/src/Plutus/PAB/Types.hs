@@ -16,15 +16,19 @@ import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
+import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (DbConfig)
+import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (DbConfig)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Pool (Pool)
 import Data.Text (Text)
 import Data.Time.Units (Second)
 import Data.UUID (UUID)
 import Data.UUID.Extras qualified as UUID
-import Data.Word (Word16)
+import Database.PostgreSQL.Simple qualified as Postgres
+import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx, TxId, eitherTx, getCardanoTxId)
 import Ledger.Index (UtxoIndex (UtxoIndex))
@@ -92,29 +96,26 @@ instance Pretty PABError where
         RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
         TxSenderNotAvailable         -> "Cannot send a transaction when connected to the real node."
 
-data DbConfig =
-    DbConfig
-        { dbConfigUser     :: Text
-        , dbConfigPass     :: Text
-        , dbConfigHost     :: Text
-        , dbConfigPort     :: Word16
-        , dbConfigDatabase :: Text
-        , dbConfigPoolSize :: Int
-        }
+data DBConnection = PostgresPool (Pool Postgres.Connection)
+                  | SqlitePool (Pool Sqlite.Connection)
+
+takePostgres :: DBConnection -> Pool Postgres.Connection
+takePostgres (PostgresPool db) = db
+takePostgres _                 = error "Sqlite db"
+
+takeSqlite :: DBConnection -> Pool Sqlite.Connection
+takeSqlite (SqlitePool db) = db
+takeSqlite _               = error "Postgres db"
+
+data DbConfig = SqliteDB Sqlite.DbConfig
+              | PostgresDB Postgres.DbConfig
     deriving (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 -- | Default database config uses an in-memory sqlite database that is shared
 -- between all threads in the process.
 defaultDbConfig :: DbConfig
-defaultDbConfig = DbConfig
-        { dbConfigUser = "postgres"
-        , dbConfigPass = ""
-        , dbConfigHost = "localhost"
-        , dbConfigPort = 5432
-        , dbConfigDatabase = "pab"
-        , dbConfigPoolSize = 20
-        }
+defaultDbConfig = SqliteDB def
 
 instance Default DbConfig where
   def = defaultDbConfig
