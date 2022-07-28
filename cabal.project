@@ -209,7 +209,9 @@ source-repository-package
   tag: ebcf1a8936dd84de0182d54004473f4ce66c7923
   subdir:
     eras/alonzo/impl
+    eras/alonzo/test-suite
     eras/babbage/impl
+    eras/babbage/test-suite
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
@@ -219,15 +221,16 @@ source-repository-package
     eras/shelley/impl
     eras/shelley/test-suite
     eras/shelley-ma/impl
-    libs/cardano-data
+    eras/shelley-ma/test-suite
     libs/cardano-ledger-core
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
+    libs/cardano-data
     libs/vector-map
-    libs/non-integral
     libs/set-algebra
     libs/small-steps
     libs/small-steps-test
+    libs/non-integral
 
 -- Should follow cardano-wallet.
 source-repository-package
