@@ -46,14 +46,14 @@ exportTxGen :: (Hedgehog.GenBase m ~ Identity, MonadFail m, MonadGen m) => m Exp
 exportTxGen = do
     exportTxInputs <- Gen.list (Range.linear 0 5) exportTxInputGen
     ExportTx
-        <$> Hedgehog.fromGenT (Gen.genTx C.AlonzoEra)
+        <$> Hedgehog.fromGenT (Gen.genTx C.BabbageEra)
         <*> pure exportTxInputs
         <*> exportTxRedeemersGen exportTxInputs
 
 exportTxInputGen :: (Hedgehog.GenBase m ~ Identity, MonadFail m, MonadGen m) => m ExportTxInput
 exportTxInputGen = do
     C.TxIn txId txIx <- Hedgehog.fromGenT Gen.genTxIn
-    C.TxOut addressInEra txOutValue txOutDatum _ <- Hedgehog.fromGenT (Gen.genTxOutTxContext C.AlonzoEra)
+    C.TxOut addressInEra txOutValue txOutDatum _ <- Hedgehog.fromGenT (Gen.genTxOutTxContext C.BabbageEra)
     let datumToScriptDataHash C.TxOutDatumNone         = Nothing
         datumToScriptDataHash (C.TxOutDatumHash _ h)   = Just h
         datumToScriptDataHash (C.TxOutDatumInTx _ d)   = Just $ C.hashScriptData d
@@ -66,7 +66,7 @@ exportTxInputGen = do
         (datumToScriptDataHash txOutDatum)
         (currenciesFromTxOutValue txOutValue)
 
-currenciesFromTxOutValue :: C.TxOutValue C.AlonzoEra -> [(C.PolicyId, C.AssetName, C.Quantity)]
+currenciesFromTxOutValue :: C.TxOutValue C.BabbageEra -> [(C.PolicyId, C.AssetName, C.Quantity)]
 currenciesFromTxOutValue txOutValue =
     mapMaybe currencyFromValue $ C.valueToList $ C.txOutValueToValue txOutValue
   where

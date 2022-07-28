@@ -84,10 +84,10 @@ makeLensesFor
     , ("txOuts", "txOuts'")
     ] ''C.TxBodyContent
 
-txIns :: Lens' C.CardanoBuildTx [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.AlonzoEra))]
+txIns :: Lens' C.CardanoBuildTx [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))]
 txIns = coerced . txIns'
 
-txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.AlonzoEra]
+txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.BabbageEra]
 txOuts = coerced . txOuts'
 
 tx :: Traversal' UnbalancedTx C.CardanoBuildTx
@@ -96,13 +96,13 @@ tx = P.cardanoTx . _Left
 emptyCardanoBuildTx :: Params -> C.CardanoBuildTx
 emptyCardanoBuildTx Params { pProtocolParams }= C.CardanoBuildTx $ C.TxBodyContent
     { C.txIns = mempty
-    , C.txInsCollateral = C.TxInsCollateral C.CollateralInAlonzoEra mempty
+    , C.txInsCollateral = C.TxInsCollateral C.CollateralInBabbageEra mempty
     , C.txInsReference = C.TxInsReferenceNone
     , C.txOuts = mempty
     , C.txTotalCollateral = C.TxTotalCollateralNone
     , C.txReturnCollateral = C.TxReturnCollateralNone
-    , C.txFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra mempty
-    , C.txValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+    , C.txFee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra mempty
+    , C.txValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
     , C.txMintValue = C.TxMintNone
     , C.txProtocolParams = C.BuildTxWith $ Just pProtocolParams
     , C.txScriptValidity = C.TxScriptValidityNone
@@ -213,7 +213,7 @@ processConstraint = \case
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInAlonzoEra . C.toCardanoScriptData . getDatum) md)
+            <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.toCardanoScriptData . getDatum) md)
             <*> pure C.ReferenceScriptNone
 
         unbalancedTx . tx . txOuts <>= [ out ]

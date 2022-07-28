@@ -167,7 +167,7 @@ instance ToJSON ExportTxRedeemer where
 -- | Partial transaction that can be balanced by the wallet backend.
 data ExportTx =
         ExportTx
-            { partialTx :: C.Tx C.AlonzoEra -- ^ The transaction itself
+            { partialTx :: C.Tx C.BabbageEra -- ^ The transaction itself
             , lookups   :: [ExportTxInput] -- ^ The tx outputs for all inputs spent by the partial tx
             , redeemers :: [ExportTxRedeemer]
             }
@@ -183,7 +183,7 @@ instance FromJSON ExportTx where
       parsePartialTx v =
         v .: "transaction" >>= \t ->
           either parseFail pure $ JSON.tryDecode t
-                              >>= (first show . C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra))
+                              >>= (first show . C.deserialiseFromCBOR (C.AsTx C.AsBabbageEra))
 
 -- IMPORTANT: The JSON produced here needs to match the schema expected by
 -- https://input-output-hk.github.io/cardano-wallet/api/edge/#operation/balanceTransaction
@@ -199,7 +199,7 @@ data ExportTxInput =
     ExportTxInput
         { etxiId               :: C.TxId
         , etxiTxIx             :: C.TxIx
-        , etxiAddress          :: C.AddressInEra C.AlonzoEra
+        , etxiAddress          :: C.AddressInEra C.BabbageEra
         , etxiLovelaceQuantity :: C.Lovelace
         , etxiDatumHash        :: Maybe (C.Hash C.ScriptData)
         , etxiAssets           :: [(C.PolicyId, C.AssetName, C.Quantity)]
@@ -218,7 +218,7 @@ instance FromJSON ExportTxInput where
       where
           parseAddress o = do
               addressField <- o .: "address"
-              let deserialisedAddr = C.deserialiseAddress (C.AsAddressInEra C.AsAlonzoEra) addressField
+              let deserialisedAddr = C.deserialiseAddress (C.AsAddressInEra C.AsBabbageEra) addressField
               maybe (parseFail "Failed to deserialise address field") pure deserialisedAddr
           parseAsset :: Object -> Parser (C.PolicyId, C.AssetName, C.Quantity)
           parseAsset o = do

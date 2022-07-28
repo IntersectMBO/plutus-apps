@@ -87,7 +87,7 @@ annotateTransaction sequenceId tx = do
             , valid = eitherTx (const False) (const True) tx
             }
     where
-        getEmulatorTx = Tx.onCardanoTx id (error "Wallet.Rollup.annotateTransaction: Expecting a mock tx, not an Alonzo tx.")
+        getEmulatorTx = Tx.onCardanoTx id (error "Wallet.Rollup.annotateTransaction: Expecting a mock tx, not a cardano-api tx.")
 
 annotateChainSlot :: Monad m => Int -> Block -> StateT Rollup m [AnnotatedTx]
 annotateChainSlot slotIndex =

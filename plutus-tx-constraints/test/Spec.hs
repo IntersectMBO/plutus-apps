@@ -97,7 +97,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             Hedgehog.assert $ not $ null stakingCreds
             forM_ stakingCreds ((===) skh)
     where
-        stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.AlonzoEra -> Maybe StakePubKeyHash
+        stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.BabbageEra -> Maybe StakePubKeyHash
         stakePaymentPubKeyHash (C.TxOut addr _ _ _) = do
             txOutAddress <- either (const Nothing) Just $ C.fromCardanoAddressInEra addr
             stakeCred <- addressStakingCredential txOutAddress

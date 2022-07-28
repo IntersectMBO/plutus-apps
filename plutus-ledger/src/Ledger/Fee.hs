@@ -36,7 +36,7 @@ makeAutoBalancedTransaction
   -> UTxO EmulatorEra -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoBuildTx
   -> Address -- ^ Change address
-  -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
+  -> Either CardanoLedgerError (C.Api.Tx C.Api.BabbageEra)
 makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
   cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
   -- Compute the change.
@@ -58,7 +58,7 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
     ss = systemStart $ emulatorGlobals params
     utxo' = fromLedgerUTxO utxo
     balance cChangeAddr extraOuts = C.Api.makeTransactionBodyAutoBalance
-      C.Api.AlonzoEraInCardanoMode
+      C.Api.BabbageEraInCardanoMode
       ss
       eh
       (pProtocolParams params)
@@ -70,10 +70,10 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
 
 
 fromLedgerUTxO :: UTxO EmulatorEra
-               -> C.Api.UTxO C.Api.AlonzoEra
+               -> C.Api.UTxO C.Api.BabbageEra
 fromLedgerUTxO (UTxO utxo) =
     C.Api.UTxO
   . Map.fromList
-  . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraAlonzo))
+  . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraBabbage))
   . Map.toList
   $ utxo
