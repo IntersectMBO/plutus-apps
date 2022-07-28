@@ -95,6 +95,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Crypto (pubKeyHash)
+import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
@@ -426,10 +427,13 @@ adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.A
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) adjustTxOut
   where
     adjustTxOut :: TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
-    adjustTxOut txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
-        let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
-            missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))
-        in ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
+    adjustTxOut txOut =
+        -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
+        let txOutEstimate = txOut { txOutValue = txOutValue txOut <> Ada.toValue minAdaTxOut }
+        in fromPlutusTxOutUnsafe params txOutEstimate <&> \txOut' ->
+            let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
+                missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))
+            in ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]
