@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-node_zipped="cardano-node-1.35.1-linux.tar.gz"
+node_zipped="cardano-node-1.35.2-linux.tar.gz"
 node_config_files=(
   "mainnet-config.json"
   "mainnet-byron-genesis.json"
@@ -24,7 +24,7 @@ set -x
 mkdir -p "$NODE_BIN_DIR"
 # Download cardano-node binary. The -nc option avoids downloading if the file
 # already exists locally.
-wget -nc https://hydra.iohk.io/build/16622274/download/1/$node_zipped -P "$NODE_BIN_DIR"
+wget -nc https://hydra.iohk.io/build/17088436/download/1/$node_zipped -P "$NODE_BIN_DIR"
 
 tar zxvf "$NODE_BIN_DIR"/$node_zipped -C "$NODE_BIN_DIR"
 
