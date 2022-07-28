@@ -236,7 +236,7 @@ checkMintingAuthorised tx =
 
         mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
 
-        lockingScripts = PV1.mintingPolicyHash <$> Set.toList (txMintScripts tx)
+        lockingScripts = Map.keys $ txMintScripts tx
 
         mintedWithoutScript = filter (\c -> c `notElem` lockingScripts) mpsScriptHashes
     in
@@ -245,9 +245,9 @@ checkMintingAuthorised tx =
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
     txinfo <- mkTxInfo tx
-    iforM_ (Set.toList (txMintScripts tx)) $ \i vl -> do
+    iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, mp) -> do
         let cs :: V.CurrencySymbol
-            cs = V.mpsSymbol $ PV1.mintingPolicyHash vl
+            cs = V.mpsSymbol mph
             ctx :: Context
             ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
@@ -256,11 +256,11 @@ checkMintingScripts tx = do
             Just r  -> pure r
             Nothing -> throwError $ MissingRedeemer ptr
 
-        case runExcept $ runMintingPolicyScript ctx vl red of
+        case runExcept $ runMintingPolicyScript ctx mp red of
             Left e  -> do
-                tell [mpsValidationEvent ctx vl red (Left e)]
+                tell [mpsValidationEvent ctx mp red (Left e)]
                 throwError $ ScriptFailure e
-            res -> tell [mpsValidationEvent ctx vl red res]
+            res -> tell [mpsValidationEvent ctx mp red res]
 
 -- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
 data InOutMatch =

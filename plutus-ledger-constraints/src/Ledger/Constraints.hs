@@ -20,6 +20,7 @@ module Ledger.Constraints(
     , TC.mustSpendOutputFromTheScript
     , TC.mustSpendScriptOutput
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
+    , TC.mustReferencePubKeyOutput
     , TC.mustValidateIn
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast
@@ -50,6 +51,7 @@ module Ledger.Constraints(
     , OC.unspentOutputs
     , OC.plutusV1MintingPolicy
     , OC.plutusV1OtherScript
+    , OC.plutusV2OtherScript
     , OC.otherData
     , OC.paymentPubKey
     , OC.ownPaymentPubKeyHash

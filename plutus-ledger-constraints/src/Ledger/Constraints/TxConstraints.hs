@@ -69,6 +69,9 @@ data TxConstraint =
     -- ^ The transaction must spend the given unspent transaction public key output.
     | MustSpendScriptOutput TxOutRef Redeemer
     -- ^ The transaction must spend the given unspent transaction script output.
+    | MustReferencePubKeyOutput TxOutRef
+    -- ^ The transaction must reference (not spend) the given unspent
+    -- transaction public key output.
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
     -- ^ The transaction must mint the given token and amount.
     | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe Datum) Value
@@ -97,6 +100,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must spend pubkey output:", pretty ref]
         MustSpendScriptOutput ref red ->
             hang 2 $ vsep ["must spend script output:", pretty ref, pretty red]
+        MustReferencePubKeyOutput ref ->
+            hang 2 $ vsep ["must reference pubkey output:", pretty ref]
         MustMintValue mps red tn i ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
         MustPayToPubKeyAddress pkh skh datum v ->
@@ -510,6 +515,20 @@ mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
         txConstraintFuns = TxConstraintFuns [MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red ]
     }
 
+{-# INLINABLE mustReferencePubKeyOutput #-}
+-- | @mustReferencePubKeyOutput utxo@ must reference (not spend!) the given
+-- unspent transaction public key output.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint adds @utxo@ as a
+-- reference input to the transaction. Information about this @utxo@ must be
+-- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.unspentOutputs'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- transaction references this @utxo@.
+mustReferencePubKeyOutput :: forall i o. TxOutRef -> TxConstraints i o
+mustReferencePubKeyOutput = singleton . MustReferencePubKeyOutput
+
 {-# INLINABLE mustSatisfyAnyOf #-}
 mustSatisfyAnyOf :: forall i o. [TxConstraints i o] -> TxConstraints i o
 mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . map txConstraints
@@ -571,6 +590,7 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
             MustProduceAtLeast{}            -> True
             MustSpendPubKeyOutput{}         -> True
             MustSpendScriptOutput{}         -> True
+            MustReferencePubKeyOutput{}     -> False
             MustMintValue{}                 -> True
             MustPayToPubKeyAddress _ _ _ vl -> not (isZero vl)
             MustPayToOtherScript _ _ _ vl   -> not (isZero vl)

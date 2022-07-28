@@ -234,6 +234,7 @@ test-suite plutus-contract-test
   other-modules:
     Spec.Balancing
     Spec.Contract
+    Spec.Contract.TxConstraints
     Spec.Emulator
     Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle

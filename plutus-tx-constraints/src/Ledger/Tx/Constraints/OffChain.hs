@@ -26,6 +26,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.unspentOutputs
     , P.plutusV1MintingPolicy
     , P.plutusV1OtherScript
+    , P.plutusV2OtherScript
     , P.otherData
     , P.ownPaymentPubKeyHash
     , P.ownStakePubKeyHash
@@ -74,7 +75,6 @@ import Ledger.Scripts (getDatum)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
-
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P

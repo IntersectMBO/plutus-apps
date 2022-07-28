@@ -45,6 +45,7 @@ module Ledger.Tx.Constraints(
     , OC.unspentOutputs
     , OC.plutusV1MintingPolicy
     , OC.plutusV1OtherScript
+    , OC.plutusV2OtherScript
     , OC.otherData
     , OC.paymentPubKey
     , OC.ownPaymentPubKeyHash
@@ -62,4 +63,4 @@ import Ledger.Tx.Constraints.OffChain qualified as OC
 -- 'Ledger.Tx.Constraints.TxConstraints.TxConstraints' value it can be used both to generate a transaction that
 -- satisfies the constraints (off-chain, using 'Ledger.Tx.Constraints.TxConstraints.OffChain.mkTx') and to check whether
 -- a given pending transaction meets the constraints (on-chain, using
--- 'Ledger.Constraints.OnChain.V1.checkScriptContext').
+-- 'Ledger.Constraints.OnChain.V1.checkScriptContext', 'Ledger.Constraints.OnChain.V2.checkScriptContext').

@@ -42,6 +42,28 @@ import PlutusTx.Prelude (check)
 --    where
 --       wrap = mkUntypedValidator mkValidator
 -- @
+--
+-- Here's an example using a parameterized validator:
+--
+-- @
+--   import PlutusTx qualified
+--   import Plutus.V2.Ledger.Scripts qualified as Plutus
+--   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
+--
+--   newtype MyCustomDatum = MyCustomDatum Integer
+--   PlutusTx.unstableMakeIsData ''MyCustomDatum
+--   newtype MyCustomRedeemer = MyCustomRedeemer Integer
+--   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
+--
+--   mkValidator :: Int -> MyCustomDatum -> MyCustomRedeemer -> Plutus.ScriptContext -> Bool
+--   mkValidator _ _ _ _ = True
+--
+--   validator :: Int -> Plutus.Validator
+--   validator i = Plutus.mkValidatorScript
+--       $$(PlutusTx.compile [|| wrap . mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode i
+--    where
+--       wrap = mkUntypedValidator
+-- @
 mkUntypedValidator
     :: forall d r
     . (UnsafeFromData d, UnsafeFromData r)

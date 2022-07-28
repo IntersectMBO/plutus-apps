@@ -205,15 +205,17 @@ instance Pretty CardanoTx where
     pretty tx =
         let lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty (getCardanoTxInputs tx)))
+                , hang 2 (vsep ("reference inputs:" : fmap pretty (getCardanoTxReferenceInputs tx)))
                 , hang 2 (vsep ("collateral inputs:" : fmap pretty (getCardanoTxCollateralInputs tx)))
                 , hang 2 (vsep ("outputs:" : fmap pretty (getCardanoTxOutputs tx)))
                 , "mint:" <+> pretty (getCardanoTxMint tx)
                 , "fee:" <+> pretty (getCardanoTxFee tx)
                 ] ++ onCardanoTx (\tx' ->
-                    [ hang 2 (vsep ("mps:": fmap pretty (Set.toList (txMintScripts tx'))))
+                    [ hang 2 (vsep ("mps:": fmap pretty (Map.toList (txMintScripts tx'))))
                     , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList (txSignatures tx'))))
                     ]) (const []) tx ++
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
+                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList $ getCardanoTxRedeemers tx) ))
                 , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList (getCardanoTxData tx))))
                 ]
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
@@ -246,6 +248,15 @@ getCardanoTxCollateralInputs :: CardanoTx -> [V1.Tx.TxIn]
 getCardanoTxCollateralInputs = onCardanoTx txCollateral
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
+
+getCardanoTxReferenceInputs :: CardanoTx -> [TxIn]
+getCardanoTxReferenceInputs = onCardanoTx txReferenceInputs
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
+        txInsReferenceToPlutusTxIns txInsReference)
+ where
+     txInsReferenceToPlutusTxIns C.TxInsReferenceNone = []
+     txInsReferenceToPlutusTxIns (C.TxInsReference _ txIns) =
+         fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn) txIns
 
 getCardanoTxOutRefs :: CardanoTx -> [(V1.Tx.TxOut, V1.Tx.TxOutRef)]
 getCardanoTxOutRefs = onCardanoTx txOutRefs CardanoAPI.txOutRefs
@@ -283,20 +294,35 @@ getCardanoTxData = onCardanoTx txData
             let d' = V1.Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
     -- TODO: add txMetaData
 
+getCardanoTxRedeemers :: CardanoTx -> Redeemers
+getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty) -- TODO: To implement
+    -- (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
+    --     Map.fromList $ mapMaybe (\(C.TxOut _ _ d _) -> fromCardanoTxOutDatum d) txOuts)
+    -- where
+    --     fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe (DatumHash, Datum)
+    --     fromCardanoTxOutDatum C.TxOutDatumNone = Nothing
+    --     fromCardanoTxOutDatum (C.TxOutDatumHash _ _) = Nothing
+    --     fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) =
+    --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
+    --     fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
+    --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
+
 instance Pretty Tx where
-    pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =
+    pretty tx =
         let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty txInputs))
-                , hang 2 (vsep ("collateral inputs:" : fmap pretty txCollateral))
-                , hang 2 (vsep ("outputs:" : fmap pretty txOutputs))
-                , "mint:" <+> pretty txMint
-                , "fee:" <+> pretty txFee
-                , hang 2 (vsep ("mps:": fmap pretty (Set.toList txMintScripts)))
-                , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList txSignatures)))
-                , "validity range:" <+> viaShow txValidRange
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList txData) ))
+                [ hang 2 (vsep ("inputs:" : fmap pretty (txInputs tx)))
+                , hang 2 (vsep ("reference inputs:" : fmap pretty (txReferenceInputs tx)))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty (txCollateral tx)))
+                , hang 2 (vsep ("outputs:" : fmap pretty (txOutputs tx)))
+                , "mint:" <+> pretty (txMint tx)
+                , "fee:" <+> pretty (txFee tx)
+                , hang 2 (vsep ("mps:": fmap pretty (Map.toList $ txMintScripts tx)))
+                , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList $ txSignatures tx)))
+                , "validity range:" <+> viaShow (txValidRange tx)
+                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList $ txRedeemers tx) ))
+                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList $ txData tx) ))
                 ]
-            txid = txId t
+            txid = txId tx
         in nest 2 $ vsep ["Tx" <+> pretty txid <> colon, braces (vsep lines')]
 
 -- | Compute the id of a transaction.
