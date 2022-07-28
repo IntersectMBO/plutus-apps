@@ -11,18 +11,31 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE ViewPatterns       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-} -- https://gitlab.haskell.org/ghc/ghc/-/issues/14630
 
 module Ledger.Tx
     ( module Ledger.Tx.Internal
     , module Plutus.V1.Ledger.Tx
-    , OffChainTxOut
-    , pattern PublicKeyOffChainTxOut
-    , pattern ScriptOffChainTxOut
+    , OffChainTxOut(PublicKeyOffChainTxOut, ScriptOffChainTxOut)
+    -- * PublicKeyOffChainTxOut
+    , ocTxOutPublicKeyHash
+    , ocTxOutPublicKeyValue
+    , ocTxOutPublicKeyDatumHash
+    , ocTxOutPublicKeyReferenceScript
+    -- * ScriptOffChainTxOut
+    , ocTxOutValidatorHash
+    , ocTxOutScriptValue
+    , ocTxOutScriptDatumHash
+    , ocTxOutValidator
+    , ocTxOutScriptDatum
+    , ocTxOutScriptReferenceScript
+    -- * Common accessors
     , ocTxOutAddress
     , ocTxOutValue
     , ocTxOutDatum
     , ocTxOutDatumHash
     , ocTxOutReferenceScript
+    -- * OffChainTxOut smart constructors
     , mkPublicKeyOffChainTxOut
     , mkScriptOffChainTxOut
     , toTxOut
@@ -90,49 +103,46 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 
 type PrivateKey = Crypto.XPrv
 
--- | Transaction output represented off-chain
--- add more
+-- | Transaction output represented off-chain. The constructors are not
+-- exported to preserve consistency between the validator, datum and their
+-- hashes. Please use the smart constructors 'mkPublicKeyOffChainTxOut',
+-- 'mkScriptOffChainTxOut' and the patterns below.
 data OffChainTxOut =
-    PublicKeyOffChainTxOut' {
-      -- | Hash of the public key protecting the transaction output.
-      ocTxOutAddress            :: V1.PubKeyHash,
-      -- | Value of the transaction output.
-      ocTxOutValue              :: V1.Value,
-      -- | Optional datum hash attached to the transaction output.
-      ocTxOutPublicKeyDatumHash :: Maybe V1.DatumHash,
-      -- | Optional datum attached to the transaction output, either found
-      -- inline or resolved from its hash offchain.
-      ocTxOutDatum              :: Maybe V1.Datum,
-      -- | Optional reference script attached to the transaction output.
-      ocTxOutReferenceScript    :: Maybe V1.Script
-    }
-  | ScriptOffChainTxOut' {
-      -- | Hash of the validator protecting the transaction output.
-      ocTxOutValidatorHash   :: V1.ValidatorHash,
-      -- | Value of the transaction output.
-      ocTxOutValue           :: V1.Value,
-      -- | FIXME Hash of the datum attached to the transaction output.
-      ocTxOutScriptDatumHash :: V1.DatumHash,
-      -- | Validator script protecting the transaction output, resolved
-      -- from its hash off-chain
-      ocTxOutValidator       :: Maybe V1.Validator,
-      -- | Datum attached to the transaction output, either found inline or
-      -- resolved from its hash off-chain. A transaction output protected
-      -- by a Plutus script is need to have an associated datum to be
-      -- spendable.
-      ocTxOutDatum           :: Maybe V1.Datum,
-      -- | Optional reference script attached to the transaction output.
-      -- The reference script is, in genereal, unrelated to the validator
-      -- script althought it could also be the same.
-      ocTxOutReferenceScript :: Maybe V1.Script
-    }
+    PublicKeyOffChainTxOut'
+      V1.PubKeyHash        -- ^ Hash of the public key protecting the
+                           -- transaction output.
+      V1.Value             -- ^ Value of the transaction output.
+      (Maybe V1.DatumHash) -- ^ Optional datum hash attached to the
+                           -- transaction output.
+      (Maybe V1.Datum)     -- ^ Optional datum attached to the transaction
+                           -- output, either found inline or resolved from
+                           -- its hash offchain.
+      (Maybe V1.Script)    -- ^ Optional reference script attached to the
+                           -- transaction output.
+  | ScriptOffChainTxOut'
+      V1.ValidatorHash     -- ^ Hash of the validator protecting the
+                           -- transaction output.
+      V1.Value             -- ^ Value of the transaction output.
+      V1.DatumHash         -- ^ FIXME Hash of the datum attached to the
+                           -- transaction output.
+      (Maybe V1.Validator) -- ^ Validator script protecting the transaction
+                           -- output, resolved from its hash off-chain
+      (Maybe V1.Datum)     -- ^ Datum attached to the transaction output,
+                           -- either found inline or resolved from its hash
+                           -- off-chain. A transaction output protected by
+                           -- a Plutus script is need to have an associated
+                           -- datum to be spendable.
+      (Maybe V1.Script)    -- ^ Optional reference script attached to the
+                           -- transaction output. The reference script is,
+                           -- in genereal, unrelated to the validator
+                           -- script althought it could also be the same.
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 pattern PublicKeyOffChainTxOut :: V1.PubKeyHash -> V1.Value -> Maybe V1.DatumHash -> Maybe V1.Datum -> Maybe V1.Script -> OffChainTxOut
-pattern PublicKeyOffChainTxOut pkh va m_dh m_da m_sc <- PublicKeyOffChainTxOut' pkh va m_dh m_da m_sc
+pattern PublicKeyOffChainTxOut { ocTxOutPublicKeyHash, ocTxOutPublicKeyValue, ocTxOutPublicKeyDatumHash, ocTxOutDatum, ocTxOutPublicKeyReferenceScript } <- PublicKeyOffChainTxOut' ocTxOutPublicKeyHash ocTxOutPublicKeyValue ocTxOutPublicKeyDatumHash ocTxOutDatum ocTxOutPublicKeyReferenceScript
 
 pattern ScriptOffChainTxOut :: V1.ValidatorHash -> V1.Value -> V1.DatumHash -> Maybe V1.Validator -> Maybe V1.Datum -> Maybe V1.Script -> OffChainTxOut
-pattern ScriptOffChainTxOut vh va dh m_va m_da m_sc <- ScriptOffChainTxOut' vh va dh m_va m_da m_sc
+pattern ScriptOffChainTxOut { ocTxOutValidatorHash, ocTxOutScriptValue, ocTxOutScriptDatumHash, ocTxOutValidator, ocTxOutScriptDatum, ocTxOutScriptReferenceScript } <- ScriptOffChainTxOut' ocTxOutValidatorHash ocTxOutScriptValue ocTxOutScriptDatumHash ocTxOutValidator ocTxOutScriptDatum ocTxOutScriptReferenceScript
 
 {-# COMPLETE PublicKeyOffChainTxOut, ScriptOffChainTxOut #-}
 
@@ -155,9 +165,29 @@ mkScriptOffChainTxOut voh va doh m_sc =
     (either (const Nothing) Just doh)
     m_sc
 
+ocTxOutAddress :: OffChainTxOut -> V1.Address
+ocTxOutAddress PublicKeyOffChainTxOut { ocTxOutPublicKeyHash } =
+  V1.pubKeyHashAddress ocTxOutPublicKeyHash
+ocTxOutAddress ScriptOffChainTxOut { ocTxOutValidatorHash } =
+  V1.scriptHashAddress ocTxOutValidatorHash
+
 ocTxOutDatumHash :: OffChainTxOut -> Maybe V1.DatumHash
-ocTxOutDatumHash (PublicKeyOffChainTxOut' _pkh _va m_dh _m_da _m_sc)  = m_dh
-ocTxOutDatumHash (ScriptOffChainTxOut' _vh _va dh _m_val _m_da _m_sc) = Just dh
+ocTxOutDatumHash PublicKeyOffChainTxOut { ocTxOutPublicKeyDatumHash } =
+  ocTxOutPublicKeyDatumHash
+ocTxOutDatumHash ScriptOffChainTxOut { ocTxOutScriptDatumHash } =
+  Just ocTxOutScriptDatumHash
+
+ocTxOutValue :: OffChainTxOut -> V1.Value
+ocTxOutValue PublicKeyOffChainTxOut { ocTxOutPublicKeyValue } =
+  ocTxOutPublicKeyValue
+ocTxOutValue ScriptOffChainTxOut { ocTxOutScriptValue } =
+  ocTxOutScriptValue
+
+ocTxOutReferenceScript :: OffChainTxOut -> Maybe V1.Script
+ocTxOutReferenceScript PublicKeyOffChainTxOut { ocTxOutPublicKeyReferenceScript } =
+  ocTxOutPublicKeyReferenceScript
+ocTxOutReferenceScript ScriptOffChainTxOut { ocTxOutScriptReferenceScript } =
+  ocTxOutScriptReferenceScript
 
 -- | Converts a transaction output from the chain index to the plutus-ledger-api
 -- transaction output.
@@ -166,10 +196,10 @@ ocTxOutDatumHash (ScriptOffChainTxOut' _vh _va dh _m_val _m_da _m_sc) = Just dh
 -- reference scripts which are not supported by V1 TxOut. Converting from
 -- 'OffChainTxOut' to 'TxOut' and back is therefore lossy.
 toTxOut :: OffChainTxOut -> V1.Tx.TxOut
-toTxOut (PublicKeyOffChainTxOut' pkh value m_dh _m_da _referenceScript) =
-  V1.Tx.TxOut (V1.pubKeyHashAddress pkh) value m_dh
-toTxOut (ScriptOffChainTxOut' vh value dh _datum _validator _referenceScript)     =
-  V1.Tx.TxOut (V1.scriptHashAddress vh) value (Just dh)
+toTxOut PublicKeyOffChainTxOut { ocTxOutPublicKeyHash, ocTxOutPublicKeyValue, ocTxOutPublicKeyDatumHash } =
+  V1.Tx.TxOut (V1.pubKeyHashAddress ocTxOutPublicKeyHash) ocTxOutPublicKeyValue ocTxOutPublicKeyDatumHash
+toTxOut ScriptOffChainTxOut { ocTxOutValidatorHash, ocTxOutScriptValue, ocTxOutScriptDatumHash } =
+  V1.Tx.TxOut (V1.scriptHashAddress ocTxOutValidatorHash) ocTxOutScriptValue (Just ocTxOutScriptDatumHash)
 
 -- | Converts a plutus-ledger-api transaction output to the chain index
 -- transaction output.
@@ -182,10 +212,16 @@ fromTxOut (V1.Tx.TxOut address value mDatumHash) =
       mDatumHash >>= \dh -> pure $ ScriptOffChainTxOut' vh value dh Nothing Nothing Nothing
 
 instance Pretty OffChainTxOut where
-    pretty (PublicKeyOffChainTxOut' pkh va _m_dh _m_da _m_sc) =
-      hang 2 $ vsep ["-" <+> pretty va <+> "addressed to", pretty (V1.pubKeyHashAddress pkh)]
-    pretty (ScriptOffChainTxOut' vh va _dh _m_val _m_da _m_sc) =
-      hang 2 $ vsep ["-" <+> pretty va <+> "addressed to", pretty (V1.scriptHashAddress vh)]
+    pretty txOut@PublicKeyOffChainTxOut {} =
+      hang 2 $ vsep
+        [ "-" <+> pretty (ocTxOutValue txOut) <+> "addressed to"
+        , pretty (ocTxOutAddress txOut)
+        ]
+    pretty txOut@ScriptOffChainTxOut {} =
+      hang 2 $ vsep
+        [ "-" <+> pretty (ocTxOutValue txOut) <+> "addressed to"
+        , pretty (ocTxOutAddress txOut)
+        ]
 
 {- Note [Why we have the Both constructor in CardanoTx]
 

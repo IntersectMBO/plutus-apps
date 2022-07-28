@@ -139,7 +139,6 @@ getStates
     -> [OnChainState s i]
 getStates (SM.StateMachineInstance _ si) refMap =
     flip mapMaybe (Map.toList refMap) $ \(txOutRef, ocTxOut) -> do
-      -- FIXME is it important to check txOut is a script?
       datum <- Tx.ocTxOutDatum ocTxOut
       ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef (Tx.toTxOut ocTxOut) datum
       pure OnChainState{ocsTxOutRef}

@@ -621,11 +621,11 @@ processConstraint = \case
     MustSpendPubKeyOutput txo -> do
         txOut <- lookupTxOutRef txo
         case txOut of
-          (Tx.PublicKeyOffChainTxOut _pkh va _m_dh _m_da _m_sc) -> do
+          Tx.PublicKeyOffChainTxOut { Tx.ocTxOutPublicKeyValue } -> do
             -- TODO: Add the optional datum in the witness set for the pub key output
             unbalancedTx . tx . Tx.inputs %= Set.insert (Tx.pubKeyTxIn txo)
-            valueSpentInputs <>= provided va
-          (Tx.ScriptOffChainTxOut _vh _va _dh _m_val _m_da _m_sc) ->
+            valueSpentInputs <>= provided ocTxOutPublicKeyValue
+          Tx.ScriptOffChainTxOut {} ->
             throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red -> do
         txout <- lookupTxOutRef txo
@@ -712,17 +712,17 @@ resolveScriptTxOut
        , MonadError MkTxError m
        )
     => OffChainTxOut -> m (Maybe (Validator, Datum, Value))
-resolveScriptTxOut (Tx.PublicKeyOffChainTxOut _pkh _va _m_dh _m_da _m_sc) =
+resolveScriptTxOut Tx.PublicKeyOffChainTxOut {} =
   pure Nothing
-resolveScriptTxOut (Tx.ScriptOffChainTxOut vh va dh m_val m_da _m_sc) = do
+resolveScriptTxOut Tx.ScriptOffChainTxOut { Tx.ocTxOutValidator, Tx.ocTxOutValidatorHash, Tx.ocTxOutScriptDatum, Tx.ocTxOutScriptDatumHash, Tx.ocTxOutScriptValue } = do
   -- If we don't have a validator already, look for it in the 'slOtherScripts map.
-  validator <- case m_val of
+  validator <- case ocTxOutValidator of
     Just val -> pure val
-    Nothing  -> lookupValidator vh
+    Nothing  -> lookupValidator ocTxOutValidatorHash
 
   -- Same for the datum
-  dataValue <- case m_da of
+  datum <- case ocTxOutScriptDatum of
     Just da -> pure da
-    Nothing -> lookupDatum dh
+    Nothing -> lookupDatum ocTxOutScriptDatumHash
 
-  pure $ Just (validator, dataValue, va)
+  pure $ Just (validator, datum, ocTxOutScriptValue)

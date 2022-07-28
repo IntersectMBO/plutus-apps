@@ -31,7 +31,7 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Tx (OffChainTxOut (..))
+import Ledger.Tx (OffChainTxOut (..), ocTxOutDatum)
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract
@@ -144,7 +144,6 @@ findSecretWordValue =
 -- | Extract the secret word in the Datum of a given transaction output is possible
 secretWordValue :: OffChainTxOut -> Maybe HashedString
 secretWordValue o = do
-  -- FIXME is it important to check txOut is a script?
   Datum d <- ocTxOutDatum o
   PlutusTx.fromBuiltinData d
 
