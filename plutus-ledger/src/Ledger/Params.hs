@@ -8,7 +8,7 @@ module Ledger.Params(
   slotConfigL,
   protocolParamsL,
   networkIdL,
-  allowBigTransactions,
+  increaseTransactionLimits,
   -- * cardano-ledger specific types and conversion functions
   EmulatorEra,
   slotLength,
@@ -60,12 +60,12 @@ makeLensesFor
 -- | Set higher limits on transaction size and execution units.
 -- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
 -- Note that if you need this your Plutus script will probably not validate on Mainnet.
-allowBigTransactions :: Params -> Params
-allowBigTransactions = over protocolParamsL fixParams
+increaseTransactionLimits :: Params -> Params
+increaseTransactionLimits = over protocolParamsL fixParams
   where
     fixParams pp = pp
-      { protocolParamMaxTxSize = 256 * 1024
-      , protocolParamMaxTxExUnits = Just (ExecutionUnits {executionSteps = 100000000000, executionMemory = 100000000})
+      { protocolParamMaxTxSize = 2 * protocolParamMaxTxSize pp
+      , protocolParamMaxTxExUnits = protocolParamMaxTxExUnits pp >>= (\ExecutionUnits {executionSteps, executionMemory} -> pure $ ExecutionUnits {executionSteps = 10 * executionSteps, executionMemory = 10 * executionMemory})
       }
 
 instance Default Params where

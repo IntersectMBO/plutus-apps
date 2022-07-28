@@ -62,6 +62,7 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..
                                 TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V2.Ledger.Api (Credential (..), Datum (..), DatumHash (..), TxOutRef (..))
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
@@ -191,24 +192,29 @@ makeChainIndexTxOut ::
   )
   => ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
-makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) =
+makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
+  datumWithHash <- getDatumWithHash datum
   case addressCredential address of
     PubKeyCredential _ ->
-      pure $ Just $ L.PublicKeyChainIndexTxOut address value datum script
+        pure $ Just $ L.PublicKeyChainIndexTxOut address value datumWithHash script
     ScriptCredential vh ->
-      case datum of
-        OutputDatumHash dh -> do
-          v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          d <- maybe (Left dh) Right <$> getDatumFromHash dh
-          pure $ Just $ L.ScriptChainIndexTxOut address value d script v
-        OutputDatum d -> do
-          v <- maybe (Left vh) Right <$> getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut address value (Right d) script v
-        NoOutputDatum -> do
+      case datumWithHash of
+        Just d -> do
+          v <- getScriptFromHash vh
+          pure $ Just $ L.ScriptChainIndexTxOut address value d script (vh, v)
+        Nothing -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
   where
+    getDatumWithHash :: OutputDatum -> Eff effs (Maybe (DatumHash, Maybe Datum))
+    getDatumWithHash NoOutputDatum = pure Nothing
+    getDatumWithHash (OutputDatumHash dh) = do
+        d <- getDatumFromHash dh
+        pure $ Just (dh, d)
+    getDatumWithHash (OutputDatum d) = do
+        pure $ Just (datumHash d, Just d)
+
     script = fromReferenceScript refScript
 
 getUtxoSetAtAddress

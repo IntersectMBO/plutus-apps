@@ -43,10 +43,11 @@ import PlutusTx.Prelude (Applicative (pure), Either (Left, Right), Eq ((==)), ma
 import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Crypto (Passphrase, PubKey (..), Signature (..))
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts (Datum (Datum), DatumHash (DatumHash))
-import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Time (POSIXTime)

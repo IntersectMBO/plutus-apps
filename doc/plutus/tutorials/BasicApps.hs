@@ -25,8 +25,8 @@ import Ledger (Ada, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (Scri
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (Contract, Endpoint, Promise, collectFromScript, endpoint, logInfo, selectList,
-                        submitTxConstraints, submitTxConstraintsSpending, type (.\/), utxosAt)
+import Plutus.Contract (Contract, Endpoint, Promise, endpoint, logInfo, selectList, submitTxConstraints,
+                        submitTxConstraintsSpending, type (.\/), utxosAt)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool, Semigroup ((<>)), ($), (&&), (-), (.), (>=))
 import Prelude qualified as Haskell
@@ -117,7 +117,7 @@ unlockFunds SplitData{recipient1, recipient2, amount} = do
     utxos <- utxosAt contractAddress
     let half = Ada.divide amount 2
         tx =
-            collectFromScript utxos ()
+            Constraints.collectFromTheScript utxos ()
             <> Constraints.mustPayToPubKey recipient1 (Ada.toValue half)
             <> Constraints.mustPayToPubKey recipient2 (Ada.toValue $ amount - half)
     void $ submitTxConstraintsSpending splitValidator utxos tx

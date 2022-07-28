@@ -29,7 +29,7 @@ import Cardano.Api.Shelley qualified as Script
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
-import Plutus.Script.Utils.V1.Scripts qualified as P
+import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Builtins qualified as Builtins
 

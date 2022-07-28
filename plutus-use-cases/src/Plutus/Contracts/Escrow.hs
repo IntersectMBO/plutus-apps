@@ -69,8 +69,7 @@ import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq, lt)
 import Plutus.Contract
-import Plutus.Contract.Typed.Tx qualified as Typed
-import Plutus.Script.Utils.V1.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 
 import Prelude (Semigroup (..), foldMap)
@@ -261,7 +260,7 @@ pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
         >>= adjustUnbalancedTx
         >>= submitUnbalancedTx
         >>= return . getCardanoTxId
@@ -296,7 +295,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     unspentOutputs <- utxosAt addr
     let
         valRange = Interval.to (Haskell.pred $ escrowDeadline escrow)
-        tx = Typed.collectFromScript unspentOutputs Redeem
+        tx = Constraints.collectFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
                 <> Constraints.mustValidateIn valRange
     if current >= escrowDeadline escrow
@@ -304,7 +303,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
          then throwing _RedeemFailed NotEnoughFundsAtAddress
          else do
-           utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+           utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
                                  <> Constraints.unspentOutputs unspentOutputs
                                   ) tx
            adjusted <- adjustUnbalancedTx utx
@@ -332,12 +331,12 @@ refund ::
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = either id datumHash (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
-        tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
+    let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
+        tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+        utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx'
         adjusted <- adjustUnbalancedTx utx

@@ -121,7 +121,7 @@ guess = endpoint @"guess" @GuessParams $ \(GuessParams theGuess) -> do
     utxos <- fundsAtAddressGeq gameAddress (Ada.lovelaceValueOf 1)
 
     let redeemer = clearString theGuess
-        tx       = collectFromScript utxos redeemer
+        tx       = Constraints.collectFromTheScript utxos redeemer
 
     -- Log a message saying if the secret word was correctly guessed
     let hashedSecretWord = findSecretWordValue utxos
@@ -144,7 +144,7 @@ findSecretWordValue =
 -- | Extract the secret word in the Datum of a given transaction output is possible
 secretWordValue :: ChainIndexTxOut -> Maybe HashedString
 secretWordValue o = do
-  Datum d <- either (const Nothing) Just (_ciTxOutScriptDatum o)
+  Datum d <- snd (_ciTxOutScriptDatum o)
   PlutusTx.fromBuiltinData d
 
 game :: AsContractError e => Contract () GameSchema e ()

@@ -107,7 +107,7 @@ runScenario sim = do
 -- To run scenarios with the slot's length to 1s to make the awaiting tests stable
 runScenarioWithSecondSlot :: Simulation (Builtin TestContracts) a -> IO ()
 runScenarioWithSecondSlot sim = do
-    let params = Ledger.allowBigTransactions def
+    let params = Ledger.increaseTransactionLimits def
     result <- Simulator.runSimulationWithParams params sim
     case result of
         Left err -> error (show err)

@@ -9,7 +9,7 @@ module Plutus.PAB.Simulator.Test(runSimulation, runSimulationWithParams) where
 
 import Control.Monad.Freer (interpret)
 import Data.Default (Default (def))
-import Ledger.Params (Params (pSlotConfig), allowBigTransactions)
+import Ledger.Params (Params (pSlotConfig), increaseTransactionLimits)
 import Ledger.TimeSlot (SlotConfig (..))
 import Plutus.PAB.Core (EffectHandlers)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (contractHandler), handleBuiltin)
@@ -20,8 +20,11 @@ import Plutus.PAB.Types (PABError)
 
 -- | Run the PAB simulator with the test contracts
 runSimulation :: Simulation (Builtin TestContracts) a -> IO (Either PABError a)
-runSimulation = runSimulationWithParams $
-  allowBigTransactions def { pSlotConfig = def { scSlotLength = 1 } }
+runSimulation = runSimulationWithParams params
+ where
+    params :: Params
+    params = increaseTransactionLimits . increaseTransactionLimits
+           $ def { pSlotConfig = def { scSlotLength = 1 } }
 
 -- | Run the PAB simulator with the test contracts with provided params
 runSimulationWithParams :: Params -> Simulation (Builtin TestContracts) a -> IO (Either PABError a)

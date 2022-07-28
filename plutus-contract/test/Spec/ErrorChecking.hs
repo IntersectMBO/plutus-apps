@@ -19,7 +19,7 @@ import Data.Row
 import Test.Tasty
 
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints (mustPayToOtherScript)
+import Ledger.Constraints (collectFromTheScript, mustPayToOtherScript)
 import Ledger.Tx (getCardanoTxId)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract as Contract
@@ -145,7 +145,7 @@ contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, succes
       r <- submitTx tx
       awaitTxConfirmed (getCardanoTxId r)
       utxos <- utxosAt addr
-      let tx' = collectFromScript utxos 0
+      let tx' = collectFromTheScript utxos 0
       submitTxConstraintsSpending validator utxos tx'
 
     failFalseC = endpoint @"failFalse" $ \ _ -> do

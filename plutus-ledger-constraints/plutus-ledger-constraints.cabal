@@ -50,7 +50,7 @@ library
   exposed-modules:
     Ledger.Constraints
     Ledger.Constraints.OffChain
-    Ledger.Constraints.OnChain
+    Ledger.Constraints.OnChain.V1
     Ledger.Constraints.TxConstraints
 
   --------------------

@@ -43,7 +43,6 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract
-import Plutus.Contract.Typed.Tx qualified as Typed
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import PlutusTx qualified
@@ -188,7 +187,7 @@ vestFundsC
     -> Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups $ typedValidator vesting) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -218,14 +217,14 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
         remainingOutputs = case liveness of
                             Alive -> payIntoContract remainingValue
                             Dead  -> mempty
-        tx = Typed.collectFromScript unspentOutputs ()
+        tx = Constraints.collectFromTheScript unspentOutputs ()
                 <> remainingOutputs
                 <> mustValidateIn (Interval.from nextTime)
                 <> mustBeSignedBy (vestingOwner vesting)
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    mkTxConstraints (Constraints.typedValidatorLookups inst
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

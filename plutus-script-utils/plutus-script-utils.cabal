@@ -57,6 +57,7 @@ library
   hs-source-dirs:   src
   default-language: Haskell2010
   exposed-modules:
+    Plutus.Script.Utils.Scripts
     Plutus.Script.Utils.V1.Address
     Plutus.Script.Utils.V1.Generators
     Plutus.Script.Utils.V1.Scripts
