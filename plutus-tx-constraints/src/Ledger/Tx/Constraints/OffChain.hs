@@ -25,7 +25,8 @@ module Ledger.Tx.Constraints.OffChain(
     , P.generalise
     , P.unspentOutputs
     , P.mintingPolicy
-    , P.otherScript
+    , P.otherPlutusV1Script
+    , P.otherPlutusV2Script
     , P.otherData
     , P.ownPaymentPubKeyHash
     , P.ownStakePubKeyHash

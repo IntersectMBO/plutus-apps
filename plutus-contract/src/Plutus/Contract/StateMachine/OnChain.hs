@@ -29,7 +29,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                           TxConstraints (txOwnOutputs), checkScriptContext)
+                           TxConstraints (txOwnOutputs), checkV1ScriptContext)
 import Ledger.Tx (TxOut (txOutValue))
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, ValidatorTypes, validatorAddress,
                              validatorHash)
@@ -124,7 +124,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
             Just (newConstraints, State{stateData=newData, stateValue=newValue})
                 | isFinal newData ->
                     traceIfFalse "S3" {-"Non-zero value allocated in final state"-} (isZero newValue)
-                    && traceIfFalse "S4" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext newConstraints ptx)
+                    && traceIfFalse "S4" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkV1ScriptContext newConstraints ptx)
                 | otherwise ->
                     let txc =
                             newConstraints
@@ -136,6 +136,6 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                                         }
                                     ]
                                 }
-                    in traceIfFalse "S5" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext @_ @s txc ptx)
+                    in traceIfFalse "S5" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkV1ScriptContext @_ @s txc ptx)
             Nothing -> trace "S6" {-"State transition invalid - input is not a valid transition at the current state"-} False
     in checkOk && stateAndOutputsOk

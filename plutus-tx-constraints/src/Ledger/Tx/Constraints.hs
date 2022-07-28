@@ -32,7 +32,8 @@ module Ledger.Tx.Constraints(
     , TC.modifiesUtxoSet
     , TC.isSatisfiable
     -- * On-chain validation
-    , checkScriptContext
+    , checkV1ScriptContext
+    , checkV2ScriptContext
     -- * Off-chain transaction generation
     , OC.UnbalancedTx(..)
     , OC.MkTxError(..)
@@ -46,14 +47,16 @@ module Ledger.Tx.Constraints(
     , OC.typedValidatorLookups
     , OC.unspentOutputs
     , OC.mintingPolicy
-    , OC.otherScript
+    , OC.otherPlutusV1Script
+    , OC.otherPlutusV2Script
     , OC.otherData
     , OC.paymentPubKey
     , OC.ownPaymentPubKeyHash
     , OC.ownStakePubKeyHash
     ) where
 
-import Ledger.Constraints.OnChain (checkScriptContext)
+import Ledger.Constraints.OnChain.V1 (checkV1ScriptContext)
+import Ledger.Constraints.OnChain.V2 (checkV2ScriptContext)
 import Ledger.Constraints.TxConstraints qualified as TC
 import Ledger.Tx.Constraints.OffChain qualified as OC
 
@@ -65,4 +68,4 @@ import Ledger.Tx.Constraints.OffChain qualified as OC
 -- 'Ledger.Tx.Constraints.TxConstraints.TxConstraints' value it can be used both to generate a transaction that
 -- satisfies the constraints (off-chain, using 'Ledger.Tx.Constraints.TxConstraints.OffChain.mkTx') and to check whether
 -- a given pending transaction meets the constraints (on-chain, using
--- 'checkScriptContext').
+-- 'checkV1ScriptContext', 'checkV2ScriptContext').

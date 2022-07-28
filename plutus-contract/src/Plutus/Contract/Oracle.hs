@@ -174,7 +174,7 @@ verifySignedMessageOnChain ::
 verifySignedMessageOnChain ptx pk s@SignedMessage{osmSignature, osmMessageHash} = do
     checkSignature osmMessageHash pk osmSignature
     (a, constraints) <- checkHashConstraints s
-    unless (Constraints.checkScriptContext @() @() constraints ptx)
+    unless (Constraints.checkV1ScriptContext @() @() constraints ptx)
         (Left $ DatumMissing osmMessageHash)
     pure a
 

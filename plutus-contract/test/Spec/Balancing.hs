@@ -55,7 +55,7 @@ balanceTxnMinAda =
             let txOutRef = head (Map.keys utxo)
                 constraints2 = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
                     <> L.Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
-                lookups2 = L.Constraints.unspentOutputs utxo <> L.Constraints.otherScript someValidator
+                lookups2 = L.Constraints.unspentOutputs utxo <> L.Constraints.otherPlutusV1Script someValidator
             utx2 <- Con.adjustUnbalancedTx $ either (error . show) id $ L.Constraints.mkTx @Void lookups2 constraints2
             submitTxConfirmed utx2
 
@@ -91,7 +91,7 @@ balanceTxnMinAda2 =
             utxos <- utxosAt someAddress
             let txOutRef = head (Map.keys utxos)
                 lookups = L.Constraints.unspentOutputs utxos
-                        <> L.Constraints.otherScript someValidator
+                        <> L.Constraints.otherPlutusV1Script someValidator
                         <> L.Constraints.mintingPolicy mps
                 constraints = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
                             <> L.Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script

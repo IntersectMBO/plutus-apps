@@ -1,14 +1,10 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DerivingVia        #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Ledger.Tx.Internal where
 
@@ -30,27 +26,32 @@ import Plutus.V1.Ledger.Tx
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
 
--- | A transaction, including witnesses for its inputs.
+-- | A Babbage era transaction, including witnesses for its inputs.
 data Tx = Tx {
-    txInputs      :: Set.Set TxIn,
+    txInputs          :: Set.Set TxIn,
     -- ^ The inputs to this transaction.
-    txCollateral  :: Set.Set TxIn,
+    txReferenceInputs :: Set.Set TxIn,
+    -- ^ The reference inputs to this transaction.
+    txCollateral      :: Set.Set TxIn,
     -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
-    txOutputs     :: [TxOut],
+    txOutputs         :: [TxOut],
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
-    txMint        :: !Value,
+    txMint            :: !Value,
     -- ^ The 'Value' minted by this transaction.
-    txFee         :: !Value,
+    txFee             :: !Value,
     -- ^ The fee for this transaction.
-    txValidRange  :: !SlotRange,
+    txValidRange      :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintScripts :: Set.Set MintingPolicy,
+    txMintScripts     :: Map.Map MintingPolicyHash MintingPolicy,
     -- ^ The scripts that must be run to check minting conditions.
-    txSignatures  :: Map PubKey Signature,
+    -- We include the minting policy hash in order to be able to include
+    -- PlutusV1 AND PlutusV2 minting policy scripts, because the hashing
+    -- function is different for each Plutus script version.
+    txSignatures      :: Map PubKey Signature,
     -- ^ Signatures of this transaction.
-    txRedeemers   :: Redeemers,
+    txRedeemers       :: Redeemers,
     -- ^ Redeemers of the minting scripts.
-    txData        :: Map DatumHash Datum
+    txData            :: Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
     } deriving stock (Show, Eq, Generic)
       deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
@@ -59,6 +60,7 @@ data Tx = Tx {
 instance Semigroup Tx where
     tx1 <> tx2 = Tx {
         txInputs = txInputs tx1 <> txInputs tx2,
+        txReferenceInputs = txReferenceInputs tx1 <> txReferenceInputs tx2,
         txCollateral = txCollateral tx1 <> txCollateral tx2,
         txOutputs = txOutputs tx1 <> txOutputs tx2,
         txMint = txMint tx1 <> txMint tx2,
@@ -71,7 +73,7 @@ instance Semigroup Tx where
         }
 
 instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty mempty top mempty mempty mempty mempty
+    mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty
 
 instance BA.ByteArrayAccess Tx where
     length        = BA.length . Write.toStrictByteString . encode
@@ -82,6 +84,12 @@ inputs :: Lens' Tx (Set.Set TxIn)
 inputs = lens g s where
     g = txInputs
     s tx i = tx { txInputs = i }
+
+-- | The reference inputs of a transaction.
+referenceInputs :: Lens' Tx (Set.Set TxIn)
+referenceInputs = lens g s where
+    g = txReferenceInputs
+    s tx i = tx { txReferenceInputs = i }
 
 -- | The collateral inputs of a transaction for paying fees when validating the transaction fails.
 collateralInputs :: Lens' Tx (Set.Set TxIn)
@@ -116,7 +124,7 @@ mint = lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: Lens' Tx (Set.Set MintingPolicy)
+mintScripts :: Lens' Tx (Map.Map MintingPolicyHash MintingPolicy)
 mintScripts = lens g s where
     g = txMintScripts
     s tx fs = tx { txMintScripts = fs }
@@ -147,21 +155,24 @@ validValuesTx Tx{..}
     where
       nonNegative i = V.geq i mempty
 
--- | A transaction without witnesses for its inputs.
+-- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
-    txStrippedInputs  :: Set.Set TxOutRef,
+    txStrippedInputs          :: Set.Set TxOutRef,
     -- ^ The inputs to this transaction, as transaction output references only.
-    txStrippedOutputs :: [TxOut],
+    txStrippedReferenceInputs :: Set.Set TxOutRef,
+    -- ^ The reference inputs to this transaction, as transaction output references only.
+    txStrippedOutputs         :: [TxOut],
     -- ^ The outputs of this transation.
-    txStrippedMint    :: !Value,
+    txStrippedMint            :: !Value,
     -- ^ The 'Value' minted by this transaction.
-    txStrippedFee     :: !Value
+    txStrippedFee             :: !Value
     -- ^ The fee for this transaction.
     } deriving (Show, Eq, Generic, Serialise)
 
 strip :: Tx -> TxStripped
-strip Tx{..} = TxStripped i txOutputs txMint txFee where
+strip Tx{..} = TxStripped i ri txOutputs txMint txFee where
     i = Set.map txInRef txInputs
+    ri = Set.map txInRef txReferenceInputs
 
 -- | A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g.
 -- the full data script that goes with the 'TxOut'.
@@ -175,6 +186,10 @@ txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> Set.Set TxOutRef
 spentOutputs = Set.map txInRef . txInputs
+
+-- | The transaction output references referenced by a transaction.
+referencedOutputs :: Tx -> Set.Set TxOutRef
+referencedOutputs = Set.map txInRef . txReferenceInputs
 
 -- | Update a map of unspent transaction outputs and signatures
 --   for a failed transaction using its collateral inputs.

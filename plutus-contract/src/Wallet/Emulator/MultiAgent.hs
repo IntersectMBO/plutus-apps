@@ -291,6 +291,7 @@ emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
 emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
     tx = Tx
             { txInputs = mempty
+            , txReferenceInputs = mempty
             , txCollateral = mempty
             , txOutputs = Map.toList mp >>= mkOutputs
             , txMint = foldMap snd $ Map.toList mp

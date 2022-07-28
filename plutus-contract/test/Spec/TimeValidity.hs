@@ -51,7 +51,7 @@ contract = do
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
         lookups2 =
-            Constraints.otherScript (validatorScript deadline)
+            Constraints.otherPlutusV1Script (validatorScript deadline)
             <> Constraints.unspentOutputs utxos
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs

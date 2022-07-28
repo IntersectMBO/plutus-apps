@@ -193,7 +193,7 @@ alwaysSucceedValidatorHash = Scripts.validatorHash alwaysSucceedValidator
 
 validator1 :: Scripts.TypedValidator UnitTest
 validator1 = Scripts.mkTypedValidator
-    ($$(PlutusTx.compile [|| \vh _ _ -> checkScriptContext @() @() (constraints1 vh) ||])
+    ($$(PlutusTx.compile [|| \vh _ _ -> checkV1ScriptContext @() @() (constraints1 vh) ||])
         `PlutusTx.applyCode` PlutusTx.liftCode alwaysSucceedValidatorHash)
     $$(PlutusTx.compile [|| wrap ||])
     where

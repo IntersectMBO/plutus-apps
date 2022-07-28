@@ -49,7 +49,7 @@ import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), Tx
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
-import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
+import Plutus.Script.Utils.V1.Scripts (datumHash, redeemerHash, validatorHash)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
                              Redeemer, RedeemerHash, Script, Validator (getValidator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))
@@ -123,11 +123,10 @@ fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) =
     either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
 
-mintingPolicies :: Set MintingPolicy -> Map ScriptHash Script
-mintingPolicies = Map.fromList . fmap withHash . Set.toList
+mintingPolicies :: Map MintingPolicyHash MintingPolicy -> Map ScriptHash Script
+mintingPolicies = Map.fromList . fmap toScript . Map.toList
   where
-    withHash mp = let (MintingPolicyHash mph) = mintingPolicyHash mp
-                   in (ScriptHash mph, getMintingPolicy mp)
+    toScript (MintingPolicyHash mph, mp) = (ScriptHash mph, getMintingPolicy mp)
 
 validators :: Set TxIn -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
 validators txIns = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) $ zip [0..] (Set.toList txIns)

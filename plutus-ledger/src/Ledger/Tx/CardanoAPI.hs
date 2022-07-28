@@ -58,7 +58,8 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoValue
   , toCardanoFee
   , toCardanoValidityRange
-  , toCardanoScriptInEra
+  , toCardanoPlutusV1ScriptInEra
+  , toCardanoPlutusV2ScriptInEra
   , toCardanoPaymentKeyHash
   , toCardanoScriptData
   , toCardanoScriptDataHash
@@ -111,7 +112,6 @@ import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Internal qualified as P
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Credential qualified as Credential
@@ -395,6 +395,7 @@ toCardanoTxBodyContent
     -> Either ToCardanoError CardanoBuildTx
 toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
+    txInsReference <- traverse (\(PV1.TxIn ref _) -> toCardanoTxIn ref) $ Set.toList txReferenceInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut pNetworkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
@@ -403,8 +404,8 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} =
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse toCardanoPaymentKeyHash sigs
     pure $ CardanoBuildTx $ C.TxBodyContent
         { txIns = txIns
+        , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
         , txInsCollateral = txInsCollateral
-        , txInsReference = C.TxInsReferenceNone -- TODO Change when finally supporting Babbage era txs
         , txOuts = txOuts
         , txTotalCollateral = C.TxTotalCollateralNone -- TODO Change when going to Babbage era txs
         , txReturnCollateral = C.TxReturnCollateralNone -- TODO Change when going to Babbage era txs
@@ -473,7 +474,7 @@ toCardanoTxInWitness
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-        <$> fmap C.PScript (toCardanoPlutusScript validator)
+        <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) validator)
         <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
         <*> pure (toCardanoScriptData redeemer)
         <*> pure zeroExecutionUnits
@@ -484,7 +485,7 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
     let redeemerPtr = PV1.RedeemerPtr PV1.Mint (fromIntegral idx)
     P.Redeemer redeemer <- maybe (Left MissingMintingPolicyRedeemer) Right (Map.lookup redeemerPtr redeemers)
     C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-        <$> fmap C.PScript (toCardanoPlutusScript script)
+        <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
         <*> pure C.NoScriptDatumForMint
         <*> pure (C.fromPlutusData $ PV1.toData redeemer)
         <*> pure zeroExecutionUnits
@@ -635,12 +636,20 @@ fromCardanoMintValue :: C.TxMintValue build era -> PV1.Value
 fromCardanoMintValue C.TxMintNone              = mempty
 fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 
-toCardanoMintValue :: PV1.Redeemers -> PV1.Value -> Set.Set P.MintingPolicy -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
+toCardanoMintValue
+    :: PV1.Redeemers
+    -> PV1.Value
+    -> Map.Map P.MintingPolicyHash P.MintingPolicy
+    -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue redeemers value mps =
-    let indexedMps = Prelude.zip [0..] $ Set.toList mps
+    let indexedMps = Prelude.zip [0..] $ Map.toList mps
      in C.TxMintValue C.MultiAssetInBabbageEra
         <$> toCardanoValue value
-        <*> (C.BuildTxWith . Map.fromList <$> traverse (\(idx, mp) -> (,) <$> (toCardanoPolicyId . PV1.mintingPolicyHash) mp <*> toCardanoMintWitness redeemers idx mp) indexedMps)
+        <*> (C.BuildTxWith . Map.fromList <$> traverse indexedMpsToCardanoMintWitness indexedMps)
+ where
+    indexedMpsToCardanoMintWitness (idx, (mph, mp)) =
+        (,) <$> toCardanoPolicyId mph
+            <*> toCardanoMintWitness redeemers idx mp
 
 fromCardanoValue :: C.Value -> PV1.Value
 fromCardanoValue (C.valueToList -> list) = foldMap toValue list
@@ -732,16 +741,24 @@ fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InBabbage (C.PlutusScript 
     Just $ fromCardanoPlutusScript script
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 
-toCardanoScriptInEra :: P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
-toCardanoScriptInEra script = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript script
+toCardanoPlutusV1ScriptInEra :: P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
+toCardanoPlutusV1ScriptInEra script = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
+
+-- TODO: Is there a way to combine this with 'toCardanoPlutusV1ScriptInEra'.
+toCardanoPlutusV2ScriptInEra :: P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
+toCardanoPlutusV2ScriptInEra script = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
 fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
 fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
 
-toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
-toCardanoPlutusScript =
+toCardanoPlutusScript
+    :: C.SerialiseAsRawBytes plutusScript
+    => C.AsType plutusScript
+    -> P.Script
+    -> Either ToCardanoError plutusScript
+toCardanoPlutusScript asPlutusScriptType =
     tag "toCardanoPlutusScript"
-    . deserialiseFromRawBytes (C.AsPlutusScript C.AsPlutusScriptV1) . BSL.toStrict . Codec.serialise
+    . deserialiseFromRawBytes asPlutusScriptType . BSL.toStrict . Codec.serialise
 
 fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe P.Script
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _ssv _ss)) = Nothing
