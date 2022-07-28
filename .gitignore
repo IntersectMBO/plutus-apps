@@ -88,6 +88,7 @@ plutus-pab/plutus-pab.yaml
 .history/
 .virtualenv
 .vscode/
+.idea/
 .hsenv
 TAGS
 .DS_Store
