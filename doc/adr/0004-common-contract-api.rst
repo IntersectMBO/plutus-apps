@@ -1,7 +1,7 @@
 .. _common_pab_api:
 
-ADR 4: Common PAB API
-=====================
+ADR 4: Common Contract API
+==========================
 
 Date: 2022-07-12
 
@@ -15,12 +15,12 @@ koslambrou <konstantinos.lambrou@iohk.io>
 Status
 ------
 
-Draft
+Proposed
 
 Context
 -------
 
-There are multiple implementations of a Plutus Application Backend external of IO Global, and also other tools related to Plutus smart contracts.
+There are multiple implementations of a Plutus Application Backend (PAB) external of IO Global, and also other tools related to Plutus smart contracts.
 Some of them are using the same contract interface as the official implementation, but some of them use a different interface.
 However, as the ecosystem evolves, it would be beneficial to create a well defined standard, that other off-chain tools can use as a reference, or as an interface to implement.
 
@@ -50,12 +50,13 @@ Decision
   By moving the Contract API out of the plutus-apps monorepository, any tool could update to newer version to their discretion.
   Without many dependencies, many tools could utilize the Contract API without having to depend on the whole plutus-apps monorepo.
 
-* We (the Plutus Tools at IO Global) will continue to be the main maintainers of this new repository. However, a new ADR will need to be created if we ever decide to make this a community driven project.
+* We (the Plutus Tools at IO Global) will continue to be the main maintainers of this new repository.
+  However, a new ADR will need to be created if we ever decide to make this a community driven project.
 
 * TODO: What about governance? How do we decide which interface changes are accepted? ADRs? Who ultimately accepts and rejects them?
 
-Implications
-------------
+Argument
+--------
 
 We speed up the development of off-chain tools, by loosening up some of tightly coupled dependencies, so these external projects can move more freely.
 This would also mean that the cost of the interface update would be reduced, so we could see more features added to the standard, and the PAB API following the capabilities of Cardano more closely.
@@ -64,4 +65,19 @@ As an added benefit, community involvement with the API could also greatly impro
 A standard API for all Plutus contacts would help keeping the ecosystem on the same track with their implementation.
 As more and more off-chain tools implement the same contract interface in the future, it will be relatively easy to switch between different Plutus Application Backend implementations, or to use multiple of these tools at the same time without a need for serious code rewrites.
 
-The implementation of the Contract API interface would track a specific version of the Contract API interface. We would then need to regularly update the implementation given any interface changes.
+The implementation of the Contract API interface would track a specific version of the Contract API interface.
+We would then need to regularly update the implementation given any interface changes.
+
+Implications
+------------
+
+* We will need to decide if we should make this a community driven project.
+  If so, we will also need to make a decision about governance.
+  How do we decide which interface changes are accepted?
+  Do we use ADRs?
+  Who ultimately accepts and rejects them?
+
+Notes
+-----
+
+This ADR has been discussed here: `#586 <https://github.com/input-output-hk/plutus-apps/pull/586>`_.
