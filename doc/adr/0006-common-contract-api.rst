@@ -1,6 +1,6 @@
 .. _common_pab_api:
 
-ADR 4: Common Contract API
+ADR 6: Common Contract API
 ==========================
 
 Date: 2022-07-12
