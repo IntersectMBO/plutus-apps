@@ -39,6 +39,7 @@ module Plutus.ChainIndex.Tx(
     ) where
 
 import Cardano.Api (NetworkId)
+import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
