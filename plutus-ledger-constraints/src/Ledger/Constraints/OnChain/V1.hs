@@ -43,7 +43,7 @@ import Plutus.V1.Ledger.Value (leq)
 -- | Does the 'ScriptContext' satisfy the constraints?
 checkScriptContext :: forall i o. ToData o => TxConstraints i o -> ScriptContext -> Bool
 checkScriptContext TxConstraints{txConstraints, txConstraintFuns = TxConstraintFuns txCnsFuns, txOwnInputs, txOwnOutputs} ptx =
-    traceIfFalse "Ld" -- "checkScriptContext failed"
+    traceIfFalse "L!" -- "checkScriptContext failed"
     $ all (checkTxConstraint ptx) txConstraints
     && all (checkTxConstraintFun ptx) txCnsFuns
     && all (checkOwnInputConstraint ptx) txOwnInputs
@@ -148,7 +148,7 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
                 vh == vh' && valuePred val && datumPred d
             isMatch _ = False
         in
-        traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
+        traceIfFalse "Lf" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
         $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
 
 {- Note [Mint and Fee fields must have ada symbol]
