@@ -407,10 +407,11 @@ insertInstance :: ContractInstanceId -> InstanceState -> InstancesState -> STM (
 insertInstance instanceID state (InstancesState m) = STM.modifyTVar m (Map.insert instanceID state)
 
 -- | Wait for the status of a transaction to change.
-waitForTxStatusChange :: TxStatus -> TxId -> BlockchainEnv -> STM TxStatus
-waitForTxStatusChange oldStatus tx env@BlockchainEnv{beLastSyncedBlockNo} = do
-    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar (getUtxoIndexTxChanges env)
-    blockNumber <- STM.readTVar beLastSyncedBlockNo
+waitForTxStatusChange
+  :: TxStatus -> TxId -> TVar (UtxoIndex TxIdState) -> TVar BlockNumber -> STM TxStatus
+waitForTxStatusChange oldStatus tx ix lastBlock = do
+    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar ix
+    blockNumber <- STM.readTVar lastBlock
     let txStatus = transactionStatus blockNumber txIdState tx
     -- Succeed only if we _found_ a status and it was different; if
     -- the status hasn't changed, _or_ there was an error computing
