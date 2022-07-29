@@ -31,18 +31,12 @@ import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx.Internal (Tx)
-import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
-                             LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
-                             MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
-                             Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
-                             StakeValidatorHash (StakeValidatorHash), StakingCredential, TokenName (TokenName),
-                             TxId (TxId), TxOut, TxOutRef, UpperBound, Validator (Validator),
-                             ValidatorHash (ValidatorHash), Value (Value), fromBytes)
-import Plutus.V1.Ledger.Bytes (bytes)
-import Plutus.V1.Ledger.Scripts (ScriptError, ScriptHash (..))
-import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
+import Plutus.V1.Ledger.Bytes
+import Plutus.V1.Ledger.Scripts
+import Plutus.V1.Ledger.Time
+import Plutus.V1.Ledger.Value
+import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Tx
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))

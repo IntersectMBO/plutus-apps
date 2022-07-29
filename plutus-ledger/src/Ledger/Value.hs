@@ -1,14 +1,14 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Ledger.Value
-  ( module Export
+  ( module Plutus.V1.Ledger.Value
   , noAdaValue
   , adaOnlyValue
   , isAdaOnlyValue
   ) where
 
 import Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Value as Export
+import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude (Bool, Eq (..), (-))
 
 {-# INLINABLE noAdaValue #-}

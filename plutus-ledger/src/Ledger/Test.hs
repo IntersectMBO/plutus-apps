@@ -5,23 +5,21 @@
 {-# LANGUAGE TypeApplications    #-}
 module Ledger.Test where
 
-import Ledger qualified
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
-import Plutus.V1.Ledger.Api (Address, Validator)
+import Ledger
+import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS
 import PlutusTx qualified
 import Prelude hiding (not)
 
 someAddress :: Address
-someAddress = Ledger.scriptValidatorHashAddress (PV1.validatorHash someValidator) Nothing
+someAddress = scriptValidatorHashAddress (validatorHash someValidator) Nothing
 
 someValidator :: Validator
-someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
+someValidator = mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
 
 {-# INLINABLE mkPolicy #-}
-mkPolicy :: () -> Ledger.ScriptContext -> Bool
+mkPolicy :: () -> ScriptContext -> Bool
 mkPolicy _ _ = True
 
-coinMintingPolicy :: Ledger.MintingPolicy
-coinMintingPolicy = Ledger.mkMintingPolicyScript
+coinMintingPolicy :: MintingPolicy
+coinMintingPolicy = mkMintingPolicyScript
     $$(PlutusTx.compile [|| MPS.mkUntypedMintingPolicy mkPolicy ||])

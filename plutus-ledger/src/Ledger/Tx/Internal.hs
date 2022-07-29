@@ -14,16 +14,15 @@ import Control.DeepSeq (NFData)
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
-import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx
-import Plutus.V1.Ledger.Value as V
+import Ledger.Value (geq)
+import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Tx
 import PlutusTx.Lattice
 
 -- | A Babbage era transaction, including witnesses for its inputs.
@@ -47,11 +46,11 @@ data Tx = Tx {
     -- We include the minting policy hash in order to be able to include
     -- PlutusV1 AND PlutusV2 minting policy scripts, because the hashing
     -- function is different for each Plutus script version.
-    txSignatures      :: Map PubKey Signature,
+    txSignatures      :: Map.Map PubKey Signature,
     -- ^ Signatures of this transaction.
     txRedeemers       :: Redeemers,
     -- ^ Redeemers of the minting scripts.
-    txData            :: Map DatumHash Datum
+    txData            :: Map.Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
     } deriving stock (Show, Eq, Generic)
       deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
@@ -109,7 +108,7 @@ validRange = lens g s where
     g = txValidRange
     s tx o = tx { txValidRange = o }
 
-signatures :: Lens' Tx (Map PubKey Signature)
+signatures :: Lens' Tx (Map.Map PubKey Signature)
 signatures = lens g s where
     g = txSignatures
     s tx sig = tx { txSignatures = sig }
@@ -134,7 +133,7 @@ redeemers = lens g s where
     g = txRedeemers
     s tx reds = tx { txRedeemers = reds }
 
-datumWitnesses :: Lens' Tx (Map DatumHash Datum)
+datumWitnesses :: Lens' Tx (Map.Map DatumHash Datum)
 datumWitnesses = lens g s where
     g = txData
     s tx dat = tx { txData = dat }
@@ -153,7 +152,7 @@ validValuesTx :: Tx -> Bool
 validValuesTx Tx{..}
   = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
     where
-      nonNegative i = V.geq i mempty
+      nonNegative i = geq i mempty
 
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
@@ -181,7 +180,11 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 
 txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
+txOutTxDatum (TxOutTx tx txOut) =
+  case txOutDatum txOut of
+    NoOutputDatum      -> Nothing
+    OutputDatum da     -> Just da
+    OutputDatumHash dh -> lookupDatum tx dh
 
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> Set.Set TxOutRef
@@ -193,6 +196,6 @@ referencedOutputs = Set.map txInRef . txReferenceInputs
 
 -- | Update a map of unspent transaction outputs and signatures
 --   for a failed transaction using its collateral inputs.
-updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxoCollateral :: Tx -> Map.Map TxOutRef TxOut -> Map.Map TxOutRef TxOut
 updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.map txInRef . txCollateral $ tx)
 

@@ -42,10 +42,10 @@ module Ledger.Index(
     -- * Script validation events
     ScriptType(..),
     ScriptValidationEvent(..),
-    Api.ExBudget(..),
-    Api.ExCPU(..),
-    Api.ExMemory(..),
-    Api.SatInt,
+    ExBudget(..),
+    ExCPU(..),
+    ExMemory(..),
+    SatInt,
     ValidatorMode(..),
     getScript
     ) where
@@ -74,22 +74,15 @@ import Ledger.Crypto
 import Ledger.Index.Internal
 import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
+import Ledger.Scripts
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.V1.Scripts
+import Ledger.Value
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Api qualified as Api
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
-import Plutus.V1.Ledger.Contexts qualified as Validation
-import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Value qualified as V
-import PlutusTx (toBuiltinData)
+import Plutus.V2.Ledger.Api
 import PlutusTx.Numeric qualified as P
 
 -- | Context for validating transactions. We need access to the unspent
@@ -129,7 +122,7 @@ runValidation :: Validation (Maybe ValidationErrorInPhase) -> ValidationCtx -> (
 runValidation l ctx = runWriter $ fmap (either (\e -> Just (Phase1, e)) id) $ runExceptT $ runReaderT (_runValidation l) ctx
 
 -- | Determine the unspent value that a ''TxOutRef' refers to.
-lkpValue :: ValidationMonad m => TxOutRef -> m V.Value
+lkpValue :: ValidationMonad m => TxOutRef -> m Value
 lkpValue = fmap txOutValue . lkpTxOut
 
 -- | Find an unspent transaction output by its reference. Assumes that the
@@ -218,9 +211,9 @@ the blockchain.
 checkMintingAuthorised :: ValidationMonad m => Tx -> m ()
 checkMintingAuthorised tx =
     let
-        mintedCurrencies = V.symbols (txMint tx)
+        mintedCurrencies = symbols (txMint tx)
 
-        mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
+        mpsScriptHashes = MintingPolicyHash . unCurrencySymbol <$> mintedCurrencies
 
         lockingScripts = Map.keys $ txMintScripts tx
 
@@ -232,8 +225,8 @@ checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
     txinfo <- mkTxInfo tx
     iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, mp) -> do
-        let cs :: V.CurrencySymbol
-            cs = V.mpsSymbol mph
+        let cs :: CurrencySymbol
+            cs = mpsSymbol mph
             ctx :: Context
             ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
@@ -270,7 +263,8 @@ matchInputOutput :: ValidationMonad m
     -> TxOut
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
-matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
+matchInputOutput txid mp txin txo =
+  case (txInType txin, getOutputDatumHash $ txOutDatum txo, txOutAddress txo) of
     (Just (ConsumeScriptAddress v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
@@ -356,7 +350,7 @@ checkFeeIsAda t =
     else throwError $ NonAdaFees t
 
 -- | Minimum transaction fee.
-minFee :: Tx -> V.Value
+minFee :: Tx -> Value
 minFee = const (Ada.lovelaceValueOf 10)
 
 -- | TODO Should be calculated based on the maximum script size permitted on
@@ -368,7 +362,7 @@ maxFee = Ada.lovelaceOf 1_000_000
 --   Skip the check on the first transaction (no inputs).
 checkTransactionFee :: ValidationMonad m => Tx -> m ()
 checkTransactionFee tx =
-    if minFee tx `V.leq` txFee tx
+    if minFee tx `leq` txFee tx
     then pure ()
     else throwError $ TransactionFeeTooLow (txFee tx) (minFee tx)
 
@@ -378,24 +372,26 @@ mkTxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txins <- traverse mkIn $ Set.toList $ view inputs tx
     let ptx = TxInfo
-            { txInfoInputs = txins
-            , txInfoOutputs = txOutputs tx
-            , txInfoMint = txMint tx
-            , txInfoFee = txFee tx
-            , txInfoDCert = [] -- DCerts not supported in emulator
-            , txInfoWdrl = [] -- Withdrawals not supported in emulator
-            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
-            , txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
-            , txInfoData = Map.toList (tx ^. datumWitnesses)
-            , txInfoId = txId tx
+            { txInfoInputs          = txins
+            , txInfoReferenceInputs = mempty      -- FIXME
+            , txInfoOutputs         = txOutputs tx
+            , txInfoFee             = txFee tx
+            , txInfoMint            = txMint tx
+            , txInfoDCert           = []           -- DCerts not supported in emulator
+            , txInfoWdrl            = fromList []  -- Withdrawals not supported in emulator
+            , txInfoValidRange      = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
+            , txInfoSignatories     = fmap pubKeyHash $ Map.keys (tx ^. signatures)
+            , txInfoRedeemers       = fromList []  -- FIXME
+            , txInfoData            = fromList $ Map.toList $ tx ^. datumWitnesses
+            , txInfoId              = txId tx
             }
     pure ptx
 
 -- | Create the data about a transaction input which will be passed to a validator script.
-mkIn :: ValidationMonad m => TxIn -> m Validation.TxInInfo
+mkIn :: ValidationMonad m => TxIn -> m TxInInfo
 mkIn TxIn{txInRef} = do
     txOut <- lkpTxOut txInRef
-    pure $ Validation.TxInInfo{Validation.txInInfoOutRef = txInRef, Validation.txInInfoResolved=txOut}
+    pure $ TxInInfo{txInInfoOutRef = txInRef, txInInfoResolved=txOut}
 
 data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingPolicy
     deriving stock (Eq, Show, Generic)
@@ -405,12 +401,12 @@ data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingP
 data ScriptValidationEvent =
     ScriptValidationEvent
         { sveScript   :: Script -- ^ The script applied to all arguments
-        , sveResult   :: Either ScriptError (Api.ExBudget, [Text]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
+        , sveResult   :: Either ScriptError (ExBudget, [Text]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
         , sveRedeemer :: Redeemer
         , sveType     :: ScriptType -- ^ What type of script it was
         }
     | ScriptValidationResultOnlyEvent
-        { sveResult   :: Either ScriptError (Api.ExBudget, [Text])
+        { sveResult   :: Either ScriptError (ExBudget, [Text])
         }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -420,7 +416,7 @@ validatorScriptValidationEvent
     -> Validator
     -> Datum
     -> Redeemer
-    -> Either ScriptError (Api.ExBudget, [Text])
+    -> Either ScriptError (ExBudget, [Text])
     -> ScriptValidationEvent
 validatorScriptValidationEvent ctx validator datum redeemer result =
     ScriptValidationEvent
@@ -434,7 +430,7 @@ mpsValidationEvent
     :: Context
     -> MintingPolicy
     -> Redeemer
-    -> Either ScriptError (Api.ExBudget, [Text])
+    -> Either ScriptError (ExBudget, [Text])
     -> ScriptValidationEvent
 mpsValidationEvent ctx mps red result =
     ScriptValidationEvent

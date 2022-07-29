@@ -21,7 +21,6 @@ import Plutus.V1.Ledger.Scripts (unitRedeemer)
 
 import Data.Default (def)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
 import Hedgehog (Gen, Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -89,7 +88,7 @@ convertMintingTx = property $ do
       vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
       tx   = mempty
         { txMint = vL 1
-        , txMintScripts = Set.singleton mps
+        , txMintScripts = Map.singleton (mintingPolicyHash mps) mps
         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) unitRedeemer
         }
       ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody mempty

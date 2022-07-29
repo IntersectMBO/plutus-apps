@@ -48,7 +48,7 @@ module Ledger.Generators(
     signAll,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys,
-    someTokenValue
+    ScriptGen.someTokenValue
     ) where
 
 import Cardano.Api qualified as C
@@ -73,26 +73,16 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
-               POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
-               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
-               TokenName, Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
-               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
-               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature', pubKeyTxIn,
-               pubKeyTxOut, toPublicKey, txId)
-import Ledger qualified
+import Ledger
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
-import Ledger.Params (Params (pSlotConfig))
-import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V1.Generators as ScriptGen
-import Plutus.V1.Ledger.Contexts qualified as Contexts
+import Plutus.Script.Utils.V2.Generators
+import Plutus.Script.Utils.V2.Generators qualified as ScriptGen
 import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Scripts qualified as Script
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
@@ -215,7 +205,7 @@ genValidTransactionSpending' g ins totalVal = do
         fee' = Ada.lovelaceOf 10
         numOut = Set.size (gmPubKeys g) - 1
         totalValAda = Ada.fromValue totalVal
-        totalValTokens = if Value.isZero (Value.noAdaValue totalVal) then Nothing else Just (Value.noAdaValue totalVal)
+        totalValTokens = if Value.isZero (noAdaValue totalVal) then Nothing else Just (noAdaValue totalVal)
     if fee' < totalValAda
         then do
             -- We only split the Ada part of the input value
@@ -234,8 +224,8 @@ genValidTransactionSpending' g ins totalVal = do
                         { txInputs = ins
                         , txOutputs = fmap (\f -> f Nothing) $ uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
                         , txMint = maybe mempty id mintValue
-                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicy
-                        , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
+                        , txMintScripts = Map.singleton alwaysSucceedPolicyHash alwaysSucceedPolicy
+                        , txRedeemers = Map.singleton (RedeemerPtr Mint 0) unitRedeemer
                         , txFee = Ada.toValue fee'
                         }
 
@@ -260,7 +250,7 @@ genSlotRange = genInterval genSlot
 
 -- | Generate a 'POSIXTimeRange' where the lower bound if less or equal than the
 -- upper bound.
-genTimeRange :: (MonadFail m, Hedgehog.MonadGen m) => SlotConfig -> m POSIXTimeRange
+genTimeRange :: (MonadFail m, Hedgehog.MonadGen m) => TimeSlot.SlotConfig -> m POSIXTimeRange
 genTimeRange sc = genInterval $ genPOSIXTime sc
 
 -- | Generate a 'Slot' where the lowest slot number is 0.
@@ -269,14 +259,14 @@ genSlot = Slot <$> Gen.integral (Range.linear 0 10000)
 
 -- | Generate a 'POSIXTime' where the lowest value is 'scSlotZeroTime' given a
 -- 'SlotConfig'.
-genPOSIXTime :: (Hedgehog.MonadGen m) => SlotConfig -> m POSIXTime
+genPOSIXTime :: (Hedgehog.MonadGen m) => TimeSlot.SlotConfig -> m POSIXTime
 genPOSIXTime sc = do
     let beginTime = getPOSIXTime $ TimeSlot.scSlotZeroTime sc
     POSIXTime <$> Gen.integral (Range.linear beginTime (beginTime + 10000000))
 
 -- | Generate a 'SlotConfig' where the slot length goes from 1 to 100000
 -- ms and the time of Slot 0 is the default 'scSlotZeroTime'.
-genSlotConfig :: Hedgehog.MonadGen m => m SlotConfig
+genSlotConfig :: Hedgehog.MonadGen m => m TimeSlot.SlotConfig
 genSlotConfig = do
     sl <- Gen.integral (Range.linear 1 1000000)
     return $ def { TimeSlot.scSlotLength = sl }

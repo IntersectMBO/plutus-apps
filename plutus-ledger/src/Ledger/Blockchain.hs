@@ -47,8 +47,8 @@ import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
 import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxOutputs, spentOutputs, txOutDatum, txOutPubKey, txOutValue,
-                  unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
+                  getCardanoTxInputs, getCardanoTxOutputs, getOutputDatumHash, spentOutputs, txOutDatum, txOutPubKey,
+                  txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
@@ -126,7 +126,7 @@ value bc o = txOutValue <$> out bc o
 
 -- | Determine the data script that a transaction output refers to.
 datumTxo :: Blockchain -> TxOutRef -> Maybe DatumHash
-datumTxo bc o = txOutDatum =<< out bc o
+datumTxo bc o = out bc o >>= \txOut -> getOutputDatumHash $ txOutDatum txOut
 
 -- | Determine the public key that locks a transaction output, if there is one.
 pubKeyTxo :: Blockchain -> TxOutRef -> Maybe PubKeyHash

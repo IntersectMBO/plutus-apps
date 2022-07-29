@@ -40,12 +40,7 @@ import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-
-import Ledger.Blockchain
-import Ledger.Tx (CardanoTx, getCardanoTxId, getCardanoTxOutputs, getCardanoTxUnspentOutputsTx)
-import Plutus.V1.Ledger.Address (Address (..))
-import Plutus.V1.Ledger.Tx (TxIn (..), TxOut (..), TxOutRef (..))
-import Plutus.V1.Ledger.Value (Value)
+import Ledger hiding (inputs, singleton)
 
 type UtxoMap = Map TxOutRef (CardanoTx, TxOut)
 
@@ -148,7 +143,8 @@ knownAddresses = Map.fromList . unRef . Map.toList . getAddressMap where
 -- | Update an 'AddressMap' with the inputs and outputs of a new
 -- transaction. @updateAddresses@ does /not/ add or remove any keys from the map.
 updateAddresses :: OnChainTx -> AddressMap -> AddressMap
-updateAddresses tx utxo = AddressMap $ Map.mapWithKey upd (getAddressMap utxo) where
+updateAddresses tx utxo = AddressMap $ Map.mapWithKey upd (getAddressMap utxo)
+  where
     -- adds the newly produced outputs, and removes the consumed outputs, for
     -- an address `adr`
     upd :: Address -> Map TxOutRef (CardanoTx, TxOut) -> Map TxOutRef (CardanoTx, TxOut)
@@ -156,13 +152,13 @@ updateAddresses tx utxo = AddressMap $ Map.mapWithKey upd (getAddressMap utxo) w
 
     -- The TxOutRefs produced by the transaction, for a given address
     producedAt :: Address -> Map TxOutRef (CardanoTx, TxOut)
-    producedAt adr = Map.findWithDefault Map.empty adr outputs
+    producedAt adr = Map.findWithDefault Map.empty adr outs
 
     -- The TxOutRefs consumed by the transaction, for a given address
     consumedFrom :: Address -> Map TxOutRef ()
     consumedFrom adr = maybe Map.empty (Map.fromSet (const ())) $ Map.lookup adr consumedInputs
 
-    AddressMap outputs = fromTxOutputs tx
+    AddressMap outs = fromTxOutputs tx
 
     consumedInputs = inputs (knownAddresses utxo) tx
 

@@ -25,12 +25,11 @@ import Plutus.V1.Ledger.Value qualified as V
 import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))
 
--- | The UTxOs of a blockchain indexed by their references.
+
 newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
     deriving stock (Show, Generic)
     deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON, NFData)
-
 
 -- | A reason why a transaction is invalid.
 data ValidationError =

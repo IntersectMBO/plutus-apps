@@ -6,6 +6,7 @@ module Plutus.Script.Utils.V2.Generators
     ( alwaysSucceedValidator
     , alwaysSucceedValidatorHash
     , alwaysSucceedPolicy
+    , alwaysSucceedPolicyHash
     , PV1.someTokenValue
     ) where
 
@@ -25,3 +26,6 @@ alwaysSucceedValidatorHash = Scripts.validatorHash alwaysSucceedValidator
 alwaysSucceedPolicy :: PV2.MintingPolicy
 alwaysSucceedPolicy =
     PV2.mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
+
+alwaysSucceedPolicyHash :: PV2.MintingPolicyHash
+alwaysSucceedPolicyHash = Scripts.mintingPolicyHash alwaysSucceedPolicy

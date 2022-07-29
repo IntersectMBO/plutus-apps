@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Ledger.Address
-    ( module Export
+    ( module Plutus.V1.Ledger.Address
     , PaymentPrivateKey(..)
     , PaymentPubKey(..)
     , PaymentPubKeyHash(..)
@@ -24,7 +24,7 @@ import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Scripts (StakeValidatorHash (..), ValidatorHash (..))
-import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
+import Plutus.V1.Ledger.Address hiding (pubKeyHashAddress)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)

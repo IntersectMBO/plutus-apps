@@ -89,7 +89,6 @@ import Ledger.Params (EmulatorEra, emulatorGlobals, emulatorPParams)
 import Ledger.Params qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
-import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.ErrorCodes (checkHasFailedError)
@@ -338,12 +337,11 @@ fromPlutusTxId :: P.TxId -> Either P.ToCardanoError (TxId StandardCrypto)
 fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 
 fromPlutusTxOut :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
-fromPlutusTxOut params = fmap (toShelleyTxOut ShelleyBasedEraBabbage) . P.toCardanoTxOut (P.pNetworkId params) P.toCardanoTxOutDatumHash
-
+fromPlutusTxOut params = fmap (toShelleyTxOut ShelleyBasedEraBabbage) . P.toCardanoTxOut (P.pNetworkId params) P.toCardanoTxOutDatum (const $ throwError P.ReferenceScriptNotSupported)
 
 -- | Like 'fromPlutusTxOut', but ignores the check for zeros in txOuts.
 fromPlutusTxOutUnsafe :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
-fromPlutusTxOutUnsafe params = fmap (toShelleyTxOut ShelleyBasedEraBabbage) . P.toCardanoTxOutUnsafe (P.pNetworkId params) P.toCardanoTxOutDatumHash
+fromPlutusTxOutUnsafe params = fmap (toShelleyTxOut ShelleyBasedEraBabbage) . P.toCardanoTxOutUnsafe (P.pNetworkId params) P.toCardanoTxOutDatum (const $ throwError P.ReferenceScriptNotSupported)
 
 fromPaymentPrivateKey :: Crypto.XPrv -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.BabbageEra
 fromPaymentPrivateKey xprv txBody

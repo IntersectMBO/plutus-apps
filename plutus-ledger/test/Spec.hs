@@ -229,7 +229,8 @@ ciTxOutRoundTrip :: Property
 ciTxOutRoundTrip = property $ do
   txOuts <- Map.elems . Gen.mockchainUtxo <$> forAll Gen.genMockchain
   forM_ txOuts $ \txOut -> do
-    Hedgehog.assert $ Tx.toTxOut (fromJust $ Tx.fromTxOut txOut) == txOut
+    -- Hedgehog.assert $ Tx.toTxOut (fromJust $ Tx.fromTxOut txOut) == txOut
+    fail "FIXME" -- FIXME
 
 -- | Asserting that time range of 'scSlotZeroTime' to 'scSlotZeroTime + scSlotLength'
 -- is 'Slot 0' and the time after that is 'Slot 1'.
