@@ -130,6 +130,7 @@ library
     , plutus-chain-index
     , plutus-chain-index-core
     , plutus-contract
+    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-ledger-constraints
     , plutus-script-utils
@@ -181,7 +182,6 @@ library
     , generic-arbitrary
     , http-client
     , http-client-tls
-    , hysterical-screams
     , lens
     , memory
     , monad-logger

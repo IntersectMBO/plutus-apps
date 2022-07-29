@@ -24,10 +24,10 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (unpack)
-import Index.VSqlite qualified as Ix
 import Ledger (Block, Slot (..), TxId (..))
 import Marconi.Index.TxConfirmationStatus (TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
+import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv, getIndexerTxChanges, getUtxoIndexTxChanges)

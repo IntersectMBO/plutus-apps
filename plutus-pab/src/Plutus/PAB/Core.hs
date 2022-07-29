@@ -103,8 +103,6 @@ import Data.Map qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
-import Index.VSplit qualified as Ix
-import Index.VSqlite qualified as Ix
 import Ledger (Address (addressCredential), Params, TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx, ciTxOutValue)
@@ -115,6 +113,8 @@ import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api qualified as ChainIndex
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), PABReq)
 import Plutus.Contract.Wallet (ExportTx)
+import Plutus.HystericalScreams.Index.VSplit qualified as Ix
+import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
 import Plutus.PAB.Core.ContractInstance qualified as ContractInstance
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Active), BlockchainEnv, InstancesState, OpenEndpoint)
