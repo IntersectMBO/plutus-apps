@@ -30,7 +30,7 @@ where
 
 import Control.Monad.Except (MonadError (throwError))
 import GHC.Generics (Generic)
-import Plutus.Script.Utils.V1.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies hiding (forwardToValidator)
 import Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators hiding (forwardToValidator)
 import Plutus.Script.Utils.V1.Typed.Scripts.Validators
@@ -177,7 +177,7 @@ typePubKeyTxIn txIn =
     Just x                       -> throwError $ WrongInType x
     Nothing                      -> throwError MissingInType
 
--- | Create a 'PubKeyTxOUt' from an existing 'TxOut' by checking that it has the right payment type.
+-- | Create a 'PubKeyTxOut' from an existing 'TxOut' by checking that it has the right payment type.
 typePubKeyTxOut ::
   forall m.
   (MonadError ConnectionError m) =>

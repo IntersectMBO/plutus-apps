@@ -157,8 +157,8 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
 -- lookups1 :: ScriptLookups UnitTest
 -- lookups1
 --     = Constraints.unspentOutputs utxo1
---     <> Constraints.otherScript (Scripts.validatorScript alwaysSucceedValidator)
---     <> Constraints.otherScript (Scripts.validatorScript validator1)
+--     <> Constraints.plutusV1OtherScript (Scripts.validatorScript alwaysSucceedValidator)
+--     <> Constraints.plutusV1OtherScript (Scripts.validatorScript validator1)
 
 -- testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
 -- testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

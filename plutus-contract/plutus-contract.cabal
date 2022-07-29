@@ -74,8 +74,6 @@ library
     Plutus.Contract.StateMachine.ThreadToken
     Plutus.Contract.Trace
     Plutus.Contract.Trace.RequestHandler
-    Plutus.Contract.Tx
-    Plutus.Contract.Typed.Tx
     Plutus.Contract.Types
     Plutus.Contract.Util
     Plutus.Contract.Wallet

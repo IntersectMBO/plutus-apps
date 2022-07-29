@@ -127,16 +127,16 @@ executable marconi
   --------------------
   build-depends:
     , hysterical-screams
-    , plutus-ledger        >=1.0.0
-    , plutus-script-utils  >=1.0.0
-    , plutus-streaming     >=1.0.0
+    , plutus-ledger       >=1.0.0
+    , plutus-streaming    >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api      >=1.35
+    , cardano-api        >=1.35
     , iohk-monitoring
+    , plutus-ledger-api
 
   ------------------------
   -- Non-IOG dependencies

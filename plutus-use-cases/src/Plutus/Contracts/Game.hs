@@ -51,8 +51,8 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (ChainIndexTxOut (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
-import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, collectFromScript, endpoint,
-                        fundsAtAddressGeq, logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
+import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
+                        logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
 import PlutusTx qualified
@@ -159,7 +159,7 @@ data GuessArgs =
 lock :: AsContractError e => Promise () GameSchema e ()
 lock = endpoint @"lock" $ \LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } -> do
     logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
-    let lookups = Constraints.typedValidatorLookups (gameInstance lockArgsGameParam)
+    let lookups = Constraints.plutusV1TypedValidatorLookups (gameInstance lockArgsGameParam)
         tx       = Constraints.mustPayToTheScript (hashString lockArgsSecret) lockArgsValue
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= yieldUnbalancedTx
 
@@ -170,10 +170,10 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -
     logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
     utxos <- fundsAtAddressGeq (gameAddress guessArgsGameParam) (Ada.lovelaceValueOf 1)
 
-    let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
+    let lookups = Constraints.plutusV1TypedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
         redeemer = clearString guessArgsSecret
-        tx       = collectFromScript utxos redeemer
+        tx       = Constraints.collectFromTheScript utxos redeemer
 
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx
@@ -186,7 +186,7 @@ findSecretWordValue =
 -- | Extract the secret word in the Datum of a given transaction output is possible
 secretWordValue :: ChainIndexTxOut -> Maybe HashedString
 secretWordValue o = do
-  Datum d <- either (const Nothing) Just (_ciTxOutScriptDatum o)
+  Datum d <- snd (_ciTxOutScriptDatum o)
   PlutusTx.fromBuiltinData d
 
 contract :: AsContractError e => Contract () GameSchema e ()

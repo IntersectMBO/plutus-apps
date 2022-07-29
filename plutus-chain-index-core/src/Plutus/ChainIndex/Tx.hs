@@ -49,7 +49,8 @@ import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), Tx
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
-import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
+import Plutus.Script.Utils.Scripts (datumHash, redeemerHash)
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
                              Redeemer, RedeemerHash, Script, Validator (getValidator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))

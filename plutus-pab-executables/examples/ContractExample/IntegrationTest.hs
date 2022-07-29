@@ -46,7 +46,7 @@ run' = do
     let lookups =
             Constraints.otherData (Datum $ getRedeemer unitRedeemer)
             <> Constraints.unspentOutputs (maybe mempty (Map.singleton txOutRef) ciTxOut)
-            <> Constraints.otherScript  (Scripts.validatorScript pkInst)
+            <> Constraints.plutusV1OtherScript (Scripts.validatorScript pkInst)
         constraints =
             Constraints.mustSpendScriptOutput txOutRef unitRedeemer
             <> Constraints.mustBeSignedBy pkh

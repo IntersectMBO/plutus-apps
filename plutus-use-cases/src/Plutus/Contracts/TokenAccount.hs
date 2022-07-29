@@ -58,7 +58,6 @@ import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
-import Plutus.Contract.Typed.Tx qualified as TypedTx
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.V1.Ledger.Api (Address, ValidatorHash)
@@ -163,7 +162,7 @@ pay account vl = do
         <> " into "
         <> show account
     mapError (review _TAContractError) $
-          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
+          mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) (payTx vl)
       >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
@@ -183,9 +182,9 @@ redeemTx account pk = mapError (review _TAContractError) $ do
             <> show numInputs
             <> " outputs with a total value of "
             <> show totalVal
-    let constraints = TypedTx.collectFromScript utxos ()
+    let constraints = Constraints.collectFromTheScript utxos ()
                 <> Constraints.mustPayToPubKey pk (accountToken account)
-        lookups = Constraints.typedValidatorLookups inst
+        lookups = Constraints.plutusV1TypedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos
     -- TODO. Replace 'PubKey' with a more general 'Address' type of output?
     --       Or perhaps add a field 'requiredTokens' to 'LedgerTxConstraints' and let the

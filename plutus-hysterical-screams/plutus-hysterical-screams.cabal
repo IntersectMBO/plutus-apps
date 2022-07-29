@@ -1,0 +1,91 @@
+cabal-version: 2.2
+name:          plutus-hysterical-screams
+version:       0.1.0.0
+synopsis:      Exercises in Algebra Driven Design
+description:
+  Please see the README on GitHub at <https://github.com/githubuser/hysterical-screams#readme>
+
+category:      Testing
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
+author:        Radu Ometita
+maintainer:    radu.ometita@eiohk.io
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+build-type:    Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveGeneric
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    NamedFieldPuns
+    OverloadedStrings
+    PatternSynonyms
+    ScopedTypeVariables
+    Strict
+    TemplateHaskell
+    TypeApplications
+
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities -Wmissing-import-lists
+
+library
+  import:          lang
+  exposed-modules:
+    Plutus.HystericalScreams.Index
+    Plutus.HystericalScreams.Index.Split
+    Plutus.HystericalScreams.Index.Sqlite
+    Plutus.HystericalScreams.Index.VSplit
+    Plutus.HystericalScreams.Index.VSqlite
+
+  hs-source-dirs:  src
+  build-depends:
+    , base           >=4.7 && <5
+    , containers
+    , data-default
+    , lens
+    , primitive
+    , QuickCheck
+    , sqlite-simple
+    , vector
+
+test-suite plutus-hysterical-screams-test
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  other-modules:
+    Plutus.HystericalScreams.Spec.Index
+    Plutus.HystericalScreams.Spec.Split
+    Plutus.HystericalScreams.Spec.Sqlite
+    Plutus.HystericalScreams.Spec.VSplit
+    Plutus.HystericalScreams.Spec.VSqlite
+
+  hs-source-dirs: test
+  build-depends:
+    , base                       >=4.7 && <5
+    , containers
+    , data-default
+    , lens
+    , plutus-hysterical-screams
+    , primitive
+    , QuickCheck
+    , quickspec
+    , sqlite-simple
+    , tasty
+    , tasty-quickcheck
+    , vector

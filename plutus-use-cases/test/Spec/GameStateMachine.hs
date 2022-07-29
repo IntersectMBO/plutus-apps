@@ -65,7 +65,7 @@ gameParam :: G.GameParam
 gameParam = G.GameParam (mockWalletPaymentPubKeyHash w1) (TimeSlot.scSlotZeroTime def)
 
 options :: CheckOptions
-options = defaultCheckOptionsContractModel & allowBigTransactions
+options = defaultCheckOptionsContractModel & (increaseTransactionLimits . increaseTransactionLimits)
 
 --
 -- * QuickCheck model

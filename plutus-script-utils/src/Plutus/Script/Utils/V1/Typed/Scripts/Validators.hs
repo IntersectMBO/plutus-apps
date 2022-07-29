@@ -41,6 +41,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Kind (Type)
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Plutus.Script.Utils.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.Script.Utils.V1.Typed.TypeUtils (Any)

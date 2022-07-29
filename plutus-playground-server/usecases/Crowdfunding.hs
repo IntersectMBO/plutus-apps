@@ -35,7 +35,6 @@ import Ledger.Value (Value)
 import Playground.Contract
 import Plutus.Contract
 import Plutus.Contract.Constraints qualified as Constraints
-import Plutus.Contract.Typed.Tx qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.V1.Ledger.Contexts qualified as PV1
 import PlutusTx qualified
@@ -167,7 +166,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
@@ -177,13 +176,13 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     -- then we can claim a refund.
 
     let flt Ledger.TxOutRef{txOutRefId} _ = txid Haskell.== txOutRefId
-        tx' = Typed.collectFromScriptFilter flt utxo Refund
+        tx' = Constraints.collectFromTheScriptFilter flt utxo Refund
                 <> Constraints.mustValidateIn (refundRange cmp)
                 <> Constraints.mustBeSignedBy contributor
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+        void $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
             >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()
@@ -202,7 +201,7 @@ scheduleCollection cmp =
         _ <- awaitTime $ campaignDeadline cmp
         unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
 
-        let tx = Typed.collectFromScript unspentOutputs Collect
+        let tx = Constraints.collectFromTheScript unspentOutputs Collect
                 <> Constraints.mustValidateIn (collectionRange cmp)
         void $ submitTxConstraintsSpending inst unspentOutputs tx
 

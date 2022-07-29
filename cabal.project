@@ -8,6 +8,7 @@ packages: doc
           plutus-chain-index-core
           plutus-contract
           plutus-example
+          plutus-hysterical-screams 
           plutus-contract-certification
           plutus-ledger
           plutus-ledger-constraints
