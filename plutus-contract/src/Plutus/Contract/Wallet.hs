@@ -283,7 +283,7 @@ mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx
 
 mkSpendingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
 mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract txInputs) where
-    extract TxIn{txInType=Just (ConsumeScriptAddress _ redeemer _), txInRef} =
+    extract TxIn{txInType=Just (ConsumeScriptAddress _ _ redeemer _), txInRef} =
         pure [SpendingRedeemer{redeemer, redeemerOutRef=txInRef}]
     extract _ = pure []
 

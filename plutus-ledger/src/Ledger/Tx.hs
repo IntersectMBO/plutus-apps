@@ -8,11 +8,11 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE ViewPatterns       #-}
-
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TupleSections      #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Tx
     ( module Ledger.Tx.Internal
@@ -85,11 +85,12 @@ import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal hiding (updateUtxoCollateral)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api qualified as V1
+import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
+
 -- for re-export
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
                             scriptTxIn, scriptTxIns)
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn (..), TxInType (..))
-import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 type PrivateKey = Crypto.XPrv
 

@@ -284,9 +284,9 @@ instance Render TxIn where
     render (TxIn txInRef Nothing) = render txInRef
 
 instance Render TxInType where
-    render (ConsumeScriptAddress validator _ _) = render validator
-    render ConsumePublicKeyAddress              = pure mempty
-    render ConsumeSimpleScriptAddress           = pure mempty
+    render (ConsumeScriptAddress _ validator _ _) = render validator
+    render ConsumePublicKeyAddress                = pure mempty
+    render ConsumeSimpleScriptAddress             = pure mempty
 
 instance Render TxOutRef where
     render TxOutRef {txOutRefId, txOutRefIdx} =

@@ -95,8 +95,8 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint, Spend), Tx,
-                  TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, LedgerPlutusVersion (PlutusV2), RedeemerPtr (RedeemerPtr), ScriptTag (Mint, Spend),
+                  Tx, TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -524,7 +524,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
-    let txIn = Scripts.makeTypedScriptTxIn inst icRedeemer typedOutRef
+    let txIn = Scripts.makeTypedScriptTxIn PlutusV2 inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl
@@ -656,7 +656,7 @@ processConstraint = \case
             -- TODO: When witnesses are properly segregated we can
             --       probably get rid of the 'slOtherData' map and of
             --       'lookupDatum'
-            let input = Tx.scriptTxIn txo validator red datum
+            let input = Tx.scriptTxIn txo PlutusV2 validator red datum
             unbalancedTx . tx . Tx.inputs %= (input :)
             inputs <- use (unbalancedTx . tx . Tx.inputs)
             -- We use fromJust because we can garanty that it will always be Just.
@@ -741,7 +741,7 @@ processConstraintFun = \case
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just (validator, datum, value))] -> do
                 let dvh = P.datumHash datum
-                let input = Tx.scriptTxIn ref validator red datum
+                let input = Tx.scriptTxIn ref PlutusV2 validator red datum
                 unbalancedTx . tx . Tx.inputs %= (input :)
                 unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
                 valueSpentInputs <>= provided value

@@ -58,8 +58,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoValue
   , toCardanoFee
   , toCardanoValidityRange
-  , toCardanoPlutusV1ScriptInEra
-  , toCardanoPlutusV2ScriptInEra
+  , toCardanoScriptInEra
   , toCardanoPaymentKeyHash
   , toCardanoScriptData
   , toCardanoScriptDataHash
@@ -470,12 +469,26 @@ toCardanoTxInWitness P.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitness
 toCardanoTxInWitness P.ConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
 toCardanoTxInWitness
     (P.ConsumeScriptAddress
+        P.PlutusV1
         (P.Validator validator)
         (P.Redeemer redeemer)
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
         <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) validator)
+        <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
+        <*> pure (toCardanoScriptData redeemer)
+        <*> pure zeroExecutionUnits
+        )
+toCardanoTxInWitness
+    (P.ConsumeScriptAddress
+        P.PlutusV2
+        (P.Validator validator)
+        (P.Redeemer redeemer)
+        (P.Datum datum))
+    = C.ScriptWitness C.ScriptWitnessForSpending <$>
+        (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+        <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) validator)
         <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
         <*> pure (toCardanoScriptData redeemer)
         <*> pure zeroExecutionUnits
@@ -733,21 +746,18 @@ fromCardanoScriptData = PV1.dataToBuiltinData . C.toPlutusData
 toCardanoScriptData :: PV1.BuiltinData -> C.ScriptData
 toCardanoScriptData = C.fromPlutusData . PV1.builtinDataToData
 
-fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe P.Script
+fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe (P.Script, P.LedgerPlutusVersion)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InAlonzo (C.PlutusScript C.PlutusScriptV1 script)) =
-    Just $ fromCardanoPlutusScript script
+    Just (fromCardanoPlutusScript script, P.PlutusV1)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InBabbage (C.PlutusScript C.PlutusScriptV1 script)) =
-    Just $ fromCardanoPlutusScript script
+    Just (fromCardanoPlutusScript script, P.PlutusV1)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InBabbage (C.PlutusScript C.PlutusScriptV2 script)) =
-    Just $ fromCardanoPlutusScript script
+    Just (fromCardanoPlutusScript script, P.PlutusV2)
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 
-toCardanoPlutusV1ScriptInEra :: P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
-toCardanoPlutusV1ScriptInEra script = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-
--- TODO: Is there a way to combine this with 'toCardanoPlutusV1ScriptInEra'.
-toCardanoPlutusV2ScriptInEra :: P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
-toCardanoPlutusV2ScriptInEra script = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
+toCardanoScriptInEra :: P.Script -> P.LedgerPlutusVersion -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
+toCardanoScriptInEra script P.PlutusV1 = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
+toCardanoScriptInEra script P.PlutusV2 = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
 fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
 fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
@@ -761,11 +771,11 @@ toCardanoPlutusScript asPlutusScriptType =
     tag "toCardanoPlutusScript"
     . deserialiseFromRawBytes asPlutusScriptType . BSL.toStrict . Codec.serialise
 
-fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe P.Script
+fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe (P.Script, P.LedgerPlutusVersion)
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _ssv _ss)) = Nothing
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.PlutusScript psv ps)) = Just $ case psv of
-     C.PlutusScriptV1 -> fromCardanoPlutusScript ps
-     C.PlutusScriptV2 -> fromCardanoPlutusScript ps
+     C.PlutusScriptV1 -> (fromCardanoPlutusScript ps, P.PlutusV1)
+     C.PlutusScriptV2 -> (fromCardanoPlutusScript ps, P.PlutusV2)
 
 deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
 deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType
@@ -793,6 +803,7 @@ data ToCardanoError
     | MissingMintingPolicyRedeemer
     | MissingMintingPolicy
     | ScriptPurposeNotSupported PV1.ScriptTag
+    | UnsupportedPlutusVersion P.LedgerPlutusVersion
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -809,6 +820,7 @@ instance Pretty ToCardanoError where
     pretty MissingMintingPolicyRedeemer       = "Missing minting policy redeemer"
     pretty MissingMintingPolicy               = "Missing minting policy"
     pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
+    pretty (UnsupportedPlutusVersion v)       = "Plutus version not supported:" <+> viaShow v
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
 zeroExecutionUnits :: C.ExecutionUnits

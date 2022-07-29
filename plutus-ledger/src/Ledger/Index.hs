@@ -66,7 +66,6 @@ import Data.Either (fromRight)
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
-import Data.Set qualified as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Ada (Ada)
@@ -141,13 +140,13 @@ lkpTxOut :: ValidationMonad m => TxOutRef -> m TxOut
 lkpTxOut t = lookup t . vctxIndex =<< ask
 
 -- | Filter to get only the script inputs.
-scriptTxIns :: Fold ([TxIn]) TxIn
+scriptTxIns :: Fold [TxIn] TxIn
 scriptTxIns = (\x -> folding x) . filter $ \case
     TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
     _                                              -> False
 
 -- | Filter to get only the pubkey inputs.
-pubKeyTxIns :: Fold ([TxIn]) TxIn
+pubKeyTxIns :: Fold [TxIn] TxIn
 pubKeyTxIns = folding (filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
 
 
@@ -285,7 +284,7 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ConsumeScriptAddress v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ConsumeScriptAddress _lang v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
 

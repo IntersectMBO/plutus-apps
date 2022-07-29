@@ -8,7 +8,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module Ledger.Tx.Internal where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+module Ledger.Tx.Internal
+    ( module Ledger.Tx.Internal
+    , LedgerPlutusVersion(..)
+    ) where
 
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, encode)
@@ -24,6 +29,7 @@ import Ledger.Crypto
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
+import Plutus.ApiCommon (LedgerPlutusVersion (..))
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
                             scriptTxIn, scriptTxIns)
@@ -31,10 +37,17 @@ import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
 import Prettyprinter (Pretty (..), hang, vsep, (<+>))
 
+deriving instance Show LedgerPlutusVersion
+deriving instance Generic LedgerPlutusVersion
+deriving instance NFData LedgerPlutusVersion
+deriving instance Serialise LedgerPlutusVersion
+deriving instance ToJSON LedgerPlutusVersion
+deriving instance FromJSON LedgerPlutusVersion
+
 -- | The type of a transaction input.
 data TxInType =
-      -- TODO: these should all be hashes, with the validators and data segregated to the side
-      ConsumeScriptAddress !Validator !Redeemer !Datum -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
+      ConsumeScriptAddress !LedgerPlutusVersion !Validator !Redeemer !Datum
+      -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
@@ -52,7 +65,7 @@ instance Pretty TxIn where
     pretty TxIn{txInRef,txInType} =
                 let rest =
                         case txInType of
-                            Just (ConsumeScriptAddress _ redeemer _) ->
+                            Just (ConsumeScriptAddress _ _ redeemer _) ->
                                 pretty redeemer
                             _ -> mempty
                 in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
@@ -69,18 +82,18 @@ inType = lens txInType s where
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
-inScripts :: TxIn -> Maybe (Validator, Redeemer, Datum)
+inScripts :: TxIn -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
 inScripts TxIn{ txInType = t } = case t of
-    Just (ConsumeScriptAddress v r d) -> Just (v, r, d)
-    _                                 -> Nothing
+    Just (ConsumeScriptAddress l v r d) -> Just (l, v, r, d)
+    _                                   -> Nothing
 
 -- | A transaction input that spends a "pay to public key" output, given the witness.
 pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
-scriptTxIn :: TxOutRef -> Validator -> Redeemer -> Datum -> TxIn
-scriptTxIn ref v r d = TxIn ref . Just $ ConsumeScriptAddress v r d
+scriptTxIn :: TxOutRef -> LedgerPlutusVersion -> Validator -> Redeemer -> Datum -> TxIn
+scriptTxIn ref l v r d = TxIn ref . Just $ ConsumeScriptAddress l v r d
 
 -- | Filter to get only the pubkey inputs.
 pubKeyTxIns :: Fold (Set.Set TxIn) TxIn

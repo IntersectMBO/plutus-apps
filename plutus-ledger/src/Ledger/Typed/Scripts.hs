@@ -19,7 +19,7 @@ module Ledger.Typed.Scripts
 import Control.Monad.Except (MonadError (throwError))
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import GHC.Generics (Generic)
-import Ledger.Tx.Internal
+import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn(TxIn, txInType, txInRef), TxInType(ConsumePublicKeyAddress, ConsumeScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
 import Plutus.Script.Utils.V1.Typed.TypeUtils as Export
@@ -50,16 +50,17 @@ instance Eq (DatumType a) => Eq (TypedScriptTxIn a) where
 makeTypedScriptTxIn ::
   forall inn.
   (ToData (RedeemerType inn), ToData (DatumType inn)) =>
+  LedgerPlutusVersion ->
   TypedValidator inn ->
   RedeemerType inn ->
   TypedScriptTxOutRef inn ->
   TypedScriptTxIn inn
-makeTypedScriptTxIn si r tyRef =
+makeTypedScriptTxIn lang si r tyRef =
   let d = Export.tyTxOutData (Export.tyTxOutRefOut tyRef)
       vs = validatorScript si
       rs = Redeemer (toBuiltinData r)
       ds = Datum (toBuiltinData d)
-      txInT = ConsumeScriptAddress vs rs ds
+      txInT = ConsumeScriptAddress lang vs rs ds
    in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef
 
 txInValue :: TypedScriptTxIn a -> Value
@@ -101,14 +102,14 @@ typeScriptTxIn ::
   m (TypedScriptTxIn inn)
 typeScriptTxIn lookupRef typedValidator txIn =
   case txInType txIn of
-    Just (ConsumeScriptAddress _val re da) -> do
+    Just (ConsumeScriptAddress lang _val re da) -> do
       rsVal <- checkRedeemer typedValidator re
       _ <- checkDatum typedValidator da
       let txOutRef = txInRef txIn
       case lookupRef txOutRef of
         Just (txOut, datum) -> do
           typedOut <- typeScriptTxOutRef @inn typedValidator txOutRef txOut datum
-          pure $ makeTypedScriptTxIn typedValidator rsVal typedOut
+          pure $ makeTypedScriptTxIn lang typedValidator rsVal typedOut
         Nothing -> throwError UnknownRef
     Just _ -> throwError MissingInType -- $ WrongInType x -- TODO
     Nothing -> throwError MissingInType

@@ -358,7 +358,8 @@ doubleSatisfactionCounterexamples dsc =
                                    , txOutRefIdx = 1
                                    }
         newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
-                           , txInType = Just $ ConsumeScriptAddress alwaysOkValidator
+                           , txInType = Just $ ConsumeScriptAddress PlutusV1
+                                                                    alwaysOkValidator
                                                                     redeemerEmpty
                                                                     datumEmpty
                            }

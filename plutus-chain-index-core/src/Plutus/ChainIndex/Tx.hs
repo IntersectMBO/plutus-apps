@@ -132,7 +132,10 @@ validators :: [TxIn] -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
 validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) . zip [0..] . sort
   -- we sort the inputs to make sure that the indices match with redeemer pointers
   where
-    withHash ix (ConsumeScriptAddress val red dat) =
+    -- TODO: the index of the txin is probably incorrect as we take it from the set.
+    -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
+    -- sort them by using the standard `Ord` instance.
+    withHash ix (ConsumeScriptAddress _lang val red dat) =
       let (ValidatorHash vh) = validatorHash val
        in ( Map.singleton (ScriptHash vh) (getValidator val)
           , Map.singleton (datumHash dat) dat
