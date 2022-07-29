@@ -42,6 +42,7 @@ import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
+import Plutus.V1.Ledger.Tx (pubKeyHashTxOut)
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
@@ -292,7 +293,7 @@ emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
     tx = mempty
         & set outputs (Map.toList mp >>= mkOutputs)
         & set mint (foldMap snd $ Map.toList mp)
-        & set validRange (WAPI.defaultSlotRange)
+        & set validRange WAPI.defaultSlotRange
     -- See [Creating wallets with multiple outputs]
     mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (Wallet.splitOffAdaOnlyValue vl)
     splitHeadinto10 []       = []

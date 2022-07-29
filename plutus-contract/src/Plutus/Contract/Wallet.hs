@@ -41,6 +41,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
+import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -51,7 +52,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequ
                                     mkTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Tx (CardanoTx, Tx, TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
@@ -116,7 +117,7 @@ getUnspentOutput = do
     ownPkh <- Contract.ownPaymentPubKeyHash
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
-    tx <- Contract.balanceTx (adjustUnbalancedTx utx)
+    tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of
         inp : _ -> pure $ txInRef inp
         []      -> throwing _OtherContractError "Balanced transaction has no inputs"
@@ -252,9 +253,9 @@ export params utx =
             utxo <- fromPlutusIndex params (Plutus.UtxoIndex unBalancedTxUtxoIndex)
             makeTransactionBody params utxo ctx
      in ExportTx
-        <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
-        <*> mkInputs networkId unBalancedTxUtxoIndex
-        <*> pure (mkRedeemers unBalancedTxTx)
+        <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . mkPartialTx requiredSigners params) unBalancedTxTx)
+        <*> first Right (mkInputs (Plutus.pNetworkId params) unBalancedTxUtxoIndex)
+        <*> either (const $ Right []) (Right . mkRedeemers) unBalancedTxTx
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
@@ -265,7 +266,7 @@ finalize slotConfig utx =
 mkPartialTx
     :: [Plutus.PaymentPubKeyHash]
     -> Plutus.Params
-    -> Plutus.Tx
+    -> Tx
     -> Either CardanoAPI.ToCardanoError (C.TxBody C.AlonzoEra)
 mkPartialTx requiredSigners params =
     CardanoAPI.toCardanoTxBody requiredSigners (Just $ Plutus.pProtocolParams params) (Plutus.pNetworkId params)

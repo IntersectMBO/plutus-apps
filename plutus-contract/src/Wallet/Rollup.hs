@@ -21,8 +21,9 @@ import Data.List (groupBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut (TxOut), ValidationPhase (..), Value,
-               consumableInputs, eitherTx, outValue, txInRef, txOutRefId, txOutRefIdx, txOutValue)
+               consumableInputs, eitherTx, getCardanoTxId, txInRef, txOutRefId, txOutRefIdx, txOutValue)
 import Ledger.Tx qualified as Tx
+import Plutus.V1.Ledger.Tx (outValue)
 import PlutusTx.Monoid (inv)
 import Wallet.Emulator.Chain (ChainEvent (..))
 import Wallet.Rollup.Types
@@ -48,8 +49,8 @@ annotateTransaction sequenceId tx = do
                          Just txOut -> pure $ DereferencedInput txIn txOut
                          Nothing    -> pure $ InputNotFound key)
             (consumableInputs tx)
-    let txId = eitherTx Tx.txId Tx.txId tx
-        txOuts = eitherTx (const []) txOutputs tx
+    let txId = eitherTx getCardanoTxId getCardanoTxId tx
+        txOuts = eitherTx (const []) Tx.getCardanoTxOutputs tx
         newOutputs =
             ifoldr
                 (\outputIndex ->

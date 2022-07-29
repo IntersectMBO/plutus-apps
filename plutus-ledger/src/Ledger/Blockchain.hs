@@ -45,17 +45,15 @@ import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (CardanoTx, Tx, TxId, TxIn, TxInput, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx),
-                  collateralInputs, fillTxInputWitnesses, getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxOutputs, inputs, spentOutputs, txId, txOutDatum, txOutPubKey,
-                  txOutValue, txOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
+import Ledger.Tx (CardanoTx, TxOut, TxOutRef (..), getCardanoTxId, getCardanoTxInputs, getCardanoTxOutputs,
+                  spentOutputs, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx (TxIn, TxOut, TxOutRef (..), txOutDatum, txOutPubKey, txOutValue, validValuesTx)
+import Plutus.V1.Ledger.Tx (TxIn, txOutDatum, txOutPubKey)
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value (Value)
 
@@ -102,7 +100,7 @@ eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
 consumableInputs :: OnChainTx -> [TxIn]
-consumableInputs = eitherTx (\tx -> fmap (fillTxInputWitnesses tx) $ view collateralInputs tx) (\tx -> fmap (fillTxInputWitnesses tx) $ view inputs tx)
+consumableInputs = eitherTx getCardanoTxInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
 outputsProduced :: OnChainTx -> [TxOut]

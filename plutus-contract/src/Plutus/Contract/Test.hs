@@ -384,9 +384,9 @@ getTxOutDatum ::
   Ledger.CardanoTx ->
   Ledger.TxOut ->
   Maybe d
-getTxOutDatum _ (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
-getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
-    M.lookup datumHash (Ledger.txData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
+getTxOutDatum _ (Ledger.TxOut _ _ Nothing) = Nothing
+getTxOutDatum tx' (Ledger.TxOut _ _ (Just datumHash)) =
+    Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
 dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $

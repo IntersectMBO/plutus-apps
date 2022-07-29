@@ -49,8 +49,7 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx,
-               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxInput (TxInput, txInputRef), TxOutRef,
-               UtxoIndex (..), ValidatorHash, Value)
+               StakePubKey, Tx (txFee, txMint), TxInput (TxInput, txInputRef), TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -74,6 +73,7 @@ import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.API qualified as WAPI
 
+import Plutus.V1.Ledger.Tx (outValue)
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
@@ -417,8 +417,9 @@ handleBalanceTx ::
     => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
     -> UnbalancedTx
     -> Eff effs Tx
-handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
-    let filteredUnbalancedTxTx = removeEmptyOutputs unBalancedTxTx
+handleBalanceTx utxo utx = do
+    Params { pProtocolParams } <- WAPI.getClientParams
+    let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
     let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownPaymentPubKey <- gets ownPaymentPublicKey
     let ownStakePubKey = Nothing
@@ -426,7 +427,7 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
     collateral  <- traverse lookupValue (Tx.txCollateral filteredUnbalancedTxTx)
     let fees = txFee filteredUnbalancedTxTx
         left = txMint filteredUnbalancedTxTx <> fold inputValues
-        right = fees <> foldMap (view Tx.outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
+        right = fees <> foldMap (view outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
         collFees = Ada.toValue $ (Ada.fromValue fees * maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)) `Ada.divide` 100
         remainingCollFees = collFees PlutusTx.- fold collateral
         balance = left PlutusTx.- right

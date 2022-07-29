@@ -54,7 +54,6 @@ module Ledger.Constraints.OffChain(
     , processConstraintFun
     , addOwnInput
     , addOwnOutput
-    , addMintingRedeemers
     , addMissingValueSpent
     , updateUtxoIndex
     ) where
@@ -97,8 +96,7 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
 import Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                       ScriptHash (ScriptHash), Validator, ValidatorHash, datumHash, plutusV1MintingPolicyHash,
-                       plutusV1ValidatorHash)
+                       ScriptHash (ScriptHash))
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx, TxIn (TxIn),
                   TxInType (ConsumeScriptAddress), TxInput (TxInput), TxInputType (TxConsumePublicKeyAddress),
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef, addScriptTxInput, txInRef)

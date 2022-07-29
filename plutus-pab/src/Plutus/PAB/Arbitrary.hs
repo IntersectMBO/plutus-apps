@@ -20,7 +20,7 @@ import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
-import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef,
+import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef,
                   Withdrawal)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.TxId (TxId)

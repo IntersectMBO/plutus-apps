@@ -20,7 +20,6 @@ import Data.Maybe (isJust)
 import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
-import Ledger (outValue)
 import Plutus.ChainIndex (ChainIndexLog, ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
                           TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks, citxTxId, txFromTxId,
                           unspentTxOutFromRef, utxoSetMembership, utxoSetWithCurrency)
@@ -32,6 +31,7 @@ import Plutus.ChainIndex.Tx (_ValidTx, citxOutputs)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 import Hedgehog (Property, assert, forAll, property, (===))
+import Plutus.V1.Ledger.Tx (outValue)
 import Test.Tasty
 import Test.Tasty.Hedgehog (testProperty)
 import Util (utxoSetFromBlockAddrs)

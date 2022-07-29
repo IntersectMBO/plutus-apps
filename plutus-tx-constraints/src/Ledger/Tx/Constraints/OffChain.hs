@@ -110,7 +110,6 @@ emptyUnbalancedTx params = UnbalancedTx (Left $ emptyCardanoBuildTx params) memp
 initialState :: Params -> P.ConstraintProcessingState
 initialState params = P.ConstraintProcessingState
     { P.cpsUnbalancedTx = emptyUnbalancedTx params
-    , P.cpsMintRedeemers = mempty
     , P.cpsValueSpentBalancesInputs = P.ValueSpentBalances mempty mempty
     , P.cpsValueSpentBalancesOutputs = P.ValueSpentBalances mempty mempty
     , P.cpsParams = params

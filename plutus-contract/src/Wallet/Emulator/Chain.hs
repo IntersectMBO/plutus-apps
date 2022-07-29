@@ -33,9 +33,9 @@ import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), ScriptValidationEvent, Slot (..),
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue),
-               Value, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId,
-               getCardanoTxValidityRange, mergeCardanoTxWith, onCardanoTx, txInputRef)
+               SomeCardanoApiTx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
+               getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
+               mergeCardanoTxWith)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -180,7 +180,8 @@ validateBlock params slot@(Slot s) idx txns =
     in ValidatedBlock block events rest idx'
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
-getCollateral idx = fromRight (getCardanoTxFee tx) $ alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInputRef) (getCardanoTxCollateral tx)
+getCollateral idx tx = fromRight (getCardanoTxFee tx) $
+    alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (getCardanoTxCollateralInputs tx)
 
 -- | Check whether the given transaction can be validated in the given slot.
 canValidateNow :: Slot -> CardanoTx -> Bool

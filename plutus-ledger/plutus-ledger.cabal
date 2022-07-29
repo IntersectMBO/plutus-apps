@@ -57,37 +57,28 @@ library
     Data.Time.Units.Extra
     Ledger
     Ledger.Address
-    Ledger.Address.Orphans
     Ledger.AddressMap
     Ledger.Blockchain
-    Ledger.Builtins.Orphans
     Ledger.CardanoWallet
-    Ledger.Contexts
-    Ledger.Credential.Orphans
     Ledger.Crypto
-    Ledger.Crypto.Orphans
-    Ledger.DCert.Orphans
     Ledger.Fee
     Ledger.Generators
     Ledger.Index
+    Ledger.Index.Internal
     Ledger.Orphans
+    Ledger.Params
     Ledger.Scripts.Orphans
     Ledger.TimeSlot
     Ledger.Tokens
     Ledger.Tx
     Ledger.Tx.CardanoAPI
     Ledger.Tx.Internal
-    Ledger.Tx.Orphans
     Ledger.Typed.Scripts
-    Ledger.Typed.Scripts.MonetaryPolicies
-    Ledger.Typed.Scripts.StakeValidators
     Ledger.Typed.Scripts.Validators
     Ledger.Typed.Tx
     Ledger.Typed.TypeUtils
     Ledger.Validation
     Ledger.Value
-    Ledger.Value.Orphans
-    Prettyprinter.Extras
 
   reexported-modules:
     Data.Aeson.Extras,

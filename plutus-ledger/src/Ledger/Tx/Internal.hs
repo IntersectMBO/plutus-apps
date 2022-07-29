@@ -24,12 +24,11 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
-import Ledger.DCert.Orphans ()
-import Ledger.Scripts (datumHash, plutusV1MintingPolicyHash, plutusV1ValidatorHash)
-import Ledger.Slot
-import Ledger.Tx.Orphans ()
+import Ledger.Scripts.Orphans ()
+import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, validatorHash)
 import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert)
 import Plutus.V1.Ledger.Scripts
+import Plutus.V1.Ledger.Slot (SlotRange)
 import Plutus.V1.Ledger.Tx (TxIn (..), TxInType (..), TxOut (txOutValue), TxOutRef, txOutDatum)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
@@ -250,7 +249,7 @@ addMintingPolicy vl@(MintingPolicy script) rd tx@Tx{txMintingScripts, txScripts}
     {txMintingScripts = Map.insert mph rd txMintingScripts,
      txScripts = Map.insert (ScriptHash b) script txScripts}
     where
-        mph@(MintingPolicyHash b) = plutusV1MintingPolicyHash vl
+        mph@(MintingPolicyHash b) = mintingPolicyHash vl
 
 -- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
 addScriptTxInput :: TxOutRef -> Validator -> Redeemer -> Datum -> Tx -> Tx
@@ -260,7 +259,7 @@ addScriptTxInput outRef vl@(Validator script) rd dt tx@Tx{txInputs, txScripts, t
      txData = Map.insert dtHash dt txData}
     where
         dtHash = datumHash dt
-        vlHash@(ValidatorHash b) = plutusV1ValidatorHash vl
+        vlHash@(ValidatorHash b) = validatorHash vl
 
 
 -- | Check that all values in a transaction are non-negative.
@@ -300,8 +299,3 @@ txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> [TxOutRef]
 spentOutputs = map txInputRef . txInputs
-
--- | Update a map of unspent transaction outputs and signatures
---   for a failed transaction using its collateral inputs.
-updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
-updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInputRef . txCollateral $ tx)

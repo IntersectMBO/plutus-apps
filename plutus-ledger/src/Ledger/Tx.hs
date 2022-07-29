@@ -17,6 +17,13 @@ module Ledger.Tx
     ( module Export
     -- * ChainIndexTxOut
     , ChainIndexTxOut(..)
+    , TxOut (..)
+    , TxIn(..)
+    , TxOutRef(..)
+    , Address(..)
+    , RedeemerPtr (..)
+    , ScriptTag (..)
+    , TxInType (..)
     , toTxOut
     , fromTxOut
     -- ** Lenses and Prisms
@@ -52,11 +59,11 @@ module Ledger.Tx
     , scriptTxOut
     , scriptTxOut'
     , updateUtxo
-    , updateUtxoCollateral
     , txOutRefs
     , unspentOutputsTx
     -- * Hashing transactions
     , txId
+    , updateUtxoCollateral
     ) where
 
 import Cardano.Api qualified as C
@@ -75,13 +82,16 @@ import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
 import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
+import Ledger.Tx.Internal as Export
+-- import Ledger.Tx.Internal (Tx(..), updateUtxoCollateral, fillTxInputWitnesses, TxInput, strip, spentOutputs, signatures)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.Script.Utils.V1.Scripts (datumHash)
+import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
-                             Validator, ValidatorHash, Value, addressCredential, toBuiltin)
+                             Validator, ValidatorHash, Value, toBuiltin)
 import Plutus.V1.Ledger.Slot (SlotRange)
-import Plutus.V1.Ledger.Tx as Export hiding (updateUtxoCollateral)
+import Plutus.V1.Ledger.Tx (RedeemerPtr (..), ScriptTag (..), TxIn (..), TxInType (..), TxOut (..), TxOutRef (..))
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- | Transaction output that comes from a chain index query.
@@ -188,14 +198,16 @@ getCardanoApiTxId :: SomeCardanoApiTx -> TxId
 getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
 getCardanoTxInputs :: CardanoTx -> [TxIn]
-getCardanoTxInputs = onCardanoTx (\tx -> map (fillTxInputWitnesses tx) $ txInputs tx)
+getCardanoTxInputs = onCardanoTx
+    (\tx -> map (fillTxInputWitnesses tx) $ txInputs tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
-getCardanoTxCollateralInputs :: CardanoTx -> Set TxIn
-getCardanoTxCollateralInputs = onCardanoTx txCollateral
+getCardanoTxCollateralInputs :: CardanoTx -> [TxIn]
+getCardanoTxCollateralInputs = onCardanoTx
+    (\tx -> map (fillTxInputWitnesses tx) $ txCollateral tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
-        CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
+        Set.toList $ CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, TxOutRef)]
 getCardanoTxOutRefs = onCardanoTx txOutRefs CardanoAPI.txOutRefs
@@ -206,8 +218,8 @@ getCardanoTxOutputs = fmap fst . getCardanoTxOutRefs
 getCardanoTxUnspentOutputsTx :: CardanoTx -> Map TxOutRef TxOut
 getCardanoTxUnspentOutputsTx = onCardanoTx unspentOutputsTx CardanoAPI.unspentOutputsTx
 
-getCardanoTxSpentOutputs :: CardanoTx -> Set TxOutRef
-getCardanoTxSpentOutputs = Set.map txInRef . getCardanoTxInputs
+getCardanoTxSpentOutputs :: CardanoTx -> [TxOutRef]
+getCardanoTxSpentOutputs = map txInRef . getCardanoTxInputs
 
 getCardanoTxFee :: CardanoTx -> Value
 getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
@@ -257,8 +269,13 @@ txId tx = TxId $ toBuiltin
 
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
-updateUtxo :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
-updateUtxo tx unspent = (unspent `Map.withoutKeys` Set.fromList (spentOutputs tx)) `Map.union` unspentOutputsTx tx
+updateUtxo :: CardanoTx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxo tx unspent = (unspent `Map.withoutKeys` (Set.fromList $ getCardanoTxSpentOutputs tx)) `Map.union` getCardanoTxUnspentOutputsTx tx
+
+-- | Update a map of unspent transaction outputs and signatures based
+--   on the collateral inputs of a transaction (for when it is invalid).
+updateUtxoCollateral :: CardanoTx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList $ map txInRef . getCardanoTxCollateralInputs $ tx)
 
 -- | A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
 txOutRefs :: Tx -> [(TxOut, TxOutRef)]

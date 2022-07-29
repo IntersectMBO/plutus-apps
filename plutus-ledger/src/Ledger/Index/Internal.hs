@@ -24,9 +24,10 @@ import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Orphans ()
+import Ledger.Tx (Tx)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Slot qualified as Slot
-import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.Tx (RedeemerPtr, TxIn, TxOut, TxOutRef)
 import Plutus.V1.Ledger.Value qualified as V
 import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))

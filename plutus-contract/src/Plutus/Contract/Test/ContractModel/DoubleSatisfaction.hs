@@ -43,7 +43,6 @@ import Data.Default
 import Data.Either
 import Data.Map qualified as Map
 import Data.Maybe
-import Data.Set qualified as Set
 import Ledger.Params (Params)
 
 import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
@@ -75,6 +74,7 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), e
 import Wallet.Emulator.Stream (EmulatorErr)
 
 
+import Plutus.V1.Ledger.Tx (isPubKeyOut, outAddress, txOutPubKey)
 import Prettyprinter
 
 -- Double satisfaction magic
@@ -292,19 +292,19 @@ showPretty cand = show . vcat $
   , ""
   , "For reference the UTxOs indices above correspond to:"
   ] ++
-  [ vcat [ pretty (ref ^. inRef)
-         , pretty . fromJust $ Map.lookup (ref ^. inRef)
+  [ vcat [ pretty (txInputRef ref)
+         , pretty . fromJust $ Map.lookup (txInputRef ref)
                          (cand ^. to dsceValueStolenProof . dsUtxoIndex . to getIndex)
          ]
   | let tx0 = cand ^. to dsceTargetMattersProof . dsTx
         tx1 = cand ^. to dsceValueStolenProof . dsTx
         tx2 = cand ^. to dsceOriginalTransaction . dsTx
-  , ref <- Set.toList $  tx0 ^. inputs
-                      <> tx1 ^. inputs
-                      <> tx2 ^. inputs
-                      <> tx0 ^. collateralInputs
-                      <> tx1 ^. collateralInputs
-                      <> tx2 ^. collateralInputs
+  , ref <-    tx0 ^. inputs
+           <> tx1 ^. inputs
+           <> tx2 ^. inputs
+           <> tx0 ^. collateralInputs
+           <> tx1 ^. collateralInputs
+           <> tx2 ^. collateralInputs
   ]
 
 isVulnerable :: DoubleSatisfactionCounterexample -> Bool
@@ -359,18 +359,13 @@ doubleSatisfactionCounterexamples dsc =
         newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
                                    , txOutRefIdx = 1
                                    }
-        newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
-                           , txInType = Just $ ConsumeScriptAddress alwaysOkValidator
-                                                                    redeemerEmpty
-                                                                    datumEmpty
-                           }
   , let targetMatters0 = dsc & l . outAddress .~ stealerAddr
         tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
         targetMatters1 = targetMatters0 & dsTxId .~ txId tx
                                         & dsTx   .~ tx
   , let valueStolen0 = dsc & l . outAddress .~ stealerAddr
                            & dsTx . outputs %~ (withDatumOut:)
-                           & dsTx . inputs %~ (Set.insert newFakeTxIn)
+                           & dsTx %~ addScriptTxInput newFakeTxOutRef alwaysOkValidator redeemerEmpty datumEmpty
                            & dsUtxoIndex %~
                               (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
                                                                          newFakeTxScriptOut m)

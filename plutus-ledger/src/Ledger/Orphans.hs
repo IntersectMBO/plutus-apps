@@ -25,9 +25,6 @@ import Data.Text qualified as Text
 import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Exts (IsList (fromList))
 import GHC.Generics (Generic)
-import Ledger.Ada (Ada (Lovelace))
-import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
-import Ledger.Slot (Slot (Slot))
 import Ledger.Tx.Internal (Certificate, Tx, TxInput, TxInputType, Withdrawal)
 import Plutus.V1.Ledger.Ada (Ada (Lovelace))
 import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinData), Credential,
@@ -43,7 +40,7 @@ import Plutus.V1.Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (
 import Plutus.V1.Ledger.Scripts (ScriptHash (..))
 import Plutus.V1.Ledger.Slot (Slot (Slot))
 import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType)
+import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap

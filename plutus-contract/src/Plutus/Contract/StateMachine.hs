@@ -53,7 +53,7 @@ module Plutus.Contract.StateMachine(
     ) where
 
 import Control.Lens (makeClassyPrisms, review)
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (rights)
@@ -127,8 +127,13 @@ getInput ::
     -> ChainIndexTx
     -> Maybe i
 getInput outRef tx = do
-    (_validator, Ledger.Redeemer r, _) <- listToMaybe $ mapMaybe Tx.inScripts $ filter (\Tx.TxIn{Tx.txInRef} -> outRef == txInRef) $ Set.toList $ _citxInputs tx
+    r <- listToMaybe $ mapMaybe (takeRedeemer <=< Tx.txInType)
+        $ filter (\Tx.TxIn{Tx.txInRef} -> outRef == txInRef)
+        $ Set.toList $ _citxInputs tx
     PlutusTx.fromBuiltinData r
+    where
+        takeRedeemer (Tx.ConsumeScriptAddress _ (Ledger.Redeemer r) _) = Just r
+        takeRedeemer _                                                 = Nothing
 
 getStates
     :: forall s i

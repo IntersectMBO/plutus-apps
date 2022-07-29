@@ -23,6 +23,7 @@ import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateIni
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash)
+import Plutus.V1.Ledger.Tx (txOutDatum)
 import PlutusTx qualified
 import PlutusTx.Prelude
 

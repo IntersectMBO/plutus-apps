@@ -54,14 +54,8 @@ module Ledger.Index(
 import Cardano.Api (Lovelace (..))
 import Prelude hiding (lookup)
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Control.Lens (toListOf, view, (^.))
-import Control.Lens.Indexed (iforM_)
 
-import Codec.Serialise (Serialise)
-import Control.DeepSeq (NFData)
-import Control.Lens (toListOf, view, (^.))
 import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
@@ -71,8 +65,6 @@ import Data.Either (fromRight)
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
-import Data.OpenApi.Schema qualified as OpenApi
-import Data.Set qualified as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Blockchain
@@ -81,21 +73,24 @@ import Ledger.Index.Internal
 import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx (CardanoTx (..), txId, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx (..), Tx (..), TxInput (TxInput, txInputRef), TxOut, collateralInputs, datumWitnesses,
+                  fillTxInputWitnesses, inputs, lookupMintingPolicy, pubKeyTxInputs, scriptTxInputs, signatures, txId,
+                  updateUtxoCollateral)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.V1.Scripts
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as Api
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
+import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..), TxOut (txOutValue))
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Slot qualified as Slot
-import Plutus.V1.Ledger.Tx hiding (updateUtxoCollateral)
+import Plutus.V1.Ledger.Tx (TxIn (txInType), TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress), TxOutRef,
+                            txInRef, txOutAddress, txOutDatumHash)
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusPrelude (first)
@@ -129,56 +124,6 @@ lookup :: MonadError ValidationError m => TxOutRef -> UtxoIndex -> m TxOut
 lookup i index = case Map.lookup i $ getIndex index of
     Just t  -> pure t
     Nothing -> throwError $ TxOutRefNotFound i
-
-type EmulatorEra = AlonzoEra StandardCrypto
-
--- | A reason why a transaction is invalid.
-data ValidationError =
-    InOutTypeMismatch TxIn TxOut
-    -- ^ A pay-to-pubkey output was consumed by a pay-to-script input or vice versa, or the 'TxIn' refers to a different public key than the 'TxOut'.
-    | TxOutRefNotFound TxOutRef
-    -- ^ The transaction output consumed by a transaction input could not be found (either because it was already spent, or because
-    -- there was no transaction with the given hash on the blockchain).
-    | InvalidScriptHash Validator ValidatorHash
-    -- ^ For pay-to-script outputs: the validator script provided in the transaction input does not match the hash specified in the transaction output.
-    | InvalidDatumHash Datum DatumHash
-    -- ^ For pay-to-script outputs: the datum provided in the transaction input does not match the hash specified in the transaction output.
-    | MissingRedeemer RedeemerPtr
-    -- ^ For scripts that take redeemers: no redeemer was provided for this script.
-    | MissingMintingScript MintingPolicyHash
-    -- ^ No script witness was provided for referenced minting policy.
-    | InvalidSignature PubKey Signature
-    -- ^ For pay-to-pubkey outputs: the signature of the transaction input does not match the public key of the transaction output.
-    | ValueNotPreserved V.Value V.Value
-    -- ^ The amount spent by the transaction differs from the amount consumed by it.
-    | NegativeValue Tx
-    -- ^ The transaction produces an output with a negative value.
-    | ValueContainsLessThanMinAda Tx TxOut
-    -- ^ The transaction produces an output with a value containing less than the minimum required Ada.
-    | NonAdaFees Tx
-    -- ^ The fee is not denominated entirely in Ada.
-    | ScriptFailure ScriptError
-    -- ^ For pay-to-script outputs: evaluation of the validator script failed.
-    | CurrentSlotOutOfRange Slot.Slot
-    -- ^ The current slot is not covered by the transaction's validity slot range.
-    | SignatureMissing PubKeyHash
-    -- ^ The transaction is missing a signature
-    | MintWithoutScript Scripts.MintingPolicyHash
-    -- ^ The transaction attempts to mint value of a currency without running
-    --   the currency's minting policy.
-    | TransactionFeeTooLow V.Value V.Value
-    -- ^ The transaction fee is lower than the minimum acceptable fee.
-    | CardanoLedgerValidationError String
-    -- ^ An error from Cardano.Ledger validation
-    deriving (Eq, Show, Generic)
-
-instance FromJSON ValidationError
-instance ToJSON ValidationError
-deriving via (PrettyShow ValidationError) instance Pretty ValidationError
-
-data ValidationPhase = Phase1 | Phase2 deriving (Eq, Show, Generic, FromJSON, ToJSON)
-deriving via (PrettyShow ValidationPhase) instance Pretty ValidationPhase
-type ValidationErrorInPhase = (ValidationPhase, ValidationError)
 
 -- | A monad for running transaction validation inside, which is an instance of 'ValidationMonad'.
 newtype Validation a = Validation { _runValidation :: (ReaderT ValidationCtx (ExceptT ValidationError (Writer [ScriptValidationEvent]))) a }
@@ -298,8 +243,8 @@ checkMintingScripts tx = do
             ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
 
         vl <- case lookupMintingPolicy (txScripts tx) mph of
-            Just vl | plutusV1MintingPolicyHash vl == mph -> pure vl
-            _                                             -> throwError $ MissingMintingScript mph
+            Just vl | mintingPolicyHash vl == mph -> pure vl
+            _                                     -> throwError $ MintWithoutScript mph
 
         case runExcept $ runMintingPolicyScript ctx vl red of
             Left e  -> do
@@ -434,7 +379,7 @@ checkTransactionFee tx =
 -- | Create the data about the transaction which will be passed to a validator script.
 mkTxInfo :: ValidationMonad m => Tx -> m TxInfo
 mkTxInfo tx = do
-    slotCfg <- vctxSlotConfig <$> ask
+    slotCfg <- pSlotConfig . vctxParams <$> ask
     txins <- traverse mkIn $ view inputs tx
     let ptx = TxInfo
             { txInfoInputs = txins

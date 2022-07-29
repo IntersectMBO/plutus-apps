@@ -29,14 +29,13 @@ module Ledger.Typed.Tx where
 import Control.Lens (preview)
 import Ledger.Address (PaymentPubKey, StakePubKey)
 import Ledger.Tx (Address, ChainIndexTxOut, TxIn (TxIn, txInRef, txInType),
-                  TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress),
                   TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue), TxOutRef, _ScriptChainIndexTxOut,
                   pubKeyTxOut)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorAddress, validatorScript)
 import Plutus.Script.Utils.V1.Scripts (datumHash)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, Redeemer (Redeemer))
+import Plutus.V1.Ledger.Tx (TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress))
 import Plutus.V1.Ledger.Value qualified as Value
-
 import PlutusTx (BuiltinData, FromData, ToData, builtinDataToData, dataToBuiltinData, fromBuiltinData, toBuiltinData)
 
 import Codec.Serialise (deserialise, serialise)
