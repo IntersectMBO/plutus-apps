@@ -76,6 +76,7 @@ library
   --------------------
   build-depends:
     , freer-extras
+    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-script-utils
 
@@ -115,7 +116,6 @@ library
     , fingertree
     , freer-simple
     , http-types
-    , hysterical-screams
     , io-classes
     , iohk-monitoring
     , lens
