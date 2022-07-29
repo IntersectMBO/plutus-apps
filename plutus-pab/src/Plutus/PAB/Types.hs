@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StrictData         #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
@@ -18,8 +19,9 @@ import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
 import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (DbConfig)
 import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (DbConfig)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, Value (..), object, parseJSON, toJSON, (.:), (.:?), (.=))
 import Data.Default (Default, def)
+import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Pool (Pool)
@@ -110,7 +112,21 @@ takeSqlite _               = error "Postgres db"
 data DbConfig = SqliteDB Sqlite.DbConfig
               | PostgresDB Postgres.DbConfig
     deriving (Show, Eq, Generic)
-    deriving anyclass (ToJSON, FromJSON)
+
+instance FromJSON DbConfig where
+    parseJSON (Object obj) = do
+        ci <- obj .:? "sqliteDB"
+        bf <- obj .:? "postgresDB"
+        case (ci, bf) of
+            (Just a, Nothing)  -> pure $ SqliteDB a
+            (Nothing, Just a)  -> pure $ PostgresDB a
+            (Nothing, Nothing) -> error "No configuration available"
+            (Just _, Just _)   -> error "Cant have Sqlite and Postgres databases"
+    parseJSON _            = fail "Failed to parse database configuration"
+
+instance ToJSON DbConfig where
+    toJSON (SqliteDB cfg)   = object ["sqliteDB" .= cfg]
+    toJSON (PostgresDB cfg) = object ["postgresDB" .= cfg]
 
 -- | Default database config uses an in-memory sqlite database that is shared
 -- between all threads in the process.
@@ -130,7 +146,33 @@ data Config =
         , requestProcessingConfig :: RequestProcessingConfig
         , developmentOptions      :: DevelopmentOptions
         }
-    deriving (Show, Eq, Generic, FromJSON, ToJSON)
+    deriving (Show, Eq, Generic)
+
+instance FromJSON Config where
+    parseJSON val@(Object obj) = Config <$> parseJSON val
+                                    <*> obj .: "walletServerConfig"
+                                    <*> obj .: "nodeServerConfig"
+                                    <*> obj .: "pabWebserverConfig"
+                                    <*> obj .: "chainIndexConfig"
+                                    <*> obj .: "requestProcessingConfig"
+                                    <*> obj .: "developmentOptions"
+    parseJSON val = fail $ "Unexpected value: " ++ show val
+
+
+instance ToJSON Config where
+    toJSON Config {..}=
+        object
+        [ "walletServerConfig" .= walletServerConfig
+        , "nodeServerConfig" .= nodeServerConfig
+        , "pabWebserverConfig" .= pabWebserverConfig
+        , "chainIndexConfig" .= chainIndexConfig
+        , "requestProcessingConfig" .= requestProcessingConfig
+        , "developmentOptions" .= developmentOptions
+        ] `mergeObjects` toJSON dbConfig
+
+mergeObjects :: Value -> Value -> Value
+mergeObjects (Object o1) (Object o2) = Object $ HML.union o1 o2
+mergeObjects _ _                     = error "Value must be an object"
 
 defaultConfig :: Config
 defaultConfig =
