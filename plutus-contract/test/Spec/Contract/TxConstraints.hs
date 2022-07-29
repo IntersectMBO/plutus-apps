@@ -30,6 +30,7 @@ import Test.Tasty (TestTree, testGroup)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Scripts (unitRedeemer)
 import Ledger.Tx (getCardanoTxId)
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
@@ -171,10 +172,10 @@ mustReferencePubKeyOutputV2ConTest = do
         lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
                <> TC.plutusV2OtherScript mustReferencePubKeyOutputV2Validator
         tx = TC.mustReferencePubKeyOutput utxoRef
-          <> TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator (PV2.Redeemer $ PlutusTx.toBuiltinData ())
+          <> TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator unitRedeemer
     logInfo $ show addressMap
     logInfo $ show lookups
-    logInfo $ show $ TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator (PV2.Redeemer $ PlutusTx.toBuiltinData ())
+    logInfo $ show $ TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator unitRedeemer
     logInfo $ show $ addressMap ^. at (PV2.mkValidatorAddress mustReferencePubKeyOutputV2Validator)
     logInfo $ show tx
     mkTxConstraints @Any lookups tx >>= submitTxConfirmed
