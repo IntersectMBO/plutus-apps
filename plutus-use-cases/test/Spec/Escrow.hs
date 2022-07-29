@@ -58,7 +58,7 @@ modelParams :: EscrowParams d
 modelParams = escrowParams $ TimeSlot.scSlotZeroTime def
 
 options :: CheckOptions
-options = defaultCheckOptionsContractModel & allowBigTransactions
+options = defaultCheckOptionsContractModel & increaseTransactionLimits
 
 deriving instance Eq (ContractInstanceKey EscrowModel w s e params)
 deriving instance Show (ContractInstanceKey EscrowModel w s e params)

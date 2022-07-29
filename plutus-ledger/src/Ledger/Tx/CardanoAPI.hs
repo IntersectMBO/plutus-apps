@@ -105,6 +105,7 @@ import GHC.Generics (Generic)
 import Ledger.Address qualified as P
 import Ledger.Params qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
+import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as P
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api qualified as Api
@@ -127,7 +128,8 @@ instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
 
 instance OpenApi.ToSchema CardanoBuildTx where
-  declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
+  -- TODO: implement the schema
+  declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
 
 instance Pretty CardanoBuildTx where
   pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent

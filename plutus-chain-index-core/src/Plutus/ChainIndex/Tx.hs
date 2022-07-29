@@ -1,11 +1,7 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
 
 {-| The chain index' version of a transaction
@@ -41,7 +37,8 @@ import Ledger (Address, OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn
                TxOut (txOutAddress), TxOutRef (..), onCardanoTx, txId)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, setValidity)
-import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
+import Plutus.Script.Utils.Scripts (datumHash, redeemerHash)
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.V1.Ledger.Scripts (Datum, DatumHash, MintingPolicy (getMintingPolicy),
                                  MintingPolicyHash (MintingPolicyHash), Redeemer, RedeemerHash, Script, ScriptHash (..),
                                  Validator (getValidator), ValidatorHash (ValidatorHash))

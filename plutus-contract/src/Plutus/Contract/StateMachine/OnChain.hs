@@ -29,7 +29,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                           TxConstraints (txOwnOutputs), checkScriptContext)
+                           TxConstraints (txOwnOutputs))
+import Ledger.Constraints.OnChain.V1 (checkScriptContext)
 import Ledger.Tx (TxOut (txOutValue))
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, ValidatorTypes, validatorAddress,
                              validatorHash)

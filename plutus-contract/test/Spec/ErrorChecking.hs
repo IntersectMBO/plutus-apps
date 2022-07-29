@@ -146,7 +146,7 @@ contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, succes
       r <- submitTx tx
       awaitTxConfirmed (getCardanoTxId r)
       utxos <- utxosAt addr
-      let tx' = collectFromScript utxos 0
+      let tx' = collectFromTheScript utxos 0
       submitTxConstraintsSpending validator utxos tx'
 
     failFalseC = endpoint @"failFalse" $ \ _ -> do

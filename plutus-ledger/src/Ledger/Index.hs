@@ -75,7 +75,8 @@ import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx (..), txId, updateUtxoCollateral)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.V1.Scripts
+import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
@@ -219,7 +220,8 @@ the blockchain.
 checkMintingAuthorised :: ValidationMonad m => Tx -> m ()
 checkMintingAuthorised tx =
     let
-        mintedCurrencies = V.symbols (txMint tx)
+        -- See note [Mint and Fee fields must have ada symbol].
+        mintedCurrencies = filter ((/=) Ada.adaSymbol) $ V.symbols (txMint tx)
 
         mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
 
@@ -381,8 +383,9 @@ mkTxInfo tx = do
     let ptx = TxInfo
             { txInfoInputs = txins
             , txInfoOutputs = txOutputs tx
-            , txInfoMint = txMint tx
-            , txInfoFee = txFee tx
+            -- See note [Mint and Fee fields must have ada symbol]
+            , txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
+            , txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator
             , txInfoWdrl = [] -- Withdrawals not supported in emulator
             , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
