@@ -1,6 +1,6 @@
 {
   "https://github.com/input-output-hk/ekg-forward"."297cd9db5074339a2fb2e5ae7d0780debb670c63" = "1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g";
-  "https://github.com/input-output-hk/cardano-addresses"."b6f2f3cef01a399376064194fd96711a5bdba4a7" = "10yj47gay72kx6v564qlfiigggcpqfdzrg61ii8p25m5n8ijz045";
+  "https://github.com/input-output-hk/cardano-addresses"."4a369086471d0849d40ba384ca39a4ab94f23d82" = "1rxbaycknxaadyrwn1knlz0mp1mwavm2kcw7dmp1pyb6ifrq62iq";
   "https://github.com/input-output-hk/cardano-base"."0f3a867493059e650cda69e20a5cbf1ace289a57" = "0p0az3sbkhb7njji8xxdrfb0yx2gc8fmrh872ffm8sfip1w29gg1";
   "https://github.com/input-output-hk/cardano-config"."1646e9167fab36c0bff82317743b96efa2d3adaa" = "sha256-TNbpnR7llUgBN2WY7CryMxNVupBIUH01h1hRNHoxboY=";
   "https://github.com/input-output-hk/cardano-crypto"."f73079303f663e028288f9f4a9e08bcca39a923e" = "1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q";
