@@ -87,6 +87,7 @@ import Control.Applicative (Alternative ((<|>)))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens (view)
+import Control.Lens.Operators
 import Control.Monad (forM, guard, void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, runM, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
@@ -96,11 +97,14 @@ import Control.Monad.Freer.Reader (Reader (Ask), ask, asks, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (traverse_)
+import Data.IORef (readIORef)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
+import Index.VSplit qualified as Ix
+import Index.VSqlite qualified as Ix
 import Ledger (Address (addressCredential), Params, TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx, ciTxOutValue)
@@ -510,8 +514,19 @@ waitForState extract instanceId = do
 -- | Wait for the transaction to be confirmed on the blockchain.
 waitForTxStatusChange :: forall t env. TxId -> PABAction t env TxStatus
 waitForTxStatusChange t = do
-    env <- asks @(PABEnvironment t env) blockchainEnv
-    liftIO $ STM.atomically $ Instances.waitForTxStatusChange Unknown t env
+    env         <- asks @(PABEnvironment t env) blockchainEnv
+    case Instances.beTxChanges env of
+      Left ix -> liftIO . STM.atomically $
+        Instances.waitForTxStatusChange Unknown t ix $
+            Instances.beLastSyncedBlockNo env
+      Right ixRef -> liftIO $ do
+        ix          <- readIORef ixRef
+        blockNumber <- STM.readTVarIO $ Instances.beLastSyncedBlockNo env
+        events      <- Ix.getEvents (ix ^. Ix.storage)
+        (ix ^. Ix.query) ix t events >>= \case
+          Nothing -> undefined
+          Just ts -> undefined
+        undefined
 
 -- | Wait for the transaction output to be confirmed on the blockchain.
 waitForTxOutStatusChange :: forall t env. TxOutRef -> PABAction t env TxOutStatus

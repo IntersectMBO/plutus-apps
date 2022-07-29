@@ -198,7 +198,11 @@ processTxStatusChangeRequestsSTM =
     where
         handler txId = do
             env <- ask
-            pure (AwaitTxStatusChangeResp txId <$> InstanceState.waitForTxStatusChange Unknown txId env)
+                     -- This should never be called in a context where there is a
+                     -- Marconi indexer in the environment.
+            let ix = InstanceState.getUtxoIndexTxChanges env
+                bn = InstanceState.beLastSyncedBlockNo env
+            pure (AwaitTxStatusChangeResp txId <$> InstanceState.waitForTxStatusChange Unknown txId ix bn)
 
 processTxOutStatusChangeRequestsSTM ::
     forall effs.
