@@ -42,9 +42,9 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
 import Ledger.Blockchain
-import Ledger.Tx (CardanoTx, getCardanoTxId, getCardanoTxOutputs, getCardanoTxUnspentOutputsTx)
+import Ledger.Tx (CardanoTx, TxIn (..), TxOut (..), TxOutRef (..), getCardanoTxId, getCardanoTxOutputs,
+                  getCardanoTxUnspentOutputsTx)
 import Plutus.V1.Ledger.Address (Address (..))
-import Plutus.V1.Ledger.Tx (TxIn (..), TxOut (..), TxOutRef (..))
 import Plutus.V1.Ledger.Value (Value)
 
 type UtxoMap = Map TxOutRef (CardanoTx, TxOut)

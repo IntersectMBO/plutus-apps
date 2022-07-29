@@ -30,7 +30,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (Tx)
+import Ledger.Tx.Internal (Tx, TxIn, TxInType)
 import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
@@ -41,7 +41,7 @@ import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol
 import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Scripts (ScriptError, ScriptHash (..))
 import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
+import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap

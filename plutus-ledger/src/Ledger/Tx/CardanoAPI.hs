@@ -396,7 +396,7 @@ toCardanoTxBodyContent
     -> Either ToCardanoError CardanoBuildTx
 toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild txInputs
-    txInsReference <- traverse (\(PV1.TxIn ref _) -> toCardanoTxIn ref) txReferenceInputs
+    txInsReference <- traverse (\(P.TxIn ref _) -> toCardanoTxIn ref) txReferenceInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut pNetworkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
@@ -443,9 +443,9 @@ makeTransactionBody exUnits (CardanoBuildTx txBodyContent) =
 fromCardanoTxIn :: C.TxIn -> PV1.TxOutRef
 fromCardanoTxIn (C.TxIn txId (C.TxIx txIx)) = PV1.TxOutRef (fromCardanoTxId txId) (toInteger txIx)
 
-toCardanoTxInBuild :: PV1.TxIn -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
-toCardanoTxInBuild (PV1.TxIn txInRef (Just txInType)) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness txInType)
-toCardanoTxInBuild (PV1.TxIn _ Nothing) = Left MissingTxInType
+toCardanoTxInBuild :: P.TxIn -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
+toCardanoTxInBuild (P.TxIn txInRef (Just txInType)) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness txInType)
+toCardanoTxInBuild (P.TxIn _ Nothing) = Left MissingTxInType
 
 toCardanoTxIn :: PV1.TxOutRef -> Either ToCardanoError C.TxIn
 toCardanoTxIn (PV1.TxOutRef txId txIx) = C.TxIn <$> toCardanoTxId txId <*> pure (C.TxIx (fromInteger txIx))
@@ -458,18 +458,18 @@ toCardanoTxId (PV1.TxId bs) =
     tag "toCardanoTxId"
     $ deserialiseFromRawBytes C.AsTxId $ PlutusTx.fromBuiltin bs
 
-fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [PV1.TxIn]
+fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [P.TxIn]
 fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
-fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (PV1.pubKeyTxIn . fromCardanoTxIn) txIns
+fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (P.pubKeyTxIn . fromCardanoTxIn) txIns
 
-toCardanoTxInsCollateral :: [PV1.TxIn] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
-toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . traverse (toCardanoTxIn . PV1.txInRef)
+toCardanoTxInsCollateral :: [P.TxIn] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
+toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . traverse (toCardanoTxIn . P.txInRef)
 
-toCardanoTxInWitness :: PV1.TxInType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
-toCardanoTxInWitness PV1.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
-toCardanoTxInWitness PV1.ConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
+toCardanoTxInWitness :: P.TxInType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
+toCardanoTxInWitness P.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
+toCardanoTxInWitness P.ConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
 toCardanoTxInWitness
-    (PV1.ConsumeScriptAddress
+    (P.ConsumeScriptAddress
         (P.Validator validator)
         (P.Redeemer redeemer)
         (P.Datum datum))

@@ -105,6 +105,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
+import Ledger.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, POSIXTimeRange, Redeemer,
                              Validator, ValidatorHash, Value)
 import Plutus.V1.Ledger.Value qualified as Value
@@ -523,7 +524,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
-    let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
+    let txIn = Scripts.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl

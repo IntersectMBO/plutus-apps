@@ -53,7 +53,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequ
                                     mkTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxInType (..), TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
@@ -283,7 +283,7 @@ mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx
 
 mkSpendingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
 mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract txInputs) where
-    extract PV1.TxIn{PV1.txInType=Just (PV1.ConsumeScriptAddress _ redeemer _), PV1.txInRef} =
+    extract TxIn{txInType=Just (ConsumeScriptAddress _ redeemer _), txInRef} =
         pure [SpendingRedeemer{redeemer, redeemerOutRef=txInRef}]
     extract _ = pure []
 
