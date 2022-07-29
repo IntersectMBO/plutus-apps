@@ -356,7 +356,7 @@ toCardanoTxBodyContent
     -> Tx
     -> Either ToCardanoError (C.TxBodyContent C.BuildTx C.AlonzoEra)
 toCardanoTxBodyContent sigs protocolParams networkId
-  tx@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txMintingScripts, txWithdrawals, txCertificates, txSignatures, txScripts, txData} = do
+  tx@Tx{txInputs, txCollateral, txOutputs, txFee, txValidRange, txWithdrawals, txScripts, txData} = do
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
@@ -650,7 +650,7 @@ fromCardanoMintValue C.TxMintNone              = mempty
 fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 
 toCardanoMintValue :: Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.AlonzoEra)
-toCardanoMintValue tx@Tx{..} =
+toCardanoMintValue Tx{..} =
     let indexedMps = Map.assocs txMintingScripts
      in C.TxMintValue C.MultiAssetInAlonzoEra
         <$> toCardanoValue txMint

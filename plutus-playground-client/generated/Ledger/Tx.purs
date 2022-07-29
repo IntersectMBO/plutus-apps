@@ -15,11 +15,11 @@ import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (unwrap)
 import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Ledger.Tx.Types.Tx (Tx)
+import Ledger.Tx.Internal (Tx)
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Scripts (DatumHash, Validator)
 import Plutus.V1.Ledger.Value (Value)
@@ -157,40 +157,3 @@ _ScriptChainIndexTxOut :: Prism' ChainIndexTxOut { _ciTxOutAddress :: Address, _
 _ScriptChainIndexTxOut = prism' ScriptChainIndexTxOut case _ of
   (ScriptChainIndexTxOut a) -> Just a
   _ -> Nothing
-
---------------------------------------------------------------------------------
-
-newtype TxOutTx = TxOutTx
-  { txOutTxTx :: Tx
-  , txOutTxOut :: TxOut
-  }
-
-derive instance Eq TxOutTx
-
-instance Show TxOutTx where
-  show a = genericShow a
-
-instance EncodeJson TxOutTx where
-  encodeJson = defer \_ -> E.encode $ unwrap >$<
-    ( E.record
-        { txOutTxTx: E.value :: _ Tx
-        , txOutTxOut: E.value :: _ TxOut
-        }
-    )
-
-instance DecodeJson TxOutTx where
-  decodeJson = defer \_ -> D.decode $
-    ( TxOutTx <$> D.record "TxOutTx"
-        { txOutTxTx: D.value :: _ Tx
-        , txOutTxOut: D.value :: _ TxOut
-        }
-    )
-
-derive instance Generic TxOutTx _
-
-derive instance Newtype TxOutTx _
-
---------------------------------------------------------------------------------
-
-_TxOutTx :: Iso' TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
-_TxOutTx = _Newtype
