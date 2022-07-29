@@ -26,8 +26,8 @@ import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (Con
 import Database.SQLite.Simple.ToField (ToField (toField))
 
 import Cardano.Api (SlotNo (SlotNo))
-import Index.VSqlite (SqliteIndex)
-import Index.VSqlite qualified as Ix
+import Plutus.HystericalScreams.Index.VSqlite (SqliteIndex)
+import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
 import Plutus.V1.Ledger.Api (Datum, DatumHash)
 
 type Event        = [(SlotNo, (DatumHash, Datum))]

@@ -126,7 +126,7 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
-    , hysterical-screams
+    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-streaming
 
