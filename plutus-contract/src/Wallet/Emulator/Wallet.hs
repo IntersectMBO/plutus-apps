@@ -37,6 +37,7 @@ import Data.Bifunctor (bimap, first, second)
 import Data.Data
 import Data.Default (Default (def))
 import Data.Foldable (Foldable (fold), find, foldl')
+import Data.List (sort)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -521,7 +522,7 @@ addCollateral mp vl tx = do
     (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
     let addTxCollateral =
             let ins = Tx.pubKeyTxIn . fst <$> spend
-            in over Tx.collateralInputs ((++) ins)
+            in over Tx.collateralInputs (sort . (++) ins)
     pure $ tx & addTxCollateral
 
 -- | @addInputs mp pk vl tx@ selects transaction outputs worth at least
@@ -542,7 +543,7 @@ addInputs mp pk sk vl tx = do
 
         addTxIns =
             let ins = Tx.pubKeyTxIn . fst <$> spend
-            in over Tx.inputs ((++) ins)
+            in over Tx.inputs (sort . (++) ins)
 
         addTxOut =
             if Value.isZero change

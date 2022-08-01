@@ -368,7 +368,7 @@ doubleSatisfactionCounterexamples dsc =
                                         & dsTx   .~ tx
   , let valueStolen0 = dsc & l . outAddress .~ stealerAddr
                            & dsTx . outputs %~ (withDatumOut:)
-                           & dsTx . inputs %~ ((:) newFakeTxIn)
+                           & dsTx . inputs %~ (newFakeTxIn:)
                            & dsUtxoIndex %~
                               (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
                                                                          newFakeTxScriptOut m)

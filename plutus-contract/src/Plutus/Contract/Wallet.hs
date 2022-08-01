@@ -119,7 +119,7 @@ getUnspentOutput = do
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
-    case (fmap Semigroup.getMin $ foldMap (Just . Semigroup.Min) $ getCardanoTxInputs tx) of
+    case fmap Semigroup.getMin $ foldMap (Just . Semigroup.Min) $ getCardanoTxInputs tx of
         Just inp -> pure $ txInRef inp
         Nothing  -> throwing _OtherContractError "Balanced transaction has no inputs"
 
