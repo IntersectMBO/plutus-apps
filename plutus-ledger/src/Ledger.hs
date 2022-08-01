@@ -16,7 +16,7 @@ import Ledger.Orphans ()
 import Ledger.Params as Export
 import Ledger.Scripts as Export
 import Ledger.Slot as Export
-import Ledger.Tx as Export
+import Ledger.Tx as Export hiding (pubKeyTxIns, scriptTxIns)
 import Ledger.Value as Export (noAdaValue)
 import Plutus.V1.Ledger.Contexts as Export
 import Plutus.V1.Ledger.Interval as Export

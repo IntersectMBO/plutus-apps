@@ -30,6 +30,7 @@ import Ledger.Constraints.OnChain.V1 as Constraints
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Generators qualified as Gen
+import Ledger.Index qualified as Ledger
 import Ledger.Params ()
 import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
 import Ledger.Typed.Scripts qualified as Scripts

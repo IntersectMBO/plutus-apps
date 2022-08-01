@@ -697,7 +697,7 @@ assertAccumState contract inst p nm = TracePredicate $
         let result = p w
         unless result $ do
             tell @(Doc Void) $ vsep
-                [ "Accumulated state of of" <+> pretty inst <> colon
+                [ "Accumulated state of" <+> pretty inst <> colon
                 , indent 2 (viaShow w)
                 , "Failed" <+> squotes (fromString nm)
                 ]

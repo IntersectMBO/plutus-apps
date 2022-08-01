@@ -35,6 +35,8 @@ module Ledger.Index(
     minAdaTxOut,
     minLovelaceTxOut,
     mkTxInfo,
+    pubKeyTxIns,
+    scriptTxIns,
     -- * Actual validation
     validateTransaction,
     validateTransactionOffChain,
@@ -53,7 +55,7 @@ module Ledger.Index(
 import Cardano.Api (Lovelace (..))
 import Prelude hiding (lookup)
 
-import Control.Lens (toListOf, view, (^.))
+import Control.Lens (Fold, folding, toListOf, view, (^.))
 import Control.Lens.Indexed (iforM_)
 import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
@@ -76,7 +78,7 @@ import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx
+import Ledger.Tx hiding (pubKeyTxIns, scriptTxIns)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
@@ -138,6 +140,17 @@ lkpValue = fmap txOutValue . lkpTxOut
 lkpTxOut :: ValidationMonad m => TxOutRef -> m TxOut
 lkpTxOut t = lookup t . vctxIndex =<< ask
 
+-- | Filter to get only the script inputs.
+scriptTxIns :: Fold ([TxIn]) TxIn
+scriptTxIns = (\x -> folding x) . filter $ \case
+    TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
+    _                                              -> False
+
+-- | Filter to get only the pubkey inputs.
+pubKeyTxIns :: Fold ([TxIn]) TxIn
+pubKeyTxIns = folding (filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
+
+
 -- | Validate a transaction in a 'ValidationMonad' context.
 validateTransaction :: ValidationMonad m
     => Slot.Slot
@@ -168,7 +181,7 @@ validateTransactionOffChain t = do
     unless emptyUtxoSet (checkMintingAuthorised t)
 
     checkValidInputs (toListOf (inputs . pubKeyTxIns)) t
-    checkValidInputs (Set.toList . view collateralInputs) t
+    checkValidInputs (view collateralInputs) t
 
     (do
         -- Phase 2 validation
@@ -308,7 +321,7 @@ checkMatch txinfo = \case
 -- | Check if the value produced by a transaction equals the value consumed by it.
 checkValuePreserved :: ValidationMonad m => Tx -> m ()
 checkValuePreserved t = do
-    inVal <- (P.+) (txMint t) <$> fmap fold (traverse (lkpValue . txInRef) (Set.toList $ view inputs t))
+    inVal <- (P.+) (txMint t) <$> fmap fold (traverse (lkpValue . txInRef) (view inputs t))
     let outVal = txFee t P.+ foldMap txOutValue (txOutputs t)
     if outVal == inVal
     then pure ()
@@ -377,7 +390,7 @@ checkTransactionFee tx =
 mkTxInfo :: ValidationMonad m => Tx -> m TxInfo
 mkTxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
-    txins <- traverse mkIn $ Set.toList $ view inputs tx
+    txins <- traverse mkIn $ view inputs tx
     let ptx = TxInfo
             { txInfoInputs = txins
             , txInfoOutputs = txOutputs tx

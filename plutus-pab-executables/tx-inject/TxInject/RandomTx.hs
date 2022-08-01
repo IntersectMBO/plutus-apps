@@ -14,7 +14,6 @@ import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
-import Data.Set qualified as Set
 import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
@@ -85,7 +84,7 @@ generateTx gen slot (UtxoIndex utxo) = do
             (txOutValue . snd)
             inputs
         -- inputs of the transaction
-        sourceTxIns = Set.fromList $ fmap (Tx.pubKeyTxIn . fst) inputs
+        sourceTxIns = map (Tx.pubKeyTxIn . fst) inputs
     tx <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig

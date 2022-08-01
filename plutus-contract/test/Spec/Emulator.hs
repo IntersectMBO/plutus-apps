@@ -21,7 +21,6 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Default (Default (def))
 import Data.Foldable (fold)
-import Data.Set qualified as Set
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -222,7 +221,7 @@ invalidScript = property $ do
     let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
-    invalidTxn <- forAll $ Gen.genValidTransactionSpending (Set.fromList [scriptTxIn (snd outToSpend) failValidator unitRedeemer unitDatum]) totalVal
+    invalidTxn <- forAll $ Gen.genValidTransactionSpending [scriptTxIn (snd outToSpend) failValidator unitRedeemer unitDatum] totalVal
     Hedgehog.annotateShow invalidTxn
 
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m

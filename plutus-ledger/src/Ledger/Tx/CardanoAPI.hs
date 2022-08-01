@@ -395,7 +395,7 @@ toCardanoTxBodyContent
     -> P.Tx
     -> Either ToCardanoError CardanoBuildTx
 toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} = do
-    txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
+    txIns <- traverse toCardanoTxInBuild txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut pNetworkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
@@ -457,12 +457,12 @@ toCardanoTxId (PV1.TxId bs) =
     tag "toCardanoTxId"
     $ deserialiseFromRawBytes C.AsTxId $ PlutusTx.fromBuiltin bs
 
-fromCardanoTxInsCollateral :: C.TxInsCollateral era -> Set.Set PV1.TxIn
-fromCardanoTxInsCollateral C.TxInsCollateralNone       = mempty
-fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = Set.fromList $ fmap (PV1.pubKeyTxIn . fromCardanoTxIn) txIns
+fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [PV1.TxIn]
+fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
+fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (PV1.pubKeyTxIn . fromCardanoTxIn) txIns
 
-toCardanoTxInsCollateral :: Set.Set PV1.TxIn -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
-toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . traverse (toCardanoTxIn . PV1.txInRef) . Set.toList
+toCardanoTxInsCollateral :: [PV1.TxIn] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
+toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . traverse (toCardanoTxIn . PV1.txInRef)
 
 toCardanoTxInWitness :: PV1.TxInType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
 toCardanoTxInWitness PV1.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)

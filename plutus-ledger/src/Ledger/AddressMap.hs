@@ -183,7 +183,6 @@ inputs ::
 inputs addrs = Map.fromListWith Set.union
     . fmap (fmap Set.singleton . swap)
     . mapMaybe ((\a -> sequence (a, Map.lookup a addrs)) . txInRef)
-    . Set.toList
     . consumableInputs
 
 -- | Restrict an 'AddressMap' to a set of addresses.

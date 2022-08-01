@@ -506,7 +506,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
-    unbalancedTx . tx . Tx.inputs %= Set.insert (Typed.tyTxInTxIn txIn)
+    unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl
 
 -- | Add a typed output and return its value.
@@ -624,7 +624,7 @@ processConstraint = \case
         case txout of
           Tx.PublicKeyChainIndexTxOut { Tx._ciTxOutValue } -> do
               -- TODO: Add the optional datum in the witness set for the pub key output
-              unbalancedTx . tx . Tx.inputs %= Set.insert (Tx.pubKeyTxIn txo)
+              unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxIn txo :)
               valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red -> do
@@ -637,7 +637,7 @@ processConstraint = \case
             --       probably get rid of the 'slOtherData' map and of
             --       'lookupDatum'
             let input = Tx.scriptTxIn txo validator red datum
-            unbalancedTx . tx . Tx.inputs %= Set.insert input
+            unbalancedTx . tx . Tx.inputs %= (input :)
             unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
             valueSpentInputs <>= provided value
           _ -> throwError (TxOutRefWrongType txo)
@@ -703,7 +703,7 @@ processConstraintFun = \case
             [(ref, Just (validator, datum, value))] -> do
                 let dvh = datumHash datum
                 let input = Tx.scriptTxIn ref validator red datum
-                unbalancedTx . tx . Tx.inputs %= Set.insert input
+                unbalancedTx . tx . Tx.inputs %= (input :)
                 unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh

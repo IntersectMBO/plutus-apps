@@ -37,6 +37,7 @@ import Data.Bifunctor (bimap, first, second)
 import Data.Data
 import Data.Default (Default (def))
 import Data.Foldable (Foldable (fold), find, foldl')
+import Data.List (sort)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -438,11 +439,11 @@ handleBalanceTx ::
 handleBalanceTx utxo utx = do
     Params { pProtocolParams } <- WAPI.getClientParams
     let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
-    let txInputs = Set.toList $ Tx.txInputs filteredUnbalancedTxTx
+    let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownPaymentPubKey <- gets ownPaymentPublicKey
     let ownStakePubKey = Nothing
-    inputValues <- traverse lookupValue (Set.toList $ Tx.txInputs filteredUnbalancedTxTx)
-    collateral  <- traverse lookupValue (Set.toList $ Tx.txCollateral filteredUnbalancedTxTx)
+    inputValues <- traverse lookupValue (Tx.txInputs filteredUnbalancedTxTx)
+    collateral  <- traverse lookupValue (Tx.txCollateral filteredUnbalancedTxTx)
     let fees = txFee filteredUnbalancedTxTx
         left = txMint filteredUnbalancedTxTx <> fold inputValues
         right = fees <> foldMap (view Tx.outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
@@ -520,8 +521,8 @@ addCollateral
 addCollateral mp vl tx = do
     (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
     let addTxCollateral =
-            let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
-            in over Tx.collateralInputs (Set.union ins)
+            let ins = Tx.pubKeyTxIn . fst <$> spend
+            in over Tx.collateralInputs (sort . (++) ins)
     pure $ tx & addTxCollateral
 
 -- | @addInputs mp pk vl tx@ selects transaction outputs worth at least
@@ -541,8 +542,8 @@ addInputs mp pk sk vl tx = do
     let
 
         addTxIns =
-            let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
-            in over Tx.inputs (Set.union ins)
+            let ins = Tx.pubKeyTxIn . fst <$> spend
+            in over Tx.inputs (sort . (++) ins)
 
         addTxOut =
             if Value.isZero change
