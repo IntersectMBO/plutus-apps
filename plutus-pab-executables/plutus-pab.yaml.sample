@@ -20,6 +20,10 @@ pabWebserverConfig:
   # available. If this is not set, calls to unavailable endpoints fail
   # immediately.
   endpointTimeout: 5
+  # Optional timeout (in seconds) when querying the status of an invoked endpoint for
+  # which the expected contract status must be set to Done.
+  # If this is not set, the query will wait until the instance state is updated.
+  waitStatusTimeout: 60
   enableMarconi: False
 
 walletServerConfig:
@@ -39,6 +43,10 @@ nodeServerConfig:
     - getWallet: 1
     - getWallet: 2
     - getWallet: 3
+  # Which cardano-node to use
+  # Options are
+  # - MockNode          (plutus-apps internal mock version of the node)
+  # - AlonzoNode        (cardano-node via socket connection)
   pscNodeMode: MockNode
 
 chainIndexConfig:
