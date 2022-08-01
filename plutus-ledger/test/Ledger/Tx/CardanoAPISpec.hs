@@ -11,9 +11,9 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
 import Gen.Cardano.Api.Typed qualified as Gen
 import Ledger.Test (someValidator)
-import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
-                             toCardanoTxBodyContent)
+import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers),
+                  makeTransactionBody, toCardanoTxBodyContent)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, toCardanoAddressInEra)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
@@ -42,12 +42,10 @@ addressRoundTripSpec = property $ do
     shelleyAddr <- shelleyAddressInEra
                <$> forAll (makeShelleyAddress networkId <$> genPaymentCredential
                                                         <*> genStakeAddressReference)
-    case fromCardanoAddressInEra shelleyAddr of
-        Left _ -> Hedgehog.assert False
-        Right plutusAddr ->
-            case toCardanoAddressInEra networkId plutusAddr of
-                Left _      -> Hedgehog.assert False
-                Right cAddr -> cAddr === shelleyAddr
+    let plutusAddr = fromCardanoAddressInEra shelleyAddr
+    case toCardanoAddressInEra networkId plutusAddr of
+        Left _      -> Hedgehog.assert False
+        Right cAddr -> cAddr === shelleyAddr
 
 -- Copied from Gen.Cardano.Api.Typed, because it's not exported.
 genPaymentCredential :: Gen PaymentCredential

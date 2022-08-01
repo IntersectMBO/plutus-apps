@@ -28,7 +28,8 @@ module Ledger.Blockchain (
     updateUtxo,
     txOutPubKey,
     pubKeyTxo,
-    validValuesTx
+    validValuesTx,
+    updateUtxoCollateral
     ) where
 
 import Codec.Serialise (Serialise)
@@ -45,13 +46,14 @@ import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxOutputs, spentOutputs, txOutDatum, txOutPubKey, txOutValue,
-                  unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
+import Ledger.Tx (CardanoTx, TxId, TxIn (txInRef), TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
+                  getCardanoTxInputs, getCardanoTxOutputs, spentOutputs, txOutDatumHash, txOutPubKey, txOutValue,
+                  unspentOutputsTx, updateUtxo, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
+import Data.Set qualified as Set
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Value (Value)
@@ -125,14 +127,17 @@ value bc o = txOutValue <$> out bc o
 
 -- | Determine the data script that a transaction output refers to.
 datumTxo :: Blockchain -> TxOutRef -> Maybe DatumHash
-datumTxo bc o = txOutDatum =<< out bc o
+datumTxo bc o = Ledger.Tx.txOutDatumHash =<< out bc o
 
 -- | Determine the public key that locks a transaction output, if there is one.
 pubKeyTxo :: Blockchain -> TxOutRef -> Maybe PubKeyHash
-pubKeyTxo bc o = out bc o >>= txOutPubKey
+pubKeyTxo bc o = out bc o >>= Ledger.Tx.txOutPubKey
 
 -- | The unspent transaction outputs of the ledger as a whole.
 unspentOutputs :: Blockchain -> Map TxOutRef TxOut
 unspentOutputs = foldr (eitherTx updateUtxoCollateral updateUtxo) Map.empty . join
+
+updateUtxoCollateral :: CardanoTx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList $ map txInRef $ getCardanoTxCollateralInputs tx)
 
 makePrisms ''OnChainTx

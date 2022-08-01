@@ -62,9 +62,7 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.Either (fromRight)
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
-import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -77,13 +75,15 @@ import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx hiding (pubKeyTxIns, scriptTxIns)
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
+import Ledger.Tx hiding (pubKeyTxIns, scriptTxIns, updateUtxoCollateral)
+import Ledger.Tx.CardanoAPI (fromCardanoTxOut)
+import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as PV1
+import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
@@ -147,7 +147,6 @@ scriptTxIns = (\x -> folding x) . filter $ \case
 -- | Filter to get only the pubkey inputs.
 pubKeyTxIns :: Fold [TxIn] TxIn
 pubKeyTxIns = folding (filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
-
 
 -- | Validate a transaction in a 'ValidationMonad' context.
 validateTransaction :: ValidationMonad m
@@ -360,8 +359,7 @@ checkMinAdaInTxOutputs t@Tx { txOutputs } = do
     params <- vctxParams <$> ask
     for_ txOutputs $ \txOut -> do
         let
-            minAdaTxOut' = fromRight minAdaTxOut $
-                fromPlutusTxOutUnsafe params txOut <&> \txOut' -> evaluateMinLovelaceOutput params txOut'
+            minAdaTxOut' = evaluateMinLovelaceOutput params $ fromPlutusTxOut txOut
         if Ada.fromValue (txOutValue txOut) >= minAdaTxOut'
             then pure ()
             else throwError $ ValueContainsLessThanMinAda t txOut (Ada.toValue minAdaTxOut')
@@ -395,10 +393,11 @@ checkTransactionFee tx =
 mkPV1TxInfo :: ValidationMonad m => Tx -> m PV1.TxInfo
 mkPV1TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
-    txins <- traverse mkPV1TxInInfo $ view inputs tx
+    txInputs <- traverse mkPV1TxInInfo $ view inputs tx
+    let txInfoOutputs = map (\(TxOut txOut) -> fromCardanoTxOut txOut) $ txOutputs tx
     let ptx = PV1.TxInfo
-            { PV1.txInfoInputs = txins
-            , PV1.txInfoOutputs = txOutputs tx
+            { PV1.txInfoInputs = txInputs
+            , PV1.txInfoOutputs = txInfoOutputs
             -- See note [Mint and Fee fields must have ada symbol]
             , PV1.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV1.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
@@ -415,8 +414,11 @@ mkPV1TxInfo tx = do
 -- PlutusV1 validator script.
 mkPV1TxInInfo :: ValidationMonad m => TxIn -> m PV1.TxInInfo
 mkPV1TxInInfo TxIn{txInRef} = do
-    txOut <- lkpTxOut txInRef
-    pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInRef, PV1.txInInfoResolved=txOut}
+    TxOut txOut <- lkpTxOut txInRef
+    pure $ Validation.TxInInfo{
+      Validation.txInInfoOutRef = txInRef,
+      Validation.txInInfoResolved = fromCardanoTxOut txOut
+    }
 
 data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingPolicy
     deriving stock (Eq, Show, Generic)

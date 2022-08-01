@@ -30,7 +30,6 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (LedgerPlutusVersion, Tx, TxIn, TxInType)
 import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
@@ -109,15 +108,11 @@ instance OpenApi.ToSchema JSON.Value where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "JSON") mempty
 deriving instance OpenApi.ToSchema ann => OpenApi.ToSchema (Kind ann)
 deriving newtype instance OpenApi.ToSchema Ada
-deriving instance OpenApi.ToSchema Tx
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef
-deriving instance OpenApi.ToSchema TxInType
-deriving instance OpenApi.ToSchema TxIn
 deriving instance OpenApi.ToSchema PV1.TxOut
 deriving instance OpenApi.ToSchema PV2.TxOut
-deriving instance OpenApi.ToSchema LedgerPlutusVersion
 deriving newtype instance OpenApi.ToSchema Validator
 deriving newtype instance OpenApi.ToSchema TxId
 deriving newtype instance OpenApi.ToSchema Slot

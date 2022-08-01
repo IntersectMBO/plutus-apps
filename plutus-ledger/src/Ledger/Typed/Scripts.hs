@@ -1,7 +1,5 @@
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE GADTs                #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
 

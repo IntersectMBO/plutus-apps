@@ -62,6 +62,7 @@ import Control.Monad.Trans.Writer (runWriter)
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
 import Data.Default (Default (def))
+import Data.Either (fromRight)
 import Data.Foldable (fold, foldl')
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
@@ -79,12 +80,11 @@ import Hedgehog.Range qualified as Range
 import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
-               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
-               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
-               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
-               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addCardanoTxSignature,
-               pubKeyTxIn, pubKeyTxOut, toPublicKey)
+               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
+               TokenName, Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
+               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut, TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
+               ValidationCtx (ValidationCtx), Value, _runValidation, addCardanoTxSignature, pubKeyTxIn, pubKeyTxOut,
+               toPublicKey, txOutValue)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -167,7 +167,8 @@ genInitialTransaction ::
     -> (CardanoTx, [TxOut])
 genInitialTransaction GeneratorModel{..} =
     let
-        o = fmap (\f -> f Nothing) $ (uncurry $ flip pubKeyTxOut) <$> Map.toList gmInitialBalance
+        -- incomplete pattern match (because gmInitialBalance is static) if it changes, reconsider this
+        o = map (fromRight (error "did someone change gmInitialBalance?")) $ (\(ppk, v) -> pubKeyTxOut v ppk Nothing) <$> Map.toList gmInitialBalance
         t = fold gmInitialBalance
     in (EmulatorTx $ mempty {
         txOutputs = o,
@@ -235,9 +236,11 @@ genValidTransactionSpending' g ins totalVal = do
                           maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOut)
                                           $ List.sort splitOutVals
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
+            -- incomplete pattern match (because gmPubKeys is static) if it changes, reconsider this
+            let txOutputs = map (fromRight (error "did someone change gmPubKeys?")) $ (\(v, ppk) -> pubKeyTxOut v ppk Nothing) <$> zip outVals (Set.toList $ gmPubKeys g)
             let tx = EmulatorTx $ mempty
                         { txInputs = ins
-                        , txOutputs = fmap (\f -> f Nothing) $ uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
+                        , txOutputs = txOutputs
                         , txMint = maybe mempty id mintValue
                         , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicy
                         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
@@ -383,11 +386,11 @@ validateMockchain :: Mockchain -> CardanoTx -> Maybe Index.ValidationError
 validateMockchain (Mockchain txPool _ params) cardanoTx = result where
     h      = 1
     idx    = Index.initialise [map Valid txPool]
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
     ctx = ValidationCtx idx params
     (err, _) = cardanoTx & Ledger.mergeCardanoTxWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
-            (\(CardanoApiEmulatorEraTx tx) -> (Validation.hasValidationErrors params (fromIntegral h) cUtxoIndex tx, []))
+            (\(Ledger.EmulatorEraCardanoApiTx tx) -> (Validation.hasValidationErrors params (fromIntegral h) cUtxoIndex tx, []))
             (\(e1, sve1) (e2, sve2) -> (e1 <|> e2, sve1 ++ sve2))
     result = fmap snd err
 

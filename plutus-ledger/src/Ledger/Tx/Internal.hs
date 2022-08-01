@@ -13,36 +13,47 @@
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
     , LedgerPlutusVersion(..)
+    , TxOutRef(..)
+    , RedeemerPtr(..)
     ) where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Codec.CBOR.Write qualified as Write
-import Codec.Serialise (Serialise, encode)
-import Control.DeepSeq (NFData)
+import Codec.Serialise.Class
+import Control.DeepSeq (NFData, rnf)
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Bifunctor (first)
 import Data.ByteArray qualified as BA
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.OpenApi qualified as OpenApi
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
+import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Crypto
+import Ledger.Params
 import Ledger.Slot
+import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.ApiCommon (LedgerPlutusVersion (PlutusV1, PlutusV2))
+import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.V1.Ledger.Address qualified as V1
+import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
-                            scriptTxIn, scriptTxIns)
+import Plutus.V1.Ledger.Tx hiding (ConsumePublicKeyAddress, ConsumeScriptAddress, ConsumeSimpleScriptAddress, TxIn,
+                            TxInType, TxOut, pubKeyTxIn, txInRef, txInType, txOutAddress, txOutDatumHash, txOutPubKey,
+                            txOutValue)
 import Plutus.V1.Ledger.Value as V
+import Plutus.V2.Ledger.Api (dataToBuiltinData)
 import PlutusTx.Lattice
-import Prettyprinter (Pretty (..), hang, vsep, (<+>))
-
-deriving instance Show LedgerPlutusVersion
-deriving instance Generic LedgerPlutusVersion
-deriving instance NFData LedgerPlutusVersion
-deriving instance Serialise LedgerPlutusVersion
-deriving instance ToJSON LedgerPlutusVersion
-deriving instance FromJSON LedgerPlutusVersion
+import PlutusTx.Prelude qualified as PlutusTx
+import Prettyprinter (Pretty (..), hang, pretty, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
 data TxInType =
@@ -51,7 +62,37 @@ data TxInType =
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+
+toCardanoTxInWitness :: TxInType -> Either CardanoAPI.ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
+toCardanoTxInWitness ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
+toCardanoTxInWitness ConsumeSimpleScriptAddress = Left CardanoAPI.SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
+toCardanoTxInWitness
+    (ConsumeScriptAddress
+        PlutusV1
+        (Validator validator)
+        (Redeemer redeemer)
+        (Datum datum))
+    = C.ScriptWitness C.ScriptWitnessForSpending <$>
+        (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
+        <$> fmap C.PScript (CardanoAPI.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) validator)
+        <*> pure (C.ScriptDatumForTxIn $ CardanoAPI.toCardanoScriptData datum)
+        <*> pure (CardanoAPI.toCardanoScriptData redeemer)
+        <*> pure CardanoAPI.zeroExecutionUnits
+        )
+toCardanoTxInWitness
+    (ConsumeScriptAddress
+        PlutusV2
+        (Validator validator)
+        (Redeemer redeemer)
+        (Datum datum))
+    = C.ScriptWitness C.ScriptWitnessForSpending <$>
+        (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+        <$> fmap C.PScript (CardanoAPI.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) validator)
+        <*> pure (C.ScriptDatumForTxIn $ CardanoAPI.toCardanoScriptData datum)
+        <*> pure (CardanoAPI.toCardanoScriptData redeemer)
+        <*> pure CardanoAPI.zeroExecutionUnits
+        )
 
 -- | A transaction input, consisting of a transaction output reference and an input type.
 data TxIn = TxIn {
@@ -59,7 +100,14 @@ data TxIn = TxIn {
     txInType :: Maybe TxInType
     }
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+
+fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [TxIn]
+fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
+fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (pubKeyTxIn . CardanoAPI.fromCardanoTxIn) txIns
+
+toCardanoTxInsCollateral :: [TxIn] -> Either CardanoAPI.ToCardanoError (C.TxInsCollateral C.BabbageEra)
+toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . traverse (CardanoAPI.toCardanoTxIn . txInRef)
 
 instance Pretty TxIn where
     pretty TxIn{txInRef,txInType} =
@@ -105,6 +153,22 @@ scriptTxIns = (\x -> folding x) . Set.filter $ \case
     TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
     _                                              -> False
 
+newtype TxOut = TxOut (C.TxOut C.CtxTx C.BabbageEra)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance Serialise TxOut where
+  encode = undefined -- FIXME
+  decode = undefined -- FIXME
+
+instance NFData TxOut where
+  rnf = undefined -- FIXME
+
+instance OpenApi.ToSchema TxOut where
+  declareNamedSchema = undefined -- FIXME
+
+instance Pretty TxOut where
+  pretty = viaShow
 
 -- | A Babbage era transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -136,6 +200,7 @@ data Tx = Tx {
     } deriving stock (Show, Eq, Generic)
       deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 
+instance OpenApi.ToSchema Tx
 
 instance Semigroup Tx where
     tx1 <> tx2 = Tx {
@@ -235,6 +300,28 @@ validValuesTx Tx{..}
     where
       nonNegative i = V.geq i mempty
 
+txOutValue :: TxOut -> Value
+txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
+  CardanoAPI.fromCardanoValue $ C.txOutValueToValue tov
+
+txOutDatumHash :: TxOut -> Maybe DatumHash
+txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
+  case tod of
+    C.TxOutDatumNone ->
+      Nothing
+    C.TxOutDatumHash _era scriptDataHash ->
+      Just $ DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptDataHash)
+    C.TxOutDatumInline _era scriptData ->
+      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+    C.TxOutDatumInTx _era scriptData ->
+      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+
+txOutPubKey :: TxOut -> Maybe V1.PubKeyHash
+txOutPubKey (TxOut (C.TxOut aie _ _ _)) = V1.toPubKeyHash $ CardanoAPI.fromCardanoAddressInEra aie
+
+txOutAddress :: TxOut -> V1.Address
+txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = CardanoAPI.fromCardanoAddressInEra aie
+
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
     txStrippedInputs          :: [TxOutRef],
@@ -261,7 +348,16 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 
 txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
+txOutTxDatum (TxOutTx tx (TxOut (C.TxOut _aie _tov tod _rs))) =
+  case tod of
+    C.TxOutDatumNone ->
+      Nothing
+    C.TxOutDatumHash _era scriptDataHash ->
+      lookupDatum tx $ DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptDataHash)
+    C.TxOutDatumInline _era scriptData ->
+      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+    C.TxOutDatumInTx _era scriptData ->
+      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
 
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> [TxOutRef]
@@ -276,3 +372,57 @@ referencedOutputs = map txInRef . txReferenceInputs
 updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
 updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInRef . txCollateral $ tx)
 
+toCardanoTxBodyContent
+    :: Params -- ^ Parameters to use.
+    -> [PaymentPubKeyHash] -- ^ Required signers of the transaction
+    -> Tx
+    -> Either CardanoAPI.ToCardanoError CardanoAPI.CardanoBuildTx
+toCardanoTxBodyContent Params{pProtocolParams} sigs Tx{..} = do
+    txIns <- traverse toCardanoTxInBuild txInputs
+    txInsReference <- traverse (\(TxIn ref _) -> CardanoAPI.toCardanoTxIn ref) txReferenceInputs
+    txInsCollateral <- toCardanoTxInsCollateral txCollateral
+    let txOuts = map (\(TxOut txOut) -> txOut) txOutputs
+    txFee' <- CardanoAPI.toCardanoFee txFee
+    txValidityRange <- CardanoAPI.toCardanoValidityRange txValidRange
+    txMintValue <- CardanoAPI.toCardanoMintValue txRedeemers txMint txMintScripts
+    txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse CardanoAPI.toCardanoPaymentKeyHash sigs
+    pure $ CardanoAPI.CardanoBuildTx $ C.TxBodyContent
+        { txIns = txIns
+        , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
+        , txInsCollateral = txInsCollateral
+        , txOuts = txOuts
+        , txTotalCollateral = C.TxTotalCollateralNone -- TODO Change when going to Babbage era txs
+        , txReturnCollateral = C.TxReturnCollateralNone -- TODO Change when going to Babbage era txs
+        , txFee = txFee'
+        , txValidityRange = txValidityRange
+        , txMintValue = txMintValue
+        , txProtocolParams = C.BuildTxWith $ Just pProtocolParams
+        , txScriptValidity = C.TxScriptValidityNone
+        , txExtraKeyWits
+        -- unused:
+        , txMetadata = C.TxMetadataNone
+        , txAuxScripts = C.TxAuxScriptsNone
+        , txWithdrawals = C.TxWithdrawalsNone
+        , txCertificates = C.TxCertificatesNone
+        , txUpdateProposal = C.TxUpdateProposalNone
+        }
+
+toCardanoTxBody ::
+    Params -- ^ Parameters to use.
+    -> [PaymentPubKeyHash] -- ^ Required signers of the transaction
+    -> Tx
+    -> Either CardanoAPI.ToCardanoError (C.TxBody C.BabbageEra)
+toCardanoTxBody params sigs tx = do
+    txBodyContent <- toCardanoTxBodyContent params sigs tx
+    makeTransactionBody mempty txBodyContent
+
+makeTransactionBody
+    :: Map Alonzo.RdmrPtr Alonzo.ExUnits
+    -> CardanoAPI.CardanoBuildTx
+    -> Either CardanoAPI.ToCardanoError (C.TxBody C.BabbageEra)
+makeTransactionBody exUnits (CardanoAPI.CardanoBuildTx txBodyContent) =
+  first (CardanoAPI.TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent
+
+toCardanoTxInBuild :: TxIn -> Either CardanoAPI.ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
+toCardanoTxInBuild (TxIn txInRef (Just txInType)) = (,) <$> CardanoAPI.toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness txInType)
+toCardanoTxInBuild (TxIn _ Nothing) = Left CardanoAPI.MissingTxInType

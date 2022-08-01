@@ -11,8 +11,8 @@ import Data.Map qualified as Map
 import Ledger.Ada (lovelaceValueOf)
 import Ledger.Address (Address, PaymentPubKeyHash)
 import Ledger.Params (EmulatorEra, Params (pNetworkId, pProtocolParams), emulatorEraHistory, emulatorGlobals)
-import Ledger.Tx (ToCardanoError (TxBodyError), Tx)
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoTxBodyContent)
+import Ledger.Tx (ToCardanoError (TxBodyError), Tx, toCardanoTxBodyContent)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra)
 import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
 import Ledger.Value (Value)
 
