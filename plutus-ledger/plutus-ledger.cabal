@@ -39,7 +39,6 @@ common lang
     -Wincomplete-uni-patterns -Wincomplete-record-updates
     -Wredundant-constraints -Widentities -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fplugin-opt PlutusTx.Plugin:defer-errors
 
 -- See Plutus Tx readme
 flag defer-plugin-errors
