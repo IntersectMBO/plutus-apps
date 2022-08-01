@@ -34,7 +34,7 @@ module Ledger.Index(
     maxFee,
     minAdaTxOut,
     minLovelaceTxOut,
-    mkTxInfo,
+    mkPV1TxInfo,
     pubKeyTxIns,
     scriptTxIns,
     -- * Actual validation
@@ -44,17 +44,17 @@ module Ledger.Index(
     -- * Script validation events
     ScriptType(..),
     ScriptValidationEvent(..),
-    Api.ExBudget(..),
-    Api.ExCPU(..),
-    Api.ExMemory(..),
-    Api.SatInt,
+    PV1.ExBudget(..),
+    PV1.ExCPU(..),
+    PV1.ExMemory(..),
+    PV1.SatInt,
     ValidatorMode(..),
     getScript
     ) where
 
-import Cardano.Api (Lovelace (..))
 import Prelude hiding (lookup)
 
+import Cardano.Api (Lovelace (..))
 import Control.Lens (Fold, folding, toListOf, view, (^.))
 import Control.Lens.Indexed (iforM_)
 import Control.Monad
@@ -82,9 +82,8 @@ import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
-import Plutus.V1.Ledger.Api qualified as Api
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
-import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V1.Ledger.Api qualified as PV1
+import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
@@ -164,7 +163,8 @@ validateTransaction h t = do
     emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
     unless emptyUtxoSet (checkTransactionFee t)
 
-    validateTransactionOffChain t
+    -- validateTransactionOffChain t
+    pure Nothing
 
 validateTransactionOffChain :: ValidationMonad m
     => Tx
@@ -205,7 +205,7 @@ checkValidInputs getInputs tx = do
         sigs = tx ^. signatures
     outs <- lkpOutputs (getInputs tx)
     matches <- traverse (uncurry (matchInputOutput tid sigs)) outs
-    vld     <- mkTxInfo tx
+    vld     <- mkPV1TxInfo tx
     traverse_ (checkMatch vld) matches
 
 -- | Match each input of the transaction with the output that it spends.
@@ -241,14 +241,15 @@ checkMintingAuthorised tx =
     in
         traverse_ (throwError . MintWithoutScript) mintedWithoutScript
 
+-- TODO Needs to be change to support V2 minting policy scripts
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
-    txinfo <- mkTxInfo tx
+    txinfo <- mkPV1TxInfo tx
     iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, mp) -> do
         let cs :: V.CurrencySymbol
             cs = V.mpsSymbol mph
             ctx :: Context
-            ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
+            ctx = Context $ toBuiltinData $ PV1.ScriptContext { PV1.scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
             ptr = RedeemerPtr Mint (fromIntegral i)
         red <- case lookupRedeemer tx ptr of
@@ -264,6 +265,7 @@ checkMintingScripts tx = do
 -- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
 data InOutMatch =
     ScriptMatch
+        LedgerPlutusVersion
         TxOutRef
         Validator
         Redeemer
@@ -284,11 +286,15 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ConsumeScriptAddress _lang v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ConsumeScriptAddress lang v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
-        unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
+        case lang of
+          PlutusV1 ->
+              unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
+          PlutusV2 ->
+              unless (PV2.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
 
-        pure $ ScriptMatch (txInRef txin) v r d
+        pure $ ScriptMatch lang (txInRef txin) v r d
     (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->
         let sigMatches = flip fmap (Map.toList mp) $ \(pk,sig) ->
                 if pubKeyHash pk == pkh
@@ -304,11 +310,11 @@ matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txO
 --   correct and script evaluation has to terminate successfully. If this is a
 --   pay-to-pubkey output then the signature needs to match the public key that
 --   locks it.
-checkMatch :: ValidationMonad m => TxInfo -> InOutMatch -> m ()
+checkMatch :: ValidationMonad m => PV1.TxInfo -> InOutMatch -> m ()
 checkMatch txinfo = \case
-    ScriptMatch txOutRef vl r d -> do
+    ScriptMatch _lang txOutRef vl r d -> do
         let
-            ptx' = ScriptContext { scriptContextTxInfo = txinfo, scriptContextPurpose = Spending txOutRef }
+            ptx' = PV1.ScriptContext { PV1.scriptContextTxInfo = txinfo, PV1.scriptContextPurpose = PV1.Spending txOutRef }
             vd = Context (toBuiltinData ptx')
         case runExcept $ runScript vd vl d r of
             Left e -> do
@@ -385,31 +391,33 @@ checkTransactionFee tx =
     then pure ()
     else throwError $ TransactionFeeTooLow (txFee tx) (minFee tx)
 
--- | Create the data about the transaction which will be passed to a validator script.
-mkTxInfo :: ValidationMonad m => Tx -> m TxInfo
-mkTxInfo tx = do
+-- | Create the data about the transaction which will be passed to a PV1
+-- validator script.
+mkPV1TxInfo :: ValidationMonad m => Tx -> m PV1.TxInfo
+mkPV1TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
-    txins <- traverse mkIn $ view inputs tx
-    let ptx = TxInfo
-            { txInfoInputs = txins
-            , txInfoOutputs = txOutputs tx
+    txins <- traverse mkPV1TxInInfo $ view inputs tx
+    let ptx = PV1.TxInfo
+            { PV1.txInfoInputs = txins
+            , PV1.txInfoOutputs = txOutputs tx
             -- See note [Mint and Fee fields must have ada symbol]
-            , txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
-            , txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
-            , txInfoDCert = [] -- DCerts not supported in emulator
-            , txInfoWdrl = [] -- Withdrawals not supported in emulator
-            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
-            , txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
-            , txInfoData = Map.toList (tx ^. datumWitnesses)
-            , txInfoId = txId tx
+            , PV1.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
+            , PV1.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
+            , PV1.txInfoDCert = [] -- DCerts not supported in emulator
+            , PV1.txInfoWdrl = [] -- Withdrawals not supported in emulator
+            , PV1.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
+            , PV1.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
+            , PV1.txInfoData = Map.toList (tx ^. datumWitnesses)
+            , PV1.txInfoId = txId tx
             }
     pure ptx
 
--- | Create the data about a transaction input which will be passed to a validator script.
-mkIn :: ValidationMonad m => TxIn -> m Validation.TxInInfo
-mkIn TxIn{txInRef} = do
+-- | Create the data about a transaction input which will be passed to a
+-- PlutusV1 validator script.
+mkPV1TxInInfo :: ValidationMonad m => TxIn -> m PV1.TxInInfo
+mkPV1TxInInfo TxIn{txInRef} = do
     txOut <- lkpTxOut txInRef
-    pure $ Validation.TxInInfo{Validation.txInInfoOutRef = txInRef, Validation.txInInfoResolved=txOut}
+    pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInRef, PV1.txInInfoResolved=txOut}
 
 data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingPolicy
     deriving stock (Eq, Show, Generic)
@@ -419,12 +427,12 @@ data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingP
 data ScriptValidationEvent =
     ScriptValidationEvent
         { sveScript   :: Script -- ^ The script applied to all arguments
-        , sveResult   :: Either ScriptError (Api.ExBudget, [Text]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
+        , sveResult   :: Either ScriptError (PV1.ExBudget, [Text]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
         , sveRedeemer :: Redeemer
         , sveType     :: ScriptType -- ^ What type of script it was
         }
     | ScriptValidationResultOnlyEvent
-        { sveResult   :: Either ScriptError (Api.ExBudget, [Text])
+        { sveResult   :: Either ScriptError (PV1.ExBudget, [Text])
         }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -434,7 +442,7 @@ validatorScriptValidationEvent
     -> Validator
     -> Datum
     -> Redeemer
-    -> Either ScriptError (Api.ExBudget, [Text])
+    -> Either ScriptError (PV1.ExBudget, [Text])
     -> ScriptValidationEvent
 validatorScriptValidationEvent ctx validator datum redeemer result =
     ScriptValidationEvent
@@ -448,7 +456,7 @@ mpsValidationEvent
     :: Context
     -> MintingPolicy
     -> Redeemer
-    -> Either ScriptError (Api.ExBudget, [Text])
+    -> Either ScriptError (PV1.ExBudget, [Text])
     -> ScriptValidationEvent
 mpsValidationEvent ctx mps red result =
     ScriptValidationEvent

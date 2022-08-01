@@ -152,14 +152,8 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
         $ any (all (checkTxConstraint ctx)) xs
     MustReferencePubKeyOutput txOutRef ->
-        let isNoOutputDatum NoOutputDatum = True
-            isNoOutputDatum _             = False
-        in
         traceIfFalse "Le" -- "Public key output not referenced"
-        $ maybe
-            False
-            (isNoOutputDatum . txOutDatum . txInInfoResolved)
-            (PV2.findTxRefInByTxOutRef txOutRef scriptContextTxInfo)
+        $ isJust (PV2.findTxRefInByTxOutRef txOutRef scriptContextTxInfo)
 
 {-# INLINABLE checkTxConstraintFun #-}
 checkTxConstraintFun :: ScriptContext -> TxConstraintFun -> Bool

@@ -218,4 +218,7 @@ processConstraint = \case
 
         unbalancedTx . tx . txOuts <>= [ out ]
 
+    P.MustReferencePubKeyOutput txo -> do
+        undefined
+
     _ -> pure ()

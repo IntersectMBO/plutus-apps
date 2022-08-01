@@ -408,7 +408,7 @@ genTxInfo chain = do
     tx <- genValidTransaction chain
     let idx = UtxoIndex $ mockchainUtxo chain
     let params = mockchainParams chain
-    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx params)
+    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkPV1TxInfo tx)) (ValidationCtx idx params)
     either (const Gen.discard) pure res
 
 genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose

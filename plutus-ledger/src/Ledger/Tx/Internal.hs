@@ -8,7 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
@@ -29,7 +29,7 @@ import Ledger.Crypto
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
-import Plutus.ApiCommon (LedgerPlutusVersion (..))
+import Plutus.ApiCommon (LedgerPlutusVersion (PlutusV1, PlutusV2))
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
                             scriptTxIn, scriptTxIns)
