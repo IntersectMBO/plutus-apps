@@ -86,7 +86,7 @@ module Plutus.PAB.Core
     , timed
     ) where
 
-import Control.Applicative (empty)
+import Control.Applicative (empty, (<|>))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens (view)
@@ -127,7 +127,7 @@ import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse, fromRe
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (ContractInstanceLog, EmulatorMsg))
 import Plutus.PAB.Timeout (Timeout)
 import Plutus.PAB.Timeout qualified as Timeout
-import Plutus.PAB.Types (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, WalletError))
+import Plutus.PAB.Types (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, OtherError, WalletError))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
 import Wallet.API (Slot)
 import Wallet.API qualified as WAPI
@@ -514,11 +514,13 @@ waitForInstanceState ::
   PABAction t env ContractActivityStatus
 waitForInstanceState extract instanceId = do
   is <- instanceStateInternal instanceId
-  liftIO $ STM.atomically $ do
-    ms <- extract is
-    case ms of
-     Nothing     -> empty
-     Just status -> pure status
+  PABEnvironment{endpointTimeout} <- ask @(PABEnvironment t env)
+  timeout <- liftIO (Timeout.startTimeout endpointTimeout)
+  let waitAction = extract is >>= maybe empty pure
+  result <- liftIO (STM.atomically ((Left <$> STM.takeTMVar timeout) <|> (Right <$> waitAction)))
+  case result of
+    Left () -> throwError (OtherError "waitForInstanceState: Timeout")
+    Right r -> pure r
 
 
 -- | Wait until the instance state is updated with a response form an invoked endpoint.
