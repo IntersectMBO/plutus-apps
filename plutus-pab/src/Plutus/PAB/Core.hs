@@ -298,6 +298,11 @@ instanceStateInternal instanceId = do
         >>= liftIO . Instances.instanceState instanceId
         >>= maybe (throwError $ ContractInstanceNotFound instanceId) pure
 
+-- | Delete the instance from the 'InstancesState' of the @PABEnvironment@
+removeInstance :: forall t env. ContractInstanceId -> PABAction t env ()
+removeInstance instanceId = do
+    asks @(PABEnvironment t env) instancesState >>= liftIO . Instances.removeInstance instanceId
+
 -- | Stop the instance.
 stopInstance :: forall t env. ContractInstanceId -> PABAction t env ()
 stopInstance instanceId = do
@@ -308,6 +313,7 @@ stopInstance instanceId = do
                 Active -> STM.putTMVar issStop () >> pure Nothing
                 _      -> pure (Just $ InstanceAlreadyStopped instanceId)
     traverse_ throwError r'
+    removeInstance instanceId
     Contract.deleteState @t instanceId
 
 -- | The 'Activity' of the instance.
