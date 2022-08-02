@@ -9,10 +9,11 @@ module Plutus.Blockfrost.Queries (
     , getUnspentTxOutBlockfrost
     , getIsUtxoBlockfrost
     , getUtxoAtAddressBlockfrost
+    , getUnspentAtAddressBlockfrost
     , getTxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
     , defaultGetUtxo
-    , defaultGetTxo
+    , defaultGetList
     , defaultIsUtxo
     ) where
 
@@ -50,6 +51,10 @@ getUtxoAtAddressBlockfrost _ addr = do
     tip <- getTipBlockfrost
     utxos <- getAddressUtxos' addr (paged 100 1) def
     return (tip, utxos)
+
+-- TODO: Pagination Support
+getUnspentAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [AddressUtxo]
+getUnspentAtAddressBlockfrost _ addr = getAddressUtxos' addr (paged 100 1) def
 
 -- TODO: Pagination Support
 getTxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [UtxoInput]
@@ -93,8 +98,8 @@ defaultGetUtxo = do
     tip <- getTipBlockfrost
     return (tip, [])
 
-defaultGetTxo :: MonadBlockfrost m => m [UtxoInput]
-defaultGetTxo = return []
+defaultGetList :: MonadBlockfrost m => m [a]
+defaultGetList = return []
 
 defaultIsUtxo :: MonadBlockfrost m => m (Block, Bool)
 defaultIsUtxo = do

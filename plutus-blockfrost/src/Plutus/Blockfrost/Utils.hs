@@ -73,7 +73,7 @@ textToDatumHash = PS.DatumHash . toBuiltin . fromJust . decodeHex
 toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
 toPlutusAddress bAddr = case deserialized of
     Nothing -> Left "Error deserializing the Address"
-    Just des -> case fromCardanoAddress (Api.shelleyAddressInEra @ShelleyEra des) of
+    Just des -> case fromCardanoAddress des of
         Left err   -> Left ("Error parsing address " ++ show err)
         Right addr -> Right addr
   where
@@ -81,7 +81,7 @@ toPlutusAddress bAddr = case deserialized of
     deserialized = deserialiseAddress AsShelleyAddress (unAddress bAddr)
 
 credentialToAddress :: NetworkId -> Credential -> Blockfrost.Address
-credentialToAddress netId c = case toCardanoAddress netId pAddress of
+credentialToAddress netId c = case toCardanoAddressInEra netId pAddress of
     Left err   -> error $ show err
     Right addr -> mkAddress $ serialiseAddress addr
   where

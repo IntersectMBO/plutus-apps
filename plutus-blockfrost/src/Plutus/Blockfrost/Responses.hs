@@ -28,7 +28,7 @@ import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
-import Plutus.ChainIndex.Api (IsUtxoResponse (..), TxosResponse (..), UnspentTxOutSetResponse (..), UtxosResponse (..))
+import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
@@ -157,20 +157,13 @@ processGetTxos pq xs = return $ TxosResponse {paget=refPage}
       items = map txoToRef xs
 
 processUnspentTxOutSetAtAddress ::
-    PageQuery (TxOutRef, ChainIndexTxOut)
+    PageQuery TxOutRef
     -> Credential
-    -> (Block, [AddressUtxo])
-    -> IO UnspentTxOutSetResponse
-processUnspentTxOutSetAtAddress pq cred (blockN, xs) = do
-    tip <- processTip blockN
-    return $ UnspentTxOutSetResponse {currentTipu = tip, pageu = pageu}
+    -> [AddressUtxo]
+    -> IO (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+processUnspentTxOutSetAtAddress _ cred xs =
+  return $ QueryResponse {queryResult = items, nextQuery = Nothing}
   where
-    pageu :: Page (TxOutRef, ChainIndexTxOut)
-    pageu = Page { currentPageQuery=pq
-                 , nextPageQuery=Nothing
-                 , pageItems=items
-                 }
-
     items :: [(TxOutRef, ChainIndexTxOut)]
     items = map transform xs
 

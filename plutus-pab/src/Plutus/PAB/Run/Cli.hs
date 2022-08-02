@@ -109,7 +109,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Mi
     App.migrate (toPABMsg ccaTrace) dbConfig
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig = ChainIndexConfig ciConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
     params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
