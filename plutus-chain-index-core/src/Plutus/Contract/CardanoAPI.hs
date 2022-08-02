@@ -33,7 +33,7 @@ fromCardanoTx
   -> Either FromCardanoError ChainIndexTx
 fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) = do
     txOutputs <- traverse fromCardanoTxOut txOuts
-    let scriptMap = plutusScriptsFromTxBody txBody
+    let scriptMap = plutusScriptsFromTxBody txBody -- HERE
         isTxScriptValid = fromTxScriptValidity txScriptValidity
         (datums, redeemers) = scriptDataFromCardanoTxBody txBody
         -- We need to sort the inputs as the order is important
