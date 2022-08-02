@@ -53,7 +53,7 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (Lens', Traversal', _Left, coerced, makeLensesFor, use, (<>=))
+import Control.Lens (Lens', Traversal', _Left, coerced, iso, makeLensesFor, use, (<>=))
 import Control.Monad.Except (Except, mapExcept, runExcept, throwError)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (StateT, execStateT, mapStateT)
@@ -67,11 +67,11 @@ import Prettyprinter (Pretty (pretty), colon, (<+>))
 import PlutusTx (FromData, ToData)
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top))
 
-import Ledger (Params (..), networkIdL)
-import Ledger.Address (pubKeyHashAddress)
+import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints.TxConstraints (TxConstraint, TxConstraints (TxConstraints, txConstraints))
 import Ledger.Orphans ()
-import Ledger.Scripts (getDatum)
+import Ledger.Params (Params (..), networkIdL)
+import Ledger.Scripts (getDatum, getRedeemer, getValidator)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
@@ -81,11 +81,29 @@ import Ledger.Constraints.OffChain qualified as P
 
 makeLensesFor
     [ ("txIns", "txIns'")
+    , ("txInsCollateral", "txInsCollateral'")
+    , ("txInsReference", "txInsReference'")
     , ("txOuts", "txOuts'")
     ] ''C.TxBodyContent
 
 txIns :: Lens' C.CardanoBuildTx [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))]
 txIns = coerced . txIns'
+
+txInsCollateral :: Lens' C.CardanoBuildTx [C.TxIn]
+txInsCollateral = coerced . txInsCollateral' . iso toList fromList
+    where
+        toList C.TxInsCollateralNone       = []
+        toList (C.TxInsCollateral _ txins) = txins
+        fromList []    = C.TxInsCollateralNone
+        fromList txins = C.TxInsCollateral C.CollateralInBabbageEra txins
+
+txInsReference :: Lens' C.CardanoBuildTx [C.TxIn]
+txInsReference = coerced . txInsReference' . iso toList fromList
+    where
+        toList C.TxInsReferenceNone       = []
+        toList (C.TxInsReference _ txins) = txins
+        fromList []    = C.TxInsReferenceNone
+        fromList txins = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txins
 
 txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.BabbageEra]
 txOuts = coerced . txOuts'
@@ -169,7 +187,7 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints} =
             -- traverse_ P.addOwnOutput txOwnOutputs
             -- P.addMintingRedeemers
             -- P.addMissingValueSpent
-            -- P.updateUtxoIndex
+            P.updateUtxoIndex
 
 -- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
 --   the constraints. To use this in a contract, see
@@ -197,7 +215,7 @@ processConstraint
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) ()
 processConstraint = \case
     P.MustSpendPubKeyOutput txo -> do
-        txout <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo
+        txout <- lookupTxOutRef txo
         case txout of
           Tx.PublicKeyChainIndexTxOut {} -> do
               txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
@@ -205,10 +223,37 @@ processConstraint = \case
             --   valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
 
+    P.MustSpendScriptOutput txo redeemer -> do
+        txout <- lookupTxOutRef txo
+        mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.resolveScriptTxOut txout
+        case mscriptTXO of
+            Just (validator, datum, _) -> do
+                txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+                witness <- throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
+                    (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+                    <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator))
+                    <*> pure (C.ScriptDatumForTxIn $ C.toCardanoScriptData (getDatum datum))
+                    <*> pure (C.toCardanoScriptData (getRedeemer redeemer))
+                    <*> pure C.zeroExecutionUnits
+                    )
+
+                unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith witness)]
+
+            _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+
+    P.MustUseOutputAsCollateral txo -> do
+        txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+        unbalancedTx . tx . txInsCollateral <>= [ txIn ]
+
+    P.MustReferencePubKeyOutput txo -> do
+        txout <- lookupTxOutRef txo
+        case txout of
+            Tx.PublicKeyChainIndexTxOut {} -> do
+                txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+                unbalancedTx . tx . txInsReference <>= [ txIn ]
+            _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+
     P.MustPayToPubKeyAddress pk mskh md vl -> do
-
-        -- valueSpentOutputs <>= P.provided vl
-
         networkId <- use (P.paramsL . networkIdL)
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
@@ -218,7 +263,21 @@ processConstraint = \case
 
         unbalancedTx . tx . txOuts <>= [ out ]
 
-    P.MustReferencePubKeyOutput txo -> do
-        undefined
+    P.MustPayToOtherScript vlh svhM dv vl -> do
+        networkId <- use (P.paramsL . networkIdL)
+        out <- throwLeft ToCardanoError $ C.TxOut
+            <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
+            <*> C.toCardanoTxOutValue vl
+            <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum dv)))
+            <*> pure C.ReferenceScriptNone
+        unbalancedTx . tx . txOuts <>= [ out ]
 
-    _ -> pure ()
+    P.MustIncludeDatum _ -> do
+        pure () -- TODO
+
+    c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"
+
+lookupTxOutRef
+    :: Tx.TxOutRef
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.ChainIndexTxOut
+lookupTxOutRef txo = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo

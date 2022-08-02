@@ -59,6 +59,7 @@ module Ledger.Constraints.OffChain(
     , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
+    , resolveScriptTxOut
     ) where
 
 import Control.Lens (Traversal', _2, _Just, _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
@@ -87,7 +88,7 @@ import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (Payment
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferencePubKeyOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferencePubKeyOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
@@ -665,6 +666,8 @@ processConstraint = \case
             unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
             valueSpentInputs <>= provided value
           _ -> throwError (TxOutRefWrongType txo)
+    MustUseOutputAsCollateral _ -> do
+        pure () -- TODO
     -- TODO: Unnecessary to separate MustReferencePubKeyOutput with MustReferenceScriptOutput.
     -- Would MustReferenceOutput be enough?
     -- We are doing the current way because `TxIn` requires to know the `TxInType`

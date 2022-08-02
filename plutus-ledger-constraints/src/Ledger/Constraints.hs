@@ -20,6 +20,7 @@ module Ledger.Constraints(
     , TC.mustSpendOutputFromTheScript
     , TC.mustSpendScriptOutput
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
+    , TC.mustUseOutputAsCollateral
     , TC.mustReferencePubKeyOutput
     , TC.mustValidateIn
     , TC.mustBeSignedBy

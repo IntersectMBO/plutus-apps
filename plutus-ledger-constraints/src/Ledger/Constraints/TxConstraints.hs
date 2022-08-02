@@ -69,6 +69,8 @@ data TxConstraint =
     -- ^ The transaction must spend the given unspent transaction public key output.
     | MustSpendScriptOutput TxOutRef Redeemer
     -- ^ The transaction must spend the given unspent transaction script output.
+    | MustUseOutputAsCollateral TxOutRef
+    -- ^ The transaction must include the utxo as collateral input.
     | MustReferencePubKeyOutput TxOutRef
     -- ^ The transaction must reference (not spend) the given unspent
     -- transaction public key output.
@@ -110,6 +112,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must pay to script:", pretty vlh, pretty skh, pretty dv, pretty vl]
         MustHashDatum dvh dv ->
             hang 2 $ vsep ["must hash datum:", pretty dvh, pretty dv]
+        MustUseOutputAsCollateral ref ->
+            hang 2 $ vsep ["must use output as collateral:", pretty ref]
         MustSatisfyAnyOf xs ->
             hang 2 $ vsep ["must satisfy any of:", prettyList xs]
 
@@ -514,6 +518,11 @@ mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
     mempty {
         txConstraintFuns = TxConstraintFuns [MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red ]
     }
+
+{-# INLINABLE mustUseOutputAsCollateral #-}
+-- | TODO
+mustUseOutputAsCollateral :: forall i o. TxOutRef -> TxConstraints i o
+mustUseOutputAsCollateral = singleton . MustUseOutputAsCollateral
 
 {-# INLINABLE mustReferencePubKeyOutput #-}
 -- | @mustReferencePubKeyOutput utxo@ must reference (not spend!) the given
