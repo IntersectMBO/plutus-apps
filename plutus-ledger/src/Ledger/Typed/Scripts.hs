@@ -19,7 +19,8 @@ module Ledger.Typed.Scripts
 import Control.Monad.Except (MonadError (throwError))
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import GHC.Generics (Generic)
-import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn(TxIn, txInType, txInRef), TxInType(ConsumePublicKeyAddress, ConsumeScriptAddress))
+import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn (TxIn, txInRef, txInType),
+                           TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
 import Plutus.Script.Utils.V1.Typed.TypeUtils as Export

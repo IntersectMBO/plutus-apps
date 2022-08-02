@@ -19,7 +19,7 @@ import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Orphans ()
 import Ledger.Slot qualified as Slot
-import Ledger.Tx (Tx, TxIn)
+import Ledger.Tx.Internal (Tx, TxIn)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Tx qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V

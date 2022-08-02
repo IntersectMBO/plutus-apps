@@ -25,6 +25,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.generalise
     , P.unspentOutputs
     , P.plutusV1MintingPolicy
+    , P.plutusV2MintingPolicy
     , P.plutusV1OtherScript
     , P.plutusV2OtherScript
     , P.otherData
@@ -68,6 +69,9 @@ import PlutusTx (FromData, ToData)
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top))
 
 import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
+import Ledger.Constraints qualified as P
+import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalancedTx)
+import Ledger.Constraints.OffChain qualified as P
 import Ledger.Constraints.TxConstraints (TxConstraint, TxConstraints (TxConstraints, txConstraints))
 import Ledger.Orphans ()
 import Ledger.Params (Params (..), networkIdL)
@@ -75,9 +79,6 @@ import Ledger.Scripts (getDatum, getRedeemer, getValidator)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
-import Ledger.Constraints qualified as P
-import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalancedTx)
-import Ledger.Constraints.OffChain qualified as P
 
 makeLensesFor
     [ ("txIns", "txIns'")
@@ -227,8 +228,9 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.resolveScriptTxOut txout
         case mscriptTXO of
-            Just (validator, datum, _) -> do
+            Just ((_, validator), (_, datum), _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+                -- Hardcoded to PlutusV2. Needs to also work with PlutusV1
                 witness <- throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
                     (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
                     <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator))

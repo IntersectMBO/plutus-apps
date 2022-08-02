@@ -81,9 +81,9 @@ import Ledger.Tx hiding (pubKeyTxIns, scriptTxIns)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts

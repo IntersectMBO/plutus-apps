@@ -5,12 +5,12 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE PatternSynonyms    #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE ViewPatterns       #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TupleSections      #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -47,6 +47,7 @@ module Ledger.Tx
     , getCardanoTxMint
     , getCardanoTxValidityRange
     , getCardanoTxData
+    , addCardanoTxSignature
     , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
     , ToCardanoError(..)
     -- * Transactions
@@ -83,6 +84,7 @@ import Ledger.Slot (SlotRange)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal hiding (updateUtxoCollateral)
+import Ledger.Validation qualified
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api qualified as V1
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
@@ -367,6 +369,13 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: V1.Value -> PaymentPubKey -> Maybe StakePubKey -> V1.Tx.TxOut
 pubKeyTxOut v pk sk = V1.Tx.TxOut (pubKeyAddress pk sk) v Nothing
+
+addCardanoTxSignature :: PrivateKey -> CardanoTx -> CardanoTx
+addCardanoTxSignature privKey = cardanoTxMap (addSignature' privKey) addSignatureCardano
+    where
+        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
+        addSignatureCardano (CardanoApiEmulatorEraTx ctx)
+            = CardanoApiEmulatorEraTx (Ledger.Validation.addSignature privKey ctx)
 
 -- | Sign the transaction with a 'PrivateKey' and passphrase (ByteString) and add the signature to the
 --   transaction's list of signatures.

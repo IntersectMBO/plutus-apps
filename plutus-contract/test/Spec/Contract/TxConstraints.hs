@@ -1,7 +1,9 @@
+{-# LANGUAGE BlockArguments        #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NumericUnderscores    #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -9,11 +11,12 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
+
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
-{-# LANGUAGE BlockArguments        #-}
-{-# LANGUAGE NumericUnderscores    #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+
 module Spec.Contract.TxConstraints (tests) where
 
 import Control.Lens hiding ((.>))
@@ -27,31 +30,14 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as TC
-import Ledger.Constraints.OffChain qualified as TC
-import Ledger.Constraints.OffChain.V2 qualified as TC
 import Ledger.Constraints.OnChain.V1 qualified as TCV1
 import Ledger.Constraints.OnChain.V2 qualified as TCV2
-import Ledger.Constraints.TxConstraints qualified as TC (mustPayToOtherScript, mustPayToPubKey,
-                                                         mustReferencePubKeyOutput, mustSpendPubKeyOutput)
 import Ledger.Scripts (unitRedeemer)
-import Ledger.Tx (ciTxOutValue)
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Plutus.Contract as Con
-import Plutus.Contract.Request as Con (mkTxConstraints, ownFirstPaymentPubKeyHash, ownUtxos, submitTxConfirmed,
-                                       submitUnbalancedTx, utxosAt)
-import Plutus.Contract.Schema as Con (EmptySchema)
-import Plutus.Contract.State qualified as State
-import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
-                             assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
-                             assertUserLog, assertValidatedTransactionCount, assertValidatedTransactionCountOfTotal,
-                             checkEmulatorFails, checkPredicate, checkPredicateOptions, defaultCheckOptions,
-                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, valueAtAddress, w1, w2,
-                             w3, waitingForSlot, walletFundsChange, (.&&.))
-import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
-import Plutus.Contract.Types as Con (Contract, ContractError)
-import Plutus.Contract.Util (loopM)
-import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Contract.Test (TracePredicate, assertValidatedTransactionCount, assertValidatedTransactionCountOfTotal,
+                             checkPredicate, checkPredicateOptions, defaultCheckOptions, minLogLevel, valueAtAddress,
+                             w1, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.TypeUtils (Any)
@@ -81,6 +67,7 @@ tests = testGroup "contract tx constraints" []
 disabledTests :: TestTree
 disabledTests = testGroup "contract tx constraints"
     -- Testing package plutus-ledger-constraints
+
     [ checkPredicate "mustReferencePubKeyOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
         .&&. valueAtAddress mustReferencePubKeyOutputV1ValidatorAddress (== Ada.adaValueOf 5)
@@ -95,7 +82,7 @@ disabledTests = testGroup "contract tx constraints"
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ activateContract w1 mustReferencePubKeyOutputV2ConTest tag
-            void $ Trace.waitNSlots 2
+            void $ Trace.waitNSlots 3
 
     -- Testing package plutus-tx-constraints
 
@@ -113,7 +100,7 @@ disabledTests = testGroup "contract tx constraints"
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ activateContract w1 mustReferencePubKeyOutputTxV2ConTest tag
-            void $ Trace.waitNSlots 2
+            void $ Trace.waitNSlots 3
     ]
 
 {-
@@ -155,7 +142,7 @@ mustReferencePubKeyOutputV1ConTest = do
                <> TC.plutusV1OtherScript mustReferencePubKeyOutputV1Validator
                <> TC.unspentOutputs utxos
         tx = TC.mustReferencePubKeyOutput utxoRef
-          <> TC.collectFromScript addressMap mustReferencePubKeyOutputV1Validator unitRedeemer
+          <> TC.collectFromPlutusV1Script addressMap mustReferencePubKeyOutputV1Validator unitRedeemer
           <> TC.mustSpendPubKeyOutput utxoRefForBalance2
     mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 
@@ -211,7 +198,7 @@ mustReferencePubKeyOutputV2ConTest = do
     utxos <- ownUtxos
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV2ValidatorAddress
-        lookups = Tx.Constraints.unspentOutputs utxos
+        lookups = TC.unspentOutputs utxos
         tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
@@ -224,7 +211,7 @@ mustReferencePubKeyOutputV2ConTest = do
                <> TC.plutusV2OtherScript mustReferencePubKeyOutputV2Validator
                <> TC.unspentOutputs utxos
         tx = TC.mustReferencePubKeyOutput utxoRef
-          <> TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator unitRedeemer
+          <> TC.collectFromPlutusV2Script addressMap mustReferencePubKeyOutputV2Validator unitRedeemer
           <> TC.mustSpendPubKeyOutput utxoRefForBalance2
     mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 

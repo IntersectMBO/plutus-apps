@@ -108,11 +108,11 @@ scriptTxIns = (\x -> folding x) . Set.filter $ \case
 
 -- | A Babbage era transaction, including witnesses for its inputs.
 data Tx = Tx {
-    txInputs      :: [TxIn],
+    txInputs          :: [TxIn],
     -- ^ The inputs to this transaction.
     txReferenceInputs :: [TxIn],
     -- ^ The reference inputs to this transaction.
-    txCollateral  :: [TxIn],
+    txCollateral      :: [TxIn],
     -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
     txOutputs         :: [TxOut],
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
@@ -237,7 +237,7 @@ validValuesTx Tx{..}
 
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
-    txStrippedInputs  :: [TxOutRef],
+    txStrippedInputs          :: [TxOutRef],
     -- ^ The inputs to this transaction, as transaction output references only.
     txStrippedReferenceInputs :: [TxOutRef],
     -- ^ The reference inputs to this transaction, as transaction output references only.

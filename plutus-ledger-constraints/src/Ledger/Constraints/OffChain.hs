@@ -82,6 +82,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
+import Data.Maybe (fromJust)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -103,20 +104,18 @@ import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
                              ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Ledger.Typed.Scripts qualified as Typed
+import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
+import Plutus.Script.Utils.Scripts qualified as P
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
+import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, POSIXTimeRange, Redeemer,
                              Validator, ValidatorHash, Value)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
-import Plutus.Script.Utils.Scripts qualified as P
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Data.Maybe (fromJust)
 
 data ScriptLookups a =
     ScriptLookups
@@ -525,6 +524,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
+    -- TODO Needs to work with PlutusV1 AND PlutusV2.
     let txIn = Scripts.makeTypedScriptTxIn PlutusV2 inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
@@ -652,8 +652,7 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mscriptTXO <- resolveScriptTxOut txout
         case mscriptTXO of
-          Just (validator, datum, value) -> do
-            let dvh = P.datumHash datum
+          Just ((_, validator), (dvh, datum), value) -> do
             -- TODO: When witnesses are properly segregated we can
             --       probably get rid of the 'slOtherData' map and of
             --       'lookupDatum'
@@ -668,12 +667,6 @@ processConstraint = \case
           _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral _ -> do
         pure () -- TODO
-    -- TODO: Unnecessary to separate MustReferencePubKeyOutput with MustReferenceScriptOutput.
-    -- Would MustReferenceOutput be enough?
-    -- We are doing the current way because `TxIn` requires to know the `TxInType`
-    -- which requires to know the difference between public key and script outputs.
-    -- However, it was noted that `TxInType` isn't necessary anymore, so it might be removed.
-    -- If that's the case, then we can instead define MustReferenceOutput.
     MustReferencePubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
         case txout of
@@ -737,13 +730,15 @@ processConstraintFun = \case
         -- TODO: Need to precalculate the validator hash or else this won't work
         -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
         -- include the hash.
-        let matches (Just (validator, datum, value)) = PV1.validatorHash validator == vh && datumPred datum && valuePred value
+        let matches (Just ((validatorHash, _), (_, datum), value)) =
+                validatorHash == vh && datumPred datum && valuePred value
             matches Nothing = False
-        opts <- filter (matches . snd) <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo) (Map.toList slTxOutputs)
+        opts <- filter (matches . snd)
+            <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
+                         (Map.toList slTxOutputs)
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just (validator, datum, value))] -> do
-                let dvh = P.datumHash datum
+            [(ref, Just ((_, validator), (dvh, datum), value))] -> do
                 let input = Tx.scriptTxIn ref PlutusV2 validator red datum
                 unbalancedTx . tx . Tx.inputs %= (input :)
                 unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
@@ -754,7 +749,7 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Validator, Datum, Value))
+    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Validator), (DatumHash, Datum), Value))
 resolveScriptTxOut
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutValidator = (vh, v)
@@ -769,5 +764,5 @@ resolveScriptTxOut
     -- look for it in the 'slOtherData' map.
     dataValue <- maybe (lookupDatum dh) pure d
 
-    pure $ Just (validator, dataValue, _ciTxOutValue)
+    pure $ Just ((vh, validator), (dh, dataValue), _ciTxOutValue)
 resolveScriptTxOut _ = pure Nothing

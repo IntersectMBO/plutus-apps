@@ -30,6 +30,13 @@ module Ledger.Tx.Constraints(
     , TC.mustPayToOtherScriptAddress
     , TC.mustHashDatum
     , TC.mustSatisfyAnyOf
+    -- * Defining off-chain only constraints
+    , TC.collectFromPlutusV1Script
+    , TC.collectFromPlutusV1ScriptFilter
+    , TC.collectFromTheScriptFilter
+    , TC.collectFromTheScript
+    , TC.collectFromPlutusV2Script
+    , TC.collectFromPlutusV2ScriptFilter
     -- * Queries on constraints
     , TC.modifiesUtxoSet
     , TC.isSatisfiable
@@ -46,6 +53,7 @@ module Ledger.Tx.Constraints(
     , OC.plutusV1TypedValidatorLookups
     , OC.unspentOutputs
     , OC.plutusV1MintingPolicy
+    , OC.plutusV2MintingPolicy
     , OC.plutusV1OtherScript
     , OC.plutusV2OtherScript
     , OC.otherData
