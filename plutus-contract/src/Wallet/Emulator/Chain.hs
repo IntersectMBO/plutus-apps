@@ -205,7 +205,7 @@ validateEm h cUtxoIndex txn = do
     let (e, events) = txn & mergeCardanoTxWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
             (\tx -> validateL params h cUtxoIndex tx)
-            (\(e1, sve1) (e2, sve2) -> (e1 <|> e2, sve1 ++ sve2))
+            (\(e1, sve1) (e2, sve2) -> (e2 <|> e1, sve2 ++ sve1))
         idx' = case e of
             Just (Index.Phase1, _) -> idx
             Just (Index.Phase2, _) -> Index.insertCollateral txn idx
