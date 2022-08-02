@@ -18,7 +18,6 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , currentSlot
     , lastSyncedBlockSlot
     , getUtxoIndexTxChanges
-    , getIndexerTxChanges
     -- * State of a contract instance
     , InstanceState(..)
     , emptyInstanceState
@@ -57,7 +56,7 @@ import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard, (<=<))
 import Data.Aeson (Value)
-import Data.Either (fromLeft, fromRight)
+import Data.Either (fromLeft)
 import Data.Foldable (fold)
 import Data.IORef (IORef)
 import Data.List.NonEmpty (NonEmpty)
@@ -166,10 +165,6 @@ data BlockchainEnv =
 getUtxoIndexTxChanges :: BlockchainEnv -> TVar (UtxoIndex TxIdState)
 getUtxoIndexTxChanges BlockchainEnv{beTxChanges} =
     fromLeft (error "Changes use an indexer for storage.") beTxChanges
-
-getIndexerTxChanges :: BlockchainEnv -> IORef TCSIndex
-getIndexerTxChanges BlockchainEnv{beTxChanges} =
-    fromRight (error "Changes use in-memory storage, not an indexer.") beTxChanges
 
 -- | Initialise an empty 'BlockchainEnv' value
 emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv

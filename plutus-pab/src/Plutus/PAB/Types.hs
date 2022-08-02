@@ -162,6 +162,7 @@ data WebserverConfig =
         , staticDir            :: Maybe FilePath
         , permissiveCorsPolicy :: Bool -- ^ If true; use a very permissive CORS policy (any website can interact.)
         , endpointTimeout      :: Maybe Second
+        , enableMarconi        :: Bool
         }
     deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -175,6 +176,7 @@ defaultWebServerConfig =
     , staticDir            = Nothing
     , permissiveCorsPolicy = False
     , endpointTimeout      = Nothing
+    , enableMarconi        = False
     }
 
 instance Default WebserverConfig where
