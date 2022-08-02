@@ -90,17 +90,10 @@ processGetValidator (Just val) = buildResponse val
     retFromCbor :: PlutusValidator a => Text -> IO (Maybe a)
     retFromCbor = return . Just . fromSucceed . fromCBOR . Text.drop 6
 
-processUnspentTxOut :: Integer -> Maybe [UtxoOutput] -> IO (Maybe ChainIndexTxOut)
-processUnspentTxOut _ Nothing = pure Nothing
-processUnspentTxOut idx (Just outs) =
-  case filterByIndex of
-    []  -> pure Nothing
-    [x] -> buildResponse x
-    _   -> ioError (userError "Multiple UTxOs with the same index found!!!")
+processUnspentTxOut :: Maybe UtxoOutput -> IO (Maybe ChainIndexTxOut)
+processUnspentTxOut Nothing = pure Nothing
+processUnspentTxOut (Just utxo) = buildResponse utxo
   where
-    filterByIndex :: [UtxoOutput]
-    filterByIndex = filter ((==) idx . _utxoOutputOutputIndex) outs
-
     buildResponse :: UtxoOutput -> IO (Maybe ChainIndexTxOut)
     buildResponse utxo = case toPlutusAddress (_utxoOutputAddress utxo) of
               Left err   -> ioError (userError err)

@@ -1,11 +1,13 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Plutus.Blockfrost.Queries (
     getTipBlockfrost
     , getDatumBlockfrost
     , getValidatorBlockfrost
+    , getTxOutBlockfrost
     , getUnspentTxOutBlockfrost
     , getIsUtxoBlockfrost
     , getUtxoAtAddressBlockfrost
@@ -18,6 +20,7 @@ module Plutus.Blockfrost.Queries (
     ) where
 
 import Control.Concurrent.Async (mapConcurrently)
+import Control.Monad.Except (throwError)
 import Control.Monad.Freer.Extras.Pagination (PageQuery (..))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Value)
@@ -36,8 +39,23 @@ getDatumBlockfrost dHash = getScriptDatum dHash <&> _scriptDatumJsonValue
 getValidatorBlockfrost :: MonadBlockfrost m => ScriptHash -> m ScriptCBOR
 getValidatorBlockfrost = getScriptCBOR
 
-getUnspentTxOutBlockfrost :: MonadBlockfrost m => TxHash -> m [UtxoOutput]
-getUnspentTxOutBlockfrost tHash = getTxUtxos tHash <&> _transactionUtxosOutputs
+getTxOutBlockfrost :: (TxHash, Integer) -> BlockfrostClient UtxoOutput
+getTxOutBlockfrost (tHash, idx) = do
+    txos <- getTxUtxos tHash <&> _transactionUtxosOutputs
+    case filterByIndex txos of
+        []  -> throwError BlockfrostNotFound
+        [x] -> pure x
+        _   -> throwError $ BlockfrostError "Multiple UTxOs with the same index found!!!"
+  where
+    filterByIndex :: [UtxoOutput] -> [UtxoOutput]
+    filterByIndex = filter ((==) idx . _utxoOutputOutputIndex)
+
+
+getUnspentTxOutBlockfrost :: (TxHash, Integer) -> BlockfrostClient UtxoOutput
+getUnspentTxOutBlockfrost ref = do
+    txo <- getTxOutBlockfrost ref
+    isUtxo <- checkIsUtxo ref
+    if isUtxo then pure txo else throwError BlockfrostNotFound
 
 getIsUtxoBlockfrost :: MonadBlockfrost m => (TxHash, Integer) -> m (Block, Bool)
 getIsUtxoBlockfrost ref = do
