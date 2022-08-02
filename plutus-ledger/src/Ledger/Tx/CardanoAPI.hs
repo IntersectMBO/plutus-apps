@@ -63,10 +63,12 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoScriptData
   , toCardanoScriptDataHash
   , toCardanoScriptHash
+  , toCardanoPlutusScript
   , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
   , deserialiseFromRawBytes
+  , zeroExecutionUnits
 ) where
 
 import Cardano.Api qualified as C
@@ -134,9 +136,6 @@ instance OpenApi.ToSchema CardanoBuildTx where
   -- TODO: implement the schema
   declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
 
-instance Pretty CardanoBuildTx where
-  pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent
-
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
   declareNamedSchema _ = do
     return $ NamedSchema (Just "EraInMode") $ sketchSchema C.BabbageEraInCardanoMode
@@ -159,9 +158,6 @@ instance Eq SomeCardanoApiTx where
   _ == _                                                                           = False
 
 deriving instance Show SomeCardanoApiTx
-
-instance Pretty SomeCardanoApiTx where
-  pretty = viaShow
 
 instance Serialise SomeCardanoApiTx where
   encode (SomeTx tx eraInMode) = encodedMode eraInMode <> Encoding (TkBytes (C.serialiseToCBOR tx))

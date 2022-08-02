@@ -27,12 +27,12 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as TC
-import Ledger.Constraints.OffChain qualified as TC (plutusV2OtherScript, unspentOutputs)
+import Ledger.Constraints.OffChain qualified as TC
 import Ledger.Constraints.OffChain.V2 qualified as TC
 import Ledger.Constraints.OnChain.V1 qualified as TCV1
 import Ledger.Constraints.OnChain.V2 qualified as TCV2
 import Ledger.Constraints.TxConstraints qualified as TC (mustPayToOtherScript, mustPayToPubKey,
-                                                         mustReferencePubKeyOutput)
+                                                         mustReferencePubKeyOutput, mustSpendPubKeyOutput)
 import Ledger.Scripts (unitRedeemer)
 import Ledger.Tx (ciTxOutValue)
 import Ledger.Tx.Constraints qualified as Tx.Constraints
@@ -43,10 +43,10 @@ import Plutus.Contract.Schema as Con (EmptySchema)
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
-                             assertUserLog, assertValidatedTransactionCount, checkEmulatorFails, checkPredicate,
-                             checkPredicateOptions, defaultCheckOptions, endpointAvailable, minLogLevel,
-                             mockWalletPaymentPubKeyHash, not, valueAtAddress, w1, w2, w3, waitingForSlot,
-                             walletFundsChange, (.&&.))
+                             assertUserLog, assertValidatedTransactionCount, assertValidatedTransactionCountOfTotal,
+                             checkEmulatorFails, checkPredicate, checkPredicateOptions, defaultCheckOptions,
+                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, valueAtAddress, w1, w2,
+                             w3, waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Types as Con (Contract, ContractError)
 import Plutus.Contract.Util (loopM)
@@ -81,15 +81,15 @@ tests = testGroup "contract tx constraints"
     [ checkPredicate "mustReferencePubKeyOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
         .&&. valueAtAddress mustReferencePubKeyOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCount 2
+        .&&. assertValidatedTransactionCountOfTotal 1 2
         ) $ do
             void $ activateContract w1 mustReferencePubKeyOutputV1ConTest tag
-            void $ Trace.waitNSlots 1
+            void $ Trace.waitNSlots 2
 
     , checkPredicate "mustReferencePubKeyOutput can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Ada.adaValueOf 0)
         .&&. valueAtAddress mustReferencePubKeyOutputV2ValidatorAddress (== Ada.adaValueOf 0)
-        .&&. assertValidatedTransactionCount 3
+        .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ activateContract w1 mustReferencePubKeyOutputV2ConTest tag
             void $ Trace.waitNSlots 2
@@ -99,15 +99,15 @@ tests = testGroup "contract tx constraints"
     , checkPredicate "Tx.Constraints.mustReferencePubKeyOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
         .&&. valueAtAddress mustReferencePubKeyOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCount 2
+        .&&. assertValidatedTransactionCountOfTotal 1 2
         ) $ do
             void $ activateContract w1 mustReferencePubKeyOutputTxV1ConTest tag
-            void $ Trace.waitNSlots 1
+            void $ Trace.waitNSlots 2
 
     , checkPredicate "Tx.Constraints.mustReferencePubKeyOutput can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Ada.adaValueOf 0)
         .&&. valueAtAddress mustReferencePubKeyOutputV2ValidatorAddress (== Ada.adaValueOf 0)
-        .&&. assertValidatedTransactionCount 3
+        .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ activateContract w1 mustReferencePubKeyOutputTxV2ConTest tag
             void $ Trace.waitNSlots 2
@@ -135,58 +135,52 @@ mustReferencePubKeyOutputV1ValidatorAddress =
 
 mustReferencePubKeyOutputV1ConTest :: Contract () EmptySchema ContractError ()
 mustReferencePubKeyOutputV1ConTest = do
-    -- Create a transaction which creates a least 2 utxos for the wallet
-    -- We'll use one of those utxos for referencing
-    -- We're supposing that the wallet contains at least 10ADA.
-    let newUtxoValue = Ada.toValue 2_000_000
-    pkh <- Con.ownFirstPaymentPubKeyHash
-    let lookups = mempty
-        tx = TC.mustPayToPubKey pkh newUtxoValue
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
-    -- Locking some Ada in the script address
-    (utxoRef, utxo) <-
-          head
-        . filter (\(_, txOut) -> txOut ^. ciTxOutValue == newUtxoValue)
-        . Map.toList <$> ownUtxos
-    let vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV1ValidatorAddress
-        lookups = mempty
+    utxos <- ownUtxos
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
+        vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV1ValidatorAddress
+        lookups = TC.unspentOutputs utxos
         tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+          <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
     -- Trying to unlock the Ada in the script address
-    let lookups = TC.unspentOutputs (Map.singleton utxoRef utxo)
+    scriptUtxos <- utxosAt mustReferencePubKeyOutputV1ValidatorAddress
+    let
+        addressMap = Map.singleton mustReferencePubKeyOutputV1ValidatorAddress scriptUtxos
+        lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
+               <> TC.plutusV1OtherScript mustReferencePubKeyOutputV1Validator
+               <> TC.unspentOutputs utxos
         tx = TC.mustReferencePubKeyOutput utxoRef
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
+          <> TC.collectFromScript addressMap mustReferencePubKeyOutputV1Validator unitRedeemer
+          <> TC.mustSpendPubKeyOutput utxoRefForBalance2
+    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 
 mustReferencePubKeyOutputTxV1ConTest :: Contract () EmptySchema ContractError ()
 mustReferencePubKeyOutputTxV1ConTest = do
-    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Void def lookups constraints
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Any def lookups constraints
 
-    -- Create a transaction which creates a least 2 utxos for the wallet
-    -- We'll use one of those utxos for referencing
-    -- We're supposing that the wallet contains at least 10ADA.
-    let newUtxoValue = Ada.toValue 2_000_000
-    pkh <- Con.ownFirstPaymentPubKeyHash
-    let lookups = mempty
-        tx = TC.mustPayToPubKey pkh newUtxoValue
-    void $ submitUnbalancedTx $ mkTx lookups tx
-
-    -- Locking some Ada in the script address
-    -- We find the utxo we created earlier
-    (utxoRef, utxo) <-
-          head
-        . filter (\(_, txOut) -> txOut ^. ciTxOutValue == newUtxoValue)
-        . Map.toList <$> ownUtxos
-    let vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV1ValidatorAddress
-        lookups = mempty
+    utxos <- ownUtxos
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
+        vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV1ValidatorAddress
+        lookups = Tx.Constraints.unspentOutputs utxos
         tx = Tx.Constraints.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
-    void $ submitUnbalancedTx $ mkTx lookups tx
+          <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
+          <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
+    submitTxConfirmed $ mkTx lookups tx
 
     -- Trying to unlock the Ada in the script address
-    let lookups = Tx.Constraints.unspentOutputs (Map.singleton utxoRef utxo)
+    scriptUtxos <- utxosAt mustReferencePubKeyOutputV1ValidatorAddress
+    let
+        scriptUtxo = fst . head . Map.toList $ scriptUtxos
+        lookups = Tx.Constraints.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
+               <> Tx.Constraints.plutusV1OtherScript mustReferencePubKeyOutputV1Validator
+               <> Tx.Constraints.unspentOutputs utxos
         tx = Tx.Constraints.mustReferencePubKeyOutput utxoRef
-    void $ submitUnbalancedTx $ mkTx lookups tx
+          <> Tx.Constraints.mustSpendScriptOutput scriptUtxo unitRedeemer
+          <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance2
+          <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance2
+    submitTxConfirmed $ mkTx lookups tx
 
 {-
 Test case: mustReferencePubKeyOutput can be used on-chain to unlock funds in a PlutusV2 script
@@ -210,24 +204,13 @@ mustReferencePubKeyOutputV2ValidatorAddress =
 
 mustReferencePubKeyOutputV2ConTest :: Contract () EmptySchema ContractError ()
 mustReferencePubKeyOutputV2ConTest = do
-    -- Create a transaction which creates a least 2 utxos for the wallet
-    -- We'll use one of those utxos for referencing
-    -- We're supposing that the wallet contains at least 10ADA.
-    let newUtxoValue = Ada.toValue 2_000_000
-    pkh <- Con.ownFirstPaymentPubKeyHash
-    let lookups = mempty
-        tx = TC.mustPayToPubKey pkh newUtxoValue
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
-    -- Locking some Ada in the script address
-    -- We find the utxo we created earlier
-    (utxoRef, utxo) <-
-          head
-        . filter (\(_, txOut) -> txOut ^. ciTxOutValue == newUtxoValue)
-        . Map.toList <$> ownUtxos
-    let vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV2ValidatorAddress
-        lookups = mempty
+    utxos <- ownUtxos
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
+        vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV2ValidatorAddress
+        lookups = Tx.Constraints.unspentOutputs utxos
         tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+          <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
     -- Trying to unlock the Ada in the script address
@@ -236,40 +219,38 @@ mustReferencePubKeyOutputV2ConTest = do
         addressMap = Map.singleton mustReferencePubKeyOutputV2ValidatorAddress scriptUtxos
         lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
                <> TC.plutusV2OtherScript mustReferencePubKeyOutputV2Validator
+               <> TC.unspentOutputs utxos
         tx = TC.mustReferencePubKeyOutput utxoRef
           <> TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator unitRedeemer
+          <> TC.mustSpendPubKeyOutput utxoRefForBalance2
     mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 
 mustReferencePubKeyOutputTxV2ConTest :: Contract () EmptySchema ContractError ()
 mustReferencePubKeyOutputTxV2ConTest = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Any def lookups constraints
 
-    -- Create a transaction which creates a least 2 utxos for the wallet
-    -- We'll use one of those utxos for referencing
-    -- We're supposing that the wallet contains at least 10ADA.
-    let newUtxoValue = Ada.toValue 2_000_000
-    pkh <- Con.ownFirstPaymentPubKeyHash
-    let lookups = mempty
-        tx = Tx.Constraints.mustPayToPubKey pkh newUtxoValue
-    void $ submitUnbalancedTx $ mkTx lookups tx
-
-    -- Locking some Ada in the script address
-    -- We find the utxo we created earlier
-    (utxoRef, utxo) <-
-          head
-        . filter (\(_, txOut) -> txOut ^. ciTxOutValue == newUtxoValue)
-        . Map.toList <$> ownUtxos
-    let vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV2ValidatorAddress
-        lookups = mempty
+    utxos <- ownUtxos
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
+        vh = fromJust $ Addr.toValidatorHash mustReferencePubKeyOutputV2ValidatorAddress
+        lookups = Tx.Constraints.unspentOutputs utxos
         tx = Tx.Constraints.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
-    void $ submitUnbalancedTx $ mkTx lookups tx
+          <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
+          <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
+    submitTxConfirmed $ mkTx lookups tx
 
     -- Trying to unlock the Ada in the script address
     scriptUtxos <- utxosAt mustReferencePubKeyOutputV2ValidatorAddress
     let
-        addressMap = Map.singleton mustReferencePubKeyOutputV2ValidatorAddress scriptUtxos
+        scriptUtxo = fst . head . Map.toList $ scriptUtxos
         lookups = Tx.Constraints.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
                <> Tx.Constraints.plutusV2OtherScript mustReferencePubKeyOutputV2Validator
+               <> Tx.Constraints.unspentOutputs utxos
         tx = Tx.Constraints.mustReferencePubKeyOutput utxoRef
-          <> TC.collectFromScript addressMap mustReferencePubKeyOutputV2Validator unitRedeemer
-    void $ submitUnbalancedTx $ mkTx lookups tx
+          <> Tx.Constraints.mustSpendScriptOutput scriptUtxo unitRedeemer
+          <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance2
+          <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance2
+    submitTxConfirmed $ mkTx lookups tx
+
+get3 :: [a] -> (a, a, a)
+get3 (a:b:c:_) = (a, b, c)
+get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
