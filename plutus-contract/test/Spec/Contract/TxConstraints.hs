@@ -76,7 +76,10 @@ tag :: ContractInstanceTag
 tag = "instance 1"
 
 tests :: TestTree
-tests = testGroup "contract tx constraints"
+tests = testGroup "contract tx constraints" []
+
+disabledTests :: TestTree
+disabledTests = testGroup "contract tx constraints"
     -- Testing package plutus-ledger-constraints
     [ checkPredicate "mustReferencePubKeyOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))

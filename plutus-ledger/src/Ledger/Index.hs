@@ -163,8 +163,7 @@ validateTransaction h t = do
     emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
     unless emptyUtxoSet (checkTransactionFee t)
 
-    -- validateTransactionOffChain t
-    pure Nothing
+    validateTransactionOffChain t
 
 validateTransactionOffChain :: ValidationMonad m
     => Tx
