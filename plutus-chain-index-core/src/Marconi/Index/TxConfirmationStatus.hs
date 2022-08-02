@@ -106,14 +106,14 @@ query ix txId' events = (<|>) <$> searchInMemory
     searchOnDisk = do
       txStatus :: [TxInfo]
         <- SQL.query (ix ^. Ix.handle) "SELECT (txId, blockNo, slotNo) FROM tx_status WHERE txId = ?" (Only txId')
-      if null txStatus
-         then pure Nothing
-         else let (TxInfo _ bn _) = head txStatus
-              in  pure . Just $
-                TxConfirmedState { timesConfirmed = Sum 0
-                                 , blockAdded     = Last $ Just bn
-                                 , validity       = Last $ Just TxValid
-                                 }
+      pure $ if null txStatus
+              then Nothing
+              else let (TxInfo _ bn _) = head txStatus
+                   in Just $
+                        TxConfirmedState { timesConfirmed = Sum 0
+                                         , blockAdded     = Last $ Just bn
+                                         , validity       = Last $ Just TxValid
+                                         }
 
 store :: TCSIndex -> IO ()
 store ix = do
