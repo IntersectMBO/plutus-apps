@@ -47,7 +47,6 @@ import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.Script.Utils.V1.Typed.TypeUtils (Any)
 import Plutus.V1.Ledger.Address qualified as PV1
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusCore.Default (DefaultUni)
 import PlutusTx (CompiledCode, Lift, applyCode, liftCode)
 import PlutusTx.Prelude (check)
@@ -234,8 +233,6 @@ data WrongOutTypeError
 data ConnectionError
   = WrongValidatorAddress PV1.Address PV1.Address
   | WrongOutType WrongOutTypeError
-  | WrongInType PV1.TxInType
-  | MissingInType
   | WrongValidatorType String
   | WrongRedeemerType PV1.BuiltinData
   | WrongDatumType PV1.BuiltinData
@@ -246,8 +243,6 @@ data ConnectionError
 instance Pretty ConnectionError where
   pretty (WrongValidatorAddress a1 a2) = "Wrong validator address. Expected:" <+> pretty a1 <+> "Actual:" <+> pretty a2
   pretty (WrongOutType t)              = "Wrong out type:" <+> viaShow t
-  pretty (WrongInType t)               = "Wrong in type:" <+> viaShow t
-  pretty MissingInType                 = "Missing in type"
   pretty (WrongValidatorType t)        = "Wrong validator type:" <+> pretty t
   pretty (WrongRedeemerType d)         = "Wrong redeemer type" <+> pretty (PV1.builtinDataToData d)
   pretty (WrongDatumType d)            = "Wrong datum type" <+> pretty (PV1.builtinDataToData d)
