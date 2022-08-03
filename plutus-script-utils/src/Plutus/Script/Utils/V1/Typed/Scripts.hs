@@ -48,7 +48,7 @@ check for error in the overall evaluation.
 -}
 
 -- | A 'TxOut' tagged by a phantom type: and the connection type of the output.
-data TypedScriptTxOut a = (FromData (DatumType a), ToData (DatumType a)) =>
+data TypedScriptTxOut a =
   TypedScriptTxOut
   { tyTxOutTxOut :: TxOut,
     tyTxOutData  :: DatumType a
@@ -59,19 +59,10 @@ instance Eq (DatumType a) => Eq (TypedScriptTxOut a) where
     tyTxOutTxOut l == tyTxOutTxOut r
       && tyTxOutData l == tyTxOutData r
 
--- instance (FromJSON (DatumType a), FromData (DatumType a), ToData (DatumType a)) => FromJSON (TypedScriptTxOut a) where
---   parseJSON (Data.Aeson.Object v) =
---     TypedScriptTxOut <$> v .: "tyTxOutTxOut" <*> v .: "tyTxOutData"
---   parseJSON invalid = typeMismatch "Object" invalid
-
--- instance (ToJSON (DatumType a)) => ToJSON (TypedScriptTxOut a) where
---   toJSON TypedScriptTxOut {tyTxOutTxOut, tyTxOutData} =
---     object ["tyTxOutTxOut" .= tyTxOutTxOut, "tyTxOutData" .= tyTxOutData]
-
 -- | Create a 'TypedScriptTxOut' from a correctly-typed data script, an address, and a value.
 makeTypedScriptTxOut ::
   forall out.
-  (ToData (DatumType out), FromData (DatumType out)) =>
+  (ToData (DatumType out)) =>
   TypedValidator out ->
   DatumType out ->
   Value ->
@@ -96,15 +87,6 @@ instance Eq (DatumType a) => Eq (TypedScriptTxOutRef a) where
     tyTxOutRefRef l == tyTxOutRefRef r
       && tyTxOutRefOut l == tyTxOutRefOut r
 
--- instance (FromJSON (DatumType a), FromData (DatumType a), ToData (DatumType a)) => FromJSON (TypedScriptTxOutRef a) where
---   parseJSON (Data.Aeson.Object v) =
---     TypedScriptTxOutRef <$> v .: "tyTxOutRefRef" <*> v .: "tyTxOutRefOut"
---   parseJSON invalid = typeMismatch "Object" invalid
-
--- instance (ToJSON (DatumType a)) => ToJSON (TypedScriptTxOutRef a) where
---   toJSON TypedScriptTxOutRef {tyTxOutRefRef, tyTxOutRefOut} =
---     object ["tyTxOutRefRef" .= tyTxOutRefRef, "tyTxOutRefOut" .= tyTxOutRefOut]
-
 -- | A public-key 'TxOut'. We need this to be sure that it is not a script output.
 newtype PubKeyTxOut = PubKeyTxOut {unPubKeyTxOut :: TxOut}
   deriving stock (Eq, Generic)
@@ -125,7 +107,6 @@ typePubKeyTxOut txOut =
 typeScriptTxOut ::
   forall out m.
   ( FromData (DatumType out),
-    ToData (DatumType out),
     MonadError ConnectionError m
   ) =>
   TypedValidator out ->
@@ -149,7 +130,6 @@ typeScriptTxOut tv txOutRef txOut datum = do
 typeScriptTxOutRef ::
   forall out m.
   ( FromData (DatumType out),
-    ToData (DatumType out),
     MonadError ConnectionError m
   ) =>
   TypedValidator out ->

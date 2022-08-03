@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE GADTs                #-}
+{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,16 +13,11 @@ module Ledger.Typed.Scripts
   , makeTypedScriptTxIn
   ) where
 
-import Control.Monad.Except (MonadError (throwError))
-import Data.Aeson (FromJSON (..), ToJSON (..))
-import GHC.Generics (Generic)
-import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn (TxIn, txInRef, txInType),
-                           TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress))
+import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn (TxIn), TxInType (ConsumeScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
 import Plutus.Script.Utils.V1.Typed.TypeUtils as Export
-import Plutus.V1.Ledger.Api (Datum (Datum), FromData, Redeemer (Redeemer), ToData (..), TxOut (txOutValue), TxOutRef,
-                             Value)
+import Plutus.V1.Ledger.Api (Datum (Datum), Redeemer (Redeemer), ToData (..))
 
 -- | A 'TxIn' tagged by two phantom types: a list of the types of the data scripts in the transaction; and the connection type of the input.
 data TypedScriptTxIn a = TypedScriptTxIn
@@ -33,15 +29,6 @@ instance Eq (DatumType a) => Eq (TypedScriptTxIn a) where
   l == r =
     tyTxInTxIn l == tyTxInTxIn r
       && tyTxInOutRef l == tyTxInOutRef r
-
-instance (FromJSON (DatumType a), FromData (DatumType a), ToData (DatumType a)) => FromJSON (TypedScriptTxIn a) where
-  parseJSON (Data.Aeson.Object v) =
-    TypedScriptTxIn <$> v .: "tyTxInTxIn" <*> v .: "tyTxInOutRef"
-  parseJSON invalid = typeMismatch "Object" invalid
-
-instance (ToJSON (DatumType a)) => ToJSON (TypedScriptTxIn a) where
-  toJSON TypedScriptTxIn {tyTxInTxIn, tyTxInOutRef} =
-    object ["tyTxInTxIn" .= tyTxInTxIn, "tyTxInOutRef" .= tyTxInOutRef]
 
 -- | Create a 'TypedScriptTxIn' from a correctly-typed validator, redeemer, and output ref.
 makeTypedScriptTxIn ::
