@@ -35,6 +35,7 @@ module Ledger.Index(
     minAdaTxOut,
     minLovelaceTxOut,
     mkPV1TxInfo,
+    mkPV2TxInfo,
     pubKeyTxIns,
     scriptTxIns,
     -- * Actual validation
@@ -89,7 +90,9 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value qualified as V
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx (toBuiltinData)
+import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Numeric qualified as P
 
 -- | Context for validating transactions. We need access to the unspent
@@ -204,8 +207,7 @@ checkValidInputs getInputs tx = do
         sigs = tx ^. signatures
     outs <- lkpOutputs (getInputs tx)
     matches <- traverse (uncurry (matchInputOutput tid sigs)) outs
-    vld     <- mkPV1TxInfo tx
-    traverse_ (checkMatch vld) matches
+    traverse_ (checkMatch tx) matches
 
 -- | Match each input of the transaction with the output that it spends.
 lkpOutputs :: ValidationMonad m => [TxIn] -> m [(TxIn, TxOut)]
@@ -312,11 +314,22 @@ matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txO
 --   correct and script evaluation has to terminate successfully. If this is a
 --   pay-to-pubkey output then the signature needs to match the public key that
 --   locks it.
-checkMatch :: ValidationMonad m => PV1.TxInfo -> InOutMatch -> m ()
-checkMatch txinfo = \case
-    ScriptMatch _lang txOutRef vl r d -> do
+checkMatch :: ValidationMonad m => Tx -> InOutMatch -> m ()
+checkMatch tx = \case
+    ScriptMatch PlutusV1 txOutRef vl r d -> do
+        txInfo <- mkPV1TxInfo tx
         let
-            ptx' = PV1.ScriptContext { PV1.scriptContextTxInfo = txinfo, PV1.scriptContextPurpose = PV1.Spending txOutRef }
+            ptx' = PV1.ScriptContext { PV1.scriptContextTxInfo = txInfo, PV1.scriptContextPurpose = PV1.Spending txOutRef }
+            vd = Context (toBuiltinData ptx')
+        case runExcept $ runScript vd vl d r of
+            Left e -> do
+                tell [validatorScriptValidationEvent vd vl d r (Left e)]
+                throwError $ ScriptFailure e
+            res -> tell [validatorScriptValidationEvent vd vl d r res]
+    ScriptMatch PlutusV2 txOutRef vl r d -> do
+        txInfo <- mkPV2TxInfo tx
+        let
+            ptx' = PV2.ScriptContext { PV2.scriptContextTxInfo = txInfo, PV2.scriptContextPurpose = PV2.Spending txOutRef }
             vd = Context (toBuiltinData ptx')
         case runExcept $ runScript vd vl d r of
             Left e -> do
@@ -420,6 +433,42 @@ mkPV1TxInInfo :: ValidationMonad m => TxIn -> m PV1.TxInInfo
 mkPV1TxInInfo TxIn{txInRef} = do
     txOut <- lkpTxOut txInRef
     pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInRef, PV1.txInInfoResolved=txOut}
+
+-- | Create the data about the transaction which will be passed to a PV2
+-- validator script.
+mkPV2TxInfo :: ValidationMonad m => Tx -> m PV2.TxInfo
+mkPV2TxInfo tx = do
+    slotCfg <- pSlotConfig . vctxParams <$> ask
+    txins <- traverse mkPV2TxInInfo $ view inputs tx
+    let ptx = PV2.TxInfo
+            { PV2.txInfoInputs = txins
+            , PV2.txInfoReferenceInputs = []
+            , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> txOutputs tx
+            -- See note [Mint and Fee fields must have ada symbol]
+            , PV2.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
+            , PV2.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
+            , PV2.txInfoDCert = [] -- DCerts not supported in emulator
+            , PV2.txInfoWdrl = AMap.empty -- Withdrawals not supported in emulator
+            , PV2.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
+            , PV2.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
+            , PV2.txInfoData = AMap.fromList $ Map.toList (tx ^. datumWitnesses)
+            , PV2.txInfoRedeemers = AMap.empty -- TODO Our tx must support ScriptPurpose in redeemers
+            , PV2.txInfoId = txId tx
+            }
+    pure ptx
+
+-- | Create the data about a transaction input which will be passed to a
+-- PlutusV2 validator script.
+mkPV2TxInInfo :: ValidationMonad m => TxIn -> m PV2.TxInInfo
+mkPV2TxInInfo TxIn{txInRef} = do
+    txOut <- lkpTxOut txInRef
+    pure $ PV2.TxInInfo txInRef (txOutV1ToTxOutV2 txOut)
+
+-- Temporary. Might not exist anymore once we remove our custom ledger rules
+txOutV1ToTxOutV2 :: PV1.TxOut -> PV2.TxOut
+txOutV1ToTxOutV2 (PV1.TxOut address val datum) =
+    let v2Datum = maybe PV2.NoOutputDatum PV2.OutputDatumHash datum
+     in PV2.TxOut address val v2Datum Nothing
 
 data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingPolicy
     deriving stock (Eq, Show, Generic)
