@@ -247,7 +247,7 @@ scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Dept
           loop $
             fromMaybe index $ do
               slot   <- chainPointToSlotNo cp
-              offset <- findIndex  (\u -> (u ^. ScriptTx.slotNo) < slot) events
+              offset <- findIndex  (\u -> ScriptTx.slotNo u < slot) events
               Ix.rewind offset index
 
     toUpdate :: forall era . C.IsCardanoEra era => [Tx era] -> SlotNo -> ScriptTx.ScriptTxUpdate

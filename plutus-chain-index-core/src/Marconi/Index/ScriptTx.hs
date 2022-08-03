@@ -11,7 +11,6 @@ module Marconi.Index.ScriptTx where
 import Cardano.Api (SlotNo)
 import Codec.Serialise (deserialiseOrFail, serialise)
 import Control.Lens.Operators ((^.))
-import Control.Lens.TH (makeLenses)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
 
@@ -37,11 +36,9 @@ newtype TxCbor = TxCbor BS.ByteString
 -- * SQLite
 
 data ScriptTxRow = ScriptTxRow
-  { _scriptAddress :: !ScriptAddress
-  , _txCbor        :: !TxCbor
+  { scriptAddress :: !ScriptAddress
+  , txCbor        :: !TxCbor
   } deriving (Generic)
-
-$(makeLenses ''ScriptTxRow)
 
 instance SQL.ToField ScriptAddress where
   toField (ScriptAddress hash)  = SQL.SQLBlob . BL.toStrict . serialise $ hash
@@ -52,7 +49,7 @@ instance SQL.FromField ScriptAddress where
       (\b -> return (ScriptAddress $ Ledger.ScriptHash b))
 
 instance SQL.ToRow ScriptTxRow where
-  toRow o = [SQL.toField $ o ^. scriptAddress, SQL.toField $ o ^. txCbor]
+  toRow o = [SQL.toField $ scriptAddress o, SQL.toField $ txCbor o]
 
 -- * Indexer
 
@@ -60,11 +57,9 @@ type Query = ScriptAddress
 type Result = [TxCbor]
 
 data ScriptTxUpdate = ScriptTxUpdate
-  { _txScripts :: [(TxCbor, [ScriptAddress])]
-  , _slotNo    :: !SlotNo
+  { txScripts :: [(TxCbor, [ScriptAddress])]
+  , slotNo    :: !SlotNo
   } deriving (Show)
-
-$(makeLenses ''ScriptTxUpdate)
 
 type ScriptTxIndex = SqliteIndex ScriptTxUpdate () Query Result
 
