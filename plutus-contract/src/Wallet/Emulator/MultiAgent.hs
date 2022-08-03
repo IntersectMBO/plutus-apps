@@ -303,17 +303,13 @@ emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
             , txData = mempty
             }
     -- See [Creating wallets with multiple outputs]
-    mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (splitOffAdaOnlyValue vl)
-    splitHeadinto10 []       = []
-    splitHeadinto10 (vl:vls) = replicate (fromIntegral count) (Ada.toValue . (`div` count) . Ada.fromValue $ vl) ++ vls
+    mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
+    splitInto10 vl = replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
         where
+            ada = if Value.isAdaOnlyValue vl then Ada.fromValue vl else Ada.fromValue vl - minAdaTxOut
             -- Make sure we don't make the outputs too small
-            count = min 10 $ Ada.fromValue vl `div` minAdaTxOut
-    -- | Split value into an ada-only and an non-ada-only value, making sure each has at least minAdaTxOut.
-    splitOffAdaOnlyValue :: Value -> [Value]
-    splitOffAdaOnlyValue vl = if Value.isAdaOnlyValue vl || ada < minAdaTxOut then [vl] else [Ada.toValue ada, vl <> Ada.toValue (-ada)]
-        where
-            ada = Ada.fromValue vl - minAdaTxOut
+            count = min 10 $ ada `div` minAdaTxOut
+            remainder = [ vl <> Ada.toValue (-ada) | not (Value.isAdaOnlyValue vl) ]
     mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =

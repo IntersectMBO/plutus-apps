@@ -447,8 +447,9 @@ handleBalanceTx utxo utx = do
         inputsOutRefs = map Tx.txInRef txInputs
         filteredUtxo = flip Map.filterWithKey utxo $ \txOutRef _ ->
             txOutRef `notElem` inputsOutRefs
+        outRefsWithValue = second (view Ledger.ciTxOutValue) <$> Map.toList filteredUtxo
 
-    ((neg, newTxIns), (pos, newTxOuts)) <- calculateTxChanges params ownAddr filteredUtxo $ Value.split balance
+    ((neg, newTxIns), (pos, newTxOuts)) <- calculateTxChanges params ownAddr outRefsWithValue $ Value.split balance
 
     tx' <- if Value.isZero pos
            then do
@@ -479,7 +480,7 @@ calculateTxChanges
        )
     => Params
     -> Address -- ^ The address for the change output
-    -> Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
+    -> [(TxOutRef, Value)] -- ^ The current wallet's unspent transaction outputs.
     -> (Value, Value) -- ^ The unbalanced tx's negative and positive balance.
     -> Eff effs ((Value, [TxIn]), (Value, [TxOut]))
 calculateTxChanges params addr utxos (neg, pos) = do
@@ -498,7 +499,7 @@ calculateTxChanges params addr utxos (neg, pos) = do
     -- Calculate the extra inputs needed
     (spend, change) <- if Value.isZero newNeg
         then pure ([], mempty)
-        else selectCoin (second (view Ledger.ciTxOutValue) <$> Map.toList utxos) newNeg
+        else selectCoin utxos newNeg
 
     if Value.isZero change
         then do
