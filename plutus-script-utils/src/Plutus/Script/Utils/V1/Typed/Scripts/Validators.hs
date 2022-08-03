@@ -146,7 +146,6 @@ data TypedValidator (a :: Type) = TypedValidator
     tvForwardingMPSHash :: PV1.MintingPolicyHash
   }
   deriving stock (Show, Eq, Generic)
-  -- deriving anyclass (ToJSON, FromJSON)
 
 -- | Generalise the typed validator to one that works with the 'Data' type.
 generalise :: forall a. TypedValidator a -> TypedValidator Any
@@ -243,7 +242,6 @@ data ConnectionError
   | NoDatum PV1.TxOutRef PV1.DatumHash
   | UnknownRef
   deriving stock (Show, Eq, Ord, Generic)
-  -- deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty ConnectionError where
   pretty (WrongValidatorAddress a1 a2) = "Wrong validator address. Expected:" <+> pretty a1 <+> "Actual:" <+> pretty a2
