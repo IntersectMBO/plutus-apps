@@ -240,7 +240,10 @@ checkMintingAuthorised tx =
     in
         traverse_ (throwError . MintWithoutScript) mintedWithoutScript
 
--- TODO Needs to be change to support V2 minting policy scripts
+-- TODO Needs to be change to support V2 minting policy scripts.
+-- For now, this function runs the minting policy script with a V1
+-- ScriptContext. However, transactions can contain V1 AND V2 scripts, so we
+-- need to handle both.
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
     txinfo <- mkPV1TxInfo tx
