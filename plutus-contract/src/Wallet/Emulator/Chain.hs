@@ -17,6 +17,7 @@
 
 module Wallet.Emulator.Chain where
 
+import Cardano.Api qualified as C
 import Control.Applicative ((<|>))
 import Control.Lens hiding (index)
 import Control.Monad.Freer
@@ -25,16 +26,20 @@ import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (fromRight)
-import Data.Foldable (traverse_)
-import Data.List ((\\))
-import Data.Maybe (mapMaybe)
+import Data.Foldable (foldl', traverse_)
+import Data.List (partition, (\\))
+import Data.Map qualified as Map
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), EmulatorEra, OnChainTx (..), Params (..), ScriptValidationEvent,
-               Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxId, TxIn (txInRef), TxOut (txOutValue), Value,
-               eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
-               mergeCardanoTxWith)
+               Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TxId, TxIn (txInRef), TxOut (txOutValue),
+               Value, addCardanoTxSignature, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId,
+               getCardanoTxValidityRange, mergeCardanoTxWith, onCardanoTx, txSignatures)
+import Ledger.Address qualified as Address
+import Ledger.Crypto qualified as Crypto
+import Ledger.Generators qualified as Generators
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -193,9 +198,21 @@ validateEm
     -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateEm h cUtxoIndex txn = do
     ctx@(Index.ValidationCtx idx params) <- S.get
-    let (e, events) = txn & mergeCardanoTxWith
-            (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
-            (\tx -> validateL params h cUtxoIndex tx)
+    let
+        getPublicKeys = Map.keys . txSignatures
+        privateKeys = onCardanoTx
+            (map Address.unPaymentPrivateKey . catMaybes .
+                map (flip Map.lookup Generators.knownPaymentKeys) .
+                map Address.PaymentPubKey . getPublicKeys)
+            (const []) txn
+        convertTx t = flip SomeTx C.AlonzoEraInCardanoMode $
+            either (\err -> error $ "Failed to build a Tx: " ++ show err) id $
+            Validation.fromPlutusTx params cUtxoIndex (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys t) t
+        signed tx = foldl' (flip addCardanoTxSignature) tx privateKeys
+        txn' = signed $ CardanoApiTx $ onCardanoTx convertTx id txn
+        (e, events) = txn' & mergeCardanoTxWith
+            (\_ -> error "validateEm: EmulatorTx is not supported")
+            (\tx -> if cUtxoIndex == Validation.UTxO (Map.fromList []) then (Nothing, []) else validateL params h cUtxoIndex tx)
             (\(e1, sve1) (e2, sve2) -> (e2 <|> e1, sve2 ++ sve1))
         idx' = case e of
             Just (Index.Phase1, _) -> idx

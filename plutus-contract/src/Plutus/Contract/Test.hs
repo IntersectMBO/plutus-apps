@@ -66,7 +66,7 @@ module Plutus.Contract.Test(
     , checkPredicateInner
     , checkPredicateInnerStream
     , checkEmulatorFails
-    , CheckOptions
+    , CheckOptions(..)
     , defaultCheckOptions
     , minLogLevel
     , emulatorConfig

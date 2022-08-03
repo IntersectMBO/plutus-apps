@@ -37,7 +37,7 @@ import Data.Bifunctor (bimap, first, second)
 import Data.Data (Data)
 import Data.Default (Default (def))
 import Data.Foldable (Foldable (fold), find, foldl')
-import Data.List (sortOn, (\\))
+import Data.List (nub, sort, sortOn, (\\))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -53,12 +53,19 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (
                TxIn (TxIn, txInRef), TxOut (..), TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.Address (Address (addressCredential), PaymentPrivateKey (..), PaymentPubKey,
+                       PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Address qualified as Address
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
+import Ledger.Generators qualified as Generators
+import Ledger.Index (UtxoIndex (UtxoIndex, getIndex))
+import Ledger.Params (Params (Params, pProtocolParams, pSlotConfig))
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxIn, TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (makeTransactionBody)
 import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
@@ -316,7 +323,9 @@ handleBalance utx' = do
     utxo <- get >>= ownOutputs
     params@Params { pSlotConfig } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
-        requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+        requiredSigners = nub $
+            Set.toList (U.unBalancedTxRequiredSignatories utx) ++
+            (map Address.paymentPubKeyHash Generators.knownPaymentPublicKeys)
         eitherTx = U.unBalancedTxTx utx
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     case eitherTx of

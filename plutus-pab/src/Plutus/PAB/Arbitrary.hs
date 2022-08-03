@@ -66,7 +66,17 @@ instance Arbitrary Ledger.ScriptError where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary Ledger.LedgerPlutusVersion where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary MkTxError where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+-- TODO: added for 'ConnectionError instance, as 'ConnectionError' uses plutus-ledger-api's TxInType
+-- Should be changed to use `Ledger.Tx.TxInType`?
+instance Arbitrary PV1.TxInType where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

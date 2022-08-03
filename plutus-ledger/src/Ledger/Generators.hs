@@ -48,52 +48,72 @@ module Ledger.Generators(
     signAll,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys,
+    knownPaymentKeys,
     someTokenValue,
     genTxInfo
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Ledger.Address qualified as C.Ledger
+import Cardano.Ledger.BaseTypes qualified as C.Ledger
+import Cardano.Ledger.SafeHash qualified as C.Ledger
+import Cardano.Ledger.Shelley.Constraints (makeTxOut)
+import Cardano.Ledger.Shelley.Genesis (initialFundsPseudoTxIn)
+import Cardano.Ledger.TxIn qualified as C.Ledger
+import Cardano.Ledger.Val qualified as Val
+import Control.Applicative ((<|>))
+import Control.Lens ((&))
 import Control.Monad (replicateM)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Writer (runWriter)
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
-import Data.Default (Default (def))
+import Data.Default (Default (def), def)
 import Data.Foldable (fold, foldl')
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
 import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (isNothing)
+import Data.Maybe (catMaybes, fromMaybe, isNothing)
+import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Text.Encoding qualified as T
 import GHC.Stack (HasCallStack)
 import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
+import Ledger (Ada, CardanoTx (CardanoApiTx, EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
-               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
-               TokenName, Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
-               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
-               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature', pubKeyTxIn,
-               pubKeyTxOut, toPublicKey, txId)
+               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
+               SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
+               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
+               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (..), TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
+               ValidationCtx (ValidationCtx), Value, addCardanoTxSignature, addSignature', mergeCardanoTxWith,
+               pubKeyTxIn, pubKeyTxOut, toPublicKey, txId, txSignatures)
 import Ledger qualified
+import Ledger.Address qualified as Address
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Crypto qualified as Crypto
 import Ledger.Index qualified as Index
-import Ledger.Params (Params (pSlotConfig))
+import Ledger.Params (Params (Params, pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Generators as ScriptGen
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusTx.Prelude qualified as PlutusTx
+
+import Debug.Trace
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
@@ -372,14 +392,31 @@ assertValid :: (MonadTest m, HasCallStack)
     => Tx
     -> Mockchain
     -> m ()
-assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
+assertValid tx mc = do
+    let m = validateMockchain mc tx
+    Hedgehog.assert $ Nothing == m
 
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> Tx -> Maybe Index.ValidationError
 validateMockchain (Mockchain txPool _ params) tx = result where
     h      = 1
-    idx    = Index.initialise [map (Valid . EmulatorTx) txPool]
-    result = fmap snd $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx params)
+    idx    = Index.initialise [map Valid (map EmulatorTx txPool)]
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+    getPublicKeys = Map.keys . txSignatures
+    privateKeys =
+        (map Address.unPaymentPrivateKey . catMaybes .
+            map (flip Map.lookup knownPaymentKeys) .
+            map Address.PaymentPubKey . getPublicKeys) tx
+    convertTx t = flip SomeTx C.AlonzoEraInCardanoMode $
+        either (\err -> error $ "Failed to build a Tx: " ++ show err) id $
+        Validation.fromPlutusTx params cUtxoIndex (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys t) t
+    signed tx = foldl' (flip addCardanoTxSignature) tx privateKeys
+    txn' = signed $ CardanoApiTx $ convertTx tx
+    err = txn' & mergeCardanoTxWith
+        (\_ -> error "validateMockchain: EmulatorTx is not supported")
+        (\(CardanoApiEmulatorEraTx tx) -> if cUtxoIndex == Validation.UTxO (Map.fromList []) then Nothing else Validation.hasValidationErrors params (fromIntegral h) cUtxoIndex tx)
+        (\e1 e2 -> e2 <|> e1)
+    result = fmap snd err
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required
@@ -408,7 +445,7 @@ genTxInfo chain = do
     tx <- genValidTransaction chain
     let idx = UtxoIndex $ mockchainUtxo chain
     let params = mockchainParams chain
-    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx params)
+    let (res, _) = error "not implemented" --  runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx params)
     either (const Gen.discard) pure res
 
 genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose
@@ -434,6 +471,10 @@ genMintingPolicyContext chain = do
 knownPaymentPublicKeys :: [PaymentPubKey]
 knownPaymentPublicKeys =
     PaymentPubKey . toPublicKey . unPaymentPrivateKey <$> knownPaymentPrivateKeys
+
+knownPaymentKeys :: Map PaymentPubKey PaymentPrivateKey
+knownPaymentKeys = Map.fromList $ map
+    (\k -> (PaymentPubKey $ toPublicKey $ unPaymentPrivateKey k, k)) knownPaymentPrivateKeys
 
 knownPaymentPrivateKeys :: [PaymentPrivateKey]
 knownPaymentPrivateKeys = CW.paymentPrivateKey <$> CW.knownMockWallets

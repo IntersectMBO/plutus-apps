@@ -149,25 +149,25 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
             _                                                         -> Nothing
 
 -- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
-testScriptInputs
-    :: ( PlutusTx.FromData (Scripts.DatumType a)
-       , PlutusTx.ToData (Scripts.DatumType a)
-       , PlutusTx.ToData (Scripts.RedeemerType a))
-    => ScriptLookups a
-    -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
-    -> Property
-testScriptInputs lookups txc = property $ do
-    tx <- either (\err -> do Hedgehog.annotateShow err; Hedgehog.failure)
-                 (pure . view OC.tx)
-                 $ mkTx lookups txc
-    let valM = do
-            Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
-            pure Nothing
-    case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
-        (Nothing, _) -> pure ()
-        (Just err, _) -> do
-            Hedgehog.annotateShow err
-            Hedgehog.failure
+-- testScriptInputs
+--     :: ( PlutusTx.FromData (Scripts.DatumType a)
+--        , PlutusTx.ToData (Scripts.DatumType a)
+--        , PlutusTx.ToData (Scripts.RedeemerType a))
+--     => ScriptLookups a
+--     -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
+--     -> Property
+-- testScriptInputs lookups txc = property $ do
+--     tx <- either (\err -> do Hedgehog.annotateShow err; Hedgehog.failure)
+--                  (pure . view OC.tx)
+--                  $ mkTx lookups txc
+--     let valM = do
+--             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
+--             pure Nothing
+--     case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
+--         (Nothing, _) -> pure ()
+--         (Just err, _) -> do
+--             Hedgehog.annotateShow err
+--             Hedgehog.failure
 
 
 txOut0 :: Ledger.ChainIndexTxOut
@@ -235,5 +235,5 @@ lookups1
     <> Constraints.plutusV1OtherScript (Scripts.validatorScript alwaysSucceedValidator)
     <> Constraints.plutusV1OtherScript (Scripts.validatorScript validator1)
 
-testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
-testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)
+-- testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
+-- testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

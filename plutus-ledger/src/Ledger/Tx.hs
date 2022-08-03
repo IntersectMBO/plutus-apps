@@ -50,6 +50,7 @@ module Ledger.Tx
     -- * Transactions
     , addSignature
     , addSignature'
+    , addCardanoTxSignature
     , pubKeyTxOut
     , scriptTxOut
     , scriptTxOut'
@@ -80,6 +81,7 @@ import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Validation qualified
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
                              Validator, ValidatorHash, Value, addressCredential, toBuiltin)
@@ -313,6 +315,13 @@ scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: Value -> PaymentPubKey -> Maybe StakePubKey -> TxOut
 pubKeyTxOut v pk sk = TxOut (pubKeyAddress pk sk) v Nothing
+
+addCardanoTxSignature :: PrivateKey -> CardanoTx -> CardanoTx
+addCardanoTxSignature privKey = cardanoTxMap (addSignature' privKey) addSignatureCardano
+    where
+        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
+        addSignatureCardano (CardanoApiEmulatorEraTx ctx)
+            = CardanoApiEmulatorEraTx (Ledger.Validation.addSignature privKey ctx)
 
 -- | Sign the transaction with a 'PrivateKey' and passphrase (ByteString) and add the signature to the
 --   transaction's list of signatures.

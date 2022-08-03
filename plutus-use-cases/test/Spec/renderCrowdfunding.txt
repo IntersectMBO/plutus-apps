@@ -551,11 +551,19 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
+<<<<<<< HEAD
 TxId:       9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0
 Fee:        Ada:      Lovelace:  176105
 Mint:       -
 Signatures  PubKey: c0a4b02f44c212ba6c1197df5a5cf8bd1a3dceef...
               Signature: 5840a69994f80d0a7bb32c0770982c22835cb3ba...
+=======
+TxId:       63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e
+Fee:        Ada:      Lovelace:  234053
+Mint:       -
+Signatures  PubKey: c0a4b02f44c212ba6c1197df5a5cf8bd1a3dceef...
+              Signature: 5840c7c109305e1e4015fac5c32a0b1ada6967f4...
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
@@ -576,7 +584,11 @@ Outputs:
   ---- Output 1 ----
   Destination:  PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  7323895
+=======
+    Ada:      Lovelace:  7265947
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
 
 Balances Carried Forward:
@@ -586,7 +598,11 @@ Balances Carried Forward:
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  97323895
+=======
+    Ada:      Lovelace:  97265947
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
@@ -625,11 +641,19 @@ Balances Carried Forward:
     Ada:      Lovelace:  2500000
 
 ==== Slot #1, Tx #1 ====
+<<<<<<< HEAD
 TxId:       0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
 Fee:        Ada:      Lovelace:  182133
 Mint:       -
 Signatures  PubKey: 4cdc632449cde98d811f78ad2e2d15a278731bc5...
               Signature: 58401b7ac449aeee7df5171c28f889a808a7d718...
+=======
+TxId:       56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4
+Fee:        Ada:      Lovelace:  240081
+Mint:       -
+Signatures  PubKey: 4cdc632449cde98d811f78ad2e2d15a278731bc5...
+              Signature: 584045d52ef06ca824b30fe35104419c455de311...
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
@@ -659,17 +683,29 @@ Outputs:
   ---- Output 1 ----
   Destination:  PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  9817867
+=======
+    Ada:      Lovelace:  9759919
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
 
 Balances Carried Forward:
   PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  89817867
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
     Ada:      Lovelace:  97323895
+=======
+    Ada:      Lovelace:  89759919
+
+  PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
+  Value:
+    Ada:      Lovelace:  97265947
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
@@ -708,11 +744,19 @@ Balances Carried Forward:
     Ada:      Lovelace:  12500000
 
 ==== Slot #1, Tx #2 ====
+<<<<<<< HEAD
 TxId:       a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
 Fee:        Ada:      Lovelace:  182133
 Mint:       -
 Signatures  PubKey: 98c77c40ccc536e0d433874dae97d4a0787b10b3...
               Signature: 58408540c0cde30e7370057e65fc83b7462cd7bd...
+=======
+TxId:       c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89
+Fee:        Ada:      Lovelace:  240081
+Mint:       -
+Signatures  PubKey: 98c77c40ccc536e0d433874dae97d4a0787b10b3...
+              Signature: 584022f77a8e12abbc93aaa5e1a1062b17fdba73...
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
@@ -742,12 +786,17 @@ Outputs:
   ---- Output 1 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  9817867
+=======
+    Ada:      Lovelace:  9759919
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
 
 Balances Carried Forward:
   PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  89817867
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
@@ -757,6 +806,17 @@ Balances Carried Forward:
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  89817867
+=======
+    Ada:      Lovelace:  89759919
+
+  PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
+  Value:
+    Ada:      Lovelace:  97265947
+
+  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
+  Value:
+    Ada:      Lovelace:  89759919
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
   PaymentPubKeyHash: 8952ed1aff55f5b7674b122804a3c0a96f4e2863... (Wallet 3a4778247ad35117d7c3150d194da389f3148f4a)
   Value:
@@ -791,18 +851,30 @@ Balances Carried Forward:
     Ada:      Lovelace:  22500000
 
 ==== Slot #2, Tx #0 ====
+<<<<<<< HEAD
 TxId:       e216c3723b081530b62929a74b8af62f189e8c654351fe63e9a4503871fadbad
 Fee:        Ada:      Lovelace:  300581
 Mint:       -
 Signatures  PubKey: 8d9de88fbf445b7f6c3875a14daba94caee2ffcb...
               Signature: 5840268c33fd48118ef099ae1189056a960b46d8...
+=======
+TxId:       4d23ee974b5f69caa16d5e745f02cc5d819a6b0050b4221c7c0a05bc013877a2
+Fee:        Ada:      Lovelace:  358309
+Mint:       -
+Signatures  PubKey: 8d9de88fbf445b7f6c3875a14daba94caee2ffcb...
+              Signature: 58401d2a3bfe774120214679733da66d01ec22dc...
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Inputs:
   ---- Input 0 ----
   Destination:  Script: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38
   Value:
     Ada:      Lovelace:  10000000
   Source:
+<<<<<<< HEAD
     Tx:     0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
+=======
+    Tx:     c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
     Output #0
     Script: 590b0c0100003323232323232323232323232323...
 
@@ -811,7 +883,11 @@ Inputs:
   Value:
     Ada:      Lovelace:  2500000
   Source:
+<<<<<<< HEAD
     Tx:     9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0
+=======
+    Tx:     63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
     Output #0
     Script: 590b0c0100003323232323232323232323232323...
 
@@ -820,7 +896,11 @@ Inputs:
   Value:
     Ada:      Lovelace:  10000000
   Source:
+<<<<<<< HEAD
     Tx:     a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
+=======
+    Tx:     56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
     Output #0
     Script: 590b0c0100003323232323232323232323232323...
 
@@ -829,12 +909,13 @@ Outputs:
   ---- Output 0 ----
   Destination:  PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
-    Ada:      Lovelace:  22199419
+    Ada:      Lovelace:  22141691
 
 
 Balances Carried Forward:
   PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
+<<<<<<< HEAD
     Ada:      Lovelace:  89817867
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
@@ -844,6 +925,17 @@ Balances Carried Forward:
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  89817867
+=======
+    Ada:      Lovelace:  89759919
+
+  PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
+  Value:
+    Ada:      Lovelace:  97265947
+
+  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
+  Value:
+    Ada:      Lovelace:  89759919
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 
   PaymentPubKeyHash: 8952ed1aff55f5b7674b122804a3c0a96f4e2863... (Wallet 3a4778247ad35117d7c3150d194da389f3148f4a)
   Value:
@@ -855,7 +947,7 @@ Balances Carried Forward:
 
   PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
-    Ada:      Lovelace:  122199419
+    Ada:      Lovelace:  122141691
 
   PaymentPubKeyHash: a96a668ed7be83e332c872f51da7925b4472ca98... (Wallet bdf8dbca0cadeb365480c6ec29ec746a2b85274f)
   Value:

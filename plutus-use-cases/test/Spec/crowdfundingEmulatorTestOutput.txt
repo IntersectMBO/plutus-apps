@@ -39,7 +39,11 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                 Validity range:
                   (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W[2]: Finished balancing:
+<<<<<<< HEAD
                 Tx a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84:
+=======
+                Tx c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89:
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                   {inputs:
                      - ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958!20
 
@@ -50,11 +54,19 @@ Slot 1: W[2]: Finished balancing:
 
                   outputs:
                     - Value (Map [(,Map [("",10000000)])]) addressed to
+<<<<<<< HEAD
                       ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential)
                     - Value (Map [(,Map [("",9817867)])]) addressed to
                       PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",182133)])])
+=======
+                      ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                    - Value (Map [(,Map [("",9759919)])]) addressed to
+                      PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
+                  mint: Value (Map [])
+                  fee: Value (Map [(,Map [("",240081)])])
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                   mps:
                   signatures:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -64,9 +76,15 @@ Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
+<<<<<<< HEAD
 Slot 1: W[2]: Signing tx: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
 Slot 1: W[2]: Submitting tx: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
 Slot 1: W[2]: TxSubmit: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
+=======
+Slot 1: W[2]: Signing tx: c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89
+Slot 1: W[2]: Submitting tx: c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89
+Slot 1: W[2]: TxSubmit: c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Slot 1: W[3]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 96974388d9ba75c1992248ebf666f8821fd654a524a33bcfbbd9c4ce039b5b30:
@@ -87,7 +105,11 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                 Validity range:
                   (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W[3]: Finished balancing:
+<<<<<<< HEAD
                 Tx 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893:
+=======
+                Tx 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4:
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                   {inputs:
                      - ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958!0
 
@@ -98,19 +120,33 @@ Slot 1: W[3]: Finished balancing:
 
                   outputs:
                     - Value (Map [(,Map [("",10000000)])]) addressed to
+<<<<<<< HEAD
                       ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential)
                     - Value (Map [(,Map [("",9817867)])]) addressed to
                       PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",182133)])])
+=======
+                      ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                    - Value (Map [(,Map [("",9759919)])]) addressed to
+                      PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
+                  mint: Value (Map [])
+                  fee: Value (Map [(,Map [("",240081)])])
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                   mps:
                   signatures:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   data:
                     ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"}
+<<<<<<< HEAD
 Slot 1: W[3]: Signing tx: 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
 Slot 1: W[3]: Submitting tx: 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
 Slot 1: W[3]: TxSubmit: 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
+=======
+Slot 1: W[3]: Signing tx: 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4
+Slot 1: W[3]: Submitting tx: 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4
+Slot 1: W[3]: TxSubmit: 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Slot 1: W[4]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 67d36219de9657d44cd20633bdac09ebf592c79d41f556a90b3abbbaae7c185d:
@@ -131,7 +167,11 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                 Validity range:
                   (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W[4]: Finished balancing:
+<<<<<<< HEAD
                 Tx 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0:
+=======
+                Tx 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e:
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                   {inputs:
                      - ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958!10
 
@@ -140,26 +180,44 @@ Slot 1: W[4]: Finished balancing:
 
                   outputs:
                     - Value (Map [(,Map [("",2500000)])]) addressed to
+<<<<<<< HEAD
                       ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential)
                     - Value (Map [(,Map [("",7323895)])]) addressed to
                       PubKeyCredential: 557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d (no staking credential)
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",176105)])])
+=======
+                      ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                    - Value (Map [(,Map [("",7265947)])]) addressed to
+                      PubKeyCredential: 557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d (no staking credential)
+                  mint: Value (Map [])
+                  fee: Value (Map [(,Map [("",234053)])])
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                   mps:
                   signatures:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   data:
                     "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="}
+<<<<<<< HEAD
 Slot 1: W[4]: Signing tx: 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0
 Slot 1: W[4]: Submitting tx: 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0
 Slot 1: W[4]: TxSubmit: 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0
 Slot 1: TxnValidate 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0
 Slot 1: TxnValidate 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
 Slot 1: TxnValidate a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
+=======
+Slot 1: W[4]: Signing tx: 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e
+Slot 1: W[4]: Submitting tx: 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e
+Slot 1: W[4]: TxSubmit: 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e
+Slot 1: TxnValidate 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e
+Slot 1: TxnValidate 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4
+Slot 1: TxnValidate c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: W[1]: Balancing an unbalanced transaction:
                  Tx:
+<<<<<<< HEAD
                    Tx 8fb70239443b20452621db996c868f35e63355cc2bb00a53e7fae0f8d017ec8a:
                      {inputs:
                         - 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893!0
@@ -167,6 +225,15 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                         - 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0!0
                           <>
                         - a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84!0
+=======
+                   Tx 35189609010a75225c01dfb5151066bcd2634bb05ecf164b03d43955cc817791:
+                     {inputs:
+                        - c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89!0
+                          <>
+                        - 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e!0
+                          <>
+                        - 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4!0
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                           <>
                      collateral inputs:
                      outputs:
@@ -178,6 +245,7 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                      data:}
                  Requires signatures:
                  Utxo index:
+<<<<<<< HEAD
                    ( 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893!0
                    , - Value (Map [(,Map [("",10000000)])]) addressed to
                        ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential) )
@@ -185,11 +253,21 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                    , - Value (Map [(,Map [("",2500000)])]) addressed to
                        ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential) )
                    ( a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84!0
+=======
+                   ( 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4!0
+                   , - Value (Map [(,Map [("",10000000)])]) addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
+                   ( 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e!0
+                   , - Value (Map [(,Map [("",2500000)])]) addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
+                   ( c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89!0
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                    , - Value (Map [(,Map [("",10000000)])]) addressed to
                        ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential) )
                  Validity range:
                    [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W[1]: Finished balancing:
+<<<<<<< HEAD
                  Tx e216c3723b081530b62929a74b8af62f189e8c654351fe63e9a4503871fadbad:
                    {inputs:
                       - 0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893!0
@@ -197,22 +275,40 @@ Slot 20: W[1]: Finished balancing:
                       - 9b3a1f951e788ba61c5b26fb8abb23560c30891aa00c55a98317805f429633b0!0
                         <>
                       - a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84!0
+=======
+                 Tx 4d23ee974b5f69caa16d5e745f02cc5d819a6b0050b4221c7c0a05bc013877a2:
+                   {inputs:
+                      - c17ab2d0aa6414088cf3db2d161b2475627e261c22f1e8fb54d031bdb36fdf89!0
+                        <>
+                      - 63db1b461ed3500730092fdf9c0ec338b0afd5b97cc77c2fee746515e69ed51e!0
+                        <>
+                      - 56ccb7bff67b2300e111645652ee509eb5b37fdbe15c24c9d363f8a4961923a4!0
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
                         <>
                    collateral inputs:
                      - ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958!50
 
                    outputs:
-                     - Value (Map [(,Map [("",22199419)])]) addressed to
+                     - Value (Map [(,Map [("",22141691)])]) addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
                    mint: Value (Map [])
-                   fee: Value (Map [(,Map [("",300581)])])
+                   fee: Value (Map [(,Map [("",358309)])])
                    mps:
                    signatures:
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
                    data:}
+<<<<<<< HEAD
 Slot 20: W[1]: Signing tx: e216c3723b081530b62929a74b8af62f189e8c654351fe63e9a4503871fadbad
 Slot 20: W[1]: Submitting tx: e216c3723b081530b62929a74b8af62f189e8c654351fe63e9a4503871fadbad
 Slot 20: W[1]: TxSubmit: e216c3723b081530b62929a74b8af62f189e8c654351fe63e9a4503871fadbad
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract instance stopped (no errors)
 Slot 20: TxnValidate e216c3723b081530b62929a74b8af62f189e8c654351fe63e9a4503871fadbad
+=======
+Slot 20: W[1]: Signing tx: 4d23ee974b5f69caa16d5e745f02cc5d819a6b0050b4221c7c0a05bc013877a2
+Slot 20: W[1]: Submitting tx: 4d23ee974b5f69caa16d5e745f02cc5d819a6b0050b4221c7c0a05bc013877a2
+Slot 20: W[1]: TxSubmit: 4d23ee974b5f69caa16d5e745f02cc5d819a6b0050b4221c7c0a05bc013877a2
+Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
+           Contract instance stopped (no errors)
+Slot 20: TxnValidate 4d23ee974b5f69caa16d5e745f02cc5d819a6b0050b4221c7c0a05bc013877a2
+>>>>>>> e52894f9a... Remove plutus-ledger transaction validation rules
