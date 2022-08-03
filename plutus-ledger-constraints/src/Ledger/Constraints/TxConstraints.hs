@@ -35,7 +35,7 @@ import Ledger.Address (PaymentPubKeyHash, StakePubKeyHash)
 import Ledger.Tx (ChainIndexTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
-import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer (Redeemer),
+import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer (Redeemer),
                              StakeValidatorHash, TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
@@ -305,7 +305,7 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the new script transaction output with
 -- @d@ and @v@ is part of the transaction's outputs.
-mustPayToTheScript :: forall i o. PlutusTx.ToData o => o -> Value -> TxConstraints i o
+mustPayToTheScript :: o -> Value -> TxConstraints i o
 mustPayToTheScript dt vl =
     mempty { txOwnOutputs = [ScriptOutputConstraint dt vl] }
 

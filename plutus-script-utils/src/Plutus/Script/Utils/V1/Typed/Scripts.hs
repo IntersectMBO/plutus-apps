@@ -48,7 +48,7 @@ check for error in the overall evaluation.
 -}
 
 -- | A 'TxOut' tagged by a phantom type: and the connection type of the output.
-data TypedScriptTxOut a =
+data TypedScriptTxOut a = (FromData (DatumType a), ToData (DatumType a)) =>
   TypedScriptTxOut
   { tyTxOutTxOut :: TxOut,
     tyTxOutData  :: DatumType a
@@ -62,7 +62,7 @@ instance Eq (DatumType a) => Eq (TypedScriptTxOut a) where
 -- | Create a 'TypedScriptTxOut' from a correctly-typed data script, an address, and a value.
 makeTypedScriptTxOut ::
   forall out.
-  (ToData (DatumType out)) =>
+  (ToData (DatumType out), FromData (DatumType out)) =>
   TypedValidator out ->
   DatumType out ->
   Value ->
@@ -107,6 +107,7 @@ typePubKeyTxOut txOut =
 typeScriptTxOut ::
   forall out m.
   ( FromData (DatumType out),
+    ToData (DatumType out),
     MonadError ConnectionError m
   ) =>
   TypedValidator out ->
@@ -130,6 +131,7 @@ typeScriptTxOut tv txOutRef txOut datum = do
 typeScriptTxOutRef ::
   forall out m.
   ( FromData (DatumType out),
+    ToData (DatumType out),
     MonadError ConnectionError m
   ) =>
   TypedValidator out ->
