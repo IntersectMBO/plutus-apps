@@ -136,7 +136,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustUseOutputAsCollateral _ ->
         True -- TODO
     MustReferencePubKeyOutput _ ->
-        traceIfFalse "Le" -- "Cannot use reference inputs in PlutusV1.ScriptContext"
+        traceIfFalse "Lf" -- "Cannot use reference inputs in PlutusV1.ScriptContext"
         False
 
 {-# INLINABLE checkTxConstraintFun #-}
@@ -150,7 +150,7 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
                 vh == vh' && valuePred val && datumPred d
             isMatch _ = False
         in
-        traceIfFalse "Lf" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
+        traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
         $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
 
 {- Note [Mint and Fee fields must have ada symbol]

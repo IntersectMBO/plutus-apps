@@ -308,7 +308,6 @@ mustIncludeDatum = singleton . MustIncludeDatum
 mustPayToTheScript :: forall i o. PlutusTx.ToData o => o -> Value -> TxConstraints i o
 mustPayToTheScript dt vl =
     mempty { txOwnOutputs = [ScriptOutputConstraint dt vl] }
-    <> mustIncludeDatum (Datum (PlutusTx.toBuiltinData dt))
 
 {-# INLINABLE mustPayToPubKey #-}
 -- | @mustPayToPubKey pkh v@ is the same as
@@ -367,7 +366,6 @@ mustPayWithDatumToPubKeyAddress pkh skh datum =
 mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScript vh dv vl =
     singleton (MustPayToOtherScript vh Nothing dv vl)
-    <> singleton (MustIncludeDatum dv)
 
 {-# INLINABLE mustPayToOtherScriptAddress #-}
 -- | @mustPayToOtherScriptAddress vh svh d v@ locks the value @v@ with the given script
@@ -383,7 +381,6 @@ mustPayToOtherScript vh dv vl =
 mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScriptAddress vh svh dv vl =
     singleton (MustPayToOtherScript vh (Just svh) dv vl)
-    <> singleton (MustIncludeDatum dv)
 
 {-# INLINABLE mustMintValue #-}
 -- | Same as 'mustMintValueWithRedeemer', but sets the redeemer to the unit

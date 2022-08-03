@@ -154,7 +154,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustUseOutputAsCollateral _ ->
         True -- TODO
     MustReferencePubKeyOutput txOutRef ->
-        traceIfFalse "Le" -- "Public key output not referenced"
+        traceIfFalse "Lf" -- "Public key output not referenced"
         $ isJust (PV2.findTxRefInByTxOutRef txOutRef scriptContextTxInfo)
 
 {-# INLINABLE checkTxConstraintFun #-}
@@ -168,5 +168,5 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
                 vh == vh' && valuePred val && datumPred d
             isMatch _ = False
         in
-        traceIfFalse "Lf" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
+        traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
         $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)

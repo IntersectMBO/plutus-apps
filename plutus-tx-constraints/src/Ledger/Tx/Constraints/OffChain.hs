@@ -45,11 +45,6 @@ module Ledger.Tx.Constraints.OffChain(
     , MkTxError(..)
     , mkTx
     , mkSomeTx
-    -- * Internals exposed for testing
-    , P.ValueSpentBalances(..)
-    , P.provided
-    , P.required
-    , P.missingValueSpent
     ) where
 
 import Cardano.Api qualified as C
@@ -221,7 +216,6 @@ processConstraint = \case
           Tx.PublicKeyChainIndexTxOut {} -> do
               txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
               unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
-            --   valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
 
     P.MustSpendScriptOutput txo redeemer -> do
@@ -230,7 +224,7 @@ processConstraint = \case
         case mscriptTXO of
             Just ((_, validator), (_, datum), _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
-                -- Hardcoded to PlutusV2. Needs to also work with PlutusV1
+                -- TODO: Hardcoded to PlutusV2. Needs to also work with PlutusV1
                 witness <- throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
                     (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
                     <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator))
@@ -273,9 +267,6 @@ processConstraint = \case
             <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum dv)))
             <*> pure C.ReferenceScriptNone
         unbalancedTx . tx . txOuts <>= [ out ]
-
-    P.MustIncludeDatum _ -> do
-        pure () -- TODO
 
     c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"
 
