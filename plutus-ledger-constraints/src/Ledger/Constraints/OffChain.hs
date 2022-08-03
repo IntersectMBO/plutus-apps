@@ -38,6 +38,7 @@ module Ledger.Constraints.OffChain(
     , validityTimeRange
     , emptyUnbalancedTx
     , adjustUnbalancedTx
+    , adjustTxOut
     , MkTxError(..)
     , mkTx
     , mkSomeTx
@@ -420,13 +421,17 @@ mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
 adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
-adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) adjustTxOut
-  where
-    adjustTxOut :: TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
-    adjustTxOut txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
-        let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
-            missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))
-        in ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
+adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxOut params)
+
+-- | Adjust a single transaction output so it contains at least the minimum amount of Ada
+-- and return the adjustment (if any) and the updated TxOut.
+adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
+adjustTxOut params txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
+    let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
+        missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
+    in if missingLovelace > 0
+        then ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
+        else ([], txOut)
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]
