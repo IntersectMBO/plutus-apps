@@ -233,8 +233,6 @@ test-suite plutus-contract-test
   hs-source-dirs:     test
   other-modules:
     Spec.Balancing
-    Spec.Constraints.RequiredSigner
-    Spec.Constraints.TimeValidity
     Spec.Contract
     Spec.Emulator
     Spec.ErrorChecking
@@ -245,6 +243,8 @@ test-suite plutus-contract-test
     Spec.Secrets
     Spec.State
     Spec.ThreadToken
+    Spec.TxConstraints.RequiredSigner
+    Spec.TxConstraints.TimeValidity
 
   --------------------
   -- Local components

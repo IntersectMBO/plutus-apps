@@ -2,8 +2,6 @@
 module Main(main) where
 
 import Spec.Balancing qualified
-import Spec.Constraints.RequiredSigner qualified
-import Spec.Constraints.TimeValidity qualified
 import Spec.Contract qualified
 import Spec.Emulator qualified
 import Spec.ErrorChecking qualified
@@ -14,6 +12,8 @@ import Spec.Rows qualified
 import Spec.Secrets qualified
 import Spec.State qualified
 import Spec.ThreadToken qualified
+import Spec.TxConstraints.RequiredSigner qualified
+import Spec.TxConstraints.TimeValidity qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -26,8 +26,8 @@ tests = testGroup "plutus-contract" [
     Spec.State.tests,
     Spec.Rows.tests,
     Spec.ThreadToken.tests,
-    Spec.Constraints.TimeValidity.tests,
-    Spec.Constraints.RequiredSigner.tests,
+    Spec.TxConstraints.TimeValidity.tests,
+    Spec.TxConstraints.RequiredSigner.tests,
     Spec.Secrets.tests,
     Spec.ErrorChecking.tests,
     Spec.Plutus.Contract.Wallet.tests,
