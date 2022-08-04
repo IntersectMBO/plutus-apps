@@ -41,7 +41,7 @@ import Cardano.Wallet.Mock.Client qualified as WalletMockClient
 import Cardano.Wallet.RemoteClient qualified as RemoteWalletClient
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Concurrent.STM qualified as STM
-import Control.Lens (preview)
+import Control.Lens (preview, (^?!))
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, type (~>))
 import Control.Monad.Freer.Error (Error, handleError, throwError)
@@ -84,8 +84,8 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMs
 import Plutus.PAB.Timeout (Timeout (Timeout))
 import Plutus.PAB.Types (Config (Config), DBConnection (..), DbConfig (..),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
-                         WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, endpointTimeout,
-                         nodeServerConfig, pabWebserverConfig, takePostgres, takeSqlite, walletServerConfig)
+                         WebserverConfig (WebserverConfig), _PostgresPool, _SqlitePool, chainIndexConfig, dbConfig,
+                         endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
 import Wallet.API (NodeClientEffect)
 import Wallet.Effects (WalletEffect)
@@ -153,11 +153,11 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
               . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
               . case dbConfig config of
                     SqliteDB _ ->
-                          interpret (Core.handleMappedReader @(AppEnv a) (takeSqlite . dbPool))
+                          interpret (Core.handleMappedReader @(AppEnv a) ((^?!_SqlitePool) . dbPool))
                         . interpret (handleBeam Sqlite.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
                         . reinterpretN @'[_, _, _, _, _] (BeamEff.handleContractStore @Sqlite)
                     PostgresDB _ ->
-                          interpret (Core.handleMappedReader @(AppEnv a) (takePostgres . dbPool))
+                          interpret (Core.handleMappedReader @(AppEnv a) ((^?!_PostgresPool) . dbPool))
                         . interpret (handleBeam Postgres.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
                         . reinterpretN @'[_, _, _, _, _] (BeamEff.handleContractStore @Postgres)
 
@@ -167,11 +167,11 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . flip handleError (throwError . BeamEffectError)
             . case dbConfig config of
                   SqliteDB _ -> interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-                                . interpret (Core.handleMappedReader @(AppEnv a) (takeSqlite . dbPool))
+                                . interpret (Core.handleMappedReader @(AppEnv a) ((^?!_SqlitePool) . dbPool))
                                 . interpret (handleBeam Sqlite.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
                                 . reinterpretN @'[_, _, _, _, _ ] handleContractDefinition
                   PostgresDB _ -> interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-                                . interpret (Core.handleMappedReader @(AppEnv a) (takePostgres . dbPool))
+                                . interpret (Core.handleMappedReader @(AppEnv a) ((^?!_PostgresPool) . dbPool))
                                 . interpret (handleBeam Postgres.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
                                 . reinterpretN @'[_, _, _, _, _] handleContractDefinition
 
