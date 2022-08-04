@@ -525,7 +525,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     -- TODO Needs to work with PlutusV1 AND PlutusV2.
-    let txIn = Scripts.makeTypedScriptTxIn PlutusV2 inst icRedeemer typedOutRef
+    let txIn = Scripts.makeTypedScriptTxIn PlutusV1 inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl
@@ -758,7 +758,7 @@ resolveScriptTxOut
             } = do
     -- first check in the 'ChainIndexTx' for the validator, then
     -- look for it in the 'slOtherScripts map.
-    (validator, pv) <- maybe (lookupValidator vh) (pure . (, PlutusV2)) v
+    (validator, pv) <- maybe (lookupValidator vh) (pure . (, PlutusV1)) v
 
     -- first check in the 'ChainIndexTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
