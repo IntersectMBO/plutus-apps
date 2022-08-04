@@ -21,15 +21,11 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Codec.CBOR.Decoding (decodeBytes)
 import Codec.Serialise.Class
-import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes))
 import Control.DeepSeq (NFData)
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
-import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi qualified as OpenApi
@@ -158,15 +154,6 @@ scriptTxIns = (\x -> folding x) . Set.filter $ \case
 newtype TxOut = TxOut (C.TxOut C.CtxTx C.BabbageEra)
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON)
-
--- FIXME revisit this
-instance Serialise TxOut where
-  encode (TxOut txOut) =
-    Encoding $ TkBytes $ BSL.toStrict $ Aeson.encode txOut
-  decode = do
-    buf <- decodeBytes
-    txOut <- maybe (fail "Failed to decode TxOut") pure $ Aeson.decodeStrict buf
-    pure (TxOut txOut)
 
 instance Pretty TxOut where
   pretty = viaShow
@@ -329,7 +316,7 @@ data TxStripped = TxStripped {
     -- ^ The 'Value' minted by this transaction.
     txStrippedFee             :: !Value
     -- ^ The fee for this transaction.
-    } deriving (Show, Eq, Generic, Serialise)
+    } deriving (Show, Eq, Generic)
 
 strip :: Tx -> TxStripped
 strip Tx{..} = TxStripped i ri txOutputs txMint txFee where

@@ -65,11 +65,9 @@ module Ledger.Tx
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Crypto.Hash (SHA256, digest)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.CBOR.Decoding
 import Codec.CBOR.Encoding
-import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (decode, encode))
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, withObject, (.:), (.=))
@@ -78,7 +76,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
-import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
@@ -350,10 +347,9 @@ instance Pretty Tx where
 
 -- | Compute the id of a transaction.
 txId :: Tx -> TxId
-txId tx = TxId $ V1.toBuiltin
-               $ digest (Proxy @SHA256)
-               $ digest (Proxy @SHA256)
-               (Write.toStrictByteString $ encode $ strip tx)
+txId tx = case toCardanoTxBody def [] tx of
+  Left e       -> error (show e)
+  Right txBody -> CardanoAPI.fromCardanoTxId $ C.getTxId txBody
 
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
