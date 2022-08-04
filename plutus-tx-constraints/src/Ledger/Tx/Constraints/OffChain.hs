@@ -222,16 +222,23 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.resolveScriptTxOut txout
         case mscriptTXO of
-            Just ((_, validator), (_, datum), _) -> do
+            Just ((_, validator, lang), (_, datum), _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
-                -- TODO: Hardcoded to PlutusV2. Needs to also work with PlutusV1
-                witness <- throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
-                    (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-                    <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator))
-                    <*> pure (C.ScriptDatumForTxIn $ C.toCardanoScriptData (getDatum datum))
-                    <*> pure (C.toCardanoScriptData (getRedeemer redeemer))
-                    <*> pure C.zeroExecutionUnits
-                    )
+                witness <-
+                    throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
+                    case lang of
+                        Tx.PlutusV1 ->
+                            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
+                                <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) (getValidator validator))
+                                <*> pure (C.ScriptDatumForTxIn $ C.toCardanoScriptData (getDatum datum))
+                                <*> pure (C.toCardanoScriptData (getRedeemer redeemer))
+                                <*> pure C.zeroExecutionUnits
+                        Tx.PlutusV2 ->
+                            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+                                <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator))
+                                <*> pure (C.ScriptDatumForTxIn $ C.toCardanoScriptData (getDatum datum))
+                                <*> pure (C.toCardanoScriptData (getRedeemer redeemer))
+                                <*> pure C.zeroExecutionUnits
 
                 unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith witness)]
 
