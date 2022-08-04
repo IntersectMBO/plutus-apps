@@ -335,7 +335,7 @@ scriptAnyLangType = SumType (
 ------------------------------------------------------------
 ledgerTypes :: [SumType 'Haskell]
 ledgerTypes =
-    [ equal . genericShow . argonaut $ mkSumType @LedgerPlutusVersion
+    [ order . genericShow . argonaut $ mkSumType @LedgerPlutusVersion
     , equal . genericShow . argonaut $ mkSumType @Slot
     , equal . genericShow . argonaut $ mkSumType @Ada
     , equal . genericShow . argonaut $ mkSumType @SlotConfig
