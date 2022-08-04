@@ -394,10 +394,10 @@ mkPV1TxInfo :: ValidationMonad m => Tx -> m PV1.TxInfo
 mkPV1TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txInputs <- traverse mkPV1TxInInfo $ view inputs tx
-    let txInfoOutputs = map (\(TxOut txOut) -> fromCardanoTxOut txOut) $ txOutputs tx
+    let plutusTxOutputs = map (\(TxOut txOut) -> fromCardanoTxOut txOut) $ txOutputs tx
     let ptx = PV1.TxInfo
             { PV1.txInfoInputs = txInputs
-            , PV1.txInfoOutputs = txInfoOutputs
+            , PV1.txInfoOutputs = plutusTxOutputs
             -- See note [Mint and Fee fields must have ada symbol]
             , PV1.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV1.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx

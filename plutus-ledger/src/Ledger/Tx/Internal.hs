@@ -198,9 +198,7 @@ data Tx = Tx {
     txData            :: Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
     } deriving stock (Show, Eq, Generic)
-      deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
-
-instance OpenApi.ToSchema Tx
+      deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
 
 instance Semigroup Tx where
     tx1 <> tx2 = Tx {
