@@ -217,7 +217,7 @@ data CardanoTx
     | CardanoApiTx { _cardanoApiTx :: EmulatorEraCardanoApiTx }
     | Both { _emulatorTx :: Tx, _cardanoApiTx :: EmulatorEraCardanoApiTx }
     deriving (Eq, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, Serialise)
+    deriving anyclass (FromJSON, ToJSON {-, OpenApi.ToSchema, Serialise -})
 
 makeLenses ''CardanoTx
 
@@ -350,7 +350,6 @@ instance Pretty Tx where
 
 -- | Compute the id of a transaction.
 txId :: Tx -> TxId
--- Double hash of a transaction, excluding its witnesses.
 txId tx = TxId $ V1.toBuiltin
                $ digest (Proxy @SHA256)
                $ digest (Proxy @SHA256)

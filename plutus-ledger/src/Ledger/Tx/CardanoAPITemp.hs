@@ -43,6 +43,7 @@ import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Shelley.Tx qualified as Shelley
 import Cardano.Ledger.Shelley.TxBody qualified as Shelley
 
+-- FIXME this could be pure
 makeTransactionBody'
     :: Map.Map Alonzo.RdmrPtr Alonzo.ExUnits
     -> TxBodyContent BuildTx BabbageEra

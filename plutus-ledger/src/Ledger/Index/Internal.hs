@@ -10,11 +10,8 @@ module Ledger.Index.Internal where
 
 import Prelude hiding (lookup)
 
-import Codec.Serialise (Serialise)
-import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Map qualified as Map
-import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Orphans ()
@@ -28,8 +25,8 @@ import Prettyprinter.Extras (PrettyShow (..))
 -- | The UTxOs of a blockchain indexed by their references.
 newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
     deriving stock (Show, Generic)
-    deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
-    deriving anyclass (FromJSON, ToJSON, NFData)
+    deriving newtype (Eq, Semigroup)
+    deriving anyclass (FromJSON, ToJSON)
 
 
 -- | A reason why a transaction is invalid.

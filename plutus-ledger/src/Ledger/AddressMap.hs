@@ -29,11 +29,8 @@ module Ledger.AddressMap(
     fromChain
     ) where
 
-import Codec.Serialise.Class (Serialise)
 import Control.Lens (At (..), Index, IxValue, Ixed (..), Lens', at, lens, non, (&), (.~), (^.))
 import Control.Monad (join)
-import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.Aeson.Extras qualified as JSON
 import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -42,8 +39,8 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
 import Ledger.Blockchain
-import Ledger.Tx (CardanoTx, TxOut (..), TxOutRef (..), getCardanoTxId, getCardanoTxOutputs,
-                  getCardanoTxUnspentOutputsTx, txOutAddress, txOutValue, txOutValue, TxIn (txInRef))
+import Ledger.Tx (CardanoTx, TxIn (txInRef), TxOut (..), TxOutRef (..), getCardanoTxId, getCardanoTxOutputs,
+                  getCardanoTxUnspentOutputsTx, txOutAddress, txOutValue)
 import Plutus.V1.Ledger.Address (Address (..))
 import Plutus.V1.Ledger.Value (Value)
 
@@ -52,8 +49,6 @@ type UtxoMap = Map TxOutRef (CardanoTx, TxOut)
 -- | A map of 'Address'es and their unspent outputs.
 newtype AddressMap = AddressMap { getAddressMap :: Map Address UtxoMap }
     deriving stock (Show, Eq, Generic)
-    deriving newtype (Serialise)
-    deriving (ToJSON, FromJSON) via (JSON.JSONViaSerialise AddressMap)
 
 -- | An address map with a single unspent transaction output.
 singleton :: (Address, TxOutRef, CardanoTx, TxOut) -> AddressMap

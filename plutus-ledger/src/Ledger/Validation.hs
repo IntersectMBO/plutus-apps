@@ -351,4 +351,4 @@ fromPaymentPrivateKey xprv txBody
       (C.Api.ShelleyTxBody C.Api.ShelleyBasedEraBabbage txBody notUsed notUsed notUsed notUsed)
       (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
   where
-    notUsed = undefined -- hack so we can reuse code from cardano-api
+    notUsed = error "fromPaymentPrivateKey: unimplemented" -- hack so we can reuse code from cardano-api

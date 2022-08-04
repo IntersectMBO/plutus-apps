@@ -32,7 +32,6 @@ module Ledger.Blockchain (
     updateUtxoCollateral
     ) where
 
-import Codec.Serialise (Serialise)
 import Control.Lens (makePrisms)
 import Control.Monad (join)
 import Data.Aeson (FromJSON, ToJSON)
@@ -83,7 +82,7 @@ instance Pretty BlockId where
 -- Invalid transactions are still put on the chain to be able to collect fees.
 data OnChainTx = Invalid CardanoTx | Valid CardanoTx
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise)
+    deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty OnChainTx where
     pretty = \case

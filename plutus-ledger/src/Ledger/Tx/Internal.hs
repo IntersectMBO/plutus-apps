@@ -21,13 +21,15 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Codec.CBOR.Write qualified as Write
+import Codec.CBOR.Decoding (decodeBytes)
 import Codec.Serialise.Class
-import Control.DeepSeq (NFData, rnf)
+import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes))
+import Control.DeepSeq (NFData)
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
-import Data.ByteArray qualified as BA
+import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi qualified as OpenApi
@@ -157,15 +159,14 @@ newtype TxOut = TxOut (C.TxOut C.CtxTx C.BabbageEra)
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON)
 
+-- FIXME revisit this
 instance Serialise TxOut where
-  encode = undefined -- FIXME
-  decode = undefined -- FIXME
-
-instance NFData TxOut where
-  rnf = undefined -- FIXME
-
-instance OpenApi.ToSchema TxOut where
-  declareNamedSchema = undefined -- FIXME
+  encode (TxOut txOut) =
+    Encoding $ TkBytes $ BSL.toStrict $ Aeson.encode txOut
+  decode = do
+    buf <- decodeBytes
+    txOut <- maybe (fail "Failed to decode TxOut") pure $ Aeson.decodeStrict buf
+    pure (TxOut txOut)
 
 instance Pretty TxOut where
   pretty = viaShow
@@ -198,7 +199,7 @@ data Tx = Tx {
     txData            :: Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
     } deriving stock (Show, Eq, Generic)
-      deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+      deriving anyclass (ToJSON, FromJSON)
 
 instance Semigroup Tx where
     tx1 <> tx2 = Tx {
@@ -217,10 +218,6 @@ instance Semigroup Tx where
 
 instance Monoid Tx where
     mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty
-
-instance BA.ByteArrayAccess Tx where
-    length        = BA.length . Write.toStrictByteString . encode
-    withByteArray = BA.withByteArray . Write.toStrictByteString . encode
 
 -- | The inputs of a transaction.
 inputs :: Lens' Tx [TxIn]
@@ -343,7 +340,7 @@ strip Tx{..} = TxStripped i ri txOutputs txMint txFee where
 -- the full data script that goes with the 'TxOut'.
 data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving stock (Show, Eq, Generic)
-    deriving anyclass (Serialise, ToJSON, FromJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 txOutTxDatum :: TxOutTx -> Maybe Datum
 txOutTxDatum (TxOutTx tx (TxOut (C.TxOut _aie _tov tod _rs))) =
