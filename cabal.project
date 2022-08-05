@@ -110,7 +110,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: a3fba9f4e776c38bc54cb9a1c1cae82d2338b718
+  tag: a56c96598b4b25c9e28215214d25189331087244
   subdir:
     plutus-core
     plutus-ledger-api
@@ -175,7 +175,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: 1.35.2
+  tag: 1.35.3-rc1
   subdir:
     cardano-api
     cardano-cli
@@ -207,7 +207,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: ebcf1a8936dd84de0182d54004473f4ce66c7923
+  tag: c7c63dabdb215ebdaed8b63274965966f2bf408f
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
