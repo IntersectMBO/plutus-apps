@@ -3,6 +3,7 @@ module Main(main) where
 
 import Spec.Balancing qualified
 import Spec.Contract qualified
+import Spec.Contract.TxConstraints qualified
 import Spec.Emulator qualified
 import Spec.ErrorChecking qualified
 import Spec.Plutus.Contract.Oracle qualified
@@ -20,6 +21,7 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "plutus-contract" [
     Spec.Contract.tests,
+    Spec.Contract.TxConstraints.tests,
     Spec.Emulator.tests,
     Spec.State.tests,
     Spec.Rows.tests,

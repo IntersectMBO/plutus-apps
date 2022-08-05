@@ -36,6 +36,7 @@ module Plutus.Contract.Test(
     , assertInstanceLog
     , assertNoFailedTransactions
     , assertValidatedTransactionCount
+    , assertValidatedTransactionCountOfTotal
     , assertFailedTransaction
     , assertHooks
     , assertResponses
@@ -111,7 +112,6 @@ import Test.Tasty.Providers (TestTree)
 
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Tx (Tx, onCardanoTx)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
@@ -632,13 +632,13 @@ assertChainEvents' logMsg predicate = TracePredicate $
 
 -- | Assert that at least one transaction failed to validate, and that all
 --   transactions that failed meet the predicate.
-assertFailedTransaction :: (Tx -> ValidationError -> [ScriptValidationEvent] -> Bool) -> TracePredicate
+assertFailedTransaction :: (Ledger.CardanoTx -> ValidationError -> [ScriptValidationEvent] -> Bool) -> TracePredicate
 assertFailedTransaction predicate = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> do
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
-        xs -> pure (all (\(_, t, e, evts, _) -> onCardanoTx (\t' -> predicate t' e evts) (const True) t) xs)
+        xs -> pure (all (\(_, t, e, evts, _) -> predicate t e evts) xs)
 
 -- | Assert that no transaction failed to validate.
 assertNoFailedTransactions :: TracePredicate
@@ -652,13 +652,21 @@ assertNoFailedTransactions = TracePredicate $
 
 -- | Assert that n transactions validated, and no transaction failed to validate.
 assertValidatedTransactionCount :: Int -> TracePredicate
-assertValidatedTransactionCount expected =
-    assertNoFailedTransactions
-    .&&.
+assertValidatedTransactionCount expected = assertValidatedTransactionCountOfTotal expected expected
+
+-- | Assert that n transactions validated, and the rest failed.
+assertValidatedTransactionCountOfTotal :: Int -> Int -> TracePredicate
+assertValidatedTransactionCountOfTotal expectedValid expectedTotal =
     TracePredicate (flip postMapM (L.generalize Folds.validatedTransactions) $ \xs ->
         let actual = length xs - 1 in -- ignore the initial wallet distribution transaction
-        if actual == expected then pure True else do
+        if actual == expectedValid then pure True else do
             tell @(Doc Void) $ "Unexpected number of validated transactions:" <+> pretty actual
+            pure False
+    ) .&&.
+    TracePredicate (flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \xs ->
+        let actual = length xs in
+        if actual == expectedTotal - expectedValid then pure True else do
+            tell @(Doc Void) $ "Unexpected number of invalid transactions:" <+> pretty actual
             pure False
     )
 

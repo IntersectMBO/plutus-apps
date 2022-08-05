@@ -62,6 +62,7 @@ import Ledger (Ada, AssetClass, CurrencySymbol, Interval, POSIXTime, POSIXTimeRa
                PubKey, PubKeyHash, Signature, Slot, StakePubKey, StakePubKeyHash, TokenName, TxId, TxOutRef, Value)
 import Ledger.Bytes (LedgerBytes)
 import Ledger.CardanoWallet (WalletNumber)
+import Plutus.ApiCommon (LedgerPlutusVersion)
 import Plutus.Contract.Secrets (SecretArgument (EndpointSide, UserSide))
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken)
 import Plutus.V1.Ledger.Api (DatumHash, RedeemerHash, ValidatorHash)
@@ -402,6 +403,8 @@ deriving anyclass instance ToSchema PubKeyHash
 deriving anyclass instance ToSchema PaymentPubKey
 
 deriving anyclass instance ToSchema PaymentPubKeyHash
+
+deriving anyclass instance ToSchema LedgerPlutusVersion
 
 deriving anyclass instance ToSchema StakePubKey
 

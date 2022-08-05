@@ -53,6 +53,8 @@ module Ledger.Generators(
     ) where
 
 import Cardano.Api qualified as C
+import Control.Applicative ((<|>))
+import Control.Lens ((&))
 import Control.Monad (replicateM)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Reader (runReaderT)
@@ -77,11 +79,12 @@ import Hedgehog.Range qualified as Range
 import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
-               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
-               TokenName, Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
+               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
+               SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
+               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
                TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
-               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature', pubKeyTxIn,
-               pubKeyTxOut, toPublicKey, txId)
+               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addCardanoTxSignature,
+               pubKeyTxIn, pubKeyTxOut, toPublicKey)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -89,6 +92,7 @@ import Ledger.Index qualified as Index
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Generators as ScriptGen
 import Plutus.V1.Ledger.Contexts qualified as Contexts
@@ -96,8 +100,8 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
 
 -- | Attach signatures of all known private keys to a transaction.
-signAll :: Tx -> Tx
-signAll tx = foldl' (flip addSignature') tx
+signAll :: CardanoTx -> CardanoTx
+signAll tx = foldl' (flip addCardanoTxSignature) tx
            $ fmap unPaymentPrivateKey knownPaymentPrivateKeys
 
 -- | The parameters for the generators in this module.
@@ -126,7 +130,7 @@ generatorModel =
 --   plutus-ledger (in particular, 'Ledger.Tx.unspentOutputs') we note the
 --   unspent outputs of the chain when it is first created.
 data Mockchain = Mockchain {
-    mockchainInitialTxPool :: [Tx],
+    mockchainInitialTxPool :: [CardanoTx],
     mockchainUtxo          :: Map TxOutRef TxOut,
     mockchainParams        :: Params
     } deriving Show
@@ -143,7 +147,7 @@ genMockchain' :: MonadGen m
     -> m Mockchain
 genMockchain' gm = do
     let (txn, ot) = genInitialTransaction gm
-        tid = txId txn
+        tid = Ledger.getCardanoTxId txn
     slotCfg <- genSlotConfig
     pure Mockchain {
         mockchainInitialTxPool = [txn],
@@ -160,12 +164,12 @@ genMockchain = genMockchain' generatorModel
 --   beginning of a blockchain).
 genInitialTransaction ::
        GeneratorModel
-    -> (Tx, [TxOut])
+    -> (CardanoTx, [TxOut])
 genInitialTransaction GeneratorModel{..} =
     let
         o = fmap (\f -> f Nothing) $ (uncurry $ flip pubKeyTxOut) <$> Map.toList gmInitialBalance
         t = fold gmInitialBalance
-    in (mempty {
+    in (EmulatorTx $ mempty {
         txOutputs = o,
         txMint = t,
         txValidRange = Interval.from 0
@@ -176,7 +180,7 @@ genInitialTransaction GeneratorModel{..} =
 --   of the unspent outputs is smaller than the minimum fee.
 genValidTransaction :: MonadGen m
     => Mockchain
-    -> m Tx
+    -> m CardanoTx
 genValidTransaction = genValidTransaction' generatorModel
 
 -- | Generate a valid transaction, using the unspent outputs provided.
@@ -185,7 +189,7 @@ genValidTransaction = genValidTransaction' generatorModel
 genValidTransaction' :: MonadGen m
     => GeneratorModel
     -> Mockchain
-    -> m Tx
+    -> m CardanoTx
 genValidTransaction' g (Mockchain _ ops _) = do
     -- Take a random number of UTXO from the input
     nUtxo <- if Map.null ops
@@ -199,14 +203,14 @@ genValidTransaction' g (Mockchain _ ops _) = do
 genValidTransactionSpending :: MonadGen m
     => [TxIn]
     -> Value
-    -> m Tx
+    -> m CardanoTx
 genValidTransactionSpending = genValidTransactionSpending' generatorModel
 
 genValidTransactionSpending' :: MonadGen m
     => GeneratorModel
     -> [TxIn]
     -> Value
-    -> m Tx
+    -> m CardanoTx
 genValidTransactionSpending' g ins totalVal = do
     mintAmount <- toInteger <$> Gen.int (Range.linear 0 maxBound)
     mintTokenName <- genTokenName
@@ -231,11 +235,11 @@ genValidTransactionSpending' g ins totalVal = do
                           maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOut)
                                           $ List.sort splitOutVals
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
-            let tx = mempty
+            let tx = EmulatorTx $ mempty
                         { txInputs = ins
                         , txOutputs = fmap (\f -> f Nothing) $ uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
                         , txMint = maybe mempty id mintValue
-                        , txMintScripts = Set.singleton ScriptGen.alwaysSucceedPolicy
+                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicy
                         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
                         , txFee = Ada.toValue fee'
                         }
@@ -369,17 +373,23 @@ genValueNonNegative = genValue' $ fromIntegral <$> Range.linear @Int 0 maxBound
 
 -- | Assert that a transaction is valid in a chain.
 assertValid :: (MonadTest m, HasCallStack)
-    => Tx
+    => CardanoTx
     -> Mockchain
     -> m ()
 assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
 
 -- | Validate a transaction in a mockchain.
-validateMockchain :: Mockchain -> Tx -> Maybe Index.ValidationError
-validateMockchain (Mockchain txPool _ params) tx = result where
+validateMockchain :: Mockchain -> CardanoTx -> Maybe Index.ValidationError
+validateMockchain (Mockchain txPool _ params) cardanoTx = result where
     h      = 1
-    idx    = Index.initialise [map (Valid . EmulatorTx) txPool]
-    result = fmap snd $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx params)
+    idx    = Index.initialise [map Valid txPool]
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+    ctx = ValidationCtx idx params
+    (err, _) = cardanoTx & Ledger.mergeCardanoTxWith
+            (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
+            (\(CardanoApiEmulatorEraTx tx) -> (Validation.hasValidationErrors params (fromIntegral h) cUtxoIndex tx, []))
+            (\(e1, sve1) (e2, sve2) -> (e1 <|> e2, sve1 ++ sve2))
+    result = fmap snd err
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required
@@ -405,10 +415,11 @@ splitVal mx init' = go 0 0 [] where
 
 genTxInfo :: MonadGen m => Mockchain -> m TxInfo
 genTxInfo chain = do
-    tx <- genValidTransaction chain
-    let idx = UtxoIndex $ mockchainUtxo chain
-    let params = mockchainParams chain
-    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx params)
+    cardanoTx <- genValidTransaction chain
+    let tx = Ledger.onCardanoTx id (\_ -> error "Unexpected SomeCardanoApiTx") cardanoTx
+        idx = UtxoIndex $ mockchainUtxo chain
+        params = mockchainParams chain
+        (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkPV1TxInfo tx)) (ValidationCtx idx params)
     either (const Gen.discard) pure res
 
 genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose

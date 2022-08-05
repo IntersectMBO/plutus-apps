@@ -20,6 +20,8 @@ module Ledger.Constraints(
     , TC.mustSpendOutputFromTheScript
     , TC.mustSpendScriptOutput
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
+    , TC.mustUseOutputAsCollateral
+    , TC.mustReferencePubKeyOutput
     , TC.mustValidateIn
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast
@@ -33,6 +35,8 @@ module Ledger.Constraints(
     , TC.collectFromPlutusV1ScriptFilter
     , TC.collectFromTheScriptFilter
     , TC.collectFromTheScript
+    , TC.collectFromPlutusV2Script
+    , TC.collectFromPlutusV2ScriptFilter
     -- * Queries on constraints
     , TC.modifiesUtxoSet
     , TC.isSatisfiable
@@ -49,7 +53,9 @@ module Ledger.Constraints(
     , OC.plutusV1TypedValidatorLookups
     , OC.unspentOutputs
     , OC.plutusV1MintingPolicy
+    , OC.plutusV2MintingPolicy
     , OC.plutusV1OtherScript
+    , OC.plutusV2OtherScript
     , OC.otherData
     , OC.paymentPubKey
     , OC.ownPaymentPubKeyHash

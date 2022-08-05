@@ -33,8 +33,9 @@ import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap),
 
 import Ledger.Address (PaymentPubKeyHash, StakePubKeyHash)
 import Ledger.Tx (ChainIndexTxOut)
-import Plutus.Script.Utils.V1.Address qualified as Address
-import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer (Redeemer),
+import Plutus.Script.Utils.V1.Address qualified as PV1
+import Plutus.Script.Utils.V2.Address qualified as PV2
+import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer (Redeemer),
                              StakeValidatorHash, TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
@@ -69,6 +70,11 @@ data TxConstraint =
     -- ^ The transaction must spend the given unspent transaction public key output.
     | MustSpendScriptOutput TxOutRef Redeemer
     -- ^ The transaction must spend the given unspent transaction script output.
+    | MustUseOutputAsCollateral TxOutRef
+    -- ^ The transaction must include the utxo as collateral input.
+    | MustReferencePubKeyOutput TxOutRef
+    -- ^ The transaction must reference (not spend) the given unspent
+    -- transaction public key output.
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
     -- ^ The transaction must mint the given token and amount.
     | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe Datum) Value
@@ -97,6 +103,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must spend pubkey output:", pretty ref]
         MustSpendScriptOutput ref red ->
             hang 2 $ vsep ["must spend script output:", pretty ref, pretty red]
+        MustReferencePubKeyOutput ref ->
+            hang 2 $ vsep ["must reference pubkey output:", pretty ref]
         MustMintValue mps red tn i ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
         MustPayToPubKeyAddress pkh skh datum v ->
@@ -105,6 +113,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must pay to script:", pretty vlh, pretty skh, pretty dv, pretty vl]
         MustHashDatum dvh dv ->
             hang 2 $ vsep ["must hash datum:", pretty dvh, pretty dv]
+        MustUseOutputAsCollateral ref ->
+            hang 2 $ vsep ["must use output as collateral:", pretty ref]
         MustSatisfyAnyOf xs ->
             hang 2 $ vsep ["must satisfy any of:", prettyList xs]
 
@@ -295,10 +305,9 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the new script transaction output with
 -- @d@ and @v@ is part of the transaction's outputs.
-mustPayToTheScript :: forall i o. PlutusTx.ToData o => o -> Value -> TxConstraints i o
+mustPayToTheScript :: o -> Value -> TxConstraints i o
 mustPayToTheScript dt vl =
     mempty { txOwnOutputs = [ScriptOutputConstraint dt vl] }
-    <> mustIncludeDatum (Datum (PlutusTx.toBuiltinData dt))
 
 {-# INLINABLE mustPayToPubKey #-}
 -- | @mustPayToPubKey pkh v@ is the same as
@@ -357,7 +366,6 @@ mustPayWithDatumToPubKeyAddress pkh skh datum =
 mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScript vh dv vl =
     singleton (MustPayToOtherScript vh Nothing dv vl)
-    <> singleton (MustIncludeDatum dv)
 
 {-# INLINABLE mustPayToOtherScriptAddress #-}
 -- | @mustPayToOtherScriptAddress vh svh d v@ locks the value @v@ with the given script
@@ -373,7 +381,6 @@ mustPayToOtherScript vh dv vl =
 mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScriptAddress vh svh dv vl =
     singleton (MustPayToOtherScript vh (Just svh) dv vl)
-    <> singleton (MustIncludeDatum dv)
 
 {-# INLINABLE mustMintValue #-}
 -- | Same as 'mustMintValueWithRedeemer', but sets the redeemer to the unit
@@ -510,6 +517,25 @@ mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
         txConstraintFuns = TxConstraintFuns [MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red ]
     }
 
+{-# INLINABLE mustUseOutputAsCollateral #-}
+-- | TODO
+mustUseOutputAsCollateral :: forall i o. TxOutRef -> TxConstraints i o
+mustUseOutputAsCollateral = singleton . MustUseOutputAsCollateral
+
+{-# INLINABLE mustReferencePubKeyOutput #-}
+-- | @mustReferencePubKeyOutput utxo@ must reference (not spend!) the given
+-- unspent transaction public key output.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint adds @utxo@ as a
+-- reference input to the transaction. Information about this @utxo@ must be
+-- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.unspentOutputs'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- transaction references this @utxo@.
+mustReferencePubKeyOutput :: forall i o. TxOutRef -> TxConstraints i o
+mustReferencePubKeyOutput = singleton . MustReferencePubKeyOutput
+
 {-# INLINABLE mustSatisfyAnyOf #-}
 mustSatisfyAnyOf :: forall i o. [TxConstraints i o] -> TxConstraints i o
 mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . map txConstraints
@@ -584,9 +610,9 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
 -- Off-chain use only
 ----------------------
 
--- | A set of constraints for a transaction that collects script outputs
--- from the address of the given validator script, using the same redeemer
--- script for all outputs.
+-- | A set of constraints for a transaction that collects PlutusV1 script outputs
+-- from the address of the given validator script, using the same redeemer script
+-- for all outputs.
 collectFromPlutusV1Script
     :: Map Address (Map TxOutRef ChainIndexTxOut)
     -> Validator
@@ -601,7 +627,7 @@ collectFromPlutusV1ScriptFilter
     -> Redeemer
     -> UntypedConstraints
 collectFromPlutusV1ScriptFilter flt am vls (Redeemer red) =
-    let mp'  = fromMaybe Haskell.mempty $ am ^. at (Address.mkValidatorAddress vls)
+    let mp'  = fromMaybe Haskell.mempty $ am ^. at (PV1.mkValidatorAddress vls)
     in collectFromTheScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
 
 -- | Given the pay to script address of the 'Validator', collect from it
@@ -626,3 +652,50 @@ collectFromTheScript ::
     -> TxConstraints i o
 collectFromTheScript utxo redeemer =
     foldMap (flip mustSpendOutputFromTheScript redeemer) $ Map.keys utxo
+
+-- | A set of constraints for a transaction that collects PlutusV2 script outputs
+--   from the address of the given validator script, using the same redeemer
+--   script for all outputs.
+collectFromPlutusV2Script
+    :: Map Address (Map TxOutRef ChainIndexTxOut)
+    -> Validator
+    -> Redeemer
+    -> UntypedConstraints
+collectFromPlutusV2Script= collectFromPlutusV2ScriptFilter (\_ -> const True)
+
+collectFromPlutusV2ScriptFilter
+    :: (TxOutRef -> ChainIndexTxOut -> Bool)
+    -> Map Address (Map TxOutRef ChainIndexTxOut)
+    -> Validator
+    -> Redeemer
+    -> UntypedConstraints
+collectFromPlutusV2ScriptFilter flt am vls red = -- (Redeemer red) =
+    -- let mp'  = fromMaybe mempty $ am ^. at (PV2.mkValidatorAddress vls)
+    -- in collectFromTheScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
+    let mp'  = fromMaybe Haskell.mempty $ am ^. at (PV2.mkValidatorAddress vls)
+        ourUtxo = Map.filterWithKey flt mp'
+    in foldMap (flip mustSpendScriptOutput red) $ Map.keys ourUtxo
+
+-- TODO Uncomment and modify once PlutusV2 TypedValidator are available
+-- -- | Given the pay to script address of the 'Validator', collect from it
+-- --   all the outputs that match a predicate, using the 'RedeemerValue'.
+-- collectFromTheScriptFilter ::
+--     forall i o
+--     .  (TxOutRef -> ChainIndexTxOut -> Bool)
+--     -> Map.Map TxOutRef ChainIndexTxOut
+--     -> i
+--     -> TxConstraints i o
+-- collectFromTheScriptFilter flt utxo red =
+--     let ourUtxo :: Map.Map TxOutRef ChainIndexTxOut
+--         ourUtxo = Map.filterWithKey flt utxo
+--     in collectFromTheScript ourUtxo red
+
+-- -- | A version of 'collectFromScript' that selects all outputs
+-- --   at the address
+-- collectFromTheScript ::
+--     forall i o
+--     .  Map.Map TxOutRef ChainIndexTxOut
+--     -> i
+--     -> TxConstraints i o
+-- collectFromTheScript utxo redeemer =
+--     foldMap (flip mustSpendOutputFromTheScript redeemer) $ Map.keys utxo

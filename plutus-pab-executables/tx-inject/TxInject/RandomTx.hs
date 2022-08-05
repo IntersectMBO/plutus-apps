@@ -85,7 +85,7 @@ generateTx gen slot (UtxoIndex utxo) = do
             inputs
         -- inputs of the transaction
         sourceTxIns = map (Tx.pubKeyTxIn . fst) inputs
-    tx <- Gen.sample $
+    Tx.EmulatorTx tx <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig
     let (validationResult, _) =

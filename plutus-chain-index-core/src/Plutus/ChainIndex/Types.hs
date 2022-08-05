@@ -144,7 +144,7 @@ instance OpenApi.ToSchema C.ScriptInAnyLang where
 
 fromReferenceScript :: ReferenceScript -> Maybe Script
 fromReferenceScript ReferenceScriptNone             = Nothing
-fromReferenceScript (ReferenceScriptInAnyLang sial) = fromCardanoScriptInAnyLang sial
+fromReferenceScript (ReferenceScriptInAnyLang sial) = fst <$> fromCardanoScriptInAnyLang sial
 
 data ChainIndexTxOut = ChainIndexTxOut
   { citoAddress   :: Address -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era

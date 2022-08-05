@@ -71,7 +71,6 @@ import Plutus.Contract (WalletAPIError)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Wallet (finalize)
 import Plutus.V1.Ledger.Api (PubKeyHash, TxOutRef, ValidatorHash, Value)
-import Plutus.V1.Ledger.Tx (TxIn (TxIn, txInRef))
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
@@ -417,7 +416,7 @@ lookupValue ::
     )
     => Tx.TxIn
     -> Eff effs Value
-lookupValue outputRef@TxIn {txInRef} = do
+lookupValue outputRef@Tx.TxIn {Tx.txInRef} = do
     txoutMaybe <- ChainIndex.unspentTxOutFromRef txInRef
     case txoutMaybe of
         Just txout -> pure $ view Ledger.ciTxOutValue txout

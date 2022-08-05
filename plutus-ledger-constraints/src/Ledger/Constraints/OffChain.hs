@@ -23,7 +23,9 @@ module Ledger.Constraints.OffChain(
     , generalise
     , unspentOutputs
     , plutusV1MintingPolicy
+    , plutusV2MintingPolicy
     , plutusV1OtherScript
+    , plutusV2OtherScript
     , otherData
     , ownPaymentPubKeyHash
     , ownStakePubKeyHash
@@ -57,6 +59,7 @@ module Ledger.Constraints.OffChain(
     , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
+    , resolveScriptTxOut
     ) where
 
 import Control.Lens (Traversal', _2, _Just, _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
@@ -79,13 +82,14 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
+import Data.Maybe (fromJust)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferencePubKeyOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
@@ -93,18 +97,19 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
-                  TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, LedgerPlutusVersion (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr),
+                  ScriptTag (Mint, Spend), Tx, TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
                              ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Typed.Scripts qualified as Typed
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
+import Plutus.Script.Utils.Scripts qualified as P
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
+import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, POSIXTimeRange, Redeemer,
                              Validator, ValidatorHash, Value)
 import Plutus.V1.Ledger.Value qualified as Value
@@ -118,7 +123,7 @@ data ScriptLookups a =
         -- ^ Minting policies that the script interacts with
         , slTxOutputs              :: Map TxOutRef ChainIndexTxOut
         -- ^ Unspent outputs that the script may want to spend
-        , slOtherScripts           :: Map ValidatorHash Validator
+        , slOtherScripts           :: Map ValidatorHash (Validator, LedgerPlutusVersion)
         -- ^ Validators of scripts other than "our script"
         , slOtherData              :: Map DatumHash Datum
         -- ^ Datums that we might need
@@ -185,19 +190,31 @@ unspentOutputs mp = mempty { slTxOutputs = mp }
 -- | A script lookups value with a minting policy script.
 plutusV1MintingPolicy :: MintingPolicy -> ScriptLookups a
 plutusV1MintingPolicy pl =
-    let hsh = mintingPolicyHash pl in
+    let hsh = PV1.mintingPolicyHash pl in
+    mempty { slMPS = Map.singleton hsh pl }
+
+-- | A script lookups value with a minting policy script.
+plutusV2MintingPolicy :: MintingPolicy -> ScriptLookups a
+plutusV2MintingPolicy pl =
+    let hsh = PV2.mintingPolicyHash pl in
     mempty { slMPS = Map.singleton hsh pl }
 
 -- | A script lookups value with a PlutusV1 validator script.
 plutusV1OtherScript :: Validator -> ScriptLookups a
 plutusV1OtherScript vl =
-    let vh = validatorHash vl in
-    mempty { slOtherScripts = Map.singleton vh vl }
+    let vh = PV1.validatorHash vl in
+    mempty { slOtherScripts = Map.singleton vh (vl, PlutusV1) }
+
+-- | A script lookups value with a PlutusV2 validator script.
+plutusV2OtherScript :: Validator -> ScriptLookups a
+plutusV2OtherScript vl =
+    let vh = PV2.validatorHash vl in
+    mempty { slOtherScripts = Map.singleton vh (vl, PlutusV2) }
 
 -- | A script lookups value with a datum.
 otherData :: Datum -> ScriptLookups a
 otherData dt =
-    let dh = datumHash dt in
+    let dh = P.datumHash dt in
     mempty { slOtherData = Map.singleton dh dt }
 
 -- | A script lookups value with a payment public key
@@ -465,10 +482,13 @@ addMintingRedeemers
 addMintingRedeemers = do
     reds <- use mintRedeemers
     txSoFar <- use (unbalancedTx . tx)
-    let mpss = mintingPolicyHash <$> Set.toList (Tx.txMintScripts txSoFar)
     iforM_ reds $ \mpsHash red -> do
         let err = throwError (MintingPolicyNotFound mpsHash)
-        ptr <- maybe err (pure . RedeemerPtr Mint . fromIntegral) $ elemIndex mpsHash mpss
+        ptr <-
+            maybe
+                err
+                (pure . RedeemerPtr Mint . fromIntegral)
+                $ elemIndex mpsHash (Map.keys $ Tx.txMintScripts txSoFar)
         unbalancedTx . tx . Tx.redeemers . at ptr .= Just red
 
 updateUtxoIndex
@@ -504,7 +524,8 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
-    let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
+    -- TODO Needs to work with PlutusV1 AND PlutusV2.
+    let txIn = Scripts.makeTypedScriptTxIn PlutusV1 inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl
@@ -525,7 +546,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue} = do
     let txOut = Typed.makeTypedScriptTxOut inst ocDatum ocValue
         dsV   = Datum (toBuiltinData ocDatum)
     unbalancedTx . tx . Tx.outputs %= (Typed.tyTxOutTxOut txOut :)
-    unbalancedTx . tx . Tx.datumWitnesses . at (datumHash dsV) .= Just dsV
+    unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dsV) .= Just dsV
     valueSpentOutputs <>= provided ocValue
 
 data MkTxError =
@@ -594,7 +615,7 @@ lookupValidator
        , MonadError MkTxError m
        )
     => ValidatorHash
-    -> m Validator
+    -> m (Validator, LedgerPlutusVersion)
 lookupValidator vh =
     let err = throwError (ValidatorHashNotFound vh) in
     asks slOtherScripts >>= maybe err pure . view (at vh)
@@ -611,7 +632,7 @@ processConstraint
     -> m ()
 processConstraint = \case
     MustIncludeDatum dv ->
-        let theHash = datumHash dv in
+        let theHash = P.datumHash dv in
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
     MustValidateIn timeRange ->
         unbalancedTx . validityTimeRange %= (timeRange /\)
@@ -631,21 +652,32 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mscriptTXO <- resolveScriptTxOut txout
         case mscriptTXO of
-          Just (validator, datum, value) -> do
-            let dvh = datumHash datum
+          Just ((_, validator, pv), (dvh, datum), value) -> do
             -- TODO: When witnesses are properly segregated we can
             --       probably get rid of the 'slOtherData' map and of
             --       'lookupDatum'
-            let input = Tx.scriptTxIn txo validator red datum
+            let input = Tx.scriptTxIn txo pv validator red datum
             unbalancedTx . tx . Tx.inputs %= (input :)
+            inputs <- use (unbalancedTx . tx . Tx.inputs)
+            -- We use fromJust because we can garanty that it will always be Just.
+            let idx = fromJust $ elemIndex input inputs
             unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
+            unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
             valueSpentInputs <>= provided value
+          _ -> throwError (TxOutRefWrongType txo)
+    MustUseOutputAsCollateral _ -> do
+        pure () -- TODO
+    MustReferencePubKeyOutput txo -> do
+        txout <- lookupTxOutRef txo
+        case txout of
+          Tx.PublicKeyChainIndexTxOut {} -> do
+              unbalancedTx . tx . Tx.referenceInputs %= (Tx.pubKeyTxIn txo :)
           _ -> throwError (TxOutRefWrongType txo)
 
     MustMintValue mpsHash red tn i -> do
         mintingPolicyScript <- lookupMintingPolicy mpsHash
         -- See note [Mint and Fee fields must have ada symbol].
-        let value = ((<>) (Ada.lovelaceValueOf 0)) . Value.singleton (Value.mpsSymbol mpsHash) tn
+        let value = (<>) (Ada.lovelaceValueOf 0) . Value.singleton (Value.mpsSymbol mpsHash) tn
         -- If i is negative we are burning tokens. The tokens burned must
         -- be provided as an input. So we add the value burnt to
         -- 'valueSpentInputs'. If i is positive then new tokens are created
@@ -654,14 +686,14 @@ processConstraint = \case
             then valueSpentInputs <>= provided (value (negate i))
             else valueSpentOutputs <>= provided (value i)
 
-        unbalancedTx . tx . Tx.mintScripts %= Set.insert mintingPolicyScript
+        unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash mintingPolicyScript
         unbalancedTx . tx . Tx.mint <>= value i
         mintRedeemers . at mpsHash .= Just red
     MustPayToPubKeyAddress pk skhM mdv vl -> do
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
-            unbalancedTx . tx . Tx.datumWitnesses . at (datumHash dv) .= Just dv
-        let hash = datumHash <$> mdv
+            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) .= Just dv
+        let hash = P.datumHash <$> mdv
         unbalancedTx . tx . Tx.outputs %= (Tx.TxOut{ txOutAddress=pubKeyHashAddress pk skhM
                                                    , txOutValue=vl
                                                    , txOutDatumHash=hash
@@ -669,12 +701,12 @@ processConstraint = \case
         valueSpentOutputs <>= provided vl
     MustPayToOtherScript vlh svhM dv vl -> do
         let addr = Address.scriptValidatorHashAddress vlh svhM
-            theHash = datumHash dv
+            theHash = P.datumHash dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
         unbalancedTx . tx . Tx.outputs %= (scriptAddressTxOut addr vl dv :)
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
-        unless (datumHash dv == dvh)
+        unless (P.datumHash dv == dvh)
             (throwError $ DatumWrongHash dvh dv)
         unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just dv
     MustSatisfyAnyOf xs -> do
@@ -695,14 +727,19 @@ processConstraintFun
 processConstraintFun = \case
     MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
         ScriptLookups{slTxOutputs} <- ask
-        let matches (Just (validator, datum, value)) = validatorHash validator == vh && datumPred datum && valuePred value
+        -- TODO: Need to precalculate the validator hash or else this won't work
+        -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
+        -- include the hash.
+        let matches (Just ((validatorHash, _, _), (_, datum), value)) =
+                validatorHash == vh && datumPred datum && valuePred value
             matches Nothing = False
-        opts <- filter (matches . snd) <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo) (Map.toList slTxOutputs)
+        opts <- filter (matches . snd)
+            <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
+                         (Map.toList slTxOutputs)
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just (validator, datum, value))] -> do
-                let dvh = datumHash datum
-                let input = Tx.scriptTxIn ref validator red datum
+            [(ref, Just ((_, validator, pv), (dvh, datum), value))] -> do
+                let input = Tx.scriptTxIn ref pv validator red datum
                 unbalancedTx . tx . Tx.inputs %= (input :)
                 unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
                 valueSpentInputs <>= provided value
@@ -712,7 +749,7 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Validator, Datum, Value))
+    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Validator, LedgerPlutusVersion), (DatumHash, Datum), Value))
 resolveScriptTxOut
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutValidator = (vh, v)
@@ -721,11 +758,11 @@ resolveScriptTxOut
             } = do
     -- first check in the 'ChainIndexTx' for the validator, then
     -- look for it in the 'slOtherScripts map.
-    validator <- maybe (lookupValidator vh) pure v
+    (validator, pv) <- maybe (lookupValidator vh) (pure . (, PlutusV1)) v
 
     -- first check in the 'ChainIndexTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
     dataValue <- maybe (lookupDatum dh) pure d
 
-    pure $ Just (validator, dataValue, _ciTxOutValue)
+    pure $ Just ((vh, validator, pv), (dh, dataValue), _ciTxOutValue)
 resolveScriptTxOut _ = pure Nothing

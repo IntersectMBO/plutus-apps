@@ -6,6 +6,7 @@ module Plutus.Script.Utils.V1.Generators
     ( alwaysSucceedValidator
     , alwaysSucceedValidatorHash
     , alwaysSucceedPolicy
+    , alwaysSucceedPolicyHash
     , someTokenValue
     ) where
 
@@ -26,6 +27,9 @@ alwaysSucceedValidatorHash = Scripts.validatorHash alwaysSucceedValidator
 alwaysSucceedPolicy :: Ledger.MintingPolicy
 alwaysSucceedPolicy =
     Ledger.mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
+
+alwaysSucceedPolicyHash :: Ledger.MintingPolicyHash
+alwaysSucceedPolicyHash = Scripts.mintingPolicyHash alwaysSucceedPolicy
 
 someTokenValue :: TokenName -> Integer -> Value
 someTokenValue = Value.singleton (Scripts.scriptCurrencySymbol alwaysSucceedPolicy)

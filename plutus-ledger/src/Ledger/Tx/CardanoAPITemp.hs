@@ -52,6 +52,7 @@ makeTransactionBody'
     txbodycontent@TxBodyContent {
         txIns,
         txInsCollateral,
+        txInsReference,
         txOuts,
         txFee,
         txValidityRange = (lowerBound, upperBound),
@@ -72,7 +73,10 @@ makeTransactionBody'
               case txInsCollateral of
                 TxInsCollateralNone     -> Set.empty
                 TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
-          , Babbage.referenceInputs = mempty
+          , Babbage.referenceInputs =
+              case txInsReference of
+                TxInsReferenceNone     -> Set.empty
+                TxInsReference _ txins -> Set.fromList (map toShelleyTxIn txins)
           , Babbage.outputs = Seq.fromList (map (CBOR.mkSized . toShelleyTxOut era) txOuts)
           , Babbage.collateralReturn = SNothing
           , Babbage.totalCollateral = SNothing

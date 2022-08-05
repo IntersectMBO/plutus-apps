@@ -36,6 +36,7 @@ import Ledger.TimeSlot (SlotConfig, SlotConversionError)
 import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
 import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
 import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
+import Plutus.ApiCommon (LedgerPlutusVersion)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
@@ -334,7 +335,8 @@ scriptAnyLangType = SumType (
 ------------------------------------------------------------
 ledgerTypes :: [SumType 'Haskell]
 ledgerTypes =
-    [ equal . genericShow . argonaut $ mkSumType @Slot
+    [ order . genericShow . argonaut $ mkSumType @LedgerPlutusVersion
+    , equal . genericShow . argonaut $ mkSumType @Slot
     , equal . genericShow . argonaut $ mkSumType @Ada
     , equal . genericShow . argonaut $ mkSumType @SlotConfig
     , equal . genericShow . argonaut $ mkSumType @SlotConversionError

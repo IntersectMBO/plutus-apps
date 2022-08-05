@@ -18,7 +18,7 @@ import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
-import Ledger.Tx (RedeemerPtr, ScriptTag, Tx)
+import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
@@ -27,7 +27,7 @@ import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, TxId, TxOut, TxOutRef,
                              ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
-import Plutus.V1.Ledger.Tx (TxIn, TxInType)
+import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
@@ -103,6 +103,10 @@ instance Arbitrary TxOutRef where
     shrink = genericShrink
 
 instance Arbitrary TxInType where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary PV1.TxInType where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -222,6 +226,10 @@ instance Arbitrary PlutusTx.Data where
 instance Arbitrary PlutusTx.BuiltinData where
     arbitrary = PlutusTx.dataToBuiltinData <$> arbitrary
     shrink d = PlutusTx.dataToBuiltinData <$> shrink (PlutusTx.builtinDataToData d)
+
+instance Arbitrary Ledger.LedgerPlutusVersion where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary Ledger.Datum where
     arbitrary = genericArbitrary

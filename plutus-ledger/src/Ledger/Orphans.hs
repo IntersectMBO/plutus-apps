@@ -30,19 +30,21 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (Tx)
+import Ledger.Tx.Internal (LedgerPlutusVersion, Tx, TxIn, TxInType)
 import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
                              Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
                              StakeValidatorHash (StakeValidatorHash), StakingCredential, TokenName (TokenName),
-                             TxId (TxId), TxOut, TxOutRef, UpperBound, Validator (Validator),
-                             ValidatorHash (ValidatorHash), Value (Value), fromBytes)
+                             TxId (TxId), TxOutRef, UpperBound, Validator (Validator), ValidatorHash (ValidatorHash),
+                             Value (Value), fromBytes)
+import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Scripts (ScriptError, ScriptHash (..))
 import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
+import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
@@ -113,7 +115,9 @@ deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef
 deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema TxIn
-deriving instance OpenApi.ToSchema TxOut
+deriving instance OpenApi.ToSchema PV1.TxOut
+deriving instance OpenApi.ToSchema PV2.TxOut
+deriving instance OpenApi.ToSchema LedgerPlutusVersion
 deriving newtype instance OpenApi.ToSchema Validator
 deriving newtype instance OpenApi.ToSchema TxId
 deriving newtype instance OpenApi.ToSchema Slot
