@@ -16,6 +16,7 @@ module Plutus.Blockfrost.Queries (
     , getTxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
     , getTxFromTxIdBlockfrost
+    , getTxsFromTxIdsBlockfrost
     , defaultGetUtxo
     , defaultGetList
     , defaultIsUtxo
@@ -122,6 +123,9 @@ getTxFromTxIdBlockfrost txHash = do
                         , _scriptsMap    = fromList scriptsList
                         , _redeemers     = redeemers
                         }
+
+getTxsFromTxIdsBlockfrost :: MonadBlockfrost m => [TxHash] -> m [TxResponse]
+getTxsFromTxIdsBlockfrost = liftIO . mapConcurrently getTxFromTxIdBlockfrost
 
 -- UTIL FUNCTIONS
 

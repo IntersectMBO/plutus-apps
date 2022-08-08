@@ -14,6 +14,7 @@ module Plutus.Blockfrost.Responses (
     , processGetTxos
     , processUnspentTxOutSetAtAddress
     , processGetTxFromTxId
+    , processGetTxsFromTxIds
     ) where
 
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
@@ -281,3 +282,6 @@ processGetTxFromTxId (Just TxResponse{..}) = do
 
         dat :: UtxoInput -> Datum
         dat utxoIn = fromJust $ Map.lookup (textToDatumHash $ unDatumHash $ fromJust $ _utxoInputDataHash utxoIn) datums
+
+processGetTxsFromTxIds :: [TxResponse] -> IO [ChainIndexTx]
+processGetTxsFromTxIds txs = catMaybes <$> sequence (map (processGetTxFromTxId . Just) txs)
