@@ -18,77 +18,101 @@ Draft
 Context
 -------
 
-+ We need to be able to index blockchain information.
+Off-chain code needs access to indexed portions of the blockchain. Currently, we have a working solution in the form of the chain-index and PAB (which both index information). The big problem with the current solution is its lack of reuse (or modularity) capability.
 
-+ Current solution may cause data corruption in case of long rollbacks.
+We attempt to fix that problem with Marconi where we currently have a generic indexer that stores volatile information in memory and blocks that have been fully committed (are old enough to guarantee that they will not be rolled back). The K blockchain parameter represents the number of slots after which a block can no longer be rolled back.
 
-+ Previous solution used too much RAM.
+We currently need to keep K blocks in memory to be able to perform rollbacks. However, the K parameter can be adjusted for indexers which land us in the unfortunate position of saying that there may be data corruption in the case where the number of rollbacked blocks is larger than the number of blocks stored in memory. While this is both detectable and unlikely to happen we think that our current solution can prevent it without any significant drawbacks.
 
 Decision
 --------
 
-+ Split storage between memory and disk.
+Initially, we needed a generic way of indexing information where we can control the amount of memory the indexer uses. The initial solution was to store the volatile blocks in memory and persist them on disk whenever they become older than the K parameter.
+
+We make a distinction between the volatile blocks which are stored in memory as events (and are derived from blocks). We fold these events into the aggregated on-disk data structure for which we no do not require to keep multiple versions (rollbacks cannot happen for this data structure).
+
+We improve on that idea by allowing part of the volatile blocks to be stored on disk. While this is not required at the API level, the usage pattern would be to have a set of events, as well as the aggregated data structure stored on disk. The compromise here is that the more data is on the disk, the more we will need to work with the disk and the slower the indexing process will become. The advantage would be reduced memory usage.
 
 Events
 ^^^^^^
 
-+ Event structure
-  + Slot numbers
-  + Block ids
+Events need to contain information about the slot number and block id when they were produced.
+
+The slot number information is used in case of rollbacks (when we only get the old slot number that we need to rollback to) and for resuming the operation of the index, in which case we need both the slot numbers and block ids.
+
+Note that to support resume from disk we need to always have at least one event persisted on disk which contains the slot number and block id from which we are supposed to resume operation. In case there are more than one events stored on disk we can use those as resume alternatives in the case of the ChainSync protocol.
 
 Queries
 ^^^^^^^
 
-+ Query validity intervals.
+We also extend the queries with a bit more structure that will make specifying query validity intervals possible. The validity is important in the case where we want to query several indexers and we would like them to require to have processed all the information up to some slot number or be between some slot interval.
 
-+ Queries are synchronous.
+At this point all query results are synchronous. We have plans to extend this functionality, but these plans are based on updating the notification system for indexers which will be described in a further ADR.
 
 API Design
 ^^^^^^^^^^
 
-+ Definitions for:
-  + Data: Event
-  + Data: Query / Response
-  + Function: Query
-  + Function: Storage
-  + Function: Resume
+We want the API for our users to be as flexible as possible, so some of our previously mentioned design patterns are not captured by the API, but rather by its implementation.
 
-+ Configuration
-  + Minimum events retained (K)
-  + Maximum in-memory events (N, from N*K - implicit)
+Data types
+""""""""""
+
+* Events
+  ** Slot numbers (requires Ord)
+  ** Block id (requires Eq)
+  ** e (type variable standing for the event)
+* Query
+  ** Validity interval (can be always valid)
+  ** q (type variable standing for the query)
+* Result
+  ** Slot number at which the query was ran
+  ** r (type variable standing for the query result)
+
+Functions
+"""""""""
+
+* Query
+  ** Indexer
+  ** Validity interval
+  ** The query (q type variable)
+  ** Returns the result
+* Store
+  ** Indexer
+  ** Does not return anything useful
+* Resume
+  ** Indexer
+  ** Returns a list of slot numbers and block ids
+
+Runtime parameters
+""""""""""""""""""
+
+* Minimum events retained (this should be the previously mentioned K parameter)
+* Maximum in-memory events (should be less than K)
+
+Extension mechanisms
+""""""""""""""""""""
+
+A. Storage engine
+
+You can customise the query and store functions which run in some generic monad to use whatever backend is best for the job. We currently use SQLite, but that is more for convenience than anything else.
+
+B. Query intervals
+
+If you want to specify an interval for your queries (which is highly encouraged) then you need to have either in memory or on disk sufficient information to reconstruct the state at the given slot number. By storing more than K events you can extend the query interval as much as you need. In extreme, you can only store events on disk, in which case your queries can span the whole blockchain.
 
 Implementation
 ^^^^^^^^^^^^^^
 
-+ Diagram.
+This is the way we suggest people implement storage for the indexers.::
 
-+ Vector data structure as a ring buffer
+  | Memory |       Disk         |
+  |--------|--------|-----------|
+  | Events | Events | Aggregate |
 
-+ Using stored events for resuming.
+To support the resume function we need to always have at least one event stored on disk. This is an invariant that an implementation can keep by ensuring that the number of in-memory events is less than K.
 
-+ Merging events into the accumulator.
-  + The case for no accumulator => forever queries.
-  + When do we merge events (in the indexer or outside of it)
+Since the number of events stored in memory is constant we can keep on using a ring buffer backed by the vector library.
 
-+ Moving events into storage.
+Events are moved into storage whenever the in-memory buffer becomes full. When they are moved into storage we also need to decide what we are folding into the stored aggregated data structure. We should never fold any events that are newer than K blocks.
 
-+ Type families should make the code easier to read and use
-  + Query      -> (Events, Notifications, Response)
-  + Connection -> m
-
-Argument
---------
-
-+ There is no real reason why we would not want to support this.
-
-Alternatives
-------------
-
-+ Included in the design.
-
-+ Less queries should be faster.
-
-Implications
-------------
-
-
+We suggest using type families for the implementation due to the functional dependencies between the handler type and the monad that the indexer runs in, as well as the dependency between the query type and the result type (and in the future the notification type).
