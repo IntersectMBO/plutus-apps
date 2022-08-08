@@ -24,7 +24,9 @@ import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, 
 import Plutus.V1.Ledger.Address qualified as LA
 import Plutus.V1.Ledger.Api (Credential (..), adaSymbol, adaToken, fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
+import Plutus.V1.Ledger.Interval (always, from, interval, to)
 import Plutus.V1.Ledger.Scripts qualified as PS
+import Plutus.V1.Ledger.Slot qualified as Ledger (Slot (..), SlotRange)
 import Plutus.V1.Ledger.TxId qualified as Ledger
 import Plutus.V1.Ledger.Value hiding (Value)
 import Plutus.V1.Ledger.Value qualified as Ledger (Value)
@@ -50,11 +52,14 @@ fromSucceed :: Result a -> a
 fromSucceed (Error a)   = error $ show a
 fromSucceed (Success a) = a
 
-toBlockfrostTxHash :: TxOutRef -> TxHash
-toBlockfrostTxHash = TxHash . pack . show . txOutRefId
+toBlockfrostTxHash :: Ledger.TxId -> TxHash
+toBlockfrostTxHash = TxHash . pack . show
+
+toBlockfrostTxHashes :: [Ledger.TxId] -> [TxHash]
+toBlockfrostTxHashes = map toBlockfrostTxHash
 
 toBlockfrostRef :: TxOutRef -> (TxHash, Integer)
-toBlockfrostRef ref = (toBlockfrostTxHash ref, txOutRefIdx ref)
+toBlockfrostRef ref = (toBlockfrostTxHash (txOutRefId ref), txOutRefIdx ref)
 
 toBlockfrostAssetId :: AssetClass -> AssetId
 toBlockfrostAssetId ac = fromString (polId ++ tName)
@@ -69,6 +74,12 @@ toBlockfrostAssetId ac = fromString (polId ++ tName)
 
 textToDatumHash :: Text -> PS.DatumHash
 textToDatumHash = PS.DatumHash . toBuiltin . fromJust . decodeHex
+
+textToScriptHash :: Text -> PS.ScriptHash
+textToScriptHash = PS.ScriptHash . toBuiltin . fromJust . decodeHex
+
+textToRedeemerHash :: Text -> PS.RedeemerHash
+textToRedeemerHash = PS.RedeemerHash . toBuiltin . fromJust . decodeHex
 
 toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
 toPlutusAddress bAddr = case deserialized of
@@ -90,14 +101,16 @@ credentialToAddress netId c = case toCardanoAddressInEra netId pAddress of
       PubKeyCredential pkh     -> LA.pubKeyHashAddress pkh
       ScriptCredential valHash -> LA.scriptHashAddress valHash
 
+txHashToTxId :: TxHash -> Ledger.TxId
+txHashToTxId = Ledger.TxId .toBuiltin . fromJust . decodeHex . unTxHash
+
 utxoToRef :: AddressUtxo -> TxOutRef
 utxoToRef utxo = TxOutRef { txOutRefId=utxoToTxId utxo
                           , txOutRefIdx=_addressUtxoOutputIndex utxo
                           }
 
 utxoToTxId :: AddressUtxo -> Ledger.TxId
-utxoToTxId utxo =
-    Ledger.TxId $ toBuiltin $ fromJust $ decodeHex $ unTxHash $ _addressUtxoTxHash utxo
+utxoToTxId = txHashToTxId . _addressUtxoTxHash
 
 
 txoToRef :: UtxoInput -> TxOutRef
@@ -105,9 +118,10 @@ txoToRef txo = TxOutRef { txOutRefId=txoToTxId txo
                           , txOutRefIdx=_utxoInputOutputIndex txo
                           }
 
+-- We are forced to use blockfrost-client v0.3.1 by the cardano-wallet.
+-- In that version, _utxoInputTxHash returns a Text instead of a TxHash
 txoToTxId :: UtxoInput -> Ledger.TxId
-txoToTxId txo =
-    Ledger.TxId $ toBuiltin $ fromJust $ decodeHex $ _utxoInputTxHash txo
+txoToTxId = txHashToTxId . TxHash . _utxoInputTxHash
 
 
 amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
@@ -144,3 +158,14 @@ lovelacesToValue :: Lovelaces -> Ledger.Value
 lovelacesToValue lov = case lovelacesToMInt lov of
   Nothing  -> singleton adaSymbol adaToken 0
   Just int -> singleton adaSymbol adaToken int
+
+textToSlot :: Text -> Ledger.Slot
+textToSlot = maybe (error "Failed to convert text to slot") Ledger.Slot . (readMaybe . unpack)
+
+-- the functions "to", "from" and "interval" includes the parameters inside the validity range, meanwhile
+-- blockfrost gives us an [) range, so we need to take one from the Right bound
+toPlutusSlotRange :: Maybe Text -> Maybe Text -> Ledger.SlotRange
+toPlutusSlotRange Nothing Nothing            = always
+toPlutusSlotRange Nothing (Just after)       = to (textToSlot after - 1)
+toPlutusSlotRange (Just before) Nothing      = from (textToSlot before)
+toPlutusSlotRange (Just before) (Just after) = interval (textToSlot before) (textToSlot after - 1)

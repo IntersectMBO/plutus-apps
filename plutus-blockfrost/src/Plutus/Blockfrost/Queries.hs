@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module Plutus.Blockfrost.Queries (
     getTipBlockfrost
@@ -14,6 +15,7 @@ module Plutus.Blockfrost.Queries (
     , getUnspentAtAddressBlockfrost
     , getTxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
+    , getTxFromTxIdBlockfrost
     , defaultGetUtxo
     , defaultGetList
     , defaultIsUtxo
@@ -25,8 +27,14 @@ import Control.Monad.Freer.Extras.Pagination (PageQuery (..))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Value)
 import Data.Functor ((<&>))
+import Data.Map (Map (..), fromList)
+import Data.Maybe (catMaybes)
+import Data.Text (Text)
 
 import Blockfrost.Client
+
+import Plutus.Blockfrost.Types
+
 
 -- ENDPOINTS
 
@@ -92,7 +100,38 @@ getUtxoSetWithCurrency _ assetId = do
     let retUtxos = (take 100 . concat) utxos
     return (tip, retUtxos)
 
+
+getTxFromTxIdBlockfrost :: MonadBlockfrost m => TxHash -> m TxResponse
+getTxFromTxIdBlockfrost txHash = do
+    specificTx <- getTx txHash
+    txUtxos <- getTxUtxos txHash
+    datumMap <- getAllTxDatums txUtxos
+    redeemers <- getTxRedeemers txHash
+    liftIO $ print $ "INPUTS: " ++ show (_transactionUtxosInputs txUtxos)
+    let scriptHashes = map _transactionRedeemerScriptHash redeemers
+        redeemerHashes = map _transactionRedeemerDatumHash redeemers
+    redeemersList <- liftIO $ mapConcurrently (\hash -> (unDatumHash hash,) <$> getScriptDatum hash) redeemerHashes
+    scriptsList <- liftIO $ mapConcurrently (\hash -> (unScriptHash hash,) <$> getScriptCBOR hash) scriptHashes
+    return $ TxResponse { _txHash        = txHash
+                        , _invalidBefore = _transactionInvalidBefore specificTx
+                        , _invalidAfter  = _transactionInvalidHereafter specificTx
+                        , _utxosInputs   = _transactionUtxosInputs txUtxos
+                        , _utxosOutpus   = _transactionUtxosOutputs txUtxos
+                        , _datumsMap     = datumMap
+                        , _redeemersMap  = fromList redeemersList
+                        , _scriptsMap    = fromList scriptsList
+                        , _redeemers     = redeemers
+                        }
+
 -- UTIL FUNCTIONS
+
+getAllTxDatums :: MonadBlockfrost m => TransactionUtxos -> m (Map Text ScriptDatum)
+getAllTxDatums utxos = do
+    let inputs = map _utxoInputDataHash (_transactionUtxosInputs utxos)
+        outputs = map _utxoOutputDataHash (_transactionUtxosOutputs utxos)
+        datumHashes = catMaybes (inputs ++ outputs)
+    datumMap <- liftIO $ mapConcurrently (\hash -> (unDatumHash hash,) <$> getScriptDatum hash) datumHashes
+    return $ fromList datumMap
 
 getAddressFromReference :: MonadBlockfrost m => (TxHash, Integer) -> m (Maybe Address)
 getAddressFromReference (tHash, idx) = getTxUtxos tHash <&> (getAddress . _transactionUtxosOutputs)

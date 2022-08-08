@@ -52,14 +52,14 @@ handleBlockfrostClient event = do
                     Left e                  -> ioError (userError $ show e)
 
         case event of
-            DatumFromHash d               -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
-            RedeemerFromHash d            -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
-            ValidatorFromHash d           -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-            MintingPolicyFromHash d       -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-            StakeValidatorFromHash d      -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-            UnspentTxOutFromRef r         -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostRef) r     >>= processUnspentTxOut
-            TxOutFromRef r                -> (runClientMaybe . getTxOutBlockfrost . toBlockfrostRef) r            >>= processUnspentTxOut
-            TxFromTxId _                  -> ioError (userError "TODO")
+            DatumFromHash d               -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d        >>= processGetDatum
+            RedeemerFromHash d            -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d        >>= processGetDatum
+            ValidatorFromHash d           -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d   >>= processGetValidator
+            MintingPolicyFromHash d       -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d   >>= processGetValidator
+            StakeValidatorFromHash d      -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d   >>= processGetValidator
+            UnspentTxOutFromRef r         -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostRef) r       >>= processUnspentTxOut
+            TxOutFromRef r                -> (runClientMaybe . getTxOutBlockfrost . toBlockfrostRef) r              >>= processUnspentTxOut
+            TxFromTxId i                  -> (runClientMaybe . getTxFromTxIdBlockfrost . toBlockfrostTxHash) i      >>= processGetTxFromTxId
             TxsFromTxIds _                -> ioError (userError "TODO")
             UtxoSetMembership r           -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
             UtxoSetAtAddress pq a         -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processGetUtxos pq

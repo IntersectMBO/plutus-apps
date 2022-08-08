@@ -53,6 +53,7 @@ library
     , blockfrost-client
     , bytestring
     , cardano-api
+    , containers
     , freer-simple
     , hex-text
     , mtl
