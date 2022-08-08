@@ -122,6 +122,7 @@ library
     , freer-extras
     , plutus-chain-index-core
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-script-utils
 
@@ -134,7 +135,6 @@ library
     , cardano-ledger-core
     , cardano-wallet-core
     , plutus-core
-    , plutus-ledger-api
     , plutus-tx
     , quickcheck-dynamic
 
