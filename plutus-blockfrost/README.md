@@ -1,8 +1,29 @@
-Blockfrost endpoint integration for the PAB
+# Blockfrost endpoint integration for the PAB
 
 How to integrate this version of plutus-apps into your contracts:
 
-1. Change the location for the plutus-apps repository on the .project file to: https://github.com/joinplank/plutus-apps.git
-2. Add `plutus-blockfrost` to the list of subdirs
-3. Use the latest tag: `c188ec0be7e14ffe9b8cbe6c6d11e7227094909a`
-4. Add a `testnet-token` file on the base directory where you will run the PAB containing the blockfrost API key for the testnet. You can get a key for free [here](https://blockfrost.io/auth/signin).
+## Usage
+
+Add `plutus-blockfrost` to the list of subdirs in plutus-apps in the .cabal file
+
+## PAB Config 
+ 
+In the PAB [configuration file](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/test-node/testnet/pab-config.yml) of your smart-contract you have the option to choose querying blockfrost or chain-index.
+
+To choose chain index, you don´t need to do anything different. For instance, the following is a valid configuration:
+
+```yaml
+chainIndexConfig:
+   ciBaseUrl: http://localhost:9083
+   ciWatchedAddresses: []
+```
+
+To choose blockfrost, you have to replace the chain-index configuration for the following configuration:
+
+```yaml
+blockfrostConfig:
+  bfTokenPath: ./testnet-token
+```
+where bfTokenPath is the path to the file that holds you blockfrost token.
+
+Keep in mind you can't have both configurations at the same time.
