@@ -483,14 +483,12 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
         $ Typed.typeScriptTxOutRef (`Map.lookup` slTxOutputs) inst icTxOutRef
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
-    valueSpentInputs <>= provided vl
     case Typed.tyTxInTxIn txIn of
         -- this is what makeTypedScriptTxIn makes
         TxIn outRef (Just (ConsumeScriptAddress validator rs dt)) -> do
             unbalancedTx . tx %= addScriptTxInput outRef validator rs dt
         _ -> error "Impossible txIn in addOwnInput."
-
-
+    valueSpentInputs <>= provided vl
 
 -- | Add a typed output and return its value.
 addOwnOutput

@@ -22,7 +22,6 @@ module Ledger.Blockchain (
     out,
     value,
     unspentOutputsTx,
-    spentOutputs,
     unspentOutputs,
     datumTxo,
     updateUtxo,
@@ -45,8 +44,8 @@ import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (CardanoTx, TxOut, TxOutRef (..), getCardanoTxId, getCardanoTxInputs, getCardanoTxOutputs,
-                  spentOutputs, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
+import Ledger.Tx (CardanoTx, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId, getCardanoTxInputs,
+                  getCardanoTxOutputs, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
@@ -100,7 +99,7 @@ eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
 consumableInputs :: OnChainTx -> [TxIn]
-consumableInputs = eitherTx getCardanoTxInputs getCardanoTxInputs
+consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
 outputsProduced :: OnChainTx -> [TxOut]

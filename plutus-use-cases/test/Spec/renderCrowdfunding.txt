@@ -802,7 +802,7 @@ Inputs:
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
+    Tx:     a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
     Output #0
     Script: 590b0c0100003323232323232323232323232323...
 
@@ -820,7 +820,7 @@ Inputs:
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
+    Tx:     0e0409a352192418bacff81338e88b4dabc6d7537f5c76402b492cc090c94893
     Output #0
     Script: 590b0c0100003323232323232323232323232323...
 

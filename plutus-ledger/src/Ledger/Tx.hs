@@ -74,7 +74,7 @@ import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (isJust, mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
@@ -82,10 +82,9 @@ import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
 import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Tx.Internal as Export
--- import Ledger.Tx.Internal (Tx(..), updateUtxoCollateral, fillTxInputWitnesses, TxInput, strip, spentOutputs, signatures)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Tx.Internal as Export
 import Plutus.Script.Utils.V1.Scripts (datumHash)
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
@@ -241,7 +240,7 @@ getCardanoTxData = onCardanoTx txData
     -- TODO: add txMetaData
 
 instance Pretty Tx where
-    pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintingScripts, txScripts, txData, txWithdrawals, txCertificates} =
+    pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintingScripts, txScripts, txData, txWithdrawals, txCertificates, txMetadata} =
         let lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty txInputs))
                 , hang 2 (vsep ("collateral inputs:" : fmap pretty txCollateral))
@@ -255,6 +254,7 @@ instance Pretty Tx where
                 , hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys txScripts)))
                 , hang 2 (vsep ("withdrawals:": fmap pretty txWithdrawals))
                 , hang 2 (vsep ("certificates:": fmap pretty txCertificates))
+                , "metadata:" <+> if isJust txMetadata then "present" else mempty
                 ]
             txid = txId t
         in nest 2 $ vsep ["Tx" <+> pretty txid <> colon, braces (vsep lines')]

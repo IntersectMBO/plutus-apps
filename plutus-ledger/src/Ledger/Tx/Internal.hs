@@ -32,7 +32,7 @@ import Plutus.V1.Ledger.Slot (SlotRange)
 import Plutus.V1.Ledger.Tx (TxIn (..), TxInType (..), TxOut (txOutValue), TxOutRef, txOutDatum)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
-import Prettyprinter (Pretty (pretty), viaShow)
+import Prettyprinter (Pretty (pretty), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input. Contains redeemer if consumes a script.
 data TxInputType =
@@ -51,7 +51,13 @@ data TxInput = TxInput {
     deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 
 instance Pretty TxInput where
-    pretty = viaShow
+    pretty TxInput{txInputRef,txInputType} =
+        let rest =
+                case txInputType of
+                    TxConsumeScriptAddress redeemer _ _ ->
+                        pretty redeemer
+                    _ -> mempty
+        in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
 
 -- | Stake withdrawal, if applicable the script should be included in txScripts.
 data Withdrawal = Withdrawal
@@ -296,6 +302,3 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
 txOutTxDatum :: TxOutTx -> Maybe Datum
 txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
 
--- | The transaction output references consumed by a transaction.
-spentOutputs :: Tx -> [TxOutRef]
-spentOutputs = map txInputRef . txInputs
