@@ -18,8 +18,7 @@ import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Lens.Operators
 import Control.Monad (when)
-import Data.Either (isLeft)
-import Data.IORef (newIORef, readIORef, writeIORef)
+import Data.IORef (newIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -32,7 +31,7 @@ import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
-                                             emptyBlockchainEnv, getUtxoIndexTxChanges)
+                                             emptyBlockchainEnv)
 import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 
@@ -81,23 +80,23 @@ startNodeClient config instancesState = do
                                       }
                , dbConfig = DbConfig { dbConfigFile = dbFile }
                , pabWebserverConfig =
-                   WebserverConfig { enableMarconi = useMarconiIndexer }
+                   WebserverConfig { enableMarconi = useDiskIndex }
                } = config
     params <- Params.fromPABServerConfig $ nodeServerConfig config
-    env <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
+    env <- do
+      env' <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
+      if useDiskIndex && nodeStartsInAlonzoMode pscNodeMode
+      then do
+        utxoIx <- Ix.open (unpack dbFile) (Ix.Depth 10) >>= newIORef
+        pure $ env' { beTxChanges = Right utxoIx }
+      else do
+        pure env'
     case pscNodeMode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
             )
       AlonzoNode -> do
-        env' <-
-          if useMarconiIndexer
-          then do
-            utxoIx <- Ix.open (unpack dbFile) (Ix.Depth 2160) >>= newIORef
-            pure $ env { beTxChanges = Right utxoIx }
-          else do
-            pure env
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
             (\block -> do
@@ -107,9 +106,13 @@ startNodeClient config instancesState = do
                 -- useful/necessary for blocking contract actions like `awaitSlot`.
                 slot <- TimeSlot.currentSlot slotConfig
                 STM.atomically $ STM.writeTVar (beCurrentSlot env) slot
-                processChainSyncEvent instancesState env' block >>= handleSyncAction'
+                processChainSyncEvent instancesState env block >>= handleSyncAction'
             )
     pure env
+    where
+      nodeStartsInAlonzoMode :: NodeMode -> Bool
+      nodeStartsInAlonzoMode AlonzoNode = True
+      nodeStartsInAlonzoMode _          = False
 
 -- | Deal with sync action failures from running this STM action. For now, we
 -- deal with them by simply calling `error`; i.e. the application exits.
@@ -153,18 +156,13 @@ processChainSyncEvent instancesState env@BlockchainEnv{beTxChanges} event = do
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
       withIsCardanoEra era (processBlock instancesState header env transactions era)
     RollBackward chainPoint _ -> do
-      either (const $ pure ())
-             (\ixRef -> do
-                 -- Rollback the index
-                 ix'    <- readIORef ixRef
-                 events <- concat <$> Ix.getEvents (ix' ^. Ix.storage)
-                 -- TODO: Stop ignoring errors.
-                 let nextIx = fromMaybe ix' $ do
-                                slot   <- chainPointToSlotNo chainPoint
-                                offset <- findIndex (\(TxInfo _ _ sn) -> sn < slot) events
-                                Ix.rewind offset ix'
-                 writeIORef ixRef nextIx)
-              beTxChanges
+      S.updateTxChangesR beTxChanges $
+        \txChanges -> do
+           events <- concat <$> Ix.getEvents (txChanges ^. Ix.storage)
+           pure . fromMaybe txChanges $ do
+             slot   <- chainPointToSlotNo chainPoint
+             offset <- findIndex (\(TxInfo _ _ sn) -> sn < slot) events
+             Ix.rewind offset txChanges
 
       STM.atomically $ runRollback env chainPoint
 
@@ -175,7 +173,7 @@ data SyncActionFailure
 
 -- | Roll back the chain to the given ChainPoint and slot.
 runRollback :: BlockchainEnv -> ChainPoint -> STM (Either SyncActionFailure (Slot, BlockNumber))
-runRollback env@BlockchainEnv{beTxChanges, beLastSyncedBlockSlot, beTxOutChanges} chainPoint = do
+runRollback env@BlockchainEnv{beLastSyncedBlockSlot, beTxChanges, beTxOutChanges} chainPoint = do
   currentSlot <- STM.readTVar beLastSyncedBlockSlot
   txOutBalanceStateIndex <- STM.readTVar beTxOutChanges
 
@@ -186,27 +184,22 @@ runRollback env@BlockchainEnv{beTxChanges, beLastSyncedBlockSlot, beTxOutChanges
            point > tipAsPoint (viewTip txOutBalanceStateIndex)
         && pointSlot point <= currentSlot
 
-  rs <- case beTxChanges of
-          Left ix' -> do
-            txIdStateIndex <- STM.readTVar ix'
-            pure $ TxIdState.rollback point txIdStateIndex
-          Right _  ->
-            pure $ Right RollbackResult { newTip = TipAtGenesis
-                                        , rolledBackIndex = mempty
-                                        }
   if emptyRollBack
     then Right <$> blockAndSlot env
-    else case rs of
-           Left e  -> pure $ Left (RollbackFailure e)
-           Right RollbackResult{rolledBackIndex=rolledBackTxIdStateIndex} -> do
-             case rs' of
-               Left e' -> pure $ Left (RollbackFailure e')
-               Right RollbackResult{rolledBackIndex=rolledBackTxOutBalanceStateIndex} -> do
-                 STM.writeTVar beTxOutChanges rolledBackTxOutBalanceStateIndex
-                 either (\ix' -> STM.writeTVar ix' rolledBackTxIdStateIndex)
-                        (const $ pure ())
-                        beTxChanges
-                 Right <$> blockAndSlot env
+    else case rs' of
+           Right RollbackResult{rolledBackIndex=rolledBackTxOutBalanceStateIndex} -> do
+             STM.writeTVar beTxOutChanges rolledBackTxOutBalanceStateIndex
+             case beTxChanges of
+               Left txChanges -> do
+                 txIdStateIndex <- STM.readTVar txChanges
+                 let rs = TxIdState.rollback point txIdStateIndex
+                 case rs of
+                   Left e -> pure $ Left (RollbackFailure e)
+                   Right RollbackResult{rolledBackIndex=rolledBackTxIdStateIndex} -> do
+                     STM.writeTVar txChanges rolledBackTxIdStateIndex
+                     Right <$> blockAndSlot env
+               Right _tcsIndex -> Right <$> blockAndSlot env
+           Left e' -> pure $ Left (RollbackFailure e')
 
 -- | Get transaction ID and validity from a transaction.
 txEvent :: ChainIndexTx -> (TxId, TxOutBalance, TxValidity)
@@ -240,12 +233,7 @@ processBlock instancesState header env@BlockchainEnv{beTxChanges} transactions e
           updateInstances (indexBlock ciTxs) instEnv
           updateEmulatorTransactionState tip env (txEvent <$> ciTxs)
 
-  either (const $ pure ())
-         (\ixRef -> do
-             ix'    <- readIORef ixRef
-             nextIx <- Ix.insert (mkEvent tip <$> ciTxs) ix'
-             writeIORef ixRef nextIx)
-         beTxChanges
+  S.updateTxChangesR beTxChanges $ Ix.insert (mkEvent tip <$> ciTxs)
 
   pure stmResult
 
@@ -278,31 +266,39 @@ updateEmulatorTransactionState
                      }
     xs = do
 
-    let useOldIndex = isLeft beTxChanges
-    txIdStateIndex <- case beTxChanges of
-                        Left c  -> STM.readTVar c
-                        Right _ -> pure mempty
-
-    let txIdState = _usTxUtxoData $ utxoState txIdStateIndex
-
     txUtxoBalanceIndex <- STM.readTVar beTxOutChanges
     let txUtxoBalance = _usTxUtxoData $ utxoState txUtxoBalanceIndex
     blockNumber <- STM.readTVar beLastSyncedBlockNo
-    let txIdState' = foldl' (insertNewTx blockNumber) txIdState xs
-        txIdStateInsert  = insert (UtxoState txIdState' tip) txIdStateIndex
-        txUtxoBalance' = txUtxoBalance <> foldMap (\(_, b, _) -> b) xs
+    let txUtxoBalance' = txUtxoBalance <> foldMap (\(_, b, _) -> b) xs
         txUtxoBalanceInsert = insert (UtxoState txUtxoBalance' tip) txUtxoBalanceIndex
 
-    case (txIdStateInsert, txUtxoBalanceInsert) of
-      (Right InsertUtxoSuccess{newIndex=newTxIdState}
-        , Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
-        when useOldIndex $
-          STM.writeTVar (getUtxoIndexTxChanges env) $ trimIx beRollbackHistory newTxIdState
+    case txUtxoBalanceInsert of
+      Right InsertUtxoSuccess{newIndex=newTxOutBalance} -> do
         STM.writeTVar beTxOutChanges $ trimIx beRollbackHistory newTxOutBalance
         STM.writeTVar beLastSyncedBlockNo (succ blockNumber)
-        Right <$> blockAndSlot env
-      (Left e, _) -> pure $ Left $ InsertUtxoStateFailure e
-      (_, Left e) -> pure $ Left $ InsertUtxoStateFailure e
+        -- We have to handle the case where we don't have a `UtxoState` indexer
+        -- available in the environment. If this happens, it means that we have
+        -- a disk based indexer which is updated outside of this function, as it
+        -- requires `IO` to operate.
+        case beTxChanges of
+          Left txChanges -> do
+            txIdStateIndex     <- STM.readTVar txChanges
+            let txIdState       = _usTxUtxoData $ utxoState txIdStateIndex
+                txIdState'      = foldl' (insertNewTx blockNumber) txIdState xs
+                txIdStateInsert = insert (UtxoState txIdState' tip) txIdStateIndex
+            case txIdStateInsert of
+              Right InsertUtxoSuccess{newIndex=newTxIdState} -> do
+                STM.writeTVar txChanges $ trimIx beRollbackHistory newTxIdState
+                Right <$> blockAndSlot env
+              -- We have an in-memory indexer, but for some reason it failed to
+              -- insert the Utxo
+              Left e -> pure $ Left $ InsertUtxoStateFailure e
+          Right _ ->
+            -- This means that there is no in-memory indexer available, so we are
+            -- using the on-disk one, so we just return all-is-fine.
+            Right <$> blockAndSlot env
+      Left e -> pure $ Left $ InsertUtxoStateFailure e
+
     where
       trimIx :: Monoid a => Maybe Int -> UtxoIndex a -> UtxoIndex a
       trimIx Nothing                uix = uix

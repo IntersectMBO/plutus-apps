@@ -105,7 +105,7 @@ query ix txId' events = (<|>) <$> searchInMemory
     searchOnDisk :: IO Result
     searchOnDisk = do
       txStatus :: [TxInfo]
-        <- SQL.query (ix ^. Ix.handle) "SELECT (txId, blockNo, slotNo) FROM tx_status WHERE txId = ?" (Only txId')
+        <- SQL.query (ix ^. Ix.handle) "SELECT txId, blockNo, slotNo FROM tx_status WHERE txId = ?" (Only txId')
       pure $ if null txStatus
               then Nothing
               else let (TxInfo _ bn _) = head txStatus

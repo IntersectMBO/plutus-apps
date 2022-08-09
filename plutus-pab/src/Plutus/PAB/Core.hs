@@ -84,11 +84,9 @@ module Plutus.PAB.Core
     ) where
 
 import Control.Applicative (Alternative ((<|>)))
-import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens (view)
-import Control.Lens.Operators
 import Control.Monad (forM, guard, void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, runM, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
@@ -98,10 +96,8 @@ import Control.Monad.Freer.Reader (Reader (Ask), ask, asks, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (traverse_)
-import Data.IORef (readIORef)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Monoid (Sum (..))
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
@@ -110,14 +106,11 @@ import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx, ciTxOutValue)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
-import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxOutStatus,
-                          TxStatus, TxValidity (..))
+import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
 import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api qualified as ChainIndex
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), PABReq)
 import Plutus.Contract.Wallet (ExportTx)
-import Plutus.HystericalScreams.Index.VSplit qualified as Ix
--- import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
 import Plutus.PAB.Core.ContractInstance qualified as ContractInstance
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Active), BlockchainEnv, InstancesState, OpenEndpoint)
@@ -517,28 +510,8 @@ waitForState extract instanceId = do
 -- | Wait for the transaction to be confirmed on the blockchain.
 waitForTxStatusChange :: forall t env. TxId -> PABAction t env TxStatus
 waitForTxStatusChange t = do
-    env         <- asks @(PABEnvironment t env) blockchainEnv
-    case Instances.beTxChanges env of
-      Left ix -> liftIO . STM.atomically $
-        Instances.waitForTxStatusChange Unknown t ix $
-            Instances.beLastSyncedBlockNo env
-      Right ixRef -> do
-        ix          <- liftIO $ readIORef ixRef
-        _blockNumber <- liftIO $ STM.readTVarIO $ Instances.beLastSyncedBlockNo env
-        events      <- liftIO $ Ix.getEvents (ix ^. Ix.storage)
-        queryResult <- liftIO $ (ix ^. Ix.query) ix t events
-        case queryResult of
-          -- On this branch the transaction has not yet been indexed. This means
-          -- that the transaction status has not changed from `Unknown` which is
-          -- why we wait and re-poll.
-          Nothing -> do
-              liftIO $ threadDelay 500
-              waitForTxStatusChange t
-          -- If we get any kind of update we can return. Due to the way the indexer
-          -- works we can compute if the tx has been confirmed or not.
-          Just (TxConfirmedState (Sum 0) _ _) -> pure $ Committed TxValid ()
-          Just (TxConfirmedState (Sum n) _ _) ->
-              pure $ TentativelyConfirmed (Depth n) TxValid ()
+    env <- asks @(PABEnvironment t env) blockchainEnv
+    liftIO $ STM.atomically $ Instances.waitForTxStatusChange Unknown t env
 
 -- | Wait for the transaction output to be confirmed on the blockchain.
 waitForTxOutStatusChange :: forall t env. TxOutRef -> PABAction t env TxOutStatus

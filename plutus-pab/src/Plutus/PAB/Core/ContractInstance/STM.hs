@@ -14,11 +14,10 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , awaitTime
     , awaitEndpointResponse
     , waitForTxStatusChange
+    , updateTxChangesR
     , waitForTxOutStatusChange
     , currentSlot
     , lastSyncedBlockSlot
-    , getUtxoIndexTxChanges
-    -- * State of a contract instance
     , InstanceState(..)
     , emptyInstanceState
     , OpenEndpoint(..)
@@ -56,9 +55,8 @@ import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard, (<=<))
 import Data.Aeson (Value)
-import Data.Either (fromLeft)
 import Data.Foldable (fold)
-import Data.IORef (IORef)
+import Data.IORef (IORef, readIORef, writeIORef)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -162,9 +160,14 @@ data BlockchainEnv =
         , beParams              :: Params -- ^ The set of parameters, like protocol parameters and slot configuration.
         }
 
-getUtxoIndexTxChanges :: BlockchainEnv -> TVar (UtxoIndex TxIdState)
-getUtxoIndexTxChanges BlockchainEnv{beTxChanges} =
-    fromLeft (error "Changes use an indexer for storage.") beTxChanges
+updateTxChangesR
+  :: Either (TVar (UtxoIndex TxIdState)) (IORef TCSIndex)
+  -> (TCSIndex -> IO TCSIndex)
+  -> IO ()
+updateTxChangesR env f =
+    case env of
+      Left  _     -> pure ()
+      Right ixRef -> readIORef ixRef >>= f >>= writeIORef ixRef
 
 -- | Initialise an empty 'BlockchainEnv' value
 emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv
@@ -403,31 +406,37 @@ insertInstance instanceID state (InstancesState m) = STM.modifyTVar m (Map.inser
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange
-  :: TxStatus -> TxId -> TVar (UtxoIndex TxIdState) -> TVar BlockNumber -> STM TxStatus
-waitForTxStatusChange oldStatus tx ix lastBlock = do
-    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar ix
-    blockNumber <- STM.readTVar lastBlock
-    let txStatus = transactionStatus blockNumber txIdState tx
-    -- Succeed only if we _found_ a status and it was different; if
-    -- the status hasn't changed, _or_ there was an error computing
-    -- the status, keep retrying.
-    case txStatus of
-      Right s | s /= oldStatus -> pure s
-      _                        -> empty
+  :: TxStatus -> TxId -> BlockchainEnv -> STM TxStatus
+waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beLastSyncedBlockNo} = do
+    case beTxChanges of
+      Left ix -> do
+        blockNumber <- STM.readTVar beLastSyncedBlockNo
+        txIdState <- _usTxUtxoData . utxoState <$> STM.readTVar ix
+        let txStatus  = transactionStatus blockNumber txIdState tx
+        -- Succeed only if we _found_ a status and it was different; if
+        -- the status hasn't changed, _or_ there was an error computing
+        -- the status, keep retrying.
+        case txStatus of
+          Right s | s /= oldStatus -> pure s
+          _                        -> empty
+      Right _ -> undefined
 
 -- | Wait for the status of a transaction output to change.
 waitForTxOutStatusChange :: TxOutStatus -> TxOutRef -> BlockchainEnv -> STM TxOutStatus
-waitForTxOutStatusChange oldStatus txOutRef env@BlockchainEnv{beTxOutChanges, beLastSyncedBlockNo} = do
-    txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar (getUtxoIndexTxChanges env)
-    txOutBalance <- _usTxUtxoData . utxoState <$> STM.readTVar beTxOutChanges
-    blockNumber   <- STM.readTVar beLastSyncedBlockNo
-    let txOutStatus = transactionOutputStatus blockNumber txIdState txOutBalance txOutRef
-    -- Succeed only if we _found_ a status and it was different; if
-    -- the status hasn't changed, _or_ there was an error computing
-    -- the status, keep retrying.
-    case txOutStatus of
-      Right s | s /= oldStatus -> pure s
-      _                        -> empty
+waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutChanges, beLastSyncedBlockNo} = do
+    case beTxChanges of
+      Left ix -> do
+        txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar ix
+        txOutBalance <- _usTxUtxoData . utxoState <$> STM.readTVar beTxOutChanges
+        blockNumber   <- STM.readTVar beLastSyncedBlockNo
+        let txOutStatus = transactionOutputStatus blockNumber txIdState txOutBalance txOutRef
+        -- Succeed only if we _found_ a status and it was different; if
+        -- the status hasn't changed, _or_ there was an error computing
+        -- the status, keep retrying.
+        case txOutStatus of
+          Right s | s /= oldStatus -> pure s
+          _                        -> empty
+      Right _ -> undefined -- TODO: Decide what happens here.
 
 -- | The current slot number
 currentSlot :: BlockchainEnv -> STM Slot
