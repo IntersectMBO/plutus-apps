@@ -28,11 +28,9 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, mockWalletPaymentPubKey, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (ScriptContext (scriptContextTxInfo), TxInfo)
-import Plutus.V1.Ledger.Contexts (txSignedBy)
+import Plutus.V1.Ledger.Api (ScriptContext (scriptContextTxInfo))
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)
 import PlutusTx qualified
-import PlutusTx.Prelude qualified as P
 import Prelude
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
 
@@ -44,7 +42,6 @@ tests =
         , otherWallet
         , otherWalletNoSigningProcess
         , withoutOffChainMustBeSignedBy
-        , phase2FailureTxSignedBy
         , phase2FailureMustBeSignedBy
         ]
 
@@ -128,17 +125,6 @@ withoutOffChainMustBeSignedBy =
     (assertValidatedTransactionCount 2)
     (void trace)
 
-phase2FailureTxSignedBy :: TestTree -- this should fail as phase-1 in the contract before script execution. We need to run phase-1 before phase-2 or only use ledger validation (PLT-645).
-phase2FailureTxSignedBy =
-    let pk  = mockWalletPaymentPubKey     w1
-        pkh = Ledger.PaymentPubKeyHash $ fromString "76aaef06f38cc98ed08ceb168ddb55bab2ea5df43a6847a99f086fc1" :: Ledger.PaymentPubKeyHash
-        trace = do
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract pk pkh txSignedByTypedValidator
-            void $ Trace.waitNSlots 1
-    in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain txSignedBy validation"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Missing signature":_) _) -> True; _ -> False  }))
-    (void trace)
-
 phase2FailureMustBeSignedBy :: TestTree
 phase2FailureMustBeSignedBy =
     let pk  = mockWalletPaymentPubKey     w1
@@ -151,31 +137,13 @@ phase2FailureMustBeSignedBy =
     (void trace)
 
 {-
-    validator for using txSignedBy
+    validator using mustBeSignedBy
 -}
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest  where
     type instance DatumType UnitTest = ()
     type instance RedeemerType UnitTest = Ledger.PaymentPubKeyHash
-
-{-# INLINEABLE txSignedByValidator #-}
-txSignedByValidator :: () -> Ledger.PaymentPubKeyHash -> ScriptContext -> Bool
-txSignedByValidator _ pkh ctx = P.traceIfFalse "Missing signature" (txSignedBy info P.$ Ledger.unPaymentPubKeyHash pkh)
-    where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
-
-txSignedByTypedValidator :: Scripts.TypedValidator UnitTest
-txSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
-    $$(PlutusTx.compile [||txSignedByValidator||])
-    $$(PlutusTx.compile [|| wrap ||])
-    where
-        wrap = Scripts.mkUntypedValidator
-
-{-
-    validator for using on-chain mustBeSignedBy constraint
--}
 
 {-# INLINEABLE mustBeSignedByValidator #-}
 mustBeSignedByValidator :: () -> Ledger.PaymentPubKeyHash -> ScriptContext -> Bool
