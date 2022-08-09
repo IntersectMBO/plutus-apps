@@ -101,7 +101,9 @@ processGetValidator (Just val) = buildResponse val
     buildResponse = maybe (pure Nothing) retFromCbor . _scriptCborCbor
 
     retFromCbor :: PlutusValidator a => Text -> IO (Maybe a)
-    retFromCbor = return . Just . fromSucceed . fromCBOR . Text.drop 6
+    retFromCbor txt = case fromCBOR $ Text.drop 6 txt of
+              JSON.Success a -> return $ Just a
+              JSON.Error _   -> return Nothing
 
 processUnspentTxOut :: Maybe UtxoOutput -> IO (Maybe ChainIndexTxOut)
 processUnspentTxOut Nothing = pure Nothing

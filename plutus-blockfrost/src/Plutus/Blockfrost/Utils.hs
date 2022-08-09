@@ -5,7 +5,6 @@
 
 module Plutus.Blockfrost.Utils where
 
-import Data.Aeson
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.String
@@ -47,10 +46,6 @@ class Show a => ToBlockfrostDatumHash a where
 
 instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.DatumHash
 instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.RedeemerHash
-
-fromSucceed :: Result a -> a
-fromSucceed (Error a)   = error $ show a
-fromSucceed (Success a) = a
 
 toBlockfrostTxHash :: Ledger.TxId -> TxHash
 toBlockfrostTxHash = TxHash . pack . show
