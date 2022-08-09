@@ -2,6 +2,17 @@ cabal-version: 2.2
 name:          plutus-blockfrost
 version:       0.1.0.0
 license:       Apache-2.0
+maintainer:
+  valentino.cerutti@joinplank.com, tomas.osiecki@joinplank.com
+
+author:        Valentino Cerutti, Tomas Osiecki
+homepage:
+  https://github.com/joinplank/plutus-apps/tree/plank-pab-blockfrost/plutus-blockfrost#readme
+
+bug-reports:   https://github.com/joinplank/plutus-apps/issues
+description:
+  Please see the README on GitHub at <https://github.com/joinplank/plutus-apps/tree/plank-pab-blockfrost/plutus-blockfrost#readme>
+
 build-type:    Simple
 
 source-repository head
