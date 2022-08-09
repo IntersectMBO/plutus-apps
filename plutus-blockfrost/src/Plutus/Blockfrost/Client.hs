@@ -8,7 +8,6 @@ import Blockfrost.Client (BlockfrostClientT, BlockfrostError (BlockfrostNotFound
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (..))
-import Ledger.Tx (TxOutRef (..))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
 
 import Plutus.Blockfrost.Queries

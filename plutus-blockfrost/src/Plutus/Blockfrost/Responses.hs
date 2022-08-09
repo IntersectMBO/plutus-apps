@@ -20,12 +20,11 @@ module Plutus.Blockfrost.Responses (
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
 import Data.Aeson qualified as JSON
 import Data.Aeson.QQ
-import Data.Either (fromRight)
 import Data.List (find)
-import Data.Map as Map (Map, elems, empty, fromList, keys, lookup)
+import Data.Map as Map (Map, elems, fromList, keys, lookup)
 import Data.Maybe (catMaybes, fromJust)
 import Data.Set (Set)
-import Data.Set qualified as Set (empty, fromList)
+import Data.Set qualified as Set (fromList)
 import Data.Text (Text)
 import Data.Text qualified as Text (drop)
 import Text.Hex (decodeHex)
@@ -33,16 +32,15 @@ import Text.Hex (decodeHex)
 import Blockfrost.Client
 import Cardano.Api hiding (Block, Script, ScriptDatum, ScriptHash, TxIn, TxOut)
 import Cardano.Api.Shelley qualified as Shelley
-import Ledger.Slot qualified as Ledger (Slot, SlotRange)
-import Ledger.Tx (ChainIndexTxOut (..), TxIn (..), TxInType (..), TxOut (..), TxOutRef (..), pubKeyTxIn, scriptTxIn)
+import Ledger.Slot qualified as Ledger (Slot)
+import Ledger.Tx (ChainIndexTxOut (..), TxIn (..), TxOut (..), TxOutRef (..), pubKeyTxIn, scriptTxIn)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Api (BuiltinByteString)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Plutus.V1.Ledger.Interval (always, from, interval, to)
-import Plutus.V1.Ledger.Scripts (Datum, DatumHash, MintingPolicy, Redeemer, StakeValidator, Validator (..),
-                                 ValidatorHash (..), unitDatum)
+import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, Redeemer, StakeValidator, Validator (..), ValidatorHash (..),
+                                 unitDatum)
 import Plutus.V1.Ledger.Scripts qualified as Ledger (DatumHash, RedeemerHash, Script, ScriptHash (..))
 import Plutus.V1.Ledger.Value qualified as Ledger
 
@@ -110,22 +108,22 @@ processUnspentTxOut Nothing = pure Nothing
 processUnspentTxOut (Just utxo) = buildResponse utxo
   where
     buildResponse :: UtxoOutput -> IO (Maybe ChainIndexTxOut)
-    buildResponse utxo = case toPlutusAddress (_utxoOutputAddress utxo) of
+    buildResponse utxoOut = case toPlutusAddress (_utxoOutputAddress utxoOut) of
               Left err   -> ioError (userError err)
               Right addr -> case Ledger.addressCredential addr of
-                    PubKeyCredential _       -> return $ Just $ buildPublicKeyTxOut addr utxo
-                    ScriptCredential valHash -> return $ Just $ buildScriptTxOut addr utxo valHash
+                    PubKeyCredential _       -> return $ Just $ buildPublicKeyTxOut addr utxoOut
+                    ScriptCredential valHash -> return $ Just $ buildScriptTxOut addr utxoOut valHash
 
     buildScriptTxOut :: Ledger.Address -> UtxoOutput -> ValidatorHash -> ChainIndexTxOut
-    buildScriptTxOut addr utxo val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
-                                                           , _ciTxOutValidator=Left val
-                                                           , _ciTxOutDatum=utxoDatumHash utxo
-                                                           , _ciTxOutValue=utxoValue utxo
-                                                           }
+    buildScriptTxOut addr utxoOut val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
+                                                              , _ciTxOutValidator=Left val
+                                                              , _ciTxOutDatum=utxoDatumHash utxoOut
+                                                              , _ciTxOutValue=utxoValue utxoOut
+                                                              }
 
     buildPublicKeyTxOut :: Ledger.Address -> UtxoOutput -> ChainIndexTxOut
-    buildPublicKeyTxOut addr utxo = PublicKeyChainIndexTxOut { _ciTxOutAddress=addr
-                                                             , _ciTxOutValue=utxoValue utxo}
+    buildPublicKeyTxOut addr utxoOut = PublicKeyChainIndexTxOut { _ciTxOutAddress=addr
+                                                                , _ciTxOutValue=utxoValue utxoOut}
 
     utxoValue :: UtxoOutput -> Ledger.Value
     utxoValue = amountsToValue . _utxoOutputAmount
@@ -225,36 +223,36 @@ processGetTxFromTxId (Just TxResponse{..}) = do
   where
     processTxOuts :: [UtxoOutput] -> IO ChainIndexTxOutputs
     processTxOuts [] = return InvalidTx
-    processTxOuts xs = ValidTx <$> (sequence $ map utxoOutputToTxOut xs)
+    processTxOuts xs = ValidTx <$> mapM utxoOutputToTxOut xs
 
     utxoOutputToTxOut :: UtxoOutput -> IO TxOut
     utxoOutputToTxOut utxo = do
         addr <- either (ioError . userError) return (toPlutusAddress $ _utxoOutputAddress utxo)
         return $ TxOut { txOutAddress = addr
                        , txOutValue     = amountsToValue $ _utxoOutputAmount utxo
-                       , txOutDatumHash = (textToDatumHash . unDatumHash) <$> _utxoOutputDataHash utxo
+                       , txOutDatumHash = textToDatumHash . unDatumHash <$> _utxoOutputDataHash utxo
                        }
 
     getAllDatumsMap :: Map Text ScriptDatum -> IO (Map Ledger.DatumHash Datum)
     getAllDatumsMap datumMap = do
         let newKeys = map textToDatumHash $ keys datumMap
             newElems = map ((<$>) fromJust . processGetDatum . Just . _scriptDatumJsonValue) $ elems datumMap
-        elems <- sequence newElems
-        return $ fromList $ zip newKeys elems
+        datElems <- sequence newElems
+        return $ fromList $ zip newKeys datElems
 
     getAllRedeemersMap :: Map Text ScriptDatum -> IO (Map Ledger.RedeemerHash Redeemer)
     getAllRedeemersMap datumMap = do
         let newKeys = map textToRedeemerHash $ keys datumMap
             newElems = map ((<$>) fromJust . processGetDatum . Just . _scriptDatumJsonValue) $ elems datumMap
-        elems <- sequence newElems
-        return $ fromList $ zip newKeys elems
+        redElems <- sequence newElems
+        return $ fromList $ zip newKeys redElems
 
     getAllScriptsMap :: Map Text ScriptCBOR -> IO (Map Ledger.ScriptHash Ledger.Script)
     getAllScriptsMap scriptsMap = do
         let newKeys = map textToScriptHash $ keys scriptsMap
             newElems = map ((<$>) fromJust . processGetValidator . Just) $ elems scriptsMap
-        elems <- sequence newElems
-        return $ fromList $ zip newKeys elems
+        scriptElems <- sequence newElems
+        return $ fromList $ zip newKeys scriptElems
 
     processTxIn ::
         Map Ledger.ScriptHash Ledger.Script
@@ -262,26 +260,26 @@ processGetTxFromTxId (Just TxResponse{..}) = do
         -> Map Ledger.DatumHash Datum
         -> [UtxoInput]
         -> Set TxIn
-    processTxIn scripts redeemers datums utxoIns = Set.fromList $ zipWith toPlutusTxIn utxoIns [0..] -- TODO: Make sure the list is ordered correctly
+    processTxIn scripts redeemers datums utxoIns = Set.fromList $ zipWith toPlutusTxIn utxoIns [0..]
       where
         toPlutusTxIn :: UtxoInput -> Integer -> TxIn
-        toPlutusTxIn utxoIn index = case addr utxoIn  of
-                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (val utxoIn bbs) (red index) (dat utxoIn)
-                            PubKeyCredential pkh                  -> pubKeyTxIn $ txoToRef utxoIn
+        toPlutusTxIn utxoIn idx = case addr utxoIn  of
+                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (val bbs) (red idx) (dat utxoIn)
+                            PubKeyCredential _                    -> pubKeyTxIn $ txoToRef utxoIn
 
         addr :: UtxoInput -> Credential
         addr utxoIn = either (error "processTxIn: Error decoding address") Ledger.addressCredential (toPlutusAddress $ _utxoInputAddress utxoIn)
 
         red :: Integer -> Redeemer
-        red index = case find ((==) index . _transactionRedeemerTxIndex) _redeemers of
-                Nothing -> error $ "processTxIn: Can't find a redeemer that has the same index as this UtxoInput (" ++ show index ++ ")"
+        red idx = case find ((==) idx . _transactionRedeemerTxIndex) _redeemers of
+                Nothing -> error $ "processTxIn: Can't find a redeemer that has the same index as this UtxoInput (" ++ show idx ++ ")"
                 Just redeemer -> fromJust $ Map.lookup (textToRedeemerHash $ unDatumHash $ _transactionRedeemerDatumHash redeemer) redeemers
 
-        val :: UtxoInput -> BuiltinByteString -> Validator
-        val utxoIn bbs = Validator $ fromJust $ Map.lookup (Ledger.ScriptHash bbs) scripts
+        val :: BuiltinByteString -> Validator
+        val bbs = Validator $ fromJust $ Map.lookup (Ledger.ScriptHash bbs) scripts
 
         dat :: UtxoInput -> Datum
         dat utxoIn = fromJust $ Map.lookup (textToDatumHash $ unDatumHash $ fromJust $ _utxoInputDataHash utxoIn) datums
 
 processGetTxsFromTxIds :: [TxResponse] -> IO [ChainIndexTx]
-processGetTxsFromTxIds txs = catMaybes <$> sequence (map (processGetTxFromTxId . Just) txs)
+processGetTxsFromTxIds txs = catMaybes <$> mapM (processGetTxFromTxId . Just) txs
