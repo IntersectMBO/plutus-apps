@@ -28,7 +28,7 @@ import Control.Monad.Freer.Extras.Pagination (PageQuery (..))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Value)
 import Data.Functor ((<&>))
-import Data.Map (Map (..), fromList)
+import Data.Map (Map, fromList)
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 
@@ -72,48 +72,41 @@ getIsUtxoBlockfrost ref = do
     isUtxo <- checkIsUtxo ref
     return (tip, isUtxo)
 
--- TODO: Pagination Support
 getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
 getUtxoAtAddressBlockfrost _ addr = do
     tip <- getTipBlockfrost
-    utxos <- getAddressUtxos' addr (paged 100 1) def
+    utxos <- allPages (wrapperPaged getAddressUtxos' addr)
     return (tip, utxos)
 
--- TODO: Pagination Support
 getUnspentAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [AddressUtxo]
-getUnspentAtAddressBlockfrost _ addr = getAddressUtxos' addr (paged 100 1) def
+getUnspentAtAddressBlockfrost _ addr = allPages (wrapperPaged getAddressUtxos' addr)
 
--- TODO: Pagination Support
 getTxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [UtxoInput]
 getTxoAtAddressBlockfrost _ a = do
-    addTxs <- getAddressTransactions a
+    addTxs <- allPages (wrapperPagedTx getAddressTransactions' a)
     txUtxos <- liftIO $ mapConcurrently (getTxUtxos . _addressTransactionTxHash) addTxs
-    let txos = concat $ map _transactionUtxosInputs txUtxos
-    return $ take 100 $ filter ((==) a . _utxoInputAddress) txos
+    let txos = concatMap _transactionUtxosInputs txUtxos
+    return $ filter ((==) a . _utxoInputAddress) txos
 
-
--- TODO: Pagination Support
 getUtxoSetWithCurrency :: MonadBlockfrost m => PageQuery a -> AssetId -> m (Block, [AddressUtxo])
 getUtxoSetWithCurrency _ assetId = do
     tip <- getTipBlockfrost
-    xs <- getAssetAddresses assetId
+    xs <- allPages (wrapperPaged getAssetAddresses' assetId)
     utxos <- liftIO $ mapConcurrently (flip getAddressUtxosAsset assetId . _assetAddressAddress) xs
-    let retUtxos = (take 100 . concat) utxos
-    return (tip, retUtxos)
-
+    return (tip, concat utxos)
 
 getTxFromTxIdBlockfrost :: MonadBlockfrost m => TxHash -> m TxResponse
-getTxFromTxIdBlockfrost txHash = do
-    specificTx <- getTx txHash
-    txUtxos <- getTxUtxos txHash
+getTxFromTxIdBlockfrost tHash = do
+    specificTx <- getTx tHash
+    txUtxos <- getTxUtxos tHash
     datumMap <- getAllTxDatums txUtxos
-    redeemers <- getTxRedeemers txHash
+    redeemers <- getTxRedeemers tHash
     liftIO $ print $ "INPUTS: " ++ show (_transactionUtxosInputs txUtxos)
     let scriptHashes = map _transactionRedeemerScriptHash redeemers
         redeemerHashes = map _transactionRedeemerDatumHash redeemers
-    redeemersList <- liftIO $ mapConcurrently (\hash -> (unDatumHash hash,) <$> getScriptDatum hash) redeemerHashes
-    scriptsList <- liftIO $ mapConcurrently (\hash -> (unScriptHash hash,) <$> getScriptCBOR hash) scriptHashes
-    return $ TxResponse { _txHash        = txHash
+    redeemersList <- liftIO $ mapConcurrently (\rHash -> (unDatumHash rHash,) <$> getScriptDatum rHash) redeemerHashes
+    scriptsList <- liftIO $ mapConcurrently (\sHash -> (unScriptHash sHash,) <$> getScriptCBOR sHash) scriptHashes
+    return $ TxResponse { _txHash        = tHash
                         , _invalidBefore = _transactionInvalidBefore specificTx
                         , _invalidAfter  = _transactionInvalidHereafter specificTx
                         , _utxosInputs   = _transactionUtxosInputs txUtxos
@@ -131,10 +124,10 @@ getTxsFromTxIdsBlockfrost = liftIO . mapConcurrently getTxFromTxIdBlockfrost
 
 getAllTxDatums :: MonadBlockfrost m => TransactionUtxos -> m (Map Text ScriptDatum)
 getAllTxDatums utxos = do
-    let inputs = map _utxoInputDataHash (_transactionUtxosInputs utxos)
-        outputs = map _utxoOutputDataHash (_transactionUtxosOutputs utxos)
-        datumHashes = catMaybes (inputs ++ outputs)
-    datumMap <- liftIO $ mapConcurrently (\hash -> (unDatumHash hash,) <$> getScriptDatum hash) datumHashes
+    let inps = map _utxoInputDataHash (_transactionUtxosInputs utxos)
+        outs = map _utxoOutputDataHash (_transactionUtxosOutputs utxos)
+        datumHashes = catMaybes (inps ++ outs)
+    datumMap <- liftIO $ mapConcurrently (\dHash -> (unDatumHash dHash,) <$> getScriptDatum dHash) datumHashes
     return $ fromList datumMap
 
 getAddressFromReference :: MonadBlockfrost m => (TxHash, Integer) -> m (Maybe Address)
@@ -145,12 +138,17 @@ getAddressFromReference (tHash, idx) = getTxUtxos tHash <&> (getAddress . _trans
         [out] -> Just $ _utxoOutputAddress out
         _     -> Nothing
 
--- TODO: Support addresses with more than 100 utxos
 checkIsUtxo :: MonadBlockfrost m => (TxHash, Integer) -> m Bool
-checkIsUtxo ref@(tHash, idx) = getAddressFromReference ref >>= maybe (pure []) getAddressUtxos <&> any matchUtxo
+checkIsUtxo ref@(tHash, idx) = getAddressFromReference ref >>= maybe (pure []) (allPages . wrapperPaged getAddressUtxos') <&> any matchUtxo
   where
     matchUtxo :: AddressUtxo -> Bool
     matchUtxo AddressUtxo{..} = (tHash == _addressUtxoTxHash) && (idx == _addressUtxoOutputIndex)
+
+wrapperPaged :: (a -> Paged -> SortOrder -> m [b]) -> a -> Paged -> m [b]
+wrapperPaged f a p = f a p def
+
+wrapperPagedTx :: (a -> Paged -> SortOrder -> Maybe b -> Maybe b -> m [c]) -> a -> Paged -> m [c]
+wrapperPagedTx f a p = f a p def Nothing Nothing
 
 -- DEFAULT RESPONSES
 
