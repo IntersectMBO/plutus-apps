@@ -121,22 +121,25 @@ getUnspentOutput = do
         inp : _ -> pure $ txInRef inp
         []      -> throwing _OtherContractError "Balanced transaction has no inputs"
 
-data ExportTxRedeemerPurpose = Spending | Minting | Rewarding
+data ExportTxRedeemerPurpose = Spending | Minting | Rewarding | Certifying
 
 instance ToJSON ExportTxRedeemerPurpose where
     toJSON = \case
-        Spending  -> String "spending"
-        Minting   -> String "minting"
-        Rewarding -> String "rewarding"
+        Spending   -> String "spending"
+        Minting    -> String "minting"
+        Rewarding  -> String "rewarding"
+        Certifying -> String "certifying"
 
 data ExportTxRedeemer =
     SpendingRedeemer{ redeemer:: Plutus.Redeemer, redeemerOutRef :: TxOutRef }
     | MintingRedeemer { redeemer:: Plutus.Redeemer, redeemerPolicyId :: MintingPolicyHash }
+    | RewardingRedeemer { redeemer:: Plutus.Redeemer, redeemerRewardCredential :: Credential, redeemerAmount :: Integer }
+    | CertifyingRedeemer { redeemer:: Plutus.Redeemer, redeemerDcert :: DCert }
     deriving stock (Eq, Show, Generic, Typeable)
     deriving anyclass (OpenApi.ToSchema)
 
 instance FromJSON ExportTxRedeemer where
-    parseJSON v = parseSpendingRedeemer v <|> parseMintingRedeemer v
+    parseJSON v = parseSpendingRedeemer v <|> parseMintingRedeemer v <|> parseRewardingRedeemer v <|> parseCertifyingRedeemer v
 
 parseSpendingRedeemer :: Value -> Parser ExportTxRedeemer
 parseSpendingRedeemer =
@@ -152,6 +155,14 @@ parseMintingRedeemer =
         <$> parseRedeemerData o
         <*> o .: "policy_id"
 
+-- TODO
+parseRewardingRedeemer :: Value -> Parser ExportTxRedeemer
+parseRewardingRedeemer = error "Unimplemented rewarding redeemer parsing."
+
+-- TODO
+parseCertifyingRedeemer :: Value -> Parser ExportTxRedeemer
+parseCertifyingRedeemer = error "Unimplemented certifying redeemer parsing."
+
 parseRedeemerData :: Object -> Parser Plutus.Redeemer
 parseRedeemerData o =
     fmap (\(JSON.JSONViaSerialise d) -> Plutus.Redeemer $ PlutusTx.dataToBuiltinData d)
@@ -162,6 +173,9 @@ instance ToJSON ExportTxRedeemer where
         object ["purpose" .= Spending, "data" .= JSON.JSONViaSerialise (PlutusTx.builtinDataToData dt), "input" .= object ["id" .= Plutus.getTxId txOutRefId, "index" .= txOutRefIdx]]
     toJSON MintingRedeemer{redeemer=Plutus.Redeemer dt, redeemerPolicyId} =
         object ["purpose" .= Minting, "data" .= JSON.JSONViaSerialise (PlutusTx.builtinDataToData dt), "policy_id" .= redeemerPolicyId]
+    -- TODO
+    toJSON RewardingRedeemer{} = error "Unimplemented rewarding redeemer encoding."
+    toJSON CertifyingRedeemer{} = error "Unimplemented certifying redeemer encoding."
 
 -- | Partial transaction that can be balanced by the wallet backend.
 data ExportTx =
@@ -277,9 +291,8 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
         <*> pure otherQuantities
 
--- TODO: export redeemers of other types
 mkRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkRedeemers tx = mkSpendingRedeemers tx <> mkMintingRedeemers tx
+mkRedeemers = mkSpendingRedeemers <> mkMintingRedeemers <> mkRewardingRedeemers <> mkCertifyingRedeemers
 
 mkSpendingRedeemers :: P.Tx -> [ExportTxRedeemer]
 mkSpendingRedeemers P.Tx{P.txInputs} = mapMaybe extract txInputs where
@@ -289,3 +302,17 @@ mkSpendingRedeemers P.Tx{P.txInputs} = mapMaybe extract txInputs where
 
 mkMintingRedeemers :: P.Tx -> [ExportTxRedeemer]
 mkMintingRedeemers P.Tx{P.txMintingScripts} = map (\(a,b) -> MintingRedeemer b a) $ Map.toList txMintingScripts
+
+mkRewardingRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkRewardingRedeemers P.Tx{P.txWithdrawals} = mapMaybes f txWithdrawals
+    where
+        f = \case
+            Withdrawal cred n (Just rd) -> Just (RewardingRedeemer rd cred n)
+            Withdrawal _    _ Nothing   -> Nothing
+
+mkCertifyingRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkCertifyingRedeemers P.Tx{P.txCertificates} = mapMaybes f txCertificates
+    where
+        f = \case
+            Certificate dcert (Just rd) -> Just (CertifyingRedeemer rd dcert)
+            Withdrawal _    _ Nothing   -> Nothing
