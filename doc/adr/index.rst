@@ -37,3 +37,4 @@ The general process for creating an ADR is:
    0005-pab-indexing-solution-integration
    0006-common-contract-api
    0007-support-reference-inputs-in-constraint-library
+   0008-support-inline-datums-in-constraint-library
