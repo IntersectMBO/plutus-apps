@@ -39,7 +39,7 @@ import Data.Aeson.Types (Parser, parseFail)
 import Data.Bifunctor (first)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Semigroup qualified as Semigroup
 import Data.Set qualified as Set
@@ -288,9 +288,12 @@ mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract txInputs) whe
     extract _ = pure []
 
 mkMintingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkMintingRedeemers P.Tx{P.txRedeemers, P.txMintScripts} = traverse extract $ Map.toList txRedeemers where
+mkMintingRedeemers P.Tx{P.txRedeemers, P.txMintScripts} =
+    catMaybes <$> traverse extract (Map.toList txRedeemers)
+ where
     indexedMintScriptHashes = Map.fromList $ zip [0..] $ Map.keys txMintScripts
     extract (PV1.RedeemerPtr PV1.Mint idx, redeemer) = do
         redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) Right (Map.lookup idx indexedMintScriptHashes)
-        pure MintingRedeemer{redeemer, redeemerPolicyId}
-    extract (PV1.RedeemerPtr tag _, _) = Left (CardanoAPI.ScriptPurposeNotSupported tag)
+        pure $ Just MintingRedeemer{redeemer, redeemerPolicyId}
+    -- Some other redeemer (like a spending redeemer) which is ignored
+    extract (PV1.RedeemerPtr _ _, _) = pure Nothing

@@ -186,13 +186,12 @@ runWith userContractHandler = withLocalClusterSetup $ \dir lo@LogOutputs{loClust
                 <$> getEKGURL
 
             void $ serveWallet
-                (NodeSource socketPath vData)
+                (NodeSource socketPath vData (SyncTolerance 10))
                 gp
                 tunedForMainnetPipeliningStrategy
                 (SomeNetworkDiscriminant $ Proxy @'Mainnet)
                 poolCertificates
                 tracers
-                (SyncTolerance 10)
                 (Just db)
                 Nothing
                 (fromString walletHost)
