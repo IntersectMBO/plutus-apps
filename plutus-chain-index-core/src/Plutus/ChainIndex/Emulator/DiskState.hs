@@ -33,10 +33,13 @@ import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
+import Ledger (Address (..), Script, ScriptHash, TxOutRef)
 import Ledger.Ada qualified as Ada
 import Ledger.Credential (Credential)
-import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
-                             txRedeemersWithHash)
+import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash)
+import Ledger.Tx (TxId)
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOut (..), citxData, citxRedeemers, citxScripts, citxTxId,
+                             txOutsWithRef, txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
 import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Datum, DatumHash, Redeemer, RedeemerHash, Script,
                              TxId, TxOutRef)

@@ -108,11 +108,7 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
 
     extract :: (UtxoLocation, OnChainTx) -> [Maybe FlowLink]
     extract (loc, tx) =
-      let targetRef = mkRef $ eitherTx getCardanoTxId getCardanoTxId tx in
       fmap (flow (Just loc) targetRef . txInRef) (consumableInputs tx)
-    -- make a flow for a TxOutRef
-
-    flow :: Maybe UtxoLocation -> TxRef -> TxOutRef -> Maybe FlowLink
     flow tgtLoc tgtRef rf = do
       src <- out bc rf
       sourceLoc <- Map.lookup rf sourceLocations

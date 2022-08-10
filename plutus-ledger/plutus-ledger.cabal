@@ -67,6 +67,7 @@ library
     Ledger.Credential.Orphans
     Ledger.Crypto
     Ledger.Crypto.Orphans
+    Ledger.DCert.Orphans
     Ledger.Fee
     Ledger.Generators
     Ledger.Index
@@ -85,6 +86,11 @@ library
     Ledger.Tx.Orphans
     Ledger.Tx.Orphans.V1
     Ledger.Tx.Orphans.V2
+    Ledger.Tx.Types
+    Ledger.Tx.Types.Certificate
+    Ledger.Tx.Types.Tx
+    Ledger.Tx.Types.TxInput
+    Ledger.Tx.Types.Withdrawal
     Ledger.Typed.Scripts
     Ledger.Typed.Scripts.Orphans
     Ledger.Typed.Scripts.Validators

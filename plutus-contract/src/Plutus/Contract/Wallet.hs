@@ -29,7 +29,7 @@ module Plutus.Contract.Wallet(
 import Cardano.Api qualified as C
 import Control.Applicative ((<|>))
 import Control.Lens ((&), (.~), (^.))
-import Control.Monad (join, (>=>))
+import Control.Monad ((>=>))
 import Control.Monad.Error.Lens (throwing)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
@@ -61,7 +61,6 @@ import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
-import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusTx qualified
 import Wallet.API qualified as WAPI
 import Wallet.Effects (WalletEffect, balanceTx, yieldUnbalancedTx)
@@ -118,9 +117,9 @@ getUnspentOutput = do
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
-    case fmap Semigroup.getMin $ foldMap (Just . Semigroup.Min) $ getCardanoTxInputs tx of
-        Just inp -> pure $ txInRef inp
-        Nothing  -> throwing _OtherContractError "Balanced transaction has no inputs"
+    case getCardanoTxInputs tx of
+        inp : _ -> pure $ txInRef inp
+        []      -> throwing _OtherContractError "Balanced transaction has no inputs"
 
 data ExportTxRedeemerPurpose = Spending | Minting | Rewarding
 
@@ -252,10 +251,10 @@ export params utx =
         fromCardanoTx ctx = do
             utxo <- fromPlutusIndex params (P.UtxoIndex unBalancedTxUtxoIndex)
             makeTransactionBody params utxo ctx
-     in ExportTx
+    in ExportTx
         <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . CardanoAPI.toCardanoTxBody params requiredSigners) unBalancedTxTx)
-        <*> first Right (mkInputs (P.pNetworkId params) unBalancedTxUtxoIndex)
-        <*> either (const $ Right []) (first Right . mkRedeemers) unBalancedTxTx
+        <*> mkInputs (P.pNetworkId params) unBalancedTxUtxoIndex
+        <*> pure (mkRedeemers unBalancedTxTx)
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
@@ -278,19 +277,15 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
         <*> pure otherQuantities
 
-mkRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx
+-- TODO: export redeemers of other types
+mkRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkRedeemers tx = mkSpendingRedeemers tx <> mkMintingRedeemers tx
 
-mkSpendingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract txInputs) where
-    extract TxIn{txInType=Just (ConsumeScriptAddress _ _ redeemer _), txInRef} =
-        pure [SpendingRedeemer{redeemer, redeemerOutRef=txInRef}]
-    extract _ = pure []
+mkSpendingRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkSpendingRedeemers P.Tx{P.txInputs} = mapMaybe extract txInputs where
+    extract P.TxInput{P.txInputType=P.TxConsumeScriptAddress redeemer _ _, P.txInputRef} =
+        Just SpendingRedeemer{redeemer, redeemerOutRef=txInputRef}
+    extract _ = Nothing
 
-mkMintingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkMintingRedeemers P.Tx{P.txRedeemers, P.txMintScripts} = traverse extract $ Map.toList txRedeemers where
-    indexedMintScriptHashes = Map.fromList $ zip [0..] $ Map.keys txMintScripts
-    extract (PV1.RedeemerPtr PV1.Mint idx, redeemer) = do
-        redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) Right (Map.lookup idx indexedMintScriptHashes)
-        pure MintingRedeemer{redeemer, redeemerPolicyId}
-    extract (PV1.RedeemerPtr tag _, _) = Left (CardanoAPI.ScriptPurposeNotSupported tag)
+mkMintingRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkMintingRedeemers P.Tx{P.txMintingScripts} = map (\(a,b) -> MintingRedeemer b a) $ Map.toList txMintingScripts

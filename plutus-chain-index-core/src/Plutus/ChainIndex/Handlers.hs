@@ -45,7 +45,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, i
                             update, (&&.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (TxId)
+import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
@@ -57,6 +57,7 @@ import Plutus.ChainIndex.Compatibility (toCardanoPoint)
 import Plutus.ChainIndex.DbSchema
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx
+import Plutus.ChainIndex.Tx qualified as Chain
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
                                 TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
@@ -190,7 +191,7 @@ makeChainIndexTxOut ::
   ( Member BeamEffect effs
   , Member (LogMsg ChainIndexLog) effs
   )
-  => ChainIndexTxOut
+  => Chain.ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
@@ -551,10 +552,10 @@ fromTx tx = mempty
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
     }
     where
-        credential :: (ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef)
+        credential :: (Chain.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef)
         credential (ChainIndexTxOut{citoAddress=Address{addressCredential}}, ref) =
           (addressCredential, ref)
-        assetClasses :: (ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
+        assetClasses :: (Chain.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
         assetClasses (ChainIndexTxOut{citoValue}, ref) =
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))
                -- We don't store the 'AssetClass' when it is the Ada currency.

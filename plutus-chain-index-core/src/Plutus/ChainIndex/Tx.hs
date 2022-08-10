@@ -38,14 +38,39 @@ module Plutus.ChainIndex.Tx(
     , _ValidTx
     ) where
 
-import Cardano.Api (NetworkId)
+import Cardano.Api (NetworkId, txOutValueToValue)
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Codec.Serialise (Serialise)
+import Codec.Serialise.Class (Serialise (decode, encode))
+import Codec.Serialise.Decoding (decodeListLen, decodeWord)
+import Codec.Serialise.Encoding (encodeListLen, encodeWord)
+import Control.Arrow ((&&&))
+import Control.Lens (makeLenses, makePrisms)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.!=), (.:), (.:?), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson
 import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.OpenApi qualified as OpenApi
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Tuple (swap)
+import GHC.Generics (Generic)
 import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..), onCardanoTx,
                txId)
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Address (Address)
+import Ledger.Blockchain (OnChainTx (..))
+import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash, redeemerHash)
+import Ledger.Slot (SlotRange)
+import Ledger.Tx (Certificate (certificateRedeemer), SomeCardanoApiTx, TxId, TxIn, TxInput (txInputType),
+                  TxInputType (TxConsumeScriptAddress), TxOutRef (TxOutRef), Withdrawal (withdrawalRedeemer),
+                  fillTxInputWitnesses, txId)
+import Ledger.Tx.CardanoAPI (FromCardanoError, fromCardanoAddress, fromCardanoTxOutDatum, fromCardanoValue,
+                             toCardanoTxOut, toCardanoTxOutBabbage, toCardanoTxOutDatumHash,
+                             toCardanoTxOutDatumHashBabbage)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
 import Plutus.Script.Utils.Scripts (datumHash, redeemerHash)
@@ -84,38 +109,58 @@ fromOnChainTx :: NetworkId -> OnChainTx -> ChainIndexTx
 fromOnChainTx networkId = \case
     Valid ctx ->
         onCardanoTx
-            (\tx@Tx{txInputs, txOutputs, txValidRange, txData, txMintScripts} ->
-                let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
-                ChainIndexTx
-                    { _citxTxId = txId tx
-                    , _citxInputs = txInputs
-                    , _citxOutputs = case traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) txOutputs of
-                        Right txs -> either (const InvalidTx) ValidTx $ traverse fromCardanoTxOut txs
-                        Left _    -> InvalidTx
-                    , _citxValidRange = txValidRange
-                    , _citxData = txData <> otherDataHashes
-                    , _citxRedeemers = redeemers
-                    , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
-                    , _citxCardanoTx = Nothing
-                    })
+            (\case tx@Tx{txInputs, txOutputs, txValidRange, txData, txScripts, txWithdrawals, txCertificates, txMintingScripts} ->
+                    let redeemers = allRedeemers txWithdrawals txCertificates txMintingScripts txInputs
+                    in
+                    ChainIndexTx
+                        { _citxTxId = txId tx
+                        , _citxInputs = Set.fromList $ map (fillTxInputWitnesses tx) txInputs
+                        , _citxOutputs = case traverse (toCardanoTxOutBabbage networkId toCardanoTxOutDatumHashBabbage) txOutputs of
+                            Right txs -> either (const InvalidTx) ValidTx $ traverse fromTxOut txs
+                            Left _    -> InvalidTx
+                        , _citxValidRange = txValidRange
+                        , _citxData = txData
+                        , _citxRedeemers = redeemersToMap redeemers
+                        , _citxScripts = txScripts
+                        , _citxCardanoTx = Nothing
+                        }
+            )
             (fromOnChainCardanoTx True)
             ctx
     Invalid ctx ->
         onCardanoTx
-            (\tx@Tx{txCollateral, txValidRange, txData, txInputs, txMintScripts} ->
-                let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
-                ChainIndexTx
-                    { _citxTxId = txId tx
-                    , _citxInputs = txCollateral
-                    , _citxOutputs = InvalidTx
-                    , _citxValidRange = txValidRange
-                    , _citxData = txData <> otherDataHashes
-                    , _citxRedeemers = redeemers
-                    , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
-                    , _citxCardanoTx = Nothing
-                    })
+            (\case tx@Tx{txCollateral, txValidRange, txData, txScripts, txMintingScripts, txWithdrawals, txCertificates} ->
+                    let  redeemers = allRedeemers txWithdrawals txCertificates txMintingScripts txCollateral in
+                    ChainIndexTx
+                        { _citxTxId = txId tx
+                        , _citxInputs = Set.fromList $ map (fillTxInputWitnesses tx) txCollateral
+                        , _citxOutputs = InvalidTx
+                        , _citxValidRange = txValidRange
+                        , _citxData = txData
+                        , _citxRedeemers = redeemersToMap redeemers
+                        , _citxScripts = txScripts
+                        , _citxCardanoTx = Nothing
+                        }
+            )
             (fromOnChainCardanoTx False)
             ctx
+    where
+        redeemersToMap :: [Redeemer] -> Map RedeemerHash Redeemer
+        redeemersToMap = Map.fromList . map (redeemerHash &&& id)
+
+        allRedeemers txWithdrawals txCertificates txMintingScripts txInputs =
+            mapMaybe withdrawalRedeemer txWithdrawals
+            <> mapMaybe certificateRedeemer txCertificates
+            <> Map.elems txMintingScripts
+            <> mapMaybe (
+                (\case
+                    TxConsumeScriptAddress rd _ _ -> Just rd
+                    _                             -> Nothing) . txInputType) txInputs
+
+txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
+txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
+    $ fmap (\r -> (redeemerHash r, r))
+    $ Map.elems _citxRedeemers
 
 -- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
 -- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
@@ -123,27 +168,3 @@ fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) =
     either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
 
-mintingPolicies :: Map MintingPolicyHash MintingPolicy -> Map ScriptHash Script
-mintingPolicies = Map.fromList . fmap toScript . Map.toList
-  where
-    toScript (MintingPolicyHash mph, mp) = (ScriptHash mph, getMintingPolicy mp)
-
-validators :: [TxIn] -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
-validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) . zip [0..] . sort
-  -- we sort the inputs to make sure that the indices match with redeemer pointers
-  where
-    -- TODO: the index of the txin is probably incorrect as we take it from the set.
-    -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
-    -- sort them by using the standard `Ord` instance.
-    withHash ix (ConsumeScriptAddress _lang val red dat) =
-      let (ValidatorHash vh) = validatorHash val
-       in ( Map.singleton (ScriptHash vh) (getValidator val)
-          , Map.singleton (datumHash dat) dat
-          , Map.singleton (RedeemerPtr Spend ix) red
-          )
-    withHash _ _ = mempty
-
-txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
-txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
-    $ fmap (\r -> (redeemerHash r, r))
-    $ Map.elems _citxRedeemers
