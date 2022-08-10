@@ -236,14 +236,15 @@ test-suite plutus-contract-test
     Spec.Contract
     Spec.Emulator
     Spec.ErrorChecking
-    Spec.MustSpendAtLeast
     Spec.Plutus.Contract.Oracle
     Spec.Plutus.Contract.Wallet
     Spec.Rows
     Spec.Secrets
     Spec.State
     Spec.ThreadToken
-    Spec.TimeValidity
+    Spec.TxConstraints.MustSpendAtLeast
+    Spec.TxConstraints.RequiredSigner
+    Spec.TxConstraints.TimeValidity
 
   --------------------
   -- Local components
@@ -253,6 +254,7 @@ test-suite plutus-contract-test
     , plutus-chain-index-core
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-script-utils
     , plutus-tx-constraints
@@ -263,7 +265,6 @@ test-suite plutus-contract-test
   build-depends:
     , cardano-api:{cardano-api, gen}
     , plutus-core
-    , plutus-ledger-api
     , plutus-tx
 
   if !(impl(ghcjs) || os(ghcjs))
