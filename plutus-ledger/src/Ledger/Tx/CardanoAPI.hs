@@ -117,6 +117,7 @@ import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Internal qualified as L
 import Ledger.Tx.Internal qualified as P
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.Scripts qualified as L
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
@@ -316,7 +317,7 @@ toTxScriptValidity _ _ = C.TxScriptValidityNone
 -- with their hashes.
 scriptDataFromCardanoTxBody
   :: C.TxBody era
-  -> (Map P.DatumHash P.Datum, Map P.RedeemerHash P.Redeemer)
+  -> (Map P.DatumHash P.Datum, PV1.Redeemers)
 scriptDataFromCardanoTxBody C.ByronTxBody {} = (mempty, mempty)
 scriptDataFromCardanoTxBody (C.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) =
   (mempty, mempty)
@@ -324,21 +325,32 @@ scriptDataFromCardanoTxBody
   (C.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ (Alonzo.TxDats' dats) (Alonzo.Redeemers' reds)) _ _) =
 
   let datums = Map.fromList
-             $ fmap ( (\d -> (L.datumHash d, d))
-                    . PV1.Datum
+             $ fmap ( (\d -> (datumHash d, d))
+                    . P.Datum
                     . fromCardanoScriptData
                     . C.fromAlonzoData
                     )
              $ Map.elems dats
       redeemers = Map.fromList
-                $ fmap ( (\r -> (L.redeemerHash r, r))
-                       . PV1.Redeemer
-                       . fromCardanoScriptData
-                       . C.fromAlonzoData
-                       . fst
-                       )
-                $ Map.elems reds
+                $ map (\(ptr, rdmr) ->
+                        ( redeemerPtrFromCardanoRdmrPtr ptr
+                        , P.Redeemer
+                         $ fromCardanoScriptData
+                         $ C.fromAlonzoData
+                         $ fst rdmr
+                        )
+                      )
+                $ Map.toList reds
    in (datums, redeemers)
+
+redeemerPtrFromCardanoRdmrPtr :: Alonzo.RdmrPtr -> PV1.RedeemerPtr
+redeemerPtrFromCardanoRdmrPtr (Alonzo.RdmrPtr rdmrTag ptr) = PV1.RedeemerPtr t (toInteger ptr)
+  where
+    t = case rdmrTag of
+      Alonzo.Spend -> PV1.Spend
+      Alonzo.Mint  -> PV1.Mint
+      Alonzo.Cert  -> PV1.Cert
+      Alonzo.Rewrd -> PV1.Reward
 
 -- | Extract plutus scripts from a Cardano API tx body.
 --
