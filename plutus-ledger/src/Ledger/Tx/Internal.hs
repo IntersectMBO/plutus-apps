@@ -23,22 +23,23 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
+import Ledger.Scripts (Datum, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                       ScriptHash (ScriptHash), StakeValidator (StakeValidator),
+                       StakeValidatorHash (StakeValidatorHash), Validator (Validator), ValidatorHash (ValidatorHash),
+                       mintingPolicyHash, validatorHash)
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.ApiCommon (LedgerPlutusVersion (PlutusV1, PlutusV2))
-import Plutus.V1.Ledger.Api (TxOutRef)
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Scripts (DatumHash, Redeemer, ValidatorHash)
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
-                            scriptTxIn, scriptTxIns)
+import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, TxOut, TxOutRef)
+import Plutus.V1.Ledger.Scripts (DatumHash, Redeemer)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
-import Prettyprinter (Pretty (..), hang, vsep, (<+>))
+import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 
 deriving instance Show LedgerPlutusVersion
@@ -47,6 +48,42 @@ deriving instance NFData LedgerPlutusVersion
 deriving instance Serialise LedgerPlutusVersion
 deriving instance ToJSON LedgerPlutusVersion
 deriving instance FromJSON LedgerPlutusVersion
+
+{- [Note on TxIn vs TxInput]
+TxInput differs with TxIn by: TxIn *maybe* contains *full* data witnesses, TxInput *always* contains redeemer witness, but datum/validator hashes.
+Functions differ in the way name does: inRef -> inputRef
+-}
+
+-- TODO: remove
+{- [Note on pr #468]
+In the previous iteration of #468 pr Plutus.V1.Ledger.Api/TxIn was used only in an auxiliry way, not to rewrite all functions.
+Now it got added PlutusVersion field, so TxIn defined here and TxInput coexist. Old TxIn from plutus-ledger-api unused.
+-}
+
+-- | The type of a transaction input.
+data TxInType =
+      ConsumeScriptAddress !LedgerPlutusVersion !Validator !Redeemer !Datum
+      -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
+    | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
+    | ConsumeSimpleScriptAddress -- ^ Consume a simple script
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+-- | A transaction input, consisting of a transaction output reference and an input type.
+data TxIn = TxIn {
+    txInRef  :: !TxOutRef,
+    txInType :: Maybe TxInType
+    }
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+-- | A transaction input that spends a "pay to public key" output, given the witness.
+pubKeyTxIn :: TxOutRef -> TxIn
+pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
+
+-- | A transaction input that spends a "pay to script" output, given witnesses.
+scriptTxIn :: LedgerPlutusVersion -> TxOutRef -> Validator -> Redeemer -> Datum -> TxIn
+scriptTxIn pv ref v r d = TxIn ref . Just $ ConsumeScriptAddress pv v r d
 
 -- | The type of a transaction input. Contains redeemer if consumes a script.
 data TxInputType =
@@ -70,10 +107,50 @@ instance Pretty TxInput where
     pretty TxInput{txInputRef,txInputType} =
         let rest =
                 case txInputType of
-                    TxConsumeScriptAddress redeemer _ _ ->
+                    TxConsumeScriptAddress _ redeemer _ _ ->
                         pretty redeemer
                     _ -> mempty
         in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
+
+-- | The 'TxOutRef' spent by a transaction input.
+inputRef :: Lens' TxInput TxOutRef
+inputRef = lens txInputRef s where
+    s txi r = txi { txInputRef = r }
+
+-- | The type of a transaction input.
+inputType :: Lens' TxInput TxInputType
+inputType = lens txInputType s where
+    s txi t = txi { txInputType = t }
+
+-- | Stake withdrawal, if applicable the script should be included in txScripts.
+data Withdrawal = Withdrawal
+  { withdrawalCredential :: Credential      -- ^ staking credential
+  , withdrawalAmount     :: Integer         -- ^ amount of withdrawal in Lovelace, must withdraw all eligible amount
+  , withdrawalRedeemer   :: Maybe Redeemer  -- ^ redeemer for script credential
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+instance Pretty Withdrawal where
+    pretty = viaShow
+
+data Certificate = Certificate
+  { certificateDcert    :: DCert
+  , certificateRedeemer :: Maybe Redeemer           -- ^ redeemer for script credential
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+instance Pretty Certificate where
+    pretty = viaShow
+
+-- | Validator, redeemer, and data scripts of a transaction input that spends a
+--   "pay to script" output.
+inScripts :: TxIn -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
+inScripts TxIn{ txInType = t } = case t of
+    Just (ConsumeScriptAddress l v r d) -> Just (l, v, r, d)
+    _                                   -> Nothing
+
 
 -- | The 'TxOutRef' spent by a transaction input.
 inRef :: Lens' TxInput TxOutRef
@@ -85,21 +162,6 @@ inType :: Lens' TxInput TxInputType
 inType = lens txInputType s where
     s txi t = txi { txInputType = t }
 
--- | Validator, redeemer, and data scripts of a transaction input that spends a
---   "pay to script" output.
-inScripts :: TxIn -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
-inScripts TxIn{ txInType = t } = case t of
-    Just (ConsumeScriptAddress l v r d) -> Just (l, v, r, d)
-    _                                   -> Nothing
-
--- | A transaction input that spends a "pay to public key" output, given the witness.
-pubKeyTxIn :: TxOutRef -> TxIn
-pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
-
--- | A transaction input that spends a "pay to script" output, given witnesses.
-scriptTxIn :: TxOutRef -> LedgerPlutusVersion -> Validator -> Redeemer -> Datum -> TxIn
-scriptTxIn ref l v r d = TxIn ref . Just $ ConsumeScriptAddress l v r d
-
 -- | Filter to get only the pubkey inputs.
 pubKeyTxInputs :: Fold [TxInput] TxInput
 pubKeyTxInputs = folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
@@ -110,6 +172,13 @@ scriptTxInputs = (\x -> folding x) . filter $ \case
     TxInput{ txInputType = TxConsumeScriptAddress{} } -> True
     _                                                 -> False
 
+-- | Validator, redeemer, and data scripts of a transaction input that spends a
+--   "pay to script" output.
+-- inScripts :: Tx -> TxInput -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
+-- inScripts tx i@TxInput{txInputType=TxConsumeScriptAddress pv _ _ _} = case txInType $ fillTxInputWitnesses tx i of
+--     Just (ConsumeScriptAddress v r d) -> Just (pv, v, r, d)
+--     _                                   -> Nothing
+-- inScripts _ _ = Nothing
 
 -- | A Babbage-era transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -242,9 +311,6 @@ lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 lookupDatum :: Tx -> DatumHash -> Maybe Datum
 lookupDatum Tx{txData} h = Map.lookup h txData
 
-lookupRedeemer :: Tx -> RedeemerPtr -> Maybe Redeemer
-lookupRedeemer tx p = Map.lookup p (txRedeemers tx)
-
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
     txStrippedInputs          :: [TxOutRef],
@@ -261,8 +327,8 @@ data TxStripped = TxStripped {
 
 strip :: Tx -> TxStripped
 strip Tx{..} = TxStripped i ri txOutputs txMint txFee where
-    i = map txInRef txInputs
-    ri = map txInRef txReferenceInputs
+    i = map txInputRef txInputs
+    ri = map txInputRef txReferenceInputs
 
 lookupScript :: Map ScriptHash Script -> ScriptHash -> Maybe Script
 lookupScript txScripts hash  = Map.lookup hash txScripts
@@ -278,7 +344,7 @@ spentOutputs = map txInputRef . txInputs
 
 -- | The transaction output references referenced by a transaction.
 referencedOutputs :: Tx -> [TxOutRef]
-referencedOutputs = map txInRef . txReferenceInputs
+referencedOutputs = map txInputRef . txReferenceInputs
 
 lookupMintingPolicy :: Map ScriptHash Script -> MintingPolicyHash -> Maybe MintingPolicy
 lookupMintingPolicy txScripts = fmap MintingPolicy . lookupScript txScripts . toScriptHash
@@ -290,15 +356,15 @@ lookupStakeValidator txScripts = fmap StakeValidator . lookupScript txScripts . 
     where
         toScriptHash (StakeValidatorHash b) = ScriptHash b
 
--- | Translate TxInput to TxIn taking script and datum witnesses from Tx.
+-- | Translate TxInput to old Plutus.V1.Ledger.Api TxIn taking script and datum witnesses from Tx.
 fillTxInputWitnesses :: Tx -> TxInput -> TxIn
 fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
     TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
     TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
-    TxConsumeScriptAddress redeemer vlh dh -> TxIn outRef $ do
+    TxConsumeScriptAddress pv redeemer vlh dh -> TxIn outRef $ do
         datum <- Map.lookup dh (txData tx)
         validator <- lookupValidator (txScripts tx) vlh
-        Just $ ConsumeScriptAddress validator redeemer datum
+        Just $ ConsumeScriptAddress pv validator redeemer datum
 
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
