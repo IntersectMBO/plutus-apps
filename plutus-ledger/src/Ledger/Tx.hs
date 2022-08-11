@@ -15,8 +15,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Tx
-    ( module Ledger.Tx.Internal
-    , module Export
+    ( module Export
     -- * ChainIndexTxOut
     , ChainIndexTxOut(..)
     , toTxOut
@@ -93,7 +92,6 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 import Data.Set (Set)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Tx.Internal
 import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Api (Datum)
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn,
@@ -231,7 +229,7 @@ instance Pretty CardanoTx where
                     , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList (txSignatures tx'))))
                     ]) (const []) tx ++
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
-                , hang 2 (vsep ("redeemers:": fmap pretty (getCardanoTxRedeemers tx)))
+                , hang 2 (vsep ("redeemers:": fmap pretty (Map.elems $ getCardanoTxRedeemers tx)))
                 , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList (getCardanoTxData tx))))
                 ]
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
@@ -335,8 +333,8 @@ getCardanoTxData = onCardanoTx txData
     --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
     --     fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
     --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
-getCardanoTxRedeemers :: CardanoTx -> [V1.Redeemer]
-getCardanoTxRedeemers = onCardanoTx txRedeemers (const [])
+getCardanoTxRedeemers :: CardanoTx -> Map V1.ScriptPurpose V1.Redeemer
+getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty)
 
 -- Defined here as uses `txId`.
 instance Pretty Tx where

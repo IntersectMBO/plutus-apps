@@ -64,7 +64,6 @@ import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
 import Data.Default (Default (def))
 import Data.Foldable (fold, foldl')
-import Data.Function ((&))
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
 import Data.List qualified as List
@@ -80,15 +79,13 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Datum, Interval, OnChainTx (Valid),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
-               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
-               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
-               TxInInfo (txInInfoOutRef), TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
+               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext),
+               Slot (Slot), SlotRange, SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
+               Tx (txFee, txInputs, txMint, txOutputs, txValidRange), TxInInfo (txInInfoOutRef),
+               TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
                TxInputType (TxConsumePublicKeyAddress), TxOut (txOutValue), TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
                ValidationCtx (ValidationCtx), Validator (Validator), Value, _runValidation, addCardanoTxSignature,
-               addMintingPolicy, addSignature', datumHash, pubKeyTxIn, pubKeyTxOut, toPublicKey, txData, txId,
-               txScripts)
+               addMintingPolicy, pubKeyTxOut, scriptHash, toPublicKey, txData, txScripts, validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -96,7 +93,9 @@ import Ledger.Index qualified as Index
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
+import Ledger.Validation qualified as Validation
+import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Generators as ScriptGen
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
@@ -249,7 +248,7 @@ genValidTransactionSpending' g ins totalVal = do
                         , txMint = maybe mempty id mintValue
                         , txFee = Ada.toValue fee'
                         , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
-                        , txScripts = Map.fromList (map (\(Validator s) -> (PV1.scriptHash s, s)) scripts)
+                        , txScripts = Map.fromList (map (\(Validator s) -> (scriptHash s, s)) scripts)
                         }
                     & addMintingPolicy ScriptGen.alwaysSucceedPolicy Script.unitRedeemer
                     & EmulatorTx
@@ -265,7 +264,7 @@ genValidTransactionSpending' g ins totalVal = do
         txInToTxInput (TxInputWitnessed outref txInType) = case txInType of
             Ledger.ConsumePublicKeyAddress -> (TxInput outref TxConsumePublicKeyAddress, Nothing)
             Ledger.ConsumeSimpleScriptAddress -> (TxInput outref Ledger.TxConsumeSimpleScriptAddress, Nothing)
-            Ledger.ConsumeScriptAddress vl rd dt -> (TxInput outref (Ledger.TxConsumeScriptAddress rd (PV1.validatorHash vl) (datumHash dt)), Just (vl, dt))
+            Ledger.ConsumeScriptAddress pv vl rd dt -> (TxInput outref (Ledger.TxConsumeScriptAddress pv rd (validatorHash  vl) (datumHash dt)), Just (vl, dt))
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

@@ -57,7 +57,6 @@ import Prelude hiding (lookup)
 
 import Cardano.Api (Lovelace (..))
 import Control.Lens (Fold, folding, toListOf, view, (^.))
-import Control.Lens.Indexed (iforM_)
 import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
@@ -78,7 +77,7 @@ import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx hiding (pubKeyTxIns, scriptTxIns)
+import Ledger.Tx
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
@@ -454,7 +453,7 @@ mkPV2TxInfo tx = do
             , PV2.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
             , PV2.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
             , PV2.txInfoData = AMap.fromList . Map.toList $  tx ^. datumWitnesses
-            , PV2.txInfoRedeemers = AMap.empty -- TODO Our tx must support ScriptPurpose in redeemers
+            , PV2.txInfoRedeemers = AMap.fromList . Map.toList $ txRedeemers tx
             , PV2.txInfoId = txId tx
             }
     pure ptx

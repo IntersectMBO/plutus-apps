@@ -64,6 +64,7 @@ library
     Ledger.Blockchain
     Ledger.Builtins.Orphans
     Ledger.CardanoWallet
+    Ledger.Contexts.Orphans
     Ledger.Credential.Orphans
     Ledger.Crypto
     Ledger.Crypto.Orphans

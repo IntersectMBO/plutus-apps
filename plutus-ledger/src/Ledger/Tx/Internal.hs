@@ -19,12 +19,14 @@ import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, encode)
 import Control.DeepSeq (NFData)
 import Control.Lens
+import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
+import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
+import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Scripts (Datum, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
@@ -36,7 +38,8 @@ import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.ApiCommon (LedgerPlutusVersion (PlutusV1, PlutusV2))
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, TxOut (txOutValue), TxOutRef)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash),
+                             TxOut (txOutValue), TxOutRef)
 import Plutus.V1.Ledger.Scripts (DatumHash, Redeemer)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
@@ -404,27 +407,27 @@ addScriptTxInput outRef version vl@(Validator script) rd dt tx@Tx{txInputs, txSc
         dtHash = datumHash dt
         vlHash@(ValidatorHash b) = validatorHash vl
 
-txRedeemers :: Tx -> [Redeemer]
-txRedeemers = txSpendingRedeemers <> txMintingRedeemers <> txRewardingRedeemers <> txCertifyingRedeemers
+txRedeemers :: Tx -> Map ScriptPurpose Redeemer
+txRedeemers = (Map.mapKeys Spending . txSpendingRedeemers)
+    <> (Map.mapKeys (Minting . mpsSymbol) . txMintingRedeemers)
+    <> (Map.mapKeys (Rewarding . StakingHash)  . txRewardingRedeemers)
+    <> (Map.mapKeys Certifying . txCertifyingRedeemers)
 
-txSpendingRedeemers :: Tx -> [Redeemer]
-txSpendingRedeemers Tx{txInputs} = mapMaybe extract txInputs where
-    extract TxInput{txInputType=TxConsumeScriptAddress _ redeemer _ _} =
-        Just redeemer
-    extract _ = Nothing
+txSpendingRedeemers :: Tx -> Map TxOutRef Redeemer
+txSpendingRedeemers Tx{txInputs} = flip execState Map.empty $ traverse_ extract txInputs where
+    extract TxInput{txInputType=TxConsumeScriptAddress _ redeemer _ _, txInputRef} =
+        modify' $ Map.insert txInputRef redeemer
+    extract _ = return ()
 
+txMintingRedeemers :: Tx -> Map MintingPolicyHash Redeemer
+txMintingRedeemers Tx{txMintingScripts} = txMintingScripts
 
-txMintingRedeemers :: Tx -> [Redeemer]
-txMintingRedeemers Tx{txMintingScripts} = Map.elems txMintingScripts
+txRewardingRedeemers :: Tx -> Map Credential Redeemer
+txRewardingRedeemers Tx{txWithdrawals} = flip execState Map.empty $ traverse_ f txWithdrawals where
+    f (Withdrawal cred _ (Just rd)) = modify' $ Map.insert cred rd
+    f _                             = return ()
 
-txRewardingRedeemers :: Tx -> [Redeemer]
-txRewardingRedeemers Tx{txWithdrawals} = mapMaybe f txWithdrawals
-    where
-        f (Withdrawal _ _ (Just rd)) = Just rd
-        f _                          = Nothing
-
-txCertifyingRedeemers :: Tx -> [Redeemer]
-txCertifyingRedeemers Tx{txCertificates} = mapMaybe f txCertificates
-    where
-        f (Certificate _ (Just rd)) = Just rd
-        f _                         = Nothing
+txCertifyingRedeemers :: Tx -> Map DCert Redeemer
+txCertifyingRedeemers Tx{txCertificates} = flip execState Map.empty $ traverse_ f txCertificates where
+    f (Certificate dcert (Just rd)) = modify' $ Map.insert dcert rd
+    f _                             = return ()

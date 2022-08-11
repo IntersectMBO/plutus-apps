@@ -133,8 +133,8 @@ instance ToJSON ExportTxRedeemerPurpose where
 data ExportTxRedeemer =
     SpendingRedeemer{ redeemer:: Plutus.Redeemer, redeemerOutRef :: TxOutRef }
     | MintingRedeemer { redeemer:: Plutus.Redeemer, redeemerPolicyId :: MintingPolicyHash }
-    | RewardingRedeemer { redeemer:: Plutus.Redeemer, redeemerRewardCredential :: Credential, redeemerAmount :: Integer }
-    | CertifyingRedeemer { redeemer:: Plutus.Redeemer, redeemerDcert :: DCert }
+    | RewardingRedeemer { redeemer:: Plutus.Redeemer, redeemerStakingCredential :: Credential}
+    | CertifyingRedeemer { redeemer:: Plutus.Redeemer, redeemerDCert :: DCert }
     deriving stock (Eq, Show, Generic, Typeable)
     deriving anyclass (OpenApi.ToSchema)
 
@@ -292,27 +292,11 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> pure otherQuantities
 
 mkRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkRedeemers = mkSpendingRedeemers <> mkMintingRedeemers <> mkRewardingRedeemers <> mkCertifyingRedeemers
-
-mkSpendingRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkSpendingRedeemers P.Tx{P.txInputs} = mapMaybe extract txInputs where
-    extract P.TxInput{P.txInputType=P.TxConsumeScriptAddress redeemer _ _, P.txInputRef} =
-        Just SpendingRedeemer{redeemer, redeemerOutRef=txInputRef}
-    extract _ = Nothing
-
-mkMintingRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkMintingRedeemers P.Tx{P.txMintingScripts} = map (\(a,b) -> MintingRedeemer b a) $ Map.toList txMintingScripts
-
-mkRewardingRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkRewardingRedeemers P.Tx{P.txWithdrawals} = mapMaybes f txWithdrawals
+mkRedeemers = map (uncurry scriptPurposeToExportRedeemer) . Map.assocs . txRedeemers
     where
-        f = \case
-            Withdrawal cred n (Just rd) -> Just (RewardingRedeemer rd cred n)
-            Withdrawal _    _ Nothing   -> Nothing
 
-mkCertifyingRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkCertifyingRedeemers P.Tx{P.txCertificates} = mapMaybes f txCertificates
-    where
-        f = \case
-            Certificate dcert (Just rd) -> Just (CertifyingRedeemer rd dcert)
-            Withdrawal _    _ Nothing   -> Nothing
+scriptPurposeToExportRedeemer :: ScriptPurpose -> Redeemer -> ExportTxRedeemer
+scriptPurposeToExportRedeemer (Spending ref)     = SpendingRedeemer {redeemerOutRef = ref}
+scriptPurposeToExportRedeemer (Minting cs)       = MintingRedeemer {redeemerPolicyId = currencyMpsHash cs}
+scriptPurposeToExportRedeemer (Rewarding cred)   = RewardingRedeemer {redeemerStakingCredential = cred}
+scriptPurposeToExportRedeemer (Certifying dcert) = CertifyingRedeemer {redeemerDCert = dcert}

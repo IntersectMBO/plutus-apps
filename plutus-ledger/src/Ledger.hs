@@ -19,7 +19,7 @@ import Ledger.Orphans ()
 import Ledger.Params as Export
 import Ledger.Scripts as Export
 import Ledger.Slot as Export
-import Ledger.Tx as Export hiding (pubKeyTxIns, scriptTxIns)
+import Ledger.Tx as Export
 import Ledger.Value as Export (noAdaValue)
 import Plutus.V1.Ledger.Api (Credential, DCert)
 import Plutus.V1.Ledger.Contexts as Export
