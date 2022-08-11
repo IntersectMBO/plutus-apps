@@ -39,7 +39,7 @@ import Data.Aeson.Types (Parser, parseFail)
 import Data.Bifunctor (first)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Semigroup qualified as Semigroup
 import Data.Set qualified as Set

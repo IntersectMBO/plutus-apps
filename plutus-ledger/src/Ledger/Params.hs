@@ -92,7 +92,7 @@ instance Default ProtocolParameters where
     , protocolParamPoolPledgeInfluence = 3 % 10
     , protocolParamMonetaryExpansion = 3 % 1000
     , protocolParamTreasuryCut = 1 % 5
-    , protocolParamUTxOCostPerWord = Just (Lovelace 34482)
+    , protocolParamUTxOCostPerWord = Nothing -- Obsolete from babbage onwards
     , protocolParamCostModels = fromList
       [ (AnyPlutusScriptVersion PlutusScriptV1, CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams)
       , (AnyPlutusScriptVersion PlutusScriptV2, CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams) ]
@@ -103,8 +103,8 @@ instance Default ProtocolParameters where
     , protocolParamCollateralPercent = Just 150
     , protocolParamMaxCollateralInputs = Just 3
     , protocolParamUTxOCostPerByte =
-      let (Coin coinsPerUTxOByte) = coinsPerUTxOWordToCoinsPerUTxOByte $ Coin 34482
-      in Just $ Lovelace coinsPerUTxOByte
+        let (Coin coinsPerUTxOByte) = coinsPerUTxOWordToCoinsPerUTxOByte $ Coin 34482
+         in Just $ Lovelace coinsPerUTxOByte
     }
 
 
