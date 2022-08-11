@@ -39,13 +39,14 @@ import Data.Aeson.Types (Parser, parseFail)
 import Data.Bifunctor (first)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
-import Data.Semigroup qualified as Semigroup
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
+import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
@@ -53,8 +54,9 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequ
                                     mkTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxInType (..), TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
+import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
@@ -133,7 +135,7 @@ instance ToJSON ExportTxRedeemerPurpose where
 data ExportTxRedeemer =
     SpendingRedeemer{ redeemer:: Plutus.Redeemer, redeemerOutRef :: TxOutRef }
     | MintingRedeemer { redeemer:: Plutus.Redeemer, redeemerPolicyId :: MintingPolicyHash }
-    | RewardingRedeemer { redeemer:: Plutus.Redeemer, redeemerStakingCredential :: Credential}
+    | RewardingRedeemer { redeemer:: Plutus.Redeemer, redeemerStakingCredential :: StakingCredential}
     | CertifyingRedeemer { redeemer:: Plutus.Redeemer, redeemerDCert :: DCert }
     deriving stock (Eq, Show, Generic, Typeable)
     deriving anyclass (OpenApi.ToSchema)
@@ -267,8 +269,8 @@ export params utx =
             makeTransactionBody params utxo ctx
     in ExportTx
         <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . CardanoAPI.toCardanoTxBody params requiredSigners) unBalancedTxTx)
-        <*> mkInputs (P.pNetworkId params) unBalancedTxUtxoIndex
-        <*> pure (mkRedeemers unBalancedTxTx)
+        <*> first Right (mkInputs (P.pNetworkId params) unBalancedTxUtxoIndex)
+        <*> either (const $ Right []) (pure . mkRedeemers) unBalancedTxTx
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
@@ -291,12 +293,12 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
         <*> pure otherQuantities
 
+-- TODO: Here there's hidden error of script DCert missing its redeemer - this just counts as no DCert. Don't know if bad.
 mkRedeemers :: P.Tx -> [ExportTxRedeemer]
 mkRedeemers = map (uncurry scriptPurposeToExportRedeemer) . Map.assocs . txRedeemers
-    where
 
-scriptPurposeToExportRedeemer :: ScriptPurpose -> Redeemer -> ExportTxRedeemer
-scriptPurposeToExportRedeemer (Spending ref)     = SpendingRedeemer {redeemerOutRef = ref}
-scriptPurposeToExportRedeemer (Minting cs)       = MintingRedeemer {redeemerPolicyId = currencyMpsHash cs}
-scriptPurposeToExportRedeemer (Rewarding cred)   = RewardingRedeemer {redeemerStakingCredential = cred}
-scriptPurposeToExportRedeemer (Certifying dcert) = CertifyingRedeemer {redeemerDCert = dcert}
+scriptPurposeToExportRedeemer :: Ledger.ScriptPurpose -> Redeemer -> ExportTxRedeemer
+scriptPurposeToExportRedeemer (Ledger.Spending ref)     rd = SpendingRedeemer {redeemerOutRef = ref, redeemer=rd}
+scriptPurposeToExportRedeemer (Ledger.Minting cs)       rd = MintingRedeemer {redeemerPolicyId = currencyMPSHash cs, redeemer=rd}
+scriptPurposeToExportRedeemer (Ledger.Rewarding cred)   rd = RewardingRedeemer {redeemerStakingCredential = cred, redeemer=rd}
+scriptPurposeToExportRedeemer (Ledger.Certifying dcert) rd = CertifyingRedeemer {redeemerDCert = dcert, redeemer=rd}

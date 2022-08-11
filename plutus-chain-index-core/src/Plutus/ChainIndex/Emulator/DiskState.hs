@@ -38,12 +38,9 @@ import Ledger.Ada qualified as Ada
 import Ledger.Credential (Credential)
 import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash)
 import Ledger.Tx (TxId)
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOut (..), citxData, citxRedeemers, citxScripts, citxTxId,
-                             txOutsWithRef, txRedeemersWithHash)
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
+                             txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
-import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Datum, DatumHash, Redeemer, RedeemerHash, Script,
-                             TxId, TxOutRef)
-import Plutus.V1.Ledger.Scripts (ScriptHash)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 -- | Set of transaction output references for each address.

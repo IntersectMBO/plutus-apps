@@ -118,7 +118,6 @@ import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Internal qualified as L
 import Ledger.Tx.Internal qualified as P
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.Scripts qualified as L
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1
@@ -505,11 +504,11 @@ toCardanoTxInWitness tx
     (L.TxConsumeScriptAddress
         P.PlutusV1
         (L.Redeemer redeemer)
-        validatorHash
-        datumHash)
+        valh
+        dh)
     = do
-      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup datumHash (L.txData tx)
-      (PV1.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator (L.txScripts tx) validatorHash
+      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (L.txData tx)
+      (PV1.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator (L.txScripts tx) valh
       C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
         <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) validator)
@@ -521,11 +520,11 @@ toCardanoTxInWitness tx
     (L.TxConsumeScriptAddress
         P.PlutusV2
         (L.Redeemer redeemer)
-        validatorHash
-        datumHash)
+        vh
+        dh)
     = do
-      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup datumHash (L.txData tx)
-      (PV1.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator (L.txScripts tx) validatorHash
+      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (L.txData tx)
+      (PV1.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator (L.txScripts tx) vh
       C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
         <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) validator)
@@ -562,39 +561,39 @@ toCardanoScriptWitness pv datum redeemer script = (case pv of
 -- TODO Handle reference script once 'PV1.TxOut' supports it (or when we use
 -- exclusively 'C.TxOut' in all the codebase).
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError PV1.TxOut
-fromCardanoTxOut (C.TxOut addr value datumHash _) =
+fromCardanoTxOut (C.TxOut addr value dh _) =
     PV1.TxOut
     <$> fromCardanoAddressInEra addr
     <*> pure (fromCardanoTxOutValue value)
-    <*> pure (fromCardanoTxOutDatumHash datumHash)
+    <*> pure (fromCardanoTxOutDatumHash dh)
 
 toCardanoTxOut
     :: C.NetworkId
     -> (Maybe L.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
     -> PV1.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.BabbageEra)
-toCardanoTxOut networkId fromHash (PV1.TxOut addr value datumHash) =
+toCardanoTxOut networkId fromHash (PV1.TxOut addr value dh) =
     C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValue value
-            <*> fromHash datumHash
+            <*> fromHash dh
             <*> pure C.ReferenceScriptNone
 
 toCardanoTxOutUnsafe
     :: C.NetworkId
-    -> (Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
+    -> (Maybe L.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
     -> PV1.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.BabbageEra)
-toCardanoTxOutUnsafe networkId fromHash (PV1.TxOut addr value datumHash) =
+toCardanoTxOutUnsafe networkId fromHash (PV1.TxOut addr value dh) =
     C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValueUnsafe value
-            <*> fromHash datumHash
+            <*> fromHash dh
             <*> pure C.ReferenceScriptNone
 
 lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
-lookupDatum datums datumHash =
-    case flip Map.lookup datums =<< datumHash of
+lookupDatum datums dh =
+    case flip Map.lookup datums =<< dh of
         Just datum -> pure $ C.TxOutDatumInTx C.ScriptDataInBabbageEra (toCardanoScriptData $ P.getDatum datum)
-        Nothing    -> toCardanoTxOutDatumHash datumHash
+        Nothing    -> toCardanoTxOutDatumHash dh
 
 fromCardanoAddressInEra :: C.AddressInEra era -> Either FromCardanoError P.Address
 fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
@@ -695,8 +694,8 @@ fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) = PV2.OutputDatum $ PV2.Datum $ fro
 fromCardanoTxOutDatum (C.TxOutDatumInline _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
-toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
-toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash datumHash
+toCardanoTxOutDatumHash Nothing   = pure C.TxOutDatumNone
+toCardanoTxOutDatumHash (Just dh) = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash dh
 
 toCardanoScriptDataHash :: PV1.DatumHash -> Either ToCardanoError (C.Hash C.ScriptData)
 toCardanoScriptDataHash (PV1.DatumHash bs) = tag "toCardanoTxOutDatumHash" (deserialiseFromRawBytes (C.AsHash C.AsScriptData) (PlutusTx.fromBuiltin bs))

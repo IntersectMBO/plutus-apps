@@ -357,19 +357,13 @@ doubleSatisfactionCounterexamples dsc =
         newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
                                    , txOutRefIdx = 1
                                    }
-        newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
-                           , txInType = Just $ ConsumeScriptAddress PlutusV1
-                                                                    alwaysOkValidator
-                                                                    redeemerEmpty
-                                                                    datumEmpty
-                           }
   , let targetMatters0 = dsc & l . outAddress .~ stealerAddr
         tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
         targetMatters1 = targetMatters0 & dsTxId .~ txId tx
                                         & dsTx   .~ tx
   , let valueStolen0 = dsc & l . outAddress .~ stealerAddr
                            & dsTx . outputs %~ (withDatumOut:)
-                           & dsTx . inputs %~ (newFakeTxIn:)
+                           & dsTx  %~ addScriptTxInput newFakeTxOutRef PlutusV1 alwaysOkValidator redeemerEmpty datumEmpty
                            & dsUtxoIndex %~
                               (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
                                                                          newFakeTxScriptOut m)

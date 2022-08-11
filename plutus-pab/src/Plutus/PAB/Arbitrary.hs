@@ -25,10 +25,8 @@ import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
-import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, TxId, TxOut, TxOutRef,
-                             ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
-import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx

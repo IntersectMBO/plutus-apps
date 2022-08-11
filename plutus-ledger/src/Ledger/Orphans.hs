@@ -30,7 +30,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (Certificate, LedgerPlutusVersion, Tx, TxInput, TxInputType, Withdrawal)
+import Ledger.Tx.Internal (Certificate, LedgerPlutusVersion, Tx, TxIn, TxInType, TxInput, TxInputType, Withdrawal)
 import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), DCert, Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
@@ -112,9 +112,9 @@ deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
 deriving instance OpenApi.ToSchema Certificate
 deriving instance OpenApi.ToSchema DCert
--- deriving instance OpenApi.ToSchema TxIn
+deriving instance OpenApi.ToSchema TxIn
 deriving instance OpenApi.ToSchema TxInput
--- deriving instance OpenApi.ToSchema TxInType
+deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef

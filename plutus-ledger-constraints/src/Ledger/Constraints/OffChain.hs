@@ -56,7 +56,6 @@ module Ledger.Constraints.OffChain(
     , processConstraintFun
     , addOwnInput
     , addOwnOutput
-    , addMintingRedeemers
     , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
@@ -108,12 +107,12 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
                              ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Scripts qualified as Typed
-import Ledger.Typed.Tx (ConnectionError, tyTxInTxIn)
-import Ledger.Typed.Tx qualified as Typed
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
+import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError)
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash (MintingPolicyHash),
                              POSIXTimeRange, Redeemer, Validator, ValidatorHash, Value)
@@ -517,9 +516,10 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     valueSpentInputs <>= provided vl
     case Typed.tyTxInTxIn txIn of
+        -- TODO Needs to work with PlutusV1 AND PlutusV2.
         -- this is what makeTypedScriptTxIn makes
-        Tx.TxIn outRef (Just (Tx.ConsumeScriptAddress validator rs dt)) -> do
-            unbalancedTx . tx %= addScriptTxInput outRef validator rs dt
+        Tx.TxIn outRef (Just (Tx.ConsumeScriptAddress PlutusV1 validator rs dt)) -> do
+            unbalancedTx . tx %= addScriptTxInput outRef PlutusV1 validator rs dt
         _ -> error "Impossible txIn in addOwnInput."
 
 
@@ -656,7 +656,7 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         case txout of
           Tx.PublicKeyChainIndexTxOut {} -> do
-              unbalancedTx . tx . Tx.referenceInputs %= (Tx.pubKeyTxIn txo :)
+              unbalancedTx . tx . Tx.referenceInputs %= (Tx.pubKeyTxInput txo :)
           _ -> throwError (TxOutRefWrongType txo)
 
     MustMintValue mpsHash@(MintingPolicyHash mpsHashBytes) red tn i -> do
@@ -723,8 +723,8 @@ processConstraintFun = \case
                          (Map.toList slTxOutputs)
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just (validator, datum, value))] -> do
-                unbalancedTx . tx %=  addScriptTxInput ref validator red datum
+            [(ref, Just ((_, validator, version), (_, datum), value))] -> do
+                unbalancedTx . tx %=  addScriptTxInput ref version validator red datum
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
 

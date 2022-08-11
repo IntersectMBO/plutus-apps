@@ -389,7 +389,7 @@ fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
 
--- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
+-- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly. Doesn't alter txMint.
 addMintingPolicy :: MintingPolicy -> Redeemer -> Tx -> Tx
 addMintingPolicy vl@(MintingPolicy script) rd tx@Tx{txMintingScripts, txScripts} = tx
     {txMintingScripts = Map.insert mph rd txMintingScripts,

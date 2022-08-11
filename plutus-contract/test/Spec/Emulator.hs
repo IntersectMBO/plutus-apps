@@ -25,6 +25,8 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import Ledger (LedgerPlutusVersion (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, cardanoTxMap, getCardanoTxFee,
+               getCardanoTxOutRefs, getCardanoTxOutputs, onCardanoTx, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Gen
@@ -32,8 +34,7 @@ import Ledger.Index (ValidationError (ScriptFailure))
 import Ledger.Index qualified as Index
 import Ledger.Params ()
 import Ledger.Scripts (ScriptError (EvaluationError), Validator, mkValidatorScript, unitDatum, unitRedeemer)
-import Ledger.Tx (CardanoTx (EmulatorTx), Tx (txFee, txMint, txOutputs), TxInType (ConsumeScriptAddress),
-                  TxOut (txOutValue), outputs, txOutRefs)
+import Ledger.Tx (CardanoTx (EmulatorTx), Tx (txMint), TxInType (ConsumeScriptAddress), TxOut (txOutValue), outputs)
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
@@ -224,7 +225,7 @@ invalidScript = property $ do
     let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
-    invalidTxn <- forAll $ Gen.genValidTransactionSpending [TxInputWitnessed (snd outToSpend) (ConsumeScriptAddress failValidator unitRedeemer unitDatum)] totalVal
+    invalidTxn <- forAll $ Gen.genValidTransactionSpending [TxInputWitnessed (snd outToSpend) (ConsumeScriptAddress PlutusV1 failValidator unitRedeemer unitDatum)] totalVal
     Hedgehog.annotateShow invalidTxn
 
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m

@@ -21,8 +21,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, toTxOut, unitDatum,
-                         unitRedeemer)
+import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, scriptTxInputs, toTxOut,
+                         unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential)
 import Ledger.Constraints qualified as Constraints
@@ -148,6 +148,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
             StakingHash (ScriptCredential (Ledger.ValidatorHash svh)) -> Just $ Ledger.StakeValidatorHash svh
             _                                                         -> Nothing
 
+
 -- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
 testScriptInputs
     :: ( PlutusTx.FromData (Scripts.DatumType a)
@@ -162,14 +163,12 @@ testScriptInputs lookups txc = property $ do
                  $ Constraints.mkTx lookups txc
     let valM = do
             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxInputs)) tx
-            idx <- Ledger.vctxIndex <$> ask
-            pure (Nothing, idx)
+            pure Nothing
     case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
         (Nothing, _) -> pure ()
         (Just err, _) -> do
             Hedgehog.annotateShow err
             Hedgehog.failure
-
 
 txOut0 :: Ledger.ChainIndexTxOut
 txOut0 =
