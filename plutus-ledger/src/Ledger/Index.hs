@@ -85,13 +85,16 @@ import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as PV1
+import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose))
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value qualified as V
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusPrelude (first)
 import PlutusTx.AssocMap qualified as AMap
+import PlutusTx.Prelude qualified as P
 
 -- | Context for validating transactions. We need access to the unspent
 --   transaction outputs of the blockchain, and we can throw 'ValidationError's.
@@ -251,11 +254,11 @@ checkMintingScripts tx = do
         let cs :: V.CurrencySymbol
             cs = V.mpsSymbol mph
             ctx :: Context
-            ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txinfo }
+            ctx = Context $ PV1.toBuiltinData $ ScriptContext { scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txinfo }
 
-        vl <- case lookupMintingPolicy (txScripts tx) mph of
-            Just vl | mintingPolicyHash vl == mph -> pure vl
-            _                                     -> throwError $ MintWithoutScript mph
+        mp <- case lookupMintingPolicy (txScripts tx) mph of
+            Just vl | PV1.mintingPolicyHash vl == mph -> pure vl
+            _                                         -> throwError $ MintWithoutScript mph
 
         case runExcept $ runMintingPolicyScript ctx mp red of
             Left e  -> do
@@ -317,7 +320,7 @@ checkMatch tx = \case
         txInfo <- mkPV1TxInfo tx
         let
             ptx' = PV1.ScriptContext { PV1.scriptContextTxInfo = txInfo, PV1.scriptContextPurpose = PV1.Spending txOutRef }
-            vd = Context (toBuiltinData ptx')
+            vd = Context (PV1.toBuiltinData ptx')
         case runExcept $ runScript vd vl d r of
             Left e -> do
                 tell [validatorScriptValidationEvent vd vl d r (Left e)]
@@ -327,7 +330,7 @@ checkMatch tx = \case
         txInfo <- mkPV2TxInfo tx
         let
             ptx' = PV2.ScriptContext { PV2.scriptContextTxInfo = txInfo, PV2.scriptContextPurpose = PV2.Spending txOutRef }
-            vd = Context (toBuiltinData ptx')
+            vd = Context (PV2.toBuiltinData ptx')
         case runExcept $ runScript vd vl d r of
             Left e -> do
                 tell [validatorScriptValidationEvent vd vl d r (Left e)]
@@ -411,9 +414,8 @@ mkPV1TxInfo tx = do
     txins <- traverse mkPV1TxInInfo $ view inputs tx
     let ptx = PV1.TxInfo
             { PV1.txInfoInputs = txins
-            , PV1.txInfoReferenceInputs = []
             -- See note [Mint and Fee fields must have ada symbol]
-            , PV1.txInfoOutputs = txOutV1ToTxOutV2 <$> txOutputs tx
+            , PV1.txInfoOutputs = txOutputs tx
             , PV1.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV1.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , PV1.txInfoDCert = [] -- DCerts not supported in emulator
@@ -421,7 +423,6 @@ mkPV1TxInfo tx = do
             , PV1.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
             , PV1.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
             , PV1.txInfoData = Map.toList (tx ^. datumWitnesses)
-            , PV1.txInfoRedeemers = AMap.empty -- TODO Our tx must support ScriptPurpose in redeemers
             , PV1.txInfoId = txId tx
             }
     pure ptx
@@ -429,10 +430,10 @@ mkPV1TxInfo tx = do
 
 -- | Create the data about a transaction input which will be passed to a
 -- PlutusV1 validator script.
-mkPV1TxInInfo :: ValidationMonad m => TxIn -> m PV1.TxInInfo
-mkPV1TxInInfo TxIn{txInRef} = do
-    txOut <- lkpTxOut txInRef
-    pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInRef, PV1.txInInfoResolved=txOut}
+mkPV1TxInInfo :: ValidationMonad m => TxInput -> m PV1.TxInInfo
+mkPV1TxInInfo i = do
+    txOut <- lkpTxOut $ txInputRef i
+    pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInputRef i, PV1.txInInfoResolved=txOut}
 
 -- | Create the data about the transaction which will be passed to a PV2
 -- validator script.
@@ -440,18 +441,19 @@ mkPV2TxInfo :: ValidationMonad m => Tx -> m PV2.TxInfo
 mkPV2TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txins <- traverse mkPV2TxInInfo $ view inputs tx
+    txRefIns <- traverse mkPV2TxInInfo $ view referenceInputs tx
     let ptx = PV2.TxInfo
             { PV2.txInfoInputs = txins
-            , PV2.txInfoReferenceInputs = []
+            , PV2.txInfoReferenceInputs = txRefIns
             -- See note [Mint and Fee fields must have ada symbol]
             , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> txOutputs tx
             , PV2.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV2.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , PV2.txInfoDCert = [] -- DCerts not supported in emulator
-            , PV2.txInfoWdrl = [] -- Withdrawals not supported in emulator
+            , PV2.txInfoWdrl = AMap.empty -- Withdrawals not supported in emulator
             , PV2.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
             , PV2.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
-            , PV2.txInfoData = Map.toList (tx ^. datumWitnesses)
+            , PV2.txInfoData = AMap.fromList . Map.toList $  tx ^. datumWitnesses
             , PV2.txInfoRedeemers = AMap.empty -- TODO Our tx must support ScriptPurpose in redeemers
             , PV2.txInfoId = txId tx
             }

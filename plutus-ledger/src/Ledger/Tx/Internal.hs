@@ -23,6 +23,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
@@ -35,7 +36,7 @@ import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.ApiCommon (LedgerPlutusVersion (PlutusV1, PlutusV2))
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, TxOut, TxOutRef)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, TxOut (txOutValue), TxOutRef)
 import Plutus.V1.Ledger.Scripts (DatumHash, Redeemer)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
@@ -76,6 +77,15 @@ data TxIn = TxIn {
     }
     deriving stock (Show, Eq, Ord, Generic)
     deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+instance Pretty TxIn where
+    pretty TxIn{txInRef,txInType} =
+                let rest =
+                        case txInType of
+                            Just (ConsumeScriptAddress _ _ redeemer _) ->
+                                pretty redeemer
+                            _ -> mempty
+                in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
 
 -- | A transaction input that spends a "pay to public key" output, given the witness.
 pubKeyTxIn :: TxOutRef -> TxIn
@@ -311,6 +321,13 @@ lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 lookupDatum :: Tx -> DatumHash -> Maybe Datum
 lookupDatum Tx{txData} h = Map.lookup h txData
 
+-- | Check that all values in a transaction are non-negative.
+validValuesTx :: Tx -> Bool
+validValuesTx Tx{..}
+  = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
+    where
+      nonNegative i = V.geq i mempty
+
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
     txStrippedInputs          :: [TxOutRef],
@@ -386,3 +403,28 @@ addScriptTxInput outRef version vl@(Validator script) rd dt tx@Tx{txInputs, txSc
     where
         dtHash = datumHash dt
         vlHash@(ValidatorHash b) = validatorHash vl
+
+txRedeemers :: Tx -> [Redeemer]
+txRedeemers = txSpendingRedeemers <> txMintingRedeemers <> txRewardingRedeemers <> txCertifyingRedeemers
+
+txSpendingRedeemers :: Tx -> [Redeemer]
+txSpendingRedeemers Tx{txInputs} = mapMaybe extract txInputs where
+    extract TxInput{txInputType=TxConsumeScriptAddress _ redeemer _ _} =
+        Just redeemer
+    extract _ = Nothing
+
+
+txMintingRedeemers :: Tx -> [Redeemer]
+txMintingRedeemers Tx{txMintingScripts} = Map.elems txMintingScripts
+
+txRewardingRedeemers :: Tx -> [Redeemer]
+txRewardingRedeemers Tx{txWithdrawals} = mapMaybe f txWithdrawals
+    where
+        f (Withdrawal _ _ (Just rd)) = Just rd
+        f _                          = Nothing
+
+txCertifyingRedeemers :: Tx -> [Redeemer]
+txCertifyingRedeemers Tx{txCertificates} = mapMaybe f txCertificates
+    where
+        f (Certificate _ (Just rd)) = Just rd
+        f _                         = Nothing

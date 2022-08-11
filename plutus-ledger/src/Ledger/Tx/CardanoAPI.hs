@@ -117,8 +117,7 @@ import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Internal qualified as L
 import Ledger.Tx.Internal qualified as P
-import Ledger.Tx.Types qualified as L
-import Plutus.Script.Utils.Scripts qualified as P
+import Plutus.Script.Utils.Scripts qualified as L
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1
@@ -341,15 +340,6 @@ scriptDataFromCardanoTxBody
                 $ Map.elems reds
    in (datums, redeemers)
 
-redeemerPtrFromCardanoRdmrPtr :: Alonzo.RdmrPtr -> PV1.RedeemerPtr
-redeemerPtrFromCardanoRdmrPtr (Alonzo.RdmrPtr rdmrTag ptr) = PV1.RedeemerPtr t (toInteger ptr)
-  where
-    t = case rdmrTag of
-      Alonzo.Spend -> PV1.Spend
-      Alonzo.Mint  -> PV1.Mint
-      Alonzo.Cert  -> PV1.Cert
-      Alonzo.Rewrd -> PV1.Reward
-
 -- | Extract plutus scripts from a Cardano API tx body.
 --
 -- Note that Plutus scripts are only supported in Alonzo era and onwards.
@@ -389,20 +379,21 @@ fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
    in either (const Nothing) Just script
 
 toCardanoTxBodyContent
-    :: [L.PaymentPubKeyHash] -- ^ Required signers of the transaction
+    :: P.Params
+    -> [L.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> L.Tx
     -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} = do
+toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..} = do
     -- TODO: translate all fields
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
-    txInsReference <- traverse (toCardanoTxIn ref . txInputRef) txReferenceInputs
+    txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut pNetworkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue tx
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse toCardanoPaymentKeyHash sigs
-    withdrawals <- toWithdrawals txScripts networkId txWithdrawals
+    withdrawals <- toWithdrawals txScripts pNetworkId txWithdrawals
     pure $ CardanoBuildTx $ C.TxBodyContent
         { txIns = txIns
         , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
@@ -424,13 +415,14 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} =
         , txUpdateProposal = C.TxUpdateProposalNone
         }
 
+-- TODO: Support V2.
 toWithdrawals :: Map L.ScriptHash PV1.Script
   -> C.NetworkId
   -> [L.Withdrawal]
-  -> Either ToCardanoError (C.TxWithdrawals C.BuildTx C.AlonzoEra)
+  -> Either ToCardanoError (C.TxWithdrawals C.BuildTx C.BabbageEra)
 toWithdrawals txScripts networkId = \case
   [] -> pure C.TxWithdrawalsNone
-  xs -> C.TxWithdrawals C.WithdrawalsInAlonzoEra <$> mapM toWithdraw xs
+  xs -> C.TxWithdrawals C.WithdrawalsInBabbageEra <$> mapM toWithdraw xs
 
   where
     toWithdraw L.Withdrawal{withdrawalCredential, withdrawalAmount, withdrawalRedeemer} = do
@@ -441,7 +433,8 @@ toWithdrawals txScripts networkId = \case
     toStakeWitness withdrawalRedeemer cred = case cred of
       PV1.PubKeyCredential _pkh -> pure $ C.BuildTxWith $ C.KeyWitness C.KeyWitnessForStakeAddr
       PV1.ScriptCredential _vh -> case (,) <$> withdrawalRedeemer <*> L.lookupValidator txScripts _vh of
-        Just (redeemer, PV1.Validator script) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoScriptWitness C.NoScriptDatumForStake redeemer script
+        -- Hardcoded V1.
+        Just (redeemer, PV1.Validator script) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoScriptWitness P.PlutusV1 C.NoScriptDatumForStake redeemer script
         Nothing                    -> Left MissingStakeValidator
 
 toCardanoStakeAddress :: C.NetworkId -> PV1.Credential -> Either ToCardanoError C.StakeAddress
@@ -472,7 +465,7 @@ makeTransactionBody exUnits (CardanoBuildTx txBodyContent) =
 fromCardanoTxIn :: C.TxIn -> PV1.TxOutRef
 fromCardanoTxIn (C.TxIn txId (C.TxIx txIx)) = PV1.TxOutRef (fromCardanoTxId txId) (toInteger txIx)
 
-toCardanoTxInBuild :: L.Tx -> L.TxInput -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.AlonzoEra))
+toCardanoTxInBuild :: L.Tx -> L.TxInput -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
 toCardanoTxInBuild tx (L.TxInput txInRef txInType) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness tx txInType)
 
 toCardanoTxIn :: PV1.TxOutRef -> Either ToCardanoError C.TxIn
@@ -531,22 +524,28 @@ toCardanoTxInWitness tx
 
 
 -- TODO: Support V2 minting scripts.
-toCardanoMintWitness :: PV1.Redeemer -> Maybe PV1.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.AlonzoEra)
+toCardanoMintWitness :: PV1.Redeemer -> Maybe PV1.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
 toCardanoMintWitness _ Nothing = Left MissingMintingPolicy
-toCardanoMintWitness redeemer (Just (PV1.MintingPolicy script)) = toCardanoScriptWitness C.NoScriptDatumForMint redeemer script
+toCardanoMintWitness redeemer (Just (PV1.MintingPolicy script)) =
+  -- Hardcoded V1
+  toCardanoScriptWitness P.PlutusV1 C.NoScriptDatumForMint redeemer script
 
--- TODO: Differentiate between V1 and V2.
 toCardanoScriptWitness :: PV1.ToData a =>
-  C.ScriptDatum witctx
+  P.LedgerPlutusVersion
+  -> C.ScriptDatum witctx
   -> a
   -> PV1.Script
-  -> Either ToCardanoError (C.ScriptWitness witctx C.AlonzoEra)
-toCardanoScriptWitness datum redeemer script = do
-    C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-        <$> fmap C.PScript (toCardanoPlutusScript script)
-        <*> pure datum
-        <*> pure (C.fromPlutusData $ PV1.toData redeemer)
-        <*> pure zeroExecutionUnits
+  -> Either ToCardanoError (C.ScriptWitness witctx C.BabbageEra)
+toCardanoScriptWitness pv datum redeemer script = (case pv of
+    P.PlutusV1 ->
+      C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
+          <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
+    P.PlutusV2 ->
+      C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+          <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
+  ) <*> pure datum
+    <*> pure (C.fromPlutusData $ PV1.toData redeemer)
+    <*> pure zeroExecutionUnits
 
 -- TODO Handle reference script once 'PV1.TxOut' supports it (or when we use
 -- exclusively 'C.TxOut' in all the codebase).
@@ -694,10 +693,6 @@ fromCardanoMintValue :: C.TxMintValue build era -> PV1.Value
 fromCardanoMintValue C.TxMintNone              = mempty
 fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 
-toCardanoMintValue
-    :: PV1.Redeemers
-    -> PV1.Value
-    -> Map.Map P.MintingPolicyHash P.MintingPolicy
 toCardanoMintValue :: L.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue tx@L.Tx{..} =
     let indexedMps = Map.assocs txMintingScripts
@@ -858,14 +853,11 @@ instance Pretty ToCardanoError where
     pretty OutputHasZeroAda                   = "Transaction outputs should not contain zero Ada"
     pretty StakingPointersNotSupported        = "Staking pointers are not supported"
     pretty SimpleScriptsNotSupportedToCardano = "Simple scripts are not supported"
-    pretty MissingTxInType                    = "Missing TxInType"
-    pretty MissingMintingPolicyRedeemer       = "Missing minting policy redeemer"
     pretty MissingMintingPolicy               = "Missing minting policy"
     pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
     pretty (UnsupportedPlutusVersion v)       = "Plutus version not supported:" <+> viaShow v
     pretty MissingInputValidator              = "Missing input validator."
     pretty MissingDatum                       = "Missing required datum."
-    pretty MissingMintingPolicy               = "Missing minting policy."
     pretty MissingStakeValidator              = "Missing stake validator."
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 

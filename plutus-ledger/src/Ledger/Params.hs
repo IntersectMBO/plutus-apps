@@ -24,6 +24,7 @@ import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo
                             PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (retractPP)
+import Cardano.Ledger.Babbage.Translation (coinsPerUTxOWordToCoinsPerUTxOByte)
 import Cardano.Ledger.BaseTypes (boundRational)
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -101,6 +102,9 @@ instance Default ProtocolParameters where
     , protocolParamMaxValueSize = Just 5000
     , protocolParamCollateralPercent = Just 150
     , protocolParamMaxCollateralInputs = Just 3
+    , protocolParamUTxOCostPerByte =
+      let (Coin coinsPerUTxOByte) = coinsPerUTxOWordToCoinsPerUTxOByte $ Coin 34482
+      in Just $ Lovelace coinsPerUTxOByte
     }
 
 
