@@ -1,33 +1,36 @@
-Plutus Tools Developer Guide
+Plutus Tools SDK User Guide
 ===============================
 
-Plutus Tools are a collection of off-chain infrastructure resources. Plutus Tools are built 
-for developers who are authoring web-based applications that implement smart contracts on the 
-Cardano blockchain. 
-
-The Plutus Tools Team supports the underlying resources that developers need who are 
-writing full applications using Plutus in Haskell, including off-chain code. 
-The term “off-chain code” refers to the part of a contract application’s code which 
-runs off the chain, usually as a contract application. 
-
-Because there are so many potential use cases for what you may choose to create, you are not 
-confined to only one prescribed way of using Plutus Tools. Instead, you can access 
-the entire tool box where you can find a collection of utilities and components. Pick and choose 
-from the tools and examples that best suit your use case. 
-
-The Plutus Platform
+Intended Audience
 -------------------------------
 
-The Plutus Tools Repo (https://github.com/input-output-hk/plutus-apps) contains 
-the Plutus Platform, which consists of these components: 
+This user guide is intended for external developers who are authoring distributed 
+applications that implement smart contracts on the Cardano blockchain. 
 
-* Libraries which implement the Plutus Application Framework
-* A selection of end-to-end use cases written with the Plutus Application Framework
-* The Plutus Playground, a web-based playground for learning and writing basic Plutus Applications
+Plutus Tools SDK
+===============================
 
-To read more about the Platform, see :ref:`what_is_the_plutus_platform`.
-To get started using the Platform, see :ref:`plutus_getting_started`.
+The Plutus Tools SDK is a collection of off-chain infrastructure resources built 
+for external developers. The `Plutus Tools SDK repository <https://github.com/
+input-output-hk/plutus-apps>`_ supports the underlying resources that developers 
+need who are writing full applications using Plutus in Haskell, including off-chain 
+code. The term “off-chain code” refers to the part of a contract application’s code 
+which runs off the chain. 
 
+The `Plutus Tools SDK repository <https://github.com/input-output-hk/plutus-apps>`_ 
+contains packages such as: 
+
+* the `Plutus Application Backend (PAB) <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-pab>`_, 
+  an off-chain application for managing the state of Plutus contract instances;
+
+* the `chain-index <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-chain-index>`_, 
+  a lightweight, customizable chain follower application and library for DApp 
+  developers who need to index and query the Cardano blockchain; 
+
+* a variety of other Plutus packages. 
+
+To get started using the Plutus Tools SDK, see the `Plutus starter template repository 
+<https://github.com/input-output-hk/plutus-starter>`_.
 
 .. toctree::
    :caption: Explore Plutus
