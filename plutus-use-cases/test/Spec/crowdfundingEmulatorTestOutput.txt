@@ -33,7 +33,6 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                     mps:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
-                    redeemers:
                     data:
                       "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"
                     attached scripts:
@@ -67,11 +66,7 @@ Slot 1: W[2]: Finished balancing:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   redeemers:
                   data:
-                    "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"
-                  attached scripts:
-                  withdrawals:
-                  certificates:
-                  metadata: }
+                    "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
@@ -93,7 +88,6 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                     mps:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
-                    redeemers:
                     data:
                       ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
                     attached scripts:
@@ -127,14 +121,10 @@ Slot 1: W[3]: Finished balancing:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   redeemers:
                   data:
-                    ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
-                  attached scripts:
-                  withdrawals:
-                  certificates:
-                  metadata: }
-Slot 1: W[3]: Signing tx: b130ba8f7233f5f15573b4831e1abd74fbea6f090c5f04619c34190ee4ca9dee
-Slot 1: W[3]: Submitting tx: b130ba8f7233f5f15573b4831e1abd74fbea6f090c5f04619c34190ee4ca9dee
-Slot 1: W[3]: TxSubmit: b130ba8f7233f5f15573b4831e1abd74fbea6f090c5f04619c34190ee4ca9dee
+                    ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"}
+Slot 1: W[3]: Signing tx: 8ae118363cb5291661f5543f3e5ad98e857781535b5ce9b892ed02f2e4c578a7
+Slot 1: W[3]: Submitting tx: 8ae118363cb5291661f5543f3e5ad98e857781535b5ce9b892ed02f2e4c578a7
+Slot 1: W[3]: TxSubmit: 8ae118363cb5291661f5543f3e5ad98e857781535b5ce9b892ed02f2e4c578a7
 Slot 1: W[4]: Balancing an unbalanced transaction:
                 Tx:
                   Tx c440ee2710cdd0dd74435592fd10ee5803a631c59d8fcd8cf64b5034e0809421:
@@ -149,7 +139,6 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                     mps:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
-                    redeemers:
                     data:
                       "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
                     attached scripts:
@@ -181,28 +170,24 @@ Slot 1: W[4]: Finished balancing:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   redeemers:
                   data:
-                    "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
-                  attached scripts:
-                  withdrawals:
-                  certificates:
-                  metadata: }
-Slot 1: W[4]: Signing tx: 31f38006481bbd0f6fa4ba7f2fb29856988990f264be0c35eee91dff98e879a4
-Slot 1: W[4]: Submitting tx: 31f38006481bbd0f6fa4ba7f2fb29856988990f264be0c35eee91dff98e879a4
-Slot 1: W[4]: TxSubmit: 31f38006481bbd0f6fa4ba7f2fb29856988990f264be0c35eee91dff98e879a4
-Slot 1: TxnValidate 31f38006481bbd0f6fa4ba7f2fb29856988990f264be0c35eee91dff98e879a4
-Slot 1: TxnValidate b130ba8f7233f5f15573b4831e1abd74fbea6f090c5f04619c34190ee4ca9dee
-Slot 1: TxnValidate cb11f60209ec0a31a6f1fdbd2f30c24a23d8aec19c6647c57958eba563e6fcb6
+                    "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="}
+Slot 1: W[4]: Signing tx: 7a163ff491284ec42cd9c342ade0987cd3831be81910be496fb834c0d759370a
+Slot 1: W[4]: Submitting tx: 7a163ff491284ec42cd9c342ade0987cd3831be81910be496fb834c0d759370a
+Slot 1: W[4]: TxSubmit: 7a163ff491284ec42cd9c342ade0987cd3831be81910be496fb834c0d759370a
+Slot 1: TxnValidate 7a163ff491284ec42cd9c342ade0987cd3831be81910be496fb834c0d759370a
+Slot 1: TxnValidate 8ae118363cb5291661f5543f3e5ad98e857781535b5ce9b892ed02f2e4c578a7
+Slot 1: TxnValidate b3baa4f9600750b3fdf919880701412010216a8ae89025d53037443073441a20
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: W[1]: Balancing an unbalanced transaction:
                  Tx:
                    Tx d6b80d0682729167c3b383403e887c6f9911288e1344462b8f6f0687caccd9b6:
                      {inputs:
-                        - cb11f60209ec0a31a6f1fdbd2f30c24a23d8aec19c6647c57958eba563e6fcb6!0
+                        - b3baa4f9600750b3fdf919880701412010216a8ae89025d53037443073441a20!0
                           <>
                         - 8ae118363cb5291661f5543f3e5ad98e857781535b5ce9b892ed02f2e4c578a7!0
                           <>
-                        - 31f38006481bbd0f6fa4ba7f2fb29856988990f264be0c35eee91dff98e879a4!0
+                        - 7a163ff491284ec42cd9c342ade0987cd3831be81910be496fb834c0d759370a!0
                           <>
                      reference inputs:
                      collateral inputs:
@@ -237,11 +222,11 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
 Slot 20: W[1]: Finished balancing:
                  Tx fa9d402a681b646b31767d8bba0b4fc0819b5351245e8e6849ae9dfa93043b37:
                    {inputs:
-                      - cb11f60209ec0a31a6f1fdbd2f30c24a23d8aec19c6647c57958eba563e6fcb6!0
+                      - b3baa4f9600750b3fdf919880701412010216a8ae89025d53037443073441a20!0
                         <>
                       - 8ae118363cb5291661f5543f3e5ad98e857781535b5ce9b892ed02f2e4c578a7!0
                         <>
-                      - 31f38006481bbd0f6fa4ba7f2fb29856988990f264be0c35eee91dff98e879a4!0
+                      - 7a163ff491284ec42cd9c342ade0987cd3831be81910be496fb834c0d759370a!0
                         <>
                    reference inputs:
                    collateral inputs:
@@ -255,18 +240,17 @@ Slot 20: W[1]: Finished balancing:
                    mps:
                    signatures:
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
+                   redeemers:
+                     <>
+                     <>
+                     <>
                    data:
                      ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
                      "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
-                     "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"
-                   attached scripts:
-                     8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f
-                   withdrawals:
-                   certificates:
-                   metadata: }
-Slot 20: W[1]: Signing tx: 8f696523e027acdd20bcb1553236c928e30eaa0e259af28f4465cd59df6a7616
-Slot 20: W[1]: Submitting tx: 8f696523e027acdd20bcb1553236c928e30eaa0e259af28f4465cd59df6a7616
-Slot 20: W[1]: TxSubmit: 8f696523e027acdd20bcb1553236c928e30eaa0e259af28f4465cd59df6a7616
+                     "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
+Slot 20: W[1]: Signing tx: fa9d402a681b646b31767d8bba0b4fc0819b5351245e8e6849ae9dfa93043b37
+Slot 20: W[1]: Submitting tx: fa9d402a681b646b31767d8bba0b4fc0819b5351245e8e6849ae9dfa93043b37
+Slot 20: W[1]: TxSubmit: fa9d402a681b646b31767d8bba0b4fc0819b5351245e8e6849ae9dfa93043b37
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract instance stopped (no errors)
 Slot 20: TxnValidate fa9d402a681b646b31767d8bba0b4fc0819b5351245e8e6849ae9dfa93043b37
