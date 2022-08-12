@@ -126,9 +126,9 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
-    , hysterical-screams
-    , plutus-ledger       >=1.0.0
-    , plutus-streaming    >=1.0.0
+    , plutus-hysterical-screams
+    , plutus-ledger              >=1.0.0
+    , plutus-streaming           >=1.0.0
 
   --------------------------
   -- Other IOG dependencies

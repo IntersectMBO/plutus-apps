@@ -243,7 +243,9 @@ test-suite plutus-contract-test
     Spec.Secrets
     Spec.State
     Spec.ThreadToken
-    Spec.TimeValidity
+    Spec.TxConstraints.MustSpendAtLeast
+    Spec.TxConstraints.RequiredSigner
+    Spec.TxConstraints.TimeValidity
 
   --------------------
   -- Local components

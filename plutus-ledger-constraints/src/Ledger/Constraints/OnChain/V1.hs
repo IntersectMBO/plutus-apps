@@ -67,7 +67,7 @@ checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} ScriptOutputCons
     let hsh = V.findDatumHash (Ledger.Datum $ toBuiltinData ocDatum) scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatumHash=Just svh} =
                Ada.fromValue txOutValue >= Ada.fromValue ocValue
-            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.minAdaTxOut
+            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.maxMinAdaTxOut
             && Value.noAdaValue txOutValue == Value.noAdaValue ocValue
             && hsh == Just svh
         checkOutput _       = False
@@ -107,19 +107,18 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
-            checkOutput (Just dv) TxOut{txOutDatumHash=Just svh} = hsh dv == Just svh
-            -- return 'True' by default meaning we fail only when the provided datum is not found
-            checkOutput _ _                                      = True
+            checkOutput dv TxOut{txOutDatumHash=Just svh} = hsh dv == Just svh
+            checkOutput _ _                               = False
         in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk && any (checkOutput mdv) outs
+        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk && maybe True (\dv -> any (checkOutput dv) outs) mdv
     MustPayToOtherScript vlh _ dv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh = V.findDatumHash dv scriptContextTxInfo
             addr = Address.scriptHashAddress vlh
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatumHash=Just svh} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.minAdaTxOut
+                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && Value.noAdaValue txOutValue == Value.noAdaValue vl
                 && hsh == Just svh
                 && txOutAddress == addr
