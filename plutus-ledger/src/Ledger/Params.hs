@@ -24,6 +24,7 @@ import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo
                             PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (retractPP)
+import Cardano.Ledger.Babbage.Translation (coinsPerUTxOWordToCoinsPerUTxOByte)
 import Cardano.Ledger.BaseTypes (boundRational)
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -91,7 +92,7 @@ instance Default ProtocolParameters where
     , protocolParamPoolPledgeInfluence = 3 % 10
     , protocolParamMonetaryExpansion = 3 % 1000
     , protocolParamTreasuryCut = 1 % 5
-    , protocolParamUTxOCostPerWord = Just (Lovelace 34482)
+    , protocolParamUTxOCostPerWord = Nothing -- Obsolete from babbage onwards
     , protocolParamCostModels = fromList
       [ (AnyPlutusScriptVersion PlutusScriptV1, CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams)
       , (AnyPlutusScriptVersion PlutusScriptV2, CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams) ]
@@ -101,6 +102,9 @@ instance Default ProtocolParameters where
     , protocolParamMaxValueSize = Just 5000
     , protocolParamCollateralPercent = Just 150
     , protocolParamMaxCollateralInputs = Just 3
+    , protocolParamUTxOCostPerByte =
+        let (Coin coinsPerUTxOByte) = coinsPerUTxOWordToCoinsPerUTxOByte $ Coin 34482
+         in Just $ Lovelace coinsPerUTxOByte
     }
 
 

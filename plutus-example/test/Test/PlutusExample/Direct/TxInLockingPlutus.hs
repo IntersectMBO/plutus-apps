@@ -42,6 +42,7 @@ import System.Directory qualified as IO
 import System.Environment qualified as IO
 import Test.Base qualified as H
 import Test.Process qualified as H
+import Test.Runtime qualified as H
 import Testnet.Cardano qualified as H
 import Testnet.Conf qualified as H
 
