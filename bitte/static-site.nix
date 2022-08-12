@@ -15,11 +15,11 @@ let
       ".jpg" => "image/jpeg",
       ".jpeg" => "image/jpeg",
       ".html" => "text/html",
-      ".js"           =>      "text/javascript",
-      ".svg"          =>      "image/svg+xml",
+      ".js" => "text/javascript",
+      ".svg" => "image/svg+xml",
     )
-    deflate.cache-dir   = "/tmp"
-    deflate.mimetypes    = ("text/plain", "text/html", "text/css")
+    deflate.cache-dir = "/tmp"
+    deflate.mimetypes = ("text/plain", "text/html", "text/css")
     server.upload-dirs = ("/tmp")
   '';
 in

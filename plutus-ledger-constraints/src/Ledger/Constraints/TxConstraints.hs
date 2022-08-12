@@ -9,11 +9,12 @@
 {-# LANGUAGE NoImplicitPrelude    #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-{-# LANGUAGE TypeApplications     #-}
+
 -- | Constraints for transactions
 module Ledger.Constraints.TxConstraints where
 
@@ -35,8 +36,8 @@ import Ledger.Address (PaymentPubKeyHash, StakePubKeyHash)
 import Ledger.Tx (ChainIndexTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
-import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer (Redeemer),
-                             StakeValidatorHash, TxOutRef, Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicyHash, POSIXTimeRange, Redeemer, StakeValidatorHash,
+                             TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
 import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
@@ -626,9 +627,10 @@ collectFromPlutusV1ScriptFilter
     -> Validator
     -> Redeemer
     -> UntypedConstraints
-collectFromPlutusV1ScriptFilter flt am vls (Redeemer red) =
+collectFromPlutusV1ScriptFilter flt am vls red =
     let mp'  = fromMaybe Haskell.mempty $ am ^. at (PV1.mkValidatorAddress vls)
-    in collectFromTheScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
+        ourUtxo = Map.filterWithKey flt mp'
+    in foldMap (flip mustSpendScriptOutput red) $ Map.keys ourUtxo
 
 -- | Given the pay to script address of the 'Validator', collect from it
 -- all the outputs that match a predicate, using the 'RedeemerValue'.
