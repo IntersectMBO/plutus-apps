@@ -21,7 +21,6 @@
   "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "10pb0yfp80jhb9ryn65a4rha2lxzsn2vlhcc6xphrrkf4x5lhzqc";
   "https://github.com/input-output-hk/typed-protocols"."181601bc3d9e9d21a671ce01e0b481348b3ca104" = "sha256-5Wof5yTKb12EPY6B8LfapX18xNZZpF+rvhnQ88U6KdM=";
   "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
-  "https://github.com/raduom/hysterical-screams"."4c523469e9efd3f0d10d17da3304923b7b0e0674" = "0w118v4vffrsjxfmwfv8qcn2qxmxpd1gxwcjnda91qz09jnpg0vp";
   "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
   "https://github.com/vshabanov/ekg-json"."00ebe7211c981686e65730b7144fbf5350462608" = "sha256-VT8Ur585TCn03P2TVi6t92v2Z6tl8vKijICjse6ocv8=";
 }

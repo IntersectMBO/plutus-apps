@@ -38,6 +38,7 @@ module Ledger.Index(
     mkPV2TxInfo,
     pubKeyTxIns,
     scriptTxIns,
+    maxMinAdaTxOut,
     -- * Actual validation
     validateTransaction,
     validateTransactionOffChain,
@@ -354,7 +355,7 @@ checkPositiveValues t =
     else throwError $ NegativeValue t
 
 {-# INLINABLE minAdaTxOut #-}
--- Minimum required Ada for each tx output.
+-- An estimate of the minimum required Ada for each tx output.
 --
 -- TODO: Should be removed.
 minAdaTxOut :: Ada
@@ -363,6 +364,21 @@ minAdaTxOut = Ada.lovelaceOf minTxOut
 {-# INLINABLE minTxOut #-}
 minTxOut :: Integer
 minTxOut = 2_000_000
+
+{-# INLINABLE maxMinAdaTxOut #-}
+{-
+maxMinAdaTxOut = maxTxOutSize * coinsPerUTxOWord
+coinsPerUTxOWord = 34_482
+maxTxOutSize = utxoEntrySizeWithoutVal + maxValSizeInWords + dataHashSize
+utxoEntrySizeWithoutVal = 27
+maxValSizeInWords = 500
+dataHashSize = 10
+
+These values are partly protocol parameters-based, but since this is used in on-chain code
+we want a constant to reduce code size.
+-}
+maxMinAdaTxOut :: Ada
+maxMinAdaTxOut = Ada.lovelaceOf 18_516_834
 
 -- Minimum required Lovelace for each tx output.
 --
