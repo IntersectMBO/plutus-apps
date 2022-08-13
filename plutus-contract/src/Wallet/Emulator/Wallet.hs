@@ -59,8 +59,7 @@ import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Index (UtxoIndex (UtxoIndex, getIndex))
 import Ledger.Params (Params (Params, pProtocolParams, pSlotConfig))
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxInput (TxInput, txInputRef),
-                  TxOut (TxOut), TxOutRef)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (makeTransactionBody)
 import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
@@ -71,6 +70,7 @@ import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Wallet (finalize)
+import Plutus.V1.Ledger.Api (PubKeyHash, TxOutRef, ValidatorHash, Value)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
@@ -82,9 +82,6 @@ import Wallet.Error qualified as WAPI (WalletAPIError (InsufficientFunds, Paymen
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Ledger qualified
-import Ledger.Crypto (PubKeyHash)
-import Ledger.Scripts (ValidatorHash)
-import Ledger.Value (Value)
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
@@ -224,7 +221,7 @@ makeLenses ''WalletState
 ownPaymentPrivateKey :: WalletState -> PaymentPrivateKey
 ownPaymentPrivateKey = CW.paymentPrivateKey . _mockWallet
 
-ownPaymentPublicKey :: WalletState -> Ledger.PaymentPubKey
+ownPaymentPublicKey :: WalletState -> PaymentPubKey
 ownPaymentPublicKey = CW.paymentPubKey . _mockWallet
 
 -- | Get the user's own payment public-key address.
@@ -418,7 +415,7 @@ lookupValue ::
     )
     => Tx.TxInput
     -> Eff effs Value
-lookupValue outputRef@TxInput {txInputRef} = do
+lookupValue outputRef@Tx.TxInput {Tx.txInputRef} = do
     txoutMaybe <- ChainIndex.unspentTxOutFromRef txInputRef
     case txoutMaybe of
         Just txout -> pure $ view Ledger.ciTxOutValue txout
@@ -472,7 +469,7 @@ handleBalanceTx utxo utx = do
                 pure tx'
             else do
                 logDebug $ AddingInputsFor neg
-                pure $ tx' & over Tx.inputs ( fmap (Tx.pubKeyTxInput . pubKeyTxOutRef) newTxIns ++ )
+                pure $ tx' & over Tx.inputs (sort . (++) (fmap (Tx.pubKeyTxInput . pubKeyTxOutRef) newTxIns))
 
     if remainingCollFees `Value.leq` PlutusTx.zero
     then do

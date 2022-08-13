@@ -43,12 +43,14 @@ import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
-import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx (SomeTx), Tx (..), TxOutRef (..),
-               onCardanoTx, txCertifyingRedeemers, txId, txMintingRedeemers, txRewardingRedeemers, txSpendingRedeemers)
+import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx (SomeTx), Tx (..),
+               TxInput (txInputType), TxOutRef (..), onCardanoTx, txCertifyingRedeemers, txId, txMintingRedeemers,
+               txRewardingRedeemers)
 import Ledger.Address (Address)
 import Ledger.Scripts (Redeemer, RedeemerHash)
-import Ledger.Tx (fillTxInputWitnesses)
+import Ledger.Tx (TxInputType (TxConsumeScriptAddress), fillTxInputWitnesses)
                             --  toCardanoTxOutDatumHashBabbage, toCardanoTxOutBabbage)
+import Data.Maybe (mapMaybe)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity, toCardanoTxOut,
                                    toCardanoTxOutDatumHash)
@@ -129,7 +131,7 @@ fromOnChainCardanoTx validity (SomeTx tx era) =
     either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
 
 
--- TODO: the index of the txin is incorrect as we take it from the set.
+-- TODO: the index of the txin is probably incorrect as we take it from the set.
 -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
 -- sort them by using the standard `Ord` instance.
 calculateRedeemerPointers :: Tx -> Redeemers
@@ -138,8 +140,13 @@ calculateRedeemerPointers tx = spends <> rewards <> mints <> certs
 
     where
         -- These sorts are ofc bad.
-        spends  = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Spend n, rd)) [0..]  $ sort $ Map.assocs $ txSpendingRedeemers tx
         rewards = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Reward n, rd)) [0..]  $ sort $ Map.assocs $ txRewardingRedeemers tx
         mints   = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Mint n, rd)) [0..]  $ sort $ Map.assocs $ txMintingRedeemers tx
         certs   = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Cert n, rd)) [0..]  $ sort $ Map.assocs $ txCertifyingRedeemers tx
+        -- This is written this way not to change the previous semantic. Either though previous version was commented as "probably incorrect".
+        spends = Map.fromList $ mapMaybe (uncurry getRd) $ zip [0..] $ fmap txInputType $ sort $ txInputs tx
+        -- spends  = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Spend n, rd)) [0..]  $ sort $ Map.assocs $ txSpendingRedeemers tx
 
+        getRd n = \case
+            TxConsumeScriptAddress _ rd _ _ -> Just $ (RedeemerPtr Spend n, rd)
+            _                               -> Nothing
