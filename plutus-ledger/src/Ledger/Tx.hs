@@ -76,6 +76,7 @@ import Data.Map qualified as Map
 import Data.Maybe (isJust, mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
+import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
@@ -88,8 +89,6 @@ import Plutus.V1.Ledger.Api qualified as V1
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- for re-export
--- for re-export
-import Data.Set (Set)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal as Export

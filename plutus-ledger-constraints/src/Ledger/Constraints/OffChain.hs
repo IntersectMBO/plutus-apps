@@ -16,7 +16,6 @@
 {-# LANGUAGE TypeOperators             #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE ViewPatterns              #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 module Ledger.Constraints.OffChain(
     -- * Lookups
     ScriptLookups(..)
@@ -63,7 +62,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (Traversal', _2, _Just, _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
+import Control.Lens (Traversal', _2, _Just, _Right, alaf, at, makeLensesFor, view, (%=), (.=), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -73,7 +72,6 @@ import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (Compose))
-import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
@@ -83,7 +81,6 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
-import Data.Maybe (fromJust)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -98,11 +95,9 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, LedgerPlutusVersion (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr),
-                  ScriptTag (Mint, Spend), Tx, TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef,
-                  addScriptTxInput)
+import Ledger.Tx (ChainIndexTxOut, LedgerPlutusVersion (PlutusV1, PlutusV2), Tx,
+                  TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef, addScriptTxInput)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
                              ValidatorTypes (DatumType, RedeemerType))
@@ -112,15 +107,11 @@ import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
-import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError)
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash (MintingPolicyHash),
-                             POSIXTimeRange, Redeemer, Validator, ValidatorHash, Value)
+                             POSIXTimeRange, Validator, ValidatorHash, Value)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy))
 import Plutus.V1.Ledger.Scripts qualified as PV1
-import Plutus.V1.Ledger.Time (POSIXTimeRange)
-import Plutus.V1.Ledger.Value (Value)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
