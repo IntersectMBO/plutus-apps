@@ -118,7 +118,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
             addr = Address.scriptHashAddress vlh
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatumHash=Just svh} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.minAdaTxOut
+                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && Value.noAdaValue txOutValue == Value.noAdaValue vl
                 && hsh == Just svh
                 && txOutAddress == addr
