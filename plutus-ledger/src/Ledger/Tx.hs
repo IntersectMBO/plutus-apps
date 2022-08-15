@@ -89,7 +89,6 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal as Export
-import Plutus.V1.Ledger.Api (Datum)
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn,
                                       pubKeyTxIns, scriptTxIn, scriptTxIns)
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn, TxInType (..))
