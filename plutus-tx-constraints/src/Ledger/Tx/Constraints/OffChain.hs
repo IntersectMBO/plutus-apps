@@ -248,13 +248,9 @@ processConstraint = \case
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txInsCollateral <>= [ txIn ]
 
-    P.MustReferencePubKeyOutput txo -> do
-        txout <- lookupTxOutRef txo
-        case txout of
-            Tx.PublicKeyChainIndexTxOut {} -> do
-                txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
-                unbalancedTx . tx . txInsReference <>= [ txIn ]
-            _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+    P.MustReferenceOutput txo -> do
+        txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+        unbalancedTx . tx . txInsReference <>= [ txIn ]
 
     P.MustPayToPubKeyAddress pk mskh md vl -> do
         networkId <- use (P.paramsL . networkIdL)

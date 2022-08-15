@@ -73,9 +73,8 @@ data TxConstraint =
     -- ^ The transaction must spend the given unspent transaction script output.
     | MustUseOutputAsCollateral TxOutRef
     -- ^ The transaction must include the utxo as collateral input.
-    | MustReferencePubKeyOutput TxOutRef
-    -- ^ The transaction must reference (not spend) the given unspent
-    -- transaction public key output.
+    | MustReferenceOutput TxOutRef
+    -- ^ The transaction must reference (not spend) the given unspent transaction output.
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
     -- ^ The transaction must mint the given token and amount.
     | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe Datum) Value
@@ -104,8 +103,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must spend pubkey output:", pretty ref]
         MustSpendScriptOutput ref red ->
             hang 2 $ vsep ["must spend script output:", pretty ref, pretty red]
-        MustReferencePubKeyOutput ref ->
-            hang 2 $ vsep ["must reference pubkey output:", pretty ref]
+        MustReferenceOutput ref ->
+            hang 2 $ vsep ["must reference output:", pretty ref]
         MustMintValue mps red tn i ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
         MustPayToPubKeyAddress pkh skh datum v ->
@@ -523,9 +522,9 @@ mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
 mustUseOutputAsCollateral :: forall i o. TxOutRef -> TxConstraints i o
 mustUseOutputAsCollateral = singleton . MustUseOutputAsCollateral
 
-{-# INLINABLE mustReferencePubKeyOutput #-}
--- | @mustReferencePubKeyOutput utxo@ must reference (not spend!) the given
--- unspent transaction public key output.
+{-# INLINABLE mustReferenceOutput #-}
+-- | @mustReferenceOutput utxo@ must reference (not spend!) the given
+-- unspent transaction output.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint adds @utxo@ as a
 -- reference input to the transaction. Information about this @utxo@ must be
@@ -534,8 +533,8 @@ mustUseOutputAsCollateral = singleton . MustUseOutputAsCollateral
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction references this @utxo@.
-mustReferencePubKeyOutput :: forall i o. TxOutRef -> TxConstraints i o
-mustReferencePubKeyOutput = singleton . MustReferencePubKeyOutput
+mustReferenceOutput :: forall i o. TxOutRef -> TxConstraints i o
+mustReferenceOutput = singleton . MustReferenceOutput
 
 {-# INLINABLE mustSatisfyAnyOf #-}
 mustSatisfyAnyOf :: forall i o. [TxConstraints i o] -> TxConstraints i o
