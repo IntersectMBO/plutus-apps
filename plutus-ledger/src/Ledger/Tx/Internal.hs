@@ -41,6 +41,7 @@ import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash),
                              TxOut (txOutValue), TxOutRef)
 import Plutus.V1.Ledger.Scripts (DatumHash, Redeemer)
+import Plutus.V1.Ledger.Tx (txOutDatum)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
@@ -349,6 +350,15 @@ strip :: Tx -> TxStripped
 strip Tx{..} = TxStripped i ri txOutputs txMint txFee where
     i = map txInputRef txInputs
     ri = map txInputRef txReferenceInputs
+
+-- | A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g.
+-- the full data script that goes with the 'TxOut'.
+data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON)
+
+txOutTxDatum :: TxOutTx -> Maybe Datum
+txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
 
 lookupScript :: Map ScriptHash Script -> ScriptHash -> Maybe Script
 lookupScript txScripts hash  = Map.lookup hash txScripts

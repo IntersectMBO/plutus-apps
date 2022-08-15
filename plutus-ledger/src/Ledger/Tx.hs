@@ -59,9 +59,6 @@ module Ledger.Tx
     , unspentOutputsTx
     -- * Hashing transactions
     , txId
-    -- * ChainIndexTxOut
-    , TxOutTx (..)
-    , txOutTxDatum
     ) where
 
 import Cardano.Api qualified as C
@@ -96,15 +93,6 @@ import Plutus.V1.Ledger.Api (Datum)
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn,
                                       pubKeyTxIns, scriptTxIn, scriptTxIns)
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn, TxInType (..))
-
--- | A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g.
--- the full data script that goes with the 'TxOut'.
-data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass (Serialise, ToJSON, FromJSON)
-
-txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
 
 -- | Transaction output that comes from a chain index query.
 --
