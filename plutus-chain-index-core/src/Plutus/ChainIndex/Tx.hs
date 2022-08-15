@@ -42,6 +42,7 @@ import Cardano.Api (NetworkId)
 import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.Tuple (swap)
 import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx (SomeTx), Tx (..),
                TxInput (txInputType), TxOutRef (..), onCardanoTx, txCertifyingRedeemers, txId, txMintingRedeemers,
@@ -49,8 +50,6 @@ import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx 
 import Ledger.Address (Address)
 import Ledger.Scripts (Redeemer, RedeemerHash)
 import Ledger.Tx (TxInputType (TxConsumeScriptAddress), fillTxInputWitnesses)
-                            --  toCardanoTxOutDatumHashBabbage, toCardanoTxOutBabbage)
-import Data.Maybe (mapMaybe)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity, toCardanoTxOut,
                                    toCardanoTxOutDatumHash)
@@ -139,14 +138,11 @@ calculateRedeemerPointers tx = spends <> rewards <> mints <> certs
     -- we sort the inputs to make sure that the indices match with redeemer pointers
 
     where
-        -- These sorts are ofc bad.
         rewards = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Reward n, rd)) [0..]  $ sort $ Map.assocs $ txRewardingRedeemers tx
         mints   = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Mint n, rd)) [0..]  $ sort $ Map.assocs $ txMintingRedeemers tx
         certs   = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Cert n, rd)) [0..]  $ sort $ Map.assocs $ txCertifyingRedeemers tx
-        -- This is written this way not to change the previous semantic. Either though previous version was commented as "probably incorrect".
         spends = Map.fromList $ mapMaybe (uncurry getRd) $ zip [0..] $ fmap txInputType $ sort $ txInputs tx
-        -- spends  = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Spend n, rd)) [0..]  $ sort $ Map.assocs $ txSpendingRedeemers tx
 
         getRd n = \case
-            TxConsumeScriptAddress _ rd _ _ -> Just $ (RedeemerPtr Spend n, rd)
+            TxConsumeScriptAddress _ rd _ _ -> Just (RedeemerPtr Spend n, rd)
             _                               -> Nothing
