@@ -237,7 +237,7 @@
                   TxConstraint
                 )
               )
-              (vardecl MustReferencePubKeyOutput (fun TxOutRef TxConstraint))
+              (vardecl MustReferenceOutput (fun TxOutRef TxConstraint))
               (vardecl
                 MustSatisfyAnyOf
                 (fun [ List [ List TxConstraint ] ] TxConstraint)

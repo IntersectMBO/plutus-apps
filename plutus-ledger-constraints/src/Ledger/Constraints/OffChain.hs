@@ -90,7 +90,7 @@ import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (Payment
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferencePubKeyOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
@@ -672,13 +672,8 @@ processConstraint = \case
           _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral _ -> do
         pure () -- TODO
-    MustReferencePubKeyOutput txo -> do
-        txout <- lookupTxOutRef txo
-        case txout of
-          Tx.PublicKeyChainIndexTxOut {} -> do
-              unbalancedTx . tx . Tx.referenceInputs %= (Tx.pubKeyTxIn txo :)
-          _ -> throwError (TxOutRefWrongType txo)
-
+    MustReferenceOutput txo -> do
+        unbalancedTx . tx . Tx.referenceInputs %= (Tx.pubKeyTxIn txo :)
     MustMintValue mpsHash red tn i -> do
         mintingPolicyScript <- lookupMintingPolicy mpsHash
         -- See note [Mint and Fee fields must have ada symbol].

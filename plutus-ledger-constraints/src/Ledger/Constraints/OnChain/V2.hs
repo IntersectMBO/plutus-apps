@@ -20,7 +20,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferencePubKeyOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
@@ -153,8 +153,8 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ any (all (checkTxConstraint ctx)) xs
     MustUseOutputAsCollateral _ ->
         True -- TODO
-    MustReferencePubKeyOutput txOutRef ->
-        traceIfFalse "Lf" -- "Public key output not referenced"
+    MustReferenceOutput txOutRef ->
+        traceIfFalse "Lf" -- "Output not referenced"
         $ isJust (PV2.findTxRefInByTxOutRef txOutRef scriptContextTxInfo)
 
 {-# INLINABLE checkTxConstraintFun #-}
