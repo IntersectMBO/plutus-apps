@@ -4,8 +4,16 @@ Plutus Tools SDK User Guide
 Intended Audience
 -------------------------------
 
+External Developers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 This user guide is intended for external developers who are authoring distributed 
-applications that implement smart contracts on the Cardano blockchain. 
+applications ("DApps") that implement smart contracts on the Cardano blockchain. 
+
+.. note::
+   If you are a developer who wants to contribute to the Plutus Tools SDK project, 
+   please refer to documentation residing in the `Plutus Tools SDK repository <https://github.com/
+   input-output-hk/plutus-apps>`_.
 
 Plutus Tools SDK
 ===============================
