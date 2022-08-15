@@ -469,7 +469,7 @@ handleBalanceTx utxo utx = do
                 pure tx'
             else do
                 logDebug $ AddingInputsFor neg
-                pure $ tx' & over Tx.inputs (sort . (++) (fmap (Tx.pubKeyTxInput . pubKeyTxOutRef) newTxIns))
+                pure $ tx' & over Tx.inputs (sort . (++) (fmap Tx.pubKeyTxInput newTxIns))
 
     if remainingCollFees `Value.leq` PlutusTx.zero
     then do
@@ -479,8 +479,7 @@ handleBalanceTx utxo utx = do
         logDebug $ AddingCollateralInputsFor remainingCollFees
         addCollateral utxo remainingCollFees tx''
 
--- Auxiliary.
-newtype PubKeyTxIn = PubKeyTxIn { pubKeyTxOutRef :: TxOutRef }
+type PubKeyTxIn = TxOutRef
 
 calculateTxChanges
     :: ( Member (Error WAPI.WalletAPIError) effs

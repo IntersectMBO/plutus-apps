@@ -57,7 +57,7 @@ import Plutus.ChainIndex.Compatibility (toCardanoPoint)
 import Plutus.ChainIndex.DbSchema
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx
-import Plutus.ChainIndex.Tx qualified as Chain
+import Plutus.ChainIndex.Tx qualified as ChainIndex
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
                                 TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
@@ -191,7 +191,7 @@ makeChainIndexTxOut ::
   ( Member BeamEffect effs
   , Member (LogMsg ChainIndexLog) effs
   )
-  => Chain.ChainIndexTxOut
+  => ChainIndex.ChainIndexTxOut
   -> Eff effs (Maybe L.ChainIndexTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
@@ -552,10 +552,10 @@ fromTx tx = mempty
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
     }
     where
-        credential :: (Chain.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef)
+        credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef)
         credential (ChainIndexTxOut{citoAddress=Address{addressCredential}}, ref) =
           (addressCredential, ref)
-        assetClasses :: (Chain.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
+        assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
         assetClasses (ChainIndexTxOut{citoValue}, ref) =
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))
                -- We don't store the 'AssetClass' when it is the Ada currency.
