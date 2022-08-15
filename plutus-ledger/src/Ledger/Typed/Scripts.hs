@@ -13,7 +13,7 @@ module Ledger.Typed.Scripts
   , makeTypedScriptTxIn
   ) where
 
-import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn (TxIn), TxInType (ConsumeScriptAddress))
+import Ledger.Tx.Internal (Language, TxIn (TxIn), TxInType (ConsumeScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
 import Plutus.Script.Utils.V1.Typed.TypeUtils as Export
@@ -34,7 +34,7 @@ instance Eq (DatumType a) => Eq (TypedScriptTxIn a) where
 makeTypedScriptTxIn ::
   forall inn.
   (ToData (RedeemerType inn), ToData (DatumType inn)) =>
-  LedgerPlutusVersion ->
+  Language ->
   TypedValidator inn ->
   RedeemerType inn ->
   TypedScriptTxOutRef inn ->

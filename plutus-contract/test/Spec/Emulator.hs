@@ -25,7 +25,7 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), LedgerPlutusVersion (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint),
+import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint),
                ValidationError (ScriptFailure), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs, getCardanoTxOutputs,
                onCardanoTx, outputs, scriptTxIn, unspentOutputs)
 import Ledger.Ada qualified as Ada

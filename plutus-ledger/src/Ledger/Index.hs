@@ -270,7 +270,7 @@ checkMintingScripts tx = do
 -- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
 data InOutMatch =
     ScriptMatch
-        LedgerPlutusVersion
+        Language
         TxOutRef
         Validator
         Redeemer

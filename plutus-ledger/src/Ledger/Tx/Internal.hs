@@ -12,9 +12,11 @@
 
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
-    , LedgerPlutusVersion(..)
+    , Language(..)
     ) where
 
+import Cardano.Ledger.Alonzo.Genesis ()
+import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, encode)
 import Control.DeepSeq (NFData)
@@ -29,7 +31,6 @@ import Ledger.Crypto
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
-import Plutus.ApiCommon (LedgerPlutusVersion (PlutusV1, PlutusV2))
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
                             scriptTxIn, scriptTxIns)
@@ -37,16 +38,11 @@ import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
 import Prettyprinter (Pretty (..), hang, vsep, (<+>))
 
-deriving instance Show LedgerPlutusVersion
-deriving instance Generic LedgerPlutusVersion
-deriving instance NFData LedgerPlutusVersion
-deriving instance Serialise LedgerPlutusVersion
-deriving instance ToJSON LedgerPlutusVersion
-deriving instance FromJSON LedgerPlutusVersion
+deriving instance Serialise Language
 
 -- | The type of a transaction input.
 data TxInType =
-      ConsumeScriptAddress !LedgerPlutusVersion !Validator !Redeemer !Datum
+      ConsumeScriptAddress !Language !Validator !Redeemer !Datum
       -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
@@ -82,7 +78,7 @@ inType = lens txInType s where
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
-inScripts :: TxIn -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
+inScripts :: TxIn -> Maybe (Language, Validator, Redeemer, Datum)
 inScripts TxIn{ txInType = t } = case t of
     Just (ConsumeScriptAddress l v r d) -> Just (l, v, r, d)
     _                                   -> Nothing
@@ -92,7 +88,7 @@ pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
-scriptTxIn :: TxOutRef -> LedgerPlutusVersion -> Validator -> Redeemer -> Datum -> TxIn
+scriptTxIn :: TxOutRef -> Language -> Validator -> Redeemer -> Datum -> TxIn
 scriptTxIn ref l v r d = TxIn ref . Just $ ConsumeScriptAddress l v r d
 
 -- | Filter to get only the pubkey inputs.

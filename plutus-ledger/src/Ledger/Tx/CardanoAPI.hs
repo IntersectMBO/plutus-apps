@@ -742,7 +742,7 @@ fromCardanoScriptData = PV1.dataToBuiltinData . C.toPlutusData
 toCardanoScriptData :: PV1.BuiltinData -> C.ScriptData
 toCardanoScriptData = C.fromPlutusData . PV1.builtinDataToData
 
-fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe (P.Script, P.LedgerPlutusVersion)
+fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe (P.Script, P.Language)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InAlonzo (C.PlutusScript C.PlutusScriptV1 script)) =
     Just (fromCardanoPlutusScript script, P.PlutusV1)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InBabbage (C.PlutusScript C.PlutusScriptV1 script)) =
@@ -751,7 +751,7 @@ fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InBabbage (C.PlutusScript 
     Just (fromCardanoPlutusScript script, P.PlutusV2)
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 
-toCardanoScriptInEra :: P.Script -> P.LedgerPlutusVersion -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
+toCardanoScriptInEra :: P.Script -> P.Language -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
 toCardanoScriptInEra script P.PlutusV1 = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
 toCardanoScriptInEra script P.PlutusV2 = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
@@ -767,7 +767,7 @@ toCardanoPlutusScript asPlutusScriptType =
     tag "toCardanoPlutusScript"
     . deserialiseFromRawBytes asPlutusScriptType . BSL.toStrict . Codec.serialise
 
-fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe (P.Script, P.LedgerPlutusVersion)
+fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe (P.Script, P.Language)
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _ssv _ss)) = Nothing
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.PlutusScript psv ps)) = Just $ case psv of
      C.PlutusScriptV1 -> (fromCardanoPlutusScript ps, P.PlutusV1)
@@ -799,7 +799,7 @@ data ToCardanoError
     | MissingMintingPolicyRedeemer
     | MissingMintingPolicy
     | ScriptPurposeNotSupported PV1.ScriptTag
-    | UnsupportedPlutusVersion P.LedgerPlutusVersion
+    | UnsupportedPlutusVersion P.Language
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
