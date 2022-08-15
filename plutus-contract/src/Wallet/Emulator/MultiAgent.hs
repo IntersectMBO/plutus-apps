@@ -17,8 +17,8 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module Wallet.Emulator.MultiAgent where
 
-import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, set, to,
-                     unto, view, (&), (.~), (^.), (^..))
+import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
+                     view, (&), (.~), (^.), (^..))
 import Control.Monad (join)
 import Control.Monad.Freer (Eff, Member, Members, interpret, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)

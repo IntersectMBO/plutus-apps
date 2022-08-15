@@ -510,7 +510,7 @@ calculateTxChanges params addr utxos (neg, pos) = do
     if Value.isZero change
         then do
             -- No change, so the new inputs and outputs have balanced the transaction
-            pure ((newNeg, PubKeyTxIn . fst <$> spend), (newPos, extraTxOuts))
+            pure ((newNeg, fst <$> spend), (newPos, extraTxOuts))
         else if null extraTxOuts
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
