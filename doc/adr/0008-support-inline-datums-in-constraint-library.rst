@@ -31,7 +31,7 @@ Decision
 
 * We will replace the ``Datum`` parameter in ``TxConstraints``'s data constructor ``MustPayToPubKeyAddress`` with ``Plutus.V2.Ledger.Api.OutputDatum``.
   In the offchain implementation of the constraint, we will use this new data constructor parameter to support either adding the datum in the datum witness set (by using the datum lookups to resolve the hash) or inline it in the transaction output.
-  In the PlutusV1 on-chain implementation of the constraint, we will return ``False`` if the datum value matches ``OutputDatum Datum`` because the ledgers forbids using Babbage era features with PlutusV1.
+  In the PlutusV1 on-chain implementation of the constraint, we will return ``False`` if the datum value matches ``OutputDatum Datum`` because the ledger forbids using Babbage era features with PlutusV1.
   The PlutusV2 on-chain implementation of the constraint is trivial.
 
 * We will modify the data constructor interface, on-chain implementation and off-chain implementation of ``MustPayToOtherScript`` similarly to ``MustPayToPubKeyAddress``.
