@@ -340,7 +340,8 @@ instance Pretty Tx where
     pretty tx@(Tx _txInputs _txReferenceInputs _txCollateral _txOutputs _txMint _txFee
                  _txValidRange _txMintingScripts _txWithdrawals _txCertificates
                  _txSignatures _txScripts _txData _txMetadata) =
-        let lines' =
+        let showNonEmpty empty x = [x | not empty]
+            lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty _txInputs))
                 , hang 2 (vsep ("reference inputs:" : fmap pretty _txReferenceInputs))
                 , hang 2 (vsep ("collateral inputs:" : fmap pretty _txCollateral))
@@ -350,12 +351,12 @@ instance Pretty Tx where
                 , hang 2 (vsep ("mps:": fmap pretty (Map.assocs _txMintingScripts)))
                 , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList _txSignatures)))
                 , "validity range:" <+> viaShow _txValidRange
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _txData)))
-                , hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys _txScripts)))
-                , hang 2 (vsep ("withdrawals:": fmap pretty _txWithdrawals))
-                , hang 2 (vsep ("certificates:": fmap pretty _txCertificates))
-                , "metadata:" <+> if isJust _txMetadata then "present" else mempty
                 ]
+                <> (showNonEmpty (Map.null _txData) $ hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _txData))))
+                <> (showNonEmpty (Map.null _txScripts) $ hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys _txScripts))))
+                <> (showNonEmpty (null _txWithdrawals) $ hang 2 (vsep ("withdrawals:": fmap pretty _txWithdrawals)))
+                <> (showNonEmpty (null _txCertificates) $ hang 2 (vsep ("certificates:": fmap pretty _txCertificates)))
+                <> (["metadata: present" | isJust _txMetadata])
             txid = txId tx
         in nest 2 $ vsep ["Tx" <+> pretty txid <> colon, braces (vsep lines')]
 
