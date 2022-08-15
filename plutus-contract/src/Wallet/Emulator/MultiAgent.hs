@@ -290,10 +290,22 @@ we create 10 Ada-only outputs per wallet here.
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
 emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
-    tx = mempty
-        & set outputs (Map.toList mp >>= mkOutputs)
-        & set mint (foldMap snd $ Map.toList mp)
-        & set validRange (WAPI.defaultSlotRange)
+    tx = Tx
+            { txInputs = mempty
+            , txReferenceInputs = mempty
+            , txCollateral = mempty
+            , txOutputs = Map.toList mp >>= mkOutputs
+            , txMint = foldMap snd $ Map.toList mp
+            , txFee = mempty
+            , txValidRange = WAPI.defaultSlotRange
+            , txMintingScripts = mempty
+            , txWithdrawals = mempty
+            , txCertificates = mempty
+            , txSignatures = mempty
+            , txScripts = mempty
+            , txData = mempty
+            , txMetadata = mempty
+            }
     -- See [Creating wallets with multiple outputs]
     mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
     splitInto10 vl = replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
