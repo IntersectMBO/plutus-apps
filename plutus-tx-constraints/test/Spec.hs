@@ -51,7 +51,10 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "all tests"
-    [ testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash" mustPayToPubKeyAddressStakePubKeyNotNothingProp
+    [ testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash"
+        mustPayToPubKeyAddressStakePubKeyNotNothingProp
+    , testProperty "mustValidateIn should set a validity time range"
+        mustValidateInPayValidityTimeRangeNotNothingProp
     -- , testProperty "mustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
     ]
 
@@ -102,6 +105,27 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             case stakeCred of
                 StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh
                 _                                  -> Nothing
+
+
+-- | The 'mustValidateIn' should be able to set the validity time range of a transaction
+mustValidateInPayValidityTimeRangeNotNothingProp :: Property
+mustValidateInPayValidityTimeRangeNotNothingProp = property $ do
+    range <- forAll genRange
+    let txE = mkTx @Void def mempty (Constraints.mustValidateIn range)
+    case txE of
+        Left err -> do
+            Hedgehog.annotateShow err
+            Hedgehog.failure
+        Right utx -> do
+            let tx = either id (error "Unexpected enulator tx") (OC.unBalancedTxTx utx)
+            let validityTimeRange = view OC.validityTimeRange utx
+            validityTimeRange === range
+    where
+        genRange :: (MonadFail m, Hedgehog.MonadGen m) => m Ledger.POSIXTimeRange
+        genRange = do
+          slot <- Gen.genSlotConfig
+          Gen.genTimeRange slot
+
 
 -- txOut0 :: Ledger.ChainIndexTxOut
 -- txOut0 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing) (Left alwaysSucceedValidatorHash) (Right Ledger.unitDatum) mempty
