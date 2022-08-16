@@ -51,7 +51,7 @@ module Ledger.Tx.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (Lens', Traversal', _Left, coerced, makeLensesFor, use, (<>=))
+import Control.Lens (Lens', Traversal', _Left, coerced, makeLensesFor, use, (%=), (<>=))
 import Control.Monad.Except (Except, mapExcept, runExcept, throwError)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (StateT, execStateT, mapStateT)
@@ -63,7 +63,7 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import PlutusTx (FromData, ToData)
-import PlutusTx.Lattice (BoundedMeetSemiLattice (top))
+import PlutusTx.Lattice (BoundedMeetSemiLattice (top), MeetSemiLattice ((/\)))
 
 import Ledger (Params (..), networkIdL)
 import Ledger.Address (pubKeyHashAddress)
@@ -212,5 +212,8 @@ processConstraint = \case
             <*> pure (maybe C.TxOutDatumNone (C.TxOutDatum C.ScriptDataInAlonzoEra . C.toCardanoScriptData . getDatum) md)
 
         unbalancedTx . tx . txOuts <>= [ out ]
+
+    P.MustValidateIn range ->
+        unbalancedTx . P.validityTimeRange %= (/\ range)
 
     _ -> pure ()
