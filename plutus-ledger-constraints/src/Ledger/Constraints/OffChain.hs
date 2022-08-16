@@ -98,8 +98,8 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, LedgerPlutusVersion (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr),
-                  ScriptTag (Mint, Spend), Tx, TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr), ScriptTag (Mint, Spend),
+                  Tx, TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -124,7 +124,7 @@ data ScriptLookups a =
         -- ^ Minting policies that the script interacts with
         , slTxOutputs              :: Map TxOutRef ChainIndexTxOut
         -- ^ Unspent outputs that the script may want to spend
-        , slOtherScripts           :: Map ValidatorHash (Validator, LedgerPlutusVersion)
+        , slOtherScripts           :: Map ValidatorHash (Validator, Language)
         -- ^ Validators of scripts other than "our script"
         , slOtherData              :: Map DatumHash Datum
         -- ^ Datums that we might need
@@ -620,7 +620,7 @@ lookupValidator
        , MonadError MkTxError m
        )
     => ValidatorHash
-    -> m (Validator, LedgerPlutusVersion)
+    -> m (Validator, Language)
 lookupValidator vh =
     let err = throwError (ValidatorHashNotFound vh) in
     asks slOtherScripts >>= maybe err pure . view (at vh)
@@ -749,7 +749,7 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Validator, LedgerPlutusVersion), (DatumHash, Datum), Value))
+    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Validator, Language), (DatumHash, Datum), Value))
 resolveScriptTxOut
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutValidator = (vh, v)

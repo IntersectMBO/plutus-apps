@@ -227,7 +227,7 @@ instance Arbitrary PlutusTx.BuiltinData where
     arbitrary = PlutusTx.dataToBuiltinData <$> arbitrary
     shrink d = PlutusTx.dataToBuiltinData <$> shrink (PlutusTx.builtinDataToData d)
 
-instance Arbitrary Ledger.LedgerPlutusVersion where
+instance Arbitrary Ledger.Language where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
