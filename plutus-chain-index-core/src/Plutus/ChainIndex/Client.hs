@@ -20,6 +20,7 @@ module Plutus.ChainIndex.Client(
     , getUnspentTxOut
     , getIsUtxo
     , getUtxoSetAtAddress
+    , getUnspentTxOutsAtAddress
     , getUtxoSetWithCurrency
     , getTxs
     , getTxoSetAtAddress
