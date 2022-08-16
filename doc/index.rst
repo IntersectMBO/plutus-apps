@@ -4,8 +4,8 @@ Plutus Tools SDK User Guide
 Intended Audience
 -------------------------------
 
-This user guide is intended for developers who are authoring distributed 
-applications ("DApps") by using smart contracts on the Cardano blockchain. 
+This user guide is intended for developers who are authoring distributed applications 
+("DApps") by using smart contracts on the Cardano blockchain. 
 
 .. note::
    If you are a developer who wants to contribute to the Plutus Tools SDK project, 
@@ -36,6 +36,9 @@ contains packages such as:
   developers who need to index and query the Cardano blockchain; 
 
 * a variety of other Plutus packages. 
+
+Plutus Starter Template Repository
+----------------------------------------
 
 See the `Plutus starter template repository <https://github.com/input-output-hk/plutus-starter>`_ 
 for a simple starter project using the Plutus Tools SDK. 
