@@ -4,11 +4,8 @@ Plutus Tools SDK User Guide
 Intended Audience
 -------------------------------
 
-External Developers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This user guide is intended for external developers who are authoring distributed 
-applications ("DApps") that implement smart contracts on the Cardano blockchain. 
+This user guide is intended for developers who are authoring distributed 
+applications ("DApps") by using smart contracts on the Cardano blockchain. 
 
 .. note::
    If you are a developer who wants to contribute to the Plutus Tools SDK project, 
@@ -22,8 +19,11 @@ The Plutus Tools SDK is a collection of off-chain infrastructure resources built
 for external developers. The `Plutus Tools SDK repository <https://github.com/
 input-output-hk/plutus-apps>`_ supports the underlying resources that developers 
 need who are writing full applications using Plutus in Haskell, including off-chain 
-code. The term “off-chain code” refers to the part of a contract application’s code 
-which runs off the chain. 
+code. 
+
+The term “off-chain code” refers to the part of a contract application’s code 
+which runs outside of the blockchain. Off-chain code responds to events happening 
+on the blockchain, usually by producing transactions. 
 
 The `Plutus Tools SDK repository <https://github.com/input-output-hk/plutus-apps>`_ 
 contains packages such as: 
@@ -37,8 +37,8 @@ contains packages such as:
 
 * a variety of other Plutus packages. 
 
-To get started using the Plutus Tools SDK, see the `Plutus starter template repository 
-<https://github.com/input-output-hk/plutus-starter>`_.
+See the `Plutus starter template repository <https://github.com/input-output-hk/plutus-starter>`_ 
+for a simple starter project using the Plutus Tools SDK. 
 
 .. toctree::
    :caption: Explore Plutus
