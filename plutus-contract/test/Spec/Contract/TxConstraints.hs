@@ -38,9 +38,9 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (TracePredicate, assertValidatedTransactionCount, assertValidatedTransactionCountOfTotal,
                              checkPredicate, checkPredicateOptions, defaultCheckOptions, minLogLevel, valueAtAddress,
                              w1, walletFundsChange, (.&&.))
+import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
-import Plutus.Script.Utils.V1.Typed.TypeUtils (Any)
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract)

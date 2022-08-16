@@ -13,10 +13,10 @@ module Ledger.Typed.Scripts
   , makeTypedScriptTxIn
   ) where
 
-import Ledger.Tx.Internal (Language, TxIn (TxIn), TxInType (ConsumeScriptAddress))
+import Ledger.Tx.Internal (TxIn (TxIn), TxInType (ConsumeScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
+import Plutus.Script.Utils.Typed as Export
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
-import Plutus.Script.Utils.V1.Typed.TypeUtils as Export
 import Plutus.V1.Ledger.Api (Datum (Datum), Redeemer (Redeemer), ToData (..))
 
 -- | A 'TxIn' tagged by two phantom types: a list of the types of the data scripts in the transaction; and the connection type of the input.

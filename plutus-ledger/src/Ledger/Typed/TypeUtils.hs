@@ -1,7 +1,7 @@
 module Ledger.Typed.TypeUtils
-  {-# DEPRECATED "Use Plutus.Script.Utils.V1.Typed.TypeUtils instead" #-}
-  ( module Plutus.Script.Utils.V1.Typed.TypeUtils,
+  {-# DEPRECATED "Use Plutus.Script.Utils.Typed instead" #-}
+  ( module Plutus.Script.Utils.Typed,
   )
 where
 
-import Plutus.Script.Utils.V1.Typed.TypeUtils
+import Plutus.Script.Utils.Typed
