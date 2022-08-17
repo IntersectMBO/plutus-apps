@@ -50,7 +50,7 @@ module Ledger.Constraints(
     , OC.mkSomeTx
     -- ** Lookups
     , OC.ScriptLookups(..)
-    , OC.plutusV1TypedValidatorLookups
+    , OC.typedValidatorLookups
     , OC.unspentOutputs
     , OC.plutusV1MintingPolicy
     , OC.plutusV2MintingPolicy

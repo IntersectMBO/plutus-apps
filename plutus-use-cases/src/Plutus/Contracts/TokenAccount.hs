@@ -162,7 +162,7 @@ pay account vl = do
         <> " into "
         <> show account
     mapError (review _TAContractError) $
-          mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) (payTx vl)
+          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
       >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
@@ -184,7 +184,7 @@ redeemTx account pk = mapError (review _TAContractError) $ do
             <> show totalVal
     let constraints = Constraints.collectFromTheScript utxos ()
                 <> Constraints.mustPayToPubKey pk (accountToken account)
-        lookups = Constraints.plutusV1TypedValidatorLookups inst
+        lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos
     -- TODO. Replace 'PubKey' with a more general 'Address' type of output?
     --       Or perhaps add a field 'requiredTokens' to 'LedgerTxConstraints' and let the

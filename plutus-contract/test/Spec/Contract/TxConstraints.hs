@@ -38,9 +38,9 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (TracePredicate, assertValidatedTransactionCount, assertValidatedTransactionCountOfTotal,
                              checkPredicate, checkPredicateOptions, defaultCheckOptions, minLogLevel, valueAtAddress,
                              w1, walletFundsChange, (.&&.))
+import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
-import Plutus.Script.Utils.V1.Typed.TypeUtils (Any)
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract)
@@ -62,10 +62,8 @@ tag :: ContractInstanceTag
 tag = "instance 1"
 
 tests :: TestTree
-tests = testGroup "contract tx constraints" []
+tests = testGroup "contract tx constraints"
 
-disabledTests :: TestTree
-disabledTests = testGroup "contract tx constraints"
     -- Testing package plutus-ledger-constraints
 
     [ checkPredicate "mustReferenceOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
@@ -86,10 +84,10 @@ disabledTests = testGroup "contract tx constraints"
 
     -- Testing package plutus-tx-constraints
 
-    , checkPredicate "Tx.Constraints.mustReferenceOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
+    , checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
         .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCountOfTotal 1 2
+        .&&. assertValidatedTransactionCountOfTotal 1 1
         ) $ do
             void $ activateContract w1 mustReferenceOutputTxV1ConTest tag
             void $ Trace.waitNSlots 2

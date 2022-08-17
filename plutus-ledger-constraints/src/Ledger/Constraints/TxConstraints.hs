@@ -300,7 +300,7 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- output with @d@ and @v@ and adds @d@ in the transaction's datum witness set.
 -- The script address is derived from the typed validator that is provided in
 -- the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.plutusV1TypedValidatorLookups'.
+-- 'Ledger.Constraints.OffChain.typedValidatorLookups'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the new script transaction output with

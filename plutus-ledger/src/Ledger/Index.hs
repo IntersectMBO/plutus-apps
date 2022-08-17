@@ -455,10 +455,11 @@ mkPV1TxInInfo TxIn{txInRef} = do
 mkPV2TxInfo :: ValidationMonad m => Tx -> m PV2.TxInfo
 mkPV2TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
-    txins <- traverse mkPV2TxInInfo $ view inputs tx
+    txIns <- traverse mkPV2TxInInfo $ view inputs tx
+    txRefIns <- traverse mkPV2TxInInfo $ view referenceInputs tx
     let ptx = PV2.TxInfo
-            { PV2.txInfoInputs = txins
-            , PV2.txInfoReferenceInputs = []
+            { PV2.txInfoInputs = txIns
+            , PV2.txInfoReferenceInputs = txRefIns
             , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> txOutputs tx
             -- See note [Mint and Fee fields must have ada symbol]
             , PV2.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx

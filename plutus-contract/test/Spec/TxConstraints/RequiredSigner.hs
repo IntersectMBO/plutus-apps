@@ -17,8 +17,7 @@ import Data.String (fromString)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet as CW
-import Ledger.Constraints.OffChain qualified as Constraints (paymentPubKey, plutusV1TypedValidatorLookups,
-                                                             unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Constraints (paymentPubKey, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
                                                                   mustIncludeDatum, mustPayToTheScript,
@@ -47,14 +46,14 @@ tests =
 
 mustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustBeSignedByContract pk pkh = do
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
+    let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
     let lookups2 =
-            Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
+            Constraints.typedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.paymentPubKey pk
         tx2 =
@@ -67,14 +66,14 @@ mustBeSignedByContract pk pkh = do
 
 withoutOffChainMustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 withoutOffChainMustBeSignedByContract pk pkh = do
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
+    let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
     let lookups2 =
-            Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
+            Constraints.typedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.paymentPubKey pk
         tx2 =

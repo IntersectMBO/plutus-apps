@@ -15,7 +15,6 @@ module Plutus.Script.Utils.V1.Typed.Scripts
     StakeValidator,
     TypedScriptTxOut (tyTxOutData, tyTxOutTxOut),
     TypedScriptTxOutRef (tyTxOutRefOut, tyTxOutRefRef),
-    typePubKeyTxOut,
     makeTypedScriptTxOut,
     typeScriptTxOut,
     typeScriptTxOutRef,
@@ -23,7 +22,6 @@ module Plutus.Script.Utils.V1.Typed.Scripts
 where
 
 import Control.Monad.Except (MonadError (throwError))
-import GHC.Generics (Generic)
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies hiding (forwardToValidator)
 import Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators hiding (forwardToValidator)
@@ -86,22 +84,6 @@ instance Eq (DatumType a) => Eq (TypedScriptTxOutRef a) where
   l == r =
     tyTxOutRefRef l == tyTxOutRefRef r
       && tyTxOutRefOut l == tyTxOutRefOut r
-
--- | A public-key 'TxOut'. We need this to be sure that it is not a script output.
-newtype PubKeyTxOut = PubKeyTxOut {unPubKeyTxOut :: TxOut}
-  deriving stock (Eq, Generic)
-  -- deriving newtype (FromJSON, ToJSON)
-
--- | Create a 'PubKeyTxOut' from an existing 'TxOut' by checking that it has the right payment type.
-typePubKeyTxOut ::
-  forall m.
-  (MonadError ConnectionError m) =>
-  TxOut ->
-  m PubKeyTxOut
-typePubKeyTxOut txOut =
-  case txOutDatumHash txOut of
-    Nothing -> pure $ PubKeyTxOut txOut
-    Just _  -> throwError $ WrongOutType ExpectedPubkeyGotScript
 
 -- | Create a 'TypedScriptTxOut' from an existing 'TxOut' by checking the types of its parts.
 typeScriptTxOut ::
