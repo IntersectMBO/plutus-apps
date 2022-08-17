@@ -44,7 +44,7 @@ contract :: Contract () Empty ContractError ()
 contract = do
     now <- Con.currentTime
     logInfo @String $ "now: " ++ show now
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups $ typedValidator deadline
+    let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
         tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25000000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1

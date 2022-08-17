@@ -440,7 +440,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
           ttConstraints ThreadToken{ttOutRef} =
               mustMintValueWithRedeemer red (SM.threadTokenValueOrZero scInstance)
               <> mustSpendPubKeyOutput ttOutRef
-          lookups = Constraints.plutusV1TypedValidatorLookups typedValidator
+          lookups = Constraints.typedValidatorLookups typedValidator
               <> foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
               <> Constraints.unspentOutputs utxo
               <> customLookups
@@ -538,7 +538,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                 Just (newConstraints, newState)  ->
                     let isFinal = smFinal stateMachine (stateData newState)
                         lookups =
-                            Constraints.plutusV1TypedValidatorLookups typedValidator
+                            Constraints.typedValidatorLookups typedValidator
                             <> Constraints.unspentOutputs utxo
                             <> if isFinal then foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine) else mempty
                         red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Burn))

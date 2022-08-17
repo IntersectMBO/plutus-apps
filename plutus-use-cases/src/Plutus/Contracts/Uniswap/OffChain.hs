@@ -208,7 +208,7 @@ start = do
         inst = uniswapInstance us
         tx   = mustPayToTheScript (Factory []) $ unitValue c
 
-    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
+    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
       >>= adjustUnbalancedTx >>= submitTxConfirmed
     void $ waitNSlots 1
 
@@ -232,7 +232,7 @@ create us CreateParams{..} = do
         usVal    = unitValue $ usCoin us
         lpVal    = valueOf cpCoinA cpAmountA <> valueOf cpCoinB cpAmountB <> unitValue psC
 
-        lookups  = Constraints.plutusV1TypedValidatorLookups usInst        <>
+        lookups  = Constraints.typedValidatorLookups usInst        <>
                    Constraints.plutusV1OtherScript usScript                <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us) <>
                    Constraints.unspentOutputs (Map.singleton oref o)
@@ -262,7 +262,7 @@ close us CloseParams{..} = do
         lVal     = valueOf lC liquidity
         redeemer = Redeemer $ PlutusTx.toBuiltinData Close
 
-        lookups  = Constraints.plutusV1TypedValidatorLookups usInst        <>
+        lookups  = Constraints.typedValidatorLookups usInst        <>
                    Constraints.plutusV1OtherScript usScript                <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us) <>
                    Constraints.ownPaymentPubKeyHash pkh                   <>
@@ -298,7 +298,7 @@ remove us RemoveParams{..} = do
         val          = psVal <> valueOf rpCoinA outA <> valueOf rpCoinB outB
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Remove
 
-        lookups  = Constraints.plutusV1TypedValidatorLookups usInst          <>
+        lookups  = Constraints.typedValidatorLookups usInst          <>
                    Constraints.plutusV1OtherScript usScript                  <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us)   <>
                    Constraints.unspentOutputs (Map.singleton oref o) <>
@@ -338,7 +338,7 @@ add us AddParams{..} = do
         val          = psVal <> valueOf apCoinA newA <> valueOf apCoinB newB
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Add
 
-        lookups  = Constraints.plutusV1TypedValidatorLookups usInst             <>
+        lookups  = Constraints.typedValidatorLookups usInst             <>
                    Constraints.plutusV1OtherScript usScript                     <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us)       <>
                    Constraints.ownPaymentPubKeyHash pkh                        <>
@@ -379,7 +379,7 @@ swap us SwapParams{..} = do
     let inst    = uniswapInstance us
         val     = valueOf spCoinA newA <> valueOf spCoinB newB <> unitValue (poolStateCoin us)
 
-        lookups = Constraints.plutusV1TypedValidatorLookups inst                 <>
+        lookups = Constraints.typedValidatorLookups inst                 <>
                   Constraints.plutusV1OtherScript (Scripts.validatorScript inst) <>
                   Constraints.unspentOutputs (Map.singleton oref o)      <>
                   Constraints.ownPaymentPubKeyHash pkh

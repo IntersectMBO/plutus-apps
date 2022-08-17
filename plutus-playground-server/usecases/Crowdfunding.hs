@@ -166,7 +166,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
@@ -182,7 +182,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
+        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
             >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()

@@ -187,7 +187,7 @@ vestFundsC
     -> Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups $ typedValidator vesting) tx
+    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -224,7 +224,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
+    mkTxConstraints (Constraints.typedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

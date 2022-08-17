@@ -1,7 +1,5 @@
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE GADTs                #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -34,15 +32,14 @@ instance Eq (DatumType a) => Eq (TypedScriptTxIn a) where
 makeTypedScriptTxIn ::
   forall inn.
   (ToData (RedeemerType inn), ToData (DatumType inn)) =>
-  Language ->
   TypedValidator inn ->
   RedeemerType inn ->
   TypedScriptTxOutRef inn ->
   TypedScriptTxIn inn
-makeTypedScriptTxIn lang si r tyRef =
+makeTypedScriptTxIn si r tyRef =
   let d = Export.tyTxOutData (Export.tyTxOutRefOut tyRef)
       vs = validatorScript si
       rs = Redeemer (toBuiltinData r)
       ds = Datum (toBuiltinData d)
-      txInT = ConsumeScriptAddress lang vs rs ds
+      txInT = ConsumeScriptAddress (Export.tvLanguage si) vs rs ds
    in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef

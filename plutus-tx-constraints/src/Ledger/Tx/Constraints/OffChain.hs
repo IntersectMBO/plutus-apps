@@ -21,7 +21,7 @@
 module Ledger.Tx.Constraints.OffChain(
     -- * Lookups
     P.ScriptLookups(..)
-    , P.plutusV1TypedValidatorLookups
+    , P.typedValidatorLookups
     , P.generalise
     , P.unspentOutputs
     , P.plutusV1MintingPolicy

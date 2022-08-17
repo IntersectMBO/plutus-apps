@@ -13,7 +13,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, plutusV1TypedValidatorLookups,
+import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, typedValidatorLookups,
                                                              unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
@@ -45,13 +45,13 @@ scriptBalance = 25_000_000
 
 mustSpendAtLeastContract :: Integer -> Integer -> Ledger.PaymentPubKeyHash-> Contract () Empty ContractError ()
 mustSpendAtLeastContract offAmt onAmt pkh = do
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScript onAmt (Ada.lovelaceValueOf scriptBalance)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt scrAddress
-    let lookups2 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
