@@ -35,6 +35,14 @@ contains packages such as:
   a lightweight, customizable chain follower application and library for DApp 
   developers who need to index and query the Cardano blockchain; 
 
+* the `Plutus Contract Package <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-contract>`_, 
+  a library for writing Plutus contracts and transforming them into executables that run 
+  on the app platform. 
+
+* the `Plutus Ledger Constraints Package <https://github.com/input-output-hk/plutus-apps/tree/a5ab40d6b7f28646a69da03d303a39982cc10b68/plutus-ledger-constraints>`_, 
+  containing an API to build transactions by providing a list of constraints. For constructing
+  and validating Plutus transactions. 
+
 * a variety of other Plutus packages. 
 
 Plutus Starter Template Repository
