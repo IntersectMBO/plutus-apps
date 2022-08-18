@@ -240,7 +240,4 @@ processConstraint = \case
 
         unbalancedTx . tx . txOuts <>= [ out ]
 
-    P.MustValidateIn range ->
-        unbalancedTx . P.validityTimeRange %= (/\ range)
-
     _ -> pure ()
