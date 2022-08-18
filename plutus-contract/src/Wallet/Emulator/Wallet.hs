@@ -317,7 +317,7 @@ handleBalance utx' = do
     params@Params { pSlotConfig } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-        eitherTx = view U.cardanoTx utx
+        eitherTx = U.unBalancedTxTx utx
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     case eitherTx of
         Right _ -> do
