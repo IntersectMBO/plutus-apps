@@ -63,7 +63,11 @@ module Ledger.Tx
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Hash (SHA256, digest)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.TxBody (TxBody)
+import Cardano.Ledger.Alonzo.TxWitness (txwitsVKey)
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
@@ -79,9 +83,9 @@ import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
 import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
+import Ledger.Params (EmulatorEra)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Validation qualified
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
                              Validator, ValidatorHash, Value, addressCredential, toBuiltin)
@@ -321,7 +325,23 @@ addCardanoTxSignature privKey = cardanoTxMap (addSignature' privKey) addSignatur
     where
         addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
         addSignatureCardano (CardanoApiEmulatorEraTx ctx)
-            = CardanoApiEmulatorEraTx (Ledger.Validation.addSignature privKey ctx)
+            = CardanoApiEmulatorEraTx (addSignatureCardano' ctx)
+
+        addSignatureCardano' (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isValid aux))
+            = C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits' isValid aux)
+          where
+            wits' = wits <> mempty { txwitsVKey = newWits }
+            newWits = case fromPaymentPrivateKey privKey body of
+              C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
+              _                             -> Set.empty
+
+        fromPaymentPrivateKey :: PrivateKey -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.AlonzoEra
+        fromPaymentPrivateKey xprv txBody
+          = C.Api.makeShelleyKeyWitness
+              (C.Api.ShelleyTxBody C.Api.ShelleyBasedEraAlonzo txBody notUsed notUsed notUsed notUsed)
+              (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
+          where
+            notUsed = undefined -- hack so we can reuse code from cardano-api
 
 -- | Sign the transaction with a 'PrivateKey' and passphrase (ByteString) and add the signature to the
 --   transaction's list of signatures.

@@ -37,7 +37,7 @@ import Data.Bifunctor (bimap, first, second)
 import Data.Data (Data)
 import Data.Default (Default (def))
 import Data.Foldable (Foldable (fold), find, foldl')
-import Data.List (nub, sort, sortOn, (\\))
+import Data.List (sortOn, (\\))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -47,15 +47,12 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..),
-               PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey), PaymentPubKey,
-               PaymentPubKeyHash (PaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx, Tx (txFee, txMint),
-               TxIn (TxIn, txInRef), TxOut (..), TxOutRef, UtxoIndex (..), Value)
+import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..), PaymentPubKey,
+               PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut (..),
+               TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (addressCredential), PaymentPrivateKey (..), PaymentPubKey,
-                       PaymentPubKeyHash (PaymentPubKeyHash))
-import Ledger.Address qualified as Address
+import Ledger.Address (PaymentPrivateKey (..), paymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
@@ -63,12 +60,9 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Generators qualified as Generators
-import Ledger.Index (UtxoIndex (UtxoIndex, getIndex))
-import Ledger.Params (Params (Params, pProtocolParams, pSlotConfig))
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxIn, TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (makeTransactionBody)
-import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
+import Ledger.Validation (fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -323,9 +317,8 @@ handleBalance utx' = do
     utxo <- get >>= ownOutputs
     params@Params { pSlotConfig } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
-        requiredSigners = nub $
-            Set.toList (U.unBalancedTxRequiredSignatories utx) ++
-            (map Address.paymentPubKeyHash Generators.knownPaymentPublicKeys)
+        requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+        signersForEstimation = requiredSigners ++ map paymentPubKeyHash Generators.knownPaymentPublicKeys
         eitherTx = U.unBalancedTxTx utx
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     case eitherTx of
@@ -333,7 +326,7 @@ handleBalance utx' = do
             -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
             let calcFee n fee = do
                     tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-                    newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
+                    newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex signersForEstimation tx
                     if newFee /= fee
                         then if n == (0 :: Int)
                             -- If we don't reach a fixed point, pick the larger fee
@@ -375,7 +368,7 @@ handleAddSignature tx = do
     case msp of
         Nothing -> do
             PaymentPrivateKey privKey <- gets ownPaymentPrivateKey
-            pure $ addSignature' privKey tx
+            pure $ Tx.addCardanoTxSignature privKey tx
         Just (SigningProcess sp) -> do
             let ctx = case tx of
                     Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
@@ -383,13 +376,6 @@ handleAddSignature tx = do
                     _ -> error "handleAddSignature: Need a Cardano API Tx from the Alonzo era to get the required signers"
                 reqSigners = getRequiredSigners ctx
             sp reqSigners tx
-
-addSignature' :: PrivateKey -> CardanoTx -> CardanoTx
-addSignature' privKey = Tx.cardanoTxMap (Ledger.addSignature' privKey) addSignatureCardano
-    where
-        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
-        addSignatureCardano (Tx.CardanoApiEmulatorEraTx ctx)
-            = Tx.CardanoApiEmulatorEraTx (addSignature privKey ctx)
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
@@ -642,14 +628,14 @@ signTxWithPrivateKey
 signTxWithPrivateKey (PaymentPrivateKey pk) tx pkh@(PaymentPubKeyHash pubK) = do
     let ownPaymentPubKey = Ledger.toPublicKey pk
     if Ledger.pubKeyHash ownPaymentPubKey == pubK
-    then pure (addSignature' pk tx)
+    then pure (Tx.addCardanoTxSignature pk tx)
     else throwError (WAPI.PaymentPrivateKeyNotFound pkh)
 
 -- | Sign the transaction with the given private keys,
 --   ignoring the list of public keys that the 'SigningProcess' is passed.
 signPrivateKeys :: [PaymentPrivateKey] -> SigningProcess
 signPrivateKeys signingKeys = SigningProcess $ \_ tx ->
-    pure (foldr (addSignature' . unPaymentPrivateKey) tx signingKeys)
+    pure (foldr (Tx.addCardanoTxSignature . unPaymentPrivateKey) tx signingKeys)
 
 data SigningProcessControlEffect r where
     SetSigningProcess :: Maybe SigningProcess -> SigningProcessControlEffect ()

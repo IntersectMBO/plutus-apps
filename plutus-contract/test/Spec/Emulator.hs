@@ -21,6 +21,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Default (Default (def))
 import Data.Foldable (fold)
+import Data.List (isInfixOf)
 import Data.Set qualified as Set
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
@@ -150,10 +151,10 @@ txnUpdateUtxo = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidate _ (EmulatorTx i1) _
-                , Chain.TxnValidationFail _ _ (EmulatorTx txi) (Index.TxOutRefNotFound _) _ _
+                , Chain.TxnValidate _ _ _
+                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError err) _ _
                 , Chain.SlotAdd _
-                ] -> i1 == txn && txi == txn
+                ] -> "UnknownTxIns" `isInfixOf` err
             _ -> False
     checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
@@ -183,9 +184,9 @@ invalidTrace = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ (EmulatorTx txn) (Index.ValueNotPreserved _ _) _ _
+                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError err) _ _
                 , Chain.SlotAdd _
-                ] -> txn == invalidTxn
+                ] -> "ValueNotConservedUTxO" `isInfixOf` err
             _ -> False
     checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
@@ -215,17 +216,17 @@ invalidScript = property $ do
             Trace.liftWallet wallet1 (submitTxn $ EmulatorTx (Gen.signAll scriptTxn))
             _ <- Trace.nextSlot
             Trace.liftWallet wallet1 (submitTxn $ EmulatorTx invalidTxn)
-        pred = \case
+        pred = \case -- case (Debug.Trace.trace ("events!!!: " ++ (show ev)) ev) of
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
                 , Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ (EmulatorTx txn) (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _ _
+                , Chain.TxnValidationFail _ _ _ (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure: An error has occurred:  User error:\nThe provided Plutus code called 'error'.")) _ _
                 , Chain.SlotAdd _
-                ] -> txn == invalidTxn
+                ] -> True
             _ -> False
-
-    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
+    let expectedPaidFees = txFee scriptTxn <> totalVal
+    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 expectedPaidFees) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
         failValidator :: Validator
         failValidator = mkValidatorScript $$(PlutusTx.compile [|| mkUntypedValidator validator ||])

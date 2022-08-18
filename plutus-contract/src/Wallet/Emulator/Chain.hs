@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
@@ -17,8 +18,6 @@
 
 module Wallet.Emulator.Chain where
 
-import Cardano.Api qualified as C
-import Control.Applicative ((<|>))
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
@@ -26,20 +25,15 @@ import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (fromRight)
-import Data.Foldable (foldl', traverse_)
+import Data.Foldable (traverse_)
 import Data.List (partition, (\\))
-import Data.Map qualified as Map
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), EmulatorEra, OnChainTx (..), Params (..), ScriptValidationEvent,
-               Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TxId, TxIn (txInRef), TxOut (txOutValue),
-               Value, addCardanoTxSignature, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId,
-               getCardanoTxValidityRange, mergeCardanoTxWith, onCardanoTx, txSignatures)
-import Ledger.Address qualified as Address
-import Ledger.Crypto qualified as Crypto
-import Ledger.Generators qualified as Generators
+               Slot (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs,
+               getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -154,8 +148,8 @@ validateBlock params slot@(Slot s) idx txns =
         -- Validate transactions, updating the UTXO index each time
         (processed, Index.ValidationCtx idx' _) =
             flip S.runState (Index.ValidationCtx idx params) $ for txns $ \tx -> do
-                (err, events_) <- validateEm slot cUtxoIndex tx
-                pure (tx, err, events_)
+                err <- validateEm slot tx
+                pure (tx, err, [])
 
         -- The new block contains all transaction that were validated
         -- successfully
@@ -170,7 +164,6 @@ validateBlock params slot@(Slot s) idx txns =
         nextSlot = Slot (s + 1)
         events   = (uncurry3 (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
 
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
 
     in ValidatedBlock block events idx'
 
@@ -193,41 +186,19 @@ mkValidationEvent idx t result events =
 validateEm
     :: S.MonadState Index.ValidationCtx m
     => Slot
-    -> Validation.UTxO EmulatorEra
     -> CardanoTx
-    -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
-validateEm h cUtxoIndex txn = do
+    -> m (Maybe Index.ValidationErrorInPhase)
+validateEm h txn = do
     ctx@(Index.ValidationCtx idx params) <- S.get
     let
-        getPublicKeys = Map.keys . txSignatures
-        privateKeys = onCardanoTx
-            (map Address.unPaymentPrivateKey . catMaybes .
-                map (flip Map.lookup Generators.knownPaymentKeys) .
-                map Address.PaymentPubKey . getPublicKeys)
-            (const []) txn
-        convertTx t = flip SomeTx C.AlonzoEraInCardanoMode $
-            either (\err -> error $ "Failed to build a Tx: " ++ show err) id $
-            Validation.fromPlutusTx params cUtxoIndex (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys t) t
-        signed tx = foldl' (flip addCardanoTxSignature) tx privateKeys
-        txn' = signed $ CardanoApiTx $ onCardanoTx convertTx id txn
-        (e, events) = txn' & mergeCardanoTxWith
-            (\_ -> error "validateEm: EmulatorTx is not supported")
-            (\tx -> if cUtxoIndex == Validation.UTxO (Map.fromList []) then (Nothing, []) else validateL params h cUtxoIndex tx)
-            (\(e1, sve1) (e2, sve2) -> (e2 <|> e1, sve2 ++ sve1))
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+        e = Validation.validateCardanoTx params h cUtxoIndex txn
         idx' = case e of
             Just (Index.Phase1, _) -> idx
             Just (Index.Phase2, _) -> Index.insertCollateral txn idx
             Nothing                -> Index.insert txn idx
     _ <- S.put ctx{ Index.vctxIndex = idx' }
-    pure (e, events)
-
-validateL
-    :: Params
-    -> Slot
-    -> Validation.UTxO EmulatorEra
-    -> SomeCardanoApiTx
-    -> (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
-validateL params slot idx (CardanoApiEmulatorEraTx tx) = (Validation.hasValidationErrors params (fromIntegral slot) idx tx, [])
+    pure e
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState

@@ -54,7 +54,6 @@ tests :: TestTree
 tests = testGroup "all tests"
     [ testProperty "missing value spent" missingValueSpentProp
     , testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash" mustPayToPubKeyAddressStakePubKeyNotNothingProp
-    , testProperty "mustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
     , testProperty "mustPayToOtherScriptAddress should create output addresses with stake validator hash" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
     ]
 
@@ -148,28 +147,6 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
             StakingHash (ScriptCredential (Ledger.ValidatorHash svh)) -> Just $ Ledger.StakeValidatorHash svh
             _                                                         -> Nothing
 
--- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
--- testScriptInputs
---     :: ( PlutusTx.FromData (Scripts.DatumType a)
---        , PlutusTx.ToData (Scripts.DatumType a)
---        , PlutusTx.ToData (Scripts.RedeemerType a))
---     => ScriptLookups a
---     -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
---     -> Property
--- testScriptInputs lookups txc = property $ do
---     tx <- either (\err -> do Hedgehog.annotateShow err; Hedgehog.failure)
---                  (pure . view OC.tx)
---                  $ mkTx lookups txc
---     let valM = do
---             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
---             pure Nothing
---     case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
---         (Nothing, _) -> pure ()
---         (Just err, _) -> do
---             Hedgehog.annotateShow err
---             Hedgehog.failure
-
-
 txOut0 :: Ledger.ChainIndexTxOut
 txOut0 =
     Ledger.ScriptChainIndexTxOut
@@ -234,6 +211,3 @@ lookups1
     = Constraints.unspentOutputs utxo1
     <> Constraints.plutusV1OtherScript (Scripts.validatorScript alwaysSucceedValidator)
     <> Constraints.plutusV1OtherScript (Scripts.validatorScript validator1)
-
--- testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
--- testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

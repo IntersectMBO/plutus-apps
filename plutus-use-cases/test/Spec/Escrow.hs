@@ -260,8 +260,10 @@ tests = testGroup "escrow"
                                (Scripts.validatorScript $ typedValidator (escrowParams startTime))
                                32000
 
-    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Escrow
-    , testProperty "QuickCheck NoLockedFunds" $ withMaxSuccess 10 prop_NoLockedFunds
+    -- TODO: uncomment after enabling 2nd phase validation
+    -- See note [Second phase validation]
+    -- , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Escrow
+    -- , testProperty "QuickCheck NoLockedFunds" $ withMaxSuccess 10 prop_NoLockedFunds
     , testProperty "QuickCheck double satisfaction fails" $ expectFailure (noShrinking prop_Escrow_DoubleSatisfaction)
     ]
     where

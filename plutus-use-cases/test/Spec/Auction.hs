@@ -346,30 +346,29 @@ prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCove
 tests :: TestTree
 tests =
     testGroup "auction"
-        [
-        -- checkPredicateOptions options "run an auction"
-        --     (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
-        --     .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w2) (const True) "buyer should be done"
-        --     .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace1FinalState ) "wallet 2 final state should be OK"
-        --     .&&. walletFundsChange w1 (Ada.toValue trace1WinningBid <> inv theToken)
-        --     .&&. walletFundsChange w2 (inv (Ada.toValue trace1WinningBid) <> theToken))
-        --     auctionTrace1
-        -- , checkPredicateOptions options "run an auction with multiple bids"
-        --     (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
-        --     .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w2) (const True) "buyer should be done"
-        --     .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w3) (const True) "3rd party should be done"
-        --     .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace2FinalState) "wallet 2 final state should be OK"
-        --     .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w3) ((==) trace2FinalState) "wallet 3 final state should be OK"
-        --     .&&. walletFundsChange w1 (Ada.toValue trace2WinningBid <> inv theToken)
-        --     .&&. walletFundsChange w2 (inv (Ada.toValue trace2WinningBid) <> theToken)
-        --     .&&. walletFundsChange w3 mempty)
-        --     auctionTrace2
-        -- , testProperty "QuickCheck property" $
-        --     withMaxSuccess 10 prop_FinishAuction
-          testProperty "NLFP fails" $
+        [ checkPredicateOptions options "run an auction"
+            (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
+            .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w2) (const True) "buyer should be done"
+            .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace1FinalState ) "wallet 2 final state should be OK"
+            .&&. walletFundsChange w1 (Ada.toValue trace1WinningBid <> inv theToken)
+            .&&. walletFundsChange w2 (inv (Ada.toValue trace1WinningBid) <> theToken))
+            auctionTrace1
+        , checkPredicateOptions options "run an auction with multiple bids"
+            (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
+            .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w2) (const True) "buyer should be done"
+            .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w3) (const True) "3rd party should be done"
+            .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace2FinalState) "wallet 2 final state should be OK"
+            .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w3) ((==) trace2FinalState) "wallet 3 final state should be OK"
+            .&&. walletFundsChange w1 (Ada.toValue trace2WinningBid <> inv theToken)
+            .&&. walletFundsChange w2 (inv (Ada.toValue trace2WinningBid) <> theToken)
+            .&&. walletFundsChange w3 mempty)
+            auctionTrace2
+        , testProperty "QuickCheck property" $
+            withMaxSuccess 10 prop_FinishAuction
+        , testProperty "NLFP fails" $
             expectFailure $ noShrinking prop_NoLockedFunds
-        -- , testProperty "prop_Reactive" $
-        --     withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
-        -- , testProperty "prop_doubleSatisfaction fails" $
-        --     expectFailure $ noShrinking prop_doubleSatisfaction
+        , testProperty "prop_Reactive" $
+            withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
+        , testProperty "prop_doubleSatisfaction fails" $
+            expectFailure $ noShrinking prop_doubleSatisfaction
         ]

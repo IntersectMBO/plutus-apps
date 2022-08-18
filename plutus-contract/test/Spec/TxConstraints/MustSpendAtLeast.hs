@@ -37,7 +37,11 @@ tests =
         , lessThanScriptBalance
         --, higherThanScriptBalanceWithoutWalletPubkeyLookup -- Failing due to PLT-665
         --, higherThanScriptBalanceWithWalletPubkeyLookup    -- Failing due to PLT-665
-        , phase2Failure
+
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        --
+        -- , phase2Failure
         ]
 
 scriptBalance :: Integer

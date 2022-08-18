@@ -593,6 +593,10 @@ walletFundsChangeImpl exact w dlt' = TracePredicate $
                 then ["but they did not change"]
                 else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
                       "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
+                    ++ [ "finalValue: " <+> viaShow finalValue
+                        , "finalValue': " <+> viaShow finalValue'
+                        , "initialValue: " <+> viaShow initialValue
+                        , "dlt: " <+> viaShow dlt ]
         pure result
 
 walletPaidFees :: Wallet -> Value -> TracePredicate

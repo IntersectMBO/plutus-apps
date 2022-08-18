@@ -33,23 +33,18 @@ module Plutus.Contract.Test.ContractModel.DoubleSatisfaction
 import PlutusTx qualified
 import PlutusTx.Builtins hiding (error)
 
-
-import Cardano.Api qualified as C
-import Control.Applicative ((<|>))
 import Control.Lens
 import Control.Monad.Cont
 import Control.Monad.Freer (Eff, run)
 import Control.Monad.Freer.Extras.Log (LogMessage, logMessageContent)
 import Control.Monad.State qualified as State
 import Data.Either
-import Data.Foldable (foldl')
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Ledger.Params (EmulatorEra, Params)
 
 import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
-import Ledger.Address qualified as Address
 import Ledger.Crypto
 import Ledger.Generators
 import Ledger.Index as Index
@@ -203,21 +198,7 @@ getDSCounterexamples params cs = go 0 mempty cs
         | all (isRight . sveResult) ces ->
           let
               cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
-              getPublicKeys = Map.keys . txSignatures
-              privateKeys = onCardanoTx
-                  (map Address.unPaymentPrivateKey . catMaybes .
-                      map (flip Map.lookup Ledger.Generators.knownPaymentKeys) .
-                      map Address.PaymentPubKey . getPublicKeys)
-                  (const []) txn
-              convertTx t = flip SomeTx C.AlonzoEraInCardanoMode $
-                  either (\err -> error $ "Failed to build a Tx: " ++ show err) id $
-                  Validation.fromPlutusTx params cUtxoIndex (map (Address.PaymentPubKeyHash . pubKeyHash) $ getPublicKeys t) t
-              signed tx = foldl' (flip addCardanoTxSignature) tx privateKeys
-              txn' = signed $ CardanoApiTx $ onCardanoTx convertTx id txn
-              (e', _) = txn' & mergeCardanoTxWith
-                  (\_ -> error "validateEm: EmulatorTx is not supported")
-                  (\tx -> if cUtxoIndex == Validation.UTxO (Map.fromList []) then (Nothing, []) else validateL params slot cUtxoIndex tx)
-                  (\(e1, sve1) (e2, sve2) -> (e2 <|> e1, sve2 ++ sve1))
+              e' = Validation.validateCardanoTx params slot cUtxoIndex txn
               idx' = case e' of
                   Just (Index.Phase1, _) -> idx
                   Just (Index.Phase2, _) -> Index.insertCollateral txn idx
@@ -249,22 +230,9 @@ doubleSatisfactionCandidates params slot idx event = case event of
 validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
-      cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsParams _dsUtxoIndex
-      getPublicKeys = Map.keys . txSignatures
-      privateKeys =
-          (map Address.unPaymentPrivateKey . catMaybes .
-              map (flip Map.lookup Ledger.Generators.knownPaymentKeys) .
-              map Address.PaymentPubKey . getPublicKeys) _dsTx
-      convertTx t = flip SomeTx C.AlonzoEraInCardanoMode $
-          either (\err -> error $ "Failed to build a Tx: " ++ show err) id $
-          Validation.fromPlutusTx _dsParams cUtxoIndex (map (Address.PaymentPubKeyHash . pubKeyHash) $ getPublicKeys t) t
-      signed tx = foldl' (flip addCardanoTxSignature) tx privateKeys
-      txn' = signed $ CardanoApiTx $ convertTx _dsTx
-      (e', _) = txn' & mergeCardanoTxWith
-          (\_ -> error "validateEm: EmulatorTx is not supported")
-          (\tx -> if cUtxoIndex == Validation.UTxO (Map.fromList []) then (Nothing, []) else validateL _dsParams _dsSlot cUtxoIndex tx)
-          (\(e1, sve1) (e2, sve2) -> (e2 <|> e1, sve2 ++ sve1))
-      in e'
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsParams _dsUtxoIndex
+    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex (EmulatorTx _dsTx)
+  in e'
 
 -- | Run validation for a `WrappedTx`. Returns @True@ if successful.
 validateWrappedTx :: WrappedTx -> Bool

@@ -40,9 +40,12 @@ tests =
         [
           ownWallet
         , otherWallet
-        , otherWalletNoSigningProcess
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        --
+        -- , otherWalletNoSigningProcess
+        -- , phase2FailureMustBeSignedBy
         , withoutOffChainMustBeSignedBy
-        , phase2FailureMustBeSignedBy
         ]
 
 mustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()

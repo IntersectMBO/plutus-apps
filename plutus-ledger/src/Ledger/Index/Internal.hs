@@ -15,9 +15,12 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
+import Data.Text (Text)
 import GHC.Generics (Generic)
+import Ledger.Blockchain
 import Ledger.Crypto
 import Ledger.Orphans ()
+import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Slot qualified as Slot
 import Plutus.V1.Ledger.Tx
@@ -31,6 +34,9 @@ newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
     deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON, NFData)
 
+-- | Create an index of all UTxOs on the chain.
+initialise :: Blockchain -> UtxoIndex
+initialise = UtxoIndex . unspentOutputs
 
 -- | A reason why a transaction is invalid.
 data ValidationError =
@@ -77,3 +83,21 @@ deriving via (PrettyShow ValidationError) instance Pretty ValidationError
 data ValidationPhase = Phase1 | Phase2 deriving (Eq, Show, Generic, FromJSON, ToJSON)
 deriving via (PrettyShow ValidationPhase) instance Pretty ValidationPhase
 type ValidationErrorInPhase = (ValidationPhase, ValidationError)
+
+data ScriptType = ValidatorScript Scripts.Validator Scripts.Datum | MintingPolicyScript Scripts.MintingPolicy
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | A script (MPS or validator) that was run during transaction validation
+data ScriptValidationEvent =
+    ScriptValidationEvent
+        { sveScript   :: Scripts.Script -- ^ The script applied to all arguments
+        , sveResult   :: Either Scripts.ScriptError (Api.ExBudget, [Text]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
+        , sveRedeemer :: Scripts.Redeemer
+        , sveType     :: ScriptType -- ^ What type of script it was
+        }
+    | ScriptValidationResultOnlyEvent
+        { sveResult   :: Either Scripts.ScriptError (Api.ExBudget, [Text])
+        }
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
