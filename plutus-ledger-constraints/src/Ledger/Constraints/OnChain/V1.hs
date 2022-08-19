@@ -104,15 +104,16 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
+    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv _inlineScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
             checkOutput dv TxOut{txOutDatumHash=Just svh} = hsh dv == Just svh
             checkOutput _ _                               = False
         in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk && maybe True (\dv -> any (checkOutput dv) outs) mdv
-    MustPayToOtherScript vlh _ dv vl ->
+        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
+            && maybe True (\dv -> any (checkOutput dv) outs) mdv
+    MustPayToOtherScript vlh _ dv _inlineScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh = V.findDatumHash dv scriptContextTxInfo
             addr = Address.scriptHashAddress vlh

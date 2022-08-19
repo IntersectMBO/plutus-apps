@@ -60,6 +60,7 @@ module Ledger.Constraints.OffChain(
     , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
+    , lookupScript
     , resolveScriptTxOut
     ) where
 
@@ -83,13 +84,14 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
+import Data.Bifunctor (first)
 import Data.Maybe (fromJust)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
-                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
+                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocInlineScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
@@ -102,7 +104,7 @@ import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), RedeemerPtr (R
                   Tx, TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
-import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
+import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvLanguage),
                              ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Typed
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
@@ -110,8 +112,9 @@ import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, POSIXTimeRange, Redeemer,
-                             Validator, ValidatorHash, Value)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, POSIXTimeRange, Redeemer, Value)
+import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                                 ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
@@ -119,12 +122,10 @@ import PlutusTx.Numeric qualified as N
 
 data ScriptLookups a =
     ScriptLookups
-        { slMPS                  :: Map MintingPolicyHash MintingPolicy
-        -- ^ Minting policies that the script interacts with
-        , slTxOutputs            :: Map TxOutRef ChainIndexTxOut
+        { slTxOutputs            :: Map TxOutRef ChainIndexTxOut
         -- ^ Unspent outputs that the script may want to spend
-        , slOtherScripts         :: Map ValidatorHash (Validator, Language)
-        -- ^ Validators of scripts other than "our script"
+        , slOtherScripts         :: Map ScriptHash (Script, Language)
+        -- ^ Scripts other than "our script"
         , slOtherData            :: Map DatumHash Datum
         -- ^ Datums that we might need
         , slPaymentPubKeyHashes  :: Set PaymentPubKeyHash
@@ -146,8 +147,7 @@ generalise sl =
 instance Semigroup (ScriptLookups a) where
     l <> r =
         ScriptLookups
-            { slMPS = slMPS l <> slMPS r
-            , slTxOutputs = slTxOutputs l <> slTxOutputs r
+            { slTxOutputs = slTxOutputs l <> slTxOutputs r
             , slOtherScripts = slOtherScripts l <> slOtherScripts r
             , slOtherData = slOtherData l <> slOtherData r
             , slPaymentPubKeyHashes = slPaymentPubKeyHashes l <> slPaymentPubKeyHashes r
@@ -163,7 +163,7 @@ instance Semigroup (ScriptLookups a) where
 
 instance Monoid (ScriptLookups a) where
     mappend = (<>)
-    mempty  = ScriptLookups mempty mempty mempty mempty mempty Nothing Nothing Nothing
+    mempty  = ScriptLookups mempty mempty mempty mempty Nothing Nothing Nothing
 
 -- | A script lookups value with a script instance. For convenience this also
 --   includes the minting policy script that forwards all checks to the
@@ -177,8 +177,9 @@ instance Monoid (ScriptLookups a) where
 -- @
 typedValidatorLookups :: TypedValidator a -> ScriptLookups a
 typedValidatorLookups inst =
-    mempty
-        { slMPS = Map.singleton (Typed.forwardingMintingPolicyHash inst) (Typed.forwardingMintingPolicy inst)
+    let (MintingPolicyHash mph, MintingPolicy mp) = (Typed.forwardingMintingPolicyHash inst, Typed.forwardingMintingPolicy inst)
+    in mempty
+        { slOtherScripts = Map.singleton (ScriptHash mph) (mp, tvLanguage inst)
         , slTypedValidator = Just inst
         }
 
@@ -189,26 +190,26 @@ unspentOutputs mp = mempty { slTxOutputs = mp }
 
 -- | A script lookups value with a minting policy script.
 plutusV1MintingPolicy :: MintingPolicy -> ScriptLookups a
-plutusV1MintingPolicy pl =
-    let hsh = PV1.mintingPolicyHash pl in
-    mempty { slMPS = Map.singleton hsh pl }
+plutusV1MintingPolicy (MintingPolicy pl) =
+    let MintingPolicyHash hsh = PV1.mintingPolicyHash (MintingPolicy pl) in
+    mempty { slOtherScripts = Map.singleton (ScriptHash hsh) (pl, PlutusV1) }
 
 -- | A script lookups value with a minting policy script.
 plutusV2MintingPolicy :: MintingPolicy -> ScriptLookups a
-plutusV2MintingPolicy pl =
-    let hsh = PV2.mintingPolicyHash pl in
-    mempty { slMPS = Map.singleton hsh pl }
+plutusV2MintingPolicy (MintingPolicy pl) =
+    let MintingPolicyHash hsh = PV2.mintingPolicyHash (MintingPolicy pl) in
+    mempty { slOtherScripts = Map.singleton (ScriptHash hsh) (pl, PlutusV2) }
 
 -- | A script lookups value with a PlutusV1 validator script.
 plutusV1OtherScript :: Validator -> ScriptLookups a
-plutusV1OtherScript vl =
-    let vh = PV1.validatorHash vl in
+plutusV1OtherScript (Validator vl) =
+    let vh = PV1.scriptHash vl in
     mempty { slOtherScripts = Map.singleton vh (vl, PlutusV1) }
 
 -- | A script lookups value with a PlutusV2 validator script.
 plutusV2OtherScript :: Validator -> ScriptLookups a
-plutusV2OtherScript vl =
-    let vh = PV2.validatorHash vl in
+plutusV2OtherScript (Validator vl) =
+    let vh = PV2.scriptHash vl in
     mempty { slOtherScripts = Map.singleton vh (vl, PlutusV2) }
 
 -- | A script lookups value with a datum.
@@ -413,10 +414,10 @@ processLookupsAndConstraints
     -> m ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
         flip runReaderT lookups $ do
-            traverse_ processConstraint txConstraints
+            ownOutputConstraints <- traverse addOwnOutput txOwnOutputs
+            traverse_ processConstraint (txConstraints <> ownOutputConstraints)
             traverse_ processConstraintFun txCnsFuns
             traverse_ addOwnInput txOwnInputs
-            traverse_ addOwnOutput txOwnOutputs
             addMintingRedeemers
             addMissingValueSpent
             updateUtxoIndex
@@ -533,24 +534,19 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl
 
--- | Add a typed output and return its value.
+-- | Convert a @ScriptOutputConstraint@ into a @TxConstraint@.
 addOwnOutput
     :: ( MonadReader (ScriptLookups a) m
-        , MonadState ConstraintProcessingState m
-        , FromData (DatumType a)
-        , ToData (DatumType a)
         , MonadError MkTxError m
+        , ToData (DatumType a)
         )
     => ScriptOutputConstraint (DatumType a)
-    -> m ()
-addOwnOutput ScriptOutputConstraint{ocDatum, ocValue} = do
+    -> m TxConstraint
+addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocInlineScriptHash} = do
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
-    let txOut = Typed.makeTypedScriptTxOut inst ocDatum ocValue
-        dsV   = Datum (toBuiltinData ocDatum)
-    unbalancedTx . tx . Tx.outputs %= (Typed.tyTxOutTxOut txOut :)
-    unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dsV) .= Just dsV
-    valueSpentOutputs <>= provided ocValue
+    let dsV = Datum (toBuiltinData ocDatum)
+    pure $ MustPayToOtherScript (Typed.tvValidatorHash inst) Nothing dsV ocInlineScriptHash ocValue
 
 data MkTxError =
     TypeCheckFailed Typed.ConnectionError
@@ -558,7 +554,7 @@ data MkTxError =
     | TxOutRefWrongType TxOutRef
     | DatumNotFound DatumHash
     | MintingPolicyNotFound MintingPolicyHash
-    | ValidatorHashNotFound ValidatorHash
+    | ScriptHashNotFound ScriptHash
     | OwnPubKeyMissing
     | TypedValidatorMissing
     | DatumWrongHash DatumHash Datum
@@ -575,7 +571,7 @@ instance Pretty MkTxError where
         TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
         DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found"
         MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
-        ValidatorHashNotFound h        -> "No validator with hash" <+> pretty h <+> "was found"
+        ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
         OwnPubKeyMissing               -> "Own public key is missing"
         TypedValidatorMissing          -> "Script instance is missing"
         DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
@@ -609,9 +605,7 @@ lookupMintingPolicy
        )
     => MintingPolicyHash
     -> m MintingPolicy
-lookupMintingPolicy mph =
-    let err = throwError (MintingPolicyNotFound mph) in
-    asks slMPS >>= maybe err pure . view (at mph)
+lookupMintingPolicy (MintingPolicyHash mph) = MintingPolicy . fst <$> lookupScript (ScriptHash mph)
 
 lookupValidator
     :: ( MonadReader (ScriptLookups a) m
@@ -619,9 +613,17 @@ lookupValidator
        )
     => ValidatorHash
     -> m (Validator, Language)
-lookupValidator vh =
-    let err = throwError (ValidatorHashNotFound vh) in
-    asks slOtherScripts >>= maybe err pure . view (at vh)
+lookupValidator (ValidatorHash vh) = first Validator <$> lookupScript (ScriptHash vh)
+
+lookupScript
+    :: ( MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => ScriptHash
+    -> m (Script, Language)
+lookupScript sh =
+    let err = throwError (ScriptHashNotFound sh) in
+    asks slOtherScripts >>= maybe err pure . view (at sh)
 
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
@@ -687,7 +689,8 @@ processConstraint = \case
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash mintingPolicyScript
         unbalancedTx . tx . Tx.mint <>= value i
         mintRedeemers . at mpsHash .= Just red
-    MustPayToPubKeyAddress pk skhM mdv vl -> do
+    MustPayToPubKeyAddress pk skhM mdv _inlineScript vl -> do
+        -- TODO: implement adding inline script
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
             unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) .= Just dv
@@ -697,7 +700,8 @@ processConstraint = \case
                                                    , txOutDatumHash=hash
                                                    } :)
         valueSpentOutputs <>= provided vl
-    MustPayToOtherScript vlh svhM dv vl -> do
+    MustPayToOtherScript vlh svhM dv _inlineScript vl -> do
+        -- TODO: implement adding inline script
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = P.datumHash dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv

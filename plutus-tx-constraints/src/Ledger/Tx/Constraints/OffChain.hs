@@ -67,11 +67,13 @@ import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
-import Ledger.Constraints.TxConstraints (TxConstraint, TxConstraints (TxConstraints, txConstraints))
+import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
+                                         TxConstraints (TxConstraints, txConstraints, txOwnOutputs))
 import Ledger.Orphans ()
 import Ledger.Params (Params (..), networkIdL)
-import Ledger.Scripts (getDatum, getRedeemer, getValidator)
+import Ledger.Scripts (ScriptHash, getDatum, getRedeemer, getValidator)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (toCardanoScriptInAnyLang)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
 
@@ -169,18 +171,18 @@ mkSomeTx params xs =
 --   'ConstraintProcessingState'
 processLookupsAndConstraints
     :: ( -- FromData (DatumType a)
-    --    , ToData (DatumType a)
+         ToData (DatumType a)
     --    , ToData (RedeemerType a)
        )
     => P.ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> StateT P.ConstraintProcessingState (Except MkTxError) ()
-processLookupsAndConstraints lookups TxConstraints{txConstraints} =
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} =
         flip runReaderT lookups $ do
-            traverse_ processConstraint txConstraints
+            ownOutputConstraints <- traverse addOwnOutput txOwnOutputs
+            traverse_ processConstraint (txConstraints <> ownOutputConstraints)
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
-            -- traverse_ P.addOwnOutput txOwnOutputs
             -- P.addMintingRedeemers
             -- P.addMissingValueSpent
             P.updateUtxoIndex
@@ -252,23 +254,25 @@ processConstraint = \case
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txInsReference <>= [ txIn ]
 
-    P.MustPayToPubKeyAddress pk mskh md vl -> do
+    P.MustPayToPubKeyAddress pk mskh md inlineScriptM vl -> do
         networkId <- use (P.paramsL . networkIdL)
+        refScript <- lookupInlineScript inlineScriptM
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
             <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.toCardanoScriptData . getDatum) md)
-            <*> pure C.ReferenceScriptNone
+            <*> pure refScript
 
         unbalancedTx . tx . txOuts <>= [ out ]
 
-    P.MustPayToOtherScript vlh svhM dv vl -> do
+    P.MustPayToOtherScript vlh svhM dv inlineScriptM vl -> do
         networkId <- use (P.paramsL . networkIdL)
+        refScript <- lookupInlineScript inlineScriptM
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
             <*> C.toCardanoTxOutValue vl
             <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum dv)))
-            <*> pure C.ReferenceScriptNone
+            <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 
     c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"
@@ -277,3 +281,18 @@ lookupTxOutRef
     :: Tx.TxOutRef
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.ChainIndexTxOut
 lookupTxOutRef txo = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo
+
+lookupInlineScript
+    :: Maybe ScriptHash
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
+lookupInlineScript Nothing = pure C.ReferenceScriptNone
+lookupInlineScript (Just sh) = do
+    (script, language) <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupScript sh
+    scriptInAnyLang <- either (throwError . ToCardanoError) pure $ toCardanoScriptInAnyLang script language
+    pure $ C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra scriptInAnyLang
+
+addOwnOutput
+    :: ToData (DatumType a)
+    => ScriptOutputConstraint (DatumType a)
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) TxConstraint
+addOwnOutput soc = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.addOwnOutput soc
