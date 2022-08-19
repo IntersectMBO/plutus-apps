@@ -9,7 +9,6 @@ module Spec.TxConstraints.TimeValidity(tests) where
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
-import Control.Monad.Reader (ReaderT, asks, lift, runReaderT)
 import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
@@ -43,8 +42,10 @@ tests = testGroup "time validitity constraint"
         , defaultProtocolParams
         ]
     , testGroup "with Tx.Constraints"
-        [ protocolV6Cardano
+        [ protocolV5Cardano
+        , protocolV6Cardano
         , defaultProtocolParamsValidCardano
+        , defaultProtocolParamsInvalidCardano
         ]
     ]
 
@@ -94,15 +95,13 @@ defaultProtocolParams = checkPredicateOptions
     (assertValidatedTransactionCount 2)
     (void trace)
 
-validTraceCardano :: ReaderT Ledger.Params Trace.EmulatorTrace ()
-validTraceCardano = do
-    c <- asks validContractCardano
-    lift $ do
-        void $ Trace.activateContractWallet w1 c
-        void $ Trace.waitNSlots 2
+traceCardano :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
+traceCardano c = do
+    void $ Trace.activateContractWallet w1 c
+    void $ Trace.waitNSlots 3
 
-validContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
-validContractCardano p = do
+contractCardano :: (Ledger.POSIXTime -> Ledger.POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
+contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Void p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
@@ -112,30 +111,47 @@ validContractCardano p = do
         lookups = Tx.Constraints.unspentOutputs utxos
         tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
-            <> Tx.Constraints.mustValidateIn (from $ now + 1000)
-
+            <> Tx.Constraints.mustValidateIn (f now)
     submitTxConfirmed $ mkTx lookups tx
 
+validContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
+validContractCardano = contractCardano (from . (1000 +))
+
+invalidContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
+invalidContractCardano = contractCardano (I.to . subtract 1000)
+
+
 protocolV5Cardano :: TestTree
-protocolV5Cardano = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
+protocolV5Cardano =
+    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) })
+    in checkPredicateOptions
+    checkOptions
     "tx valid time interval is not supported in protocol v5"
     (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
-    (void $ validTraceCardano `runReaderT` view (emulatorConfig . params) defaultCheckOptions)
+    (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) checkOptions)
 
 protocolV6Cardano :: TestTree
-protocolV6Cardano = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
+protocolV6Cardano =
+    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) })
+    in checkPredicateOptions
+    checkOptions
     "tx valid time interval is supported in protocol v6"
     (assertValidatedTransactionCount 1)
-    (void $ validTraceCardano `runReaderT` view (emulatorConfig . params) defaultCheckOptions)
+    (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) checkOptions)
 
 defaultProtocolParamsValidCardano :: TestTree
 defaultProtocolParamsValidCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval is supported in protocol v6+"
     (assertValidatedTransactionCount 1)
-    (void $ validTraceCardano `runReaderT` view (emulatorConfig . params) defaultCheckOptions)
+    (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
+
+defaultProtocolParamsInvalidCardano :: TestTree
+defaultProtocolParamsInvalidCardano = checkPredicateOptions
+    defaultCheckOptions
+    "tx valid time interval in the past make transactions fail"
+    (assertValidatedTransactionCount 0)
+    (void $ traceCardano $ invalidContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 deadline :: POSIXTime
 deadline = 1596059092000 -- (milliseconds) transaction's valid range must be after this
