@@ -58,13 +58,18 @@ Data types
 """"""""""
 
 * The `Events` data type contains the following fields:
+
   * Slot numbers (a data type that supports ordering)
   * Block id (a data type that supports equality checking)
   * e (type variable standing for the event)
+
 * The `Query` data type contains the following fields:
+
   * Validity interval (can be any interval defined by using the slot numbers or a special value that turn off checking for validity)
   * q (type variable standing for the query)
+
 * Result
+
   * Slot number at which the query was ran
   * r (type variable standing for the query result)
 
@@ -72,14 +77,19 @@ Functions
 """""""""
 
 * The `Query` function takes the following parameters:
+
   * Indexer - The indexer that we are using to run the query.
   * Validity interval - The interval under which the query needs to be ran.
   * The query (q type variable) - The user-defined query.
-  * Returns the result - The result
+  * The query result
+
 * The `Store` function takes the following parameters:
+
   * Indexer - The indexer for which we run the function
   * Does not return anything useful
+
 * The `Resume` function takes the following parameters:
+
   * Indexer - The indexer we need to query for the last consumed slot numbers
   * Returns a list of slot numbers and block ids
 
