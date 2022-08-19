@@ -98,7 +98,7 @@ defaultProtocolParams = checkPredicateOptions
 traceCardano :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 traceCardano c = do
     void $ Trace.activateContractWallet w1 c
-    void $ Trace.waitNSlots 3
+    void $ Trace.waitNSlots 4
 
 contractCardano :: (Ledger.POSIXTime -> Ledger.POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
 contractCardano f p = do
@@ -108,18 +108,25 @@ contractCardano f p = do
     now <- Con.currentTime
     logInfo @String $ "now: " ++ show now
     let utxoRef = fst $ head' $ Map.toList utxos
-        lookups =  Constraints.plutusV1TypedValidatorLookups (typedValidator deadline)
-                <> Tx.Constraints.unspentOutputs utxos
+        lookups = Tx.Constraints.unspentOutputs utxos
         tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
             <> Tx.Constraints.mustValidateIn (f now)
-    submitTxConfirmed $ mkTx lookups tx
+    ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+
+    cSlot <- Con.currentPABSlot
+    let txRange = Tx.getCardanoTxValidityRange ledgerTx
+    logInfo @String $ "Current slot: " ++ show cSlot
+    logInfo @String $ show txRange
+
+    P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
 validContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
 validContractCardano = contractCardano (from . (1000 +))
 
 invalidContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
-invalidContractCardano = contractCardano (I.to . subtract 1000)
+invalidContractCardano = contractCardano I.to
 
 
 protocolV5Cardano :: TestTree
