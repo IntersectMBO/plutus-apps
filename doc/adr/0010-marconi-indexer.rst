@@ -20,14 +20,14 @@ Context
 
 Off-chain code needs access to indexed portions of the blockchain. Currently, we have a working solution in the form of the chain-index and PAB (which both index information). The big problem with the current solution is its lack of reuse (or modularity) capability.
 
-We attempt to fix that problem with Marconi where we currently have a generic indexer that stores volatile information in memory and blocks that have been fully committed (are old enough to guarantee that they will not be rolled back). The K blockchain parameter represents the number of slots after which a block can no longer be rolled back.
+We attempt to fix that problem with Marconi where we currently have a generic indexer that stores volatile information in memory and blocks that have been fully committed (are old enough to guarantee that they will not be rolled back) on disk. The K blockchain parameter represents how many slots deep a block must be in order to ensure that it can no longer be rolled back.
 
 We currently need to keep K blocks in memory to be able to perform rollbacks. However, the K parameter can be adjusted for indexers which land us in the unfortunate position of saying that there may be data corruption in the case where the number of rollbacked blocks is larger than the number of blocks stored in memory. While this is both detectable and unlikely to happen we think that our current solution can prevent it without any significant drawbacks.
 
 Decision
 --------
 
-Initially, we needed a generic way of indexing information where we can control the amount of memory the indexer uses. The initial solution was to store the volatile blocks in memory and persist them on disk whenever they become older than the K parameter.
+After receiving feedback on the initial implementation of the PAB and chain-index we needed a generic way of indexing information where we can control the amount of memory the indexer uses. The first version of indexers store the volatile blocks in memory and persist them to disk whenever they become older than the K parameter.
 
 We make a distinction between the volatile blocks which are stored in memory as events (and are derived from blocks). We fold these events into the aggregated on-disk data structure for which we no do not require to keep multiple versions (rollbacks cannot happen for this data structure).
 
@@ -57,37 +57,42 @@ We want the API for our users to be as flexible as possible, so some of our prev
 Data types
 """"""""""
 
-* Events
-  ** Slot numbers (requires Ord)
-  ** Block id (requires Eq)
-  ** e (type variable standing for the event)
-* Query
-  ** Validity interval (can be always valid)
-  ** q (type variable standing for the query)
+* The `Events` data type contains the following fields:
+  * Slot numbers (a data type that supports ordering)
+  * Block id (a data type that supports equality checking)
+  * e (type variable standing for the event)
+* The `Query` data type contains the following fields:
+  * Validity interval (can be any interval defined by using the slot numbers or a special value that turn off checking for validity)
+  * q (type variable standing for the query)
 * Result
-  ** Slot number at which the query was ran
-  ** r (type variable standing for the query result)
+  * Slot number at which the query was ran
+  * r (type variable standing for the query result)
 
 Functions
 """""""""
 
-* Query
-  ** Indexer
-  ** Validity interval
-  ** The query (q type variable)
-  ** Returns the result
-* Store
-  ** Indexer
-  ** Does not return anything useful
-* Resume
-  ** Indexer
-  ** Returns a list of slot numbers and block ids
+* The `Query` function takes the following parameters:
+  * Indexer - The indexer that we are using to run the query.
+  * Validity interval - The interval under which the query needs to be ran.
+  * The query (q type variable) - The user-defined query.
+  * Returns the result - The result
+* The `Store` function takes the following parameters:
+  * Indexer - The indexer for which we run the function
+  * Does not return anything useful
+* The `Resume` function takes the following parameters:
+  * Indexer - The indexer we need to query for the last consumed slot numbers
+  * Returns a list of slot numbers and block ids
 
 Runtime parameters
 """"""""""""""""""
 
 * Minimum events retained (this should be the previously mentioned K parameter)
+
+  Currently the main cardano network guarantees that there will be no rollbacks beyond 2160 blocks. This would be that parameter.
+
 * Maximum in-memory events (should be less than K)
+
+  How many events to we want to keep in memory. For the main network this should be any number lower that 2160. The larger the number the less frequent writing to disk is and the more RAM is used.
 
 Extension mechanisms
 """"""""""""""""""""
