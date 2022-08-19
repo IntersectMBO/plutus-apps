@@ -9,6 +9,7 @@ module Spec.TxConstraints.TimeValidity(tests) where
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
+import Control.Monad.Reader (ReaderT, asks, lift, runReaderT)
 import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
@@ -17,6 +18,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
@@ -26,6 +28,7 @@ import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Interval (contains, from)
+import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -33,12 +36,17 @@ import Prelude hiding (not)
 import Wallet.Emulator.Stream (params)
 
 tests :: TestTree
-tests =
-    testGroup "time validity"
+tests = testGroup "time validitity constraint"
+    [ testGroup "with Ledger constraints"
         [ protocolV5
         , protocolV6
         , defaultProtocolParams
         ]
+    , testGroup "with Tx.Constraints"
+        [ protocolV6Cardano
+        , defaultProtocolParamsValidCardano
+        ]
+    ]
 
 contract :: Contract () Empty ContractError ()
 contract = do
@@ -86,6 +94,49 @@ defaultProtocolParams = checkPredicateOptions
     (assertValidatedTransactionCount 2)
     (void trace)
 
+validTraceCardano :: ReaderT Ledger.Params Trace.EmulatorTrace ()
+validTraceCardano = do
+    c <- asks validContractCardano
+    lift $ do
+        void $ Trace.activateContractWallet w1 c
+        void $ Trace.waitNSlots 2
+
+validContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
+validContractCardano p = do
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Void p lookups constraints
+    pkh <- Con.ownFirstPaymentPubKeyHash
+    utxos <- Con.ownUtxos
+    now <- Con.currentTime
+    logInfo @String $ "now: " ++ show now
+    let utxoRef = fst $ head' $ Map.toList utxos
+        lookups = Tx.Constraints.unspentOutputs utxos
+        tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
+            <> Tx.Constraints.mustValidateIn (from $ now + 1000)
+
+    submitTxConfirmed $ mkTx lookups tx
+
+protocolV5Cardano :: TestTree
+protocolV5Cardano = checkPredicateOptions
+    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
+    "tx valid time interval is not supported in protocol v5"
+    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
+    (void $ validTraceCardano `runReaderT` view (emulatorConfig . params) defaultCheckOptions)
+
+protocolV6Cardano :: TestTree
+protocolV6Cardano = checkPredicateOptions
+    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
+    "tx valid time interval is supported in protocol v6"
+    (assertValidatedTransactionCount 1)
+    (void $ validTraceCardano `runReaderT` view (emulatorConfig . params) defaultCheckOptions)
+
+defaultProtocolParamsValidCardano :: TestTree
+defaultProtocolParamsValidCardano = checkPredicateOptions
+    defaultCheckOptions
+    "tx valid time interval is supported in protocol v6+"
+    (assertValidatedTransactionCount 1)
+    (void $ validTraceCardano `runReaderT` view (emulatorConfig . params) defaultCheckOptions)
+
 deadline :: POSIXTime
 deadline = 1596059092000 -- (milliseconds) transaction's valid range must be after this
 
@@ -118,3 +169,7 @@ valHash = Scripts.validatorHash $ typedValidator deadline
 
 scrAddress :: Ledger.Address
 scrAddress = Ledger.scriptHashAddress valHash
+
+head' :: [a] -> a
+head' (x:_) = x
+head' _     = error "Spec.TxConstraints.TimeValidity: Not enough inputs"
