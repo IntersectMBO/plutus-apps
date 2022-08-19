@@ -71,9 +71,11 @@ import Wallet.Emulator.Wallet qualified as Wallet
 
 import Control.Monad.Freer.NonDet (NonDet)
 import Data.Monoid (Sum (Sum))
-import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxStatus,
-                          TxValidity (..))
-import Plutus.PAB.Core.ContractInstance.STM (Activity (Done, Stopped), BlockchainEnv,
+import Ledger (TxId, TxOutRef (..))
+import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxOutState (..),
+                          TxOutStatus, TxStatus, TxValidity (..), transactionOutputState)
+import Plutus.ChainIndex.UtxoState (UtxoState (_usTxUtxoData), utxoState)
+import Plutus.PAB.Core.ContractInstance.STM (Activity (Done, Stopped), BlockchainEnv (..),
                                              InstanceState (InstanceState, issStop), InstancesState,
                                              callEndpointOnInstance, emptyInstanceState)
 import Plutus.PAB.Core.ContractInstance.STM qualified as InstanceState
@@ -83,7 +85,6 @@ import Plutus.PAB.Effects.UUID (UUIDEffect, uuidNextRandom)
 import Plutus.PAB.Events.Contract (ContractInstanceId (ContractInstanceId))
 import Plutus.PAB.Types (PABError)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
-import Plutus.V1.Ledger.Api (TxId)
 
 -- | Container for holding a few bits of state related to the contract
 -- instance that we may want to pass in.
@@ -196,7 +197,7 @@ processAwaitTimeRequestsSTM =
         )
 
 processTxStatusChangeRequestsSTM ::
-    forall effs m.
+    forall m effs.
     ( LastMember m effs
     , MonadIO m
     , Member (Reader BlockchainEnv) (NonDet : effs)
@@ -237,8 +238,10 @@ processTxStatusChangeRequestIO ixRef env txId = do
             TentativelyConfirmed (Depth n) TxValid ()
 
 processTxOutStatusChangeRequestsSTM ::
-    forall effs.
-    ( Member (Reader BlockchainEnv) effs
+    forall m effs.
+    ( LastMember m effs
+    , MonadIO m
+    , Member (Reader BlockchainEnv) effs
     )
     => RequestHandler effs PABReq (STM PABResp)
 processTxOutStatusChangeRequestsSTM =
@@ -247,7 +250,35 @@ processTxOutStatusChangeRequestsSTM =
     where
         handler txOutRef = do
             env <- ask
-            pure (AwaitTxOutStatusChangeResp txOutRef <$> InstanceState.waitForTxOutStatusChange Unknown txOutRef env)
+            case InstanceState.beTxChanges env of
+              Left _ ->
+                pure (AwaitTxOutStatusChangeResp txOutRef <$> InstanceState.waitForTxOutStatusChange Unknown txOutRef env)
+              Right txChange -> do
+                 txOutStatus <- raise . liftIO $ processTxOutStatusChangeRequestsIO txChange env txOutRef
+                 pure (AwaitTxOutStatusChangeResp txOutRef <$> txOutStatus)
+
+processTxOutStatusChangeRequestsIO
+  :: IORef TCSIndex
+  -> BlockchainEnv
+  -> TxOutRef
+  -> IO (STM TxOutStatus)
+processTxOutStatusChangeRequestsIO tcsIx BlockchainEnv{beTxOutChanges} txOutRef = do
+  txOutBalance  <- _usTxUtxoData . utxoState <$> STM.atomically (STM.readTVar beTxOutChanges)
+  case transactionOutputState txOutBalance txOutRef of
+    Nothing             -> pure empty
+    Just s@(Spent txId) -> queryTx s txId
+    Just s@(Unspent)    -> queryTx s $ txOutRefId txOutRef
+  where
+    queryTx :: TxOutState -> TxId -> IO (STM TxOutStatus)
+    queryTx s txId = do
+      ix <- readIORef tcsIx
+      events <- Ix.getEvents (ix ^. Ix.storage)
+      queryResult <- (ix ^. Ix.query) ix txId events
+      pure . pure $ case queryResult of
+        Nothing -> Unknown
+        Just (TxConfirmedState (Sum 0) _ _) -> Committed TxValid s
+        Just (TxConfirmedState (Sum n) _ _) ->
+          TentativelyConfirmed (Depth n) TxValid s
 
 processUtxoSpentRequestsSTM ::
     forall effs.
@@ -316,8 +347,8 @@ stmRequestHandler = fmap sequence (wrapHandler (fmap pure nonBlockingRequests) <
     blockingRequests =
         wrapHandler (processAwaitSlotRequestsSTM @effs)
         <> wrapHandler (processAwaitTimeRequestsSTM @effs)
-        <> wrapHandler (processTxStatusChangeRequestsSTM @effs)
-        <> wrapHandler (processTxOutStatusChangeRequestsSTM @effs)
+        <> wrapHandler (processTxStatusChangeRequestsSTM @_ @effs)
+        <> wrapHandler (processTxOutStatusChangeRequestsSTM @_ @effs)
         <> processEndpointRequestsSTM @effs
         <> processUtxoSpentRequestsSTM @effs
         <> processUtxoProducedRequestsSTM @effs

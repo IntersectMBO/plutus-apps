@@ -176,7 +176,7 @@ defaultWebServerConfig =
     , staticDir            = Nothing
     , permissiveCorsPolicy = False
     , endpointTimeout      = Nothing
-    , enableMarconi        = True
+    , enableMarconi        = False
     }
 
 instance Default WebserverConfig where

@@ -419,16 +419,19 @@ waitForTxStatusChange oldStatus tx BlockchainEnv{beTxChanges, beLastSyncedBlockN
         case txStatus of
           Right s | s /= oldStatus -> pure s
           _                        -> empty
-      Right _ -> undefined
+      -- This branch gets intercepted in `processTxStatusChangeRequestIO` and
+      -- handled separateley, so we should never reach this place.
+      Right _ ->
+          error "waitForTxStatusChange called without the STM index available"
 
 -- | Wait for the status of a transaction output to change.
 waitForTxOutStatusChange :: TxOutStatus -> TxOutRef -> BlockchainEnv -> STM TxOutStatus
 waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutChanges, beLastSyncedBlockNo} = do
     case beTxChanges of
-      Left ix -> do
-        txIdState   <- _usTxUtxoData . utxoState <$> STM.readTVar ix
+      Left txChanges -> do
+        txIdState    <- _usTxUtxoData . utxoState <$> STM.readTVar txChanges
         txOutBalance <- _usTxUtxoData . utxoState <$> STM.readTVar beTxOutChanges
-        blockNumber   <- STM.readTVar beLastSyncedBlockNo
+        blockNumber  <- STM.readTVar beLastSyncedBlockNo
         let txOutStatus = transactionOutputStatus blockNumber txIdState txOutBalance txOutRef
         -- Succeed only if we _found_ a status and it was different; if
         -- the status hasn't changed, _or_ there was an error computing
@@ -436,7 +439,10 @@ waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutCh
         case txOutStatus of
           Right s | s /= oldStatus -> pure s
           _                        -> empty
-      Right _ -> undefined -- TODO: Decide what happens here.
+      -- This branch gets intercepted in `processTxOutStatusChangeRequestIO` and
+      -- handled separateley, so we should never reach this place.
+      Right _ ->
+          error "waitForTxOutStatusChange called without the STM index available"
 
 -- | The current slot number
 currentSlot :: BlockchainEnv -> STM Slot
