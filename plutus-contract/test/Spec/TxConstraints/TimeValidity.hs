@@ -102,13 +102,14 @@ traceCardano c = do
 
 contractCardano :: (Ledger.POSIXTime -> Ledger.POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
 contractCardano f p = do
-    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Void p lookups constraints
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
     now <- Con.currentTime
     logInfo @String $ "now: " ++ show now
     let utxoRef = fst $ head' $ Map.toList utxos
-        lookups = Tx.Constraints.unspentOutputs utxos
+        lookups =  Constraints.plutusV1TypedValidatorLookups (typedValidator deadline)
+                <> Tx.Constraints.unspentOutputs utxos
         tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
             <> Tx.Constraints.mustValidateIn (f now)
