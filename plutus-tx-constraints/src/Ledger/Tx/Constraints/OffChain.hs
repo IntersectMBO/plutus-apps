@@ -53,7 +53,7 @@ module Ledger.Tx.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (Lens', Traversal', coerced, makeLensesFor, use, (%=), (.=), (<>=))
+import Control.Lens (Lens', Traversal', coerced, makeLensesFor, use, (.=), (<>=))
 import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)

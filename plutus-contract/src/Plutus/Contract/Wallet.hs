@@ -48,7 +48,7 @@ import GHC.Generics (Generic)
 import Ledger qualified as Plutus
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
-import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedCardanoTx, UnbalancedLedgerTx, unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex, unBalancedTxValidityTimeRange),
+import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx, unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex, unBalancedTxValidityTimeRange),
                                     mkTx, unBalancedTxTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
@@ -257,11 +257,11 @@ export params utx =
         <*> first Right (mkInputs (Plutus.pNetworkId params) (unBalancedTxUtxoIndex utxFinal))
         <*> either (const $ Right []) (first Right . mkRedeemers) (unBalancedTxTx utx)
 
--- | when we use LedgerTx inside the UnbalancedTx, finalize computes the final validityRange and set it into the Tx.
--- In the case of a CardanoBuildTx, there's nothing to do here as the validityRange of the Tx is set when we process the
+-- | when we use UnbalancedEmulatorTx, finalize computes the final validityRange and set it into the Tx.
+-- In the case of a UnbalancedCardanoTx, there's nothing to do here as the validityRange of the Tx is set when we process the
 -- constraints.
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
-finalize slotConfig utx@UnbalancedLedgerTx{unBalancedTxValidityTimeRange} =
+finalize slotConfig utx@UnbalancedEmulatorTx{unBalancedTxValidityTimeRange} =
     utx & U.tx
     . Plutus.validRange
     .~ posixTimeRangeToContainedSlotRange slotConfig unBalancedTxValidityTimeRange

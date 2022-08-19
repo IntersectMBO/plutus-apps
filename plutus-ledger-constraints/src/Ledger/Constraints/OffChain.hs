@@ -234,8 +234,8 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 --   can be submitted to the ledger. See note [Submitting transactions from
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
 data UnbalancedTx
-    = UnbalancedLedgerTx
-        { unBalancedLedgerTx              :: Tx.Tx
+    = UnbalancedEmulatorTx
+        { unBalancedEmulatorTx            :: Tx.Tx
         , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
@@ -268,7 +268,7 @@ data UnbalancedTx
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
 makeLensesFor
-    [ ("unBalancedLedgerTx", "tx")
+    [ ("unBalancedEmulatorTx", "tx")
     , ("unBalancedCardanoBuildTx", "cardanoTx")
     , ("unBalancedTxRequiredSignatories", "requiredSignatories")
     , ("unBalancedTxUtxoIndex", "utxoIndex")
@@ -276,14 +276,14 @@ makeLensesFor
     ] ''UnbalancedTx
 
 unBalancedTxTx :: UnbalancedTx -> Either C.CardanoBuildTx Tx.Tx
-unBalancedTxTx UnbalancedLedgerTx{unBalancedLedgerTx}        = Right unBalancedLedgerTx
+unBalancedTxTx UnbalancedEmulatorTx{unBalancedEmulatorTx}    = Right unBalancedEmulatorTx
 unBalancedTxTx UnbalancedCardanoTx{unBalancedCardanoBuildTx} = Left unBalancedCardanoBuildTx
 
 emptyUnbalancedTx :: UnbalancedTx
-emptyUnbalancedTx = UnbalancedLedgerTx mempty mempty mempty top
+emptyUnbalancedTx = UnbalancedEmulatorTx mempty mempty mempty top
 
 instance Pretty UnbalancedTx where
-    pretty (UnbalancedLedgerTx utx rs utxo vr) =
+    pretty (UnbalancedEmulatorTx utx rs utxo vr) =
         vsep
         [ hang 2 $ vsep ["Tx:", pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
@@ -292,7 +292,7 @@ instance Pretty UnbalancedTx where
         ]
     pretty (UnbalancedCardanoTx utx rs utxo) =
         vsep
-        [ hang 2 $ vsep ["Tx (Cardano Representation):", pretty utx]
+        [ hang 2 $ vsep ["Tx (cardano-api Representation):", pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
