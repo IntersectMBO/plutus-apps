@@ -42,8 +42,10 @@ tests = testGroup "time validitity constraint"
         , defaultProtocolParams
         ]
     , testGroup "with Tx.Constraints"
-        [ protocolV5Cardano
-        , protocolV6Cardano
+        [ protocolV6Cardano
+        -- protocol V5 test cannot be performed for Cardano Tx as we don't have enough constraints implemented to
+        -- trigger the validator
+        -- , protocolV5Cardano
         , defaultProtocolParamsValidCardano
         , defaultProtocolParamsInvalidCardano
         ]
@@ -150,15 +152,6 @@ invalidContractCardano p = do
     logInfo @String $ show txRange
 
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
-
-protocolV5Cardano :: TestTree
-protocolV5Cardano =
-    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) })
-    in checkPredicateOptions
-    checkOptions
-    "tx valid time interval is not supported in protocol v5"
-    (assertFailedTransaction (\_ _ _ -> True))
-    (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) checkOptions)
 
 protocolV6Cardano :: TestTree
 protocolV6Cardano =
