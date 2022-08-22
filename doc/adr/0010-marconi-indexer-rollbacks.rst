@@ -1,7 +1,7 @@
 .. _marconi_indexer:
 
-ADR X: Marconi indexers
-=======================
+ADR 10: Rolling back on-disk data for Marconi indexers
+======================================================
 
 Date: 2022-08-05
 
