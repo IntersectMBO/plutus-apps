@@ -119,7 +119,7 @@ data CertificationTask = UnitTestsTask
                        | CrashToleranceTask
                        | WhitelistTask
                        | DLTestsTask
-  deriving (Eq, Show)
+  deriving (Eq, Show, Enum, Bounded)
 
 data CertificationOptions = CertificationOptions { certOptNumTests  :: Int
                                                  , certOptOutput    :: Bool
