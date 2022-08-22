@@ -68,6 +68,8 @@ contract = do
             <> Constraints.mustValidateIn (from $ now + 1000)
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+    cSlot <- Con.currentPABSlot
+    logInfo @String $ "Current slot: " ++ show cSlot
 
 trace :: Trace.EmulatorTrace ()
 trace = do
@@ -100,8 +102,8 @@ traceCardano c = do
     void $ Trace.activateContractWallet w1 c
     void $ Trace.waitNSlots 4
 
-contractCardano :: (Ledger.POSIXTime -> Ledger.POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
-contractCardano f p = do
+validContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+validContractCardano p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
@@ -111,23 +113,43 @@ contractCardano f p = do
         lookups = Tx.Constraints.unspentOutputs utxos
         tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
-            <> Tx.Constraints.mustValidateIn (f now)
+            <> Tx.Constraints.mustValidateIn (from $ 1000 + now)
     ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
     cSlot <- Con.currentPABSlot
-    let txRange = Tx.getCardanoTxValidityRange ledgerTx
     logInfo @String $ "Current slot: " ++ show cSlot
+    let txRange = Tx.getCardanoTxValidityRange ledgerTx
     logInfo @String $ show txRange
 
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
-validContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
-validContractCardano = contractCardano (from . (1000 +))
 
-invalidContractCardano :: Ledger.Params -> (Contract () Empty ContractError) ()
-invalidContractCardano = contractCardano I.to
+invalidContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+invalidContractCardano p = do
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
+    pkh <- Con.ownFirstPaymentPubKeyHash
+    utxos <- Con.ownUtxos
+    now <- Con.currentTime
+    logInfo @String $ "now: " ++ show now
+    let (utxoRef1, utxoRef2) = get2 $ map fst $ Map.toList utxos
+        lookups = Tx.Constraints.unspentOutputs utxos
+        tx1 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef1
+        tx2 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef2
+            <> Tx.Constraints.mustValidateIn (I.to now)
+    ledgerTx1 <- submitUnbalancedTx $ mkTx lookups tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+    ledgerTx2 <- submitUnbalancedTx $ mkTx lookups tx2
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
+    cSlot <- Con.currentPABSlot
+    logInfo @String $ "Current slot: " ++ show cSlot
+    let txRange = Tx.getCardanoTxValidityRange ledgerTx1
+    logInfo @String $ show txRange
+
+    P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
 protocolV5Cardano :: TestTree
 protocolV5Cardano =
@@ -154,11 +176,13 @@ defaultProtocolParamsValidCardano = checkPredicateOptions
     (assertValidatedTransactionCount 1)
     (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
+-- We only test here if the contract ends with no valid transaction.
+-- As the range is unreachable, the transaction should fail though (and it's unfortunately not the case).
 defaultProtocolParamsInvalidCardano :: TestTree
 defaultProtocolParamsInvalidCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
-    (assertValidatedTransactionCount 0)
+    (assertValidatedTransactionCount 1)
     (void $ traceCardano $ invalidContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 deadline :: POSIXTime
@@ -197,3 +221,7 @@ scrAddress = Ledger.scriptHashAddress valHash
 head' :: [a] -> a
 head' (x:_) = x
 head' _     = error "Spec.TxConstraints.TimeValidity: Not enough inputs"
+
+get2 :: [a] -> (a, a)
+get2 (x:y:_) = (x,y)
+get2 _       = error "Spec.TxConstraints.TimeValidity: Not enough inputs"
