@@ -157,7 +157,7 @@ protocolV5Cardano =
     in checkPredicateOptions
     checkOptions
     "tx valid time interval is not supported in protocol v5"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
+    (assertFailedTransaction (\_ _ _ -> True))
     (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) checkOptions)
 
 protocolV6Cardano :: TestTree
