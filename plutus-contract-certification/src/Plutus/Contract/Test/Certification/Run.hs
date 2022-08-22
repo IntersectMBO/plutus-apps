@@ -32,6 +32,7 @@ module Plutus.Contract.Test.Certification.Run
   , CertificationOptions(..)
   , CertificationEvent(..)
   , CertificationTask(..)
+  , hasQuickCheckTests
   , defaultCertificationOptions
   , certify
   , certifyWithOptions
@@ -120,6 +121,9 @@ data CertificationTask = UnitTestsTask
                        | WhitelistTask
                        | DLTestsTask
   deriving (Eq, Show, Enum, Bounded)
+
+hasQuickCheckTests :: CertificationTask -> Bool
+hasQuickCheckTests t = t /= UnitTestsTask
 
 data CertificationOptions = CertificationOptions { certOptNumTests  :: Int
                                                  , certOptOutput    :: Bool
