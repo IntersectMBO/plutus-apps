@@ -47,7 +47,7 @@ tests = testGroup "time validitity constraint"
         -- trigger the validator
         -- , protocolV5Cardano
         , defaultProtocolParamsValidCardano
-        , defaultProtocolParamsInvalidCardano
+        , defaultProtocolParamsPastTxCardano
         ]
     ]
 
@@ -127,8 +127,8 @@ validContractCardano p = do
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
 
-invalidContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
-invalidContractCardano p = do
+pastTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+pastTxContractCardano p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
@@ -141,8 +141,10 @@ invalidContractCardano p = do
         tx2 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef2
             <> Tx.Constraints.mustValidateIn (I.to now)
+    -- submit a first transaction to occupy the first slot
     ledgerTx1 <- submitUnbalancedTx $ mkTx lookups tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+    -- submit a tx that should be validated at the latest in slot 1
     ledgerTx2 <- submitUnbalancedTx $ mkTx lookups tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
@@ -169,14 +171,18 @@ defaultProtocolParamsValidCardano = checkPredicateOptions
     (assertValidatedTransactionCount 1)
     (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
--- We only test here if the contract ends with no valid transaction.
--- As the range is unreachable, the transaction should fail though (and it's unfortunately not the case).
-defaultProtocolParamsInvalidCardano :: TestTree
-defaultProtocolParamsInvalidCardano = checkPredicateOptions
+-- We only test here if the contract rejects transactions with a time range uppper bound set before the
+-- current slot.
+-- We submit a first successful transaction to ensure that the validityRange of the second one is in the
+-- past.
+-- As the range of the second transaction is unreachable, the transaction should fail.
+-- (it's unfortunately not the case at the moment, the tx is just postponed indefinitely).
+defaultProtocolParamsPastTxCardano :: TestTree
+defaultProtocolParamsPastTxCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
     (assertValidatedTransactionCount 1)
-    (void $ traceCardano $ invalidContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
+    (void $ traceCardano $ pastTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 deadline :: POSIXTime
 deadline = 1596059092000 -- (milliseconds) transaction's valid range must be after this
