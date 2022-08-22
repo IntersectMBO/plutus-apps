@@ -133,8 +133,6 @@ rollbackWith
 rollbackWith f PointAtGenesis after =
     Right (RollbackResult TipAtGenesis (f mempty after))
 -- Partial synchronisation, starting from a given block id.
--- TODO: After we implement persistent storage this should return
---       Left RollbackNoTip.
 rollbackWith f _ after@(viewTip -> TipAtGenesis) =
     Right (RollbackResult TipAtGenesis (f mempty after))
 rollbackWith f targetPoint idx@(viewTip -> currentTip)
