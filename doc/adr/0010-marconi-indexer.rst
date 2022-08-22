@@ -20,7 +20,7 @@ Context
 
 Off-chain code needs access to indexed portions of the blockchain. Currently, we have a working solution in the form of the chain-index and PAB (which both index information). The big problem with the current solution is its lack of reuse (or modularity) capability.
 
-We attempt to fix that problem with Marconi where we currently have a generic indexer that stores volatile information in memory and blocks that have been fully committed (are old enough to guarantee that they will not be rolled back) on disk. The K blockchain parameter represents how many slots deep a block must be in order to ensure that it can no longer be rolled back.
+We attempt to fix that problem with Marconi where we currently have a generic indexer that stores volatile information in memory and blocks that have been fully committed (are old enough to guarantee that they will not be rolled back) on disk. The K blockchain parameter represents how many blocks deep the blockchain becomes immutable (no rollbacks can occur beyond K blocks).
 
 We currently need to keep K blocks in memory to be able to perform rollbacks. However, the K parameter can be adjusted for indexers which land us in the unfortunate position of saying that there may be data corruption in the case where the number of rollbacked blocks is larger than the number of blocks stored in memory. While this is both detectable and unlikely to happen we think that our current solution can prevent it without any significant drawbacks.
 
@@ -113,12 +113,12 @@ You can customise the query and store functions which run in some generic monad 
 
 B. Query intervals
 
-If you want to specify an interval for your queries (which is highly encouraged) then you need to have either in memory or on disk sufficient information to reconstruct the state at the given slot number. By storing more than K events you can extend the query interval as much as you need. In extreme, you can only store events on disk, in which case your queries can span the whole blockchain.
+If you want to specify an interval for your queries (which is highly encouraged) then you need to have in memory (or on disk) sufficient information to reconstruct the state at the given slot number. The information required is contained in the event (which includes the slot number). By storing more than K events you can extend the query interval as much as you need. In extreme, you can store events without ever aggregating and deleting them, in which case your queries can span the whole blockchain.
 
 Implementation
 ^^^^^^^^^^^^^^
 
-This is the way we suggest people implement storage for the indexers.::
+This is the way we suggest people implement storage for the indexers::
 
   | Memory |       Disk         |
   |--------|--------|-----------|
