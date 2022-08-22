@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Index.VSplit
+module RewindableIndex.Index.VSplit
   ( SplitIndex(..)
   , new
   , newBoxed
@@ -34,7 +34,7 @@ import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
 import Data.Vector.Unboxed qualified as VU
 
-import Plutus.HystericalScreams.Index (IndexView (..))
+import RewindableIndex.Index (IndexView (..))
 
 data Storage v m e = Storage
   { _events :: (VG.Mutable v) (PrimState m) e

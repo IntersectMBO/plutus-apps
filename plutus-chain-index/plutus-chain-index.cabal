@@ -126,9 +126,9 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
-    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-streaming
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies

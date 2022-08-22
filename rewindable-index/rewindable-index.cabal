@@ -1,5 +1,5 @@
 cabal-version: 2.2
-name:          plutus-hysterical-screams
+name:          rewindable-index
 version:       0.1.0.0
 synopsis:      Exercises in Algebra Driven Design
 description:
@@ -47,11 +47,11 @@ common lang
 library
   import:          lang
   exposed-modules:
-    Plutus.HystericalScreams.Index
-    Plutus.HystericalScreams.Index.Split
-    Plutus.HystericalScreams.Index.Sqlite
-    Plutus.HystericalScreams.Index.VSplit
-    Plutus.HystericalScreams.Index.VSqlite
+    RewindableIndex.Index
+    RewindableIndex.Index.Split
+    RewindableIndex.Index.Sqlite
+    RewindableIndex.Index.VSplit
+    RewindableIndex.Index.VSqlite
 
   hs-source-dirs:  src
   build-depends:
@@ -64,27 +64,27 @@ library
     , sqlite-simple
     , vector
 
-test-suite plutus-hysterical-screams-test
+test-suite rewindable-index-test
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
-    Plutus.HystericalScreams.Spec.Index
-    Plutus.HystericalScreams.Spec.Split
-    Plutus.HystericalScreams.Spec.Sqlite
-    Plutus.HystericalScreams.Spec.VSplit
-    Plutus.HystericalScreams.Spec.VSqlite
+    RewindableIndex.Spec.Index
+    RewindableIndex.Spec.Split
+    RewindableIndex.Spec.Sqlite
+    RewindableIndex.Spec.VSplit
+    RewindableIndex.Spec.VSqlite
 
   hs-source-dirs: test
   build-depends:
-    , base                       >=4.7 && <5
+    , base              >=4.7 && <5
     , containers
     , data-default
     , lens
-    , plutus-hysterical-screams
     , primitive
     , QuickCheck
     , quickspec
+    , rewindable-index
     , sqlite-simple
     , tasty
     , tasty-quickcheck

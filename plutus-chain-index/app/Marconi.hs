@@ -38,12 +38,12 @@ import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
 import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
                             metavar, option, readerError, strOption, (<**>), (<|>))
-import Plutus.HystericalScreams.Index.VSplit qualified as Ix
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
 import Plutus.V1.Ledger.Api (Datum, DatumHash)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
+import RewindableIndex.Index.VSplit qualified as Ix
 import Streaming.Prelude qualified as S
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)

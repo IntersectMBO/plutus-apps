@@ -42,8 +42,8 @@ import Ledger (Address, TxId, TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx
 import Ledger qualified as Ledger
 import System.Random.MWC (createSystemRandom, uniformR)
 
-import Plutus.HystericalScreams.Index.VSqlite (SqliteIndex)
-import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
+import RewindableIndex.Index.VSqlite (SqliteIndex)
+import RewindableIndex.Index.VSqlite qualified as Ix
 
 data UtxoUpdate = UtxoUpdate
   { _inputs  :: !(Set TxOutRef)
