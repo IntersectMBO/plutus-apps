@@ -130,6 +130,7 @@ library
     , plutus-chain-index
     , plutus-chain-index-core
     , plutus-contract
+    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-ledger-constraints
     , plutus-script-utils
@@ -176,6 +177,7 @@ library
     , either
     , exceptions
     , filepath
+    , fingertree
     , freer-simple
     , generic-arbitrary
     , http-client

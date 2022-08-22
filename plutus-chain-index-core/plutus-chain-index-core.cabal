@@ -43,6 +43,9 @@ library
   exposed-modules:
     Cardano.Protocol.Socket.Client
     Cardano.Protocol.Socket.Type
+    Marconi.Index.Datum
+    Marconi.Index.TxConfirmationStatus
+    Marconi.Index.Utxo
     Plutus.ChainIndex
     Plutus.ChainIndex.Api
     Plutus.ChainIndex.ChainIndexError
@@ -73,6 +76,7 @@ library
   --------------------
   build-depends:
     , freer-extras
+    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-script-utils
 
@@ -112,9 +116,12 @@ library
     , fingertree
     , freer-simple
     , http-types
+    , io-classes
+    , iohk-monitoring
     , lens
     , memory
     , mtl
+    , mwc-random
     , nothunks
     , openapi3
     , prettyprinter         >=1.1.0.1

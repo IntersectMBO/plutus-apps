@@ -109,8 +109,6 @@ executable marconi
   main-is:            Marconi.hs
   hs-source-dirs:     app
   other-modules:
-    Marconi.Index.Datum
-    Marconi.Index.Utxo
     Marconi.Logging
     Marconi.Orphans
 
@@ -126,6 +124,14 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
+    , base                       >=4.9 && <5
+    , bytestring
+    , cardano-api
+    , containers
+    , iohk-monitoring
+    , lens
+    , optparse-applicative
+    , plutus-chain-index-core
     , plutus-hysterical-screams
     , plutus-ledger
     , plutus-streaming
@@ -146,11 +152,8 @@ executable marconi
     , bytestring
     , containers
     , lens
-    , mwc-random
     , optparse-applicative
     , prettyprinter
-    , serialise
-    , sqlite-simple
     , stm
     , streaming
     , text
