@@ -110,6 +110,7 @@ certResJSON = unpack . encode
 
 data CertificationEvent = QuickCheckTestEvent (Maybe Bool)  -- ^ Nothing if discarded, otherwise test result
                         | StartCertificationTask CertificationTask
+                        | FinishedTask Bool
   deriving (Eq, Show)
 
 data CertificationTask = UnitTestsTask
@@ -209,10 +210,12 @@ runUnitTests t = liftIORep $ do
 checkDerived :: forall d m c. (c m => ContractModel (d m))
              => Maybe (Instance c m)
              -> CertificationOptions
+             -> CertificationTask
              -> CoverageIndex
              -> CertMonad (Maybe QC.Result)
-checkDerived Nothing _ _                 = return Nothing
-checkDerived (Just Instance) opts covIdx = Just <$> runStandardProperty @(d m) opts covIdx
+checkDerived Nothing _ _ _                    = return Nothing
+checkDerived (Just Instance) opts task covIdx =
+  Just <$> wrapQCTask opts task (runStandardProperty @(d m) opts covIdx)
 
 checkWhitelist :: forall m. ContractModel m
                => Maybe Whitelist
@@ -221,7 +224,8 @@ checkWhitelist :: forall m. ContractModel m
                -> CertMonad (Maybe QC.Result)
 checkWhitelist Nothing _ _           = return Nothing
 checkWhitelist (Just wl) opts covIdx = do
-  a <- liftIORep $ quickCheckWithCoverageAndResult
+  a <- wrapQCTask opts WhitelistTask
+     $ liftIORep $ quickCheckWithCoverageAndResult
                   (mkQCArgs opts)
                   (set coverageIndex covIdx defaultCoverageOptions)
                   $ \ covopts -> addOnTestEvents opts $
@@ -236,20 +240,45 @@ checkDLTests :: forall m. ContractModel m
             -> CoverageIndex
             -> CertMonad [(String, QC.Result)]
 checkDLTests tests opts covIdx =
-  sequence [(s,) <$> liftIORep (quickCheckWithCoverageAndResult
+  wrapTask opts DLTestsTask (Prelude.all (QC.isSuccess . snd))
+  $ sequence [(s,) <$> liftIORep (quickCheckWithCoverageAndResult
                                     (mkQCArgs opts)
                                     (set coverageIndex covIdx defaultCoverageOptions)
                                     $ \ covopts ->
                                         addOnTestEvents opts $
-                                        forAllDL dl (propRunActionsWithOptions @m defaultCheckOptionsContractModel covopts (const $ pure True)))
-           | (s, dl) <- tests ]
+                                        forAllDL dl (propRunActionsWithOptions
+                                                      @m
+                                                      defaultCheckOptionsContractModel
+                                                      covopts (const $ pure True)))
+             | (s, dl) <- tests ]
 
 startTaskEvent :: CertificationOptions -> CertificationTask -> CertMonad ()
 startTaskEvent opts task | Just ch <- certEventChannel opts = liftIO $ writeChan ch $ StartCertificationTask task
                          | otherwise                        = pure ()
 
+finishTaskEvent :: CertificationOptions -> Bool -> CertMonad ()
+finishTaskEvent opts res | Just ch <- certEventChannel opts = liftIO $ writeChan ch $ FinishedTask res
+                         | otherwise                        = pure ()
+
 certify :: forall m. ContractModel m => Certification m -> IO (CertificationReport m)
 certify = certifyWithOptions defaultCertificationOptions
+
+wrapTask :: CertificationOptions
+         -> CertificationTask
+         -> (r -> Bool)
+         -> CertMonad r
+         -> CertMonad r
+wrapTask opts task resInterp act = do
+  startTaskEvent opts task
+  res <- act
+  finishTaskEvent opts $ resInterp res
+  return res
+
+wrapQCTask :: CertificationOptions
+           -> CertificationTask
+           -> CertMonad QC.Result
+           -> CertMonad QC.Result
+wrapQCTask opts task = wrapTask opts task QC.isSuccess
 
 certifyWithOptions :: forall m. ContractModel m
                    => CertificationOptions
@@ -257,28 +286,25 @@ certifyWithOptions :: forall m. ContractModel m
                    -> IO (CertificationReport m)
 certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- Unit tests
-  startTaskEvent opts UnitTestsTask
-  unitTests    <- fromMaybe [] <$> traverse runUnitTests certUnitTests
+  unitTests    <- wrapTask opts UnitTestsTask (Prelude.all Tasty.resultSuccessful)
+                $ fromMaybe [] <$> traverse runUnitTests certUnitTests
   -- Standard property
-  startTaskEvent opts StandardPropertyTask
-  qcRes        <- runStandardProperty @m opts certCoverageIndex
+  qcRes        <- wrapQCTask opts StandardPropertyTask
+                $ runStandardProperty @m opts certCoverageIndex
   -- Double satisfaction
-  startTaskEvent opts DoubleSatisfactionTask
-  dsRes        <- checkDS @m opts certCoverageIndex
+  dsRes        <- wrapQCTask opts DoubleSatisfactionTask
+                $ checkDS @m opts certCoverageIndex
   -- No locked funds
-  startTaskEvent opts NoLockedFundsTask
-  noLock       <- traverse (checkNoLockedFunds opts) certNoLockedFunds
+  noLock       <- traverse (wrapQCTask opts NoLockedFundsTask . checkNoLockedFunds opts)
+                           certNoLockedFunds
   -- No locked funds light
-  startTaskEvent opts NoLockedFundsLightTask
-  noLockLight  <- traverse (checkNoLockedFundsLight opts) certNoLockedFundsLight
+  noLockLight  <- traverse (wrapQCTask opts NoLockedFundsLightTask . checkNoLockedFundsLight opts)
+                           certNoLockedFundsLight
   -- Crash tolerance
-  startTaskEvent opts CrashToleranceTask
-  ctRes        <- checkDerived @WithCrashTolerance certCrashTolerance opts certCoverageIndex
+  ctRes        <- checkDerived @WithCrashTolerance certCrashTolerance opts CrashToleranceTask certCoverageIndex
   -- Whitelist
-  startTaskEvent opts WhitelistTask
   wlRes        <- checkWhitelist @m certWhitelist opts certCoverageIndex
   -- DL tests
-  startTaskEvent opts DLTestsTask
   dlRes        <- checkDLTests @m certDLTests opts certCoverageIndex
   -- Final results
   return $ CertificationReport
