@@ -16,6 +16,9 @@
 {-# LANGUAGE TypeOperators             #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE ViewPatterns              #-}
+
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
 module Ledger.Constraints.OffChain(
     -- * Lookups
     ScriptLookups(..)
@@ -31,6 +34,7 @@ module Ledger.Constraints.OffChain(
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
+    , unBalancedTxTx
     , cardanoTx
     , tx
     , requiredSignatories
@@ -57,10 +61,9 @@ module Ledger.Constraints.OffChain(
     , addMintingRedeemers
     , addMissingValueSpent
     , updateUtxoIndex
-    , lookupTxOutRef
-    ) where
+    , lookupTxOutRef) where
 
-import Control.Lens (Traversal', _2, _Just, _Right, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
+import Control.Lens (_2, _Just, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -96,7 +99,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
+import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint),
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
@@ -230,9 +233,9 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 -- | An unbalanced transaction. It needs to be balanced and signed before it
 --   can be submitted to the ledger. See note [Submitting transactions from
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
-data UnbalancedTx =
-    UnbalancedTx
-        { unBalancedTxTx                  :: Either C.CardanoBuildTx Tx.Tx
+data UnbalancedTx
+    = UnbalancedEmulatorTx
+        { unBalancedEmulatorTx            :: Tx.Tx
         , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
@@ -250,29 +253,48 @@ data UnbalancedTx =
         -- 'POSIXTimeRange' to 'SlotRange' using a 'SlotConfig'. See
         -- 'Plutus.Contract.Wallet.finalize'.
         }
+    | UnbalancedCardanoTx
+        { unBalancedCardanoBuildTx        :: C.CardanoBuildTx
+        , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
+        -- ^ These are all the payment public keys that should be used to request the
+        -- signatories from the user's wallet. The signatories are what is required to
+        -- sign the transaction before submitting it to the blockchain. Transaction
+        -- validation will fail if the transaction is not signed by the required wallet.
+        , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
+        -- ^ Utxo lookups that are used for adding inputs to the 'UnbalancedTx'.
+        -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
+        }
     deriving stock (Eq, Generic, Show)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
 makeLensesFor
-    [ ("unBalancedTxTx", "cardanoTx")
+    [ ("unBalancedEmulatorTx", "tx")
+    , ("unBalancedCardanoBuildTx", "cardanoTx")
     , ("unBalancedTxRequiredSignatories", "requiredSignatories")
     , ("unBalancedTxUtxoIndex", "utxoIndex")
     , ("unBalancedTxValidityTimeRange", "validityTimeRange")
     ] ''UnbalancedTx
 
-tx :: Traversal' UnbalancedTx Tx
-tx = cardanoTx . _Right
+unBalancedTxTx :: UnbalancedTx -> Either C.CardanoBuildTx Tx.Tx
+unBalancedTxTx UnbalancedEmulatorTx{unBalancedEmulatorTx}    = Right unBalancedEmulatorTx
+unBalancedTxTx UnbalancedCardanoTx{unBalancedCardanoBuildTx} = Left unBalancedCardanoBuildTx
 
 emptyUnbalancedTx :: UnbalancedTx
-emptyUnbalancedTx = UnbalancedTx (Right mempty) mempty mempty top
+emptyUnbalancedTx = UnbalancedEmulatorTx mempty mempty mempty top
 
 instance Pretty UnbalancedTx where
-    pretty (UnbalancedTx utx rs utxo vr) =
+    pretty (UnbalancedEmulatorTx utx rs utxo vr) =
         vsep
-        [ hang 2 $ vsep ["Tx:", either pretty pretty utx]
+        [ hang 2 $ vsep ["Tx:", pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         , hang 2 $ vsep ["Validity range:", pretty vr]
+        ]
+    pretty (UnbalancedCardanoTx utx rs utxo) =
+        vsep
+        [ hang 2 $ vsep ["Tx (cardano-api Representation):", pretty utx]
+        , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
+        , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
 
 {- Note [Balance of value spent]
