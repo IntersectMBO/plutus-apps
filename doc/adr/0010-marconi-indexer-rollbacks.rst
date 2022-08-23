@@ -29,7 +29,7 @@ Decision
 
 After receiving feedback on the initial implementation of the PAB and chain-index we needed a generic way of indexing information where we can control the amount of memory the indexer uses. The first version of indexers store the volatile blocks in memory and persist them to disk whenever they become older than the K parameter.
 
-We make a distinction between the volatile blocks which are stored in memory as events (and are derived from blocks). We fold these events into the aggregated on-disk data structure for which we no do not require to keep multiple versions (rollbacks cannot happen for this data structure).
+We make a distinction between the volatile blocks which are stored in memory as events (and are derived from blocks). We fold these events into the aggregated on-disk data structure for which we do not require to keep multiple versions (rollbacks cannot happen for this data structure).
 
 We improve on that idea by allowing part of the volatile blocks to be stored on disk. While this is not required at the API level, the usage pattern would be to have a set of events, as well as the aggregated data structure stored on disk. The compromise here is that the more data is on the disk, the more we will need to work with the disk and the slower the indexing process will become. The advantage would be reduced memory usage.
 
@@ -102,7 +102,7 @@ Runtime parameters
 
 * Maximum in-memory events (should be less than K)
 
-  How many events to we want to keep in memory. For the main network this should be any number lower that 2160. The larger the number the less frequent writing to disk is and the more RAM is used.
+  How many events do we want to keep in memory. For the main network this should be any number lower that 2160. The larger the number the less frequent writing to disk is and the more RAM is used.
 
 Extension mechanisms
 """"""""""""""""""""
