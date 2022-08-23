@@ -34,8 +34,8 @@ import Plutus.ChainIndex.Types (BlockNumber (BlockNumber),
                                 TxConfirmedState (TxConfirmedState, blockAdded, timesConfirmed, validity),
                                 TxValidity (TxValid))
 
-import Plutus.HystericalScreams.Index.VSqlite (SqliteIndex)
-import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
+import RewindableIndex.Index.VSqlite (SqliteIndex)
+import RewindableIndex.Index.VSqlite qualified as Ix
 
 type Result = Maybe TxConfirmedState
 

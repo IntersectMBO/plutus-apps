@@ -28,12 +28,12 @@ import Ledger (Block, Slot (..), TxId (..))
 import Marconi.Index.TxConfirmationStatus (TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
-import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
 import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
+import RewindableIndex.Index.VSqlite qualified as Ix
 
 import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),

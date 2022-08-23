@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Index.VSqlite
+module RewindableIndex.Index.VSqlite
   ( -- * API
     SqliteIndex
   , new
@@ -23,8 +23,8 @@ import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
 import Database.SQLite.Simple (Connection, open)
 
-import Plutus.HystericalScreams.Index.VSplit (SplitIndex (..), Storage (..))
-import Plutus.HystericalScreams.Index.VSplit qualified as S
+import RewindableIndex.Index.VSplit (SplitIndex (..), Storage (..))
+import RewindableIndex.Index.VSplit qualified as S
 
 type SqliteIndex e n q r = SplitIndex IO Connection V.Vector e n q r
 

@@ -76,9 +76,9 @@ library
   --------------------
   build-depends:
     , freer-extras
-    , plutus-hysterical-screams
     , plutus-ledger
     , plutus-script-utils
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
