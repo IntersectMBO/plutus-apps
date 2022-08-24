@@ -758,7 +758,7 @@ resolveScriptTxOut
             , Tx._ciTxOutScriptDatum = (dh, d)
             , Tx._ciTxOutValue
             } = do
-    -- Look for the validator in the 'slOtherScripts map so we also get the language.
+    -- Look for the validator in the 'slOtherScripts' map so we also get the language.
     (validator, pv) <- lookupValidator vh
 
     -- first check in the 'ChainIndexTxOut' for the datum, then

@@ -40,8 +40,9 @@ import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Da
                              POSIXTimeRange, Redeemer, StakeValidatorHash, StakingCredential (StakingHash), TxOutRef,
                              Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (ScriptHash, StakeValidatorHash (StakeValidatorHash), ValidatorHash (ValidatorHash),
-                                 unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
+                                 StakeValidatorHash (StakeValidatorHash), ValidatorHash (ValidatorHash), unitDatum,
+                                 unitRedeemer)
 import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
 import Plutus.V1.Ledger.Value qualified as Value
 
@@ -362,6 +363,24 @@ mustPayWithDatumToPubKeyAddress
     -> TxConstraints i o
 mustPayWithDatumToPubKeyAddress pkh skh datum vl =
     singleton (MustPayToPubKeyAddress pkh (Just skh) (Just datum) Nothing vl)
+
+mustOutputInlineValidator
+    :: forall i o
+    . Address
+    -> ValidatorHash
+    -> Maybe Datum
+    -> Value
+    -> TxConstraints i o
+mustOutputInlineValidator addr (ValidatorHash vh) = mustOutputInlineScript addr (ScriptHash vh)
+
+mustOutputInlineMintingPolicy
+    :: forall i o
+    . Address
+    -> MintingPolicyHash
+    -> Maybe Datum
+    -> Value
+    -> TxConstraints i o
+mustOutputInlineMintingPolicy addr (MintingPolicyHash vh) = mustOutputInlineScript addr (ScriptHash vh)
 
 mustOutputInlineScript
     :: forall i o
