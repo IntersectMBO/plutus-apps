@@ -31,9 +31,9 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), EmulatorEra, OnChainTx (..), Params (..), ScriptValidationEvent,
-               Slot (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs,
-               getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange)
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), ScriptValidationEvent, Slot (..), TxId,
+               TxIn (txInRef), TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee,
+               getCardanoTxId, getCardanoTxValidityRange)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
