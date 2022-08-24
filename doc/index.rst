@@ -21,9 +21,9 @@ input-output-hk/plutus-apps>`_ supports the underlying resources that developers
 need who are writing full applications using Plutus in Haskell, including off-chain 
 code. The term “off-chain code” refers to the part of a contract application’s code 
 which runs outside of the blockchain. Off-chain code responds to events happening 
-on the blockchain, usually by producing transactions. 
+on or off the blockchain, usually by producing transactions. 
 
-Plutus Tools SDK repository
+Plutus Tools SDK Repository
 ------------------------------------------------
 
 The `Plutus Tools SDK repository <https://github.com/input-output-hk/plutus-apps>`_ 
