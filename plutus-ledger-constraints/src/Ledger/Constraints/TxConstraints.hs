@@ -364,6 +364,8 @@ mustPayWithDatumToPubKeyAddress
 mustPayWithDatumToPubKeyAddress pkh skh datum vl =
     singleton (MustPayToPubKeyAddress pkh (Just skh) (Just datum) Nothing vl)
 
+{-# INLINABLE mustOutputInlineValidator #-}
+-- | @mustOutputInlineValidator@ is a helper that calls @mustOutputInlineScript@.
 mustOutputInlineValidator
     :: forall i o
     . Address
@@ -373,6 +375,8 @@ mustOutputInlineValidator
     -> TxConstraints i o
 mustOutputInlineValidator addr (ValidatorHash vh) = mustOutputInlineScript addr (ScriptHash vh)
 
+{-# INLINABLE mustOutputInlineMintingPolicy #-}
+-- | @mustOutputInlineMintingPolicy@ is a helper that calls @mustOutputInlineScript@.
 mustOutputInlineMintingPolicy
     :: forall i o
     . Address
@@ -382,6 +386,17 @@ mustOutputInlineMintingPolicy
     -> TxConstraints i o
 mustOutputInlineMintingPolicy addr (MintingPolicyHash vh) = mustOutputInlineScript addr (ScriptHash vh)
 
+{-# INLINABLE mustOutputInlineScript #-}
+-- | @mustOutputInlineScript addr scriptHash d v@ creates a transaction output
+-- with an inline script. This allows the script to be used as a reference script.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint creates an
+-- output with @addr@, @scriptHash@, @d@ and @v@ and maybe adds @d@ in the transaction's
+-- datum witness set.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
+-- part of the datum witness set and that the transaction output with
+-- @addr@, @scriptHash@, @d@ and @v@ is part of the transaction's outputs.
 mustOutputInlineScript
     :: forall i o
     . Address
