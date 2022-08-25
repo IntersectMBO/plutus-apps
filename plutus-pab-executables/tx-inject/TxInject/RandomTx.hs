@@ -23,11 +23,12 @@ import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Address qualified as Address
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Generators qualified as Generators
-import Ledger.Index (UtxoIndex (..), ValidationCtx (..), runValidation, validateTransaction)
+import Ledger.Index (UtxoIndex (..))
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (Tx, TxOut (..))
 import Ledger.Tx qualified as Tx
+import Ledger.Validation qualified as Validation
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -89,8 +90,11 @@ generateTx gen slot (UtxoIndex utxo) = do
     tx <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig
-    let (validationResult, _) =
-          runValidation (validateTransaction slot tx) (ValidationCtx (UtxoIndex utxo) (def { pSlotConfig = slotCfg }))
+    let
+      txn = Tx.EmulatorTx tx
+      params = def { pSlotConfig = slotCfg }
+      utxoIndex = either (error . show) id $ Validation.fromPlutusIndex params $ UtxoIndex utxo
+      validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
       Nothing -> pure tx
       Just  _ -> generateTx gen slot (UtxoIndex utxo)

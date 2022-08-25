@@ -216,7 +216,7 @@ hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
     -- TODO: uncomment to fix the issues with plutus scripts in tests
     -- See note [Second phase validation]
     --
-    -- case getTxExUnits True params utxo tx' of
+    -- case getTxExUnits params utxo tx' of
     --   Left (Left e) -> Just e
     --   _ -> Nothing
   where
@@ -267,8 +267,8 @@ We also have to comment the tests that expect the script's failure. They should 
 when we will fix the rest failing tests.
 -}
 
-getTxExUnits :: Bool -> P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
-getTxExUnits fullValidation params utxo (C.Api.ShelleyTx _ tx) =
+getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
+getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
   case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
     Left e      -> Left . Left . (P.Phase1,) . P.BasicFailure $ e
     Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
@@ -278,8 +278,7 @@ getTxExUnits fullValidation params utxo (C.Api.ShelleyTx _ tx) =
     ei = epochInfo eg
     costmdls = array (minBound, maxBound) . Map.toList $ getField @"_costmdls" $ emulatorPParams params
     -- See note [Second phase validation]
-    -- If you don't want to ignore the results of checks, pass 'fullValidation = True'.
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | (not fullValidation) && last logs == Builtins.fromBuiltin checkHasFailedError =
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
       Left $ Left (P.Phase2, P.ScriptError (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
@@ -292,7 +291,7 @@ makeTransactionBody
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.AlonzoEra)
 makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
-  exUnits <- getTxExUnits False params utxo txTmp
+  exUnits <- getTxExUnits params utxo txTmp
   first Right $ P.makeTransactionBody exUnits txBodyContent
 
 
