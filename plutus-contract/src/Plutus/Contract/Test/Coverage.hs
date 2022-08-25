@@ -10,23 +10,16 @@ module Plutus.Contract.Test.Coverage
   , writeCoverageReport
   ) where
 
+import Control.Lens
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
-
 import Data.Text qualified as Text
 
-import Control.Lens
-
-import Ledger qualified
-import Plutus.V1.Ledger.Scripts qualified as Ledger
-
-import PlutusTx.Coverage
-
 import Plutus.Trace.Emulator.Types
-
+import PlutusTx.Coverage
 import Wallet.Emulator.Chain
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorTimeEvent (..), eteEvent)
 import Wallet.Types
@@ -48,13 +41,9 @@ getInvokedEndpoints es =
 getCoverageData :: [EmulatorEvent] -> CoverageData
 getCoverageData es =
   let extractLog e = case e of
-        ChainEvent (TxnValidate _ _ valEvs)             -> logOf . Ledger.sveResult <$> valEvs
-        ChainEvent (TxnValidationFail _ _ _ _ valEvs _) -> logOf . Ledger.sveResult <$> valEvs
-        _                                               -> []
-
-      logOf (Left (Ledger.EvaluationError lg _)) = lg
-      logOf (Left _)                             = []
-      logOf (Right (_, lg))                      = lg
+        ChainEvent (TxnValidate _ _)             -> []
+        ChainEvent (TxnValidationFail _ _ _ _ _) -> []
+        _                                        -> []
 
   in fold $ do
     event <- es

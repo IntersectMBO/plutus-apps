@@ -11,6 +11,7 @@ module Spec.TxConstraints.MustSpendAtLeast(tests) where
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, plutusV1TypedValidatorLookups,
@@ -25,7 +26,6 @@ import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransaction
                              defaultCheckOptions, w1)
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, Validator, ValidatorHash)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
@@ -124,7 +124,7 @@ phase2Failure =
     in  checkPredicateOptions
             defaultCheckOptions
             "Fail phase-2 validation when on-chain mustSpendAtLeast is greater than script's balance"
-            (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L5":_) _) -> True; _ -> False }))
+            (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (C.Ledger.ValidationFailedV1 _ ("L5":_)) -> True; Ledger.ScriptFailure (C.Ledger.ValidationFailedV2 _ ("L5":_)) -> True; _ -> False }))
             (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}

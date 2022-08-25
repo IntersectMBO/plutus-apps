@@ -38,7 +38,6 @@ import Control.Monad.Cont
 import Control.Monad.Freer (Eff, run)
 import Control.Monad.Freer.Extras.Log (LogMessage, logMessageContent)
 import Control.Monad.State qualified as State
-import Data.Either
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
@@ -172,9 +171,8 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
       QC.assert False
    return env
     where
-      chainEventType (TxnValidate _ constr ces) = "TxnValidate "
+      chainEventType (TxnValidate _ constr) = "TxnValidate "
         ++ (head . words . show $ constr)
-        ++ " " ++ concat [ if isLeft (sveResult ce) then "E" else "_" | ce <- ces ]
       chainEventType ce = head . words . show $ ce
 
       finalState = StateModel.stateAfter (toStateModelActions acts)
@@ -194,8 +192,7 @@ getDSCounterexamples params cs = go 0 mempty cs
     go _ _ [] = ([], [], [])
     go slot idx (e:es) = case e of
       SlotAdd slot' -> go slot' idx es
-      TxnValidate _ txn ces
-        | all (isRight . sveResult) ces ->
+      TxnValidate _ txn ->
           let
               cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
               e' = Validation.validateCardanoTx params slot cUtxoIndex txn
@@ -208,7 +205,6 @@ getDSCounterexamples params cs = go 0 mempty cs
               actualCEs = checkForDoubleSatisfactionVulnerability params slot idx e
               (candsRest, potentialRest, counterexamplesRest) = go slot idx' es
           in (cands ++ candsRest, potentialCEs ++ potentialRest, actualCEs ++ counterexamplesRest)
-        | otherwise                    -> go slot idx es
       -- NOTE: We are not including spent collateral inputs here, but that's fine because
       -- the transactions we mutate are never mutated to include these unspent inputs. We only
       -- need to keep track of what UTxOs exist for the validator to validate the transactions
@@ -221,9 +217,9 @@ getDSCounterexamples params cs = go 0 mempty cs
 --   validation event.
 doubleSatisfactionCandidates :: Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
-  TxnValidate txid (EmulatorTx tx) _ -> [WrappedTx txid tx idx slot params]
-  TxnValidate txid (Both tx _) _     -> [WrappedTx txid tx idx slot params]
-  _                                  -> []
+  TxnValidate txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
+  TxnValidate txid (Both tx _)     -> [WrappedTx txid tx idx slot params]
+  _                                -> []
 
 -- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
 --   failed with error @err@.

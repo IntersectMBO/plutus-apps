@@ -25,7 +25,7 @@ import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
 import Ledger.DCert (DCert)
-import Ledger.Index (ExCPU, ExMemory, ScriptType, ScriptValidationEvent, ValidationError)
+import Ledger.Index (ExCPU, ExMemory, ValidationError)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Scripts (ScriptError)
 import Ledger.Slot (Slot)
@@ -382,10 +382,8 @@ ledgerTypes =
     , order . equal . genericShow . argonaut $ mkSumType @Priority
     , order . equal . genericShow . argonaut $ mkSumType @StopReason
     , order . genericShow . argonaut $ mkSumType @IterationID
-    , equal . genericShow . argonaut $ mkSumType @ScriptValidationEvent
     , equal . genericShow . argonaut $ mkSumType @ExCPU
     , equal . genericShow . argonaut $ mkSumType @ExMemory
-    , equal . genericShow . argonaut $ mkSumType @ScriptType
     , equal . genericShow . argonaut $ mkSumType @PABReq
     , equal . genericShow . argonaut $ mkSumType @PABResp
     , equal . genericShow . argonaut $ mkSumType @ChainIndexQuery

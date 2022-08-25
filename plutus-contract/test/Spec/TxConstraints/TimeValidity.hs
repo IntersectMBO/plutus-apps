@@ -87,7 +87,7 @@ protocolV5 :: TestTree
 protocolV5 = checkPredicateOptions
     (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
     "tx valid time interval is not supported in protocol v5"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptError (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
     (void trace)
 
 protocolV6 :: TestTree

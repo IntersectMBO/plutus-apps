@@ -349,10 +349,7 @@ handleBalance utx' = do
                  $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction []) . makeTransactionBody mempty)
                             (pure . Tx.EmulatorTx)
                  $ tx
-            let sves = case ve of
-                    Ledger.ScriptFailure f -> [Ledger.ScriptValidationResultOnlyEvent (Left f)]
-                    _                      -> []
-            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve sves mempty
+            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v

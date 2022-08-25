@@ -33,14 +33,11 @@ module Ledger.Index(
     pubKeyTxIns,
     scriptTxIns,
     -- * Script validation events
-    ScriptType(..),
-    ScriptValidationEvent(..),
     Api.ExBudget(..),
     Api.ExCPU(..),
     Api.ExMemory(..),
     Api.SatInt,
-    ValidatorMode(..),
-    getScript
+    ValidatorMode(..)
     ) where
 
 import Cardano.Api (Lovelace (..))
@@ -49,7 +46,6 @@ import Prelude hiding (lookup)
 import Control.Lens (Fold, folding)
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.Reader (MonadReader (..))
-import Control.Monad.Writer (MonadWriter)
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
 import Ledger.Blockchain
@@ -68,7 +64,7 @@ import Plutus.V1.Ledger.Value qualified as V
 
 -- | Context for validating transactions. We need access to the unspent
 --   transaction outputs of the blockchain, and we can throw 'ValidationError's.
-type ValidationMonad m = (MonadReader ValidationCtx m, MonadError ValidationError m, MonadWriter [ScriptValidationEvent] m)
+type ValidationMonad m = (MonadReader ValidationCtx m, MonadError ValidationError m)
 
 data ValidationCtx = ValidationCtx { vctxIndex :: UtxoIndex, vctxParams :: Params }
 
@@ -163,12 +159,3 @@ maxFee = Ada.lovelaceOf 1_000_000
 
 data ValidatorMode = FullyAppliedValidators | UnappliedValidators
     deriving (Eq, Ord, Show)
-
--- | Get the script from a @ScriptValidationEvent@ in either fully applied or unapplied form.
-getScript :: ValidatorMode -> ScriptValidationEvent -> Script
-getScript FullyAppliedValidators ScriptValidationEvent{sveScript} = sveScript
-getScript UnappliedValidators ScriptValidationEvent{sveType} =
-    case sveType of
-        ValidatorScript (Validator script) _    -> script
-        MintingPolicyScript (MintingPolicy mps) -> mps
-getScript _ ScriptValidationResultOnlyEvent{} = error "getScript: unexpected ScriptValidationResultOnlyEvent"

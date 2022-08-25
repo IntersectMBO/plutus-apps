@@ -12,6 +12,7 @@
 module Spec.Emulator(tests) where
 
 
+import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Control.Lens (element, (%~), (&), (.~))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
@@ -28,8 +29,7 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, Tx (txFee, txMint, txOutputs),
-               TxOut (txOutValue), ValidationError (ScriptFailure), Value, outputs, scriptTxIn, scriptTxOut, txOutRefs,
-               unspentOutputs)
+               TxOut (txOutValue), Value, outputs, scriptTxIn, scriptTxOut, txOutRefs, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
@@ -151,10 +151,10 @@ txnUpdateUtxo = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidate _ _ _
-                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError err) _ _
+                , Chain.TxnValidate _ _
+                , Chain.TxnValidationFail _ _ _ (Index.BasicFailure (C.Ledger.UnknownTxIns _)) _
                 , Chain.SlotAdd _
-                ] -> "UnknownTxIns" `isInfixOf` err
+                ] -> True
             _ -> False
     checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
@@ -172,7 +172,7 @@ validTrace2 = property $ do
         trace = do
             Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
             Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
-        predicate = assertFailedTransaction (\_ _ _ -> True)
+        predicate = assertFailedTransaction (\_ _ -> True)
     checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 invalidTrace :: Property
@@ -184,9 +184,9 @@ invalidTrace = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError err) _ _
+                , Chain.TxnValidationFail _ _ _ (Index.ApplyTxError err) _
                 , Chain.SlotAdd _
-                ] -> "ValueNotConservedUTxO" `isInfixOf` err
+                ] -> "ValueNotConservedUTxO" `isInfixOf` show err
             _ -> False
     checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
@@ -216,12 +216,12 @@ invalidScript = property $ do
             Trace.liftWallet wallet1 (submitTxn $ EmulatorTx (Gen.signAll scriptTxn))
             _ <- Trace.nextSlot
             Trace.liftWallet wallet1 (submitTxn $ EmulatorTx invalidTxn)
-        pred = \case -- case (Debug.Trace.trace ("events!!!: " ++ (show ev)) ev) of
+        pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
                 , Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ _ (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure: An error has occurred:  User error:\nThe provided Plutus code called 'error'.")) _ _
+                , Chain.TxnValidationFail _ _ _ (Index.ScriptError (EvaluationError ["I always fail everything"] "CekEvaluationFailure: An error has occurred:  User error:\nThe provided Plutus code called 'error'.")) _
                 , Chain.SlotAdd _
                 ] -> True
             _ -> False

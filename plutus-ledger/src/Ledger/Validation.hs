@@ -196,18 +196,17 @@ applyTx ::
   Tx EmulatorEra ->
   Either P.ValidationError (EmulatedLedgerState, Validated (Tx EmulatorEra))
 applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  (newMempool, vtx) <- first (P.CardanoLedgerValidationError . show) (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
+  (newMempool, vtx) <- first P.ApplyTxError (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
 -- | Validate a transaction in a mockchain.
-validateMockchain :: Mockchain -> P.Tx -> Maybe P.ValidationError
+validateMockchain :: Mockchain -> P.Tx -> Maybe P.ValidationErrorInPhase
 validateMockchain (Mockchain txPool _ params) tx = result where
     h      = 1
     idx    = P.initialise [map (Blockchain.Valid . EmulatorTx) txPool]
     cUtxoIndex = either (error . show) id $ fromPlutusIndex params idx
-    err = validateCardanoTx params h cUtxoIndex (EmulatorTx tx)
-    result = fmap (P.CardanoLedgerValidationError . show) err
+    result = validateCardanoTx params h cUtxoIndex (EmulatorTx tx)
 
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
 hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
@@ -223,7 +222,7 @@ hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
   where
     state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
-      vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (fst (_memPoolState state)) tx)
+      vtx <- first P.UtxosPredicateFailure (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (fst (_memPoolState state)) tx)
       applyTx params state vtx
 
 validateCardanoTx
@@ -271,7 +270,7 @@ when we will fix the rest failing tests.
 getTxExUnits :: Bool -> P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits fullValidation params utxo (C.Api.ShelleyTx _ tx) =
   case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
-    Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . show $ e
+    Left e      -> Left . Left . (P.Phase1,) . P.BasicFailure $ e
     Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
   where
     eg = emulatorGlobals params
@@ -283,8 +282,8 @@ getTxExUnits fullValidation params utxo (C.Api.ShelleyTx _ tx) =
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | (not fullValidation) && last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
-      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
-    toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
+      Left $ Left (P.Phase2, P.ScriptError (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
+    toCardanoLedgerError e = Left $ Left (P.Phase2, P.ScriptFailure e)
 
 makeTransactionBody
   :: P.Params

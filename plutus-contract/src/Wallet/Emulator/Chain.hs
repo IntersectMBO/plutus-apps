@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
@@ -31,20 +30,19 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), ScriptValidationEvent, Slot (..), TxId,
-               TxIn (txInRef), TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee,
-               getCardanoTxId, getCardanoTxValidityRange)
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef),
+               TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId,
+               getCardanoTxValidityRange)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
-import Plutus.Contract.Util (uncurry3)
 import Prettyprinter
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
-    TxnValidate TxId CardanoTx [ScriptValidationEvent]
+    TxnValidate TxId CardanoTx
     -- ^ A transaction has been validated and added to the blockchain.
-    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError [ScriptValidationEvent] Value
+    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError Value
     -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
     | SlotAdd Slot
     deriving stock (Eq, Show, Generic)
@@ -52,9 +50,9 @@ data ChainEvent =
 
 instance Pretty ChainEvent where
     pretty = \case
-        TxnValidate i _ _             -> "TxnValidate" <+> pretty i
-        TxnValidationFail p i _ e _ _ -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e
-        SlotAdd sl                    -> "SlotAdd" <+> pretty sl
+        TxnValidate i _             -> "TxnValidate" <+> pretty i
+        TxnValidationFail p i _ e _ -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e
+        SlotAdd sl                  -> "SlotAdd" <+> pretty sl
 
 -- | A pool of transactions which have yet to be validated.
 type TxPool = [CardanoTx]
@@ -149,20 +147,20 @@ validateBlock params slot@(Slot s) idx txns =
         (processed, Index.ValidationCtx idx' _) =
             flip S.runState (Index.ValidationCtx idx params) $ for txns $ \tx -> do
                 err <- validateEm slot tx
-                pure (tx, err, [])
+                pure (tx, err)
 
         -- The new block contains all transaction that were validated
         -- successfully
         block = mapMaybe toOnChain processed
           where
-            toOnChain (_ , Just (Index.Phase1, _), _) = Nothing
-            toOnChain (tx, Just (Index.Phase2, _), _) = Just (Invalid tx)
-            toOnChain (tx, Nothing               , _) = Just (Valid tx)
+            toOnChain (_ , Just (Index.Phase1, _)) = Nothing
+            toOnChain (tx, Just (Index.Phase2, _)) = Just (Invalid tx)
+            toOnChain (tx, Nothing               ) = Just (Valid tx)
 
         -- Also return an `EmulatorEvent` for each transaction that was
         -- processed
         nextSlot = Slot (s + 1)
-        events   = (uncurry3 (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
+        events   = (uncurry (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
 
 
     in ValidatedBlock block events idx'
@@ -176,11 +174,11 @@ canValidateNow :: Slot -> CardanoTx -> Bool
 canValidateNow slot = Interval.member slot . getCardanoTxValidityRange
 
 
-mkValidationEvent :: Index.UtxoIndex -> CardanoTx -> Maybe Index.ValidationErrorInPhase -> [ScriptValidationEvent] -> ChainEvent
-mkValidationEvent idx t result events =
+mkValidationEvent :: Index.UtxoIndex -> CardanoTx -> Maybe Index.ValidationErrorInPhase -> ChainEvent
+mkValidationEvent idx t result =
     case result of
-        Nothing           -> TxnValidate (getCardanoTxId t) t events
-        Just (phase, err) -> TxnValidationFail phase (getCardanoTxId t) t err events (getCollateral idx t)
+        Nothing           -> TxnValidate (getCardanoTxId t) t
+        Just (phase, err) -> TxnValidationFail phase (getCardanoTxId t) t err (getCollateral idx t)
 
 -- | Validate a transaction in the current emulator state.
 validateEm
