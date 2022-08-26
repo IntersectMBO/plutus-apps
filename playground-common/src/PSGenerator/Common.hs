@@ -180,6 +180,36 @@ alonzoEraBridge = do
     typeModule ^== "Cardano.Ledger.Alonzo"
     pure psString
 
+standardCryptoBridge :: BridgePart
+standardCryptoBridge = do
+    typeName ^== "StandardCrypto"
+    typeModule ^== "Cardano.Ledger.Crypto"
+    pure psString
+
+applyTxErrorBridge :: BridgePart
+applyTxErrorBridge = do
+    typeName ^== "ApplyTxError"
+    typeModule ^== "Cardano.Ledger.Shelley.API.Mempool"
+    pure psString
+
+basicFailureBridge :: BridgePart
+basicFailureBridge = do
+    typeName ^== "BasicFailure"
+    typeModule ^== "Cardano.Ledger.Alonzo.Tools"
+    pure psString
+
+scriptFailureBridge :: BridgePart
+scriptFailureBridge = do
+    typeName ^== "ScriptFailure"
+    typeModule ^== "Cardano.Ledger.Alonzo.Tools"
+    pure psString
+
+utxosPredicateFailureBridge :: BridgePart
+utxosPredicateFailureBridge = do
+    typeName ^== "UtxosPredicateFailure"
+    typeModule ^== "Cardano.Ledger.Alonzo.Rules.Utxos"
+    pure psString
+
 exportTxBridge :: BridgePart
 exportTxBridge = do
     typeName ^== "ExportTx"
@@ -200,6 +230,11 @@ miscBridge =
     <|> someCardanoApiTxBridge
     <|> cardanoBuildTxBridge
     <|> alonzoEraBridge
+    <|> standardCryptoBridge
+    <|> applyTxErrorBridge
+    <|> basicFailureBridge
+    <|> scriptFailureBridge
+    <|> utxosPredicateFailureBridge
     <|> exportTxBridge
 
 ------------------------------------------------------------
