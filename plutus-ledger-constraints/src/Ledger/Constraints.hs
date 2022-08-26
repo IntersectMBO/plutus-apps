@@ -11,9 +11,9 @@ module Ledger.Constraints(
     , TC.mustPayToPubKeyAddress
     , TC.mustPayWithDatumToPubKey
     , TC.mustPayWithDatumToPubKeyAddress
-    , TC.mustOutputInlineScript
-    , TC.mustOutputInlineValidator
-    , TC.mustOutputInlineMintingPolicy
+    , TC.mustPayToAddressWithReferenceScript
+    , TC.mustPayToAddressWithReferenceValidator
+    , TC.mustPayToAddressWithReferenceMintingPolicy
     , TC.mustMintCurrency
     , TC.mustMintCurrencyWithRedeemer
     , TC.mustMintValue

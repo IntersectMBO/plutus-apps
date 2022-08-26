@@ -91,7 +91,7 @@ import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (Payment
                        pubKeyHashAddress)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
-                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocInlineScriptHash, ocValue),
+                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
@@ -542,11 +542,11 @@ addOwnOutput
         )
     => ScriptOutputConstraint (DatumType a)
     -> m TxConstraint
-addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocInlineScriptHash} = do
+addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = do
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = Datum (toBuiltinData ocDatum)
-    pure $ MustPayToOtherScript (Typed.tvValidatorHash inst) Nothing dsV ocInlineScriptHash ocValue
+    pure $ MustPayToOtherScript (Typed.tvValidatorHash inst) Nothing dsV ocReferenceScriptHash ocValue
 
 data MkTxError =
     TypeCheckFailed Typed.ConnectionError
@@ -689,8 +689,8 @@ processConstraint = \case
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash mintingPolicyScript
         unbalancedTx . tx . Tx.mint <>= value i
         mintRedeemers . at mpsHash .= Just red
-    MustPayToPubKeyAddress pk skhM mdv _inlineScript vl -> do
-        -- TODO: implement adding inline script
+    MustPayToPubKeyAddress pk skhM mdv _refScript vl -> do
+        -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
             unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) .= Just dv
@@ -700,8 +700,8 @@ processConstraint = \case
                                                    , txOutDatumHash=hash
                                                    } :)
         valueSpentOutputs <>= provided vl
-    MustPayToOtherScript vlh svhM dv _inlineScript vl -> do
-        -- TODO: implement adding inline script
+    MustPayToOtherScript vlh svhM dv _refScript vl -> do
+        -- TODO: implement adding reference script
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = P.datumHash dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv

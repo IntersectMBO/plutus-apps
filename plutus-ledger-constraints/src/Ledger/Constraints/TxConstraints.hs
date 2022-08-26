@@ -110,10 +110,10 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must reference output:", pretty ref]
         MustMintValue mps red tn i ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
-        MustPayToPubKeyAddress pkh skh datum inlineScript v ->
-            hang 2 $ vsep ["must pay to pubkey address:", pretty pkh, pretty skh, pretty datum, pretty inlineScript, pretty v]
-        MustPayToOtherScript vlh skh dv inlineScript vl ->
-            hang 2 $ vsep ["must pay to script:", pretty vlh, pretty skh, pretty dv, pretty inlineScript, pretty vl]
+        MustPayToPubKeyAddress pkh skh datum refScript v ->
+            hang 2 $ vsep ["must pay to pubkey address:", pretty pkh, pretty skh, pretty datum, pretty refScript, pretty v]
+        MustPayToOtherScript vlh skh dv refScript vl ->
+            hang 2 $ vsep ["must pay to script:", pretty vlh, pretty skh, pretty dv, pretty refScript, pretty vl]
         MustHashDatum dvh dv ->
             hang 2 $ vsep ["must hash datum:", pretty dvh, pretty dv]
         MustUseOutputAsCollateral ref ->
@@ -186,17 +186,17 @@ deriving stock instance (Haskell.Eq a) => Haskell.Eq (ScriptInputConstraint a)
 -- output which pays to a target script.
 data ScriptOutputConstraint a =
     ScriptOutputConstraint
-        { ocDatum            :: a -- ^ Typed datum to be used with the target script
-        , ocValue            :: Value
-        , ocInlineScriptHash :: Maybe ScriptHash
+        { ocDatum               :: a -- ^ Typed datum to be used with the target script
+        , ocValue               :: Value
+        , ocReferenceScriptHash :: Maybe ScriptHash
         } deriving stock (Haskell.Show, Generic, Haskell.Functor)
 
 instance (Pretty a) => Pretty (ScriptOutputConstraint a) where
-    pretty ScriptOutputConstraint{ocDatum, ocValue, ocInlineScriptHash} =
+    pretty ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} =
         vsep $
             [ "Datum:" <+> pretty ocDatum
             , "Value:" <+> pretty ocValue
-            ] Haskell.++ Haskell.maybe [] (\sh -> ["Inline script: " <+> pretty sh]) ocInlineScriptHash
+            ] Haskell.++ Haskell.maybe [] (\sh -> ["Reference script hash: " <+> pretty sh]) ocReferenceScriptHash
 
 deriving anyclass instance (ToJSON a) => ToJSON (ScriptOutputConstraint a)
 deriving anyclass instance (FromJSON a) => FromJSON (ScriptOutputConstraint a)
@@ -364,31 +364,31 @@ mustPayWithDatumToPubKeyAddress
 mustPayWithDatumToPubKeyAddress pkh skh datum vl =
     singleton (MustPayToPubKeyAddress pkh (Just skh) (Just datum) Nothing vl)
 
-{-# INLINABLE mustOutputInlineValidator #-}
--- | @mustOutputInlineValidator@ is a helper that calls @mustOutputInlineScript@.
-mustOutputInlineValidator
+{-# INLINABLE mustPayToAddressWithReferenceValidator #-}
+-- | @mustPayToAddressWithReferenceValidator@ is a helper that calls @mustPayToAddressWithReferenceScript@.
+mustPayToAddressWithReferenceValidator
     :: forall i o
     . Address
     -> ValidatorHash
     -> Maybe Datum
     -> Value
     -> TxConstraints i o
-mustOutputInlineValidator addr (ValidatorHash vh) = mustOutputInlineScript addr (ScriptHash vh)
+mustPayToAddressWithReferenceValidator addr (ValidatorHash vh) = mustPayToAddressWithReferenceScript addr (ScriptHash vh)
 
-{-# INLINABLE mustOutputInlineMintingPolicy #-}
--- | @mustOutputInlineMintingPolicy@ is a helper that calls @mustOutputInlineScript@.
-mustOutputInlineMintingPolicy
+{-# INLINABLE mustPayToAddressWithReferenceMintingPolicy #-}
+-- | @mustPayToAddressWithReferenceMintingPolicy@ is a helper that calls @mustPayToAddressWithReferenceScript@.
+mustPayToAddressWithReferenceMintingPolicy
     :: forall i o
     . Address
     -> MintingPolicyHash
     -> Maybe Datum
     -> Value
     -> TxConstraints i o
-mustOutputInlineMintingPolicy addr (MintingPolicyHash vh) = mustOutputInlineScript addr (ScriptHash vh)
+mustPayToAddressWithReferenceMintingPolicy addr (MintingPolicyHash vh) = mustPayToAddressWithReferenceScript addr (ScriptHash vh)
 
-{-# INLINABLE mustOutputInlineScript #-}
--- | @mustOutputInlineScript addr scriptHash d v@ creates a transaction output
--- with an inline script. This allows the script to be used as a reference script.
+{-# INLINABLE mustPayToAddressWithReferenceScript #-}
+-- | @mustPayToAddressWithReferenceScript addr scriptHash d v@ creates a transaction output
+-- with an reference script. This allows the script to be used as a reference script.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint creates an
 -- output with @addr@, @scriptHash@, @d@ and @v@ and maybe adds @d@ in the transaction's
@@ -397,27 +397,27 @@ mustOutputInlineMintingPolicy addr (MintingPolicyHash vh) = mustOutputInlineScri
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the transaction output with
 -- @addr@, @scriptHash@, @d@ and @v@ is part of the transaction's outputs.
-mustOutputInlineScript
+mustPayToAddressWithReferenceScript
     :: forall i o
     . Address
     -> ScriptHash
     -> Maybe Datum
     -> Value
     -> TxConstraints i o
-mustOutputInlineScript
+mustPayToAddressWithReferenceScript
     (Address (PubKeyCredential pkh) (Just (StakingHash (PubKeyCredential sh)))) scriptHash datum value =
         singleton (MustPayToPubKeyAddress (PaymentPubKeyHash pkh) (Just (StakePubKeyHash sh)) datum (Just scriptHash) value)
-mustOutputInlineScript
+mustPayToAddressWithReferenceScript
     (Address (PubKeyCredential pkh) Nothing) scriptHash datum value =
         singleton (MustPayToPubKeyAddress (PaymentPubKeyHash pkh) Nothing datum (Just scriptHash) value)
-mustOutputInlineScript
+mustPayToAddressWithReferenceScript
     (Address (ScriptCredential vh) (Just (StakingHash (ScriptCredential (ValidatorHash sh))))) scriptHash datum value =
         singleton (MustPayToOtherScript vh (Just (StakeValidatorHash sh)) (fromMaybe unitDatum datum) (Just scriptHash) value)
-mustOutputInlineScript
+mustPayToAddressWithReferenceScript
     (Address (ScriptCredential vh) Nothing) scriptHash datum value =
         singleton (MustPayToOtherScript vh Nothing (fromMaybe unitDatum datum) (Just scriptHash) value)
-mustOutputInlineScript
-    addr _ _ _ = Haskell.error $ "Ledger.Constraints.TxConstraints.mustOutputInlineScript: unsupported address " Haskell.++ Haskell.show addr
+mustPayToAddressWithReferenceScript
+    addr _ _ _ = Haskell.error $ "Ledger.Constraints.TxConstraints.mustPayToAddressWithReferenceScript: unsupported address " Haskell.++ Haskell.show addr
 
 {-# INLINABLE mustPayToOtherScript #-}
 -- | @mustPayToOtherScript vh d v@ is the same as

@@ -254,9 +254,9 @@ processConstraint = \case
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txInsReference <>= [ txIn ]
 
-    P.MustPayToPubKeyAddress pk mskh md inlineScriptM vl -> do
+    P.MustPayToPubKeyAddress pk mskh md refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
-        refScript <- lookupInlineScript inlineScriptM
+        refScript <- lookupScriptAsReferenceScript refScriptHashM
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
@@ -265,9 +265,9 @@ processConstraint = \case
 
         unbalancedTx . tx . txOuts <>= [ out ]
 
-    P.MustPayToOtherScript vlh svhM dv inlineScriptM vl -> do
+    P.MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
-        refScript <- lookupInlineScript inlineScriptM
+        refScript <- lookupScriptAsReferenceScript refScriptHashM
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
             <*> C.toCardanoTxOutValue vl
@@ -282,11 +282,11 @@ lookupTxOutRef
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.ChainIndexTxOut
 lookupTxOutRef txo = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo
 
-lookupInlineScript
+lookupScriptAsReferenceScript
     :: Maybe ScriptHash
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
-lookupInlineScript Nothing = pure C.ReferenceScriptNone
-lookupInlineScript (Just sh) = do
+lookupScriptAsReferenceScript Nothing = pure C.ReferenceScriptNone
+lookupScriptAsReferenceScript (Just sh) = do
     (script, language) <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupScript sh
     scriptInAnyLang <- either (throwError . ToCardanoError) pure $ toCardanoScriptInAnyLang script language
     pure $ C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra scriptInAnyLang
