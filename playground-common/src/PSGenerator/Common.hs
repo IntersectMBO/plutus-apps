@@ -174,6 +174,12 @@ cardanoBuildTxBridge = do
     typeModule ^== "Ledger.Tx.CardanoAPI"
     pure psJson
 
+alonzoEraBridge :: BridgePart
+alonzoEraBridge = do
+    typeName ^== "AlonzoEra"
+    typeModule ^== "Cardano.Ledger.Alonzo"
+    pure psString
+
 exportTxBridge :: BridgePart
 exportTxBridge = do
     typeName ^== "ExportTx"
@@ -193,6 +199,7 @@ miscBridge =
     <|> exBudgetBridge
     <|> someCardanoApiTxBridge
     <|> cardanoBuildTxBridge
+    <|> alonzoEraBridge
     <|> exportTxBridge
 
 ------------------------------------------------------------
