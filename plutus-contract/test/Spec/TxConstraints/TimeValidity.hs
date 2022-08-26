@@ -13,6 +13,7 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Ledger (POSIXTimeRange)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
@@ -48,6 +49,7 @@ tests = testGroup "time validitity constraint"
         -- , protocolV5Cardano
         , defaultProtocolParamsValidCardano
         , defaultProtocolParamsPastTxCardano
+        , defaultProtocolParamsFutureTxCardano
         ]
     ]
 
@@ -68,6 +70,7 @@ contract = do
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
             <> Constraints.mustIncludeDatum unitDatum
             <> Constraints.mustValidateIn (from $ now + 1000)
+    void $ waitNSlots 2
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
     cSlot <- Con.currentPABSlot
@@ -104,8 +107,8 @@ traceCardano c = do
     void $ Trace.activateContractWallet w1 c
     void $ Trace.waitNSlots 4
 
-validContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
-validContractCardano p = do
+contractCardano :: (POSIXTime -> POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
+contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
@@ -115,7 +118,8 @@ validContractCardano p = do
         lookups = Tx.Constraints.unspentOutputs utxos
         tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
-            <> Tx.Constraints.mustValidateIn (from $ 1000 + now)
+            <> Tx.Constraints.mustValidateIn (f now)
+    void $ waitNSlots 2
     ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
@@ -126,34 +130,14 @@ validContractCardano p = do
 
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
+validContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+validContractCardano = contractCardano $ from . (+ 1000)
 
 pastTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
-pastTxContractCardano p = do
-    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
-    pkh <- Con.ownFirstPaymentPubKeyHash
-    utxos <- Con.ownUtxos
-    now <- Con.currentTime
-    logInfo @String $ "now: " ++ show now
-    let (utxoRef1, utxoRef2) = get2 $ map fst $ Map.toList utxos
-        lookups = Tx.Constraints.unspentOutputs utxos
-        tx1 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
-            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef1
-        tx2 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
-            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef2
-            <> Tx.Constraints.mustValidateIn (I.to now)
-    -- submit a first transaction to occupy the first slot
-    ledgerTx1 <- submitUnbalancedTx $ mkTx lookups tx1
-    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-    -- submit a tx that should be validated at the latest in slot 1
-    ledgerTx2 <- submitUnbalancedTx $ mkTx lookups tx2
-    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+pastTxContractCardano = contractCardano I.to
 
-    cSlot <- Con.currentPABSlot
-    logInfo @String $ "Current slot: " ++ show cSlot
-    let txRange = Tx.getCardanoTxValidityRange ledgerTx1
-    logInfo @String $ show txRange
-
-    P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
+futureTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+futureTxContractCardano = contractCardano $ from . (+ 4000)
 
 protocolV6Cardano :: TestTree
 protocolV6Cardano =
@@ -171,18 +155,21 @@ defaultProtocolParamsValidCardano = checkPredicateOptions
     (assertValidatedTransactionCount 1)
     (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
--- We only test here if the contract rejects transactions with a time range uppper bound set before the
--- current slot.
--- We submit a first successful transaction to ensure that the validityRange of the second one is in the
--- past.
--- As the range of the second transaction is unreachable, the transaction should fail.
--- (it's unfortunately not the case at the moment, the tx is just postponed indefinitely).
+-- | Past range are rejected
 defaultProtocolParamsPastTxCardano :: TestTree
 defaultProtocolParamsPastTxCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
-    (assertValidatedTransactionCount 1)
+    (assertFailedTransaction $ \_ _ _ -> True)
     (void $ traceCardano $ pastTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
+
+-- | Future range are rejected
+defaultProtocolParamsFutureTxCardano :: TestTree
+defaultProtocolParamsFutureTxCardano = checkPredicateOptions
+    defaultCheckOptions
+    "tx valid time interval in the past make transactions fail"
+    (assertFailedTransaction $ \_ _ _ -> True)
+    (void $ traceCardano $ futureTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 deadline :: POSIXTime
 deadline = 1596059092000 -- (milliseconds) transaction's valid range must be after this

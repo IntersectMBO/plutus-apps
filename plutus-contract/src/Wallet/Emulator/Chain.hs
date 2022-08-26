@@ -26,7 +26,7 @@ import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (fromRight)
 import Data.Foldable (traverse_)
-import Data.List (partition, (\\))
+import Data.List ((\\))
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
@@ -107,10 +107,10 @@ handleControlChain params = \case
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
-            ValidatedBlock block events rest idx' =
+            ValidatedBlock block events idx' =
                 validateBlock params slot idx pool
 
-        let st' = st & txPool .~ rest
+        let st' = st & txPool .~ []
                      & index .~ idx'
                      & addBlock block
 
@@ -138,26 +138,22 @@ data ValidatedBlock = ValidatedBlock
     -- ^ The transactions that have been validated in this block.
     , vlbEvents :: [ChainEvent]
     -- ^ Transaction validation events for the transactions in this block.
-    , vlbRest   :: TxPool
-    -- ^ The transactions that haven't been validated because the current slot is
-    --   not in their validation interval.
     , vlbIndex  :: Index.UtxoIndex
     -- ^ The updated UTxO index after processing the block
     }
 
 -- | Validate a block given the current slot and UTxO index, returning the valid
---   transactions, success/failure events, remaining transactions and the
---   updated UTxO set.
+--   transactions, success/failure events and the updated UTxO set.
 validateBlock :: Params -> Slot -> Index.UtxoIndex -> TxPool -> ValidatedBlock
 validateBlock params slot@(Slot s) idx txns =
     let
         -- Select those transactions that can be validated in the
         -- current slot
-        (eligibleTxns, rest) = partition (canValidateNow slot) txns
+        -- (eligibleTxns, rest) = partition (canValidateNow slot) txns
 
         -- Validate eligible transactions, updating the UTXO index each time
         (processed, Index.ValidationCtx idx' _) =
-            flip S.runState (Index.ValidationCtx idx params) $ for eligibleTxns $ \tx -> do
+            flip S.runState (Index.ValidationCtx idx params) $ for txns $ \tx -> do
                 (err, events_) <- validateEm slot cUtxoIndex tx
                 pure (tx, err, events_)
 
@@ -176,7 +172,7 @@ validateBlock params slot@(Slot s) idx txns =
 
         cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
 
-    in ValidatedBlock block events rest idx'
+    in ValidatedBlock block events idx'
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
 getCollateral idx tx = fromRight (getCardanoTxFee tx) $

@@ -173,6 +173,7 @@ vestingContract vesting = selectList [vest, retrieve]
     vest = endpoint @"vest funds" $ \() -> vestFundsC vesting
     retrieve = endpoint @"retrieve funds" $ \payment -> do
         liveness <- retrieveFundsC vesting payment
+        -- awaitTIme
         case liveness of
             Alive -> awaitPromise retrieve
             Dead  -> pure ()
