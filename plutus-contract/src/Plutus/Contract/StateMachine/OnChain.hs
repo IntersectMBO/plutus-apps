@@ -28,7 +28,7 @@ module Plutus.Contract.StateMachine.OnChain(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
+import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                            TxConstraints (txOwnOutputs))
 import Ledger.Constraints.OnChain.V1 (checkScriptContext)
 import Ledger.Tx (TxOut (txOutValue))
@@ -134,6 +134,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                                         { ocDatum = newData
                                           -- Check that the thread token value is still there
                                         , ocValue = newValue <> threadTokenValueInner threadToken (ownHash ptx)
+                                        , ocReferenceScriptHash = Nothing
                                         }
                                     ]
                                 }

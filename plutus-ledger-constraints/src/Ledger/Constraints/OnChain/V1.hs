@@ -23,7 +23,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
-                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
+                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
@@ -63,7 +63,7 @@ checkOwnOutputConstraint
     => ScriptContext
     -> ScriptOutputConstraint o
     -> Bool
-checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} ScriptOutputConstraint{ocDatum, ocValue} =
+checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} =
     let hsh = V.findDatumHash (Ledger.Datum $ toBuiltinData ocDatum) scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatumHash=Just svh} =
                Ada.fromValue txOutValue >= Ada.fromValue ocValue
@@ -73,6 +73,7 @@ checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} ScriptOutputCons
         checkOutput _       = False
     in traceIfFalse "L1" -- "Output constraint"
     $ any checkOutput (V.getContinuingOutputs ctx)
+        && isNothing ocReferenceScriptHash
 
 {-# INLINABLE checkTxConstraint #-}
 checkTxConstraint :: ScriptContext -> TxConstraint -> Bool
@@ -104,15 +105,17 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
+    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
             checkOutput dv TxOut{txOutDatumHash=Just svh} = hsh dv == Just svh
             checkOutput _ _                               = False
         in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk && maybe True (\dv -> any (checkOutput dv) outs) mdv
-    MustPayToOtherScript vlh _ dv vl ->
+        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
+            && maybe True (\dv -> any (checkOutput dv) outs) mdv
+            && isNothing refScript
+    MustPayToOtherScript vlh _ dv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh = V.findDatumHash dv scriptContextTxInfo
             addr = Address.scriptHashAddress vlh
@@ -126,6 +129,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "Lb" -- "MustPayToOtherScript"
         $ any checkOutput outs
+            && isNothing refScript
     MustHashDatum dvh dv ->
         traceIfFalse "Lc" -- "MustHashDatum"
         $ V.findDatum dvh scriptContextTxInfo == Just dv

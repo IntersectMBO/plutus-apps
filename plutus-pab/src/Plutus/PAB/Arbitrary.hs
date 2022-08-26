@@ -58,6 +58,10 @@ instance Arbitrary Ledger.MintingPolicyHash where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary Ledger.ScriptHash where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Ledger.ValidationError where
     arbitrary = genericArbitrary
     shrink = genericShrink

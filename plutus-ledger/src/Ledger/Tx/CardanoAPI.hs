@@ -64,6 +64,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoScriptDataHash
   , toCardanoScriptHash
   , toCardanoPlutusScript
+  , toCardanoScriptInAnyLang
   , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
@@ -112,7 +113,6 @@ import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Internal qualified as P
-import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1
@@ -772,6 +772,14 @@ fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _ssv _ss)) = N
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.PlutusScript psv ps)) = Just $ case psv of
      C.PlutusScriptV1 -> (fromCardanoPlutusScript ps, P.PlutusV1)
      C.PlutusScriptV2 -> (fromCardanoPlutusScript ps, P.PlutusV2)
+
+toCardanoScriptInAnyLang :: P.Script -> P.Language -> Either ToCardanoError C.ScriptInAnyLang
+toCardanoScriptInAnyLang script P.PlutusV1 =
+  C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) . C.PlutusScript C.PlutusScriptV1
+    <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
+toCardanoScriptInAnyLang script P.PlutusV2 =
+  C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) . C.PlutusScript C.PlutusScriptV2
+    <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
 deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
 deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType

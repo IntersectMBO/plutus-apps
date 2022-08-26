@@ -71,8 +71,8 @@ import Ledger.Constraints (ScriptLookups, TxConstraints, mustMintValueWithRedeem
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
-                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue), txOwnInputs,
-                                         txOwnOutputs)
+                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
+                                         txOwnInputs, txOwnOutputs)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
@@ -548,6 +548,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                                 { ocDatum = stateData newState
                                   -- Add the thread token value back to the output
                                 , ocValue = stateValue newState <> SM.threadTokenValueOrZero scInstance
+                                , ocReferenceScriptHash = Nothing
                                 }
                             | not isFinal ]
                     in pure
