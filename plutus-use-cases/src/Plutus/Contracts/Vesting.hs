@@ -202,12 +202,12 @@ retrieveFundsC
 retrieveFundsC vesting payment = mapError (review _VestingError) $ do
     let inst = typedValidator vesting
         addr = Scripts.validatorAddress inst
-    nextTime <- awaitTime 0
+    now <- currentTime
     unspentOutputs <- utxosAt addr
     let
         currentlyLocked = foldMap (view Tx.ciTxOutValue) (Map.elems unspentOutputs)
         remainingValue = currentlyLocked - payment
-        mustRemainLocked = totalAmount vesting - availableAt vesting nextTime
+        mustRemainLocked = totalAmount vesting - availableAt vesting now
         maxPayment = currentlyLocked - mustRemainLocked
 
     when (remainingValue `Value.lt` mustRemainLocked)
@@ -220,11 +220,12 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                             Dead  -> mempty
         tx = Constraints.collectFromTheScript unspentOutputs ()
                 <> remainingOutputs
-                <> mustValidateIn (Interval.from nextTime)
+                <> mustValidateIn (Interval.from now)
                 <> mustBeSignedBy (vestingOwner vesting)
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
+    waitNSlots 1 -- wait until next slot to be in the validity range
     mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
