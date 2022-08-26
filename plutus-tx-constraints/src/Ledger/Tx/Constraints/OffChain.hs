@@ -35,7 +35,9 @@ module Ledger.Tx.Constraints.OffChain(
     -- * Constraints resolution
     , P.SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
+    , unBalancedTxTx
     , tx
+    , txValidityRange
     , txOuts
     , P.requiredSignatories
     , P.utxoIndex
@@ -49,39 +51,40 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (Lens', Traversal', _Left, coerced, iso, makeLensesFor, use, (<>=))
-import Control.Monad.Except (Except, mapExcept, runExcept, throwError)
+import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), (<>=))
+import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
-import Control.Monad.State (StateT, execStateT, mapStateT)
-
+import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
+import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
 import GHC.Generics (Generic)
-import Prettyprinter (Pretty (pretty), colon, (<+>))
-
-import PlutusTx (FromData, ToData)
-import PlutusTx.Lattice (BoundedMeetSemiLattice (top))
-
+import Ledger (POSIXTimeRange, Params (..), networkIdL)
 import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
-import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalancedTx)
+import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
 import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
                                          TxConstraints (TxConstraints, txConstraints, txOwnOutputs))
+import Ledger.Interval ()
 import Ledger.Orphans ()
-import Ledger.Params (Params (..), networkIdL)
 import Ledger.Scripts (ScriptHash, getDatum, getRedeemer, getValidator)
+import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (toCardanoScriptInAnyLang)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
+import PlutusTx (FromData, ToData)
+import PlutusTx.Lattice (BoundedMeetSemiLattice (top), MeetSemiLattice ((/\)))
+import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 makeLensesFor
     [ ("txIns", "txIns'")
     , ("txInsCollateral", "txInsCollateral'")
     , ("txInsReference", "txInsReference'")
     , ("txOuts", "txOuts'")
+    , ("txValidityRange", "txValidityRange'")
     ] ''C.TxBodyContent
 
 txIns :: Lens' C.CardanoBuildTx [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))]
@@ -106,8 +109,11 @@ txInsReference = coerced . txInsReference' . iso toList fromList
 txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.BabbageEra]
 txOuts = coerced . txOuts'
 
+txValidityRange :: Lens' C.CardanoBuildTx (C.TxValidityLowerBound C.BabbageEra, C.TxValidityUpperBound C.BabbageEra)
+txValidityRange = coerced . txValidityRange'
+
 tx :: Traversal' UnbalancedTx C.CardanoBuildTx
-tx = P.cardanoTx . _Left
+tx = P.cardanoTx
 
 emptyCardanoBuildTx :: Params -> C.CardanoBuildTx
 emptyCardanoBuildTx Params { pProtocolParams }= C.CardanoBuildTx $ C.TxBodyContent
@@ -131,7 +137,7 @@ emptyCardanoBuildTx Params { pProtocolParams }= C.CardanoBuildTx $ C.TxBodyConte
     }
 
 emptyUnbalancedTx :: Params -> UnbalancedTx
-emptyUnbalancedTx params = UnbalancedTx (Left $ emptyCardanoBuildTx params) mempty mempty top
+emptyUnbalancedTx params = UnbalancedCardanoTx (emptyCardanoBuildTx params) mempty mempty
 
 initialState :: Params -> P.ConstraintProcessingState
 initialState params = P.ConstraintProcessingState
@@ -163,7 +169,7 @@ mkSomeTx params xs =
     let process = \case
             P.SomeLookupsAndConstraints lookups constraints ->
                 processLookupsAndConstraints lookups constraints
-    in fmap cpsUnbalancedTx
+    in  fmap cpsUnbalancedTx
         $ runExcept
         $ execStateT (traverse process xs) (initialState params)
 
@@ -178,14 +184,32 @@ processLookupsAndConstraints
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> StateT P.ConstraintProcessingState (Except MkTxError) ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} =
+    let
+      extractPosixTimeRange = \case
+        P.MustValidateIn range -> Left range
+        other                  -> Right other
+      (ranges, otherConstraints) = partitionEithers $ extractPosixTimeRange <$> txConstraints
+    in do
         flip runReaderT lookups $ do
             ownOutputConstraints <- traverse addOwnOutput txOwnOutputs
-            traverse_ processConstraint (txConstraints <> ownOutputConstraints)
+            traverse_ processConstraint (otherConstraints <> ownOutputConstraints)
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
             -- P.addMissingValueSpent
             P.updateUtxoIndex
+        setValidityRange ranges
+
+-- | Reinject the validityRange inside the unbalanced Tx.
+--   As the Tx is a Caradano transaction, and as we have access to the SlotConfig,
+--   we can already internalize the constraints for the test
+setValidityRange
+    :: [POSIXTimeRange] -> StateT P.ConstraintProcessingState (Except MkTxError) ()
+setValidityRange ranges = do
+  slotConfig <- gets (pSlotConfig . P.cpsParams)
+  let slotRange = foldl (/\) top $ posixTimeRangeToContainedSlotRange slotConfig <$> ranges
+  cTxTR <- throwLeft ToCardanoError $ C.toCardanoValidityRange slotRange
+  unbalancedTx . tx . txValidityRange .= cTxTR
 
 -- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
 --   the constraints. To use this in a contract, see
@@ -202,7 +226,7 @@ mkTx
     -> Either MkTxError UnbalancedTx
 mkTx params lookups txc = mkSomeTx params [P.SomeLookupsAndConstraints lookups txc]
 
-throwLeft :: (b -> MkTxError) -> Either b r -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) r
+throwLeft :: (MonadState s m, MonadError err m) => (b -> err) -> Either b r -> m r
 throwLeft f = either (throwError . f) pure
 
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if

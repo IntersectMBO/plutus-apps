@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Spec.VSplit where
+module RewindableIndex.Spec.VSplit where
 
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
@@ -10,11 +10,11 @@ import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 import Control.Lens.Operators
 import Data.Vector qualified as V
 
-import Plutus.HystericalScreams.Index (Index, IndexView (..))
-import Plutus.HystericalScreams.Index qualified as Ix
-import Plutus.HystericalScreams.Index.VSplit (SplitIndex (..))
-import Plutus.HystericalScreams.Index.VSplit qualified as S
-import Plutus.HystericalScreams.Spec.Index (Conversion (..))
+import RewindableIndex.Index (Index, IndexView (..))
+import RewindableIndex.Index qualified as Ix
+import RewindableIndex.Index.VSplit (SplitIndex (..))
+import RewindableIndex.Index.VSplit qualified as S
+import RewindableIndex.Spec.Index (Conversion (..))
 
 conversion
   :: Show s

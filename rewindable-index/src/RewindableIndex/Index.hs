@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Index
+module RewindableIndex.Index
   ( Index(..)
   -- * Constructors
   , new

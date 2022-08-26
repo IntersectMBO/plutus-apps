@@ -133,6 +133,7 @@ library
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-script-utils        >=1.0.0
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -176,6 +177,7 @@ library
     , either
     , exceptions
     , filepath
+    , fingertree
     , freer-simple
     , generic-arbitrary
     , http-client

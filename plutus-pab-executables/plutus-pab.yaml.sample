@@ -10,6 +10,7 @@ pabWebserverConfig:
   # available. If this is not set, calls to unavailable endpoints fail
   # immediately.
   endpointTimeout: 5
+  enableMarconi: False
 
 walletServerConfig:
   tag: LocalWalletConfig
