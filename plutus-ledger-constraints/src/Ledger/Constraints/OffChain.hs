@@ -627,8 +627,8 @@ lookupMintingPolicy
        , MonadError MkTxError m
        )
     => MintingPolicyHash
-    -> m MintingPolicy
-lookupMintingPolicy (MintingPolicyHash mph) = MintingPolicy . fst <$> lookupScript (ScriptHash mph)
+    -> m (MintingPolicy, Language)
+lookupMintingPolicy (MintingPolicyHash mph) = first MintingPolicy <$> lookupScript (ScriptHash mph)
 
 lookupValidator
     :: ( MonadReader (ScriptLookups a) m

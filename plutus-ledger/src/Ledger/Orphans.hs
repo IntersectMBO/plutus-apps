@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -47,7 +47,11 @@ import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
+import Prettyprinter (Pretty)
+import Prettyprinter.Extras (PrettyShow (..))
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
+
+deriving via (PrettyShow Language) instance Pretty Language
 
 instance ToHttpApiData PrivateKey where
     toUrlPiece = toUrlPiece . getPrivateKey

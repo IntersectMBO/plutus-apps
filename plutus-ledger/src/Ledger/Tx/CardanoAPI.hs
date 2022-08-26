@@ -349,7 +349,7 @@ redeemerPtrFromCardanoRdmrPtr (Alonzo.RdmrPtr rdmrTag ptr) = PV1.RedeemerPtr t (
 -- | Extract plutus scripts from a Cardano API tx body.
 --
 -- Note that Plutus scripts are only supported in Alonzo era and onwards.
-plutusScriptsFromTxBody :: C.TxBody era -> Map P.ScriptHash P.Script
+plutusScriptsFromTxBody :: C.TxBody era -> Map P.ScriptHash (P.Script, P.Language)
 plutusScriptsFromTxBody C.ByronTxBody {} = mempty
 plutusScriptsFromTxBody (C.ShelleyTxBody shelleyBasedEra _ scripts _ _ _) =
   Map.fromList $ mapMaybe (fromLedgerScript shelleyBasedEra) scripts
@@ -360,7 +360,7 @@ plutusScriptsFromTxBody (C.ShelleyTxBody shelleyBasedEra _ scripts _ _ _) =
 fromLedgerScript
   :: C.ShelleyBasedEra era
   -> Ledger.Script (C.ShelleyLedgerEra era)
-  -> Maybe (P.ScriptHash, P.Script)
+  -> Maybe (P.ScriptHash, (P.Script, P.Language))
 fromLedgerScript C.ShelleyBasedEraShelley _      = Nothing
 fromLedgerScript C.ShelleyBasedEraAllegra _      = Nothing
 fromLedgerScript C.ShelleyBasedEraMary _         = Nothing
@@ -369,16 +369,16 @@ fromLedgerScript C.ShelleyBasedEraBabbage script = fromLedgerPlutusScript script
 
 -- | Convert a `cardano-ledger` Plutus script from the Alonzo era and onwards to
 -- a 'Script' along with it's hash.
-fromLedgerPlutusScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Script)
+fromLedgerPlutusScript :: Alonzo.Script a -> Maybe (P.ScriptHash, (P.Script, P.Language))
 fromLedgerPlutusScript Alonzo.TimelockScript {} = Nothing
 fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV1 bs) =
-  let script = fmap (\s -> (PV1.scriptHash s, s))
+  let script = fmap (\s -> (PV1.scriptHash s, (s, P.PlutusV1)))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs
    in either (const Nothing) Just script
 fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
-  let script = fmap (\s -> (PV2.scriptHash s, s))
+  let script = fmap (\s -> (PV2.scriptHash s, (s, P.PlutusV2)))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs
@@ -490,15 +490,24 @@ toCardanoTxInWitness
         <*> pure zeroExecutionUnits
         )
 
-toCardanoMintWitness :: PV1.Redeemers -> Int -> P.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
-toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
+toCardanoMintWitness :: PV1.Redeemers -> Int -> P.MintingPolicy -> P.Language -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
+toCardanoMintWitness redeemers idx (P.MintingPolicy script) lang = do
     let redeemerPtr = PV1.RedeemerPtr PV1.Mint (fromIntegral idx)
     P.Redeemer redeemer <- maybe (Left MissingMintingPolicyRedeemer) Right (Map.lookup redeemerPtr redeemers)
-    C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-        <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-        <*> pure C.NoScriptDatumForMint
-        <*> pure (C.fromPlutusData $ PV1.toData redeemer)
-        <*> pure zeroExecutionUnits
+    case lang of
+      P.PlutusV1 ->
+        C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
+            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
+            <*> pure C.NoScriptDatumForMint
+            <*> pure (C.fromPlutusData $ PV1.toData redeemer)
+            <*> pure zeroExecutionUnits
+      P.PlutusV2 ->
+        C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
+            <*> pure C.NoScriptDatumForMint
+            <*> pure (C.fromPlutusData $ PV1.toData redeemer)
+            <*> pure zeroExecutionUnits
+
 
 -- TODO Handle reference script once 'P.TxOut' supports it (or when we use
 -- exclusively 'C.TxOut' in all the codebase).
@@ -649,7 +658,7 @@ fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 toCardanoMintValue
     :: PV1.Redeemers
     -> PV1.Value
-    -> Map.Map P.MintingPolicyHash P.MintingPolicy
+    -> Map.Map P.MintingPolicyHash (P.MintingPolicy, P.Language)
     -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue redeemers value mps =
     let indexedMps = Prelude.zip [0..] $ Map.toList mps
@@ -657,9 +666,9 @@ toCardanoMintValue redeemers value mps =
         <$> toCardanoValue value
         <*> (C.BuildTxWith . Map.fromList <$> traverse indexedMpsToCardanoMintWitness indexedMps)
  where
-    indexedMpsToCardanoMintWitness (idx, (mph, mp)) =
+    indexedMpsToCardanoMintWitness (idx, (mph, (mp, lang))) =
         (,) <$> toCardanoPolicyId mph
-            <*> toCardanoMintWitness redeemers idx mp
+            <*> toCardanoMintWitness redeemers idx mp lang
 
 fromCardanoValue :: C.Value -> PV1.Value
 fromCardanoValue (C.valueToList -> list) = foldMap toValue list

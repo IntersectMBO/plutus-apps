@@ -118,7 +118,7 @@ data Tx = Tx {
     -- ^ The fee for this transaction.
     txValidRange      :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintScripts     :: Map.Map MintingPolicyHash MintingPolicy,
+    txMintScripts     :: Map.Map MintingPolicyHash (MintingPolicy, Language),
     -- ^ The scripts that must be run to check minting conditions.
     -- We include the minting policy hash in order to be able to include
     -- PlutusV1 AND PlutusV2 minting policy scripts, because the hashing
@@ -200,7 +200,7 @@ mint = lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: Lens' Tx (Map.Map MintingPolicyHash MintingPolicy)
+mintScripts :: Lens' Tx (Map.Map MintingPolicyHash (MintingPolicy, Language))
 mintScripts = lens g s where
     g = txMintScripts
     s tx fs = tx { txMintScripts = fs }

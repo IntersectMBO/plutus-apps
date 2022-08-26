@@ -85,7 +85,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (Address, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..))
+import Ledger (Address, Language, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..))
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
@@ -196,7 +196,7 @@ data ChainIndexTx = ChainIndexTx {
     -- ^ Datum objects recorded on this transaction.
     _citxRedeemers  :: Redeemers,
     -- ^ Redeemers of the minting scripts.
-    _citxScripts    :: Map ScriptHash Script,
+    _citxScripts    :: Map ScriptHash (Script, Language),
     -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
     _citxCardanoTx  :: Maybe SomeCardanoApiTx
     -- ^ The full Cardano API tx which was used to populate the rest of the

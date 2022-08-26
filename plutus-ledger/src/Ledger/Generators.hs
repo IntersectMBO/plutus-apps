@@ -239,7 +239,7 @@ genValidTransactionSpending' g ins totalVal = do
                         { txInputs = ins
                         , txOutputs = fmap (\f -> f Nothing) $ uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
                         , txMint = maybe mempty id mintValue
-                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicy
+                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash (ScriptGen.alwaysSucceedPolicy, Ledger.PlutusV1)
                         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
                         , txFee = Ada.toValue fee'
                         }

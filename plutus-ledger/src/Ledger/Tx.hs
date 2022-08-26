@@ -133,7 +133,7 @@ data ChainIndexTxOut =
       _ciTxOutReferenceScript :: Maybe V1.Script,
       -- | Validator protecting the transaction output, either in full or
       -- as a hash reference.
-      _ciTxOutValidator       :: (V1.ValidatorHash, Maybe V1.Validator)
+      _ciTxOutValidator       :: (V1.ValidatorHash, Maybe (V1.Validator, Language))
     }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 

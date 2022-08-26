@@ -99,7 +99,7 @@ import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
 import Ledger.TimeSlot (SlotConversionError)
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId, onCardanoTx)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, Language, getCardanoTxId, onCardanoTx)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -288,9 +288,9 @@ instance Pretty ChainIndexQuery where
 -- responses come from the data type 'Plutus.ChainIndex.Effects.ChainIndexQueryEffect'.
 data ChainIndexResponse =
     DatumHashResponse (Maybe Datum)
-  | ValidatorHashResponse (Maybe Validator)
-  | MintingPolicyHashResponse (Maybe MintingPolicy)
-  | StakeValidatorHashResponse (Maybe StakeValidator)
+  | ValidatorHashResponse (Maybe (Validator, Language))
+  | MintingPolicyHashResponse (Maybe (MintingPolicy, Language))
+  | StakeValidatorHashResponse (Maybe (StakeValidator, Language))
   | TxOutRefResponse (Maybe ChainIndexTxOut)
   | UnspentTxOutResponse (Maybe ChainIndexTxOut)
   | RedeemerHashResponse (Maybe Redeemer)
