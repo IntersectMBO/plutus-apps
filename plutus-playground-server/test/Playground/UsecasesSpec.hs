@@ -173,12 +173,15 @@ gameTest =
     testGroup
         "game"
         [ compilationChecks game
-        , testCase "should keep the funds" $
-          evaluate (mkEvaluation [lock w2 "abcde" twoAda, AddBlocks 1, guess w1 "ade", AddBlocks 1]) >>=
-          hasFundsDistribution
-              [ mkSimulatorWallet w1 tenAda
-              , mkSimulatorWallet w2 (adaValueOf 8)
-              ]
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        --
+        -- , testCase "should keep the funds" $
+        --   evaluate (mkEvaluation [lock w2 "abcde" twoAda, AddBlocks 1, guess w1 "ade", AddBlocks 1]) >>=
+        --   hasFundsDistribution
+        --       [ mkSimulatorWallet w1 tenAda
+        --       , mkSimulatorWallet w2 (adaValueOf 8)
+        --       ]
         , testCase "should unlock the funds" $
           evaluate (mkEvaluation [lock w2 "abcde" twoAda, AddBlocks 1, guess w1 "abcde", AddBlocks 1]) >>=
           hasFundsDistribution
