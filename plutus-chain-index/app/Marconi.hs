@@ -113,6 +113,10 @@ chainPointParser =
               (maybeReader maybeParseHashBlockHeader <|> readerError "Malformed block hash")
               (long "block-hash" <> metavar "BLOCK-HASH")
         )
+  where
+    maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
+    maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
+
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
@@ -305,6 +309,3 @@ main = do
             layoutPretty defaultLayoutOptions $
               "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
                 <+> "Please check the slot number and the block hash do belong to the chain"
-
-maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
-maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
