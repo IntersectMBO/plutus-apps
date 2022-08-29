@@ -57,6 +57,7 @@ module Ledger.Tx.Constraints(
     , OC.unspentOutputs
     , OC.plutusV1MintingPolicy
     , OC.plutusV2MintingPolicy
+    , OC.otherScript
     , OC.plutusV1OtherScript
     , OC.plutusV2OtherScript
     , OC.otherData

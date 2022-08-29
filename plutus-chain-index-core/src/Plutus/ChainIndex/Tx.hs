@@ -43,8 +43,8 @@ import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
-import Ledger (Language, OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..),
-               onCardanoTx, txId)
+import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..),
+               Versioned (unversioned), onCardanoTx, txId)
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
@@ -123,21 +123,21 @@ fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) =
     either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
 
-mintingPolicies :: Map MintingPolicyHash (MintingPolicy, Language) -> Map ScriptHash (Script, Language)
+mintingPolicies :: Map MintingPolicyHash (Versioned MintingPolicy) -> Map ScriptHash (Versioned Script)
 mintingPolicies = Map.fromList . fmap toScript . Map.toList
   where
-    toScript (MintingPolicyHash mph, (mp, lang)) = (ScriptHash mph, (getMintingPolicy mp, lang))
+    toScript (MintingPolicyHash mph, mp) = (ScriptHash mph, fmap getMintingPolicy mp)
 
-validators :: [TxIn] -> (Map ScriptHash (Script, Language), Map DatumHash Datum, Redeemers)
+validators :: [TxIn] -> (Map ScriptHash (Versioned Script), Map DatumHash Datum, Redeemers)
 validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) . zip [0..] . sort
   -- we sort the inputs to make sure that the indices match with redeemer pointers
   where
     -- TODO: the index of the txin is probably incorrect as we take it from the set.
     -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
     -- sort them by using the standard `Ord` instance.
-    withHash ix (ConsumeScriptAddress lang val red dat) =
-      let (ValidatorHash vh) = validatorHash val
-       in ( Map.singleton (ScriptHash vh) (getValidator val, lang)
+    withHash ix (ConsumeScriptAddress val red dat) =
+      let (ValidatorHash vh) = validatorHash (unversioned val)
+       in ( Map.singleton (ScriptHash vh) (fmap getValidator val)
           , Map.singleton (datumHash dat) dat
           , Map.singleton (RedeemerPtr Spend ix) red
           )

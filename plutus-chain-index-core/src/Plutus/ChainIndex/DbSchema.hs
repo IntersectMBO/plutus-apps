@@ -36,7 +36,7 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (BlockId (..), ChainIndexTxOut (..), Language, Slot)
+import Ledger (BlockId (..), ChainIndexTxOut (..), Slot, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Tx qualified as CI
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
@@ -258,10 +258,10 @@ instance Serialise a => HasDbType (Serialisable a) where
 
 deriving via Serialisable Datum instance HasDbType Datum
 deriving via Serialisable Redeemer instance HasDbType Redeemer
-deriving via Serialisable (MintingPolicy, Language) instance HasDbType (MintingPolicy, Language)
-deriving via Serialisable (StakeValidator, Language) instance HasDbType (StakeValidator, Language)
-deriving via Serialisable (Validator, Language) instance HasDbType (Validator, Language)
-deriving via Serialisable (Script, Language) instance HasDbType (Script, Language)
+deriving via Serialisable (Versioned MintingPolicy) instance HasDbType (Versioned MintingPolicy)
+deriving via Serialisable (Versioned StakeValidator) instance HasDbType (Versioned StakeValidator)
+deriving via Serialisable (Versioned Validator) instance HasDbType (Versioned Validator)
+deriving via Serialisable (Versioned Script) instance HasDbType (Versioned Script)
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
 deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
@@ -291,8 +291,8 @@ instance HasDbType (DatumHash, Datum) where
     toDbValue (hash, datum) = DatumRow (toDbValue hash) (toDbValue datum)
     fromDbValue (DatumRow hash datum) = (fromDbValue hash, fromDbValue datum)
 
-instance HasDbType (ScriptHash, (Script, Language)) where
-    type DbType (ScriptHash, (Script, Language)) = ScriptRow
+instance HasDbType (ScriptHash, Versioned Script) where
+    type DbType (ScriptHash, Versioned Script) = ScriptRow
     toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
     fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
 

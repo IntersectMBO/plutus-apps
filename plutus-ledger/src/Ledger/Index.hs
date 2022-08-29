@@ -245,7 +245,7 @@ checkMintingAuthorised tx =
 
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
-    iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, (mp, lang)) -> do
+    iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, Versioned mp lang) -> do
         let cs :: V.CurrencySymbol
             cs = V.mpsSymbol mph
             ptr :: RedeemerPtr
@@ -291,7 +291,7 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ConsumeScriptAddress lang v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ConsumeScriptAddress (Versioned v lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         case lang of
           PlutusV1 ->

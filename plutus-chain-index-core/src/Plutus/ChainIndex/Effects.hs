@@ -34,7 +34,7 @@ import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger (AssetClass, TxId)
 import Ledger.Credential (Credential)
-import Ledger.Tx (ChainIndexTxOut, Language, TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
@@ -47,16 +47,16 @@ data ChainIndexQueryEffect r where
     DatumFromHash :: DatumHash -> ChainIndexQueryEffect (Maybe Datum)
 
     -- | Get the validator from a validator hash (if available)
-    ValidatorFromHash :: ValidatorHash -> ChainIndexQueryEffect (Maybe (Validator, Language))
+    ValidatorFromHash :: ValidatorHash -> ChainIndexQueryEffect (Maybe (Versioned Validator))
 
     -- | Get the monetary policy from an MPS hash (if available)
-    MintingPolicyFromHash :: MintingPolicyHash -> ChainIndexQueryEffect (Maybe (MintingPolicy, Language))
+    MintingPolicyFromHash :: MintingPolicyHash -> ChainIndexQueryEffect (Maybe (Versioned MintingPolicy))
 
     -- | Get the redeemer from a redeemer hash (if available)
     RedeemerFromHash :: RedeemerHash -> ChainIndexQueryEffect (Maybe Redeemer)
 
     -- | Get the stake validator from a stake validator hash (if available)
-    StakeValidatorFromHash :: StakeValidatorHash -> ChainIndexQueryEffect (Maybe (StakeValidator, Language))
+    StakeValidatorFromHash :: StakeValidatorHash -> ChainIndexQueryEffect (Maybe (Versioned StakeValidator))
 
     -- | Get the TxOut from a TxOutRef (if available)
     UnspentTxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe ChainIndexTxOut)

@@ -12,7 +12,7 @@ import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (Shel
 import Gen.Cardano.Api.Typed qualified as Gen
 import Ledger.Test (someValidator)
 import Ledger.Tx (Language (PlutusV1), RedeemerPtr (RedeemerPtr), ScriptTag (Mint),
-                  Tx (txMint, txMintScripts, txRedeemers))
+                  Tx (txMint, txMintScripts, txRedeemers), Versioned (Versioned))
 import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
                              toCardanoTxBodyContent)
 import Ledger.Value qualified as Value
@@ -90,7 +90,7 @@ convertMintingTx = property $ do
       vL n = Value.singleton (Value.mpsSymbol mpsHash) "L" n
       tx   = mempty
         { txMint = vL 1
-        , txMintScripts = Map.singleton mpsHash (mps, PlutusV1)
+        , txMintScripts = Map.singleton mpsHash (Versioned mps PlutusV1)
         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) unitRedeemer
         }
       ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody mempty

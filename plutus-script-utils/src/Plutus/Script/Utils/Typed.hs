@@ -11,12 +11,15 @@ module Plutus.Script.Utils.Typed (
   , validatorHash
   , validatorAddress
   , validatorScript
+  , vValidatorScript
   , forwardingMintingPolicy
+  , vForwardingMintingPolicy
   , forwardingMintingPolicyHash
   , generalise
   ---
   , Any
   , Language (PlutusV1, PlutusV2)
+  , Versioned (Versioned, unversioned, version)
 ) where
 
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
@@ -24,6 +27,7 @@ import Data.Aeson (ToJSON)
 import Data.Kind (Type)
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version))
 import Plutus.V1.Ledger.Address qualified as PV1
 import Plutus.V1.Ledger.Api qualified as PV1
 import PlutusTx.Builtins (BuiltinData)
@@ -57,13 +61,12 @@ instance ValidatorTypes Any where
 
 -- | A typed validator script with its 'ValidatorScript' and 'Address'.
 data TypedValidator (a :: Type) = TypedValidator
-  { tvValidator         :: PV1.Validator
+  { tvValidator         :: Versioned PV1.Validator
   , tvValidatorHash     :: PV1.ValidatorHash
-  , tvForwardingMPS     :: PV1.MintingPolicy
+  , tvForwardingMPS     :: Versioned PV1.MintingPolicy
     -- | The hash of the minting policy that checks whether the validator
     --   is run in this transaction
   , tvForwardingMPSHash :: PV1.MintingPolicyHash
-  , tvLanguage          :: Language
   }
   deriving stock (Show, Eq, Generic)
 
@@ -75,23 +78,33 @@ validatorHash = tvValidatorHash
 validatorAddress :: TypedValidator a -> PV1.Address
 validatorAddress = PV1.scriptHashAddress . tvValidatorHash
 
--- | The validator script itself.
+-- | The unversioned validator script itself.
 validatorScript :: TypedValidator a -> PV1.Validator
-validatorScript = tvValidator
+validatorScript = unversioned . vValidatorScript
+
+-- | The validator script itself.
+vValidatorScript :: TypedValidator a -> Versioned PV1.Validator
+vValidatorScript = tvValidator
 
 -- | Generalise the typed validator to one that works with the 'Data' type.
 generalise :: forall a. TypedValidator a -> TypedValidator Any
-generalise TypedValidator {tvValidator, tvValidatorHash, tvForwardingMPS, tvForwardingMPSHash, tvLanguage} =
+generalise TypedValidator {tvValidator, tvValidatorHash, tvForwardingMPS, tvForwardingMPSHash} =
   -- we can do this safely because the on-chain validators are untyped, so they always
   -- take 'BuiltinData' arguments. The validator script stays the same, so the conversion
   -- from 'BuiltinData' to 'a' still takes place, even if it's not reflected in the type
   -- signature anymore.
-  TypedValidator {tvValidator, tvValidatorHash, tvForwardingMPS, tvForwardingMPSHash, tvLanguage}
+  TypedValidator {tvValidator, tvValidatorHash, tvForwardingMPS, tvForwardingMPSHash}
+
+-- | The unversioned minting policy that forwards all checks to the instance's
+--   validator
+forwardingMintingPolicy :: TypedValidator a -> PV1.MintingPolicy
+forwardingMintingPolicy = unversioned . tvForwardingMPS
 
 -- | The minting policy that forwards all checks to the instance's
 --   validator
-forwardingMintingPolicy :: TypedValidator a -> PV1.MintingPolicy
-forwardingMintingPolicy = tvForwardingMPS
+vForwardingMintingPolicy :: TypedValidator a -> Versioned PV1.MintingPolicy
+vForwardingMintingPolicy = tvForwardingMPS
+
 
 -- | Hash of the minting policy that forwards all checks to the instance's
 --   validator

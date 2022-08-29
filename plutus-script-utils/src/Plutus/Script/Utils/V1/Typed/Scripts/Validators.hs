@@ -21,8 +21,10 @@ module Plutus.Script.Utils.V1.Typed.Scripts.Validators
     validatorHash,
     validatorAddress,
     validatorScript,
+    vValidatorScript,
     unsafeMkTypedValidator,
     forwardingMintingPolicy,
+    vForwardingMintingPolicy,
     forwardingMintingPolicyHash,
     generalise,
     ---
@@ -39,12 +41,12 @@ import Control.Monad.Except (MonadError (throwError))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Kind (Type)
 import GHC.Generics (Generic)
-import Plutus.Script.Utils.Scripts qualified as Scripts
-import Plutus.Script.Utils.Typed (Any, DatumType, Language (PlutusV1), RedeemerType,
-                                  TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvLanguage, tvValidator, tvValidatorHash),
+import Plutus.Script.Utils.Scripts (Datum, Language (PlutusV1), Versioned (Versioned))
+import Plutus.Script.Utils.Typed (Any, DatumType, RedeemerType,
+                                  TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvValidator, tvValidatorHash),
                                   UntypedValidator, ValidatorTypes, forwardingMintingPolicy,
-                                  forwardingMintingPolicyHash, generalise, validatorAddress, validatorHash,
-                                  validatorScript)
+                                  forwardingMintingPolicyHash, generalise, vForwardingMintingPolicy, vValidatorScript,
+                                  validatorAddress, validatorHash, validatorScript)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V1.Ledger.Address qualified as PV1
@@ -123,11 +125,10 @@ mkTypedValidator ::
   TypedValidator a
 mkTypedValidator vc wrapper =
   TypedValidator
-    { tvValidator = val,
-      tvValidatorHash = hsh,
-      tvForwardingMPS = mps,
-      tvForwardingMPSHash = Scripts.mintingPolicyHash mps,
-      tvLanguage = PlutusV1
+    { tvValidator = Versioned val PlutusV1
+    , tvValidatorHash = hsh
+    , tvForwardingMPS = Versioned mps PlutusV1
+    , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
     }
   where
     val = PV1.mkValidatorScript $ wrapper `applyCode` vc
@@ -152,11 +153,10 @@ mkTypedValidatorParam vc wrapper param =
 unsafeMkTypedValidator :: PV1.Validator -> TypedValidator Any
 unsafeMkTypedValidator vl =
   TypedValidator
-    { tvValidator = vl,
-      tvValidatorHash = vh,
-      tvForwardingMPS = mps,
-      tvForwardingMPSHash = Scripts.mintingPolicyHash mps,
-      tvLanguage = PlutusV1
+    { tvValidator = Versioned vl PlutusV1
+    , tvValidatorHash = vh
+    , tvForwardingMPS = Versioned mps PlutusV1
+    , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
     }
   where
     vh = Scripts.validatorHash vl
@@ -211,7 +211,7 @@ checkDatum ::
   forall a m.
   (PV1.FromData (DatumType a), MonadError ConnectionError m) =>
   TypedValidator a ->
-  Scripts.Datum ->
+  Datum ->
   m (DatumType a)
 checkDatum _ (PV1.Datum d) =
   case PV1.fromBuiltinData d of

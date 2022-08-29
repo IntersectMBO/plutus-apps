@@ -30,7 +30,8 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (Language, Tx, TxIn, TxInType)
+import Ledger.Tx.Internal (Tx, TxIn, TxInType)
+import Plutus.Script.Utils.Scripts (Language, Versioned)
 import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
@@ -47,11 +48,7 @@ import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
-import Prettyprinter (Pretty)
-import Prettyprinter.Extras (PrettyShow (..))
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
-
-deriving via (PrettyShow Language) instance Pretty Language
 
 instance ToHttpApiData PrivateKey where
     toUrlPiece = toUrlPiece . getPrivateKey
@@ -95,7 +92,6 @@ instance OpenApi.ToSchema C.AssetName where
         pure $ OpenApi.NamedSchema (Just "AssetName") OpenApi.byteSchema
 deriving instance Generic C.Quantity
 deriving anyclass instance OpenApi.ToSchema C.Quantity
-
 deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
 instance OpenApi.ToSchema Crypto.XPub where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "PubKey") mempty
@@ -121,7 +117,6 @@ deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema TxIn
 deriving instance OpenApi.ToSchema PV1.TxOut
 deriving instance OpenApi.ToSchema PV2.TxOut
-deriving instance OpenApi.ToSchema Language
 deriving newtype instance OpenApi.ToSchema Validator
 deriving newtype instance OpenApi.ToSchema TxId
 deriving newtype instance OpenApi.ToSchema Slot
@@ -164,6 +159,8 @@ instance OpenApi.ToSchema Script where
     declareNamedSchema _ =
         pure $ OpenApi.NamedSchema (Just "Script") (OpenApi.toSchema (Proxy :: Proxy String))
 deriving newtype instance OpenApi.ToSchema ScriptHash
+deriving instance OpenApi.ToSchema Language
+deriving instance OpenApi.ToSchema script => OpenApi.ToSchema (Versioned script)
 
 -- 'POSIXTime' instances
 

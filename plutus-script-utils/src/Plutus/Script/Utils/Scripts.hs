@@ -1,11 +1,20 @@
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {-|
-This module contains functions related to BuiltinData, or more specifially,
-'Datum's and 'Redeemer's. These functions do not depend on a particular version
-of Plutus.
+This module contains functions related to versioning scripts and BuiltinData, or more specifially,
+'Datum's and 'Redeemer's. These functions do not depend on a particular version of Plutus.
 -}
 module Plutus.Script.Utils.Scripts
-    ( -- * Script data hashes
-      PV1.Datum
+    ( -- * Plutus language versioning
+      Language (..)
+    , Versioned (..)
+      -- * Script data hashes
+    , PV1.Datum
     , PV1.DatumHash
     , PV1.Redeemer
     , PV1.RedeemerHash
@@ -16,8 +25,28 @@ module Plutus.Script.Utils.Scripts
 
 import Cardano.Api qualified as Script
 import Cardano.Api.Shelley qualified as Script
+import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
+import Codec.Serialise (Serialise)
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Api qualified as PV1
 import PlutusTx.Builtins qualified as Builtins
+import Prettyprinter (Pretty (pretty))
+
+deriving instance Serialise Language
+
+instance Pretty Language where
+  pretty PlutusV1 = "Plutus V1"
+  pretty PlutusV2 = "Plutus V2"
+
+-- | A script of some kind with its Plutus language version
+data Versioned script = Versioned { unversioned :: script, version :: Language }
+    deriving stock (Show, Eq, Ord, Functor, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+instance Pretty script => Pretty (Versioned script) where
+    pretty Versioned{unversioned,version} = pretty unversioned <> " (" <> pretty version <> ")"
 
 -- | Hash a 'PV1.Datum builtin data.
 datumHash :: PV1.Datum -> PV1.DatumHash

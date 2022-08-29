@@ -235,6 +235,10 @@ instance Arbitrary Ledger.Language where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary script => Arbitrary (Ledger.Versioned script) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Ledger.Datum where
     arbitrary = genericArbitrary
     shrink = genericShrink
