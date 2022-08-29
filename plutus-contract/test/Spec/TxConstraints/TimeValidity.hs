@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -13,6 +14,7 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.List (isSubsequenceOf)
 import Ledger (POSIXTimeRange)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -155,12 +157,19 @@ defaultProtocolParamsValidCardano = checkPredicateOptions
     (assertValidatedTransactionCount 1)
     (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
+
+outsideValidityIntervalError :: Ledger.ValidationError -> Bool
+outsideValidityIntervalError = \case
+    Ledger.CardanoLedgerValidationError msg ->
+        "OutsideValidityIntervalUTxO" `isSubsequenceOf` msg
+    _ -> False
+
 -- | Past range are rejected
 defaultProtocolParamsPastTxCardano :: TestTree
 defaultProtocolParamsPastTxCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
-    (assertFailedTransaction $ \_ _ _ -> True)
+    (assertFailedTransaction $ \_ err _ -> outsideValidityIntervalError err)
     (void $ traceCardano $ pastTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 -- | Future range are rejected
@@ -168,7 +177,7 @@ defaultProtocolParamsFutureTxCardano :: TestTree
 defaultProtocolParamsFutureTxCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
-    (assertFailedTransaction $ \_ _ _ -> True)
+    (assertFailedTransaction $ \_ err _ -> outsideValidityIntervalError err)
     (void $ traceCardano $ futureTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 deadline :: POSIXTime
