@@ -2,19 +2,19 @@ module RewindableIndex.Spec.VSplit where
 
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
-import Data.Default
+import Data.Default (Default)
 import Data.Maybe (catMaybes)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import Control.Lens.Operators
+import Control.Lens ((^.))
 import Data.Vector qualified as V
 
-import RewindableIndex.Index (Index, IndexView (..))
+import RewindableIndex.Index (Index, IndexView)
 import RewindableIndex.Index qualified as Ix
-import RewindableIndex.Index.VSplit (SplitIndex (..))
+import RewindableIndex.Index.VSplit (SplitIndex)
 import RewindableIndex.Index.VSplit qualified as S
-import RewindableIndex.Spec.Index (Conversion (..))
+import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
 
 conversion
   :: Show s

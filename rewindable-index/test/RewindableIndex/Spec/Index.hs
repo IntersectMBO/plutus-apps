@@ -3,10 +3,12 @@ module RewindableIndex.Spec.Index where
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (foldl', isPrefixOf, scanl')
 import Data.Maybe (fromJust, isJust, isNothing, mapMaybe)
-import Test.QuickCheck.Monadic
-import Test.Tasty.QuickCheck
+import Test.QuickCheck.Monadic (assert, monadic, run)
+import Test.Tasty.QuickCheck (Arbitrary (arbitrary), Fun, Property, applyFun2, chooseInt, cover, forAll, frequency,
+                              resize, (==>))
 
-import RewindableIndex.Index
+import RewindableIndex.Index (Index, IndexView (IndexView, ixDepth, ixSize, ixView), ObservedBuilder (ObservedBuilder),
+                              getFunction, getHistory, getNotifications, insertL, new, rewind, view)
 
 data Conversion m a e n = Conversion
   { cView          :: Index a e n -> m (Maybe (IndexView a))
@@ -25,7 +27,6 @@ conversion = Conversion
 
 prop_observeNew
   :: forall e a n m. (Eq a, Monad m)
-  => Show a
   => Conversion m a e n
   -> Fun (a, e) (a, Maybe n)
   -> a
@@ -80,7 +81,6 @@ prop_rewindDepth c (ObservedBuilder ix) =
 -- | Property that validates the HF data structure.
 prop_sizeLEDepth
   :: forall e a n m. (Monad m)
-  => Show a
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> Property
@@ -91,7 +91,7 @@ prop_sizeLEDepth c (ObservedBuilder ix) =
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
-  :: forall e a n m. (Monad m, Show e, Show a, Arbitrary e, Eq a)
+  :: forall e a n m. (Monad m, Show e, Arbitrary e, Eq a)
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> Property
@@ -115,7 +115,7 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
 prop_observeInsert
-  :: forall e a n m. (Monad m, Eq a, Show a)
+  :: forall e a n m. (Monad m, Eq a)
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> [e]
@@ -133,7 +133,7 @@ prop_observeInsert c (ObservedBuilder ix) es =
 
 -- | Notifications are accumulated as the folding function runs.
 prop_observeNotifications
-  :: forall e a n m. (Monad m, Show n, Show e, Eq n)
+  :: forall e a n m. (Monad m, Eq n)
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> [e]
@@ -149,7 +149,7 @@ prop_observeNotifications c (ObservedBuilder ix) es =
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindNotifications
-  :: forall e a n m. (Monad m, Show e, Show a, Arbitrary e, Show n, Eq n)
+  :: forall e a n m. (Monad m, Show e, Arbitrary e, Eq n)
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> Property

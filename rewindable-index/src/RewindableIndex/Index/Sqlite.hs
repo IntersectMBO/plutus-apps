@@ -12,11 +12,11 @@ module RewindableIndex.Index.Sqlite
   , S.getNotifications
   ) where
 
-import Data.Sequence (Seq (..))
+import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Database.SQLite.Simple (Connection, open)
 
-import RewindableIndex.Index.Split (SplitIndex (..))
+import RewindableIndex.Index.Split (SplitIndex (SplitIndex))
 import RewindableIndex.Index.Split qualified as S
 
 type SqliteIndex e n q r = SplitIndex IO Connection e n q r
@@ -33,12 +33,12 @@ new fquery foninsert fstore depth db
   | otherwise  = do
     connection <- open db
     pure . Just $ SplitIndex
-      { siHandle        = connection
-      , siEvents        = Seq.empty
-      , siBuffered      = Seq.empty
-      , siNotifications = []
-      , siDepth         = depth
-      , siStore         = fstore
-      , siQuery         = fquery
-      , siOnInsert      = foninsert
+      { S.siHandle        = connection
+      , S.siEvents        = Seq.empty
+      , S.siBuffered      = Seq.empty
+      , S.siNotifications = []
+      , S.siDepth         = depth
+      , S.siStore         = fstore
+      , S.siQuery         = fquery
+      , S.siOnInsert      = foninsert
       }

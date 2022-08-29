@@ -2,18 +2,18 @@ module RewindableIndex.Spec.Split where
 
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
-import Data.Default
+import Data.Default (Default)
 import Data.Maybe (catMaybes)
 import Data.Sequence (Seq, (><))
 import Data.Sequence qualified as Seq
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import RewindableIndex.Index (Index, IndexView (..))
+import RewindableIndex.Index (Index, IndexView)
 import RewindableIndex.Index qualified as Ix
-import RewindableIndex.Index.Split (SplitIndex (..))
+import RewindableIndex.Index.Split (SplitIndex (SplitIndex, siBuffered, siEvents, siHandle))
 import RewindableIndex.Index.Split qualified as S
-import RewindableIndex.Spec.Index (Conversion (..))
+import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
 
 conversion :: (Show s, Show e, Show n, Default s) => Conversion (PropertyM IO) s e n
 conversion = Conversion

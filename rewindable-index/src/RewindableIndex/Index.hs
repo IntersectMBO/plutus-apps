@@ -22,9 +22,8 @@ import Control.Monad (replicateM)
 import Data.Foldable (foldl')
 import Data.Maybe (fromJust, maybeToList)
 import Data.Typeable (Typeable)
-import GHC.Generics
--- import           QuickSpec
-import Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen, arbitrarySizedIntegral, chooseInt, frequency, listOf,
+import GHC.Generics (Generic)
+import Test.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Gen, arbitrarySizedIntegral, chooseInt, frequency,
                         shrinkNothing, sized)
 
 {- | Laws

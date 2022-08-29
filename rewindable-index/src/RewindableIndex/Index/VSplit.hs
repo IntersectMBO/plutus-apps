@@ -24,7 +24,7 @@ module RewindableIndex.Index.VSplit
   , view
   ) where
 
-import Control.Lens.Operators
+import Control.Lens ((%~), (&), (.~), (^.))
 import Control.Lens.TH qualified as Lens
 import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.Foldable (foldlM)
@@ -34,7 +34,7 @@ import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
 import Data.Vector.Unboxed qualified as VU
 
-import RewindableIndex.Index (IndexView (..))
+import RewindableIndex.Index (IndexView (IndexView, ixDepth, ixSize, ixView))
 
 data Storage v m e = Storage
   { _events :: (VG.Mutable v) (PrimState m) e
@@ -213,7 +213,6 @@ insert e ix = do
 
 storeEvents
   :: Monad m
-  => VGM.MVector (VG.Mutable v) e
   => SplitIndex m h v e n q r
   -> m (SplitIndex m h v e n q r)
 storeEvents ix = do
@@ -223,8 +222,7 @@ storeEvents ix = do
     (storage . bSize) .~ 0 $ ix
 
 insertL
-  :: Monad m
-  => PrimMonad m
+  :: PrimMonad m
   => VGM.MVector (VG.Mutable v) e
   => [e]
   -> SplitIndex m h v e n q r

@@ -3,10 +3,12 @@ name:          rewindable-index
 version:       0.1.0.0
 synopsis:      Exercises in Algebra Driven Design
 description:
-  Please see the README on GitHub at <https://github.com/githubuser/hysterical-screams#readme>
+  Please see the README on GitHub at <https://github.com/input-output-hk/rewindable-index#README.md>
 
 category:      Testing
-homepage:      https://github.com/input-output-hk/plutus-apps#readme
+homepage:
+  https://github.com/input-output-hk/plutus-apps/rewindable-index/README.md
+
 bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 author:        Radu Ometita
 maintainer:    radu.ometita@eiohk.io
@@ -57,7 +59,6 @@ library
   build-depends:
     , base           >=4.7 && <5
     , containers
-    , data-default
     , lens
     , primitive
     , QuickCheck
@@ -81,9 +82,7 @@ test-suite rewindable-index-test
     , containers
     , data-default
     , lens
-    , primitive
     , QuickCheck
-    , quickspec
     , rewindable-index
     , sqlite-simple
     , tasty

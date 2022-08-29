@@ -13,10 +13,10 @@ module RewindableIndex.Index.Split
   ) where
 
 import Data.Foldable (foldlM, toList)
-import Data.Sequence (Seq (..), ViewR (..))
+import Data.Sequence (Seq ((:<|)), ViewR ((:>)))
 import Data.Sequence qualified as Seq
 
-import RewindableIndex.Index (IndexView (..))
+import RewindableIndex.Index (IndexView (IndexView, ixDepth, ixSize, ixView))
 
 data SplitIndex m h e n q r = SplitIndex
   { siHandle        :: h
@@ -67,9 +67,12 @@ insert e ix@SplitIndex{siOnInsert, siNotifications, siEvents, siDepth, siBuffere
   | siDepth /= 1 = do
     let (siEvents', siBuffered')
           = if size ix == siDepth
-            then let topEvents :> lastEvent = Seq.viewr siEvents
-                  in ( e :<| topEvents
-                     , lastEvent :<| siBuffered )
+            then case Seq.viewr siEvents of
+                   topEvents :> lastEvent ->
+                     ( e :<| topEvents
+                     , lastEvent :<| siBuffered
+                     )
+                   Seq.EmptyR -> error "RewindableIndex.Index.Split.insert: siEvents should not be empty"
             else ( e :<| siEvents, siBuffered )
     ns  <- siOnInsert e ix
     let ix' = ix { siEvents   = siEvents'
