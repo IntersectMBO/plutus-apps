@@ -1,5 +1,5 @@
-import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.QuickCheck (testProperty, withMaxSuccess)
 
 import RewindableIndex.Spec.Index qualified as Ix
 import RewindableIndex.Spec.Split qualified as S
@@ -99,6 +99,7 @@ vsProperties = testGroup "SQLite vector index"
   ,  testProperty "Notifications are not affected by rewind" $
       withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int VS.conversion
   ]
+
 main :: IO ()
 main = do
   -- quickSpec ixSignature

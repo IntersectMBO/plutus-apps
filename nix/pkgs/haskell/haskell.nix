@@ -156,6 +156,7 @@ let
             plutus-script-utils.ghcOptions = [ "-Werror" ];
             plutus-tx-constraints.ghcOptions = [ "-Werror" ];
             plutus-use-cases.ghcOptions = [ "-Werror" ];
+            rewindable-index.ghcOptions = [ "-Werror" ];
 
             # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
             # This will go away when we upgrade nixpkgs and things use ieee754 anyway.

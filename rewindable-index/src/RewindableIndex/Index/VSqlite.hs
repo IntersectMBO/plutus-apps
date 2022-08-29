@@ -23,7 +23,7 @@ import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
 import Database.SQLite.Simple (Connection, open)
 
-import RewindableIndex.Index.VSplit (SplitIndex (..), Storage (..))
+import RewindableIndex.Index.VSplit (SplitIndex (SplitIndex), Storage (Storage))
 import RewindableIndex.Index.VSplit qualified as S
 
 type SqliteIndex e n q r = SplitIndex IO Connection V.Vector e n q r
@@ -41,17 +41,17 @@ new fquery fstore foninsert k' db vector
   | otherwise  = do
     connection <- open db
     pure . Just $ SplitIndex
-      { _handle        = connection
-      , _storage = Storage { _events = vector
-                           , _cursor = 0
-                           , _eSize  = 0
-                           , _bSize  = 0
-                           , _k      = k'
-                           }
-      , _notifications = []
-      , _store         = fstore
-      , _query         = fquery
-      , _onInsert      = foninsert
+      { S._handle        = connection
+      , S._storage = Storage { S._events = vector
+                             , S._cursor = 0
+                             , S._eSize  = 0
+                             , S._bSize  = 0
+                             , S._k      = k'
+                             }
+      , S._notifications = []
+      , S._store         = fstore
+      , S._query         = fquery
+      , S._onInsert      = foninsert
       }
 
 type BoxedIndex e n q r = SqliteIndex e n q r
