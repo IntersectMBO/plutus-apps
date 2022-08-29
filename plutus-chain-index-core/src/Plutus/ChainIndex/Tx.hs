@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE ViewPatterns        #-}
 {-| The chain index' version of a transaction
 -}
 module Plutus.ChainIndex.Tx(
@@ -43,15 +44,14 @@ import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
-import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..),
-               Versioned (unversioned), onCardanoTx, txId)
+import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..), onCardanoTx,
+               txId)
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
-import Plutus.Script.Utils.Scripts (datumHash, redeemerHash)
-import Plutus.Script.Utils.V1.Scripts (validatorHash)
+import Plutus.Script.Utils.Scripts (Versioned, datumHash, redeemerHash, scriptHash)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                             Redeemer, RedeemerHash, Script, Validator (getValidator), ValidatorHash (ValidatorHash))
+                             Redeemer, RedeemerHash, Script, Validator (getValidator))
 import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))
 import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
@@ -135,12 +135,11 @@ validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn)
     -- TODO: the index of the txin is probably incorrect as we take it from the set.
     -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
     -- sort them by using the standard `Ord` instance.
-    withHash ix (ConsumeScriptAddress val red dat) =
-      let (ValidatorHash vh) = validatorHash (unversioned val)
-       in ( Map.singleton (ScriptHash vh) (fmap getValidator val)
-          , Map.singleton (datumHash dat) dat
-          , Map.singleton (RedeemerPtr Spend ix) red
-          )
+    withHash ix (ConsumeScriptAddress (fmap getValidator -> val) red dat) =
+        ( Map.singleton (scriptHash val) val
+        , Map.singleton (datumHash dat) dat
+        , Map.singleton (RedeemerPtr Spend ix) red
+        )
     withHash _ _ = mempty
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer

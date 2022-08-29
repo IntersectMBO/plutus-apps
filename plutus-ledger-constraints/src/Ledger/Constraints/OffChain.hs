@@ -25,6 +25,7 @@ module Ledger.Constraints.OffChain(
     , typedValidatorLookups
     , generalise
     , unspentOutputs
+    , mintingPolicy
     , plutusV1MintingPolicy
     , plutusV2MintingPolicy
     , otherScript
@@ -113,12 +114,11 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
 import Ledger.Typed.Scripts qualified as Typed
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts qualified as P
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
-import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, POSIXTimeRange, Redeemer, Value, getMintingPolicy)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                                 ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
+                                 ScriptHash (ScriptHash), Validator (Validator, getValidator),
+                                 ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
@@ -192,34 +192,29 @@ typedValidatorLookups inst =
 unspentOutputs :: Map TxOutRef ChainIndexTxOut -> ScriptLookups a
 unspentOutputs mp = mempty { slTxOutputs = mp }
 
--- | A script lookups value with a minting policy script.
-plutusV1MintingPolicy :: MintingPolicy -> ScriptLookups a
-plutusV1MintingPolicy (MintingPolicy pl) =
-    let MintingPolicyHash hsh = PV1.mintingPolicyHash (MintingPolicy pl) in
-    mempty { slOtherScripts = Map.singleton (ScriptHash hsh) (Versioned pl PlutusV1) }
+-- | A script lookups value with a versioned minting policy script.
+mintingPolicy :: Versioned MintingPolicy -> ScriptLookups a
+mintingPolicy (fmap getMintingPolicy -> script) = mempty { slOtherScripts = Map.singleton (P.scriptHash script) script }
 
--- | A script lookups value with a minting policy script.
+-- | A script lookups value with a PlutusV1 minting policy script.
+plutusV1MintingPolicy :: MintingPolicy -> ScriptLookups a
+plutusV1MintingPolicy pl = mintingPolicy (Versioned pl PlutusV1)
+
+-- | A script lookups value with a PlutusV2 minting policy script.
 plutusV2MintingPolicy :: MintingPolicy -> ScriptLookups a
-plutusV2MintingPolicy (MintingPolicy pl) =
-    let MintingPolicyHash hsh = PV2.mintingPolicyHash (MintingPolicy pl) in
-    mempty { slOtherScripts = Map.singleton (ScriptHash hsh) (Versioned pl PlutusV2) }
+plutusV2MintingPolicy pl = mintingPolicy (Versioned pl PlutusV2)
 
 -- | A script lookups value with a versioned validator script.
 otherScript :: Versioned Validator -> ScriptLookups a
-otherScript (Versioned vl PlutusV1) = plutusV1OtherScript vl
-otherScript (Versioned vl PlutusV2) = plutusV2OtherScript vl
+otherScript (fmap getValidator -> script) = mempty { slOtherScripts = Map.singleton (P.scriptHash script) script }
 
 -- | A script lookups value with a PlutusV1 validator script.
 plutusV1OtherScript :: Validator -> ScriptLookups a
-plutusV1OtherScript (Validator vl) =
-    let vh = PV1.scriptHash vl in
-    mempty { slOtherScripts = Map.singleton vh (Versioned vl PlutusV1) }
+plutusV1OtherScript vl = otherScript (Versioned vl PlutusV1)
 
 -- | A script lookups value with a PlutusV2 validator script.
 plutusV2OtherScript :: Validator -> ScriptLookups a
-plutusV2OtherScript (Validator vl) =
-    let vh = PV2.scriptHash vl in
-    mempty { slOtherScripts = Map.singleton vh (Versioned vl PlutusV2) }
+plutusV2OtherScript vl = otherScript (Versioned vl PlutusV2)
 
 -- | A script lookups value with a datum.
 otherData :: Datum -> ScriptLookups a

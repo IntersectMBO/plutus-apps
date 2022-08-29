@@ -55,6 +55,7 @@ module Ledger.Constraints(
     , OC.ScriptLookups(..)
     , OC.typedValidatorLookups
     , OC.unspentOutputs
+    , OC.mintingPolicy
     , OC.plutusV1MintingPolicy
     , OC.plutusV2MintingPolicy
     , OC.otherScript

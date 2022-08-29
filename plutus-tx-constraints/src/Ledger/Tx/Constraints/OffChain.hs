@@ -24,6 +24,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.typedValidatorLookups
     , P.generalise
     , P.unspentOutputs
+    , P.mintingPolicy
     , P.plutusV1MintingPolicy
     , P.plutusV2MintingPolicy
     , P.otherScript
