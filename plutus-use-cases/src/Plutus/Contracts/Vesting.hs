@@ -173,7 +173,6 @@ vestingContract vesting = selectList [vest, retrieve]
     vest = endpoint @"vest funds" $ \() -> vestFundsC vesting
     retrieve = endpoint @"retrieve funds" $ \payment -> do
         liveness <- retrieveFundsC vesting payment
-        -- awaitTIme
         case liveness of
             Alive -> awaitPromise retrieve
             Dead  -> pure ()
@@ -225,7 +224,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    waitNSlots 1 -- wait until next slot to be in the validity range
+    void $ waitNSlots 1 -- wait until next slot to be in the validity range
     mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
