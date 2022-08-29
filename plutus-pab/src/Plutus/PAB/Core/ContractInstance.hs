@@ -50,7 +50,7 @@ import Data.IORef (IORef, readIORef)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
-import Marconi.Index.TxConfirmationStatus (TCSIndex)
+import Plutus.PAB.Core.TxConfirmationStatus (TCSIndex)
 import RewindableIndex.Index.VSplit qualified as Ix
 
 import Plutus.Contract.Effects (ActiveEndpoint (aeDescription),

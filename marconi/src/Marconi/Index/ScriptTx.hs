@@ -20,6 +20,10 @@ import GHC.Generics (Generic)
 import Cardano.Api (SlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
+-- | TODO Remove the following dependencies (and also cardano-ledger-*
+-- package dependencies in cabal file) when fromShelleyBasedScript is
+-- exported from cardano-node PR:
+-- https://github.com/input-output-hk/cardano-node/pull/4386
 import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Core qualified

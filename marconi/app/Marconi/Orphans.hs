@@ -4,8 +4,8 @@
 
 module Marconi.Orphans where
 
-import Cardano.Api (BlockHeader, BlockNo (BlockNo), ChainPoint (..), ChainTip (ChainTip, ChainTipAtGenesis), Hash,
-                    SlotNo (SlotNo), serialiseToRawBytesHexText)
+import Cardano.Api (BlockHeader, BlockNo (BlockNo), ChainPoint (ChainPoint, ChainPointAtGenesis),
+                    ChainTip (ChainTip, ChainTipAtGenesis), Hash, SlotNo (SlotNo), serialiseToRawBytesHexText)
 import Prettyprinter (Pretty (pretty), (<+>))
 
 instance Pretty ChainTip where

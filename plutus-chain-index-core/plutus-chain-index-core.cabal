@@ -43,10 +43,6 @@ library
   exposed-modules:
     Cardano.Protocol.Socket.Client
     Cardano.Protocol.Socket.Type
-    Marconi.Index.Datum
-    Marconi.Index.ScriptTx
-    Marconi.Index.TxConfirmationStatus
-    Marconi.Index.Utxo
     Plutus.ChainIndex
     Plutus.ChainIndex.Api
     Plutus.ChainIndex.ChainIndexError
@@ -155,7 +151,6 @@ test-suite plutus-chain-index-test
   hs-source-dirs: test
   other-modules:
     Generators
-    MarconiSpec
     Plutus.ChainIndex.Emulator.DiskStateSpec
     Plutus.ChainIndex.Emulator.HandlersSpec
     Plutus.ChainIndex.HandlersSpec

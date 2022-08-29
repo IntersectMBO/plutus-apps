@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Marconi.Index.TxConfirmationStatus
+module Plutus.PAB.Core.TxConfirmationStatus
   ( -- * TxConfirmationStatus
     TCSIndex
   , TxInfo(..)

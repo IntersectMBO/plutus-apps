@@ -22,7 +22,6 @@ import Hedgehog (Property, annotateShow, assert, failure, forAll, property, (/==
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (TxOutRef (TxOutRef, txOutRefId))
-import MarconiSpec qualified
 import Plutus.ChainIndex.Emulator.DiskStateSpec qualified as DiskStateSpec
 import Plutus.ChainIndex.Emulator.HandlersSpec qualified as EmulatorHandlersSpec
 import Plutus.ChainIndex.HandlersSpec qualified as HandlersSpec
@@ -53,7 +52,6 @@ tests =
     , DiskStateSpec.tests
     , EmulatorHandlersSpec.tests
     , HandlersSpec.tests
-    , MarconiSpec.tests
     ]
 
 utxoBalanceTests :: [TestTree]
