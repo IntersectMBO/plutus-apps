@@ -114,7 +114,7 @@ addressed by extending the emulator, without having to bring in the full block
 validating machinery.
 
 * We cannot represent different eras - everything is 'AlonzoEra'.
-* There is no handling of rewards, etc.
+* There is no handling of epoch boundaries, rewards, etc.
 * The block size is unlimited - we simply take all transactions from the
   mempool when we make a block. There is however a limit on the size of
   individual transactions.
