@@ -12,5 +12,4 @@ How-to guides
    writing-a-scalable-app
    handling-blockchain-events
    analysing-scripts
-   profiling-scripts
    plutus-spending-script-example
