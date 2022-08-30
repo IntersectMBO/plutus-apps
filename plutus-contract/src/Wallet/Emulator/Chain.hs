@@ -103,21 +103,20 @@ type ChainEffs = '[State ChainState, LogMsg ChainEvent]
 handleControlChain :: Members ChainEffs effs => Params -> ChainControlEffect ~> Eff effs
 handleControlChain params = \case
     ProcessBlock -> do
-        st <- get
-        let pool  = st ^. txPool
-            slot  = st ^. currentSlot
-            idx   = st ^. index
-            ValidatedBlock block events idx' =
-                validateBlock params slot idx pool
 
-        let st' = st & txPool .~ []
-                     & index .~ idx'
-                     & addBlock block
+        pool  <- gets $ view txPool
+        slot  <- gets $ view currentSlot
+        idx   <- gets $ view index
 
-        put st'
+        let ValidatedBlock block events idx' = validateBlock params slot idx pool
+
+        modify $ txPool .~ []
+        modify $ index .~ idx'
+        modify $ addBlock block
+
         traverse_ logEvent events
-
         pure block
+
     ModifySlot f -> modify @ChainState (over currentSlot f) >> gets (view currentSlot)
 
 logEvent :: Member (LogMsg ChainEvent) effs => ChainEvent -> Eff effs ()
@@ -147,11 +146,7 @@ data ValidatedBlock = ValidatedBlock
 validateBlock :: Params -> Slot -> Index.UtxoIndex -> TxPool -> ValidatedBlock
 validateBlock params slot@(Slot s) idx txns =
     let
-        -- Select those transactions that can be validated in the
-        -- current slot
-        -- (eligibleTxns, rest) = partition (canValidateNow slot) txns
-
-        -- Validate eligible transactions, updating the UTXO index each time
+        -- Validate transactions, updating the UTXO index each time
         (processed, Index.ValidationCtx idx' _) =
             flip S.runState (Index.ValidationCtx idx params) $ for txns $ \tx -> do
                 (err, events_) <- validateEm slot cUtxoIndex tx

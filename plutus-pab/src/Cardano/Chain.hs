@@ -85,21 +85,20 @@ handleControlChain ::
   => Params -> EC.ChainControlEffect ~> Eff effs
 handleControlChain params = \case
     EC.ProcessBlock -> do
-        st <- get
-        let pool  = st ^. txPool
-            slot  = st ^. currentSlot
-            idx   = st ^. index
-            EC.ValidatedBlock block events idx' =
-                EC.validateBlock params slot idx pool
+        pool  <- gets $ view txPool
+        slot  <- gets $ view currentSlot
+        idx   <- gets $ view index
+        chan   <- gets $ view channel
 
-        let st' = st & txPool .~ []
-                     & tip    ?~ block
-                     & index  .~ idx'
+        let EC.ValidatedBlock block events idx' = EC.validateBlock params slot idx pool
 
-        put st'
+        modify $ txPool .~ []
+        modify $ tip    ?~ block
+        modify $ index  .~ idx'
+
         traverse_ logEvent events
 
-        liftIO $ atomically $ writeTChan (st ^. channel) block
+        liftIO $ atomically $ writeTChan chan block
         pure block
     EC.ModifySlot f -> modify @MockNodeServerChainState (over currentSlot f) >> gets (view currentSlot)
 
