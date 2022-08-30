@@ -10,45 +10,45 @@ Slot 00001: W[10]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 226f7395cf83
 Slot 00001: W[9]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 226f7395cf83ccc2b595233a03d8c7f3050edcde40fb1d27565412b4653a8510, BlockNumber 0). UTxO state was added to the end.
 Slot 00001: W[3]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 226f7395cf83ccc2b595233a03d8c7f3050edcde40fb1d27565412b4653a8510, BlockNumber 0). UTxO state was added to the end.
 Slot 00001: W[5]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 226f7395cf83ccc2b595233a03d8c7f3050edcde40fb1d27565412b4653a8510, BlockNumber 0). UTxO state was added to the end.
-Slot 00001: W[1]: TxSubmit: 5ae0a302caa580d6336b5336e9dd31059e1e8e6b558e2edda824b2649d204ea3
-Slot 00001: TxnValidate 5ae0a302caa580d6336b5336e9dd31059e1e8e6b558e2edda824b2649d204ea3
+Slot 00001: W[1]: TxSubmit: a9614b14688821056a77b4bfab1b0b24d2f0de5c2dbae5fb8e6ef417a8876261
+Slot 00001: TxnValidate a9614b14688821056a77b4bfab1b0b24d2f0de5c2dbae5fb8e6ef417a8876261
 Slot 00001: SlotAdd Slot 2
-Slot 00002: W[7]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[8]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[6]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[4]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[2]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[1]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[10]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[9]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[3]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[5]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 4c5a32c536605f5accbbfc9a9a88f56f64c7c7c477a0d11ea6af1d9b722c1992, BlockNumber 1). UTxO state was added to the end.
-Slot 00002: W[2]: TxSubmit: c55b28cca12a43c717a4fe6c9c5ee2b52115f74b3701dbdc12c62a37c61f7a3d
-Slot 00002: TxnValidate c55b28cca12a43c717a4fe6c9c5ee2b52115f74b3701dbdc12c62a37c61f7a3d
+Slot 00002: W[7]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[8]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[6]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[4]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[2]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[1]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[10]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[9]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[3]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[5]: InsertionSuccess: New tip is Tip(Slot 2, BlockId d737a2fa61c8f60140948c406237501f13813520f262da55ac2bea9179855492, BlockNumber 1). UTxO state was added to the end.
+Slot 00002: W[2]: TxSubmit: becbb78bf5068bd7ac7e0a00bba5731f525be2f1df1a248134d920c809c43cdf
+Slot 00002: TxnValidate becbb78bf5068bd7ac7e0a00bba5731f525be2f1df1a248134d920c809c43cdf
 Slot 00002: SlotAdd Slot 3
-Slot 00003: W[7]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[8]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[6]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[4]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[2]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[1]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[10]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[9]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[3]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[5]: InsertionSuccess: New tip is Tip(Slot 3, BlockId a2d3e13b732562a01dbfe39c063508a7044770a39bc482a91becdbdd230afe88, BlockNumber 2). UTxO state was added to the end.
-Slot 00003: W[3]: TxSubmit: 2bdb9fab51fc92dcc9f47c2dfa66c2318005ad7a4471322c08ec7cfb23f214ff
-Slot 00003: TxnValidate 2bdb9fab51fc92dcc9f47c2dfa66c2318005ad7a4471322c08ec7cfb23f214ff
+Slot 00003: W[7]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[8]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[6]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[4]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[2]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[1]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[10]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[9]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[3]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[5]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 133e1fe77773bba6cc9508b39967ad4d4d812969b169bd9793ef483551cc7968, BlockNumber 2). UTxO state was added to the end.
+Slot 00003: W[3]: TxSubmit: 62e1b36944a8ac36471747878225ca822474ef77dca3b8ea562688e4528b6576
+Slot 00003: TxnValidate 62e1b36944a8ac36471747878225ca822474ef77dca3b8ea562688e4528b6576
 Slot 00003: SlotAdd Slot 4
-Slot 00004: W[7]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[8]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[6]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[4]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[2]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[1]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[10]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[9]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[3]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
-Slot 00004: W[5]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 43fcbfe7d1a64a29defab4cbd288dbec86232cece3c4cfa5ad3421d85ff58734, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[7]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[8]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[6]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[4]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[2]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[1]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[10]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[9]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[3]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
+Slot 00004: W[5]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 966e9e40f778e33df47c0f2823a94d85605247f5df3b49b058c8f53ff741fefa, BlockNumber 3). UTxO state was added to the end.
 Slot 00004: SlotAdd Slot 5
 Final balances
 Wallet 7: 
@@ -60,14 +60,14 @@ Wallet 6:
 Wallet 4: 
     {, ""}: 100000000
 Wallet 2: 
-    {, ""}: 99764759
+    {, ""}: 99760315
 Wallet 1: 
-    {, ""}: 99770699
+    {, ""}: 99766255
 Wallet 10: 
     {, ""}: 100000000
 Wallet 9: 
     {, ""}: 100000000
 Wallet 3: 
-    {, ""}: 99764759
+    {, ""}: 99760315
 Wallet 5: 
     {, ""}: 100000000

@@ -107,6 +107,6 @@ processEmulated params act =
         & reinterpret2 @ChainEffect @(State ChainState) @(LogMsg ChainEvent) (handleChain params)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))
-        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) (handleControlChain params)
+        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) (handleControlChain [] params)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))

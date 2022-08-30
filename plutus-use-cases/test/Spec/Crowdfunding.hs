@@ -90,10 +90,10 @@ tests = testGroup "crowdfunding"
 
     , checkPredicate "cannot collect money too late"
         (walletFundsChange w1 PlutusTx.zero
-        .&&. assertFailedTransaction (\_ err _ ->
+        .&&. assertFailedTransaction (\_ err ->
             case err of
-                Ledger.CardanoLedgerValidationError msg ->
-                    "OutsideValidityIntervalUTxO" `isSubsequenceOf` msg
+                Ledger.ApplyTxError e ->
+                    "OutsideValidityIntervalUTxO" `isSubsequenceOf` show e
                 _ -> False
             ))
         $ do

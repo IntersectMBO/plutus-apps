@@ -44,6 +44,7 @@ import Data.Set qualified as Set
 import Ledger.Params (EmulatorEra, Params)
 
 import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto
 import Ledger.Generators
 import Ledger.Index as Index
@@ -195,7 +196,7 @@ getDSCounterexamples params cs = go 0 mempty cs
       TxnValidate _ txn ->
           let
               cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
-              e' = Validation.validateCardanoTx params slot cUtxoIndex txn
+              e' = Validation.validateCardanoTx params slot cUtxoIndex txn CW.knownPaymentKeys
               idx' = case e' of
                   Just (Index.Phase1, _) -> idx
                   Just (Index.Phase2, _) -> Index.insertCollateral txn idx
@@ -227,7 +228,7 @@ validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
     cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsParams _dsUtxoIndex
-    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex (EmulatorTx _dsTx)
+    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex (EmulatorTx _dsTx) CW.knownPaymentKeys
   in e'
 
 -- | Run validation for a `WrappedTx`. Returns @True@ if successful.

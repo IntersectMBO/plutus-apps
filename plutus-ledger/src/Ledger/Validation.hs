@@ -75,7 +75,7 @@ import Data.Maybe (catMaybes)
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as Address
 import Ledger.Blockchain qualified as Blockchain
-import Ledger.CardanoWallet (knownPaymentKeys)
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto qualified as Crypto
 import Ledger.Generators.Internal (Mockchain (Mockchain))
 import Ledger.Index.Internal qualified as P
@@ -206,7 +206,7 @@ validateMockchain (Mockchain txPool _ params) tx = result where
     h      = 1
     idx    = P.initialise [map (Blockchain.Valid . EmulatorTx) txPool]
     cUtxoIndex = either (error . show) id $ fromPlutusIndex params idx
-    result = validateCardanoTx params h cUtxoIndex (EmulatorTx tx)
+    result = validateCardanoTx params h cUtxoIndex (EmulatorTx tx) CW.knownPaymentKeys
 
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
 hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
@@ -230,8 +230,9 @@ validateCardanoTx
   -> Slot
   -> UTxO EmulatorEra
   -> CardanoTx
+  -> Map.Map Address.PaymentPubKey Address.PaymentPrivateKey
   -> Maybe P.ValidationErrorInPhase
-validateCardanoTx params slot utxo txn =
+validateCardanoTx params slot utxo txn knownPaymentKeys =
   let
     getPublicKeys = Map.keys . P.txSignatures
     privateKeys = onCardanoTx
@@ -240,7 +241,7 @@ validateCardanoTx params slot utxo txn =
             map Address.PaymentPubKey . getPublicKeys)
         (const []) txn
     signTx tx = foldl' (flip addCardanoTxSignature) tx privateKeys
-    convertTx tx = fmap (flip SomeTx C.AlonzoEraInCardanoMode) $  fromPlutusTx params utxo (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys tx) tx
+    convertTx tx = fmap (flip SomeTx C.AlonzoEraInCardanoMode) $ fromPlutusTx params utxo (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys tx) tx
   in
     case onCardanoTx convertTx Right txn of
       Left (Left e) -> Just e

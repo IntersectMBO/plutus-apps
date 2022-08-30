@@ -160,8 +160,8 @@ defaultProtocolParamsValidCardano = checkPredicateOptions
 
 outsideValidityIntervalError :: Ledger.ValidationError -> Bool
 outsideValidityIntervalError = \case
-    Ledger.CardanoLedgerValidationError msg ->
-        "OutsideValidityIntervalUTxO" `isSubsequenceOf` msg
+    Ledger.ApplyTxError err ->
+        "OutsideValidityIntervalUTxO" `isSubsequenceOf` show err
     _ -> False
 
 -- | Past range are rejected
@@ -169,7 +169,7 @@ defaultProtocolParamsPastTxCardano :: TestTree
 defaultProtocolParamsPastTxCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
-    (assertFailedTransaction $ \_ err _ -> outsideValidityIntervalError err)
+    (assertFailedTransaction $ \_ err -> outsideValidityIntervalError err)
     (void $ traceCardano $ pastTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 -- | Future range are rejected
@@ -177,7 +177,7 @@ defaultProtocolParamsFutureTxCardano :: TestTree
 defaultProtocolParamsFutureTxCardano = checkPredicateOptions
     defaultCheckOptions
     "tx valid time interval in the past make transactions fail"
-    (assertFailedTransaction $ \_ err _ -> outsideValidityIntervalError err)
+    (assertFailedTransaction $ \_ err -> outsideValidityIntervalError err)
     (void $ traceCardano $ futureTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
 
 deadline :: POSIXTime
