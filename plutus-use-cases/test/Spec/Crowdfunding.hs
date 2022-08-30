@@ -35,6 +35,7 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
 
+import Data.List (isSubsequenceOf)
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -89,7 +90,12 @@ tests = testGroup "crowdfunding"
 
     , checkPredicate "cannot collect money too late"
         (walletFundsChange w1 PlutusTx.zero
-        .&&. assertNoFailedTransactions)
+        .&&. assertFailedTransaction (\_ err _ ->
+            case err of
+                Ledger.CardanoLedgerValidationError msg ->
+                    "OutsideValidityIntervalUTxO" `isSubsequenceOf` msg
+                _ -> False
+            ))
         $ do
             ContractHandle{chInstanceId} <- startCampaign
             makeContribution w2 (Ada.adaValueOf 10)
