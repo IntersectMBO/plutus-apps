@@ -25,12 +25,15 @@ import Plutus.V1.Ledger.Api qualified as Plutus
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
 
+import Integration qualified
+
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [ testProperty "prop_script_hashes_in_tx_match" getTxBodyScriptsRoundtrip ]
+  [ testProperty "prop_script_hashes_in_tx_match" getTxBodyScriptsRoundtrip
+  , Integration.tests ]
 
 getTxBodyScriptsRoundtrip :: Property
 getTxBodyScriptsRoundtrip = property $ do
