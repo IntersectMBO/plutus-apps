@@ -192,6 +192,15 @@ vestFundsC vesting = mapError (review _VestingError) $ do
 
 data Liveness = Alive | Dead
 
+{- Note [slots and POSIX time]
+ - A slot has a given duration. As a consequence, 'currentTime' does not return exactly the current time but,
+ - by convention, the last POSIX time of the current slot.
+ - A consequence to this design choice is that when we use this time to build the 'mustValidateIn constraints',
+ - we get a range that start at the slot after the current one.
+ - To be sure that the validity range is valid when the transaction will be validated by the pool, we must therefore
+ - wait the next slot before sumitting it (which is done using 'waitNSlots 1').
+ -
+ -}
 retrieveFundsC
     :: ( AsVestingError e
        )
@@ -224,7 +233,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    void $ waitNSlots 1 -- wait until we reach a slot in the validity rang
+    void $ waitNSlots 1 -- see [slots and POSIX time]
     mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
