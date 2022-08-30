@@ -21,7 +21,7 @@ import Control.Applicative ((<|>))
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
-import Control.Monad.Freer.State
+import Control.Monad.Freer.State (gets, modify)
 import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (fromRight)

@@ -17,7 +17,7 @@ import Control.Concurrent.STM
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
-import Control.Monad.Freer.State (State, get, gets, modify, put)
+import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Foldable (traverse_)
 import Data.Functor (void)
