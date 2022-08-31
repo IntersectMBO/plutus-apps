@@ -3,15 +3,17 @@ module RewindableIndex.Spec.Split where
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Default (Default)
+import Data.Foldable (toList)
 import Data.Maybe (catMaybes)
 import Data.Sequence (Seq, (><))
 import Data.Sequence qualified as Seq
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import RewindableIndex.Index (Index, IndexView)
+import RewindableIndex.Index (Index, IndexView (IndexView, ixDepth, ixSize, ixView))
 import RewindableIndex.Index qualified as Ix
-import RewindableIndex.Index.Split (SplitIndex (SplitIndex, siBuffered, siEvents, siHandle))
+import RewindableIndex.Index.Split (SplitIndex (SplitIndex, siBuffered, siDepth, siEvents, siHandle, siNotifications, siQuery),
+                                    size)
 import RewindableIndex.Index.Split qualified as S
 import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
 
@@ -23,6 +25,22 @@ conversion = Conversion
   , cMonadic       = monadic
   }
 
+view' :: (Monad m, MonadFail m) => q -> SplitIndex m h e n q r -> m (IndexView r)
+view' query ix@SplitIndex{siDepth} = do
+  h : _ <- getHistory' query ix
+  pure $ IndexView { ixDepth = siDepth
+                   , ixView  = h
+                   , ixSize  = size ix
+                   }
+
+getNotifications' :: Monad m => SplitIndex m h e n q r -> m [n]
+getNotifications' SplitIndex{siNotifications} = pure siNotifications
+
+getHistory' :: forall m h e n q r. Monad m => q -> SplitIndex m h e n q r -> m [r]
+getHistory' query ix@SplitIndex{siQuery, siEvents} = do
+  xs <- traverse (siQuery ix query) $ Seq.tails siEvents
+  pure $ toList xs
+
 view
   :: (Show s, Show e, Show n, Default s)
   => Index s e n
@@ -32,7 +50,7 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      v <- S.view () ix'
+      v <- view' () ix'
       pure $ Just v
 
 notifications
@@ -42,8 +60,7 @@ notifications
 notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
-  liftIO $ S.getNotifications ix'
-
+  liftIO $ getNotifications' ix'
 
 history
   :: (Show s, Show e, Show n, Default s)
@@ -54,7 +71,7 @@ history ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- S.getHistory () ix'
+      h <- getHistory' () ix'
       pure $ Just h
 
 monadic

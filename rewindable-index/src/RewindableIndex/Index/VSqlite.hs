@@ -11,10 +11,6 @@ module RewindableIndex.Index.VSqlite
   , S.getBuffer
   , S.handle
   , S.storage
-   -- * Observations
-  , S.view
-  , S.getHistory
-  , S.getNotifications
   ) where
 
 import Control.Monad.Primitive (PrimState)

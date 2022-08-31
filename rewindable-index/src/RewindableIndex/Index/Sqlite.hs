@@ -6,10 +6,6 @@ module RewindableIndex.Index.Sqlite
   , S.insertL
   , S.size
   , S.rewind
-   -- * Observations
-  , S.view
-  , S.getHistory
-  , S.getNotifications
   ) where
 
 import Data.Sequence (Seq)

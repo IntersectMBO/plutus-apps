@@ -18,23 +18,17 @@ module RewindableIndex.Index.VSplit
   , Storage(..)
   , getBuffer
   , getEvents
-  -- * Observations
-  , getNotifications
-  , getHistory
-  , view
+  , k
   ) where
 
 import Control.Lens ((%~), (&), (.~), (^.))
 import Control.Lens.TH qualified as Lens
 import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.Foldable (foldlM)
-import Data.List (tails)
 import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
 import Data.Vector.Unboxed qualified as VU
-
-import RewindableIndex.Index (IndexView (IndexView, ixDepth, ixSize, ixView))
 
 data Storage v m e = Storage
   { _events :: (VG.Mutable v) (PrimState m) e
@@ -250,32 +244,3 @@ rewind n ix
         | p < 0     = maxSize (ix ^. storage) + p
         | otherwise = p
 
-getNotifications
-  :: SplitIndex m h v e n q r
-  -> [n]
-getNotifications ix = ix ^. notifications
-
-getHistory
-  :: PrimMonad m
-  => VGM.MVector (VG.Mutable v) e
-  => Show e
-  => SplitIndex m h v e n q r
-  -> q
-  -> m [r]
-getHistory ix q = do
-  es <- getEvents (ix ^. storage)
-  traverse ((ix ^. query) ix q) $ tails es
-
-view
-  :: PrimMonad m
-  => VGM.MVector (VG.Mutable v) e
-  => Show e
-  => SplitIndex m h v e n q r
-  -> q
-  -> m (IndexView r)
-view ix q = do
-  hs <- getHistory ix q
-  pure $ IndexView { ixDepth = ix ^. storage . k + 1
-                   , ixView  = head hs
-                   , ixSize  = size ix
-                   }

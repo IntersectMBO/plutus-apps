@@ -1,7 +1,7 @@
 cabal-version: 2.2
 name:          rewindable-index
 version:       0.1.0.0
-synopsis:      Exercises in Algebra Driven Design
+synopsis:      Indexers that can rewind the state to a previous version.
 description:
   Please see the README on GitHub at <https://github.com/input-output-hk/rewindable-index#README.md>
 
@@ -49,7 +49,6 @@ common lang
 library
   import:          lang
   exposed-modules:
-    RewindableIndex.Index
     RewindableIndex.Index.Split
     RewindableIndex.Index.Sqlite
     RewindableIndex.Index.VSplit
@@ -61,7 +60,6 @@ library
     , containers
     , lens
     , primitive
-    , QuickCheck
     , sqlite-simple
     , vector
 
@@ -70,6 +68,7 @@ test-suite rewindable-index-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
+    RewindableIndex.Index
     RewindableIndex.Spec.Index
     RewindableIndex.Spec.Split
     RewindableIndex.Spec.Sqlite
@@ -82,6 +81,7 @@ test-suite rewindable-index-test
     , containers
     , data-default
     , lens
+    , primitive
     , QuickCheck
     , rewindable-index
     , sqlite-simple

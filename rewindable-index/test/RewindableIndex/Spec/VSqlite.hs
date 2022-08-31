@@ -18,6 +18,7 @@ import RewindableIndex.Index qualified as Ix
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as S
 import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
+import RewindableIndex.Spec.VSplit (getHistory', getNotifications', view')
 
 conversion
   :: (Show e, Show n, Show a, Default a, ToField a, FromField a)
@@ -41,7 +42,7 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> do
-      v <- M.run $ S.view ix' stateId
+      v <- M.run $ view' ix' stateId
       pure $ Just v
 
 notifications
@@ -51,7 +52,7 @@ notifications
 notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
-  pure $ S.getNotifications ix'
+  pure $ getNotifications' ix'
 
 history
   :: (Show a, Default a, ToField a, FromField a, Show e, Show n)
@@ -62,7 +63,7 @@ history ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- S.getHistory ix' stateId
+      h <- getHistory' ix' stateId
       pure $ Just h
 
 monadic

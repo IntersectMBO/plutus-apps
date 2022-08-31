@@ -6,17 +6,11 @@ module RewindableIndex.Index.Split
   , insertL
   , size
   , rewind
-  -- * Observations
-  , view
-  , getHistory
-  , getNotifications
   ) where
 
-import Data.Foldable (foldlM, toList)
+import Data.Foldable (foldlM)
 import Data.Sequence (Seq ((:<|)), ViewR ((:>)))
 import Data.Sequence qualified as Seq
-
-import RewindableIndex.Index (IndexView (IndexView, ixDepth, ixSize, ixView))
 
 data SplitIndex m h e n q r = SplitIndex
   { siHandle        :: h
@@ -111,18 +105,3 @@ rewind n ix@SplitIndex {siEvents}
   | size ix > n = Just $ ix { siEvents = Seq.drop n siEvents }
   | otherwise   = Nothing
 
-view :: (Monad m, MonadFail m) => q -> SplitIndex m h e n q r -> m (IndexView r)
-view query ix@SplitIndex{siDepth} = do
-  h : _ <- getHistory query ix
-  pure $ IndexView { ixDepth = siDepth
-                   , ixView  = h
-                   , ixSize  = size ix
-                   }
-
-getNotifications :: Monad m => SplitIndex m h e n q r -> m [n]
-getNotifications SplitIndex{siNotifications} = pure siNotifications
-
-getHistory :: forall m h e n q r. Monad m => q -> SplitIndex m h e n q r -> m [r]
-getHistory query ix@SplitIndex{siQuery, siEvents} = do
-  xs <- traverse (siQuery ix query) $ Seq.tails siEvents
-  pure $ toList xs
