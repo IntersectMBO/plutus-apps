@@ -11,7 +11,7 @@ homepage:
 
 bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 author:        Radu Ometita
-maintainer:    radu.ometita@eiohk.io
+maintainer:    radu.ometita@iohk.io
 license:       Apache-2.0
 license-files:
   LICENSE
