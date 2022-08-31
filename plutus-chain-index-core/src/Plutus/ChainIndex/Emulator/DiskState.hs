@@ -35,6 +35,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Credential (Credential)
+import Ledger.Tx (Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
                              txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
@@ -122,7 +123,7 @@ txAssetClassMap =
 data DiskState =
     DiskState
         { _DataMap       :: Map DatumHash Datum
-        , _ScriptMap     :: Map ScriptHash Script
+        , _ScriptMap     :: Map ScriptHash (Versioned Script)
         , _RedeemerMap   :: Map RedeemerHash Redeemer
         , _TxMap         :: Map TxId ChainIndexTx
         , _AddressMap    :: CredentialMap

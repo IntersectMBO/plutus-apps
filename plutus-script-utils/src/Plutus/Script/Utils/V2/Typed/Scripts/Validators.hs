@@ -19,19 +19,22 @@ module Plutus.Script.Utils.V2.Typed.Scripts.Validators
     , validatorHash
     , validatorAddress
     , validatorScript
+    , vValidatorScript
     , unsafeMkTypedValidator
     , forwardingMintingPolicy
+    , vForwardingMintingPolicy
     , forwardingMintingPolicyHash
     , generalise
     )
 where
 
 import Data.Kind (Type)
-import Plutus.Script.Utils.Typed (Any, DatumType, Language (PlutusV2), RedeemerType,
-                                  TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvLanguage, tvValidator, tvValidatorHash),
+import Plutus.Script.Utils.Scripts (Language (PlutusV2), Versioned (Versioned))
+import Plutus.Script.Utils.Typed (Any, DatumType, RedeemerType,
+                                  TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvValidator, tvValidatorHash),
                                   UntypedValidator, ValidatorTypes, forwardingMintingPolicy,
-                                  forwardingMintingPolicyHash, generalise, validatorAddress, validatorHash,
-                                  validatorScript)
+                                  forwardingMintingPolicyHash, generalise, vForwardingMintingPolicy, vValidatorScript,
+                                  validatorAddress, validatorHash, validatorScript)
 import Plutus.Script.Utils.V2.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V2.Ledger.Api qualified as PV2
@@ -107,11 +110,10 @@ mkTypedValidator ::
   TypedValidator a
 mkTypedValidator vc wrapper =
   TypedValidator
-    { tvValidator = val,
-      tvValidatorHash = hsh,
-      tvForwardingMPS = mps,
-      tvForwardingMPSHash = Scripts.mintingPolicyHash mps,
-      tvLanguage = PlutusV2
+    { tvValidator = Versioned val PlutusV2
+    , tvValidatorHash = hsh
+    , tvForwardingMPS = Versioned mps PlutusV2
+    , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
     }
   where
     val = PV2.mkValidatorScript $ wrapper `applyCode` vc
@@ -136,11 +138,10 @@ mkTypedValidatorParam vc wrapper param =
 unsafeMkTypedValidator :: PV2.Validator -> TypedValidator Any
 unsafeMkTypedValidator vl =
   TypedValidator
-    { tvValidator = vl,
-      tvValidatorHash = vh,
-      tvForwardingMPS = mps,
-      tvForwardingMPSHash = Scripts.mintingPolicyHash mps,
-      tvLanguage = PlutusV2
+    { tvValidator = Versioned vl PlutusV2
+    , tvValidatorHash = vh
+    , tvForwardingMPS = Versioned mps PlutusV2
+    , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
     }
   where
     vh = Scripts.validatorHash vl

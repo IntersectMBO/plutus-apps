@@ -234,8 +234,8 @@ constraints1 vh =
 lookups1 :: Constraints.ScriptLookups UnitTest
 lookups1
     = Constraints.unspentOutputs utxo1
-    <> Constraints.plutusV2OtherScript (Scripts.validatorScript alwaysSucceedValidator)
-    <> Constraints.plutusV2OtherScript (Scripts.validatorScript validator1)
+    <> Constraints.otherScript (Scripts.vValidatorScript alwaysSucceedValidator)
+    <> Constraints.otherScript (Scripts.vValidatorScript validator1)
 
 testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
 testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

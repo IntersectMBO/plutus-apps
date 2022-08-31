@@ -62,7 +62,7 @@ contract = do
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
         lookups2 =
-            Constraints.plutusV1OtherScript (validatorScript deadline)
+            Constraints.otherScript (validatorScript deadline)
             <> Constraints.unspentOutputs utxos
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
@@ -208,8 +208,8 @@ typedValidator = Scripts.mkTypedValidatorParam @UnitTest
     where
         wrap = Scripts.mkUntypedValidator
 
-validatorScript :: P.POSIXTime -> Validator
-validatorScript = Scripts.validatorScript . typedValidator
+validatorScript :: P.POSIXTime -> Tx.Versioned Validator
+validatorScript = Scripts.vValidatorScript . typedValidator
 
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash $ typedValidator deadline

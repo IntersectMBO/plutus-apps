@@ -24,8 +24,10 @@ module Ledger.Tx.Constraints.OffChain(
     , P.typedValidatorLookups
     , P.generalise
     , P.unspentOutputs
+    , P.mintingPolicy
     , P.plutusV1MintingPolicy
     , P.plutusV2MintingPolicy
+    , P.otherScript
     , P.plutusV1OtherScript
     , P.plutusV2OtherScript
     , P.otherData
@@ -248,7 +250,7 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.resolveScriptTxOut txout
         case mscriptTXO of
-            Just ((_, validator, lang), (_, datum), _) -> do
+            Just ((_, Tx.Versioned validator lang), (_, datum), _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
                 witness <-
                     throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
@@ -311,8 +313,8 @@ lookupScriptAsReferenceScript
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
 lookupScriptAsReferenceScript Nothing = pure C.ReferenceScriptNone
 lookupScriptAsReferenceScript (Just sh) = do
-    (script, language) <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupScript sh
-    scriptInAnyLang <- either (throwError . ToCardanoError) pure $ toCardanoScriptInAnyLang script language
+    script <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupScript sh
+    scriptInAnyLang <- either (throwError . ToCardanoError) pure $ toCardanoScriptInAnyLang script
     pure $ C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra scriptInAnyLang
 
 addOwnOutput

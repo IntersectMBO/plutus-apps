@@ -4,5 +4,4 @@ module Ledger.Scripts (
 
 import Ledger.Scripts.Orphans ()
 import Plutus.Script.Utils.Scripts as Export
-import Plutus.Script.Utils.V1.Scripts as Export
 import Plutus.V1.Ledger.Scripts as Export

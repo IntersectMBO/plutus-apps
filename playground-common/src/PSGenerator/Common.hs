@@ -33,7 +33,7 @@ import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Scripts (ScriptError)
 import Ledger.Slot (Slot)
 import Ledger.TimeSlot (SlotConfig, SlotConversionError)
-import Ledger.Tx qualified as Tx (Language)
+import Ledger.Tx qualified as Tx (Language, Versioned)
 import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
 import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
 import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
@@ -336,6 +336,7 @@ scriptAnyLangType = SumType (
 ledgerTypes :: [SumType 'Haskell]
 ledgerTypes =
     [ order . genericShow . argonaut $ mkSumType @Tx.Language
+    , order . genericShow . argonaut $ mkSumType @(Tx.Versioned A)
     , equal . genericShow . argonaut $ mkSumType @Slot
     , equal . genericShow . argonaut $ mkSumType @Ada
     , equal . genericShow . argonaut $ mkSumType @SlotConfig

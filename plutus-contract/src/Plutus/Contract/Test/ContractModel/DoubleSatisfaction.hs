@@ -314,8 +314,8 @@ isVulnerable (DoubleSatisfactionCounterexample orig pre post _ _ _) =
 -- a specific datum attached. Even though this doesn't technically matter.
 --
 -- This is not super important, but we want to leave no room for misunderstanding...
-alwaysOkValidator :: Validator
-alwaysOkValidator = mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])
+alwaysOkValidator :: Versioned Validator
+alwaysOkValidator = Versioned (mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])) PlutusV1
 
 doubleSatisfactionCounterexamples :: WrappedTx -> [DoubleSatisfactionCounterexample]
 doubleSatisfactionCounterexamples dsc =
@@ -357,8 +357,7 @@ doubleSatisfactionCounterexamples dsc =
                                    , txOutRefIdx = 1
                                    }
         newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
-                           , txInType = Just $ ConsumeScriptAddress PlutusV1
-                                                                    alwaysOkValidator
+                           , txInType = Just $ ConsumeScriptAddress alwaysOkValidator
                                                                     redeemerEmpty
                                                                     datumEmpty
                            }

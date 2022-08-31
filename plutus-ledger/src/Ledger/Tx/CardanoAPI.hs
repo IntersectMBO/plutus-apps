@@ -349,7 +349,7 @@ redeemerPtrFromCardanoRdmrPtr (Alonzo.RdmrPtr rdmrTag ptr) = PV1.RedeemerPtr t (
 -- | Extract plutus scripts from a Cardano API tx body.
 --
 -- Note that Plutus scripts are only supported in Alonzo era and onwards.
-plutusScriptsFromTxBody :: C.TxBody era -> Map P.ScriptHash P.Script
+plutusScriptsFromTxBody :: C.TxBody era -> Map P.ScriptHash (P.Versioned P.Script)
 plutusScriptsFromTxBody C.ByronTxBody {} = mempty
 plutusScriptsFromTxBody (C.ShelleyTxBody shelleyBasedEra _ scripts _ _ _) =
   Map.fromList $ mapMaybe (fromLedgerScript shelleyBasedEra) scripts
@@ -360,7 +360,7 @@ plutusScriptsFromTxBody (C.ShelleyTxBody shelleyBasedEra _ scripts _ _ _) =
 fromLedgerScript
   :: C.ShelleyBasedEra era
   -> Ledger.Script (C.ShelleyLedgerEra era)
-  -> Maybe (P.ScriptHash, P.Script)
+  -> Maybe (P.ScriptHash, P.Versioned P.Script)
 fromLedgerScript C.ShelleyBasedEraShelley _      = Nothing
 fromLedgerScript C.ShelleyBasedEraAllegra _      = Nothing
 fromLedgerScript C.ShelleyBasedEraMary _         = Nothing
@@ -369,16 +369,16 @@ fromLedgerScript C.ShelleyBasedEraBabbage script = fromLedgerPlutusScript script
 
 -- | Convert a `cardano-ledger` Plutus script from the Alonzo era and onwards to
 -- a 'Script' along with it's hash.
-fromLedgerPlutusScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Script)
+fromLedgerPlutusScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Versioned P.Script)
 fromLedgerPlutusScript Alonzo.TimelockScript {} = Nothing
 fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV1 bs) =
-  let script = fmap (\s -> (PV1.scriptHash s, s))
+  let script = fmap (\s -> (PV1.scriptHash s, P.Versioned s P.PlutusV1))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs
    in either (const Nothing) Just script
 fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
-  let script = fmap (\s -> (PV2.scriptHash s, s))
+  let script = fmap (\s -> (PV2.scriptHash s, P.Versioned s P.PlutusV2))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs
@@ -465,8 +465,7 @@ toCardanoTxInWitness P.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitness
 toCardanoTxInWitness P.ConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
 toCardanoTxInWitness
     (P.ConsumeScriptAddress
-        P.PlutusV1
-        (P.Validator validator)
+        (P.Versioned (P.Validator validator) P.PlutusV1)
         (P.Redeemer redeemer)
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>
@@ -478,8 +477,7 @@ toCardanoTxInWitness
         )
 toCardanoTxInWitness
     (P.ConsumeScriptAddress
-        P.PlutusV2
-        (P.Validator validator)
+        (P.Versioned (P.Validator validator) P.PlutusV2)
         (P.Redeemer redeemer)
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>
@@ -490,15 +488,24 @@ toCardanoTxInWitness
         <*> pure zeroExecutionUnits
         )
 
-toCardanoMintWitness :: PV1.Redeemers -> Int -> P.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
-toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
+toCardanoMintWitness :: PV1.Redeemers -> Int -> P.Versioned P.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
+toCardanoMintWitness redeemers idx (P.Versioned (P.MintingPolicy script) lang) = do
     let redeemerPtr = PV1.RedeemerPtr PV1.Mint (fromIntegral idx)
     P.Redeemer redeemer <- maybe (Left MissingMintingPolicyRedeemer) Right (Map.lookup redeemerPtr redeemers)
-    C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-        <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-        <*> pure C.NoScriptDatumForMint
-        <*> pure (C.fromPlutusData $ PV1.toData redeemer)
-        <*> pure zeroExecutionUnits
+    case lang of
+      P.PlutusV1 ->
+        C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
+            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
+            <*> pure C.NoScriptDatumForMint
+            <*> pure (C.fromPlutusData $ PV1.toData redeemer)
+            <*> pure zeroExecutionUnits
+      P.PlutusV2 ->
+        C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
+            <*> pure C.NoScriptDatumForMint
+            <*> pure (C.fromPlutusData $ PV1.toData redeemer)
+            <*> pure zeroExecutionUnits
+
 
 -- TODO Handle reference script once 'P.TxOut' supports it (or when we use
 -- exclusively 'C.TxOut' in all the codebase).
@@ -649,7 +656,7 @@ fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 toCardanoMintValue
     :: PV1.Redeemers
     -> PV1.Value
-    -> Map.Map P.MintingPolicyHash P.MintingPolicy
+    -> Map.Map P.MintingPolicyHash (P.Versioned P.MintingPolicy)
     -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue redeemers value mps =
     let indexedMps = Prelude.zip [0..] $ Map.toList mps
@@ -742,18 +749,18 @@ fromCardanoScriptData = PV1.dataToBuiltinData . C.toPlutusData
 toCardanoScriptData :: PV1.BuiltinData -> C.ScriptData
 toCardanoScriptData = C.fromPlutusData . PV1.builtinDataToData
 
-fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe (P.Script, P.Language)
+fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe (P.Versioned P.Script)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InAlonzo (C.PlutusScript C.PlutusScriptV1 script)) =
-    Just (fromCardanoPlutusScript script, P.PlutusV1)
+    Just (P.Versioned (fromCardanoPlutusScript script) P.PlutusV1)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InBabbage (C.PlutusScript C.PlutusScriptV1 script)) =
-    Just (fromCardanoPlutusScript script, P.PlutusV1)
+    Just (P.Versioned (fromCardanoPlutusScript script) P.PlutusV1)
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InBabbage (C.PlutusScript C.PlutusScriptV2 script)) =
-    Just (fromCardanoPlutusScript script, P.PlutusV2)
+    Just (P.Versioned (fromCardanoPlutusScript script) P.PlutusV2)
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 
-toCardanoScriptInEra :: P.Script -> P.Language -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
-toCardanoScriptInEra script P.PlutusV1 = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-toCardanoScriptInEra script P.PlutusV2 = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
+toCardanoScriptInEra :: P.Versioned P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
+toCardanoScriptInEra (P.Versioned script P.PlutusV1) = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
+toCardanoScriptInEra (P.Versioned script P.PlutusV2) = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
 fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
 fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
@@ -767,17 +774,17 @@ toCardanoPlutusScript asPlutusScriptType =
     tag "toCardanoPlutusScript"
     . deserialiseFromRawBytes asPlutusScriptType . BSL.toStrict . Codec.serialise
 
-fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe (P.Script, P.Language)
+fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe (P.Versioned P.Script)
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _ssv _ss)) = Nothing
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.PlutusScript psv ps)) = Just $ case psv of
-     C.PlutusScriptV1 -> (fromCardanoPlutusScript ps, P.PlutusV1)
-     C.PlutusScriptV2 -> (fromCardanoPlutusScript ps, P.PlutusV2)
+     C.PlutusScriptV1 -> P.Versioned (fromCardanoPlutusScript ps) P.PlutusV1
+     C.PlutusScriptV2 -> P.Versioned (fromCardanoPlutusScript ps) P.PlutusV2
 
-toCardanoScriptInAnyLang :: P.Script -> P.Language -> Either ToCardanoError C.ScriptInAnyLang
-toCardanoScriptInAnyLang script P.PlutusV1 =
+toCardanoScriptInAnyLang :: P.Versioned P.Script -> Either ToCardanoError C.ScriptInAnyLang
+toCardanoScriptInAnyLang (P.Versioned script P.PlutusV1) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) . C.PlutusScript C.PlutusScriptV1
     <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-toCardanoScriptInAnyLang script P.PlutusV2 =
+toCardanoScriptInAnyLang (P.Versioned script P.PlutusV2) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) . C.PlutusScript C.PlutusScriptV2
     <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
