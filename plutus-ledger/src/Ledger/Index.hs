@@ -13,8 +13,6 @@
 --   transactions using the index.
 module Ledger.Index(
     -- * Types for transaction validation based on UTXO index
-    ValidationMonad,
-    ValidationCtx(..),
     UtxoIndex(..),
     insert,
     insertCollateral,
@@ -24,11 +22,9 @@ module Ledger.Index(
     ValidationError(..),
     ValidationErrorInPhase,
     ValidationPhase(..),
-    InOutMatch(..),
     minFee,
     maxFee,
     minAdaTxOut,
-    minLovelaceTxOut,
     maxMinAdaTxOut,
     pubKeyTxIns,
     scriptTxIns,
@@ -37,36 +33,23 @@ module Ledger.Index(
     Api.ExCPU(..),
     Api.ExMemory(..),
     Api.SatInt,
-    ValidatorMode(..)
     ) where
 
-import Cardano.Api (Lovelace (..))
 import Prelude hiding (lookup)
 
 import Control.Lens (Fold, folding)
 import Control.Monad.Except (MonadError (..))
-import Control.Monad.Reader (MonadReader (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
 import Ledger.Blockchain
-import Ledger.Crypto
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Params (Params)
 import Ledger.Tx (CardanoTx (..), updateUtxoCollateral)
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api qualified as Api
-import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (pubKeyTxIns, scriptTxIns, updateUtxoCollateral)
-import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
-
--- | Context for validating transactions. We need access to the unspent
---   transaction outputs of the blockchain, and we can throw 'ValidationError's.
-type ValidationMonad m = (MonadReader ValidationCtx m, MonadError ValidationError m)
-
-data ValidationCtx = ValidationCtx { vctxIndex :: UtxoIndex, vctxParams :: Params }
 
 -- | Update the index for the addition of a transaction.
 insert :: CardanoTx -> UtxoIndex -> UtxoIndex
@@ -107,16 +90,6 @@ the blockchain.
 
 -}
 
--- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
-data InOutMatch =
-    ScriptMatch
-        TxOutRef
-        Validator
-        Redeemer
-        Datum
-    | PubKeyMatch TxId PubKey Signature
-    deriving (Eq, Ord, Show)
-
 {-# INLINABLE minAdaTxOut #-}
 -- An estimate of the minimum required Ada for each tx output.
 --
@@ -143,11 +116,6 @@ we want a constant to reduce code size.
 maxMinAdaTxOut :: Ada
 maxMinAdaTxOut = Ada.lovelaceOf 18_516_834
 
--- Minimum required Lovelace for each tx output.
---
-minLovelaceTxOut :: Lovelace
-minLovelaceTxOut = Lovelace minTxOut
-
 -- | Minimum transaction fee.
 minFee :: Tx -> V.Value
 minFee = const (Ada.lovelaceValueOf 10)
@@ -156,6 +124,3 @@ minFee = const (Ada.lovelaceValueOf 10)
 -- the Cardano blockchain.
 maxFee :: Ada
 maxFee = Ada.lovelaceOf 1_000_000
-
-data ValidatorMode = FullyAppliedValidators | UnappliedValidators
-    deriving (Eq, Ord, Show)

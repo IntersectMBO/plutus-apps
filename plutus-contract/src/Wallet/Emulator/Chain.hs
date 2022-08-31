@@ -140,14 +140,16 @@ data ValidatedBlock = ValidatedBlock
     -- ^ The updated UTxO index after processing the block
     }
 
+data ValidationCtx = ValidationCtx { vctxIndex :: Index.UtxoIndex, vctxParams :: Params }
+
 -- | Validate a block given the current slot and UTxO index, returning the valid
 --   transactions, success/failure events and the updated UTxO set.
 validateBlock :: Params -> Slot -> Index.UtxoIndex -> TxPool -> [CW.MockWallet] -> ValidatedBlock
 validateBlock params slot@(Slot s) idx txns knownMockWallets =
     let
         -- Validate transactions, updating the UTXO index each time
-        (processed, Index.ValidationCtx idx' _) =
-            flip S.runState (Index.ValidationCtx idx params) $ for txns $ \tx -> do
+        (processed, ValidationCtx idx' _) =
+            flip S.runState (ValidationCtx idx params) $ for txns $ \tx -> do
                 err <- validateEm slot tx knownMockWallets
                 pure (tx, err)
 
@@ -184,13 +186,13 @@ mkValidationEvent idx t result =
 
 -- | Validate a transaction in the current emulator state.
 validateEm
-    :: S.MonadState Index.ValidationCtx m
+    :: S.MonadState ValidationCtx m
     => Slot
     -> CardanoTx
     -> [CW.MockWallet]
     -> m (Maybe Index.ValidationErrorInPhase)
 validateEm h txn knownMockWallets = do
-    ctx@(Index.ValidationCtx idx params) <- S.get
+    ctx@(ValidationCtx idx params) <- S.get
     let
         cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
         knownMockPaymentKeys = Map.fromList $ map (\mw -> (CW.paymentPubKey mw, CW.paymentPrivateKey mw)) knownMockWallets
@@ -200,7 +202,7 @@ validateEm h txn knownMockWallets = do
             Just (Index.Phase1, _) -> idx
             Just (Index.Phase2, _) -> Index.insertCollateral txn idx
             Nothing                -> Index.insert txn idx
-    _ <- S.put ctx{ Index.vctxIndex = idx' }
+    _ <- S.put ctx{ vctxIndex = idx' }
     pure e
 
 -- | Adds a block to ChainState, without validation.
