@@ -25,7 +25,6 @@ import GHC.Generics (Generic)
 import Ledger.Blockchain
 import Ledger.Orphans ()
 import Ledger.Params (EmulatorEra)
-import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Tx
 import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))
@@ -69,8 +68,6 @@ data ValidationError =
     TxOutRefNotFound TxOutRef
     -- ^ The transaction output consumed by a transaction input could not be found (either because it was already spent, or because
     -- there was no transaction with the given hash on the blockchain).
-    | ScriptError Scripts.ScriptError
-    -- ^ For pay-to-script outputs: evaluation of the validator script failed.
     | ApplyTxError (C.Ledger.ApplyTxError EmulatorEra)
     | UtxosPredicateFailure [C.Ledger.UtxosPredicateFailure EmulatorEra]
     | ScriptFailure (C.Ledger.ScriptFailure StandardCrypto)

@@ -40,7 +40,8 @@ import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), Validator, mkValidatorScript, unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Api (EvaluationError (CekError))
+import Plutus.V1.Ledger.Scripts (Validator, mkValidatorScript, unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
@@ -221,9 +222,9 @@ invalidScript = property $ do
                 , Chain.SlotAdd _
                 , Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ _ (Index.ScriptError (EvaluationError ["I always fail everything"] "CekEvaluationFailure: An error has occurred:  User error:\nThe provided Plutus code called 'error'.")) _
+                , Chain.TxnValidationFail _ _ _ (Index.ScriptFailure (C.Ledger.ValidationFailedV1 (CekError ce) ["I always fail everything"])) _
                 , Chain.SlotAdd _
-                ] -> True
+                ] -> show ce == "An error has occurred:  User error:\nThe provided Plutus code called 'error'."
             _ -> False
     let expectedPaidFees = txFee scriptTxn <> totalVal
     checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 expectedPaidFees) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())

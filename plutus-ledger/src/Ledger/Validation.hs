@@ -86,7 +86,6 @@ import Ledger.Tx (CardanoTx (CardanoApiTx, EmulatorTx), SomeCardanoApiTx (Cardan
 import Ledger.Tx.CardanoAPI qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
 import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx qualified as P
 import PlutusTx.Builtins qualified as Builtins
@@ -281,8 +280,6 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
     -- See note [Second phase validation]
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
-      Left $ Left (P.Phase2, P.ScriptError (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
     toCardanoLedgerError e = Left $ Left (P.Phase2, P.ScriptFailure e)
 
 makeTransactionBody
