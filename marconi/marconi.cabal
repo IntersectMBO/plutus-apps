@@ -122,6 +122,7 @@ test-suite marconi-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
+  other-modules:  Integration
 
   --------------------
   -- Local components
@@ -133,14 +134,18 @@ test-suite marconi-test
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}
+    , cardano-testnet
     , plutus-ledger-api
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base            >=4.9 && <5
+    , base             >=4.9 && <5
     , containers
+    , directory
+    , filepath
     , hedgehog
+    , hedgehog-extras
     , tasty
     , tasty-hedgehog
