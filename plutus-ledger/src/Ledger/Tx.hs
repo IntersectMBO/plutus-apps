@@ -32,7 +32,6 @@ module Ledger.Tx
     , cardanoApiTx
     , emulatorTx
     , onCardanoTx
-    , mergeCardanoTxWith
     , cardanoTxMap
     , getCardanoTxId
     , getCardanoTxInputs
@@ -156,21 +155,9 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
-
-{- Note [Why we have the Both constructor in CardanoTx]
-
-We want to do validation with both the emulator and with the cardano-ledger library, at least as long
-as we don't have Phase2 validation errors via the cardano-ledger library.
-
-To do that we need the required signers which are only available in UnbalancedTx during balancing.
-So during balancing we can create the SomeCardanoApiTx, while proper validation can only happen in
-Wallet.Emulator.Chain.validateBlock, since that's when we know the right Slot number. This means that
-we need both transaction types in the path from balancing to validateBlock. -}
-
 data CardanoTx
     = EmulatorTx { _emulatorTx :: Tx }
     | CardanoApiTx { _cardanoApiTx :: SomeCardanoApiTx }
-    | Both { _emulatorTx :: Tx, _cardanoApiTx :: SomeCardanoApiTx }
     deriving (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, Serialise)
 
@@ -204,16 +191,11 @@ instance Pretty CardanoTx where
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
 onCardanoTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
-onCardanoTx l r = mergeCardanoTxWith l r const
-
-mergeCardanoTxWith :: (Tx -> a) -> (SomeCardanoApiTx -> a) -> (a -> a -> a) -> CardanoTx -> a
-mergeCardanoTxWith l _ _ (EmulatorTx tx)    = l tx
-mergeCardanoTxWith l r m (Both tx ctx)      = m (l tx) (r ctx)
-mergeCardanoTxWith _ r _ (CardanoApiTx ctx) = r ctx
+onCardanoTx l _ (EmulatorTx tx)    = l tx
+onCardanoTx _ r (CardanoApiTx ctx) = r ctx
 
 cardanoTxMap :: (Tx -> Tx) -> (SomeCardanoApiTx -> SomeCardanoApiTx) -> CardanoTx -> CardanoTx
 cardanoTxMap l _ (EmulatorTx tx)    = EmulatorTx (l tx)
-cardanoTxMap l r (Both tx ctx)      = Both (l tx) (r ctx)
 cardanoTxMap _ r (CardanoApiTx ctx) = CardanoApiTx (r ctx)
 
 getCardanoTxId :: CardanoTx -> TxId

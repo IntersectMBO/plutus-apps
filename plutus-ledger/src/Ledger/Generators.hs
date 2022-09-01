@@ -75,13 +75,14 @@ import Ledger (Ada, CurrencySymbol, Interval, POSIXTime (POSIXTime, getPOSIXTime
                RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
                TokenName,
                Tx (txCollateral, txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
-               TxOut (..), TxOutRef (TxOutRef), Value, addSignature', pubKeyTxIn, pubKeyTxOut, txId)
+               TxOut (..), TxOutRef (TxOutRef), Value, addSignature', pubKeyTxIn, pubKeyTxOut)
 import Ledger qualified
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Generators.Internal
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx qualified as Tx
 import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Numeric.Natural (Natural)
@@ -124,13 +125,19 @@ genMockchain' :: MonadGen m
     => GeneratorModel
     -> m Mockchain
 genMockchain' gm = do
-    let (txn, ot) = genInitialTransaction gm
-        tid = txId txn
     slotCfg <- genSlotConfig
+    let (txn, ot) = genInitialTransaction gm
+        params = def { pSlotConfig = slotCfg }
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params mempty
+        signedTx = Validation.fromPlutusTxSigned params cUtxoIndex txn CW.knownPaymentKeys
+        -- There is a problem that txId of emulator tx and tx of cardano tx are different.
+        -- We convert the emulator tx to cardano tx here to get the correct transaction id
+        -- because later we anyway will use the converted cardano tx so the utxo should match it.
+        tid = Tx.getCardanoTxId signedTx
     pure Mockchain {
         mockchainInitialTxPool = [txn],
         mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot,
-        mockchainParams = def { pSlotConfig = slotCfg }
+        mockchainParams = params
         }
 
 -- | Generate a mockchain using the default 'GeneratorModel'.

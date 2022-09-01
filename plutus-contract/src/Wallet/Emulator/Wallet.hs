@@ -337,7 +337,7 @@ handleBalance utx' = do
             theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
             cTx <- handleError (Right tx) $ fromPlutusTx params cUtxoIndex requiredSigners tx
-            pure $ Tx.Both tx (Tx.CardanoApiEmulatorEraTx cTx)
+            pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
         Left txBodyContent -> do
             ownAddr <- gets ownAddress
             cTx <- handleError eitherTx $ makeAutoBalancedTransaction params cUtxoIndex txBodyContent ownAddr
@@ -369,7 +369,6 @@ handleAddSignature tx = do
         Just (SigningProcess sp) -> do
             let ctx = case tx of
                     Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
-                    Tx.Both _ (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
                     _ -> error "handleAddSignature: Need a Cardano API Tx from the Alonzo era to get the required signers"
                 reqSigners = getRequiredSigners ctx
             sp reqSigners tx

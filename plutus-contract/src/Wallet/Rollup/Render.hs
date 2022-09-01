@@ -96,7 +96,7 @@ instance Render [[AnnotatedTx]] where
 
 instance Render AnnotatedTx where
     render AnnotatedTx { txId
-                       , tx = Tx {txOutputs, txMint, txFee, txSignatures}
+                       , tx -- = Tx {txOutputs, txMint, txFee, txSignatures}
                        , dereferencedInputs
                        , balances
                        , valid = True
@@ -104,27 +104,27 @@ instance Render AnnotatedTx where
         vsep <$>
         sequence
             [ heading "TxId:" txId
-            , heading "Fee:" txFee
-            , heading "Mint:" txMint
-            , heading "Signatures" txSignatures
+            -- , heading "Fee:" txFee
+            -- , heading "Mint:" txMint
+            -- , heading "Signatures" txSignatures
             , pure "Inputs:"
             , indent 2 <$> numbered "----" "Input" dereferencedInputs
             , pure line
             , pure "Outputs:"
-            , indent 2 <$> numbered "----" "Output" txOutputs
+            -- , indent 2 <$> numbered "----" "Output" txOutputs
             , pure line
             , pure "Balances Carried Forward:"
             , indented balances
             ]
     render AnnotatedTx { txId
-                       , tx = Tx { txFee }
+                       -- , tx = Tx { txFee }
                        , valid = False
                        } =
         vsep <$>
         sequence
             [ pure "Invalid transaction"
             , heading "TxId:" txId
-            , heading "Fee:" txFee
+            -- , heading "Fee:" txFee
             ]
 
 heading :: Render a => Doc ann -> a -> ReaderT (Map PaymentPubKeyHash Wallet) (Either Text) (Doc ann)

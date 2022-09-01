@@ -42,6 +42,7 @@ getCoverageData :: [EmulatorEvent] -> CoverageData
 getCoverageData es =
   let extractLog e = case e of
         ChainEvent (TxnValidate _ _)             -> []
+        -- TODO: collect executed scripts during validation
         ChainEvent (TxnValidationFail _ _ _ _ _) -> []
         _                                        -> []
 

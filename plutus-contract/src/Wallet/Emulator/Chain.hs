@@ -26,7 +26,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (fromRight)
 import Data.Foldable (traverse_)
 import Data.List ((\\))
-import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
@@ -34,7 +33,6 @@ import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef),
                TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId,
                getCardanoTxValidityRange)
-import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -99,15 +97,15 @@ getCurrentSlot = send GetCurrentSlot
 
 type ChainEffs = '[State ChainState, LogMsg ChainEvent]
 
-handleControlChain :: Members ChainEffs effs => [CW.MockWallet] -> Params -> ChainControlEffect ~> Eff effs
-handleControlChain knownMockWallets params = \case
+handleControlChain :: Members ChainEffs effs => Params -> ChainControlEffect ~> Eff effs
+handleControlChain params = \case
     ProcessBlock -> do
         pool  <- gets $ view txPool
         slot  <- gets $ view currentSlot
         idx   <- gets $ view index
 
         let ValidatedBlock block events idx' =
-                validateBlock params slot idx pool knownMockWallets
+                validateBlock params slot idx pool
 
         modify $ txPool .~ []
         modify $ index .~ idx'
@@ -144,13 +142,13 @@ data ValidationCtx = ValidationCtx { vctxIndex :: Index.UtxoIndex, vctxParams ::
 
 -- | Validate a block given the current slot and UTxO index, returning the valid
 --   transactions, success/failure events and the updated UTxO set.
-validateBlock :: Params -> Slot -> Index.UtxoIndex -> TxPool -> [CW.MockWallet] -> ValidatedBlock
-validateBlock params slot@(Slot s) idx txns knownMockWallets =
+validateBlock :: Params -> Slot -> Index.UtxoIndex -> TxPool -> ValidatedBlock
+validateBlock params slot@(Slot s) idx txns =
     let
         -- Validate transactions, updating the UTXO index each time
         (processed, ValidationCtx idx' _) =
             flip S.runState (ValidationCtx idx params) $ for txns $ \tx -> do
-                err <- validateEm slot tx knownMockWallets
+                err <- validateEm slot tx
                 pure (tx, err)
 
         -- The new block contains all transaction that were validated
@@ -189,20 +187,18 @@ validateEm
     :: S.MonadState ValidationCtx m
     => Slot
     -> CardanoTx
-    -> [CW.MockWallet]
     -> m (Maybe Index.ValidationErrorInPhase)
-validateEm h txn knownMockWallets = do
+validateEm h txn = do
     ctx@(ValidationCtx idx params) <- S.get
     let
         cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
-        knownMockPaymentKeys = Map.fromList $ map (\mw -> (CW.paymentPubKey mw, CW.paymentPrivateKey mw)) knownMockWallets
-        knownPaymentKeys = CW.knownPaymentKeys <> knownMockPaymentKeys
-        e = Validation.validateCardanoTx params h cUtxoIndex txn knownPaymentKeys
+        e = Validation.validateCardanoTx params h cUtxoIndex txn
         idx' = case e of
             Just (Index.Phase1, _) -> idx
             Just (Index.Phase2, _) -> Index.insertCollateral txn idx
             Nothing                -> Index.insert txn idx
     _ <- S.put ctx{ vctxIndex = idx' }
+    -- pure (trace ("validateEm: e : " ++ show e) $ trace ("validateEm: idx : " ++ show idx) $ trace ("validateEm: idx' : " ++ show idx') $ trace ("validateEm: txn : " ++ show (getCardanoTxId txn, txn)) e)
     pure e
 
 -- | Adds a block to ChainState, without validation.

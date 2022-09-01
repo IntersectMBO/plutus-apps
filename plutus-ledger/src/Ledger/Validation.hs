@@ -29,6 +29,8 @@ module Ledger.Validation(
   setUtxo,
   -- * Conversion from Plutus types
   fromPlutusTx,
+  fromPlutusTxSigned,
+  fromPlutusTxSigned',
   fromPlutusIndex,
   fromPlutusTxOut,
   fromPlutusTxOutUnsafe,
@@ -62,7 +64,6 @@ import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, Mempoo
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Applicative ((<|>))
 import Control.Lens (_1, makeLenses, over, (&), (.~), (^.))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
@@ -75,15 +76,14 @@ import Data.Maybe (catMaybes)
 import Data.Text qualified as Text
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as Address
-import Ledger.Blockchain qualified as Blockchain
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto qualified as Crypto
 import Ledger.Generators.Internal (Mockchain (Mockchain))
 import Ledger.Index.Internal qualified as P
 import Ledger.Params (EmulatorEra, emulatorGlobals, emulatorPParams)
 import Ledger.Params qualified as P
-import Ledger.Tx (CardanoTx (CardanoApiTx, EmulatorTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx),
-                  addCardanoTxSignature, mergeCardanoTxWith, onCardanoTx)
+import Ledger.Tx (CardanoTx (CardanoApiTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), addCardanoTxSignature,
+                  onCardanoTx)
 import Ledger.Tx.CardanoAPI qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
 import Plutus.V1.Ledger.Api qualified as P
@@ -203,11 +203,10 @@ applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
 
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> P.Tx -> Maybe P.ValidationErrorInPhase
-validateMockchain (Mockchain txPool _ params) tx = result where
-    h      = 1
-    idx    = P.initialise [map (Blockchain.Valid . EmulatorTx) txPool]
-    cUtxoIndex = either (error . show) id $ fromPlutusIndex params idx
-    result = validateCardanoTx params h cUtxoIndex (EmulatorTx tx) CW.knownPaymentKeys
+validateMockchain (Mockchain _ utxo params) tx = result where
+    cUtxoIndex = either (error . show) id $ fromPlutusIndex params (P.UtxoIndex utxo)
+    signTx t = fromPlutusTxSigned params cUtxoIndex t CW.knownPaymentKeys
+    result = validateCardanoTx params 1 cUtxoIndex (signTx tx)
 
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
 hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
@@ -231,27 +230,12 @@ validateCardanoTx
   -> Slot
   -> UTxO EmulatorEra
   -> CardanoTx
-  -> Map.Map Address.PaymentPubKey Address.PaymentPrivateKey
   -> Maybe P.ValidationErrorInPhase
-validateCardanoTx params slot utxo txn knownPaymentKeys =
-  let
-    getPublicKeys = Map.keys . P.txSignatures
-    privateKeys = onCardanoTx
-        (map Address.unPaymentPrivateKey . catMaybes .
-            map (flip Map.lookup knownPaymentKeys) .
-            map Address.PaymentPubKey . getPublicKeys)
-        (const []) txn
-    signTx tx = foldl' (flip addCardanoTxSignature) tx privateKeys
-    convertTx tx = fmap (flip SomeTx C.AlonzoEraInCardanoMode) $ fromPlutusTx params utxo (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys tx) tx
-  in
-    case onCardanoTx convertTx Right txn of
-      Left (Left e) -> Just e
-      Left (Right e) -> error ("validateCardanoTx: failed with ToCardanoError " ++ show e)
-      Right someTx ->
-        signTx (CardanoApiTx someTx) & mergeCardanoTxWith
-          (\_ -> error "validateCardanoTx: EmulatorTx is not supported")
-          (\(CardanoApiEmulatorEraTx tx) -> if utxo == UTxO (Map.fromList []) then Nothing else hasValidationErrors params (fromIntegral slot) utxo tx)
-          (\e1 e2 -> e2 <|> e1)
+validateCardanoTx params slot utxo txn =
+  onCardanoTx
+      (\_ -> error "validateCardanoTx: EmulatorTx is not supported")
+      (\(CardanoApiEmulatorEraTx tx) -> if utxo == UTxO (Map.fromList []) then Nothing else hasValidationErrors params (fromIntegral slot) utxo tx)
+      txn
 
 {- Note [Second phase validation]
 There are two phases of transaction validation:
@@ -304,6 +288,34 @@ evaluateMinLovelaceOutput params = toPlutusValue . C.Ledger.evaluateMinLovelaceO
   where
     toPlutusValue :: Coin -> P.Ada
     toPlutusValue (Coin c) = P.lovelaceOf c
+
+fromPlutusTxSigned'
+  :: P.Params
+  -> UTxO EmulatorEra
+  -> P.Tx
+  -> Map.Map Address.PaymentPubKey Address.PaymentPrivateKey
+  -> Either CardanoLedgerError CardanoTx
+fromPlutusTxSigned' params utxo tx knownPaymentKeys =
+  let
+    getPublicKeys = Map.keys . P.txSignatures
+    privateKeys =
+        (map Address.unPaymentPrivateKey . catMaybes .
+            map (flip Map.lookup knownPaymentKeys) .
+            map Address.PaymentPubKey . getPublicKeys) tx
+    signTx txn = foldl' (flip addCardanoTxSignature) txn privateKeys
+    convertTx t = fmap (flip SomeTx C.AlonzoEraInCardanoMode) $ fromPlutusTx params utxo (map (Address.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys t) t
+  in
+    signTx . CardanoApiTx <$> convertTx tx
+
+fromPlutusTxSigned
+  :: P.Params
+  -> UTxO EmulatorEra
+  -> P.Tx
+  -> Map.Map Address.PaymentPubKey Address.PaymentPrivateKey
+  -> CardanoTx
+fromPlutusTxSigned params utxo tx knownPaymentKeys = case fromPlutusTxSigned' params utxo tx knownPaymentKeys of
+  Left e  -> error ("fromPlutusTxSigned: failed to convert " ++ show e)
+  Right t -> t
 
 fromPlutusTx
   :: P.Params

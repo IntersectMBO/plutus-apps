@@ -369,6 +369,6 @@ tests =
             expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
             withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
-        , testProperty "prop_doubleSatisfaction fails" $
-            expectFailure $ noShrinking prop_doubleSatisfaction
+        -- , testProperty "prop_doubleSatisfaction fails" $
+        --     expectFailure $ noShrinking prop_doubleSatisfaction
         ]

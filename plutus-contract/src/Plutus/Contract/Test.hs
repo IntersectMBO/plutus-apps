@@ -80,7 +80,7 @@ import Control.Applicative (liftA2)
 import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
-import Control.Lens (_Left, at, ix, makeLenses, over, preview, to, (&), (.~), (^.))
+import Control.Lens (_Left, at, ix, makeLenses, over, preview, (&), (.~), (^.))
 import Control.Monad (unless)
 import Control.Monad.Freer (Eff, interpretM, runM)
 import Control.Monad.Freer.Error (Error, runError)
@@ -254,7 +254,7 @@ checkPredicateInnerStream :: forall m.
     -> (CoverageData -> m ())
     -> m ()
 checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePredicate predicate) theStream annot assert cover = do
-    let dist = _emulatorConfig ^. initialChainState . to initialDist
+    let dist = initialDist _emulatorConfig
         consumedStream :: Eff (TestEffects :++: '[m]) Bool
         consumedStream = S.fst' <$> foldEmulatorStreamM (liftA2 (&&) predicate generateCoverage) theStream
 

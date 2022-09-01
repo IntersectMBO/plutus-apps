@@ -196,7 +196,7 @@ getDSCounterexamples params cs = go 0 mempty cs
       TxnValidate _ txn ->
           let
               cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
-              e' = Validation.validateCardanoTx params slot cUtxoIndex txn CW.knownPaymentKeys
+              e' = Validation.validateCardanoTx params slot cUtxoIndex txn
               idx' = case e' of
                   Just (Index.Phase1, _) -> idx
                   Just (Index.Phase2, _) -> Index.insertCollateral txn idx
@@ -219,7 +219,6 @@ getDSCounterexamples params cs = go 0 mempty cs
 doubleSatisfactionCandidates :: Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
   TxnValidate txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
-  TxnValidate txid (Both tx _)     -> [WrappedTx txid tx idx slot params]
   _                                -> []
 
 -- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
@@ -228,7 +227,8 @@ validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
     cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsParams _dsUtxoIndex
-    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex (EmulatorTx _dsTx) CW.knownPaymentKeys
+    signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
+    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
   in e'
 
 -- | Run validation for a `WrappedTx`. Returns @True@ if successful.

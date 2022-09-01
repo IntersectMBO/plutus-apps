@@ -478,17 +478,15 @@ runChainEffects ::
     -> Eff (Chain.ChainEffect ': Chain.ChainControlEffect ': Chain.ChainEffs) a
     -> Eff effs a
 runChainEffects params action = do
-    SimulatorState{_chainState, _agentStates} <- ask @(SimulatorState t)
+    SimulatorState{_chainState} <- ask @(SimulatorState t)
     (a, logs) <- liftIO $ STM.atomically $ do
                         oldState <- STM.readTVar _chainState
-                        agentStates <- STM.readTVar _agentStates
-                        let knownMockWallets = map (Wallet._mockWallet . _walletState) $ Map.elems agentStates
-                            ((a, newState), logs) =
+                        let ((a, newState), logs) =
                                 run
                                 $ runWriter @[LogMessage Chain.ChainEvent]
                                 $ reinterpret @(LogMsg Chain.ChainEvent) @(Writer [LogMessage Chain.ChainEvent]) (handleLogWriter _singleton)
                                 $ runState oldState
-                                $ interpret (Chain.handleControlChain knownMockWallets params)
+                                $ interpret (Chain.handleControlChain params)
                                 $ interpret (Chain.handleChain params) action
                         STM.writeTVar _chainState newState
                         pure (a, logs)
