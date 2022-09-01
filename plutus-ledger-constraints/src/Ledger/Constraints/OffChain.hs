@@ -693,10 +693,10 @@ processConstraint = \case
             unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
             valueSpentInputs <>= provided value
           _ -> throwError (TxOutRefWrongType txo)
-    MustUseOutputAsCollateral _ -> do
-        pure () -- TODO
+    MustUseOutputAsCollateral txo -> do
+        unbalancedTx . tx . Tx.collateralInputs <>= [Tx.pubKeyTxIn txo]
     MustReferenceOutput txo -> do
-        unbalancedTx . tx . Tx.referenceInputs %= (Tx.pubKeyTxIn txo :)
+        unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxIn txo]
     MustMintValue mpsHash red tn i -> do
         mintingPolicyScript <- lookupMintingPolicy mpsHash
         -- See note [Mint and Fee fields must have ada symbol].
