@@ -49,15 +49,12 @@ common lang
 library
   import:          lang
   exposed-modules:
-    RewindableIndex.Index.Split
-    RewindableIndex.Index.Sqlite
     RewindableIndex.Index.VSplit
     RewindableIndex.Index.VSqlite
 
   hs-source-dirs:  src
   build-depends:
     , base           >=4.7 && <5
-    , containers
     , lens
     , primitive
     , sqlite-simple
@@ -69,15 +66,12 @@ test-suite rewindable-index-test
   main-is:        Spec.hs
   other-modules:
     RewindableIndex.Model
-    RewindableIndex.Spec.Split
-    RewindableIndex.Spec.Sqlite
     RewindableIndex.Spec.VSplit
     RewindableIndex.Spec.VSqlite
 
   hs-source-dirs: test
   build-depends:
     , base              >=4.7 && <5
-    , containers
     , data-default
     , lens
     , primitive
