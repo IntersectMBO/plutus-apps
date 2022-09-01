@@ -133,11 +133,9 @@ query ix addr updates = do
 
 store :: UtxoIndex -> IO ()
 store ix = do
-  events <- Ix.getEvents $ ix ^. Ix.storage
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let all'  = buffer ++ events
-      utxos = concatMap toRows all'
-      spent = concatMap (toList . _inputs) all'
+  let utxos = concatMap toRows buffer
+      spent = concatMap (toList . _inputs) buffer
       c     = ix ^. Ix.handle
 
   SQL.execute_ c "BEGIN"

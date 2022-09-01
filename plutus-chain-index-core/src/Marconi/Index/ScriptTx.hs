@@ -106,11 +106,9 @@ open dbPath (Depth k) = do
 
     store :: ScriptTxIndex -> IO ()
     store ix = do
-      persisted <- Ix.getEvents $ ix ^. Ix.storage
       buffered <- Ix.getBuffer $ ix ^. Ix.storage
-      let updates = buffered ++ persisted :: [ScriptTxUpdate]
-          rows = do
-            ScriptTxUpdate txScriptAddrs _slotNo <- updates
+      let rows = do
+            ScriptTxUpdate txScriptAddrs _slotNo <- buffered
             (txCbor', scriptAddrs) <- txScriptAddrs
             scriptAddr <- scriptAddrs
             pure $ ScriptTxRow scriptAddr txCbor'
