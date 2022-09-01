@@ -141,7 +141,8 @@ test-suite marconi-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base             >=4.9 && <5
+    , aeson
+    , base                  >=4.9 && <5
     , containers
     , directory
     , filepath
@@ -149,3 +150,5 @@ test-suite marconi-test
     , hedgehog-extras
     , tasty
     , tasty-hedgehog
+    , text
+    , unordered-containers
