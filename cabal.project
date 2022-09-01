@@ -1,10 +1,10 @@
 -- Bump this if you need newer packages.
-index-state: 2022-04-06T00:00:00Z
+index-state: 2022-02-22T20:47:03Z
 
 packages: doc
           freer-extras
           playground-common
-          plutus-blockfrost
+          pab-blockfrost
           plutus-chain-index
           plutus-chain-index-core
           plutus-contract

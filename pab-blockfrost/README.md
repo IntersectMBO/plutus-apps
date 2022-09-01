@@ -4,7 +4,7 @@ How to integrate this version of plutus-apps into your contracts:
 
 ## Usage
 
-Add `plutus-blockfrost` to the list of subdirs in plutus-apps in the .cabal file
+Add `pab-blockfrost` to plutus-apps' subdir list of your `cabal.project` file.
 
 ## PAB Config 
  
