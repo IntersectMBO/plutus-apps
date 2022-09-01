@@ -68,8 +68,7 @@ test-suite rewindable-index-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
-    RewindableIndex.Index
-    RewindableIndex.Spec.Index
+    RewindableIndex.Model
     RewindableIndex.Spec.Split
     RewindableIndex.Spec.Sqlite
     RewindableIndex.Spec.VSplit

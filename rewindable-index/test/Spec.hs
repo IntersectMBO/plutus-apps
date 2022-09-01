@@ -1,7 +1,7 @@
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty, withMaxSuccess)
 
-import RewindableIndex.Spec.Index qualified as Ix
+import RewindableIndex.Model qualified as Ix
 import RewindableIndex.Spec.Split qualified as S
 import RewindableIndex.Spec.Sqlite qualified as Sqlite
 import RewindableIndex.Spec.VSplit qualified as V

@@ -10,12 +10,12 @@ import Data.Sequence qualified as Seq
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import RewindableIndex.Index (Index, IndexView (IndexView, ixDepth, ixSize, ixView))
-import RewindableIndex.Index qualified as Ix
 import RewindableIndex.Index.Split (SplitIndex (SplitIndex, siBuffered, siDepth, siEvents, siHandle, siNotifications, siQuery),
                                     size)
 import RewindableIndex.Index.Split qualified as S
-import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
+import RewindableIndex.Model (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView), Index,
+                              IndexView (IndexView, ixDepth, ixSize, ixView))
+import RewindableIndex.Model qualified as Ix
 
 conversion :: (Show s, Show e, Show n, Default s) => Conversion (PropertyM IO) s e n
 conversion = Conversion

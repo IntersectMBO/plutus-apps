@@ -12,12 +12,11 @@ import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 import Test.QuickCheck.Monadic qualified as M
 
-import RewindableIndex.Index (Index, IndexView)
-import RewindableIndex.Index qualified as Ix
 import RewindableIndex.Index.Split (SplitIndex (SplitIndex, siBuffered, siEvents, siHandle))
 import RewindableIndex.Index.Sqlite (SqliteIndex)
 import RewindableIndex.Index.Sqlite qualified as S
-import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
+import RewindableIndex.Model (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView), Index, IndexView)
+import RewindableIndex.Model qualified as Ix
 import RewindableIndex.Spec.Split (getHistory', getNotifications', view')
 
 conversion

@@ -14,11 +14,11 @@ import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
 
-import RewindableIndex.Index (Index, IndexView (IndexView, ixDepth, ixSize, ixView))
-import RewindableIndex.Index qualified as Ix
 import RewindableIndex.Index.VSplit (SplitIndex)
 import RewindableIndex.Index.VSplit qualified as S
-import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
+import RewindableIndex.Model (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView), Index,
+                              IndexView (IndexView, ixDepth, ixSize, ixView))
+import RewindableIndex.Model qualified as Ix
 
 conversion
   :: Show s
