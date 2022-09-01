@@ -8,14 +8,11 @@
 module Spec.TxConstraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
-import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
 import Data.Map qualified as Map
+import Data.Text qualified as Text
 import Data.Void (Void)
-import Test.Tasty (TestTree, testGroup)
-
-import Data.List (isSubsequenceOf)
 import Ledger (POSIXTimeRange)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -32,10 +29,11 @@ import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Interval (contains, from)
 import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
+import Test.Tasty (TestTree, testGroup)
 import Wallet.Emulator.Stream (params)
 
 tests :: TestTree
@@ -88,7 +86,7 @@ protocolV5 :: TestTree
 protocolV5 = checkPredicateOptions
     (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
     "tx valid time interval is not supported in protocol v5"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (C.Ledger.ValidationFailedV1 _ ("Invalid range":_)) -> True; _ -> False  }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
     (void trace)
 
 protocolV6 :: TestTree
@@ -161,8 +159,8 @@ defaultProtocolParamsValidCardano = checkPredicateOptions
 
 outsideValidityIntervalError :: Ledger.ValidationError -> Bool
 outsideValidityIntervalError = \case
-    Ledger.ApplyTxError err ->
-        "OutsideValidityIntervalUTxO" `isSubsequenceOf` show err
+    Ledger.CardanoLedgerValidationError msg ->
+        "OutsideValidityIntervalUTxO" `Text.isInfixOf` msg
     _ -> False
 
 -- | Past range are rejected

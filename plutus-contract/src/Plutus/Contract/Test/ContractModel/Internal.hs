@@ -212,9 +212,8 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Plutus.V1.Ledger.Ada qualified as Ada
 
-import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Ledger.Index as Index
+import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Value (AssetClass)
 import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
@@ -1913,12 +1912,10 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     checkOffchain :: TracePredicate
     checkOffchain = assertFailedTransaction (\ _ ve -> case ve of {ScriptFailure e -> checkEvent e; _ -> False})
 
-    checkEvent :: (C.Ledger.ScriptFailure StandardCrypto) -> Bool
-    checkEvent (C.Ledger.ValidationFailedV1 _ msgs) | "CekEvaluationFailure" `Text.isPrefixOf` (Text.concat msgs) = listToMaybe (reverse msgs) `isAcceptedBy` whitelist
-    checkEvent (C.Ledger.ValidationFailedV2 _ msgs) | "CekEvaluationFailure" `Text.isPrefixOf` (Text.concat msgs) = listToMaybe (reverse msgs) `isAcceptedBy` whitelist
-    checkEvent (C.Ledger.ValidationFailedV1 _ msgs) | "BuiltinEvaluationFailure" `Text.isPrefixOf` (Text.concat msgs) = False
-    checkEvent (C.Ledger.ValidationFailedV2 _ msgs) | "BuiltinEvaluationFailure" `Text.isPrefixOf` (Text.concat msgs) = False
-    checkEvent _                                            = False
+    checkEvent :: ScriptError -> Bool
+    checkEvent (EvaluationError log msg) | "CekEvaluationFailure" `isPrefixOf` msg = listToMaybe (reverse log) `isAcceptedBy` whitelist
+    checkEvent (EvaluationError _ msg) | "BuiltinEvaluationFailure" `isPrefixOf` msg = False
+    checkEvent _ = False
 
     checkEvents :: [ChainEvent] -> Bool
     checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _) <- events ]

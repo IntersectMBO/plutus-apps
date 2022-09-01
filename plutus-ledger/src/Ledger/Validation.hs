@@ -72,6 +72,7 @@ import Data.Foldable (foldl')
 import Data.Functor.Identity (runIdentity)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
+import Data.Text qualified as Text
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as Address
 import Ledger.Blockchain qualified as Blockchain
@@ -86,6 +87,7 @@ import Ledger.Tx (CardanoTx (CardanoApiTx, EmulatorTx), SomeCardanoApiTx (Cardan
 import Ledger.Tx.CardanoAPI qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
 import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx qualified as P
 import PlutusTx.Builtins qualified as Builtins
@@ -195,7 +197,7 @@ applyTx ::
   Tx EmulatorEra ->
   Either P.ValidationError (EmulatedLedgerState, Validated (Tx EmulatorEra))
 applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  (newMempool, vtx) <- first P.ApplyTxError (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
+  (newMempool, vtx) <- first (P.CardanoLedgerValidationError . Text.pack . show) (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
@@ -221,7 +223,7 @@ hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
   where
     state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
-      vtx <- first P.UtxosPredicateFailure (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (fst (_memPoolState state)) tx)
+      vtx <- first (P.CardanoLedgerValidationError . Text.pack . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (fst (_memPoolState state)) tx)
       applyTx params state vtx
 
 validateCardanoTx
@@ -270,7 +272,7 @@ when we will fix the rest failing tests.
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
   case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
-    Left e      -> Left . Left . (P.Phase1,) . P.BasicFailure $ e
+    Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . Text.pack . show $ e
     Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
   where
     eg = emulatorGlobals params
@@ -280,7 +282,11 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
     -- See note [Second phase validation]
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
-    toCardanoLedgerError e = Left $ Left (P.Phase2, P.ScriptFailure e)
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
+      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
+    toCardanoLedgerError (C.Ledger.ValidationFailedV2 (P.CekError ce) logs) =
+      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
+    toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError $ Text.pack $ show e)
 
 makeTransactionBody
   :: P.Params

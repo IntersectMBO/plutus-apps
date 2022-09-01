@@ -11,9 +11,9 @@ import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Data.Maybe (fromJust)
 import Data.String (fromString)
+import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet as CW
@@ -29,7 +29,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, mockWalletPaymentPubKey, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Scripts (unitDatum)
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)
 import PlutusTx qualified
 import Prelude
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
@@ -114,7 +114,7 @@ otherWalletNoSigningProcess =
             void $ Trace.activateContractWallet w1 $ mustBeSignedByContract pk pkh
             void $ Trace.waitNSlots 1
     in checkPredicateOptions defaultCheckOptions "without Trace.setSigningProcess fails phase-1 validation"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ApplyTxError _ -> True; _ -> False  }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
     (void trace)
 
 withoutOffChainMustBeSignedBy :: TestTree -- there's no "required signer" in the txbody logs but still passes phase-2 so it must be there. Raised https://github.com/input-output-hk/plutus-apps/issues/645. It'd be good to check log output for expected required signer pubkey in these tests.
@@ -136,7 +136,7 @@ phase2FailureMustBeSignedBy =
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract pk pkh
             void $ Trace.waitNSlots 1
     in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain mustBeSignedBy constraint validation"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (C.Ledger.ValidationFailedV1 _ ("L4":_) ) -> True; Ledger.ScriptFailure (C.Ledger.ValidationFailedV2 _ ("L4":_) ) -> True; _ -> False  }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
     (void trace)
 
 {-
