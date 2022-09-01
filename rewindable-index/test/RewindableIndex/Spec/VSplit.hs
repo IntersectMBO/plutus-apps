@@ -33,31 +33,31 @@ conversion = Conversion
   , cMonadic       = monadic
   }
 
-getNotifications'
+getNotifications
   :: SplitIndex m h v e n q r
   -> [n]
-getNotifications' ix = ix ^. S.notifications
+getNotifications ix = ix ^. S.notifications
 
-getHistory'
+getHistory
   :: PrimMonad m
   => VGM.MVector (VG.Mutable v) e
   => Show e
   => SplitIndex m h v e n q r
   -> q
   -> m [r]
-getHistory' ix q = do
+getHistory ix q = do
   es <- S.getEvents (ix ^. S.storage)
   traverse ((ix ^. S.query) ix q) $ tails es
 
-view'
+getView
   :: PrimMonad m
   => VGM.MVector (VG.Mutable v) e
   => Show e
   => SplitIndex m h v e n q r
   -> q
   -> m (IndexView r)
-view' ix q = do
-  hs <- getHistory' ix q
+getView ix q = do
+  hs <- getHistory ix q
   pure $ IndexView { ixDepth = ix ^. S.storage . S.k + 1
                    , ixView  = head hs
                    , ixSize  = S.size ix
@@ -71,7 +71,7 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      v <- view' ix' ()
+      v <- getView ix' ()
       pure $ Just v
 
 notifications
@@ -81,7 +81,7 @@ notifications
 notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
-  pure $ getNotifications' ix'
+  pure $ getNotifications ix'
 
 history
   :: (Show s, Show e, Show n, Default s)
@@ -92,7 +92,7 @@ history ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- getHistory' ix' ()
+      h <- getHistory ix' ()
       pure $ Just h
 
 monadic
@@ -100,8 +100,6 @@ monadic
   -> Property
 monadic = monadicIO
 
-{- | TODO: Make the case why this interpretation tests something useful.
--}
 run
   :: forall s e n. (Show s, Show e, Show n, Default s)
   => Index s e n

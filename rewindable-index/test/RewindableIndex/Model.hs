@@ -29,11 +29,8 @@ module RewindableIndex.Model
   ) where
 
 import Control.Monad (replicateM)
--- import Data.Maybe (fromJust, maybeToList)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
--- import Test.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Gen, arbitrarySizedIntegral, chooseInt, frequency,
---                         shrinkNothing, sized)
 
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (foldl', isPrefixOf, scanl')
