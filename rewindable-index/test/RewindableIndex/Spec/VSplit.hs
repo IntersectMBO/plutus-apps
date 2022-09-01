@@ -2,19 +2,23 @@ module RewindableIndex.Spec.VSplit where
 
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Primitive (PrimMonad)
 import Data.Default (Default)
+import Data.List (tails)
 import Data.Maybe (catMaybes)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
 import Control.Lens ((^.))
 import Data.Vector qualified as V
+import Data.Vector.Generic qualified as VG
+import Data.Vector.Generic.Mutable qualified as VGM
 
-import RewindableIndex.Index (Index, IndexView)
-import RewindableIndex.Index qualified as Ix
 import RewindableIndex.Index.VSplit (SplitIndex)
 import RewindableIndex.Index.VSplit qualified as S
-import RewindableIndex.Spec.Index (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView))
+import RewindableIndex.Model (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView), Index,
+                              IndexView (IndexView, ixDepth, ixSize, ixView))
+import RewindableIndex.Model qualified as Ix
 
 conversion
   :: Show s
@@ -29,6 +33,35 @@ conversion = Conversion
   , cMonadic       = monadic
   }
 
+getNotifications
+  :: SplitIndex m h v e n q r
+  -> [n]
+getNotifications ix = ix ^. S.notifications
+
+getHistory
+  :: PrimMonad m
+  => VGM.MVector (VG.Mutable v) e
+  => Show e
+  => SplitIndex m h v e n q r
+  -> q
+  -> m [r]
+getHistory ix q = do
+  es <- S.getEvents (ix ^. S.storage)
+  traverse ((ix ^. S.query) ix q) $ tails es
+
+getView
+  :: PrimMonad m
+  => VGM.MVector (VG.Mutable v) e
+  => Show e
+  => SplitIndex m h v e n q r
+  -> q
+  -> m (IndexView r)
+getView ix q = do
+  hs <- getHistory ix q
+  pure $ IndexView { ixDepth = ix ^. S.storage . S.k + 1
+                   , ixView  = head hs
+                   , ixSize  = S.size ix
+                   }
 view
   :: (Show s, Show e, Show n, Default s)
   => Index s e n
@@ -38,7 +71,7 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      v <- S.view ix' ()
+      v <- getView ix' ()
       pure $ Just v
 
 notifications
@@ -48,7 +81,7 @@ notifications
 notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
-  pure $ S.getNotifications ix'
+  pure $ getNotifications ix'
 
 history
   :: (Show s, Show e, Show n, Default s)
@@ -59,7 +92,7 @@ history ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- S.getHistory ix' ()
+      h <- getHistory ix' ()
       pure $ Just h
 
 monadic
@@ -67,8 +100,6 @@ monadic
   -> Property
 monadic = monadicIO
 
-{- | TODO: Make the case why this interpretation tests something useful.
--}
 run
   :: forall s e n. (Show s, Show e, Show n, Default s)
   => Index s e n
