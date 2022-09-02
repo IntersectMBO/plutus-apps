@@ -354,7 +354,7 @@ fromLedgerScript C.ShelleyBasedEraAlonzo script = fromAlonzoLedgerScript script
 fromAlonzoLedgerScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Script)
 fromAlonzoLedgerScript Alonzo.TimelockScript {} = Nothing
 fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
-  let script = fmap (\s -> (P.scriptHash s, s))
+  let script = fmap (\s -> (P.scriptHash s, s :: P.Script))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs

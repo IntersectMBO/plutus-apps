@@ -126,18 +126,18 @@ query ix addr updates = do
   storedUtxos <- SQL.query c "SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?" (Only addr)
   let memoryUtxos  = concatMap (filter (onlyAt addr) . toRows) updates
       spentOutputs = foldl' Set.union Set.empty $ map _inputs updates
-  pure . Just $ storedUtxos ++ memoryUtxos
+  buffered <- Ix.getBuffer $ ix ^. Ix.storage
+  let bufferedUtxos = concatMap (filter (onlyAt addr) . toRows) buffered
+  pure . Just $ storedUtxos ++ bufferedUtxos ++ memoryUtxos
               -- Remove utxos that have been spent (from memory db).
               & filter (\u -> not (_reference u `Set.member` spentOutputs))
               & map _reference
 
 store :: UtxoIndex -> IO ()
 store ix = do
-  events <- Ix.getEvents $ ix ^. Ix.storage
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let all'  = buffer ++ events
-      utxos = concatMap toRows all'
-      spent = concatMap (toList . _inputs) all'
+  let utxos = concatMap toRows buffer
+      spent = concatMap (toList . _inputs) buffer
       c     = ix ^. Ix.handle
 
   SQL.execute_ c "BEGIN"

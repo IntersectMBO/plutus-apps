@@ -1,7 +1,7 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
-
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 module Main where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
@@ -20,6 +20,7 @@ import Control.Exception (catch)
 import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (void, when)
 import Data.ByteString.Char8 qualified as C8
+
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (assocs)
@@ -29,10 +30,13 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (IsString)
 import Ledger (TxIn (..), TxOut (..), TxOutRef (..))
+import Ledger.Scripts as Ledger
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
-                             scriptDataFromCardanoTxBody)
+                             scriptDataFromCardanoTxBody, withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
+import Marconi.Index.ScriptTx ()
+import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
@@ -40,7 +44,6 @@ import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', 
                             metavar, option, readerError, strOption, (<**>), (<|>))
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
-import Plutus.V1.Ledger.Api (Datum, DatumHash)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 import RewindableIndex.Index.VSplit qualified as Ix
@@ -56,11 +59,12 @@ import Streaming.Prelude qualified as S
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
 data Options = Options
-  { optionsSocketPath :: String,
-    optionsNetworkId  :: NetworkId,
-    optionsChainPoint :: ChainPoint,
-    optionsUtxoPath   :: Maybe FilePath,
-    optionsDatumPath  :: Maybe FilePath
+  { optionsSocketPath   :: String,
+    optionsNetworkId    :: NetworkId,
+    optionsChainPoint   :: ChainPoint,
+    optionsUtxoPath     :: Maybe FilePath,
+    optionsDatumPath    :: Maybe FilePath,
+    optionsScriptTxPath :: Maybe FilePath
   }
   deriving (Show)
 
@@ -75,6 +79,7 @@ optionsParser =
     <*> chainPointParser
     <*> optStrParser (long "utxo-db" <> help "Path to the utxo database.")
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
+    <*> optStrParser (long "script-tx-db" <> help "Path to the script transactions' database.")
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
 optStrParser fields = Just <$> strOption fields <|> pure Nothing
@@ -223,16 +228,39 @@ utxoWorker Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= 
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
+scriptTxWorker
+  :: Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO ()
+scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Depth 2160) >>= loop
+  where
+    loop :: ScriptTx.ScriptTxIndex -> IO ()
+    loop index = do
+      signalQSemN _barrier 1
+      event <- atomically $ readTChan ch
+      case event of
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs :: Block era) era :: BlockInMode CardanoMode) _ct -> do
+          withIsCardanoEra era (Ix.insert (ScriptTx.toUpdate txs slotNo) index >>= loop)
+        RollBackward cp _ct -> do
+          events <- Ix.getEvents (index ^. Ix.storage)
+          loop $
+            fromMaybe index $ do
+              slot   <- chainPointToSlotNo cp
+              offset <- findIndex  (\u -> ScriptTx.slotNo u < slot) events
+              Ix.rewind offset index
+
 combinedIndexer
   :: Maybe FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath = S.foldM_ step initial finish
+combinedIndexer utxoPath datumPath scriptTxPath = S.foldM_ step initial finish
   where
     initial :: IO Coordinator
     initial = do
-      let indexerCount = length . catMaybes $ [utxoPath, datumPath]
+      let indexerCount = length . catMaybes $ [utxoPath, datumPath, scriptTxPath]
       coordinator <- initialCoordinator indexerCount
       when (isJust datumPath) $ do
         ch <- atomically . dupTChan $ _channel coordinator
@@ -240,6 +268,9 @@ combinedIndexer utxoPath datumPath = S.foldM_ step initial finish
       when (isJust utxoPath) $ do
         ch <- atomically . dupTChan $ _channel coordinator
         void . forkIO . utxoWorker coordinator ch $ fromJust utxoPath
+      when (isJust scriptTxPath) $ do
+        ch <- atomically . dupTChan $ _channel coordinator
+        void . forkIO . scriptTxWorker coordinator ch $ fromJust scriptTxPath
       pure coordinator
 
     step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
@@ -257,7 +288,8 @@ main = do
           , optionsNetworkId
           , optionsChainPoint
           , optionsUtxoPath
-          , optionsDatumPath } <- parseOptions
+          , optionsDatumPath
+          , optionsScriptTxPath } <- parseOptions
 
   c <- defaultConfigStdout
 
@@ -266,7 +298,7 @@ main = do
       optionsSocketPath
       optionsNetworkId
       optionsChainPoint
-      (combinedIndexer optionsUtxoPath optionsDatumPath . logging trace)
+      (combinedIndexer optionsUtxoPath optionsDatumPath optionsScriptTxPath . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $
