@@ -577,18 +577,23 @@ mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
     }
 
 {-# INLINABLE mustUseOutputAsCollateral #-}
--- | TODO
+-- | @mustUseOutputAsCollateral utxo@ must use the given unspent transaction output
+-- reference as collateral input.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint adds @utxo@ as a
+-- collateral input to the transaction.
+--
+-- In 'Ledger.Constraints.OnChain' this constraint has no effect, since
+-- no information about collateral inputs is passed to the scripts.
 mustUseOutputAsCollateral :: forall i o. TxOutRef -> TxConstraints i o
 mustUseOutputAsCollateral = singleton . MustUseOutputAsCollateral
 
 {-# INLINABLE mustReferenceOutput #-}
 -- | @mustReferenceOutput utxo@ must reference (not spend!) the given
--- unspent transaction output.
+-- unspent transaction output reference.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint adds @utxo@ as a
--- reference input to the transaction. Information about this @utxo@ must be
--- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.unspentOutputs'.
+-- reference input to the transaction.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction references this @utxo@.

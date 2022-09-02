@@ -21,8 +21,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, toTxOut, unitDatum,
-                         unitRedeemer)
+import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, toTxOut, txInRef,
+                         unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential)
 import Ledger.Constraints qualified as Constraints
@@ -33,7 +33,7 @@ import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Ledger
 import Ledger.Params ()
-import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
+import Ledger.Tx (Tx (txCollateral, txOutputs), TxOut (TxOut, txOutAddress))
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Generators qualified as Gen
@@ -56,6 +56,7 @@ tests = testGroup "all tests"
     , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash" "mustPayToPubKeyAddressStakePubKeyNotNothingProp" mustPayToPubKeyAddressStakePubKeyNotNothingProp
     , testPropertyNamed "mustSpendScriptOutputWithMatchingDatumAndValue" "testMustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
     , testPropertyNamed "mustPayToOtherScriptAddress should create output addresses with stake validator hash" "mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
+    , testPropertyNamed "mustUseOutputAsCollateral should add a collateral input" "mustUseOutputAsCollateralProp" mustUseOutputAsCollateralProp
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.
@@ -147,6 +148,20 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
           case stakeCred of
             StakingHash (ScriptCredential (Ledger.ValidatorHash svh)) -> Just $ Ledger.StakeValidatorHash svh
             _                                                         -> Nothing
+
+mustUseOutputAsCollateralProp :: Property
+mustUseOutputAsCollateralProp = property $ do
+    pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
+    let txOutRef = Ledger.TxOutRef (Ledger.TxId "123") 0
+        txE = Constraints.mkTx @Void mempty (Constraints.mustUseOutputAsCollateral txOutRef)
+    case txE of
+        Left e -> do
+            Hedgehog.annotateShow e
+            Hedgehog.failure
+        Right utx -> do
+            let coll = txCollateral (view OC.tx utx)
+            Hedgehog.assert $ length coll == 1
+            Hedgehog.assert $ Ledger.txInRef (head coll) == txOutRef
 
 -- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
 testScriptInputs

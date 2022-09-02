@@ -152,7 +152,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
         $ any (all (checkTxConstraint ctx)) xs
     MustUseOutputAsCollateral _ ->
-        True -- TODO
+        True -- TxInfo does not have the collateral inputs
     MustReferenceOutput txOutRef ->
         traceIfFalse "Lf" -- "Output not referenced"
         $ isJust (PV2.findTxRefInByTxOutRef txOutRef scriptContextTxInfo)
