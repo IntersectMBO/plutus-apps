@@ -29,9 +29,8 @@ import System.FilePath ((</>))
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
--- cardano-testnet
 import Cardano.Api qualified as C
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson ((.:))
 import Data.Function ((&))
 import Data.Functor ((<&>))
@@ -56,8 +55,30 @@ instance Aeson.FromJSON Utxo where
     <$> v .: "address"
     <*> v .: "value"
 
+-- * Tmp
+
+p :: (MonadIO m) => String -> m ()
+p = liftIO . putStrLn
+
+p2 :: (Show a, MonadIO m) => String -> a -> m ()
+p2 str a = liftIO $ putStrLn $ str <> ": " <> show a
+
+pause :: MonadIO m => m ()
+pause = liftIO readLn
+
+exit :: String -> m ()
+exit = error
+
+exit_ :: m ()
+exit_ = exit "MANUAL EXIT"
+
 main :: IO ()
 main = defaultMain tests
+
+-- /Tmp
+
+readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
+readAs as path = H.leftFailM . liftIO $ C.readFileTextEnvelope as path
 
 tests :: TestTree
 tests = testGroup "Integration"
@@ -65,18 +86,29 @@ tests = testGroup "Integration"
 
 testIndex :: Property
 testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
+
   base <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
+
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
-    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
+      (tempAbsBasePath' <> "/")
+      Nothing
+
+  H.threadDelay 10000
+  p "\n\n"
+  p2 "tempAbsPath" tempAbsPath -- "/tmp/chairman/$random/"
+  p2 "base" base -- current git repo dir
 
   TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
   let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
 
+  let socketFilePath = IO.sprocketArgumentName (head bftSprockets)
+  p2 "socketFilePath" socketFilePath
+
   env <- H.evalIO IO.getEnvironment
 
-  let socketFilePath = IO.sprocketArgumentName (head bftSprockets)
-  execConfig <- H.noteShow H.ExecConfig
+  execConfig <- eval H.ExecConfig
         { H.execConfigEnv = Last $ Just $
           [ ("CARDANO_NODE_SOCKET_PATH", socketFilePath)
           ]
@@ -88,23 +120,18 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   H.note_ base
   work <- H.note tempAbsPath
+
+  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
+        && tempAbsPath == (tempBaseAbsPath <> "/")
+        && work == (tempAbsBasePath' <> "/")
+
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
 
   plutusScriptFileInUse <- H.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
-  plutusScript <-
-      C.PlutusScript C.PlutusScriptV1 <$>
-          (H.leftFailM . liftIO $
-              C.readFileTextEnvelope
-                  (C.AsPlutusScript C.AsPlutusScriptV1)
-                  plutusScriptFileInUse
-          )
 
-  -- This datum hash is the hash of the untyped 42
-  let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
-
-  datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
-  redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
+  plutusScript <- C.PlutusScript C.PlutusScriptV1
+    <$> readAs (C.AsPlutusScript C.AsPlutusScriptV1) plutusScriptFileInUse
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
@@ -126,15 +153,24 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
             C.NoStakeAddress
 
   -- TODO Create the address using Cardano.Api
+
+  -- (readAs is a helper defined above)
+  x <- readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
+  p2 "x" x
+  y <- readAs (C.AsVerificationKey C.AsVrfKey) utxoVKeyFile
+  p2 "y" y
+
   utxoAddr <- H.execCli
     [ "address", "build"
     , "--testnet-magic", show @Int testnetMagic
     , "--payment-verification-key-file", utxoVKeyFile
     ]
+  p2 "utxoAddr" utxoAddr
+  exit_
 
   -- TODO Query the utxo using the query interface of the node
   void $ H.execCli' execConfig
-    [ "query", "utxo"
+    [ "query", "utxo" -- this fails
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
@@ -163,6 +199,9 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Convert the string 'dummyAddressBech32' into an actual 'C.Address C.ShelleyAddr'.
   dummyAddress <- H.leftFail $ C.deserialiseFromBech32 (C.AsAddress C.AsShelleyAddr) dummyAddressBech32
+
+  -- This datum hash is the hash of the untyped 42
+  let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 
   -- TODO Create with Cardano.Api.TxBody instead of the CLI
   void $ H.execCli' execConfig
@@ -201,6 +240,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   -- Boilerplate codecs used for protocol serialisation.
   -- The number of epochSlots is specific to each blockchain instance. This value
   -- what the cardano main and testnet uses. Only applies to the Byron era.
+  p2 "work </> socketFilePath" $ work </> socketFilePath
   let epochSlots = C.EpochSlots 21600
       localNodeConnectInfo =
           C.LocalNodeConnectInfo
@@ -221,6 +261,9 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
         - Run the Marconi indexer
         - Query the Marconi indexer and see that it returns a single script (which has the same hash as the one we initially used).
   -}
+
+  datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
+  redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
 
   -- Just to get a test going...
   "2" === ("2" :: Text)
