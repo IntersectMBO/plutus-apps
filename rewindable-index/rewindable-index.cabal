@@ -40,6 +40,7 @@ common lang
     Strict
     TemplateHaskell
     TypeApplications
+    TypeFamilies
 
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wunused-packages
@@ -49,8 +50,10 @@ common lang
 library
   import:          lang
   exposed-modules:
+    RewindableIndex.Index
     RewindableIndex.Index.VSplit
     RewindableIndex.Index.VSqlite
+    RewindableIndex.Storable
 
   hs-source-dirs:  src
   build-depends:
