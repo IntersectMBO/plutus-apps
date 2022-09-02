@@ -19,7 +19,7 @@ import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Orphans ()
 import Ledger.Slot qualified as Slot
-import Ledger.Tx.Internal (Tx, TxIn)
+import Ledger.Tx.Internal (Tx, TxIn, TxOut)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Tx qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
@@ -27,7 +27,7 @@ import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))
 
 -- | The UTxOs of a blockchain indexed by their references.
-newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef PV1.TxOut }
+newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef TxOut }
     deriving stock (Show, Generic)
     deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON, NFData)
@@ -35,7 +35,7 @@ newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef PV1.TxOut }
 
 -- | A reason why a transaction is invalid.
 data ValidationError =
-    InOutTypeMismatch TxIn PV1.TxOut
+    InOutTypeMismatch TxIn TxOut
     -- ^ A pay-to-pubkey output was consumed by a pay-to-script input or vice versa, or the 'TxIn' refers to a different public key than the 'TxOut'.
     | TxOutRefNotFound PV1.TxOutRef
     -- ^ The transaction output consumed by a transaction input could not be found (either because it was already spent, or because
@@ -52,7 +52,7 @@ data ValidationError =
     -- ^ The amount spent by the transaction differs from the amount consumed by it.
     | NegativeValue Tx
     -- ^ The transaction produces an output with a negative value.
-    | ValueContainsLessThanMinAda Tx PV1.TxOut V.Value
+    | ValueContainsLessThanMinAda Tx TxOut V.Value
     -- ^ The transaction produces an output with a value containing less than the minimum required Ada.
     | NonAdaFees Tx
     -- ^ The fee is not denominated entirely in Ada.

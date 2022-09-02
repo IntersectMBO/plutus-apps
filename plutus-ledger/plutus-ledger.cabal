@@ -81,6 +81,7 @@ library
     Ledger.Tokens
     Ledger.Tx
     Ledger.Tx.CardanoAPI
+    Ledger.Tx.CardanoAPI.Internal
     Ledger.Tx.Internal
     Ledger.Tx.Orphans
     Ledger.Tx.Orphans.V1

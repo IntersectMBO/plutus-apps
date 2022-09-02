@@ -42,12 +42,10 @@ addressRoundTripSpec = property $ do
     shelleyAddr <- shelleyAddressInEra
                <$> forAll (makeShelleyAddress networkId <$> genPaymentCredential
                                                         <*> genStakeAddressReference)
-    case fromCardanoAddressInEra shelleyAddr of
-        Left _ -> Hedgehog.assert False
-        Right plutusAddr ->
-            case toCardanoAddressInEra networkId plutusAddr of
-                Left _      -> Hedgehog.assert False
-                Right cAddr -> cAddr === shelleyAddr
+    let plutusAddr = fromCardanoAddressInEra shelleyAddr
+    case toCardanoAddressInEra networkId plutusAddr of
+        Left _      -> Hedgehog.assert False
+        Right cAddr -> cAddr === shelleyAddr
 
 -- Copied from Gen.Cardano.Api.Typed, because it's not exported.
 genPaymentCredential :: Gen PaymentCredential

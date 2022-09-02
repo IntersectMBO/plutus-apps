@@ -41,9 +41,10 @@ import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
+import Data.Bitraversable (bisequence)
 import Ledger.Blockchain
 import Ledger.Tx (CardanoTx, TxIn (..), TxOut (..), TxOutRef (..), getCardanoTxId, getCardanoTxOutputs,
-                  getCardanoTxUnspentOutputsTx)
+                  getCardanoTxUnspentOutputsTx, txOutAddress, txOutValue)
 import Plutus.V1.Ledger.Address (Address (..))
 import Plutus.V1.Ledger.Value (Value)
 

@@ -112,9 +112,9 @@ deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
-deriving instance OpenApi.ToSchema TxOutRef
 deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema TxIn
+deriving instance OpenApi.ToSchema TxOutRef
 deriving instance OpenApi.ToSchema PV1.TxOut
 deriving instance OpenApi.ToSchema PV2.TxOut
 deriving instance OpenApi.ToSchema Language
