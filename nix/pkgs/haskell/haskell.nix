@@ -47,6 +47,7 @@ let
         ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
           packages = {
             # Things that need plutus-tx-plugin
+            marconi.package.buildable = false;
             playground-common.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;

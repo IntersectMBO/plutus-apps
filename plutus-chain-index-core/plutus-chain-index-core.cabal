@@ -75,19 +75,14 @@ library
     , freer-extras
     , plutus-ledger
     , plutus-script-utils
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
     , cardano-api
-    , cardano-binary
-    , cardano-ledger-alonzo
     , cardano-ledger-byron
     , cardano-ledger-core
-    , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , io-classes
     , iohk-monitoring
     , ouroboros-consensus
@@ -123,7 +118,6 @@ library
     , lens
     , memory
     , mtl
-    , mwc-random
     , nothunks
     , openapi3
     , prettyprinter         >=1.1.0.1
@@ -160,7 +154,6 @@ test-suite plutus-chain-index-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-api:gen
     , freer-extras
     , plutus-chain-index-core
     , plutus-ledger
@@ -169,7 +162,6 @@ test-suite plutus-chain-index-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
     , plutus-ledger-api
     , plutus-tx
 
