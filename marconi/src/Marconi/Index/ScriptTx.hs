@@ -20,7 +20,7 @@ import GHC.Generics (Generic)
 import Cardano.Api (SlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
--- | TODO Remove the following dependencies (and also cardano-ledger-*
+-- TODO Remove the following dependencies (and also cardano-ledger-*
 -- package dependencies in cabal file) when fromShelleyBasedScript is
 -- exported from cardano-node PR:
 -- https://github.com/input-output-hk/cardano-node/pull/4386
@@ -124,7 +124,7 @@ open dbPath (Depth k) = do
         filterByScriptAddress :: [ScriptTxUpdate] -> [TxCbor]
         filterByScriptAddress updates' = do
           ScriptTxUpdate update _slotNo <- updates'
-          map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) (update )
+          map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) update
       in do
       persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
         "SELECT txCbor FROM utxos WHERE scriptAddress = ?" (SQL.Only scriptAddress')

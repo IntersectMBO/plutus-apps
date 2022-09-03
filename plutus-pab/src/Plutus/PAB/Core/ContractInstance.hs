@@ -43,16 +43,19 @@ import Control.Monad (forM_, void)
 import Control.Monad.Freer (Eff, LastMember, Member, raise, type (~>))
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logInfo)
+import Control.Monad.Freer.NonDet (NonDet)
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson (Value)
 import Data.IORef (IORef, readIORef)
 import Data.Maybe (fromMaybe)
+import Data.Monoid (Sum (Sum))
 import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
-import Plutus.PAB.Core.TxConfirmationStatus (TCSIndex)
-import RewindableIndex.Index.VSplit qualified as Ix
-
+import Ledger (TxId, TxOutRef (..))
+import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxOutState (..),
+                          TxOutStatus, TxStatus, TxValidity (..), transactionOutputState)
+import Plutus.ChainIndex.UtxoState (UtxoState (_usTxUtxoData), utxoState)
 import Plutus.Contract.Effects (ActiveEndpoint (aeDescription),
                                 PABReq (AwaitUtxoProducedReq, AwaitUtxoSpentReq, ExposeEndpointReq),
                                 PABResp (AwaitSlotResp, AwaitTimeResp, AwaitTxOutStatusChangeResp, AwaitTxStatusChangeResp, AwaitUtxoProducedResp, AwaitUtxoSpentResp, ExposeEndpointResp))
@@ -64,27 +67,21 @@ import Plutus.Contract.Trace.RequestHandler (RequestHandler (RequestHandler), Re
                                              maybeToHandler, tryHandler', wrapHandler)
 import Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (ActivatedContractInstance, HandlingRequests, InitialisingContract))
 import Plutus.PAB.Core.ContractInstance.RequestHandlers qualified as RequestHandlers
-
-import Wallet.Effects (NodeClientEffect, WalletEffect)
-import Wallet.Emulator.LogMessages (TxBalanceMsg)
-import Wallet.Emulator.Wallet qualified as Wallet
-
-import Control.Monad.Freer.NonDet (NonDet)
-import Data.Monoid (Sum (Sum))
-import Ledger (TxId, TxOutRef (..))
-import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxOutState (..),
-                          TxOutStatus, TxStatus, TxValidity (..), transactionOutputState)
-import Plutus.ChainIndex.UtxoState (UtxoState (_usTxUtxoData), utxoState)
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Done, Stopped), BlockchainEnv (..),
                                              InstanceState (InstanceState, issStop), InstancesState,
                                              callEndpointOnInstance, emptyInstanceState)
 import Plutus.PAB.Core.ContractInstance.STM qualified as InstanceState
+import Plutus.PAB.Core.Indexer.TxConfirmationStatus (TCSIndex)
 import Plutus.PAB.Effects.Contract (ContractEffect, ContractStore, PABContract (ContractDef, serialisableState))
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.UUID (UUIDEffect, uuidNextRandom)
 import Plutus.PAB.Events.Contract (ContractInstanceId (ContractInstanceId))
 import Plutus.PAB.Types (PABError)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import RewindableIndex.Index.VSplit qualified as Ix
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.Wallet qualified as Wallet
 
 -- | Container for holding a few bits of state related to the contract
 -- instance that we may want to pass in.
