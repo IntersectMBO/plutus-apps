@@ -11,6 +11,9 @@ module Ledger.Constraints(
     , TC.mustPayToPubKeyAddress
     , TC.mustPayWithDatumToPubKey
     , TC.mustPayWithDatumToPubKeyAddress
+    , TC.mustPayToAddressWithReferenceScript
+    , TC.mustPayToAddressWithReferenceValidator
+    , TC.mustPayToAddressWithReferenceMintingPolicy
     , TC.mustMintCurrency
     , TC.mustMintCurrencyWithRedeemer
     , TC.mustMintValue
@@ -21,7 +24,7 @@ module Ledger.Constraints(
     , TC.mustSpendScriptOutput
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
     , TC.mustUseOutputAsCollateral
-    , TC.mustReferencePubKeyOutput
+    , TC.mustReferenceOutput
     , TC.mustValidateIn
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast
@@ -50,10 +53,12 @@ module Ledger.Constraints(
     , OC.mkSomeTx
     -- ** Lookups
     , OC.ScriptLookups(..)
-    , OC.plutusV1TypedValidatorLookups
+    , OC.typedValidatorLookups
     , OC.unspentOutputs
+    , OC.mintingPolicy
     , OC.plutusV1MintingPolicy
     , OC.plutusV2MintingPolicy
+    , OC.otherScript
     , OC.plutusV1OtherScript
     , OC.plutusV2OtherScript
     , OC.otherData

@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE ViewPatterns        #-}
 {-| The chain index' version of a transaction
 -}
 module Plutus.ChainIndex.Tx(
@@ -129,7 +130,6 @@ fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) =
     either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
 
-
 -- TODO: the index of the txin is probably incorrect as we take it from the set.
 -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
 -- sort them by using the standard `Ord` instance.
@@ -144,5 +144,5 @@ calculateRedeemerPointers tx = spends <> rewards <> mints <> certs
         spends = Map.fromList $ mapMaybe (uncurry getRd) $ zip [0..] $ fmap txInputType $ sort $ txInputs tx
 
         getRd n = \case
-            TxConsumeScriptAddress _ rd _ _ -> Just (RedeemerPtr Spend n, rd)
-            _                               -> Nothing
+            TxConsumeScriptAddress rd _ _ -> Just (RedeemerPtr Spend n, rd)
+            _                             -> Nothing

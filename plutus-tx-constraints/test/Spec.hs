@@ -7,14 +7,14 @@ module Main(main) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (toListOf, view)
+import Control.Lens (preview, toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (ask)
 import Data.ByteString qualified as BS
 import Data.Default (def)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Void (Void)
 import Hedgehog (Property, annotateShow, forAll, property, (===))
 import Hedgehog qualified
@@ -91,9 +91,9 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             Hedgehog.annotateShow err
             Hedgehog.failure
         Right utx -> do
-            let tx = either id (error "Unexpected enulator tx") (OC.unBalancedTxTx utx)
-            let outputs = view OC.txOuts tx
-            let stakingCreds = mapMaybe stakePaymentPubKeyHash outputs
+            let tx = fromMaybe (error "Unexpected emulator tx") (preview OC.tx utx)
+                outputs = view OC.txOuts tx
+                stakingCreds = mapMaybe stakePaymentPubKeyHash outputs
             Hedgehog.assert $ not $ null stakingCreds
             forM_ stakingCreds ((===) skh)
     where
@@ -104,6 +104,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             case stakeCred of
                 StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh
                 _                                  -> Nothing
+
 
 -- txOut0 :: Ledger.ChainIndexTxOut
 -- txOut0 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing) (Left alwaysSucceedValidatorHash) (Right Ledger.unitDatum) mempty

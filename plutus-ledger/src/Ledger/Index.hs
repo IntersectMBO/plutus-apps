@@ -80,12 +80,11 @@ import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash, mintingPolicyHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose))
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
@@ -93,6 +92,7 @@ import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value qualified as V
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusPrelude (first)
+import PlutusTx (toBuiltinData)
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Prelude qualified as P
 
@@ -243,22 +243,23 @@ checkMintingAuthorised tx =
     in
         traverse_ (throwError . MintWithoutScript) mintedWithoutScript
 
--- TODO Needs to be change to support V2 minting policy scripts.
--- For now, this function runs the minting policy script with a V1
--- ScriptContext. However, transactions can contain V1 AND V2 scripts, so we
--- need to handle both.
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
-    txinfo <- mkPV1TxInfo tx
     forM_ (Map.assocs $ txMintingScripts tx) $ \(mph, red) -> do
         let cs :: V.CurrencySymbol
             cs = V.mpsSymbol mph
-            ctx :: Context
-            ctx = Context $ PV1.toBuiltinData $ ScriptContext { scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txinfo }
 
-        mp <- case lookupMintingPolicy (txScripts tx) mph of
-            Just vl | PV1.mintingPolicyHash vl == mph -> pure vl
-            _                                         -> throwError $ MintWithoutScript mph
+        Versioned mp lang <- case lookupMintingPolicy (txScripts tx) mph of
+            Just vl | mintingPolicyHash vl == mph -> pure vl
+            _                                     -> throwError $ MintWithoutScript mph
+
+        ctx <-
+            if lang == PlutusV1 then do
+                txInfo <- mkPV1TxInfo tx
+                pure $ Context $ toBuiltinData $ PV1.ScriptContext { PV1.scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txInfo }
+            else do
+                txInfo <- mkPV2TxInfo tx
+                pure $ Context $ toBuiltinData $ PV2.ScriptContext { PV2.scriptContextPurpose = PV2.Minting cs, PV2.scriptContextTxInfo = txInfo }
 
         case runExcept $ runMintingPolicyScript ctx mp red of
             Left e  -> do
@@ -269,7 +270,7 @@ checkMintingScripts tx = do
 -- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
 data InOutMatch =
     ScriptMatch
-        LedgerPlutusVersion
+        Language
         TxOutRef
         Validator
         Redeemer
@@ -290,7 +291,7 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ConsumeScriptAddress lang v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ConsumeScriptAddress (Versioned v lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         case lang of
           PlutusV1 ->
@@ -455,10 +456,10 @@ mkPV1TxInInfo i = do
 mkPV2TxInfo :: ValidationMonad m => Tx -> m PV2.TxInfo
 mkPV2TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
-    txins <- traverse mkPV2TxInInfo $ view inputs tx
+    txIns <- traverse mkPV2TxInInfo $ view inputs tx
     txRefIns <- traverse mkPV2TxInInfo $ view referenceInputs tx
     let ptx = PV2.TxInfo
-            { PV2.txInfoInputs = txins
+            { PV2.txInfoInputs = txIns
             , PV2.txInfoReferenceInputs = txRefIns
             -- See note [Mint and Fee fields must have ada symbol]
             , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> txOutputs tx

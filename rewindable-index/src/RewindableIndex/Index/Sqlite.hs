@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Index.Sqlite
+module RewindableIndex.Index.Sqlite
   ( -- * API
     SqliteIndex
   , new
@@ -16,8 +16,8 @@ import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
 import Database.SQLite.Simple (Connection, open)
 
-import Plutus.HystericalScreams.Index.Split (SplitIndex (..))
-import Plutus.HystericalScreams.Index.Split qualified as S
+import RewindableIndex.Index.Split (SplitIndex (..))
+import RewindableIndex.Index.Split qualified as S
 
 type SqliteIndex e n q r = SplitIndex IO Connection e n q r
 

@@ -56,7 +56,6 @@ import Ledger.Validation qualified as Validation
 import Ledger.Value (adaOnlyValue)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
-import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
 import Streaming qualified as S
@@ -315,8 +314,8 @@ isVulnerable (DoubleSatisfactionCounterexample orig pre post _ _ _) =
 -- a specific datum attached. Even though this doesn't technically matter.
 --
 -- This is not super important, but we want to leave no room for misunderstanding...
-alwaysOkValidator :: Validator
-alwaysOkValidator = mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])
+alwaysOkValidator :: Versioned Validator
+alwaysOkValidator = Versioned (mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])) PlutusV1
 
 doubleSatisfactionCounterexamples :: WrappedTx -> [DoubleSatisfactionCounterexample]
 doubleSatisfactionCounterexamples dsc =
@@ -363,7 +362,7 @@ doubleSatisfactionCounterexamples dsc =
                                         & dsTx   .~ tx
   , let valueStolen0 = dsc & l . outAddress .~ stealerAddr
                            & dsTx . outputs %~ (withDatumOut:)
-                           & dsTx  %~ addScriptTxInput newFakeTxOutRef PlutusV1 alwaysOkValidator redeemerEmpty datumEmpty
+                           & dsTx  %~ addScriptTxInput newFakeTxOutRef alwaysOkValidator redeemerEmpty datumEmpty
                            & dsUtxoIndex %~
                               (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
                                                                          newFakeTxScriptOut m)

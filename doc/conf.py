@@ -31,7 +31,7 @@ if rtd_version not in ["stable", "latest"]:
 
 # -- Project information -----------------------------------------------------
 
-project = 'The Plutus Platform'
+project = 'Plutus Tools SDK User Guide'
 copyright = '2022, IOHK'
 author = 'IOHK'
 

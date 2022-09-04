@@ -159,7 +159,7 @@ data GuessArgs =
 lock :: AsContractError e => Promise () GameSchema e ()
 lock = endpoint @"lock" $ \LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } -> do
     logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
-    let lookups = Constraints.plutusV1TypedValidatorLookups (gameInstance lockArgsGameParam)
+    let lookups = Constraints.typedValidatorLookups (gameInstance lockArgsGameParam)
         tx       = Constraints.mustPayToTheScript (hashString lockArgsSecret) lockArgsValue
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= yieldUnbalancedTx
 
@@ -170,7 +170,7 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -
     logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
     utxos <- fundsAtAddressGeq (gameAddress guessArgsGameParam) (Ada.lovelaceValueOf 1)
 
-    let lookups = Constraints.plutusV1TypedValidatorLookups (gameInstance guessArgsGameParam)
+    let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
         redeemer = clearString guessArgsSecret
         tx       = Constraints.collectFromTheScript utxos redeemer

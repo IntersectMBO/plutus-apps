@@ -164,7 +164,7 @@ vestFundsC
     -> Contract () s T.Text ()
 vestFundsC vesting = do
     let txn = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups $ typedValidator vesting) txn
+    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) txn
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -207,7 +207,7 @@ retrieveFundsC vesting payment = do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
+    mkTxConstraints (Constraints.typedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) txn
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

@@ -11,7 +11,7 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
 import Gen.Cardano.Api.Typed qualified as Gen
 import Ledger.Test (someValidator)
-import Ledger.Tx (Tx (txMint), addMintingPolicy)
+import Ledger.Tx (Language (PlutusV1), Tx (txMint), Versioned (Versioned), addMintingPolicy)
 import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
                              toCardanoTxBodyContent)
 import Ledger.Value qualified as Value
@@ -88,7 +88,7 @@ convertMintingTx = property $ do
       mpsHash = PV1.mintingPolicyHash mps
       vL n = Value.singleton (Value.mpsSymbol mpsHash) "L" n
       tx   = mempty { txMint = vL 1 }
-          & addMintingPolicy mps unitRedeemer
+          & addMintingPolicy (Versioned mps PlutusV1) unitRedeemer
       ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody mempty
   case ectx of
     -- Check that the converted tx contains exactly one script

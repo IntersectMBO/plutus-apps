@@ -101,15 +101,15 @@ validateCreate :: Uniswap
                -> Bool
 validateCreate Uniswap{..} c lps lp@LiquidityPool{..} ctx =
     traceIfFalse "Uniswap coin not present" (isUnity (valueWithin $ findOwnInput' ctx) usCoin)          && -- 1.
-    Constraints.checkOwnOutputConstraint ctx (ScriptOutputConstraint (Factory $ lp : lps) $ unitValue usCoin) && -- 2.
+    Constraints.checkOwnOutputConstraint ctx (ScriptOutputConstraint (Factory $ lp : lps) (unitValue usCoin) Nothing) && -- 2.
     (unCoin lpCoinA /= unCoin lpCoinB)                                                                  && -- 3.
     notElem lp lps                                                                                      && -- 4.
     isUnity minted c                                                                                    && -- 5.
     (amountOf minted liquidityCoin' == liquidity)                                                       && -- 6.
     (outA > 0)                                                                                          && -- 7.
     (outB > 0)                                                                                          && -- 8.
-    Constraints.checkOwnOutputConstraint ctx (ScriptOutputConstraint (Pool lp liquidity) $                       -- 9.
-        valueOf lpCoinA outA <> valueOf lpCoinB outB <> unitValue c)
+    Constraints.checkOwnOutputConstraint ctx (ScriptOutputConstraint (Pool lp liquidity)                        -- 9.
+        (valueOf lpCoinA outA <> valueOf lpCoinB outB <> unitValue c) Nothing)
   where
     poolOutput :: TxOut
     poolOutput = case [o | o <- PV1.getContinuingOutputs ctx, isUnity (txOutValue o) c] of
@@ -133,7 +133,7 @@ validateCloseFactory Uniswap{..} c lps ctx =
     traceIfFalse "Uniswap coin not present" (isUnity (valueWithin $ findOwnInput' ctx) usCoin)                          && -- 1.
     traceIfFalse "wrong mint value"        (txInfoMint info == negate (unitValue c <>  valueOf lC (snd lpLiquidity))) && -- 2.
     traceIfFalse "factory output wrong"                                                                                    -- 3.
-        (Constraints.checkOwnOutputConstraint ctx $ ScriptOutputConstraint (Factory $ filter (/= fst lpLiquidity) lps) $ unitValue usCoin)
+        (Constraints.checkOwnOutputConstraint ctx $ ScriptOutputConstraint (Factory $ filter (/= fst lpLiquidity) lps) (unitValue usCoin) Nothing)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx

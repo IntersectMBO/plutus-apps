@@ -20,7 +20,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferencePubKeyOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
@@ -70,12 +70,12 @@ checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} ScriptOutputCons
         hsh = PV2.findDatumHash d scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatum=OutputDatumHash dh} =
                Ada.fromValue txOutValue >= Ada.fromValue ocValue
-            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.minAdaTxOut
+            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.maxMinAdaTxOut
             && Value.noAdaValue txOutValue == Value.noAdaValue ocValue
             && hsh == Just dh
         checkOutput TxOut{txOutValue, txOutDatum=OutputDatum id} =
                Ada.fromValue txOutValue >= Ada.fromValue ocValue
-            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.minAdaTxOut
+            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.maxMinAdaTxOut
             && Value.noAdaValue txOutValue == Value.noAdaValue ocValue
             && d == id
         checkOutput _       = False
@@ -115,7 +115,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
+    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _skh mdv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
             hsh dv = PV2.findDatumHash dv scriptContextTxInfo
             checkOutput (Just dv) TxOut{txOutDatum=OutputDatumHash dh} = hsh dv == Just dh
@@ -125,19 +125,19 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "La" -- "MustPayToPubKey"
         $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk && any (checkOutput mdv) outs
-    MustPayToOtherScript vlh _ dv vl ->
+    MustPayToOtherScript vlh _skh dv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
             hsh = PV2.findDatumHash dv scriptContextTxInfo
             addr = Address (ScriptCredential vlh) Nothing
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash dh} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.minAdaTxOut
+                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && Value.noAdaValue txOutValue == Value.noAdaValue vl
                 && hsh == Just dh
                 && txOutAddress == addr
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatum id} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.minAdaTxOut
+                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && Value.noAdaValue txOutValue == Value.noAdaValue vl
                 && dv == id
                 && txOutAddress == addr
@@ -152,9 +152,9 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
         $ any (all (checkTxConstraint ctx)) xs
     MustUseOutputAsCollateral _ ->
-        True -- TODO
-    MustReferencePubKeyOutput txOutRef ->
-        traceIfFalse "Lf" -- "Public key output not referenced"
+        True -- TxInfo does not have the collateral inputs
+    MustReferenceOutput txOutRef ->
+        traceIfFalse "Lf" -- "Output not referenced"
         $ isJust (PV2.findTxRefInByTxOutRef txOutRef scriptContextTxInfo)
 
 {-# INLINABLE checkTxConstraintFun #-}

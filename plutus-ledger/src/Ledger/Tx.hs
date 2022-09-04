@@ -112,7 +112,7 @@ data ChainIndexTxOut =
       -- | Optional datum attached to the transaction output.
       _ciTxOutPublicKeyDatum  :: Maybe (V1.DatumHash, Maybe V1.Datum),
       -- | Optional reference script attached to the transaction output.
-      _ciTxOutReferenceScript :: Maybe V1.Script
+      _ciTxOutReferenceScript :: Maybe (Versioned V1.Script)
     }
   | ScriptChainIndexTxOut {
       -- | Address of the transaction output. The address is protected by a
@@ -127,10 +127,10 @@ data ChainIndexTxOut =
       -- | Optional reference script attached to the transaction output.
       -- The reference script is, in genereal, unrelated to the validator
       -- script althought it could also be the same.
-      _ciTxOutReferenceScript :: Maybe V1.Script,
+      _ciTxOutReferenceScript :: Maybe (Versioned V1.Script),
       -- | Validator protecting the transaction output, either in full or
       -- as a hash reference.
-      _ciTxOutValidator       :: (V1.ValidatorHash, Maybe V1.Validator)
+      _ciTxOutValidator       :: (V1.ValidatorHash, Maybe (Versioned V1.Validator))
     }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 

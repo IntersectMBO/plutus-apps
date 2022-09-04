@@ -33,12 +33,11 @@ import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Address (..), Script, ScriptHash, TxOutRef)
+import Ledger (Address (..), Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash, TxId, TxOutRef)
 import Ledger.Ada qualified as Ada
 import Ledger.Credential (Credential)
-import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash)
-import Ledger.Tx (TxId)
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
+import Ledger.Tx (Versioned)
+import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
                              txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
@@ -122,7 +121,7 @@ txAssetClassMap =
 data DiskState =
     DiskState
         { _DataMap       :: Map DatumHash Datum
-        , _ScriptMap     :: Map ScriptHash Script
+        , _ScriptMap     :: Map ScriptHash (Versioned Script)
         , _RedeemerMap   :: Map RedeemerHash Redeemer
         , _TxMap         :: Map TxId ChainIndexTx
         , _AddressMap    :: CredentialMap

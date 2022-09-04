@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Spec.Split where
+module RewindableIndex.Spec.Split where
 
 import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import Control.Monad.IO.Class (liftIO)
@@ -9,11 +9,11 @@ import Data.Sequence qualified as Seq
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import Plutus.HystericalScreams.Index (Index, IndexView (..))
-import Plutus.HystericalScreams.Index qualified as Ix
-import Plutus.HystericalScreams.Index.Split (SplitIndex (..))
-import Plutus.HystericalScreams.Index.Split qualified as S
-import Plutus.HystericalScreams.Spec.Index (Conversion (..))
+import RewindableIndex.Index (Index, IndexView (..))
+import RewindableIndex.Index qualified as Ix
+import RewindableIndex.Index.Split (SplitIndex (..))
+import RewindableIndex.Index.Split qualified as S
+import RewindableIndex.Spec.Index (Conversion (..))
 
 conversion :: (Show s, Show e, Show n, Default s) => Conversion (PropertyM IO) s e n
 conversion = Conversion

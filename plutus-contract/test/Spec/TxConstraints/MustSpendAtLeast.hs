@@ -13,7 +13,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, plutusV1TypedValidatorLookups,
+import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, typedValidatorLookups,
                                                              unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
@@ -24,7 +24,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, w1)
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -45,13 +45,13 @@ scriptBalance = 25_000_000
 
 mustSpendAtLeastContract :: Integer -> Integer -> Ledger.PaymentPubKeyHash-> Contract () Empty ContractError ()
 mustSpendAtLeastContract offAmt onAmt pkh = do
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScript onAmt (Ada.lovelaceValueOf scriptBalance)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt scrAddress
-    let lookups2 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
@@ -138,9 +138,6 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
-
-validatorScript :: Validator
-validatorScript = Scripts.validatorScript typedValidator
 
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash typedValidator

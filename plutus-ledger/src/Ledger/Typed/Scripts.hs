@@ -1,7 +1,5 @@
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE GADTs                #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -13,10 +11,10 @@ module Ledger.Typed.Scripts
   , makeTypedScriptTxIn
   ) where
 
-import Ledger.Tx.Internal (LedgerPlutusVersion, TxIn (TxIn), TxInType (ConsumeScriptAddress))
+import Ledger.Tx.Internal (TxIn (TxIn), TxInType (ConsumeScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
+import Plutus.Script.Utils.Typed as Export
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
-import Plutus.Script.Utils.V1.Typed.TypeUtils as Export
 import Plutus.V1.Ledger.Api (Datum (Datum), Redeemer (Redeemer), ToData (..))
 
 -- | A 'TxIn' tagged by two phantom types: a list of the types of the data scripts in the transaction; and the connection type of the input.
@@ -34,15 +32,14 @@ instance Eq (DatumType a) => Eq (TypedScriptTxIn a) where
 makeTypedScriptTxIn ::
   forall inn.
   (ToData (RedeemerType inn), ToData (DatumType inn)) =>
-  LedgerPlutusVersion ->
   TypedValidator inn ->
   RedeemerType inn ->
   TypedScriptTxOutRef inn ->
   TypedScriptTxIn inn
-makeTypedScriptTxIn lang si r tyRef =
+makeTypedScriptTxIn si r tyRef =
   let d = Export.tyTxOutData (Export.tyTxOutRefOut tyRef)
-      vs = validatorScript si
+      vs = vValidatorScript si
       rs = Redeemer (toBuiltinData r)
       ds = Datum (toBuiltinData d)
-      txInT = ConsumeScriptAddress lang vs rs ds
+      txInT = ConsumeScriptAddress vs rs ds
    in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef

@@ -75,7 +75,7 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
         address = Scripts.validatorAddress inst
         tx = Constraints.mustPayToTheScript () vl
 
-    ledgerTx <- mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
+    ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     _ <- awaitTxConfirmed (getCardanoTxId ledgerTx)

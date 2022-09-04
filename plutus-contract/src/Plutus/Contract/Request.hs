@@ -128,7 +128,7 @@ import Ledger (AssetClass, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (Payme
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, Versioned, ciTxOutValue, getCardanoTxId)
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
@@ -315,7 +315,7 @@ validatorFromHash ::
     ( AsContractError e
     )
     => ValidatorHash
-    -> Contract w s e (Maybe Validator)
+    -> Contract w s e (Maybe (Versioned Validator))
 validatorFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.ValidatorFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -327,7 +327,7 @@ mintingPolicyFromHash ::
     ( AsContractError e
     )
     => MintingPolicyHash
-    -> Contract w s e (Maybe MintingPolicy)
+    -> Contract w s e (Maybe (Versioned MintingPolicy))
 mintingPolicyFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.MintingPolicyFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -339,7 +339,7 @@ stakeValidatorFromHash ::
     ( AsContractError e
     )
     => StakeValidatorHash
-    -> Contract w s e (Maybe StakeValidator)
+    -> Contract w s e (Maybe (Versioned StakeValidator))
 stakeValidatorFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.StakeValidatorFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -884,7 +884,7 @@ submitTxConstraints
   => TypedValidator a
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
-submitTxConstraints inst = submitTxConstraintsWith (Constraints.plutusV1TypedValidatorLookups inst)
+submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLookups inst)
 
 -- | Build a transaction that satisfies the constraints using the UTXO map
 --   to resolve any input constraints (see 'Ledger.Constraints.TxConstraints.InputConstraint')
@@ -900,7 +900,7 @@ submitTxConstraintsSpending
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
 submitTxConstraintsSpending inst utxo =
-  let lookups = Constraints.plutusV1TypedValidatorLookups inst <> Constraints.unspentOutputs utxo
+  let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
   in submitTxConstraintsWith lookups
 
 {-| A variant of 'mkTx' that runs in the 'Contract' monad, throwing errors and

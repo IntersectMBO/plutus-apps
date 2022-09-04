@@ -8,7 +8,6 @@ packages: doc
           plutus-chain-index-core
           plutus-contract
           plutus-example
-          plutus-hysterical-screams
           plutus-contract-certification
           plutus-ledger
           plutus-ledger-constraints
@@ -19,6 +18,7 @@ packages: doc
           plutus-tx-constraints
           plutus-use-cases
           plutus-streaming
+          rewindable-index
           web-ghc
 
 -- We never, ever, want this.
@@ -240,7 +240,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/input-output-hk/cardano-node
-    tag: 1.35.3-rc1
+    tag: 1.35.3
     subdir:
       cardano-api
       cardano-git-rev

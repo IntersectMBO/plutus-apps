@@ -27,8 +27,8 @@ import Database.SQLite.Simple.ToField (ToField (toField))
 
 import Cardano.Api (SlotNo (SlotNo))
 import Ledger.Scripts (Datum, DatumHash)
-import Plutus.HystericalScreams.Index.VSqlite (SqliteIndex)
-import Plutus.HystericalScreams.Index.VSqlite qualified as Ix
+import RewindableIndex.Index.VSqlite (SqliteIndex)
+import RewindableIndex.Index.VSqlite qualified as Ix
 
 type Event        = [(SlotNo, (DatumHash, Datum))]
 type Query        = DatumHash
