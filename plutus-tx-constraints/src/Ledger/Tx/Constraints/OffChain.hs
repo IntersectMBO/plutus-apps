@@ -50,7 +50,7 @@ module Ledger.Tx.Constraints.OffChain(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Control.Lens (Lens', Traversal', _Left, coerced, iso, makeLensesFor, use, (<>=))
-import Control.Monad.Except (Except, mapExcept, runExcept, throwError)
+import Control.Monad.Except (Except, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (StateT, execStateT, mapStateT)
 
@@ -185,7 +185,7 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} 
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
             -- P.addMissingValueSpent
-            P.updateUtxoIndex
+            mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
 
 -- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
 --   the constraints. To use this in a contract, see

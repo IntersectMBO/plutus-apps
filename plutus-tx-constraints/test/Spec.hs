@@ -27,7 +27,7 @@ import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredenti
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Generators qualified as Gen
-import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
+import Ledger.Tx (Tx (txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Tx.Constraints as Constraints
 import Ledger.Tx.Constraints.OffChain qualified as OC
@@ -99,7 +99,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     where
         stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.BabbageEra -> Maybe StakePubKeyHash
         stakePaymentPubKeyHash (C.TxOut addr _ _ _) = do
-            txOutAddress <- either (const Nothing) Just $ C.fromCardanoAddressInEra addr
+            let txOutAddress = C.fromCardanoAddressInEra addr
             stakeCred <- addressStakingCredential txOutAddress
             case stakeCred of
                 StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh
