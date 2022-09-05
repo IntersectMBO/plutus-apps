@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
 import Control.DeepSeq (NFData, rnf)
-import Control.Lens
+import Control.Lens qualified as L
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.Map (Map)
@@ -79,13 +79,13 @@ instance Pretty TxIn where
                 in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
 
 -- | The 'TxOutRef' spent by a transaction input.
-inRef :: Lens' TxIn TxOutRef
-inRef = lens txInRef s where
+inRef :: L.Lens' TxIn TxOutRef
+inRef = L.lens txInRef s where
     s txi r = txi { txInRef = r }
 
 -- | The type of a transaction input.
-inType :: Lens' TxIn (Maybe TxInType)
-inType = lens txInType s where
+inType :: L.Lens' TxIn (Maybe TxInType)
+inType = L.lens txInType s where
     s txi t = txi { txInType = t }
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
@@ -104,12 +104,12 @@ scriptTxIn :: TxOutRef -> Language -> Validator -> Redeemer -> Datum -> TxIn
 scriptTxIn ref l v r d = TxIn ref . Just $ ConsumeScriptAddress l v r d
 
 -- | Filter to get only the pubkey inputs.
-pubKeyTxIns :: Fold (Set.Set TxIn) TxIn
-pubKeyTxIns = folding (Set.filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
+pubKeyTxIns :: L.Fold (Set.Set TxIn) TxIn
+pubKeyTxIns = L.folding (Set.filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
 
 -- | Filter to get only the script inputs.
-scriptTxIns :: Fold (Set.Set TxIn) TxIn
-scriptTxIns = (\x -> folding x) . Set.filter $ \case
+scriptTxIns :: L.Fold (Set.Set TxIn) TxIn
+scriptTxIns = (\x -> L.folding x) . Set.filter $ \case
     TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
     _                                              -> False
 
@@ -185,62 +185,62 @@ instance BA.ByteArrayAccess Tx where
     withByteArray = BA.withByteArray . Write.toStrictByteString . encode
 
 -- | The inputs of a transaction.
-inputs :: Lens' Tx [TxIn]
-inputs = lens g s where
+inputs :: L.Lens' Tx [TxIn]
+inputs = L.lens g s where
     g = txInputs
     s tx i = tx { txInputs = i }
 
 -- | The reference inputs of a transaction.
-referenceInputs :: Lens' Tx [TxIn]
-referenceInputs = lens g s where
+referenceInputs :: L.Lens' Tx [TxIn]
+referenceInputs = L.lens g s where
     g = txReferenceInputs
     s tx i = tx { txReferenceInputs = i }
 
 -- | The collateral inputs of a transaction for paying fees when validating the transaction fails.
-collateralInputs :: Lens' Tx [TxIn]
-collateralInputs = lens g s where
+collateralInputs :: L.Lens' Tx [TxIn]
+collateralInputs = L.lens g s where
     g = txCollateral
     s tx i = tx { txCollateral = i }
 
 -- | The outputs of a transaction.
-outputs :: Lens' Tx [TxOut]
-outputs = lens g s where
+outputs :: L.Lens' Tx [TxOut]
+outputs = L.lens g s where
     g = txOutputs
     s tx o = tx { txOutputs = o }
 
 -- | The validity range of a transaction.
-validRange :: Lens' Tx SlotRange
-validRange = lens g s where
+validRange :: L.Lens' Tx SlotRange
+validRange = L.lens g s where
     g = txValidRange
     s tx o = tx { txValidRange = o }
 
-signatures :: Lens' Tx (Map PubKey Signature)
-signatures = lens g s where
+signatures :: L.Lens' Tx (Map PubKey Signature)
+signatures = L.lens g s where
     g = txSignatures
     s tx sig = tx { txSignatures = sig }
 
-fee :: Lens' Tx Value
-fee = lens g s where
+fee :: L.Lens' Tx Value
+fee = L.lens g s where
     g = txFee
     s tx v = tx { txFee = v }
 
-mint :: Lens' Tx Value
-mint = lens g s where
+mint :: L.Lens' Tx Value
+mint = L.lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: Lens' Tx (Map.Map MintingPolicyHash MintingPolicy)
-mintScripts = lens g s where
+mintScripts :: L.Lens' Tx (Map.Map MintingPolicyHash MintingPolicy)
+mintScripts = L.lens g s where
     g = txMintScripts
     s tx fs = tx { txMintScripts = fs }
 
-redeemers :: Lens' Tx Redeemers
-redeemers = lens g s where
+redeemers :: L.Lens' Tx Redeemers
+redeemers = L.lens g s where
     g = txRedeemers
     s tx reds = tx { txRedeemers = reds }
 
-datumWitnesses :: Lens' Tx (Map DatumHash Datum)
-datumWitnesses = lens g s where
+datumWitnesses :: L.Lens' Tx (Map DatumHash Datum)
+datumWitnesses = L.lens g s where
     g = txData
     s tx dat = tx { txData = dat }
 
@@ -259,9 +259,15 @@ validValuesTx Tx{..}
   = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
     where
       nonNegative i = V.geq i mempty
+
 txOutValue :: TxOut -> Value
 txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
   fromCardanoValue $ C.txOutValueToValue tov
+
+outValue :: L.Lens TxOut TxOut Value (C.TxOutValue C.BabbageEra)
+outValue = L.lens
+  txOutValue
+  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
 
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
@@ -318,6 +324,16 @@ txOutPubKey (TxOut (C.TxOut aie _ _ _)) = toPubKeyHash $ fromCardanoAddressInEra
 
 txOutAddress :: TxOut -> V1.Address
 txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = fromCardanoAddressInEra aie
+
+outAddress :: L.Lens TxOut TxOut V1.Address (C.AddressInEra C.BabbageEra)
+outAddress = L.lens
+  txOutAddress
+  (\(TxOut (C.TxOut _ tov tod rs)) aie -> TxOut (C.TxOut aie tov tod rs))
+
+outDatumHash :: L.Lens TxOut TxOut (Maybe DatumHash) (C.TxOutDatum C.CtxTx C.BabbageEra)
+outDatumHash = L.lens
+  txOutDatumHash
+  (\(TxOut (C.TxOut aie tov _ rs)) tod -> TxOut (C.TxOut aie tov tod rs))
 
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> [TxOutRef]

@@ -94,8 +94,9 @@ import Cardano.Api.Shelley qualified as C
 import Data.Default (def)
 import Data.Tuple (swap)
 import Ledger.Params (Params (pNetworkId))
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
-                            pubKeyTxIns, scriptTxIn, scriptTxIns, txOutAddress, txOutDatum, txOutDatumHash, txOutPubKey)
+import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress, outValue,
+                            pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutAddress, txOutDatum, txOutDatumHash,
+                            txOutPubKey)
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn (..), TxInType (..))
 
 type PrivateKey = Crypto.XPrv

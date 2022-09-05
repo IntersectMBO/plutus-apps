@@ -13,6 +13,10 @@ module Ledger.Address
     , pubKeyHashAddress
     , pubKeyAddress
     , scriptValidatorHashAddress
+    , xprvToPaymentPubKey
+    , xprvToPaymentPubKeyHash
+    , xprvToStakePubKey
+    , xprvToStakePubKeyHash
     ) where
 
 import Cardano.Crypto.Wallet qualified as Crypto
@@ -21,7 +25,7 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
-import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
+import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash, toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Scripts (StakeValidatorHash (..), ValidatorHash (..))
 import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
@@ -40,12 +44,18 @@ newtype PaymentPubKey = PaymentPubKey { unPaymentPubKey :: PubKey }
     deriving (Show, Pretty) via PubKey
 makeLift ''PaymentPubKey
 
+xprvToPaymentPubKey :: Crypto.XPrv -> PaymentPubKey
+xprvToPaymentPubKey = PaymentPubKey . toPublicKey
+
 newtype PaymentPubKeyHash = PaymentPubKeyHash { unPaymentPubKeyHash :: PubKeyHash }
     deriving stock (Eq, Ord, Generic)
     deriving anyclass (ToJSON, FromJSON, ToJSONKey, FromJSONKey, OpenApi.ToSchema)
     deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, Hashable, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving (Show, Pretty) via PubKeyHash
 makeLift ''PaymentPubKeyHash
+
+xprvToPaymentPubKeyHash :: Crypto.XPrv -> PaymentPubKeyHash
+xprvToPaymentPubKeyHash = PaymentPubKeyHash . pubKeyHash . toPublicKey
 
 newtype StakePubKey = StakePubKey { unStakePubKey :: PubKey }
     deriving stock (Eq, Ord, Generic)
@@ -54,12 +64,18 @@ newtype StakePubKey = StakePubKey { unStakePubKey :: PubKey }
     deriving (Show, Pretty) via PubKey
 makeLift ''StakePubKey
 
+xprvToStakePubKey :: Crypto.XPrv -> StakePubKey
+xprvToStakePubKey = StakePubKey . toPublicKey
+
 newtype StakePubKeyHash = StakePubKeyHash { unStakePubKeyHash :: PubKeyHash }
     deriving stock (Eq, Ord, Generic)
     deriving anyclass (ToJSON, FromJSON, ToJSONKey, FromJSONKey, OpenApi.ToSchema)
     deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, Hashable, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving (Show, Pretty) via PubKeyHash
 makeLift ''StakePubKeyHash
+
+xprvToStakePubKeyHash :: Crypto.XPrv -> StakePubKeyHash
+xprvToStakePubKeyHash = StakePubKeyHash . pubKeyHash . toPublicKey
 
 {-# INLINABLE paymentPubKeyHash #-}
 paymentPubKeyHash :: PaymentPubKey -> PaymentPubKeyHash

@@ -48,11 +48,13 @@ module Ledger.Generators(
     signAll,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys,
+    knownXPrvs,
     someTokenValue,
     genTxInfo
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Crypto.Wallet qualified as Crypto
 import Control.Applicative ((<|>))
 import Control.Lens ((&))
 import Control.Monad (replicateM)
@@ -449,6 +451,9 @@ knownPaymentPublicKeys =
 
 knownPaymentPrivateKeys :: [PaymentPrivateKey]
 knownPaymentPrivateKeys = CW.paymentPrivateKey <$> CW.knownMockWallets
+
+knownXPrvs :: [Crypto.XPrv]
+knownXPrvs = unPaymentPrivateKey <$> knownPaymentPrivateKeys
 
 -- | Seed suitable for testing a seed but not for actual wallets as ScrubbedBytes isn't used to ensure
 --  memory isn't inspectable
