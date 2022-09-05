@@ -13,7 +13,7 @@ import Data.HashMap.Lazy (HashMap)
 import Data.HashMap.Lazy qualified as HM
 import Data.Monoid (Last (Last))
 import Data.Text qualified as T
-import Hedgehog
+import Hedgehog (MonadTest, Property, assert, eval, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
@@ -30,6 +30,8 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
 import Cardano.Api qualified as C
+import Cardano.Api.Byron qualified as C
+import Cardano.Api.Shelley qualified as C
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson ((.:))
 import Data.Function ((&))
@@ -128,10 +130,17 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
 
-  plutusScriptFileInUse <- H.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
 
+  -- Create the Shelley Address from the actual Plutus script.
+  plutusScriptFileInUse <- H.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
   plutusScript <- C.PlutusScript C.PlutusScriptV1
     <$> readAs (C.AsPlutusScript C.AsPlutusScriptV1) plutusScriptFileInUse
+  let
+    plutusScriptAddr =
+      C.makeShelleyAddress
+        networkId
+        (C.PaymentCredentialByScript $ C.hashScript plutusScript)
+        C.NoStakeAddress
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
@@ -145,28 +154,27 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     , "--payment-script-file", plutusScriptFileInUse
     , "--testnet-magic", show @Int testnetMagic
     ]
-  -- Create the Shelley Address from the actual Plutus script.
-  let plutusScriptAddr =
-          C.makeShelleyAddress
-            networkId
-            (C.PaymentCredentialByScript $ C.hashScript plutusScript)
-            C.NoStakeAddress
 
-  -- TODO Create the address using Cardano.Api
+  -- TODO [X] Create the address using Cardano.Api
+  genesisKey :: C.VerificationKey C.GenesisUTxOKey <-
+    readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
 
-  -- (readAs is a helper defined above)
-  x <- readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
-  p2 "x" x
-  y <- readAs (C.AsVerificationKey C.AsVrfKey) utxoVKeyFile
-  p2 "y" y
+  let
+    _ = C.makeShelleyAddress
+      undefined
+      (C.PaymentCredentialByKey (undefined :: C.Hash C.PaymentKey))
+      undefined :: C.Address C.ShelleyAddr
+    -- _ = C.ShelleyAddress
+    --   undefined
+    --   (C.toShelleyPaymentCredential $ C.PaymentCredentialByKey undefined)
 
   utxoAddr <- H.execCli
     [ "address", "build"
     , "--testnet-magic", show @Int testnetMagic
     , "--payment-verification-key-file", utxoVKeyFile
     ]
+  p2 "utxoAddr genesisKey" genesisKey
   p2 "utxoAddr" utxoAddr
-  exit_
 
   -- TODO Query the utxo using the query interface of the node
   void $ H.execCli' execConfig
@@ -176,6 +184,8 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
+
+  exit_
 
   H.cat $ work </> "utxo-1.json"
 
@@ -267,3 +277,12 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Just to get a test going...
   "2" === ("2" :: Text)
+
+
+
+-- toShelleyPaymentCredential :: PaymentCredential
+--                            -> Shelley.PaymentCredential StandardCrypto
+-- toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
+--     Shelley.KeyHashObj kh
+-- toShelleyPaymentCredential (PaymentCredentialByScript sh) =
+--     Shelley.ScriptHashObj (toShelleyScriptHash sh)
