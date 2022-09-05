@@ -84,10 +84,6 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
 
   HE.note_ base
   work <- HE.note tempAbsPath
-  utxoVKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
-  utxoSKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
-
-  plutusScriptFileInUse <- HE.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
 
   submitApiConfigFile <- HE.note configurationFile
   submitApiStdoutFile <- HE.note $ tempAbsPath </> "logs/submit-api.stdout"
@@ -118,20 +114,22 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
   -- by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
   -- in order to accomodate this.
 
+  plutusScriptFileInUse <- HE.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
   plutusScriptAddr <- Test.execCli
     [ "address", "build"
     , "--payment-script-file", plutusScriptFileInUse
     , "--testnet-magic", show @Int testnetMagic
     ]
 
+  -- * utxov
+
+  utxoVKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoAddr <- Test.execCli
     [ "address", "build"
     , "--testnet-magic", show @Int testnetMagic
     , "--payment-verification-key-file", utxoVKeyFile
     ]
-
   liftIO $ print . (\a -> ("utxoVKeyFile",a)) =<< readFile utxoVKeyFile
-
   void $ Test.execCli' execConfig
     [ "query", "utxo"
     , "--address", utxoAddr
@@ -139,14 +137,17 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
-
   HE.cat $ work </> "utxo-1.json"
-
-  utxo1Json <- HE.leftFailM . HE.readJsonFile $ work </> "utxo-1.json"
-  utxo1 <- HE.noteShowM $ HE.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo1Json
+  utxo1 <- do
+    utxo1Json <- HE.leftFailM . HE.readJsonFile $ work </> "utxo-1.json"
+    HE.noteShowM $ HE.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo1Json
   txin <- HE.noteShow $ head $ HM.keys utxo1
-  lovelaceAtTxin <- HE.nothingFailM . HE.noteShow $ utxo1 & HM.lookup txin <&> value >>= HM.lookup "lovelace"
-  lovelaceAtTxinDiv3 <- HE.noteShow $ lovelaceAtTxin `div` 3
+
+  -- /utxov
+
+  lovelaceAtTxinDiv3 <- do
+    lovelaceAtTxin <- HE.nothingFailM . HE.noteShow $ utxo1 & HM.lookup txin <&> value >>= HM.lookup "lovelace"
+    HE.noteShow $ lovelaceAtTxin `div` 3
 
   let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
       targetaddress = "addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh"
@@ -171,6 +172,7 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
     , "--out-file", work </> "create-datum-output.body"
     ]
 
+  utxoSKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
   void $ Test.execCli
     [ "transaction", "sign"
     , "--tx-body-file", work </> "create-datum-output.body"
