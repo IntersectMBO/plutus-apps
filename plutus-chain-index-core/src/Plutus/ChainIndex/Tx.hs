@@ -38,14 +38,12 @@ module Plutus.ChainIndex.Tx(
     , _ValidTx
     ) where
 
-import Cardano.Api (NetworkId)
 import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
-import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOutRef (..), onCardanoTx,
-               txId)
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..), TxOut (getTxOut),
+               TxOutRef (..), onCardanoTx, txId)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
 import Plutus.Script.Utils.Scripts (datumHash, redeemerHash)
@@ -80,8 +78,8 @@ txOutRefMapForAddr addr tx =
 -- | Convert a 'OnChainTx' to a 'ChainIndexTx'. An invalid 'OnChainTx' will not
 -- produce any 'ChainIndexTx' outputs and the collateral inputs of the
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
-fromOnChainTx :: NetworkId -> OnChainTx -> ChainIndexTx
-fromOnChainTx networkId = \case
+fromOnChainTx :: OnChainTx -> ChainIndexTx
+fromOnChainTx = \case
     Valid ctx ->
         onCardanoTx
             (\tx@Tx{txInputs, txOutputs, txValidRange, txData, txMintScripts} ->
@@ -89,9 +87,7 @@ fromOnChainTx networkId = \case
                 ChainIndexTx
                     { _citxTxId = txId tx
                     , _citxInputs = txInputs
-                    , _citxOutputs = case traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) txOutputs of
-                        Right txs -> either (const InvalidTx) ValidTx $ traverse fromCardanoTxOut txs
-                        Left _    -> InvalidTx
+                    , _citxOutputs = ValidTx $ map (fromCardanoTxOut . getTxOut) txOutputs
                     , _citxValidRange = txValidRange
                     , _citxData = txData <> otherDataHashes
                     , _citxRedeemers = redeemers
@@ -120,8 +116,7 @@ fromOnChainTx networkId = \case
 -- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
 -- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
 fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
-fromOnChainCardanoTx validity (SomeTx tx era) =
-    either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
+fromOnChainCardanoTx validity (SomeTx tx era) = fromCardanoTx era $ setValidity validity tx
 
 mintingPolicies :: Map MintingPolicyHash MintingPolicy -> Map ScriptHash Script
 mintingPolicies = Map.fromList . fmap toScript . Map.toList
