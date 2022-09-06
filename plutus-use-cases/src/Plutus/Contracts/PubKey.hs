@@ -26,7 +26,7 @@ import GHC.Generics (Generic)
 import Ledger hiding (initialise, to)
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Contexts as V
+import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified
 
 import Ledger.Constraints qualified as Constraints
