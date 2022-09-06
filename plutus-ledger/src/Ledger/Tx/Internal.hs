@@ -353,3 +353,7 @@ referencedOutputs = map txInRef . txReferenceInputs
 updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
 updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInRef . txCollateral $ tx)
 
+deriving instance OpenApi.ToSchema Tx
+deriving instance OpenApi.ToSchema TxInType
+deriving instance OpenApi.ToSchema TxIn
+deriving instance OpenApi.ToSchema Language
