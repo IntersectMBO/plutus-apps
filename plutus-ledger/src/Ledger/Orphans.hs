@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -29,6 +29,7 @@ import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
+import Ledger.Scripts (Language, Versioned)
 import Ledger.Slot (Slot (Slot))
 import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
@@ -90,7 +91,6 @@ instance OpenApi.ToSchema C.AssetName where
         pure $ OpenApi.NamedSchema (Just "AssetName") OpenApi.byteSchema
 deriving instance Generic C.Quantity
 deriving anyclass instance OpenApi.ToSchema C.Quantity
-
 deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
 instance OpenApi.ToSchema Crypto.XPub where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "PubKey") mempty
@@ -155,6 +155,8 @@ instance OpenApi.ToSchema Script where
     declareNamedSchema _ =
         pure $ OpenApi.NamedSchema (Just "Script") (OpenApi.toSchema (Proxy :: Proxy String))
 deriving newtype instance OpenApi.ToSchema ScriptHash
+deriving instance OpenApi.ToSchema Language
+deriving instance OpenApi.ToSchema script => OpenApi.ToSchema (Versioned script)
 
 -- 'POSIXTime' instances
 

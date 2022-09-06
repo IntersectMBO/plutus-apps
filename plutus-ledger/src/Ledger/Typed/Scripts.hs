@@ -38,8 +38,8 @@ makeTypedScriptTxIn ::
   TypedScriptTxIn inn
 makeTypedScriptTxIn si r tyRef =
   let d = Export.tyTxOutData (Export.tyTxOutRefOut tyRef)
-      vs = validatorScript si
+      vs = vValidatorScript si
       rs = Redeemer (toBuiltinData r)
       ds = Datum (toBuiltinData d)
-      txInT = ConsumeScriptAddress (Export.tvLanguage si) vs rs ds
+      txInT = ConsumeScriptAddress vs rs ds
    in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef

@@ -37,7 +37,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Address (Address (addressCredential))
 import Ledger.Scripts (ScriptHash (ScriptHash))
-import Ledger.Tx (TxId, TxOutRef (..))
+import Ledger.Tx (TxId, TxOutRef (..), Versioned)
 import Ledger.Tx qualified as L (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut))
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -83,7 +83,7 @@ getScriptFromHash ::
     ( Member (State ChainIndexEmulatorState) effs
     )
     => ScriptHash
-    -> Eff effs (Maybe Script)
+    -> Eff effs (Maybe (Versioned Script))
 getScriptFromHash h = gets (view $ diskState . scriptMap . at h)
 
 -- | Get the 'ChainIndexTx' for a transaction ID
@@ -147,7 +147,7 @@ makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
       case datumWithHash of
         Just d -> do
           v <- getScriptFromHash (ScriptHash h)
-          pure $ Just $ L.ScriptChainIndexTxOut address value d script (ValidatorHash h, Validator <$> v)
+          pure $ Just $ L.ScriptChainIndexTxOut address value d script (ValidatorHash h, fmap Validator <$> v)
         Nothing -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
@@ -196,11 +196,11 @@ handleQuery ::
 handleQuery = \case
     DatumFromHash h -> getDatumFromHash h
     ValidatorFromHash (ValidatorHash h) ->  do
-      fmap (fmap Validator) $ getScriptFromHash (ScriptHash h)
+      fmap (fmap Validator) <$> getScriptFromHash (ScriptHash h)
     MintingPolicyFromHash (MintingPolicyHash h) ->
-      fmap (fmap MintingPolicy) $ getScriptFromHash (ScriptHash h)
+      fmap (fmap MintingPolicy) <$> getScriptFromHash (ScriptHash h)
     StakeValidatorFromHash (StakeValidatorHash h) ->
-      fmap (fmap StakeValidator) $ getScriptFromHash (ScriptHash h)
+      fmap (fmap StakeValidator) <$> getScriptFromHash (ScriptHash h)
     UnspentTxOutFromRef ref -> getTxOutFromRef ref
     TxOutFromRef ref -> getTxOutFromRef ref
     RedeemerFromHash h -> gets (view $ diskState . redeemerMap . at h)

@@ -1,4 +1,4 @@
-module Plutus.HystericalScreams.Index.Split
+module RewindableIndex.Index.Split
   ( -- * API
     SplitIndex(..)
   , new
@@ -16,7 +16,7 @@ import Data.Foldable (foldlM, toList)
 import Data.Sequence (Seq (..), ViewR (..))
 import Data.Sequence qualified as Seq
 
-import Plutus.HystericalScreams.Index (IndexView (..))
+import RewindableIndex.Index (IndexView (..))
 
 data SplitIndex m h e n q r = SplitIndex
   { siHandle        :: h

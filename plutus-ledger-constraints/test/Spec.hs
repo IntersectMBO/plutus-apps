@@ -21,8 +21,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, toTxOut, unitDatum,
-                         unitRedeemer)
+import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, toTxOut, txInRef,
+                         unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
@@ -35,7 +35,7 @@ import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Ledger
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
-import Ledger.Tx (Tx (txOutputs), TxOut (TxOut), txOutAddress)
+import Ledger.Tx (Tx (txCollateral, txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Tx.CardanoAPI (toCardanoTxOutDatumHash, toCardanoTxOutUnsafe)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
@@ -59,6 +59,7 @@ tests = testGroup "all tests"
     , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash" "mustPayToPubKeyAddressStakePubKeyNotNothingProp" mustPayToPubKeyAddressStakePubKeyNotNothingProp
     , testPropertyNamed "mustSpendScriptOutputWithMatchingDatumAndValue" "testMustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
     , testPropertyNamed "mustPayToOtherScriptAddress should create output addresses with stake validator hash" "mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
+    , testPropertyNamed "mustUseOutputAsCollateral should add a collateral input" "mustUseOutputAsCollateralProp" mustUseOutputAsCollateralProp
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.
@@ -154,6 +155,20 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
             StakingHash (ScriptCredential (Ledger.ValidatorHash svh)) -> Just $ Ledger.StakeValidatorHash svh
             _                                                         -> Nothing
 
+mustUseOutputAsCollateralProp :: Property
+mustUseOutputAsCollateralProp = property $ do
+    pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
+    let txOutRef = Ledger.TxOutRef (Ledger.TxId "123") 0
+        txE = Constraints.mkTx @Void mempty (Constraints.mustUseOutputAsCollateral txOutRef)
+    case txE of
+        Left e -> do
+            Hedgehog.annotateShow e
+            Hedgehog.failure
+        Right utx -> do
+            let coll = txCollateral (view OC.tx utx)
+            Hedgehog.assert $ length coll == 1
+            Hedgehog.assert $ Ledger.txInRef (head coll) == txOutRef
+
 -- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
 testScriptInputs
     :: ( PlutusTx.FromData (Scripts.DatumType a)
@@ -246,8 +261,8 @@ constraints1 vh =
 lookups1 :: Constraints.ScriptLookups UnitTest
 lookups1
     = Constraints.unspentOutputs utxo1
-    <> Constraints.plutusV2OtherScript (Scripts.validatorScript alwaysSucceedValidator)
-    <> Constraints.plutusV2OtherScript (Scripts.validatorScript validator1)
+    <> Constraints.otherScript (Scripts.vValidatorScript alwaysSucceedValidator)
+    <> Constraints.otherScript (Scripts.vValidatorScript validator1)
 
 testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
 testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

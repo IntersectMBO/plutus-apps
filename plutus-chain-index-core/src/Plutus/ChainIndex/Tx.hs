@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE ViewPatterns        #-}
 {-| The chain index' version of a transaction
 -}
 module Plutus.ChainIndex.Tx(
@@ -46,10 +47,9 @@ import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), Tx
                TxOutRef (..), onCardanoTx, txId)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
-import Plutus.Script.Utils.Scripts (datumHash, redeemerHash)
-import Plutus.Script.Utils.V1.Scripts (validatorHash)
+import Plutus.Script.Utils.Scripts (Versioned, datumHash, redeemerHash, scriptHash)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                             Redeemer, RedeemerHash, Script, Validator (getValidator), ValidatorHash (ValidatorHash))
+                             Redeemer, RedeemerHash, Script, Validator (getValidator))
 import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))
 import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
@@ -118,24 +118,23 @@ fromOnChainTx = \case
 fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) = fromCardanoTx era $ setValidity validity tx
 
-mintingPolicies :: Map MintingPolicyHash MintingPolicy -> Map ScriptHash Script
+mintingPolicies :: Map MintingPolicyHash (Versioned MintingPolicy) -> Map ScriptHash (Versioned Script)
 mintingPolicies = Map.fromList . fmap toScript . Map.toList
   where
-    toScript (MintingPolicyHash mph, mp) = (ScriptHash mph, getMintingPolicy mp)
+    toScript (MintingPolicyHash mph, mp) = (ScriptHash mph, fmap getMintingPolicy mp)
 
-validators :: [TxIn] -> (Map ScriptHash Script, Map DatumHash Datum, Redeemers)
+validators :: [TxIn] -> (Map ScriptHash (Versioned Script), Map DatumHash Datum, Redeemers)
 validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) . zip [0..] . sort
   -- we sort the inputs to make sure that the indices match with redeemer pointers
   where
     -- TODO: the index of the txin is probably incorrect as we take it from the set.
     -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
     -- sort them by using the standard `Ord` instance.
-    withHash ix (ConsumeScriptAddress _lang val red dat) =
-      let (ValidatorHash vh) = validatorHash val
-       in ( Map.singleton (ScriptHash vh) (getValidator val)
-          , Map.singleton (datumHash dat) dat
-          , Map.singleton (RedeemerPtr Spend ix) red
-          )
+    withHash ix (ConsumeScriptAddress (fmap getValidator -> val) red dat) =
+        ( Map.singleton (scriptHash val) val
+        , Map.singleton (datumHash dat) dat
+        , Map.singleton (RedeemerPtr Spend ix) red
+        )
     withHash _ _ = mempty
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer

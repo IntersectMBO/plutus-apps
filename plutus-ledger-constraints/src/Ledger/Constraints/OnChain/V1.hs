@@ -137,7 +137,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
         $ any (all (checkTxConstraint ctx)) xs
     MustUseOutputAsCollateral _ ->
-        True -- TODO
+        True -- TxInfo does not have the collateral inputs
     MustReferenceOutput _ ->
         traceIfFalse "Lf" -- "Cannot use reference inputs in PlutusV1.ScriptContext"
         False

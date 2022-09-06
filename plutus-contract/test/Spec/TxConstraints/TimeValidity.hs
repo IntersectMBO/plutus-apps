@@ -17,6 +17,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
@@ -26,6 +27,7 @@ import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Interval (contains, from)
+import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -33,12 +35,21 @@ import Prelude hiding (not)
 import Wallet.Emulator.Stream (params)
 
 tests :: TestTree
-tests =
-    testGroup "time validity"
+tests = testGroup "time validitity constraint"
+    [ testGroup "with Ledger constraints"
         [ protocolV5
         , protocolV6
         , defaultProtocolParams
         ]
+    , testGroup "with Tx.Constraints"
+        [ protocolV6Cardano
+        -- protocol V5 test cannot be performed for Cardano Tx as we don't have enough constraints implemented to
+        -- trigger the validator
+        -- , protocolV5Cardano
+        , defaultProtocolParamsValidCardano
+        , defaultProtocolParamsPastTxCardano
+        ]
+    ]
 
 contract :: Contract () Empty ContractError ()
 contract = do
@@ -51,7 +62,7 @@ contract = do
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
         lookups2 =
-            Constraints.plutusV1OtherScript (validatorScript deadline)
+            Constraints.otherScript (validatorScript deadline)
             <> Constraints.unspentOutputs utxos
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
@@ -59,6 +70,8 @@ contract = do
             <> Constraints.mustValidateIn (from $ now + 1000)
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+    cSlot <- Con.currentPABSlot
+    logInfo @String $ "Current slot: " ++ show cSlot
 
 trace :: Trace.EmulatorTrace ()
 trace = do
@@ -86,6 +99,91 @@ defaultProtocolParams = checkPredicateOptions
     (assertValidatedTransactionCount 2)
     (void trace)
 
+traceCardano :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
+traceCardano c = do
+    void $ Trace.activateContractWallet w1 c
+    void $ Trace.waitNSlots 4
+
+validContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+validContractCardano p = do
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
+    pkh <- Con.ownFirstPaymentPubKeyHash
+    utxos <- Con.ownUtxos
+    now <- Con.currentTime
+    logInfo @String $ "now: " ++ show now
+    let utxoRef = fst $ head' $ Map.toList utxos
+        lookups = Tx.Constraints.unspentOutputs utxos
+        tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
+            <> Tx.Constraints.mustValidateIn (from $ 1000 + now)
+    ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+
+    cSlot <- Con.currentPABSlot
+    logInfo @String $ "Current slot: " ++ show cSlot
+    let txRange = Tx.getCardanoTxValidityRange ledgerTx
+    logInfo @String $ show txRange
+
+    P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
+
+
+pastTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+pastTxContractCardano p = do
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
+    pkh <- Con.ownFirstPaymentPubKeyHash
+    utxos <- Con.ownUtxos
+    now <- Con.currentTime
+    logInfo @String $ "now: " ++ show now
+    let (utxoRef1, utxoRef2) = get2 $ map fst $ Map.toList utxos
+        lookups = Tx.Constraints.unspentOutputs utxos
+        tx1 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef1
+        tx2 =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            <> Tx.Constraints.mustSpendPubKeyOutput utxoRef2
+            <> Tx.Constraints.mustValidateIn (I.to now)
+    -- submit a first transaction to occupy the first slot
+    ledgerTx1 <- submitUnbalancedTx $ mkTx lookups tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+    -- submit a tx that should be validated at the latest in slot 1
+    ledgerTx2 <- submitUnbalancedTx $ mkTx lookups tx2
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+
+    cSlot <- Con.currentPABSlot
+    logInfo @String $ "Current slot: " ++ show cSlot
+    let txRange = Tx.getCardanoTxValidityRange ledgerTx1
+    logInfo @String $ show txRange
+
+    P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
+
+protocolV6Cardano :: TestTree
+protocolV6Cardano =
+    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) })
+    in checkPredicateOptions
+    checkOptions
+    "tx valid time interval is supported in protocol v6"
+    (assertValidatedTransactionCount 1)
+    (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) checkOptions)
+
+defaultProtocolParamsValidCardano :: TestTree
+defaultProtocolParamsValidCardano = checkPredicateOptions
+    defaultCheckOptions
+    "tx valid time interval is supported in protocol v6+"
+    (assertValidatedTransactionCount 1)
+    (void $ traceCardano $ validContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
+
+-- We only test here if the contract rejects transactions with a time range uppper bound set before the
+-- current slot.
+-- We submit a first successful transaction to ensure that the validityRange of the second one is in the
+-- past.
+-- As the range of the second transaction is unreachable, the transaction should fail.
+-- (it's unfortunately not the case at the moment, the tx is just postponed indefinitely).
+defaultProtocolParamsPastTxCardano :: TestTree
+defaultProtocolParamsPastTxCardano = checkPredicateOptions
+    defaultCheckOptions
+    "tx valid time interval in the past make transactions fail"
+    (assertValidatedTransactionCount 1)
+    (void $ traceCardano $ pastTxContractCardano $ view (emulatorConfig . params) defaultCheckOptions)
+
 deadline :: POSIXTime
 deadline = 1596059092000 -- (milliseconds) transaction's valid range must be after this
 
@@ -110,11 +208,19 @@ typedValidator = Scripts.mkTypedValidatorParam @UnitTest
     where
         wrap = Scripts.mkUntypedValidator
 
-validatorScript :: P.POSIXTime -> Validator
-validatorScript = Scripts.validatorScript . typedValidator
+validatorScript :: P.POSIXTime -> Tx.Versioned Validator
+validatorScript = Scripts.vValidatorScript . typedValidator
 
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash $ typedValidator deadline
 
 scrAddress :: Ledger.Address
 scrAddress = Ledger.scriptHashAddress valHash
+
+head' :: [a] -> a
+head' (x:_) = x
+head' _     = error "Spec.TxConstraints.TimeValidity: Not enough inputs"
+
+get2 :: [a] -> (a, a)
+get2 (x:y:_) = (x,y)
+get2 _       = error "Spec.TxConstraints.TimeValidity: Not enough inputs"

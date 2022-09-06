@@ -242,20 +242,20 @@ checkMintingAuthorised tx =
     in
         traverse_ (throwError . MintWithoutScript) mintedWithoutScript
 
--- TODO Needs to be change to support V2 minting policy scripts.
--- For now, this function runs the minting policy script with a V1
--- ScriptContext. However, transactions can contain V1 AND V2 scripts, so we
--- need to handle both.
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
-    txinfo <- mkPV1TxInfo tx
-    iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, mp) -> do
+    iforM_ (Map.toList (txMintScripts tx)) $ \i (mph, Versioned mp lang) -> do
         let cs :: V.CurrencySymbol
             cs = V.mpsSymbol mph
-            ctx :: Context
-            ctx = Context $ toBuiltinData $ PV1.ScriptContext { PV1.scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
             ptr = RedeemerPtr Mint (fromIntegral i)
+        ctx <-
+            if lang == PlutusV1 then do
+                txInfo <- mkPV1TxInfo tx
+                pure $ Context $ toBuiltinData $ PV1.ScriptContext { PV1.scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txInfo }
+            else do
+                txInfo <- mkPV2TxInfo tx
+                pure $ Context $ toBuiltinData $ PV2.ScriptContext { PV2.scriptContextPurpose = PV2.Minting cs, PV2.scriptContextTxInfo = txInfo }
         red <- case lookupRedeemer tx ptr of
             Just r  -> pure r
             Nothing -> throwError $ MissingRedeemer ptr
@@ -290,7 +290,7 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ConsumeScriptAddress lang v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ConsumeScriptAddress (Versioned v lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         case lang of
           PlutusV1 ->

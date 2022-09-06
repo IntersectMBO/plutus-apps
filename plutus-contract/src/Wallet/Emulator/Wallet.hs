@@ -322,7 +322,7 @@ handleBalance utx' = do
     params@Params { pSlotConfig, pNetworkId } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-        eitherTx = view U.cardanoTx utx
+        eitherTx = U.unBalancedTxTx utx
         plUtxo = traverse (toCardanoTxOut pNetworkId toCardanoTxOutDatumHash . Tx.toTxOut) utxo
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) (pure . fmap TxOut) plUtxo
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo

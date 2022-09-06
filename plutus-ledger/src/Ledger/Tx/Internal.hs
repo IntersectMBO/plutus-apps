@@ -8,19 +8,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
     , Language(..)
     , TxOut (..)
     , TxOutRef (..)
+    , Versioned(..)
     ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.Genesis ()
-import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
 import Control.DeepSeq (NFData, rnf)
@@ -37,7 +35,7 @@ import Ledger.Slot
 import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOut, fromCardanoValue)
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
-import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts
 import Plutus.V1.Ledger.Address (toPubKeyHash)
 import Plutus.V1.Ledger.Address qualified as V1
 import Plutus.V1.Ledger.Api (dataToBuiltinData)
@@ -49,11 +47,9 @@ import PlutusTx.Lattice
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
-deriving instance Serialise Language
-
 -- | The type of a transaction input.
 data TxInType =
-      ConsumeScriptAddress !Language !Validator !Redeemer !Datum
+      ConsumeScriptAddress !(Versioned Validator) !Redeemer !Datum
       -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
@@ -73,7 +69,7 @@ instance Pretty TxIn where
     pretty TxIn{txInRef,txInType} =
                 let rest =
                         case txInType of
-                            Just (ConsumeScriptAddress _ _ redeemer _) ->
+                            Just (ConsumeScriptAddress _ redeemer _) ->
                                 pretty redeemer
                             _ -> mempty
                 in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
@@ -90,18 +86,18 @@ inType = L.lens txInType s where
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
-inScripts :: TxIn -> Maybe (Language, Validator, Redeemer, Datum)
+inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Datum)
 inScripts TxIn{ txInType = t } = case t of
-    Just (ConsumeScriptAddress l v r d) -> Just (l, v, r, d)
-    _                                   -> Nothing
+    Just (ConsumeScriptAddress v r d) -> Just (v, r, d)
+    _                                 -> Nothing
 
 -- | A transaction input that spends a "pay to public key" output, given the witness.
 pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
-scriptTxIn :: TxOutRef -> Language -> Validator -> Redeemer -> Datum -> TxIn
-scriptTxIn ref l v r d = TxIn ref . Just $ ConsumeScriptAddress l v r d
+scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> TxIn
+scriptTxIn ref v r d = TxIn ref . Just $ ConsumeScriptAddress v r d
 
 -- | Filter to get only the pubkey inputs.
 pubKeyTxIns :: L.Fold (Set.Set TxIn) TxIn
@@ -147,7 +143,7 @@ data Tx = Tx {
     -- ^ The fee for this transaction.
     txValidRange      :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintScripts     :: Map.Map MintingPolicyHash MintingPolicy,
+    txMintScripts     :: Map.Map MintingPolicyHash (Versioned MintingPolicy),
     -- ^ The scripts that must be run to check minting conditions.
     -- We include the minting policy hash in order to be able to include
     -- PlutusV1 AND PlutusV2 minting policy scripts, because the hashing
@@ -229,7 +225,7 @@ mint = L.lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: L.Lens' Tx (Map.Map MintingPolicyHash MintingPolicy)
+mintScripts :: L.Lens' Tx (Map.Map MintingPolicyHash (Versioned MintingPolicy))
 mintScripts = L.lens g s where
     g = txMintScripts
     s tx fs = tx { txMintScripts = fs }
@@ -356,4 +352,3 @@ updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map 
 deriving instance OpenApi.ToSchema Tx
 deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema TxIn
-deriving instance OpenApi.ToSchema Language

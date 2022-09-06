@@ -95,8 +95,7 @@ toCardanoTxInWitness P.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitness
 toCardanoTxInWitness P.ConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
 toCardanoTxInWitness
     (P.ConsumeScriptAddress
-        P.PlutusV1
-        (P.Validator validator)
+        (P.Versioned (P.Validator validator) P.PlutusV1)
         (P.Redeemer redeemer)
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>
@@ -108,8 +107,7 @@ toCardanoTxInWitness
         )
 toCardanoTxInWitness
     (P.ConsumeScriptAddress
-        P.PlutusV2
-        (P.Validator validator)
+        (P.Versioned (P.Validator validator) P.PlutusV2)
         (P.Redeemer redeemer)
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>

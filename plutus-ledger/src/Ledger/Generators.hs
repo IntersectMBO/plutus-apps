@@ -242,7 +242,7 @@ genValidTransactionSpending' g ins totalVal = do
                         { txInputs = ins
                         , txOutputs = txOutputs
                         , txMint = maybe mempty id mintValue
-                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicy
+                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicyVersioned
                         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
                         , txFee = Ada.toValue fee'
                         }

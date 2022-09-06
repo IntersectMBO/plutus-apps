@@ -24,7 +24,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, w1)
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -138,9 +138,6 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
-
-validatorScript :: Validator
-validatorScript = Scripts.validatorScript typedValidator
 
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash typedValidator
