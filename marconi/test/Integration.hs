@@ -12,6 +12,7 @@ import Data.Aeson qualified as Aeson
 import Data.HashMap.Lazy (HashMap)
 import Data.HashMap.Lazy qualified as HM
 import Data.Monoid (Last (Last))
+import Data.Set qualified as Set
 import Data.Text qualified as T
 import Hedgehog (MonadTest, Property, assert, eval, (===))
 import Hedgehog qualified as H
@@ -130,7 +131,6 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
 
-
   -- Create the Shelley Address from the actual Plutus script.
   plutusScriptFileInUse <- H.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
   plutusScript <- C.PlutusScript C.PlutusScriptV1
@@ -156,17 +156,19 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     ]
 
   -- TODO [X] Create the address using Cardano.Api
-  genesisKey :: C.VerificationKey C.GenesisUTxOKey <-
+  genesisKey :: C.VerificationKey C.GenesisUTxOKey <- -- /cardano-node/cardano-api/src/Cardano/Api/KeysShelley.hs::1031
     readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
 
   let
-    _ = C.makeShelleyAddress
-      undefined
-      (C.PaymentCredentialByKey (undefined :: C.Hash C.PaymentKey))
-      undefined :: C.Address C.ShelleyAddr
-    -- _ = C.ShelleyAddress
-    --   undefined
-    --   (C.toShelleyPaymentCredential $ C.PaymentCredentialByKey undefined)
+    paymentKey = C.castVerificationKey genesisKey :: C.VerificationKey C.PaymentKey
+    address :: C.Address C.ShelleyAddr
+    address = C.makeShelleyAddress
+      networkId
+      (C.PaymentCredentialByKey (C.verificationKeyHash paymentKey :: C.Hash C.PaymentKey))
+      C.NoStakeAddress :: C.Address C.ShelleyAddr
+
+  p2 "address" address -- QUESTION: any way to verify this is correct
+                       -- (i.e same as the following utxoAddr)?
 
   utxoAddr <- H.execCli
     [ "address", "build"
@@ -176,24 +178,47 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   p2 "utxoAddr genesisKey" genesisKey
   p2 "utxoAddr" utxoAddr
 
-  -- TODO Query the utxo using the query interface of the node
+  -- TODO [ ] Query the utxo using the query interface of the node
+
+  -- Boilerplate codecs used for protocol serialisation.  The number
+  -- of epochSlots is specific to each blockchain instance. This value
+  -- what the cardano main and testnet uses. Only applies to the Byron
+  -- era.
+  let epochSlots = C.EpochSlots 21600
+      localNodeConnectInfo =
+          C.LocalNodeConnectInfo
+              { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+              , C.localNodeNetworkId = networkId
+              , C.localNodeSocketPath = work </> socketFilePath
+              }
+
+  -- liftIO $ C.connectToLocalNode localNodeConnectInfo undefined
+
+  let
+    query :: C.QueryInEra C.AlonzoEra (C.UTxO C.AlonzoEra)
+    query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
+      C.QueryUTxOByAddress $ Set.singleton $ C.toAddressAny address
+
+  utxo <- liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
+    C.QueryInEra C.AlonzoEraInCardanoMode query
+
+  p2 "utxo" utxo
+
+  -- old utxo code
   void $ H.execCli' execConfig
-    [ "query", "utxo" -- this fails
+    [ "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
-
-  exit_
-
   H.cat $ work </> "utxo-1.json"
-
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
   utxo1 <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @(HashMap Text Utxo) utxo1Json
   txin <- H.noteShow $ head $ HM.keys utxo1
   lovelaceAtTxin <- H.nothingFailM . H.noteShow $ ((utxo1 & HM.lookup txin) >>= HM.lookup "lovelace" . value)
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
+  -- /old utxo code
 
   -- TODO Query the PP using the IPC interface. See Plutus.PAB.Run.Cli:151 on
   -- how to query some interface from the socket connection.
@@ -230,36 +255,15 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Read the transaction body TextEnvelope that was saved to file in the
   -- previous command and decode it.
-  txBody <-
-      H.leftFailM . liftIO $
-          C.readFileTextEnvelope
-              (C.AsTxBody C.AsAlonzoEra)
-              (work </> "create-datum-output.body")
+  txBody <- readAs (C.AsTxBody C.AsAlonzoEra) (work </> "create-datum-output.body")
   liftIO $ print txBody
 
   -- Read the signing key TextEnvelope that was saved to file.
-  utxoSKey <-
-      H.leftFailM . liftIO $
-          C.readFileTextEnvelope
-              (C.AsSigningKey C.AsGenesisUTxOKey)
-              utxoSKeyFile
+  utxoSKey <- readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
   liftIO $ print txBody
 
   let tx = C.signShelleyTransaction txBody [C.WitnessGenesisUTxOKey utxoSKey]
 
-  -- Boilerplate codecs used for protocol serialisation.
-  -- The number of epochSlots is specific to each blockchain instance. This value
-  -- what the cardano main and testnet uses. Only applies to the Byron era.
-  p2 "work </> socketFilePath" $ work </> socketFilePath
-  let epochSlots = C.EpochSlots 21600
-      localNodeConnectInfo =
-          C.LocalNodeConnectInfo
-              { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-              , C.localNodeNetworkId = networkId
-              , C.localNodeSocketPath = work </> socketFilePath
-              }
-  -- TODO: For those reason, I'm getting a "Network.Socket.connect: <socket: 5>: does not exist (No such file or directory)" error
-  -- :(
   liftIO $ print socketFilePath
   liftIO $ print $ work </> socketFilePath
   void $ liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.AlonzoEraInCardanoMode
@@ -277,12 +281,3 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Just to get a test going...
   "2" === ("2" :: Text)
-
-
-
--- toShelleyPaymentCredential :: PaymentCredential
---                            -> Shelley.PaymentCredential StandardCrypto
--- toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
---     Shelley.KeyHashObj kh
--- toShelleyPaymentCredential (PaymentCredentialByScript sh) =
---     Shelley.ScriptHashObj (toShelleyScriptHash sh)
