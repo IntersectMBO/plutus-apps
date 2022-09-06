@@ -38,6 +38,9 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
+-- TODO Remove the following dependencies from plutus-ledger, and
+-- then also the package dependency from this package's cabal
+-- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
 import Ledger (Address, TxId, TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
 import Ledger qualified as Ledger
 import System.Random.MWC (createSystemRandom, uniformR)

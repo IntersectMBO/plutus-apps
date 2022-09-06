@@ -4,14 +4,6 @@
 {-# LANGUAGE TupleSections       #-}
 module Main where
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo,
-                    deserialiseFromRawBytesHex, proxyToAsType)
-import Cardano.Api qualified as C
-import Cardano.BM.Setup (withTrace)
-import Cardano.BM.Trace (logError)
-import Cardano.BM.Tracing (defaultConfigStdout)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
@@ -20,7 +12,6 @@ import Control.Exception (catch)
 import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (void, when)
 import Data.ByteString.Char8 qualified as C8
-
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (assocs)
@@ -29,25 +20,38 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (IsString)
-import Ledger (TxIn (..), TxOut (..), TxOutRef (..))
-import Ledger.Scripts as Ledger
+import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
+                            metavar, option, readerError, strOption, (<**>), (<|>))
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+import Streaming.Prelude qualified as S
+
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
+                    ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
+                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo,
+                    deserialiseFromRawBytesHex, proxyToAsType)
+import Cardano.Api qualified as C
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.BM.Tracing (defaultConfigStdout)
+-- TODO Remove the following dependencies from cardano-ledger, and
+-- then also the package dependency from this package's cabal
+-- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
+import Ledger (TxIn (TxIn), TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
+import Ledger.Scripts (Datum, DatumHash)
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
                              scriptDataFromCardanoTxBody, withIsCardanoEra)
+import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
+                         withChainSyncEventStream)
+import RewindableIndex.Index.VSplit qualified as Ix
+
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx ()
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
+import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
-import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
-                            metavar, option, readerError, strOption, (<**>), (<|>))
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
-                         withChainSyncEventStream)
-import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
-import Prettyprinter.Render.Text (renderStrict)
-import RewindableIndex.Index.VSplit qualified as Ix
-import Streaming.Prelude qualified as S
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
 --     against the mainnet (meant to be used for testing).
@@ -113,6 +117,10 @@ chainPointParser =
               (maybeReader maybeParseHashBlockHeader <|> readerError "Malformed block hash")
               (long "block-hash" <> metavar "BLOCK-HASH")
         )
+  where
+    maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
+    maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
+
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
@@ -305,6 +313,3 @@ main = do
             layoutPretty defaultLayoutOptions $
               "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
                 <+> "Please check the slot number and the block hash do belong to the chain"
-
-maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
-maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
