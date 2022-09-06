@@ -33,9 +33,8 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, Tx (Tx), TxId, TxIn (TxIn), TxInType (..),
-               TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txFee, txMint, txOutValue, txOutputs,
-               txSignatures)
+import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, Tx (Tx), TxId, TxIn (TxIn), TxInType (..), TxOut,
+               TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txFee, txMint, txOutValue, txOutputs, txSignatures)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Ada qualified as Ada
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
@@ -298,13 +297,13 @@ instance Render TxOutRef where
             pure $ fill 8 t <> r
 
 instance Render TxOut where
-    render txOut@TxOut {txOutValue} =
+    render txOut =
         vsep <$>
         sequence
             [ mappend "Destination:" . indent 2 <$>
               render (toBeneficialOwner txOut)
             , pure "Value:"
-            , indent 2 <$> render txOutValue
+            , indent 2 <$> render (txOutValue txOut)
             ]
 
 ------------------------------------------------------------

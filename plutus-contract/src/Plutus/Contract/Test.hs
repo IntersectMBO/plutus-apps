@@ -130,6 +130,7 @@ import Ledger.Value (Value)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef
+import Ledger.Tx (txOutDatumHash)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
@@ -387,9 +388,9 @@ getTxOutDatum ::
   Ledger.CardanoTx ->
   Ledger.TxOut ->
   Maybe d
-getTxOutDatum _ (Ledger.TxOut _ _ Nothing) = Nothing
-getTxOutDatum tx' (Ledger.TxOut _ _ (Just datumHash)) =
-    Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
+getTxOutDatum tx' txOut = txOutDatumHash txOut >>= go
+    where
+        go datumHash = Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
 dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $

@@ -207,7 +207,7 @@ interpretEmulatorTrace conf action =
         $ interpret (mapLog (review schedulerEvent))
         $ runThreads
         $ do
-            raise $ launchSystemThreads (pNetworkId $ _params conf) wallets
+            raise $ launchSystemThreads wallets
             handleEmulatorTrace (_params conf) action'
 
 -- | Options for how to set up and print the trace.

@@ -58,6 +58,7 @@ import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
+import Plutus.V1.Ledger.Tx qualified as V1
 import Streaming qualified as S
 import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbitraryAction, initialState, monitoring,
                                    nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
@@ -72,6 +73,7 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), e
 import Wallet.Emulator.Stream (EmulatorErr)
 
 
+import Ledger.Tx.CardanoAPI (fromCardanoTxOut)
 import Prettyprinter
 
 -- Double satisfaction magic
@@ -186,7 +188,7 @@ getDSCounterexamples :: [ChainEvent] -> ( [WrappedTx]
                                         , [DoubleSatisfactionCounterexample]
                                         , [DoubleSatisfactionCounterexample]
                                         )
-getDSCounterexamples cs = go 0 mempty cs
+getDSCounterexamples = go 0 mempty
   where
     go _ _ [] = ([], [], [])
     go slot idx (e:es) = case e of
@@ -256,9 +258,9 @@ data DoubleSatisfactionCounterexample = DoubleSatisfactionCounterexample
       --
       --   The scenario is that the other script is using a unique datum to identify the payment to
       --   the non-signer pubkey as coming from that other script.
-  , dsceStolenUTxO          :: TxOut
+  , dsceStolenUTxO          :: V1.TxOut
   , dsceStealerWallet       :: Wallet
-  , dsceDatumUTxO           :: TxOut
+  , dsceDatumUTxO           :: V1.TxOut
   } deriving Show
 
 showPretty :: DoubleSatisfactionCounterexample -> String
@@ -318,8 +320,59 @@ alwaysOkValidator :: Validator
 alwaysOkValidator = mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])
 
 doubleSatisfactionCounterexamples :: WrappedTx -> [DoubleSatisfactionCounterexample]
-doubleSatisfactionCounterexamples dsc =
-  [ DoubleSatisfactionCounterexample
+doubleSatisfactionCounterexamples = undefined -- FIXME
+{-
+doubleSatisfactionCounterexamples dsc = do
+  (idx, out') <- zip [0..] (dsc ^. dsTx . outputs) -- FIXME
+  let out = fromCardanoTxOut $ getTxOut out'
+      l = dsTx . outputs. ix idx
+  guard $ isPubKeyOut out
+  -- For now we only consider one stealer at the time
+  let signatories = dsc ^. dsTx . signatures . to Map.keys
+  guard $ length signatories == 1
+  -- Whose key is not in the signatories?
+  key <- maybeToList . txOutPubKey $ out'
+  guard $ key `notElem` map pubKeyHash signatories
+  stealerKey <- signatories
+  (stealerWallet, stealerPrivKey) <-
+      filter (\(w, _) -> unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
+             (zip knownWallets (unPaymentPrivateKey <$> knownPaymentPrivateKeys))
+  -- Then stealerKey can try to steal it
+  let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
+      datum         = Datum . mkB $ "<this is a unique string>"
+      datumEmpty    = Datum . mkB $ ""
+      redeemerEmpty = Redeemer . mkB $ ""
+      withDatumOut = out { V1.txOutDatumHash = Just $ datumHash datum }
+      newFakeTxScriptOut = V1.TxOut { V1.txOutAddress   = scriptHashAddress $ validatorHash alwaysOkValidator
+                                 , V1.txOutValue     = adaOnlyValue $ txOutValue out'
+                                 , V1.txOutDatumHash = Just $ datumHash datumEmpty
+                                 }
+      newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
+                                 , txOutRefIdx = 1
+                                 }
+      newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
+                         , txInType = Just $ ConsumeScriptAddress PlutusV1
+                                                                  alwaysOkValidator
+                                                                  redeemerEmpty
+                                                                  datumEmpty
+                         }
+  -- The output going to the original recipient but with a datum
+  let targetMatters0 = dsc & l . outAddress .~ stealerAddr
+      tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
+      targetMatters1 = targetMatters0 & dsTxId .~ txId tx
+                                        & dsTx   .~ tx
+  let valueStolen0 = dsc & l . outAddress .~ stealerAddr
+                         & dsTx . outputs %~ (withDatumOut:)
+                         & dsTx . inputs %~ (newFakeTxIn:)
+                         & dsUtxoIndex %~
+                            (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
+                                                                       newFakeTxScriptOut m)
+                         & dsTx . datumWitnesses . at (datumHash datum) ?~ datum
+                         & dsTx . datumWitnesses . at (datumHash datumEmpty) ?~ datumEmpty
+      tx           = addSignature' stealerPrivKey (valueStolen0 ^. dsTx & signatures .~ mempty)
+      valueStolen1 = valueStolen0 & dsTxId .~ txId tx
+                                    & dsTx   .~ tx
+  DoubleSatisfactionCounterexample
       { dsceOriginalTransaction = dsc
       , dsceTargetMattersProof  = targetMatters1
       , dsceValueStolenProof    = valueStolen1
@@ -327,58 +380,8 @@ doubleSatisfactionCounterexamples dsc =
       , dsceDatumUTxO           = withDatumOut
       , dsceStealerWallet       = stealerWallet
       }
-  -- For each output in the candidate tx
-  | (idx, out) <- zip [0..] (dsc ^. dsTx . outputs)
-  , let l = dsTx . outputs. ix idx
-  -- Is it a pubkeyout?
-  , isPubKeyOut out
-  -- Whose key is not in the signatories?
-  , key <- maybeToList . txOutPubKey $ out
-  , let signatories = dsc ^. dsTx . signatures . to Map.keys
-  , key `notElem` map pubKeyHash signatories
-  -- For now we only consider one stealer at the time
-  , length signatories == 1
-  -- Then stealerKey can try to steal it
-  , stealerKey <- signatories
-  , (stealerWallet, stealerPrivKey) <-
-      filter (\(w, _) -> unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
-             (zip knownWallets (unPaymentPrivateKey <$> knownPaymentPrivateKeys))
-  , let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
-  -- The output going to the original recipient but with a datum
-  , let datum         = Datum . mkB $ "<this is a unique string>"
-        datumEmpty    = Datum . mkB $ ""
-        redeemerEmpty = Redeemer . mkB $ ""
-        withDatumOut = out { txOutDatumHash = Just $ datumHash datum }
-        newFakeTxScriptOut = TxOut { txOutAddress   = scriptHashAddress $ validatorHash alwaysOkValidator
-                                   , txOutValue     = adaOnlyValue $ txOutValue out
-                                   , txOutDatumHash = Just $ datumHash datumEmpty
-                                   }
-        newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
-                                   , txOutRefIdx = 1
-                                   }
-        newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
-                           , txInType = Just $ ConsumeScriptAddress PlutusV1
-                                                                    alwaysOkValidator
-                                                                    redeemerEmpty
-                                                                    datumEmpty
-                           }
-  , let targetMatters0 = dsc & l . outAddress .~ stealerAddr
-        tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
-        targetMatters1 = targetMatters0 & dsTxId .~ txId tx
-                                        & dsTx   .~ tx
-  , let valueStolen0 = dsc & l . outAddress .~ stealerAddr
-                           & dsTx . outputs %~ (withDatumOut:)
-                           & dsTx . inputs %~ (newFakeTxIn:)
-                           & dsUtxoIndex %~
-                              (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
-                                                                         newFakeTxScriptOut m)
-                           & dsTx . datumWitnesses . at (datumHash datum) .~ Just datum
-                           & dsTx . datumWitnesses . at (datumHash datumEmpty) .~ Just datumEmpty
-        tx           = addSignature' stealerPrivKey (valueStolen0 ^. dsTx & signatures .~ mempty)
-        valueStolen1 = valueStolen0 & dsTxId .~ txId tx
-                                    & dsTx   .~ tx
-  ]
+-}
 
 toCardanoUtxoIndex :: Params -> UtxoIndex -> Validation.UTxO EmulatorEra
-toCardanoUtxoIndex params idx = either (error . show) id $ Validation.fromPlutusIndex params idx
+toCardanoUtxoIndex params idx = either (error . show) id $ Validation.fromPlutusIndex idx
 

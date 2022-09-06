@@ -9,10 +9,11 @@
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 module Spec.Emulator(tests) where
 
 
-import Control.Lens (element, (%~), (&), (.~))
+import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
 import Control.Monad.Freer.Error qualified as E
@@ -25,21 +26,22 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint),
+import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint), TxOut (TxOut),
                ValidationError (ScriptFailure), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs, getCardanoTxOutputs,
-               onCardanoTx, outputs, scriptTxIn, unspentOutputs)
+               onCardanoTx, outputs, scriptTxIn, txOutValue, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
-import Ledger.Params ()
+import Ledger.Params (Params (Params, pNetworkId))
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.V1.Tx (scriptTxOut)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (ScriptContext, TxOut (txOutValue), Validator, Value, mkValidatorScript)
+import Plutus.V1.Ledger.Api (ScriptContext, Validator, Value, mkValidatorScript)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
@@ -209,15 +211,17 @@ invalidTrace = property $ do
 
 invalidScript :: Property
 invalidScript = property $ do
-    (Mockchain m _ _, txn1) <- forAll genChainTxn
+    (Mockchain m _ Params{pNetworkId}, txn1) <- forAll genChainTxn
 
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ getCardanoTxOutputs txn1) - 1))
     let emulatorTx = onCardanoTx id (\_ -> error "Unexpected Cardano.Api.Tx") txn1
+    let setOutputs o = either (const Hedgehog.failure) (pure . TxOut) $
+           toCardanoTxOut pNetworkId toCardanoTxOutDatumHash $ scriptTxOut failValidator (txOutValue o) unitDatum
+    outs <- traverse setOutputs $ emulatorTx ^. outputs
     let scriptTxn = EmulatorTx $
             emulatorTx
-          & outputs
-          . element index %~ \o -> scriptTxOut failValidator (txOutValue o) unitDatum
+          & outputs .~ outs
     Hedgehog.annotateShow scriptTxn
     let outToSpend = getCardanoTxOutRefs scriptTxn !! index
     let totalVal = txOutValue (fst outToSpend)

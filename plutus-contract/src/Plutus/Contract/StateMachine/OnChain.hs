@@ -31,12 +31,12 @@ import GHC.Generics (Generic)
 import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                            TxConstraints (txOwnOutputs))
 import Ledger.Constraints.OnChain.V1 (checkScriptContext)
-import Ledger.Tx (TxOut (txOutValue))
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, ValidatorTypes, validatorAddress,
                              validatorHash)
 import Ledger.Value (Value, isZero)
 import Plutus.V1.Ledger.Api (Address, ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
+import Plutus.V1.Ledger.Tx qualified as V1
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (check)
 import Prelude qualified as Haskell
@@ -112,7 +112,7 @@ machineAddress = validatorAddress . typedValidator
 -- | Turn a state machine into a validator script.
 mkValidator :: forall s i. (PlutusTx.ToData s) => StateMachine s i -> ValidatorType (StateMachine s i)
 mkValidator (StateMachine step isFinal check threadToken) currentState input ptx =
-    let vl = maybe (traceError "S0" {-"Can't find validation input"-}) (txOutValue . txInInfoResolved) (findOwnInput ptx)
+    let vl = maybe (traceError "S0" {-"Can't find validation input"-}) (V1.txOutValue . txInInfoResolved) (findOwnInput ptx)
         checkOk =
             traceIfFalse "S1" {-"State transition invalid - checks failed"-} (check currentState input ptx)
             && traceIfFalse "S2" {-"Thread token not found"-} (TT.checkThreadToken threadToken (ownHash ptx) vl 1)

@@ -269,6 +269,11 @@ outValue = L.lens
   txOutValue
   (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
 
+outValue' :: L.Lens' TxOut (C.TxOutValue C.BabbageEra)
+outValue' = L.lens
+  (\(TxOut (C.TxOut _aie tov _tod _rs)) -> tov)
+  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
+
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
     txStrippedInputs          :: [TxOutRef],

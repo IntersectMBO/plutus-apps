@@ -91,6 +91,7 @@ import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curP
 import Plutus.Contract.Wallet (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
+import Plutus.V1.Ledger.Tx qualified as V1
 import PlutusTx qualified
 import PlutusTx.Monoid (inv)
 
@@ -198,7 +199,7 @@ threadTokenChooser ::
     -> [OnChainState state input]
     -> Either SMContractError (OnChainState state input)
 threadTokenChooser val states =
-    let hasToken OnChainState{ocsTxOutRef} = val `Value.leq` (Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef) in
+    let hasToken OnChainState{ocsTxOutRef} = val `Value.leq` (V1.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef) in
     case filter hasToken states of
         [x] -> Right x
         xs ->
@@ -530,7 +531,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                 oldState = State
                     { stateData = getStateData onChainState
                       -- Hide the thread token value from the client code
-                    , stateValue = Ledger.txOutValue (Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef) <> inv (SM.threadTokenValueOrZero scInstance)
+                    , stateValue = V1.txOutValue (Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef) <> inv (SM.threadTokenValueOrZero scInstance)
                     }
                 inputConstraints = [ScriptInputConstraint{icRedeemer=input, icTxOutRef = Typed.tyTxOutRefRef ocsTxOutRef }]
 

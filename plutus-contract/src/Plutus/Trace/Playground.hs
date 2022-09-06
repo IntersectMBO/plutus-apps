@@ -157,7 +157,7 @@ interpretPlaygroundTrace conf contract wallets action =
         $ interpret (mapLog (review schedulerEvent))
         $ runThreads
         $ do
-            raise $ launchSystemThreads (pNetworkId $ _params conf) wallets
+            raise $ launchSystemThreads wallets
             void
                 $ handlePlaygroundTrace conf contract
                 $ do
