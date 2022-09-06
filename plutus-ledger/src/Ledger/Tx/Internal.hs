@@ -34,7 +34,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Slot
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoValue)
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOut, fromCardanoValue)
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.Script.Utils.Scripts (datumHash)
@@ -119,7 +119,7 @@ newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     -- deriving anyclass ( Serialise, NFData)
 
 instance Serialise TxOut where
-  encode = undefined -- FIXME
+  encode = encode . fromCardanoTxOut . getTxOut
   decode = undefined -- FIXME
 
 instance NFData TxOut where
