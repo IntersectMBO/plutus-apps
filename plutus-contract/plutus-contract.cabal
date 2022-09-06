@@ -245,6 +245,7 @@ test-suite plutus-contract-test
     Spec.TxConstraints.MustMint
     Spec.TxConstraints.MustProduceAtLeast
     Spec.TxConstraints.MustSpendAtLeast
+    Spec.TxConstraints.MustSpendPubKeyOutput
     Spec.TxConstraints.RequiredSigner
     Spec.TxConstraints.TimeValidity
 
