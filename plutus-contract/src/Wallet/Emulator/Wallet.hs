@@ -61,7 +61,7 @@ import Ledger.Index (UtxoIndex (UtxoIndex, getIndex))
 import Ledger.Params (Params (Params, pNetworkId, pProtocolParams, pSlotConfig))
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxIn, TxOut (TxOut))
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Tx.CardanoAPI (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatumHash, toCardanoTxOutUnsafe)
 import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
@@ -496,7 +496,7 @@ calculateTxChanges params addr utxos (neg, pos) = do
             txOut <- either
               (throwError . WAPI.ToCardanoError)
               (pure . TxOut)
-              $ toCardanoTxOut (pNetworkId params) toCardanoTxOutDatumHash $ V1.TxOut addr pos Nothing
+              $ toCardanoTxOutUnsafe (pNetworkId params) toCardanoTxOutDatumHash $ V1.TxOut addr pos Nothing
             (missing, extraTxOut) <-
                 either (throwError . WAPI.ToCardanoError) pure
                 $ U.adjustTxOut params txOut
