@@ -135,6 +135,7 @@ test-suite marconi-test
   build-depends:
     , cardano-api:{cardano-api, gen}
     , cardano-testnet
+    , ouroboros-network
     , plutus-ledger-api
 
   ------------------------
