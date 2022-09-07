@@ -298,10 +298,13 @@ emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
             , txMint = foldMap snd $ Map.toList mp
             , txFee = mempty
             , txValidRange = WAPI.defaultSlotRange
-            , txMintScripts = mempty
+            , txMintingScripts = mempty
+            , txWithdrawals = mempty
+            , txCertificates = mempty
             , txSignatures = mempty
-            , txRedeemers = mempty
+            , txScripts = mempty
             , txData = mempty
+            , txMetadata = mempty
             }
     -- See [Creating wallets with multiple outputs]
     mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl

@@ -62,7 +62,6 @@ module Ledger.Constraints.OffChain(
     , processConstraintFun
     , addOwnInput
     , addOwnOutput
-    , addMintingRedeemers
     , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
@@ -70,7 +69,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (_2, _Just, alaf, at, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=), (^?))
+import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (.=), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -80,7 +79,6 @@ import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (Compose))
-import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
@@ -90,7 +88,6 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
-import Data.Maybe (fromJust)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -105,8 +102,8 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr), ScriptTag (Mint, Spend),
-                  TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef, Versioned (Versioned))
+import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), TxOut (txOutAddress, txOutDatumHash, txOutValue),
+                  TxOutRef, Versioned (Versioned))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -115,10 +112,10 @@ import Ledger.Typed.Scripts qualified as Typed
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, POSIXTimeRange, Redeemer, Value, getMintingPolicy)
-import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                                 ScriptHash (ScriptHash), Validator (Validator, getValidator),
-                                 ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash (MintingPolicyHash),
+                             POSIXTimeRange, Validator, ValidatorHash, Value, getMintingPolicy)
+import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), Script, ScriptHash (ScriptHash),
+                                 Validator (Validator, getValidator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
@@ -355,8 +352,6 @@ data ConstraintProcessingState =
     ConstraintProcessingState
         { cpsUnbalancedTx              :: UnbalancedTx
         -- ^ The unbalanced transaction that we're building
-        , cpsMintRedeemers             :: Map.Map MintingPolicyHash Redeemer
-        -- ^ Redeemers for minting policies.
         , cpsValueSpentBalancesInputs  :: ValueSpentBalances
         -- ^ Balance of the values given and required for the transaction's
         --   inputs
@@ -389,7 +384,6 @@ makeLensesFor
 initialState :: ConstraintProcessingState
 initialState = ConstraintProcessingState
     { cpsUnbalancedTx = emptyUnbalancedTx
-    , cpsMintRedeemers = mempty
     , cpsValueSpentBalancesInputs = ValueSpentBalances mempty mempty
     , cpsValueSpentBalancesOutputs = ValueSpentBalances mempty mempty
     , cpsParams = def -- cpsParams is not used here, only in plutus-tx-constraints
@@ -441,7 +435,6 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, t
             traverse_ processConstraint (txConstraints <> ownOutputConstraints)
             traverse_ processConstraintFun txCnsFuns
             traverse_ addOwnInput txOwnInputs
-            addMintingRedeemers
             addMissingValueSpent
             updateUtxoIndex
 
@@ -502,23 +495,6 @@ addMissingValueSpent = do
                                                         , txOutDatumHash=Nothing
                                                         } :)
 
-addMintingRedeemers
-    :: ( MonadState ConstraintProcessingState m
-       , MonadError MkTxError m
-       )
-    => m ()
-addMintingRedeemers = do
-    reds <- use mintRedeemers
-    txSoFar <- use (unbalancedTx . tx)
-    iforM_ reds $ \mpsHash red -> do
-        let err = throwError (MintingPolicyNotFound mpsHash)
-        ptr <-
-            maybe
-                err
-                (pure . RedeemerPtr Mint . fromIntegral)
-                $ elemIndex mpsHash (Map.keys $ Tx.txMintScripts txSoFar)
-        unbalancedTx . tx . Tx.redeemers . at ptr .= Just red
-
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
        , MonadState ConstraintProcessingState m
@@ -554,8 +530,14 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
-    unbalancedTx . tx . Tx.inputs %= (Typed.tyTxInTxIn txIn :)
     valueSpentInputs <>= provided vl
+    case Typed.tyTxInTxIn txIn of
+        -- this is what makeTypedScriptTxIn makes
+        Tx.TxIn outRef (Just (Tx.ConsumeScriptAddress validator rs dt)) -> do
+            unbalancedTx . tx %= Tx.addScriptTxInput outRef validator rs dt
+        _ -> error "Impossible txIn in addOwnInput."
+
+
 
 -- | Convert a @ScriptOutputConstraint@ into a @TxConstraint@.
 addOwnOutput
@@ -673,31 +655,22 @@ processConstraint = \case
         case txout of
           Tx.PublicKeyChainIndexTxOut { Tx._ciTxOutValue } -> do
               -- TODO: Add the optional datum in the witness set for the pub key output
-              unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxIn txo :)
+              unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
               valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red -> do
         txout <- lookupTxOutRef txo
         mscriptTXO <- resolveScriptTxOut txout
         case mscriptTXO of
-          Just ((_, validator), (dvh, datum), value) -> do
-            -- TODO: When witnesses are properly segregated we can
-            --       probably get rid of the 'slOtherData' map and of
-            --       'lookupDatum'
-            let input = Tx.scriptTxIn txo validator red datum
-            unbalancedTx . tx . Tx.inputs %= (input :)
-            inputs <- use (unbalancedTx . tx . Tx.inputs)
-            -- We use fromJust because we can garanty that it will always be Just.
-            let idx = fromJust $ elemIndex input inputs
-            unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
-            unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
-            valueSpentInputs <>= provided value
-          _ -> throwError (TxOutRefWrongType txo)
+            Just ((_, validator), (_, datum), value) -> do
+                unbalancedTx . tx %= Tx.addScriptTxInput txo validator red datum
+                valueSpentInputs <>= provided value
+            _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral txo -> do
-        unbalancedTx . tx . Tx.collateralInputs <>= [Tx.pubKeyTxIn txo]
+        unbalancedTx . tx . Tx.collateralInputs <>= [Tx.pubKeyTxInput txo]
     MustReferenceOutput txo -> do
-        unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxIn txo]
-    MustMintValue mpsHash red tn i -> do
+        unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput txo]
+    MustMintValue mpsHash@(MintingPolicyHash mpsHashBytes) red tn i -> do
         mintingPolicyScript <- lookupMintingPolicy mpsHash
         -- See note [Mint and Fee fields must have ada symbol].
         let value = (<>) (Ada.lovelaceValueOf 0) . Value.singleton (Value.mpsSymbol mpsHash) tn
@@ -709,9 +682,9 @@ processConstraint = \case
             then valueSpentInputs <>= provided (value (negate i))
             else valueSpentOutputs <>= provided (value i)
 
-        unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash mintingPolicyScript
+        unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash red
+        unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
         unbalancedTx . tx . Tx.mint <>= value i
-        mintRedeemers . at mpsHash .= Just red
     MustPayToPubKeyAddress pk skhM mdv _refScript vl -> do
         -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
@@ -763,10 +736,8 @@ processConstraintFun = \case
                          (Map.toList slTxOutputs)
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just ((_, validator), (dvh, datum), value))] -> do
-                let input = Tx.scriptTxIn ref validator red datum
-                unbalancedTx . tx . Tx.inputs %= (input :)
-                unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
+            [(ref, Just ((_, validator), (_, datum), value))] -> do
+                unbalancedTx . tx %=  Tx.addScriptTxInput ref validator red datum
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
 

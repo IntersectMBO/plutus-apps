@@ -26,21 +26,23 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint),
-               ValidationError (ScriptFailure), Versioned (Versioned), cardanoTxMap, getCardanoTxFee,
-               getCardanoTxOutRefs, getCardanoTxOutputs, onCardanoTx, outputs, scriptTxIn, unspentOutputs)
+               TxInType (ConsumeScriptAddress), TxOut (txOutValue), ValidationError (ScriptFailure),
+               Versioned (Versioned), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs, getCardanoTxOutputs,
+               onCardanoTx, outputs, unspentOutputs)
 import Ledger.Ada qualified as Ada
-import Ledger.Generators (Mockchain (Mockchain))
+import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
 import Ledger.Params ()
+import Ledger.Scripts (ScriptError (EvaluationError), Validator, mkValidatorScript, unitDatum, unitRedeemer)
+import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.V1.Tx (scriptTxOut)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (ScriptContext, TxOut (txOutValue), Validator, Value, mkValidatorScript)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
@@ -223,7 +225,7 @@ invalidScript = property $ do
     let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
-    invalidTxn <- forAll $ Gen.genValidTransactionSpending [scriptTxIn (snd outToSpend) (Versioned failValidator PlutusV1) unitRedeemer unitDatum] totalVal
+    invalidTxn <- forAll $ Gen.genValidTransactionSpending [TxInputWitnessed (snd outToSpend) (ConsumeScriptAddress (Versioned failValidator PlutusV1) unitRedeemer unitDatum)] totalVal
     Hedgehog.annotateShow invalidTxn
 
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m

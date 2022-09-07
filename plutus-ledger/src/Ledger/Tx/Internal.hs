@@ -19,23 +19,30 @@ import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, encode)
 import Control.DeepSeq (NFData)
 import Control.Lens
+import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
+import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
 import GHC.Generics (Generic)
+import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
+import Ledger.DCert.Orphans ()
+import Ledger.Scripts (MintingPolicy (MintingPolicy, getMintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                       ScriptHash (ScriptHash), StakeValidator (StakeValidator),
+                       StakeValidatorHash (StakeValidatorHash), Validator (Validator, getValidator),
+                       ValidatorHash (ValidatorHash))
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.Script.Utils.Scripts
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), inRef, inScripts, inType, pubKeyTxIn, pubKeyTxIns,
-                            scriptTxIn, scriptTxIns)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash),
+                             TxOut (txOutValue), TxOutRef)
+import Plutus.V1.Ledger.Tx (txOutDatum)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
-import Prettyprinter (Pretty (..), hang, vsep, (<+>))
+import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
 data TxInType =
@@ -63,23 +70,6 @@ instance Pretty TxIn where
                             _ -> mempty
                 in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
 
--- | The 'TxOutRef' spent by a transaction input.
-inRef :: Lens' TxIn TxOutRef
-inRef = lens txInRef s where
-    s txi r = txi { txInRef = r }
-
--- | The type of a transaction input.
-inType :: Lens' TxIn (Maybe TxInType)
-inType = lens txInType s where
-    s txi t = txi { txInType = t }
-
--- | Validator, redeemer, and data scripts of a transaction input that spends a
---   "pay to script" output.
-inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Datum)
-inScripts TxIn{ txInType = t } = case t of
-    Just (ConsumeScriptAddress v r d) -> Just (v, r, d)
-    _                                 -> Nothing
-
 -- | A transaction input that spends a "pay to public key" output, given the witness.
 pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
@@ -88,24 +78,107 @@ pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> TxIn
 scriptTxIn ref v r d = TxIn ref . Just $ ConsumeScriptAddress v r d
 
+-- | The type of a transaction input. Contains redeemer if consumes a script.
+data TxInputType =
+      TxConsumeScriptAddress !Redeemer !ValidatorHash !DatumHash -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
+    | TxConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
+    | TxConsumeSimpleScriptAddress -- ^ Consume a simple script
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+-- | A transaction input, consisting of a transaction output reference and an input type.
+-- Differs with TxIn by: TxIn *maybe* contains *full* data witnesses, TxInput always contains redeemer witness, but datum/validator hashes.
+data TxInput = TxInput {
+    txInputRef  :: !TxOutRef,
+    txInputType :: !TxInputType
+    }
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+-- same as TxIn
+instance Pretty TxInput where
+    pretty TxInput{txInputRef,txInputType} =
+        let rest =
+                case txInputType of
+                    TxConsumeScriptAddress redeemer _ _ ->
+                        pretty redeemer
+                    _ -> mempty
+        in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
+
+-- | The 'TxOutRef' spent by a transaction input.
+inputRef :: Lens' TxInput TxOutRef
+inputRef = lens txInputRef s where
+    s txi r = txi { txInputRef = r }
+
+-- | The type of a transaction input.
+inputType :: Lens' TxInput TxInputType
+inputType = lens txInputType s where
+    s txi t = txi { txInputType = t }
+
+-- | Stake withdrawal, if applicable the script should be included in txScripts.
+data Withdrawal = Withdrawal
+  { withdrawalCredential :: Credential      -- ^ staking credential
+  , withdrawalAmount     :: Integer         -- ^ amount of withdrawal in Lovelace, must withdraw all eligible amount
+  , withdrawalRedeemer   :: Maybe Redeemer  -- ^ redeemer for script credential
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+instance Pretty Withdrawal where
+    pretty = viaShow
+
+data Certificate = Certificate
+  { certificateDcert    :: DCert
+  , certificateRedeemer :: Maybe Redeemer           -- ^ redeemer for script credential
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+
+instance Pretty Certificate where
+    pretty = viaShow
+
+-- | Validator, redeemer, and data scripts of a transaction input that spends a
+--   "pay to script" output.
+inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Datum)
+inScripts TxIn{ txInType = t } = case t of
+    Just (ConsumeScriptAddress v r d) -> Just (v, r, d)
+    _                                 -> Nothing
+
+-- | The 'TxOutRef' spent by a transaction input.
+inRef :: Lens' TxInput TxOutRef
+inRef = lens txInputRef s where
+    s txi r = txi { txInputRef = r }
+
+-- | The type of a transaction input.
+inType :: Lens' TxInput TxInputType
+inType = lens txInputType s where
+    s txi t = txi { txInputType = t }
+
 -- | Filter to get only the pubkey inputs.
-pubKeyTxIns :: Fold (Set.Set TxIn) TxIn
-pubKeyTxIns = folding (Set.filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
+pubKeyTxInputs :: Fold [TxInput] TxInput
+pubKeyTxInputs = folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
 
 -- | Filter to get only the script inputs.
-scriptTxIns :: Fold (Set.Set TxIn) TxIn
-scriptTxIns = (\x -> folding x) . Set.filter $ \case
-    TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
-    _                                              -> False
+scriptTxInputs :: Fold [TxInput] TxInput
+scriptTxInputs = (\x -> folding x) . filter $ \case
+    TxInput{ txInputType = TxConsumeScriptAddress{} } -> True
+    _                                                 -> False
 
+-- | Validator, redeemer, and data scripts of a transaction input that spends a
+--   "pay to script" output.
+-- inScripts :: Tx -> TxInput -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
+-- inScripts tx i@TxInput{txInputType=TxConsumeScriptAddress pv _ _ _} = case txInType $ fillTxInputWitnesses tx i of
+--     Just (ConsumeScriptAddress v r d) -> Just (pv, v, r, d)
+--     _                                   -> Nothing
+-- inScripts _ _ = Nothing
 
--- | A Babbage era transaction, including witnesses for its inputs.
+-- | A Babbage-era transaction, including witnesses for its inputs.
 data Tx = Tx {
-    txInputs          :: [TxIn],
+    txInputs          :: [TxInput],
     -- ^ The inputs to this transaction.
-    txReferenceInputs :: [TxIn],
+    txReferenceInputs :: [TxInput],
     -- ^ The reference inputs to this transaction.
-    txCollateral      :: [TxIn],
+    txCollateral      :: [TxInput],
     -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
     txOutputs         :: [TxOut],
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
@@ -115,17 +188,20 @@ data Tx = Tx {
     -- ^ The fee for this transaction.
     txValidRange      :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintScripts     :: Map.Map MintingPolicyHash (Versioned MintingPolicy),
-    -- ^ The scripts that must be run to check minting conditions.
-    -- We include the minting policy hash in order to be able to include
-    -- PlutusV1 AND PlutusV2 minting policy scripts, because the hashing
-    -- function is different for each Plutus script version.
+    txMintingScripts  :: Map MintingPolicyHash Redeemer,
+    -- ^ The scripts that must be run to check minting conditions matched with their redeemers.
+    txWithdrawals     :: [Withdrawal],
+    -- ^ Withdrawals, contains redeemers.
+    txCertificates    :: [Certificate],
+    -- ^ Certificates, contains redeemers.
     txSignatures      :: Map PubKey Signature,
     -- ^ Signatures of this transaction.
-    txRedeemers       :: Redeemers,
-    -- ^ Redeemers of the minting scripts.
-    txData            :: Map DatumHash Datum
+    txScripts         :: Map.Map ScriptHash (Versioned Script),
+    -- ^ Scripts for all script credentials mentioned in this tx.
+    txData            :: Map DatumHash Datum,
     -- ^ Datum objects recorded on this transaction.
+    txMetadata        :: Maybe BuiltinByteString
+    -- ^ Metadata
     } deriving stock (Show, Eq, Generic)
       deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 
@@ -139,33 +215,36 @@ instance Semigroup Tx where
         txMint = txMint tx1 <> txMint tx2,
         txFee = txFee tx1 <> txFee tx2,
         txValidRange = txValidRange tx1 /\ txValidRange tx2,
-        txMintScripts = txMintScripts tx1 <> txMintScripts tx2,
+        txMintingScripts = txMintingScripts tx1 <> txMintingScripts tx2,
         txSignatures = txSignatures tx1 <> txSignatures tx2,
-        txRedeemers = txRedeemers tx1 <> txRedeemers tx2,
-        txData = txData tx1 <> txData tx2
+        txData = txData tx1 <> txData tx2,
+        txScripts = txScripts tx1 <> txScripts tx2,
+        txWithdrawals = txWithdrawals tx1 <> txWithdrawals tx2,
+        txCertificates = txCertificates tx1 <> txCertificates tx2,
+        txMetadata = txMetadata tx1 <> txMetadata tx2
         }
 
 instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty
+    mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty mempty mempty mempty
 
 instance BA.ByteArrayAccess Tx where
     length        = BA.length . Write.toStrictByteString . encode
     withByteArray = BA.withByteArray . Write.toStrictByteString . encode
 
 -- | The inputs of a transaction.
-inputs :: Lens' Tx [TxIn]
+inputs :: Lens' Tx [TxInput]
 inputs = lens g s where
     g = txInputs
     s tx i = tx { txInputs = i }
 
 -- | The reference inputs of a transaction.
-referenceInputs :: Lens' Tx [TxIn]
+referenceInputs :: Lens' Tx [TxInput]
 referenceInputs = lens g s where
     g = txReferenceInputs
     s tx i = tx { txReferenceInputs = i }
 
 -- | The collateral inputs of a transaction for paying fees when validating the transaction fails.
-collateralInputs :: Lens' Tx [TxIn]
+collateralInputs :: Lens' Tx [TxInput]
 collateralInputs = lens g s where
     g = txCollateral
     s tx i = tx { txCollateral = i }
@@ -197,29 +276,32 @@ mint = lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: Lens' Tx (Map.Map MintingPolicyHash (Versioned MintingPolicy))
+mintScripts :: Lens' Tx (Map MintingPolicyHash Redeemer)
 mintScripts = lens g s where
-    g = txMintScripts
-    s tx fs = tx { txMintScripts = fs }
+    g = txMintingScripts
+    s tx fs = tx { txMintingScripts = fs }
 
-redeemers :: Lens' Tx Redeemers
-redeemers = lens g s where
-    g = txRedeemers
-    s tx reds = tx { txRedeemers = reds }
+scriptWitnesses :: Lens' Tx (Map ScriptHash (Versioned Script))
+scriptWitnesses = lens g s where
+    g = txScripts
+    s tx fs = tx { txScripts = fs }
 
 datumWitnesses :: Lens' Tx (Map DatumHash Datum)
 datumWitnesses = lens g s where
     g = txData
     s tx dat = tx { txData = dat }
 
+-- | The inputs of a transaction.
+metadata :: Lens' Tx (Maybe BuiltinByteString)
+metadata = lens g s where
+    g = txMetadata
+    s tx i = tx { txMetadata = i }
+
 lookupSignature :: PubKey -> Tx -> Maybe Signature
 lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 
 lookupDatum :: Tx -> DatumHash -> Maybe Datum
 lookupDatum Tx{txData} h = Map.lookup h txData
-
-lookupRedeemer :: Tx -> RedeemerPtr -> Maybe Redeemer
-lookupRedeemer tx p = Map.lookup p (txRedeemers tx)
 
 -- | Check that all values in a transaction are non-negative.
 validValuesTx :: Tx -> Bool
@@ -244,8 +326,8 @@ data TxStripped = TxStripped {
 
 strip :: Tx -> TxStripped
 strip Tx{..} = TxStripped i ri txOutputs txMint txFee where
-    i = map txInRef txInputs
-    ri = map txInRef txReferenceInputs
+    i = map txInputRef txInputs
+    ri = map txInputRef txReferenceInputs
 
 -- | A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g.
 -- the full data script that goes with the 'TxOut'.
@@ -254,18 +336,87 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 
 txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
+txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
+
+lookupScript :: Map ScriptHash (Versioned Script) -> ScriptHash -> Maybe (Versioned Script)
+lookupScript txScripts hash  = Map.lookup hash txScripts
+
+lookupValidator :: Map ScriptHash (Versioned Script) -> ValidatorHash -> Maybe (Versioned Validator)
+lookupValidator txScripts = (fmap . fmap) Validator . lookupScript txScripts . toScriptHash
+    where
+        toScriptHash (ValidatorHash b) = ScriptHash b
 
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> [TxOutRef]
-spentOutputs = map txInRef . txInputs
+spentOutputs = map txInputRef . txInputs
 
 -- | The transaction output references referenced by a transaction.
 referencedOutputs :: Tx -> [TxOutRef]
-referencedOutputs = map txInRef . txReferenceInputs
+referencedOutputs = map txInputRef . txReferenceInputs
 
--- | Update a map of unspent transaction outputs and signatures
---   for a failed transaction using its collateral inputs.
-updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
-updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInRef . txCollateral $ tx)
+lookupMintingPolicy :: Map ScriptHash (Versioned Script) -> MintingPolicyHash -> Maybe (Versioned MintingPolicy)
+lookupMintingPolicy txScripts = (fmap . fmap) MintingPolicy . lookupScript txScripts . toScriptHash
+    where
+        toScriptHash (MintingPolicyHash b) = ScriptHash b
 
+lookupStakeValidator :: Map ScriptHash (Versioned Script) -> StakeValidatorHash -> Maybe (Versioned StakeValidator)
+lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txScripts . toScriptHash
+    where
+        toScriptHash (StakeValidatorHash b) = ScriptHash b
+
+-- | Translate TxInput to old Plutus.V1.Ledger.Api TxIn taking script and datum witnesses from Tx.
+fillTxInputWitnesses :: Tx -> TxInput -> TxIn
+fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
+    TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
+    TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
+    TxConsumeScriptAddress redeemer vlh dh -> TxIn outRef $ do
+        datum <- Map.lookup dh (txData tx)
+        validator <- lookupValidator (txScripts tx) vlh
+        Just $ ConsumeScriptAddress validator redeemer datum
+
+pubKeyTxInput :: TxOutRef -> TxInput
+pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
+
+-- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly. Doesn't alter txMint.
+addMintingPolicy :: Versioned MintingPolicy -> Redeemer -> Tx -> Tx
+addMintingPolicy vvl rd tx@Tx{txMintingScripts, txScripts} = tx
+    {txMintingScripts = Map.insert mph rd txMintingScripts,
+     txScripts = Map.insert (ScriptHash b) (fmap getMintingPolicy vvl) txScripts}
+    where
+        mph@(MintingPolicyHash b) = mintingPolicyHash vvl
+
+
+-- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
+addScriptTxInput :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> Tx -> Tx
+addScriptTxInput outRef vl rd dt tx@Tx{txInputs, txScripts, txData} = tx
+    {txInputs = TxInput outRef (TxConsumeScriptAddress rd vlHash dtHash) : txInputs,
+     txScripts = Map.insert (ScriptHash b) (fmap getValidator vl) txScripts,
+     txData = Map.insert dtHash dt txData}
+    where
+        dtHash = datumHash dt
+        vlHash@(ValidatorHash b) = validatorHash vl
+
+txRedeemers :: Tx -> Map ScriptPurpose Redeemer
+txRedeemers = (Map.mapKeys Spending . txSpendingRedeemers)
+    <> (Map.mapKeys (Minting . mpsSymbol) . txMintingRedeemers)
+    <> (Map.mapKeys (Rewarding . StakingHash)  . txRewardingRedeemers)
+    <> (Map.mapKeys Certifying . txCertifyingRedeemers)
+
+txSpendingRedeemers :: Tx -> Map TxOutRef Redeemer
+txSpendingRedeemers Tx{txInputs} = flip execState Map.empty $ traverse_ extract txInputs where
+    extract TxInput{txInputType=TxConsumeScriptAddress redeemer _ _, txInputRef} =
+        modify' $ Map.insert txInputRef redeemer
+    extract _ = return ()
+
+txMintingRedeemers :: Tx -> Map MintingPolicyHash Redeemer
+txMintingRedeemers Tx{txMintingScripts} = txMintingScripts
+
+txRewardingRedeemers :: Tx -> Map Credential Redeemer
+txRewardingRedeemers Tx{txWithdrawals} = flip execState Map.empty $ traverse_ f txWithdrawals where
+    f (Withdrawal cred _ (Just rd)) = modify' $ Map.insert cred rd
+    f _                             = return ()
+
+txCertifyingRedeemers :: Tx -> Map DCert Redeemer
+txCertifyingRedeemers Tx{txCertificates} = flip execState Map.empty $ traverse_ f txCertificates where
+    f (Certificate dcert (Just rd)) = modify' $ Map.insert dcert rd
+    f _                             = return ()

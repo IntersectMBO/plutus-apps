@@ -14,6 +14,7 @@ import Test.Tasty (TestTree, testGroup)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as L.Constraints
+import Ledger.Scripts (unitDatum, unitRedeemer)
 import Ledger.Test
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Value qualified as Value
@@ -24,7 +25,7 @@ import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as TypedScripts
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM

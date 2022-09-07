@@ -30,9 +30,9 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (Tx, TxIn, TxInType)
+import Ledger.Tx.Internal (Certificate, Tx, TxIn, TxInType, TxInput, TxInputType, Withdrawal)
 import Plutus.Script.Utils.Scripts (Language, Versioned)
-import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), Extended, Interval,
+import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), DCert, Extended, Interval,
                              LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
                              Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
@@ -110,13 +110,18 @@ instance OpenApi.ToSchema JSON.Value where
 deriving instance OpenApi.ToSchema ann => OpenApi.ToSchema (Kind ann)
 deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
+deriving instance OpenApi.ToSchema Certificate
+deriving instance OpenApi.ToSchema DCert
+deriving instance OpenApi.ToSchema TxIn
+deriving instance OpenApi.ToSchema TxInput
+deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef
-deriving instance OpenApi.ToSchema TxInType
-deriving instance OpenApi.ToSchema TxIn
 deriving instance OpenApi.ToSchema PV1.TxOut
 deriving instance OpenApi.ToSchema PV2.TxOut
+deriving instance OpenApi.ToSchema TxInputType
+deriving instance OpenApi.ToSchema Withdrawal
 deriving newtype instance OpenApi.ToSchema Validator
 deriving newtype instance OpenApi.ToSchema TxId
 deriving newtype instance OpenApi.ToSchema Slot
