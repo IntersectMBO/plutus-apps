@@ -37,6 +37,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson ((.:))
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import Data.Map qualified as Map
 import Data.Text (Text)
 import Test.Base qualified as H
 import Test.Base qualified as T
@@ -170,13 +171,13 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   p2 "address" address -- QUESTION: any way to verify this is correct
                        -- (i.e same as the following utxoAddr)?
 
-  utxoAddr <- H.execCli
+  utxoAddrStr <- H.execCli
     [ "address", "build"
     , "--testnet-magic", show @Int testnetMagic
     , "--payment-verification-key-file", utxoVKeyFile
     ]
   p2 "utxoAddr genesisKey" genesisKey
-  p2 "utxoAddr" utxoAddr
+  p2 "utxoAddr" utxoAddrStr
 
   -- TODO [ ] Query the utxo using the query interface of the node
 
@@ -199,15 +200,19 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
       C.QueryUTxOByAddress $ Set.singleton $ C.toAddressAny address
 
-  utxo <- liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
+  utxo <- H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
     C.QueryInEra C.AlonzoEraInCardanoMode query
+  let utxoMap = C.unUTxO utxo
+  txIn <- H.noteShow $ head $ Map.keys utxoMap
+  (C.Lovelace lovelaceAtTxin) <- H.nothingFailM . H.noteShow $ (\(C.TxOut _ v _) -> C.txOutValueToLovelace v) <$> (utxoMap & Map.lookup txIn)
+  lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
 
   p2 "utxo" utxo
 
   -- old utxo code
   void $ H.execCli' execConfig
     [ "query", "utxo"
-    , "--address", utxoAddr
+    , "--address", utxoAddrStr
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
@@ -215,12 +220,12 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   H.cat $ work </> "utxo-1.json"
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
   utxo1 <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @(HashMap Text Utxo) utxo1Json
-  txin <- H.noteShow $ head $ HM.keys utxo1
-  lovelaceAtTxin <- H.nothingFailM . H.noteShow $ ((utxo1 & HM.lookup txin) >>= HM.lookup "lovelace" . value)
+  txinStr <- H.noteShow $ head $ HM.keys utxo1
+  lovelaceAtTxin <- H.nothingFailM . H.noteShow $ ((utxo1 & HM.lookup txinStr) >>= HM.lookup "lovelace" . value)
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
   -- /old utxo code
 
-  -- TODO Query the PP using the IPC interface. See Plutus.PAB.Run.Cli:151 on
+  -- TODO [X] Query the PP using the IPC interface. See Plutus.PAB.Run.Cli:151 on
   -- how to query some interface from the socket connection.
   -- Would need to use stuff from Cardano.Api.IPC and Cardano.Api.Query.
   void $ H.execCli' execConfig
@@ -228,6 +233,12 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "pparams.json"
     ]
+  pparams <-
+      H.leftFailM . H.leftFailM . liftIO
+        $ C.queryNodeLocalState localNodeConnectInfo Nothing
+        $ C.QueryInEra C.AlonzoEraInCardanoMode
+        $ C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo C.QueryProtocolParameters
+  p2 "pparams" pparams
 
   let dummyAddressBech32 = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
       -- targetaddress = "addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh"
@@ -236,19 +247,51 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   dummyAddress <- H.leftFail $ C.deserialiseFromBech32 (C.AsAddress C.AsShelleyAddr) dummyAddressBech32
 
   -- This datum hash is the hash of the untyped 42
-  let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
+  let scriptDatumHashStr = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
+      scriptDatum = C.ScriptDataNumber 42
+      scriptDatumHash = C.hashScriptData scriptDatum
+  -- scriptDatumHash <- H.nothingFail $ C.deserialiseFromRawBytes (C.AsHash C.AsScriptData) scriptDatumHashStr
+  p2 "scriptDatumHash" scriptDatumHash
 
   -- TODO Create with Cardano.Api.TxBody instead of the CLI
+  let txOut1 =
+          C.TxOut
+            (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) plutusScriptAddr)
+            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace lovelaceAtTxinDiv3)
+            (C.TxOutDatumHash C.ScriptDataInAlonzoEra scriptDatumHash)
+      txOut2 =
+          C.TxOut
+            (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
+            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace lovelaceAtTxinDiv3)
+            C.TxOutDatumNone
+      txBodyContent =
+        C.TxBodyContent {
+          C.txIns              = [(txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)],
+          C.txInsCollateral    = C.TxInsCollateralNone,
+          C.txOuts             = [txOut1, txOut2],
+          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra $ C.Lovelace 0,
+          C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
+          C.txMetadata         = C.TxMetadataNone,
+          C.txAuxScripts       = C.TxAuxScriptsNone,
+          C.txExtraKeyWits     = C.TxExtraKeyWitnessesNone,
+          C.txProtocolParams   = C.BuildTxWith $ Just pparams,
+          C.txWithdrawals      = C.TxWithdrawalsNone,
+          C.txCertificates     = C.TxCertificatesNone,
+          C.txUpdateProposal   = C.TxUpdateProposalNone,
+          C.txMintValue        = C.TxMintNone,
+          C.txScriptValidity   = C.TxScriptValidityNone
+        }
+
   void $ H.execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", T.unpack dummyAddressBech32
-    , "--tx-in", T.unpack txin
+    , "--tx-in", T.unpack txinStr
     , "--tx-out", plutusScriptAddrBech32 <> "+" <> show @Integer lovelaceAtTxinDiv3
-    , "--tx-out-datum-hash", scriptDatumHash
-    , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
+    , "--tx-out-datum-hash", scriptDatumHashStr
+    , "--tx-out", utxoAddrStr <> "+" <> show @Integer lovelaceAtTxinDiv3
     , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", work </> "create-datum-output.body"
     ]
