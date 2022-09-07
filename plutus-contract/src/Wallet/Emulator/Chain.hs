@@ -198,7 +198,6 @@ validateEm h txn = do
             Just (Index.Phase2, _) -> Index.insertCollateral txn idx
             Nothing                -> Index.insert txn idx
     _ <- S.put ctx{ vctxIndex = idx' }
-    -- pure (trace ("validateEm: e : " ++ show e) $ trace ("validateEm: idx : " ++ show idx) $ trace ("validateEm: idx' : " ++ show idx') $ trace ("validateEm: txn : " ++ show (getCardanoTxId txn, txn)) e)
     pure e
 
 -- | Adds a block to ChainState, without validation.
