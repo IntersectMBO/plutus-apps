@@ -89,6 +89,23 @@ main = defaultMain tests
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = H.leftFailM . liftIO $ C.readFileTextEnvelope as path
 
+findUTxOByAddress
+  :: (MonadIO m, MonadTest m)
+  => C.LocalNodeConnectInfo C.CardanoMode -> C.AddressAny -> m (C.UTxO C.AlonzoEra)
+findUTxOByAddress localNodeConnectInfo address = let
+  query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
+    C.QueryUTxOByAddress $ Set.singleton address
+  in
+  H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
+    C.QueryInEra C.AlonzoEraInCardanoMode query
+
+failOnTxSubmitFail :: (Show a, Applicative m) => SubmitResult a -> m ()
+failOnTxSubmitFail submitResult =
+  case submitResult of
+    SubmitFail reason -> exit2 "reason" reason
+    SubmitSuccess     -> pure ()
+
+
 tests :: TestTree
 tests = testGroup "Integration"
   [ testProperty "prop_script_hashes_in_tx_match" testIndex ]
@@ -142,6 +159,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   plutusScript <- C.PlutusScript C.PlutusScriptV1
     <$> readAs (C.AsPlutusScript C.AsPlutusScriptV1) plutusScriptFileInUse
   let
+    plutusScriptAddr :: C.Address C.ShelleyAddr
     plutusScriptAddr =
       C.makeShelleyAddress
         networkId
@@ -165,8 +183,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   genesisVKey :: C.VerificationKey C.GenesisUTxOKey <- -- /cardano-node/cardano-api/src/Cardano/Api/KeysShelley.hs::1031
     readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
 
-  genesisSKey :: C.SigningKey C.GenesisUTxOKey <-
-    readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
+  genesisSKey :: C.SigningKey C.GenesisUTxOKey <- readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
 
   let
     paymentKey = C.castVerificationKey genesisVKey :: C.VerificationKey C.PaymentKey
@@ -201,13 +218,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
               , C.localNodeSocketPath = work </> socketFilePath
               }
 
-  let
-    query :: C.QueryInEra C.AlonzoEra (C.UTxO C.AlonzoEra)
-    query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
-      C.QueryUTxOByAddress $ Set.singleton $ C.toAddressAny address
-
-  utxo <- H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra C.AlonzoEraInCardanoMode query
+  utxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny address
   let utxoMap = C.unUTxO utxo
   txIn <- H.noteShow $ head $ Map.keys utxoMap
 
@@ -296,17 +307,15 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
         }
 
   txBody :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
+  p2 "txBody" txBody
   let
-    -- genesisSKey :: C.SigningKey C.GenesisUTxOKey
     kw :: C.KeyWitness C.AlonzoEra
     kw = C.makeShelleyKeyWitness txBody (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
-    tx = C.makeSignedTransaction [kw] txBody
+    tx1 = C.makeSignedTransaction [kw] txBody
 
-  submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <- liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.AlonzoEraInCardanoMode
-  case submitResult of
-    SubmitFail reason -> exit2 "reason" reason
-    -- unbalanced: reason: TxValidationErrorInMode (ShelleyTxValidationError ShelleyBasedEraAlonzo (ApplyTxError [UtxowFailure (WrappedShelleyEraFailure (UtxoFailure (ValueNotConservedUTxO (Value 900000000000 (fromList [])) (Value 600000000000 (fromList []))))),UtxowFailure (WrappedShelleyEraFailure (UtxoFailure (FeeTooSmallUTxO (Coin 269) (Coin 0))))])) AlonzoEraInCardanoMode
-    SubmitSuccess     -> pure ()
+  submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx1 C.AlonzoEraInCardanoMode
+  failOnTxSubmitFail submitResult
 
   void $ H.execCli' execConfig
     [ "transaction", "build"
@@ -322,21 +331,6 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     , "--out-file", work </> "create-datum-output.body"
     ]
 
-  -- Read the transaction body TextEnvelope that was saved to file in the
-  -- previous command and decode it.
-  txBody <- readAs (C.AsTxBody C.AsAlonzoEra) (work </> "create-datum-output.body")
-  liftIO $ print txBody
-
-  -- Read the signing key TextEnvelope that was saved to file.
-  utxoSKey <- readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
-  liftIO $ print txBody
-
-  let tx = C.signShelleyTransaction txBody [C.WitnessGenesisUTxOKey utxoSKey]
-
-  liftIO $ print socketFilePath
-  liftIO $ print $ work </> socketFilePath
-  void $ liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.AlonzoEraInCardanoMode
-
   {-
      What to do next:
         - Fix the todos and fully use the Cardano.Api types
@@ -344,6 +338,45 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
         - Run the Marconi indexer
         - Query the Marconi indexer and see that it returns a single script (which has the same hash as the one we initially used).
   -}
+
+  -- Second transaction: spend the UTXO specified in the first transaction
+
+  let todo = undefined
+
+  scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
+  scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
+  let
+      tx2out :: C.TxOut ctx C.AlonzoEra
+      tx2out =
+          C.TxOut
+            (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
+             -- send ADA back to the original address                       ^
+            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace todo)
+            C.TxOutDatumNone
+      tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
+      tx2bodyContent =
+        C.TxBodyContent {
+          C.txIns              = [(scriptTxIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)],
+          C.txInsCollateral    = C.TxInsCollateralNone,
+          C.txOuts             = [tx2out],
+          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra $ C.Lovelace todo,
+          C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
+          C.txMetadata         = C.TxMetadataNone,
+          C.txAuxScripts       = C.TxAuxScriptsNone,
+          C.txExtraKeyWits     = C.TxExtraKeyWitnessesNone,
+          C.txProtocolParams   = C.BuildTxWith $ Just pparams,
+          C.txWithdrawals      = C.TxWithdrawalsNone,
+          C.txCertificates     = C.TxCertificatesNone,
+          C.txUpdateProposal   = C.TxUpdateProposalNone,
+          C.txMintValue        = C.TxMintNone,
+          C.txScriptValidity   = C.TxScriptValidityNone
+        }
+
+  tx2body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody tx2bodyContent
+  let tx2 = C.signShelleyTransaction tx2body [C.WitnessGenesisUTxOKey genesisSKey]
+
+  tx2submitResult <- liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx2 C.AlonzoEraInCardanoMode
+  failOnTxSubmitFail tx2submitResult
 
   datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
   redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
