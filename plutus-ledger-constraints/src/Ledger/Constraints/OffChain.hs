@@ -469,15 +469,15 @@ adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxO
 -- and return the adjustment (if any) and the updated TxOut.
 adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
 adjustTxOut params txOut = do
-    minAdaValue <- C.toCardanoTxOutValue $ Ada.toValue minAdaTxOut
-    let txOutEstimate = txOut & outValue .~ minAdaValue
+    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue minAdaTxOut
+    let txOutEstimate = txOut & outValue .~ withMinAdaValue
         minAdaTxOut' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
         missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
     if missingLovelace > 0
-             then do
-               adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
-               pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
-             else pure ([], txOut)
+    then do
+      adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
+      pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
+    else pure ([], txOut)
 
 
 -- | Add the remaining balance of the total value that the tx must spend.
