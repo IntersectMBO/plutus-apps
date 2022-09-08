@@ -105,6 +105,7 @@ import GHC.Generics (Generic)
 import Ledger.Address qualified as P
 import Ledger.Params qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
+import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as P
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api qualified as Api
@@ -127,7 +128,8 @@ instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
 
 instance OpenApi.ToSchema CardanoBuildTx where
-  declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
+  -- TODO: implement the schema
+  declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
 
 instance Pretty CardanoBuildTx where
   pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent
@@ -293,7 +295,7 @@ toTxScriptValidity False = C.TxScriptValidity C.TxScriptValiditySupportedInAlonz
 -- with their hashes.
 scriptDataFromCardanoTxBody
   :: C.TxBody era
-  -> (Map P.DatumHash P.Datum, Map P.RedeemerHash P.Redeemer)
+  -> (Map P.DatumHash P.Datum, P.Redeemers)
 scriptDataFromCardanoTxBody C.ByronTxBody {} = (mempty, mempty)
 scriptDataFromCardanoTxBody (C.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) =
   (mempty, mempty)
@@ -308,14 +310,25 @@ scriptDataFromCardanoTxBody
                     )
              $ Map.elems dats
       redeemers = Map.fromList
-                $ fmap ( (\r -> (P.redeemerHash r, r))
-                       . P.Redeemer
-                       . fromCardanoScriptData
-                       . C.fromAlonzoData
-                       . fst
-                       )
-                $ Map.elems reds
+                $ map (\(ptr, rdmr) ->
+                        ( redeemerPtrFromCardanoRdmrPtr ptr
+                        , P.Redeemer
+                         $ fromCardanoScriptData
+                         $ C.fromAlonzoData
+                         $ fst rdmr
+                        )
+                      )
+                $ Map.toList reds
    in (datums, redeemers)
+
+redeemerPtrFromCardanoRdmrPtr :: Alonzo.RdmrPtr -> P.RedeemerPtr
+redeemerPtrFromCardanoRdmrPtr (Alonzo.RdmrPtr rdmrTag ptr) = P.RedeemerPtr t (toInteger ptr)
+  where
+    t = case rdmrTag of
+      Alonzo.Spend -> P.Spend
+      Alonzo.Mint  -> P.Mint
+      Alonzo.Cert  -> P.Cert
+      Alonzo.Rewrd -> P.Reward
 
 -- | Extract plutus scripts from a Cardano API tx body.
 --
@@ -341,7 +354,7 @@ fromLedgerScript C.ShelleyBasedEraAlonzo script = fromAlonzoLedgerScript script
 fromAlonzoLedgerScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Script)
 fromAlonzoLedgerScript Alonzo.TimelockScript {} = Nothing
 fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
-  let script = fmap (\s -> (P.scriptHash s, s))
+  let script = fmap (\s -> (P.scriptHash s, s :: P.Script))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs

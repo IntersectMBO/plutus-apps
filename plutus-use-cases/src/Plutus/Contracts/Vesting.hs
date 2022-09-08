@@ -43,7 +43,6 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract
-import Plutus.Contract.Typed.Tx qualified as Typed
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import PlutusTx qualified
@@ -188,11 +187,20 @@ vestFundsC
     -> Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups $ typedValidator vesting) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
 
+{- Note [slots and POSIX time]
+ - A slot has a given duration. As a consequence, 'currentTime' does not return exactly the current time but,
+ - by convention, the last POSIX time of the current slot.
+ - A consequence to this design choice is that when we use this time to build the 'mustValidateIn constraints',
+ - we get a range that start at the slot after the current one.
+ - To be sure that the validity range is valid when the transaction will be validated by the pool, we must therefore
+ - wait the next slot before sumitting it (which is done using 'waitNSlots 1').
+ -
+ -}
 retrieveFundsC
     :: ( AsVestingError e
        )
@@ -202,12 +210,12 @@ retrieveFundsC
 retrieveFundsC vesting payment = mapError (review _VestingError) $ do
     let inst = typedValidator vesting
         addr = Scripts.validatorAddress inst
-    nextTime <- awaitTime 0
+    now <- currentTime
     unspentOutputs <- utxosAt addr
     let
         currentlyLocked = foldMap (view Tx.ciTxOutValue) (Map.elems unspentOutputs)
         remainingValue = currentlyLocked - payment
-        mustRemainLocked = totalAmount vesting - availableAt vesting nextTime
+        mustRemainLocked = totalAmount vesting - availableAt vesting now
         maxPayment = currentlyLocked - mustRemainLocked
 
     when (remainingValue `Value.lt` mustRemainLocked)
@@ -218,14 +226,15 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
         remainingOutputs = case liveness of
                             Alive -> payIntoContract remainingValue
                             Dead  -> mempty
-        tx = Typed.collectFromScript unspentOutputs ()
+        tx = Constraints.collectFromTheScript unspentOutputs ()
                 <> remainingOutputs
-                <> mustValidateIn (Interval.from nextTime)
+                <> mustValidateIn (Interval.from now)
                 <> mustBeSignedBy (vestingOwner vesting)
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    mkTxConstraints (Constraints.typedValidatorLookups inst
+    void $ waitNSlots 1 -- see [slots and POSIX time]
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

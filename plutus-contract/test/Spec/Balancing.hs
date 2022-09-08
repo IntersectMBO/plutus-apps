@@ -55,7 +55,7 @@ balanceTxnMinAda =
             let txOutRef = head (Map.keys utxo)
                 constraints2 = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
                     <> L.Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
-                lookups2 = L.Constraints.unspentOutputs utxo <> L.Constraints.otherScript someValidator
+                lookups2 = L.Constraints.unspentOutputs utxo <> L.Constraints.plutusV1OtherScript someValidator
             utx2 <- Con.adjustUnbalancedTx $ either (error . show) id $ L.Constraints.mkTx @Void lookups2 constraints2
             submitTxConfirmed utx2
 
@@ -91,8 +91,8 @@ balanceTxnMinAda2 =
             utxos <- utxosAt someAddress
             let txOutRef = head (Map.keys utxos)
                 lookups = L.Constraints.unspentOutputs utxos
-                        <> L.Constraints.otherScript someValidator
-                        <> L.Constraints.mintingPolicy mps
+                        <> L.Constraints.plutusV1OtherScript someValidator
+                        <> L.Constraints.plutusV1MintingPolicy mps
                 constraints = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
                             <> L.Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
                             <> L.Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
@@ -117,7 +117,7 @@ balanceTxnNoExtraOutput =
             pkh <- Con.ownFirstPaymentPubKeyHash
 
             let val = vL 200
-                lookups = L.Constraints.mintingPolicy coinMintingPolicy
+                lookups = L.Constraints.plutusV1MintingPolicy coinMintingPolicy
                 constraints = L.Constraints.mustMintValue val
                     <> L.Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOut)
 

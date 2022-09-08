@@ -30,13 +30,13 @@ jobs:
       run: nix-build -A plutus-playground.client -A plutus-playground.server
 
     - name: Run Plutus Playground
-      working-directory: ./plutus-playground-client
       env:
         CLIENT_PORT: 8009
       run: |
-        nix-shell --run 'plutus-playground-server' ../shell.nix &
-        nix-shell --run 'npm start' ../shell.nix &
-        while ! echo exit | nc localhost $CLIENT_PORT; do echo "Waiting for playground client on $CLIENT_PORT" && sleep 10; done
+        nix-shell --run 'plutus-playground-server' shell.nix &
+        while ! [ -d plutus-playground-client/generated ]; do echo "Waiting for server to generate purescript sources" && sleep 10; done
+        nix-shell --run '(cd plutus-playground-client && npm start)' shell.nix &
+        while ! echo exit | nc localhost 8009; do echo "Waiting for playground client on 8009" && sleep 10; done
   
     - name: Setup NodeJs
       uses: actions/setup-node@v3

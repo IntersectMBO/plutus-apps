@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -165,23 +166,8 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   mTx <- getTxFromTxId txOutRefId
   -- Find the output in the tx matching the output ref
   case mTx ^? _Just . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx) of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ txOutAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
-        ScriptCredential vh -> do
-          case txOutDatumHash txout of
-            Nothing -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-            Just dh -> do
-                v <- maybe (Left vh) Right <$> getScriptFromHash vh
-                d <- maybe (Left dh) Right <$> getDatumFromHash dh
-                pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
+    Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> makeChainIndexTxOut txout
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
@@ -194,20 +180,31 @@ getUtxoutFromRef ::
 getUtxoutFromRef txOutRef = do
     mTxOut <- queryOne $ queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut txOutRef
     case mTxOut of
-      Nothing -> logWarn (TxOutNotFound txOutRef) >> pure Nothing
-      Just txout@TxOut { txOutAddress, txOutValue, txOutDatumHash } ->
-        case addressCredential txOutAddress of
-          PubKeyCredential _ -> pure $ Just $ PublicKeyChainIndexTxOut txOutAddress txOutValue
-          ScriptCredential vh ->
-            case txOutDatumHash of
-              Nothing -> do
-                -- If the txout comes from a script address, the Datum should not be Nothing
-                logWarn $ NoDatumScriptAddr txout
-                pure Nothing
-              Just dh -> do
-                v <- maybe (Left vh) Right <$> getScriptFromHash vh
-                d <- maybe (Left dh) Right <$> getDatumFromHash dh
-                pure $ Just $ ScriptChainIndexTxOut txOutAddress v d txOutValue
+      Nothing    -> logWarn (TxOutNotFound txOutRef) >> pure Nothing
+      Just txout -> makeChainIndexTxOut txout
+
+makeChainIndexTxOut ::
+  forall effs.
+  ( Member BeamEffect effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => TxOut
+  -> Eff effs (Maybe ChainIndexTxOut)
+makeChainIndexTxOut txout@(TxOut address value dh) =
+  case addressCredential address of
+    PubKeyCredential _ -> do
+      d <- maybe (pure Nothing) getDatumFromHash dh
+      pure $ Just $ PublicKeyChainIndexTxOut address value ((, d) <$> dh)
+    ScriptCredential vh ->
+      case dh of
+        Just h -> do
+          v <- getScriptFromHash vh
+          d <- getDatumFromHash h
+          pure $ Just $ ScriptChainIndexTxOut address value (h, d) (vh, v)
+        Nothing -> do
+          -- If the txout comes from a script address, the Datum should not be Nothing
+          logWarn $ NoDatumScriptAddr txout
+          pure Nothing
 
 getUtxoSetAtAddress
   :: forall effs.
@@ -537,7 +534,7 @@ fromTx :: ChainIndexTx -> Db InsertRows
 fromTx tx = mempty
     { datumRows = fromMap citxData
     , scriptRows = fromMap citxScripts
-    , redeemerRows = fromMap citxRedeemers
+    , redeemerRows = fromPairs (Map.toList . txRedeemersWithHash)
     , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
     , addressRows = fromPairs (fmap credential . txOutsWithRef)
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)

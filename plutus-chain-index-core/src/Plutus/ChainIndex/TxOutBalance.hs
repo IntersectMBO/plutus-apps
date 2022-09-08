@@ -35,12 +35,7 @@ transactionOutputStatus
   -- ^ Target transaction output for inspecting its state.
   -> Either TxStatusFailure TxOutStatus
 transactionOutputStatus currentBlock txIdState txOutBalance txOutRef@TxOutRef { txOutRefId } =
-  let spentTxOutTxId = Map.lookup txOutRef (_tobSpentOutputs txOutBalance)
-      isUnspent = txOutRef `Set.member` _tobUnspentOutputs txOutBalance
-      txOutState
-          | isUnspent = Just Unspent
-          | Just txid <- spentTxOutTxId = Just (Spent txid)
-          | Nothing <- spentTxOutTxId = Nothing
+  let txOutState = transactionOutputState txOutBalance txOutRef
    in case txOutState of
         Nothing -> Left $ TxOutBalanceStateInvalid currentBlock txOutRef txOutBalance
         Just s@(Spent txid) -> do
@@ -52,13 +47,26 @@ transactionOutputStatus currentBlock txIdState txOutBalance txOutRef@TxOutRef { 
           txStatus <- transactionStatus currentBlock txIdState txOutRefId
           Right $ fmap (const s) txStatus
 
+transactionOutputState
+  :: TxOutBalance
+  -> TxOutRef
+  -> Maybe TxOutState
+transactionOutputState txOutBalance txOutRef =
+  let spentTxOutTxId = Map.lookup txOutRef (_tobSpentOutputs txOutBalance)
+      isUnspent = txOutRef `Set.member` _tobUnspentOutputs txOutBalance
+      txOutState
+          | isUnspent = Just Unspent
+          | Just txid <- spentTxOutTxId = Just (Spent txid)
+          | Nothing <- spentTxOutTxId = Nothing
+  in txOutState
+
 fromTx :: ChainIndexTx -> TxOutBalance
 fromTx tx =
     TxOutBalance
         { _tobUnspentOutputs = Set.fromList $ fmap snd $ txOutsWithRef tx
         , _tobSpentOutputs =
           Map.fromSet (const $ view citxTxId tx)
-                      $ Set.mapMonotonic txInRef (view citxInputs tx)
+                     $ Set.fromList $ map txInRef (view citxInputs tx)
         }
 
 -- | Whether a 'TxOutRef' is a member of the UTXO set (ie. unspent)

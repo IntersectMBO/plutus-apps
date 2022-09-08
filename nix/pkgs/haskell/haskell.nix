@@ -48,6 +48,7 @@ let
           packages = {
             # Things that need plutus-tx-plugin
             pab-blockfrost.package.buildable = false;
+            marconi.package.buildable = false;
             playground-common.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
@@ -144,6 +145,7 @@ let
 
             # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
             pab-blockfrost.ghcOptions = [ "-Werror" ];
+            marconi.ghcOptions = [ "-Werror" ];
             playground-common.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
@@ -158,6 +160,7 @@ let
             plutus-script-utils.ghcOptions = [ "-Werror" ];
             plutus-tx-constraints.ghcOptions = [ "-Werror" ];
             plutus-use-cases.ghcOptions = [ "-Werror" ];
+            rewindable-index.ghcOptions = [ "-Werror" ];
 
             # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
             # This will go away when we upgrade nixpkgs and things use ieee754 anyway.

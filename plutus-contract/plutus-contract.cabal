@@ -74,8 +74,6 @@ library
     Plutus.Contract.StateMachine.ThreadToken
     Plutus.Contract.Trace
     Plutus.Contract.Trace.RequestHandler
-    Plutus.Contract.Tx
-    Plutus.Contract.Typed.Tx
     Plutus.Contract.Types
     Plutus.Contract.Util
     Plutus.Contract.Wallet
@@ -244,7 +242,12 @@ test-suite plutus-contract-test
     Spec.Secrets
     Spec.State
     Spec.ThreadToken
-    Spec.TimeValidity
+    Spec.TxConstraints.MustMint
+    Spec.TxConstraints.MustProduceAtLeast
+    Spec.TxConstraints.MustSpendAtLeast
+    Spec.TxConstraints.MustSpendPubKeyOutput
+    Spec.TxConstraints.RequiredSigner
+    Spec.TxConstraints.TimeValidity
 
   --------------------
   -- Local components
@@ -254,6 +257,7 @@ test-suite plutus-contract-test
     , plutus-chain-index-core
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-script-utils
     , plutus-tx-constraints
@@ -264,7 +268,6 @@ test-suite plutus-contract-test
   build-depends:
     , cardano-api:{cardano-api, gen}
     , plutus-core
-    , plutus-ledger-api
     , plutus-tx
 
   if !(impl(ghcjs) || os(ghcjs))

@@ -12,7 +12,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -22,6 +21,8 @@ module Plutus.Contract.Request(
     awaitSlot
     , isSlot
     , currentSlot
+    , currentPABSlot
+    , currentChainIndexSlot
     , waitNSlots
     , awaitTime
     , isTime
@@ -136,7 +137,7 @@ import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPo
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
-                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentChainIndexSlotReq, CurrentPABSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Logging (logDebug)
@@ -212,12 +213,29 @@ isSlot ::
 isSlot = Promise . awaitSlot
 
 -- | Get the current slot number
+{-# DEPRECATED currentSlot "It was renamed to 'currentPABSlot', this function will be removed" #-}
 currentSlot ::
     forall w s e.
     ( AsContractError e
     )
     => Contract w s e Slot
-currentSlot = pabReq CurrentSlotReq E._CurrentSlotResp
+currentSlot = currentPABSlot
+
+-- | Get the current slot number of PAB
+currentPABSlot ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Contract w s e Slot
+currentPABSlot = pabReq CurrentPABSlotReq E._CurrentPABSlotResp
+
+-- | Get the current node slot number querying slot number from plutus chain index to be aligned with slot at local running node
+currentChainIndexSlot ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Contract w s e Slot
+currentChainIndexSlot = pabReq CurrentChainIndexSlotReq E._CurrentChainIndexSlotResp
 
 -- | Wait for a number of slots to pass
 waitNSlots ::
@@ -866,7 +884,7 @@ submitTxConstraints
   => TypedValidator a
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
-submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLookups inst)
+submitTxConstraints inst = submitTxConstraintsWith (Constraints.plutusV1TypedValidatorLookups inst)
 
 -- | Build a transaction that satisfies the constraints using the UTXO map
 --   to resolve any input constraints (see 'Ledger.Constraints.TxConstraints.InputConstraint')
@@ -882,7 +900,7 @@ submitTxConstraintsSpending
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
 submitTxConstraintsSpending inst utxo =
-  let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
+  let lookups = Constraints.plutusV1TypedValidatorLookups inst <> Constraints.unspentOutputs utxo
   in submitTxConstraintsWith lookups
 
 {-| A variant of 'mkTx' that runs in the 'Contract' monad, throwing errors and

@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          plutus-chain-index-core
 version:       0.1.0.0
 license:       Apache-2.0
@@ -82,6 +82,7 @@ library
   build-depends:
     , cardano-api
     , cardano-ledger-byron
+    , cardano-ledger-core
     , io-classes
     , iohk-monitoring
     , ouroboros-consensus
@@ -112,6 +113,8 @@ library
     , fingertree
     , freer-simple
     , http-types
+    , io-classes
+    , iohk-monitoring
     , lens
     , memory
     , mtl

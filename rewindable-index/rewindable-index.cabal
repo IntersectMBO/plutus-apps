@@ -1,0 +1,83 @@
+cabal-version: 2.2
+name:          rewindable-index
+version:       0.1.0.0
+synopsis:      Indexers that can rewind the state to a previous version.
+description:
+  Please see the README on GitHub at <https://github.com/input-output-hk/rewindable-index#README.md>
+
+category:      Testing
+homepage:
+  https://github.com/input-output-hk/plutus-apps/rewindable-index/README.md
+
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
+author:        Radu Ometita
+maintainer:    radu.ometita@iohk.io
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+build-type:    Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveGeneric
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    NamedFieldPuns
+    OverloadedStrings
+    PatternSynonyms
+    ScopedTypeVariables
+    Strict
+    TemplateHaskell
+    TypeApplications
+
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities -Wmissing-import-lists
+
+library
+  import:          lang
+  exposed-modules:
+    RewindableIndex.Index.VSplit
+    RewindableIndex.Index.VSqlite
+
+  hs-source-dirs:  src
+  build-depends:
+    , base           >=4.7 && <5
+    , lens
+    , primitive
+    , sqlite-simple
+    , vector
+
+test-suite rewindable-index-test
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  other-modules:
+    RewindableIndex.Model
+    RewindableIndex.Spec.VSplit
+    RewindableIndex.Spec.VSqlite
+
+  hs-source-dirs: test
+  build-depends:
+    , base              >=4.7 && <5
+    , data-default
+    , lens
+    , primitive
+    , QuickCheck
+    , rewindable-index
+    , sqlite-simple
+    , tasty
+    , tasty-quickcheck
+    , vector

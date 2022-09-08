@@ -65,6 +65,8 @@ The core `plutus-apps` packages are versioned as follows:
 
 * Package versioning follows the https://pvp.haskell.org/[PVP] on a best-effort basis (i.e. we will generally try to but we won't guarantee it).
 ** The first-major-version component indicates the "era" which for our purposes means which major version of the *Cardano node* the tools are compatible with.
+*** Alonzo era: `v0.x.x`
+*** Babbage era: `v1.x.x`
 ** The second-major-version component is used for releases which are major versions according to the PVP, but which are still compatible with the current "era".
 ** The minor-version and below are used as normal.
 * Packages which are used downstream should all have the same version.
@@ -72,7 +74,11 @@ The core `plutus-apps` packages are versioned as follows:
 
 In principle we could just have a single major version, but using two makes it easier to avoid mistakes and clearly expresses the state of the repository.
 
-=== Branching
+=== Branching and tagging
+
+The following tagging rules are followed:
+
+* Version `X` is tagged as `vX`
 
 There are two protected branches in `plutus-apps`:
 
@@ -82,7 +88,7 @@ There are two protected branches in `plutus-apps`:
 ** The version of transitive dependencies (`plutus`, `cardano-ledger`, `ouroboros-network`, etc.) should be pinned to the ones from `cardano-node` (or better, `cardano-wallet`)
 ** Changes will be backported form `main` to `next-node`
 * `next-node` branch: should always target the next node release.
-** This branch will eventually be merged in `main` after the Cardano mainnet HF.
+** This branch will eventually be merged in `main` after the Cardano mainnet HF and deleted. Once the next HF is planned, it will be recreated and it will contain an upgraded `cardano-node` version.
 
 === Dependency update
 

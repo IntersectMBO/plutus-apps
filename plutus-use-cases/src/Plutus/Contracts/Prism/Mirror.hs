@@ -71,7 +71,7 @@ createTokens ::
 createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
     logInfo @String "Endpoint 'issue' called"
     let pk      = Credential.unCredentialAuthority authority
-        lookups = Constraints.mintingPolicy (Credential.policy authority)
+        lookups = Constraints.plutusV1MintingPolicy (Credential.policy authority)
                 <> Constraints.ownPaymentPubKeyHash pk
         theToken = Credential.token Credential{credAuthority=authority,credName=coTokenName}
         constraints =
@@ -91,7 +91,7 @@ revokeToken ::
     -> Promise w s MirrorError ()
 revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
     let stateMachine = StateMachine.mkMachineClient authority (mockWalletPaymentPubKeyHash coOwner) coTokenName
-        lookups = Constraints.mintingPolicy (Credential.policy authority) <>
+        lookups = Constraints.plutusV1MintingPolicy (Credential.policy authority) <>
                   Constraints.ownPaymentPubKeyHash  (Credential.unCredentialAuthority authority)
     t <- mapError StateMachineError $ SM.mkStep stateMachine RevokeCredential
     case t of

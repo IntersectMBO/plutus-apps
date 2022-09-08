@@ -3,22 +3,24 @@ index-state: 2022-02-22T20:47:03Z
 
 packages: doc
           freer-extras
+          marconi
           playground-common
           pab-blockfrost
           plutus-chain-index
           plutus-chain-index-core
           plutus-contract
-          plutus-example
           plutus-contract-certification
+          plutus-example
           plutus-ledger
           plutus-ledger-constraints
           plutus-pab
           plutus-pab-executables
           plutus-playground-server
           plutus-script-utils
+          plutus-streaming
           plutus-tx-constraints
           plutus-use-cases
-          plutus-streaming
+          rewindable-index
           web-ghc
 
 -- We never, ever, want this.
@@ -301,11 +303,6 @@ source-repository-package
   location: https://github.com/input-output-hk/Win32-network
   tag: 3825d3abf75f83f406c1f7161883c438dac7277d
 
--- Temporary indexing
-source-repository-package
-  type: git
-  location: https://github.com/raduom/hysterical-screams
-  tag: 4c523469e9efd3f0d10d17da3304923b7b0e0674
 
 source-repository-package
   type: git

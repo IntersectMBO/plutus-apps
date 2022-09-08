@@ -39,7 +39,7 @@ import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, a
                              waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
-import Plutus.Script.Utils.V1.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
