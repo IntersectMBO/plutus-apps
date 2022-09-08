@@ -121,7 +121,7 @@ data CertificationTask = UnitTestsTask
                        | CrashToleranceTask
                        | WhitelistTask
                        | DLTestsTask
-  deriving (Eq, Show, Enum, Bounded)
+  deriving (Eq, Show, Enum, Bounded, Ord)
 
 hasQuickCheckTests :: CertificationTask -> Bool
 hasQuickCheckTests t = t /= UnitTestsTask
