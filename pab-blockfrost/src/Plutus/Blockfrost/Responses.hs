@@ -205,7 +205,6 @@ processUnspentTxOutSetAtAddress _ cred xs =
     utxoDatumHash :: AddressUtxo -> Either Ledger.DatumHash Datum
     utxoDatumHash = maybe (Right unitDatum) (Left . textToDatumHash) . _addressUtxoDataHash
 
-
 processGetTxFromTxId :: Maybe TxResponse -> IO (Maybe ChainIndexTx)
 processGetTxFromTxId Nothing = pure Nothing
 processGetTxFromTxId (Just TxResponse{..}) = do

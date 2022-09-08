@@ -59,7 +59,6 @@ getTxOutBlockfrost (tHash, idx) = do
     filterByIndex :: [UtxoOutput] -> [UtxoOutput]
     filterByIndex = filter ((==) idx . _utxoOutputOutputIndex)
 
-
 getUnspentTxOutBlockfrost :: (TxHash, Integer) -> BlockfrostClient UtxoOutput
 getUnspentTxOutBlockfrost ref = do
     txo <- getTxOutBlockfrost ref

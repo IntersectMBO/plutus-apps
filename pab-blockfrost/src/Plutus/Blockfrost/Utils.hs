@@ -31,7 +31,6 @@ import Plutus.V1.Ledger.Value hiding (Value)
 import Plutus.V1.Ledger.Value qualified as Ledger (Value)
 
 
-
 class Show a => ToBlockfrostScriptHash a where
   toBlockfrostScriptHash :: a -> Blockfrost.ScriptHash
   toBlockfrostScriptHash = fromString . show
@@ -107,17 +106,15 @@ utxoToRef utxo = TxOutRef { txOutRefId=utxoToTxId utxo
 utxoToTxId :: AddressUtxo -> Ledger.TxId
 utxoToTxId = txHashToTxId . _addressUtxoTxHash
 
-
 txoToRef :: UtxoInput -> TxOutRef
 txoToRef txo = TxOutRef { txOutRefId=txoToTxId txo
-                          , txOutRefIdx=_utxoInputOutputIndex txo
-                          }
+                        , txOutRefIdx=_utxoInputOutputIndex txo
+                        }
 
 -- We are forced to use blockfrost-client v0.3.1 by the cardano-wallet.
 -- In that version, _utxoInputTxHash returns a Text instead of a TxHash
 txoToTxId :: UtxoInput -> Ledger.TxId
 txoToTxId = txHashToTxId . TxHash . _utxoInputTxHash
-
 
 amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
 amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)

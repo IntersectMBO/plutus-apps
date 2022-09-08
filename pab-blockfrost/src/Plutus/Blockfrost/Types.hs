@@ -21,7 +21,6 @@ data BlockfrostEnv = BlockfrostEnv { envBfTokenPath :: FilePath
                                    , envNetworkId   :: NetworkId
                                    }
 
-
 data TxResponse = TxResponse { _txHash        :: TxHash
                              , _invalidBefore :: Maybe Text
                              , _invalidAfter  :: Maybe Text
