@@ -91,9 +91,9 @@ generateTx gen slot (UtxoIndex utxo) = do
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig
     let
-      txn = Tx.EmulatorTx tx
       params = def { pSlotConfig = slotCfg }
       utxoIndex = either (error . show) id $ Validation.fromPlutusIndex params $ UtxoIndex utxo
+      txn = Validation.fromPlutusTxSigned params utxoIndex tx CW.knownPaymentKeys
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
       Nothing -> pure tx
