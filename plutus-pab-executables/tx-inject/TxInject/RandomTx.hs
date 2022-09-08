@@ -94,7 +94,7 @@ generateTx gen slot (UtxoIndex utxo) = do
       txn = Tx.EmulatorTx tx
       params = def { pSlotConfig = slotCfg }
       utxoIndex = either (error . show) id $ Validation.fromPlutusIndex params $ UtxoIndex utxo
-      validationResult = Validation.validateCardanoTx params slot utxoIndex txn CW.knownPaymentKeys
+      validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
       Nothing -> pure tx
       Just  _ -> generateTx gen slot (UtxoIndex utxo)

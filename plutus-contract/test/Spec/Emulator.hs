@@ -28,15 +28,14 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, Tx (txFee, txMint, txOutputs),
-               TxOut (txOutValue), Value, outputs, scriptTxIn, scriptTxOut, txOutRefs, unspentOutputs)
+import Ledger (OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, Tx (txMint, txOutputs), TxOut (txOutValue), Value,
+               outputs, scriptTxIn, scriptTxOut, txOutRefs, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
 import Ledger.Params ()
-import Ledger.Tx qualified as Tx
 import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
@@ -206,7 +205,7 @@ invalidTrace = property $ do
 
 invalidScript :: Property
 invalidScript = property $ do
-    (Mockchain m utxo params, txn1) <- forAll genChainTxn
+    (Mockchain _ _ params, txn1) <- forAll genChainTxn
 
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) - 1))
@@ -221,12 +220,8 @@ invalidScript = property $ do
     invalidTxn <- forAll $ Gen.genValidTransactionSpending (Set.fromList invalidTxnIns) totalVal
     Hedgehog.annotateShow invalidTxn
 
-    let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-
-        cUtxoIndex1 = either (error . show) id $ Validation.fromPlutusIndex params $ Index.UtxoIndex utxo
-        signedScriptTxn = Validation.fromPlutusTxSigned params cUtxoIndex1 scriptTxn CW.knownPaymentKeys
-        cUtxoIndex2 = either (error . show) id $ Validation.fromPlutusIndex params $ Index.UtxoIndex $ Map.fromList invalidTxnUtxo
-        signedInvalidTxn = Validation.fromPlutusTxSigned' params cUtxoIndex2 invalidTxn CW.knownPaymentKeys
+    let cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params $ Index.UtxoIndex $ Map.fromList invalidTxnUtxo
+        signedInvalidTxn = Validation.fromPlutusTxSigned' params cUtxoIndex invalidTxn CW.knownPaymentKeys
 
     Hedgehog.assert (signedInvalidTxn == (Left (Left (Index.Phase2, Index.ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure: An error has occurred:  User error:\nThe provided Plutus code called 'error'.")))))
     where

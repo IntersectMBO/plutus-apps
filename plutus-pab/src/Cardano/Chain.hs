@@ -90,7 +90,7 @@ handleControlChain params = \case
         idx   <- gets $ view index
         chan   <- gets $ view channel
 
-        let EC.ValidatedBlock block events idx' = EC.validateBlock params slot idx pool []
+        let EC.ValidatedBlock block events idx' = EC.validateBlock params slot idx pool
 
         modify $ txPool .~ []
         modify $ tip    ?~ block
