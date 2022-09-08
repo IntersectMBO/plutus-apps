@@ -12,6 +12,7 @@ import Spec.Rows qualified
 import Spec.Secrets qualified
 import Spec.State qualified
 import Spec.ThreadToken qualified
+import Spec.TxConstraints.MustIncludeDatum qualified
 import Spec.TxConstraints.MustMint qualified
 import Spec.TxConstraints.MustSpendAtLeast qualified
 import Spec.TxConstraints.RequiredSigner qualified
@@ -29,6 +30,7 @@ tests = testGroup "plutus-contract" [
     Spec.State.tests,
     Spec.Rows.tests,
     Spec.ThreadToken.tests,
+    Spec.TxConstraints.MustIncludeDatum.tests,
     Spec.TxConstraints.MustMint.tests,
     Spec.TxConstraints.MustSpendAtLeast.tests,
     Spec.TxConstraints.RequiredSigner.tests,
