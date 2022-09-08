@@ -63,17 +63,15 @@ module Ledger.Tx
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Crypto.Hash (SHA256, digest)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.CBOR.Write qualified as Write
-import Codec.Serialise (Serialise (encode))
+import Codec.Serialise (Serialise)
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
-import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
@@ -81,7 +79,7 @@ import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Slot (SlotRange)
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..), toCardanoTxBody)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal hiding (updateUtxoCollateral)
 import Ledger.Validation qualified
@@ -346,12 +344,9 @@ instance Pretty Tx where
 
 -- | Compute the id of a transaction.
 txId :: Tx -> V1.Tx.TxId
--- Double hash of a transaction, excluding its witnesses.
-txId tx = V1.Tx.TxId $ V1.toBuiltin
-               $ digest (Proxy @SHA256)
-               $ digest (Proxy @SHA256)
-               (Write.toStrictByteString $ encode $ strip tx)
-
+txId tx = case toCardanoTxBody def [] tx of
+  Left e       -> error (show e)
+  Right txBody -> CardanoAPI.fromCardanoTxId $ C.getTxId txBody
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
 updateUtxo :: CardanoTx -> Map V1.Tx.TxOutRef TxOut -> Map V1.Tx.TxOutRef TxOut
