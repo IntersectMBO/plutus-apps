@@ -40,6 +40,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Text (Text)
+import Gen.Cardano.Api.Typed qualified as CGen
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import Test.Base qualified as H
 import Test.Base qualified as T
@@ -49,6 +50,8 @@ import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as H
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.SubmitApi qualified as TN
+
+import Gen qualified
 
 -- Copied from plutus-example/test/Test/PlutusExample/SubmitApi/TxInLockingPlutus
 data Utxo = Utxo
@@ -306,12 +309,12 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
           C.txScriptValidity   = C.TxScriptValidityNone
         }
 
-  txBody :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
-  p2 "txBody" txBody
+  tx1body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
+  p2 "tx1body" tx1body
   let
     kw :: C.KeyWitness C.AlonzoEra
-    kw = C.makeShelleyKeyWitness txBody (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
-    tx1 = C.makeSignedTransaction [kw] txBody
+    kw = C.makeShelleyKeyWitness tx1body (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
+    tx1 = C.makeSignedTransaction [kw] tx1body
 
   submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
     liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx1 C.AlonzoEraInCardanoMode
@@ -341,25 +344,39 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Second transaction: spend the UTXO specified in the first transaction
 
-  let todo = undefined
+  HE.threadDelay 5000000 -- wait for the first transaction to be accepted
 
+  p2 "plutusScriptAddr" plutusScriptAddr
   scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
   scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
+
+  data_ <- H.forAll CGen.genScriptData
+  executionUnits <- H.forAll Gen.genExecutionUnits -- QUESTION: this is maybe not a good idea?
   let
+      fee = 500
+
+      C.PlutusScript lang plutusScript_ = plutusScript
+      scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
+      scriptWitness = C.ScriptWitness C.ScriptWitnessForSpending $
+        C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript_
+        (C.ScriptDatumForTxIn data_) data_ executionUnits
+
+      collateral = C.TxInsCollateral C.CollateralInAlonzoEra [scriptTxIn]
+
       tx2out :: C.TxOut ctx C.AlonzoEra
       tx2out =
           C.TxOut
             (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
-             -- send ADA back to the original address                       ^
-            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace todo)
+             -- send ADA back to the original genesis address               ^
+            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace $ lovelaceAtTxinDiv3 - fee)
             C.TxOutDatumNone
       tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
       tx2bodyContent =
         C.TxBodyContent {
-          C.txIns              = [(scriptTxIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)],
-          C.txInsCollateral    = C.TxInsCollateralNone,
+          C.txIns              = [(scriptTxIn, C.BuildTxWith scriptWitness)],
+          C.txInsCollateral    = collateral,
           C.txOuts             = [tx2out],
-          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra $ C.Lovelace todo,
+          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra $ C.Lovelace fee,
           C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
           C.txMetadata         = C.TxMetadataNone,
           C.txAuxScripts       = C.TxAuxScriptsNone,
