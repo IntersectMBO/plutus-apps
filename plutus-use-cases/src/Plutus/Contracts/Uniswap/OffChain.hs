@@ -346,7 +346,8 @@ add us AddParams{..} = do
 
         tx       = Constraints.mustPayToTheScript dat val          <>
                    Constraints.mustMintValue lVal                  <>
-                   Constraints.mustSpendScriptOutput oref redeemer
+                   Constraints.mustSpendScriptOutput oref redeemer <>
+                   Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData dat)
 
     logInfo @String $ printf "val = %s, inVal = %s" (show val) (show inVal)
     logInfo $ show lookups

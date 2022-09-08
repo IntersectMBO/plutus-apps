@@ -70,7 +70,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (_2, _Just, alaf, at, iforM_, makeLensesFor, use, view, (%=), (&), (.=), (.~), (<>=), (^?))
+import Control.Lens (_2, _Just, alaf, at, iforM_, makeLensesFor, use, view, (%=), (&), (.=), (.~), (<>=), (?=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -674,7 +674,7 @@ processConstraint
 processConstraint = \case
     MustIncludeDatum dv ->
         let theHash = P.datumHash dv in
-        unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
+        unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
     MustValidateIn timeRange ->
         unbalancedTx . validityTimeRange %= (timeRange /\)
     MustBeSignedBy pk ->
@@ -702,8 +702,8 @@ processConstraint = \case
             inputs <- use (unbalancedTx . tx . Tx.inputs)
             -- We use fromJust because we can garanty that it will always be Just.
             let idx = fromJust $ elemIndex input inputs
-            unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
-            unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
+            unbalancedTx . tx . Tx.datumWitnesses . at dvh ?= datum
+            unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) ?= red
             valueSpentInputs <>= provided value
           _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral txo -> do
@@ -724,7 +724,7 @@ processConstraint = \case
 
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash mintingPolicyScript
         unbalancedTx . tx . Tx.mint <>= value i
-        mintRedeemers . at mpsHash .= Just red
+        mintRedeemers . at mpsHash ?= red
     MustPayToPubKeyAddress pk skhM mdv _refScript vl -> do
         -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
@@ -746,7 +746,7 @@ processConstraint = \case
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = P.datumHash dv
             pv1script = scriptAddressTxOut addr vl dv
-        unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
+        unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
         case C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1script of
           Left err       -> throwError $ TxOutCardanoError err
           Right txScript -> unbalancedTx . tx . Tx.outputs %= (TxOut txScript :)

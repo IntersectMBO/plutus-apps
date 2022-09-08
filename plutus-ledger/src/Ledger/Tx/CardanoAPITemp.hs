@@ -140,7 +140,7 @@ makeTransactionBody'
 
     scripts :: [Ledger.Script StandardBabbage]
     scripts = Maybe.catMaybes
-      [ toShelleyScript <$> (scriptWitnessScript scriptwitness)
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
