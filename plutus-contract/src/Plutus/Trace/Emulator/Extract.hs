@@ -4,6 +4,7 @@
 Extract validators and partial transactions from emulator traces
 -}
 module Plutus.Trace.Emulator.Extract(
+  ValidatorMode(..),
   writeScriptsTo,
   showStats,
   ScriptsConfig(..),
@@ -41,9 +42,15 @@ data ScriptsConfig =
         , scCommand :: Command -- ^ Whether to write out complete transactions or just the validator scripts
         }
 
+data ValidatorMode = FullyAppliedValidators | UnappliedValidators
+    deriving (Eq, Ord, Show)
+
 -- | Command for 'writeScriptsTo'
 data Command =
-    Transactions  -- ^ Write out partial transactions
+    Scripts -- ^ Write out validator scripts only (flat encoding)
+        { unappliedValidators :: ValidatorMode -- ^ Whether to write fully applied or unapplied validators
+        }
+    | Transactions  -- ^ Write out partial transactions
         { networkId          :: C.NetworkId -- ^ Network ID to use when creating addresses
         , protocolParamsJSON :: FilePath -- ^ Location of a JSON file with protocol parameters
         }
@@ -65,6 +72,7 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
         getEvents theFold = S.fst' $ run $ foldEmulatorStreamM (L.generalize theFold) stream
     createDirectoryIfMissing True scPath
     case scCommand of
+        Scripts _ -> pure mempty
         Transactions{networkId, protocolParamsJSON} -> do
             bs <- BSL.readFile protocolParamsJSON
             case Aeson.eitherDecode bs of
