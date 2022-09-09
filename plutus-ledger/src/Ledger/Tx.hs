@@ -64,7 +64,6 @@ module Ledger.Tx
 
 import Cardano.Api qualified as C
 import Cardano.Crypto.Wallet qualified as Crypto
-import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise)
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)

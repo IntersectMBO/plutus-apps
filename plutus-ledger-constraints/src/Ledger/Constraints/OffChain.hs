@@ -70,7 +70,8 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (_2, _Just, alaf, at, iforM_, makeLensesFor, use, view, (%=), (&), (.=), (.~), (<>=), (?=), (^?))
+import Control.Lens (_2, _Just, alaf, at, iforM_, makeLensesFor, use, view, (%=), (&), (.=), (.~), (<&>), (<>=), (?=),
+                     (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -106,7 +107,7 @@ import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr), ScriptTag (Mint, Spend),
-                  TxOut (TxOut), TxOutRef, Versioned (Versioned), txOutValue)
+                  TxOut (TxOut), TxOutRef, Versioned (Versioned), outDatumHash, txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -731,14 +732,16 @@ processConstraint = \case
         networkId <- gets $ pNetworkId . cpsParams
         forM_ mdv $ \dv -> do
             unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) .= Just dv
-        let hash = P.datumHash <$> mdv
         let pv1TxOut = PV1.TxOut { PV1.txOutAddress=pubKeyHashAddress pk skhM
                                  , PV1.txOutValue=vl
-                                 , PV1.txOutDatumHash=hash
+                                 , PV1.txOutDatumHash=Nothing
                                  }
-        case C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1TxOut of
+        let txInDatum = C.toCardanoTxOutDatumInTx mdv
+        let cardanoTxOut =
+              TxOut <$> C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1TxOut <&> outDatumHash .~ txInDatum
+        case cardanoTxOut of
           Left err    -> throwError $ TxOutCardanoError err
-          Right txOut -> unbalancedTx . tx . Tx.outputs %= (TxOut txOut :)
+          Right txOut -> unbalancedTx . tx . Tx.outputs %= (txOut :)
         valueSpentOutputs <>= provided vl
     MustPayToOtherScript vlh svhM dv _refScript vl -> do
         -- TODO: implement adding reference script
@@ -747,9 +750,13 @@ processConstraint = \case
             theHash = P.datumHash dv
             pv1script = scriptAddressTxOut addr vl dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
-        case C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1script of
+
+        let txInDatum = C.toCardanoTxOutDatumInTx (Just dv)
+        let cardanoTxOut =
+              TxOut <$> C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1script <&> outDatumHash .~ txInDatum
+        case cardanoTxOut of
           Left err       -> throwError $ TxOutCardanoError err
-          Right txScript -> unbalancedTx . tx . Tx.outputs %= (TxOut txScript :)
+          Right txScript -> unbalancedTx . tx . Tx.outputs %= (txScript :)
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
         unless (P.datumHash dv == dvh)

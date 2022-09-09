@@ -46,10 +46,13 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoTxOut
   , toCardanoTxOutUnsafe
   , toCardanoTxOutDatumHash
+  , toCardanoTxOutDatumInline
+  , toCardanoTxOutDatumInTx
   , toCardanoTxOutValue
   , toCardanoAddressInEra
   , toCardanoMintValue
   , toCardanoValue
+  , adaToCardanoValue
   , toCardanoFee
   , toCardanoValidityRange
   , toCardanoScriptInEra
@@ -103,6 +106,7 @@ import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
+import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
@@ -546,6 +550,16 @@ fromCardanoTxOutDatum (C.TxOutDatumHash _ h) = PV2.OutputDatumHash $ PV2.DatumHa
 fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 fromCardanoTxOutDatum (C.TxOutDatumInline _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 
+toCardanoTxOutDatumInTx :: Maybe PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutDatumInTx Nothing = C.TxOutDatumNone
+toCardanoTxOutDatumInTx (Just d) =
+    C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum $ d
+
+toCardanoTxOutDatumInline :: Maybe PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutDatumInline Nothing = C.TxOutDatumNone
+toCardanoTxOutDatumInline (Just d) =
+    C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum $ d
+
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
 toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash datumHash
@@ -571,6 +585,9 @@ toCardanoMintValue redeemers value mps =
     indexedMpsToCardanoMintWitness (idx, (mph, mp)) =
         (,) <$> toCardanoPolicyId mph
             <*> toCardanoMintWitness redeemers idx mp
+
+adaToCardanoValue :: P.Ada -> C.Value
+adaToCardanoValue (P.Lovelace n) = C.valueFromList [(C.AdaAssetId, C.Quantity n)]
 
 fromCardanoValue :: C.Value -> PV1.Value
 fromCardanoValue (C.valueToList -> list) = foldMap toValue list

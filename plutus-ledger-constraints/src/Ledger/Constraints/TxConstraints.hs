@@ -301,14 +301,14 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- datum @d@.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
--- output with @d@ and @v@ and adds @d@ in the transaction's datum witness set.
+-- output with @dt@ and @vl@ and adds @dt@ in the transaction's datum witness set.
 -- The script address is derived from the typed validator that is provided in
 -- the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.typedValidatorLookups'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the new script transaction output with
--- @d@ and @v@ is part of the transaction's outputs.
+-- @dt@ and @vt@ is part of the transaction's outputs.
 mustPayToTheScript :: o -> Value -> TxConstraints i o
 mustPayToTheScript dt vl =
     mempty { txOwnOutputs = [ScriptOutputConstraint dt vl Nothing] }
