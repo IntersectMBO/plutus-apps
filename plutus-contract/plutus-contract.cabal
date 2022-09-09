@@ -244,6 +244,7 @@ test-suite plutus-contract-test
     Spec.State
     Spec.ThreadToken
     Spec.TxConstraints.MustMint
+    Spec.TxConstraints.MustPayToPubKeyAddress
     Spec.TxConstraints.MustSpendAtLeast
     Spec.TxConstraints.RequiredSigner
     Spec.TxConstraints.TimeValidity
