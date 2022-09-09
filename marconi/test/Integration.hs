@@ -222,8 +222,10 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
               }
 
   utxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny address
+--  exit2 "utxo" utxo
   let utxoMap = C.unUTxO utxo
   txIn <- H.noteShow $ head $ Map.keys utxoMap
+--  exit2 "txIn" txIn
 
   (C.Lovelace lovelaceAtTxin) <- H.nothingFailM . H.noteShow $ (\(C.TxOut _ v _) -> C.txOutValueToLovelace v) <$> (utxoMap & Map.lookup txIn)
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
@@ -271,7 +273,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- This datum hash is the hash of the untyped 42
   let scriptDatumHashStr = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
-      scriptDatum = C.ScriptDataNumber 42
+      scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
   -- scriptDatumHash <- H.nothingFail $ C.deserialiseFromRawBytes (C.AsHash C.AsScriptData) scriptDatumHashStr
   p2 "scriptDatumHash" scriptDatumHash
@@ -346,22 +348,25 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   HE.threadDelay 5000000 -- wait for the first transaction to be accepted
 
+  txIn_ <- head . Map.keys . C.unUTxO <$> findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
+
   p2 "plutusScriptAddr" plutusScriptAddr
   scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
   scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
 
-  data_ <- H.forAll CGen.genScriptData
-  executionUnits <- H.forAll Gen.genExecutionUnits -- QUESTION: this is maybe not a good idea?
+  redeemer <- H.forAll CGen.genScriptData
+--  executionUnits <- H.forAll Gen.genExecutionUnits -- QUESTION: this is maybe not a good idea?
   let
-      fee = 500
+      executionUnits = C.ExecutionUnits {C.executionSteps = 500000,C.executionMemory = 500000 }
+      fee = 100343
 
       C.PlutusScript lang plutusScript_ = plutusScript
       scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
       scriptWitness = C.ScriptWitness C.ScriptWitnessForSpending $
         C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript_
-        (C.ScriptDatumForTxIn data_) data_ executionUnits
+        (C.ScriptDatumForTxIn scriptDatum) redeemer executionUnits
 
-      collateral = C.TxInsCollateral C.CollateralInAlonzoEra [scriptTxIn]
+      collateral = C.TxInsCollateral C.CollateralInAlonzoEra [txIn_]
 
       tx2out :: C.TxOut ctx C.AlonzoEra
       tx2out =
@@ -370,6 +375,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
              -- send ADA back to the original genesis address               ^
             (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace $ lovelaceAtTxinDiv3 - fee)
             C.TxOutDatumNone
+
       tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
       tx2bodyContent =
         C.TxBodyContent {
