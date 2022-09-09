@@ -46,6 +46,7 @@ library
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
+    Marconi.Indexers
 
   --------------------
   -- Local components
@@ -64,6 +65,7 @@ library
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , plutus-ledger-api
+    , plutus-streaming
 
   ------------------------
   -- Non-IOG dependencies
@@ -76,6 +78,8 @@ library
     , mwc-random
     , serialise
     , sqlite-simple
+    , stm
+    , streaming
 
 executable marconi
   import:         lang
