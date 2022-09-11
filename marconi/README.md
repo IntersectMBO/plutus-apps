@@ -143,7 +143,7 @@ The `marconi` executable is available as a nix flake.
 You may either clone the [`plutus-apps`](https://github.com/input-output-hk/plutus-apps)
 repository and run from the top-level:
 ```
-nix build --impure .#marconi
+nix build .#marconi
 ```
 Or you may run from anywhere:
 ```
