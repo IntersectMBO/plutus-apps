@@ -122,10 +122,10 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
 
 -- UtxoIndexer
 getOutputs
-  :: C.Tx era
+  :: C.IsCardanoEra era => C.Tx era
   -> Maybe [(TxOut, TxOutRef)]
 getOutputs (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-  outs <- either (const Nothing) Just $ traverse fromCardanoTxOut txOuts
+  outs <- either (const Nothing) Just $ fmap TxOut <$> traverse (C.eraCast C.BabbageEra) txOuts
   pure $ outs
     &  zip ([0..] :: [Integer])
    <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
@@ -145,7 +145,7 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
   in Set.fromList $ fmap (txInRef . (`TxIn` Nothing) . fromCardanoTxIn) inputs
 
 getUtxoUpdate
-  :: SlotNo
+  :: C.IsCardanoEra era => SlotNo
   -> [C.Tx era]
   -> UtxoUpdate
 getUtxoUpdate slot txs =

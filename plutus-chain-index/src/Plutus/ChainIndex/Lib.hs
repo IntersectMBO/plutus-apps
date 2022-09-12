@@ -133,13 +133,9 @@ toCardanoChainSyncHandler :: RunRequirements -> ChainSyncHandler -> C.ChainSyncE
 toCardanoChainSyncHandler runReq handler = \case
     C.RollBackward cp ct -> handler (RollBackward (fromCardanoPoint cp) (fromCardanoTip ct))
     C.Resume cp -> handler (Resume (fromCardanoPoint cp))
-    C.RollForward block ct -> do
-        let ciBlock = fromCardanoBlock block
-        case ciBlock of
-            Left err    ->
-                logError (convertLog PrettyObject $ CI.trace runReq) (CI.ConversionFailed err)
-            Right txs ->
-                handler (RollForward (CI.Block (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
+    C.RollForward block ct ->
+        let txs = fromCardanoBlock block
+        in handler (RollForward (CI.Block (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()

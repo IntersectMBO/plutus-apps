@@ -353,6 +353,7 @@ txId :: Tx -> V1.Tx.TxId
 txId tx = case toCardanoTxBody def [] tx of
   Left e       -> error (show e)
   Right txBody -> CardanoAPI.fromCardanoTxId $ C.getTxId txBody
+
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
 updateUtxo :: CardanoTx -> Map V1.Tx.TxOutRef TxOut -> Map V1.Tx.TxOutRef TxOut

@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,7 +18,8 @@ module Ledger.Tx.Internal
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
+import Cardano.Api.Shelley qualified as C hiding (toShelleyTxOut)
+import Cardano.Binary qualified as C
 import Cardano.Ledger.Alonzo.Genesis ()
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
@@ -35,7 +37,8 @@ import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Slot
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOut, fromCardanoValue)
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoValue)
+import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.Script.Utils.Scripts
@@ -185,9 +188,17 @@ newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving anyclass (ToJSON, FromJSON)
     -- deriving anyclass ( Serialise, NFData)
 
+instance C.ToCBOR TxOut where
+  toCBOR (TxOut txout) = C.toCBOR $ C.toShelleyTxOut C.ShelleyBasedEraBabbage txout
+
+instance C.FromCBOR TxOut where
+  fromCBOR = do
+    txout <- C.fromCBOR
+    pure $ TxOut $ C.fromShelleyTxOut C.ShelleyBasedEraBabbage txout
+
 instance Serialise TxOut where
-  encode = encode . fromCardanoTxOut . getTxOut
-  decode = undefined -- FIXME
+  encode = C.toCBOR
+  decode = C.fromCBOR
 
 instance NFData TxOut where
   rnf = undefined -- FIXME
