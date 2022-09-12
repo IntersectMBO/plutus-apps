@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -24,10 +25,12 @@ import Cardano.Ledger.Alonzo.Genesis ()
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
 import Control.DeepSeq (NFData, rnf)
+import Control.Lens ((&), (.~), (?~))
 import Control.Lens qualified as L
 import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
+import Data.Data (Proxy (Proxy))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -186,7 +189,6 @@ scriptTxInputs = (\x -> L.folding x) . filter $ \case
 newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
-    -- deriving anyclass ( Serialise, NFData)
 
 instance C.ToCBOR TxOut where
   toCBOR (TxOut txout) = C.toCBOR $ C.toShelleyTxOut C.ShelleyBasedEraBabbage txout
@@ -201,10 +203,23 @@ instance Serialise TxOut where
   decode = C.fromCBOR
 
 instance NFData TxOut where
-  rnf = undefined -- FIXME
+  rnf (TxOut tx) = seq tx ()
 
 instance OpenApi.ToSchema TxOut where
-    declareNamedSchema _ = undefined -- FIXME
+    declareNamedSchema _ = do
+      addressSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy (C.AddressInEra C.BabbageEra))
+      valueSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Value)
+      bsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Datum)
+      pure $ OpenApi.NamedSchema (Just "TxOut") $ mempty
+        & OpenApi.type_ ?~ OpenApi.OpenApiObject
+        & OpenApi.properties .~
+          [ ("address", addressSchema)
+          , ("value", valueSchema)
+          , ("datum", bsSchema)
+          , ("referenceScript", bsSchema)
+          ]
+        & OpenApi.required .~ ["address","value"]
+
 
 instance Pretty TxOut where
   pretty = viaShow . getTxOut
