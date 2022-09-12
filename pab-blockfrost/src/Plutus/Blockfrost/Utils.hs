@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 
@@ -17,6 +18,7 @@ import Blockfrost.Client as Blockfrost
 import Cardano.Api hiding (AssetId, Block, Value)
 import Cardano.Api.Shelley qualified as Api
 import Ledger.Tx (TxOutRef (..))
+import Ledger.Tx qualified as LT (ScriptTag (..))
 import Ledger.Tx.CardanoAPI
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
@@ -74,6 +76,13 @@ textToScriptHash = PS.ScriptHash . toBuiltin . fromJust . decodeHex
 
 textToRedeemerHash :: Text -> PS.RedeemerHash
 textToRedeemerHash = PS.RedeemerHash . toBuiltin . fromJust . decodeHex
+
+toPlutusScriptTag :: ValidationPurpose -> LT.ScriptTag
+toPlutusScriptTag = \case
+    Spend  -> LT.Spend
+    Mint   -> LT.Mint
+    Cert   -> LT.Cert
+    Reward -> LT.Reward
 
 toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
 toPlutusAddress bAddr = case deserialized of

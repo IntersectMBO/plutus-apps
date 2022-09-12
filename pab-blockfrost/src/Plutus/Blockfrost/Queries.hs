@@ -102,8 +102,7 @@ getTxFromTxIdBlockfrost tHash = do
     redeemers <- getTxRedeemers tHash
     liftIO $ print $ "INPUTS: " ++ show (_transactionUtxosInputs txUtxos)
     let scriptHashes = map _transactionRedeemerScriptHash redeemers
-        redeemerHashes = map _transactionRedeemerDatumHash redeemers
-    redeemersList <- liftIO $ mapConcurrently (\rHash -> (unDatumHash rHash,) <$> getScriptDatum rHash) redeemerHashes
+    redeemersList <- liftIO $ mapConcurrently getRedeemersList redeemers
     scriptsList <- liftIO $ mapConcurrently (\sHash -> (unScriptHash sHash,) <$> getScriptCBOR sHash) scriptHashes
     return $ TxResponse { _txHash        = tHash
                         , _invalidBefore = _transactionInvalidBefore specificTx
@@ -113,8 +112,15 @@ getTxFromTxIdBlockfrost tHash = do
                         , _datumsMap     = datumMap
                         , _redeemersMap  = fromList redeemersList
                         , _scriptsMap    = fromList scriptsList
-                        , _redeemers     = redeemers
                         }
+  where
+    getRedeemersList :: TransactionRedeemer -> IO (Integer, (ValidationPurpose, ScriptDatum))
+    getRedeemersList red = do
+        let idx     = _transactionRedeemerTxIndex red
+            purp = _transactionRedeemerPurpose red
+            dh      = _transactionRedeemerDatumHash red
+        dat <- getScriptDatum dh
+        return (idx, (purp  , dat))
 
 getTxsFromTxIdsBlockfrost :: MonadBlockfrost m => [TxHash] -> m [TxResponse]
 getTxsFromTxIdsBlockfrost = liftIO . mapConcurrently getTxFromTxIdBlockfrost

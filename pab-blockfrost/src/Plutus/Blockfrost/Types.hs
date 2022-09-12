@@ -27,7 +27,6 @@ data TxResponse = TxResponse { _txHash        :: TxHash
                              , _utxosInputs   :: [UtxoInput]
                              , _utxosOutpus   :: [UtxoOutput]
                              , _datumsMap     :: Map Text ScriptDatum
-                             , _redeemersMap  :: Map Text ScriptDatum
+                             , _redeemersMap  :: Map Integer (ValidationPurpose, ScriptDatum)
                              , _scriptsMap    :: Map Text ScriptCBOR
-                             , _redeemers     :: [TransactionRedeemer]
                              }
