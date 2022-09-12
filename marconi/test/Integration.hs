@@ -1,12 +1,14 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
-
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Integration where
 
+import Control.Concurrent qualified as IO
+import Control.Exception (catch)
 import Control.Monad (void)
 import Data.Aeson qualified as Aeson
 import Data.HashMap.Lazy (HashMap)
@@ -24,6 +26,7 @@ import Hedgehog.Extras.Test.File qualified as H
 import Hedgehog.Extras.Test.Process qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import Prettyprinter.Render.Text (renderStrict)
 import System.Directory qualified as IO
 import System.Environment qualified as IO
 import System.FilePath ((</>))
@@ -51,7 +54,14 @@ import Testnet.Conf qualified as H
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.SubmitApi qualified as TN
 
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.BM.Tracing (defaultConfigStdout)
 import Gen qualified
+import Marconi.Indexers qualified
+import Marconi.Logging qualified
+import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 
 -- Copied from plutus-example/test/Test/PlutusExample/SubmitApi/TxInLockingPlutus
 data Utxo = Utxo
@@ -133,7 +143,28 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
 
   let socketFilePath = IO.sprocketArgumentName (head bftSprockets)
+      socketPathAbs = tempAbsPath </> socketFilePath
   p2 "socketFilePath" socketFilePath
+
+  H.threadDelay 1_000_000
+
+  let sqlitedb = tempAbsPath </> "script-tx.db"
+  liftIO $ IO.forkIO $ do
+    let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
+    c <- defaultConfigStdout
+    p2 "getCurrentDirectory" =<< IO.getCurrentDirectory
+    withTrace c "marconi" $ \trace ->
+      withChainSyncEventStream
+        socketPathAbs
+        networkId
+        chainPoint
+        (Marconi.Indexers.combinedIndexer Nothing Nothing (Just sqlitedb) . Marconi.Logging.logging trace)
+        `catch` \NoIntersectionFound ->
+          logError trace $
+            renderStrict $
+              layoutPretty defaultLayoutOptions $
+                "No intersection found when looking for the chain point" <+> pretty chainPoint <> "."
+                  <+> "Please check the slot number and the block hash do belong to the chain"
 
   env <- H.evalIO IO.getEnvironment
 
@@ -404,5 +435,6 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
   redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
 
+  exit_
   -- Just to get a test going...
   "2" === ("2" :: Text)
