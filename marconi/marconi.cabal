@@ -153,12 +153,14 @@ test-suite marconi-test
   build-depends:
     , aeson
     , base                  >=4.9 && <5
+    , bytestring
     , containers
     , directory
     , filepath
     , hedgehog
     , hedgehog-extras
     , prettyprinter
+    , sqlite-simple
     , tasty
     , tasty-hedgehog
     , text

@@ -11,11 +11,15 @@ import Control.Concurrent qualified as IO
 import Control.Exception (catch)
 import Control.Monad (void)
 import Data.Aeson qualified as Aeson
+import Data.ByteString.Builder qualified as BS
+import Data.Char (toLower)
 import Data.HashMap.Lazy (HashMap)
 import Data.HashMap.Lazy qualified as HM
 import Data.Monoid (Last (Last))
 import Data.Set qualified as Set
 import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding qualified as TL
 import Hedgehog (MonadTest, Property, assert, eval, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
@@ -57,6 +61,7 @@ import Testnet.SubmitApi qualified as TN
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
+import Database.SQLite.Simple qualified as Sql
 import Gen qualified
 import Marconi.Indexers qualified
 import Marconi.Logging qualified
@@ -193,12 +198,12 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   plutusScript <- C.PlutusScript C.PlutusScriptV1
     <$> readAs (C.AsPlutusScript C.AsPlutusScriptV1) plutusScriptFileInUse
   let
+    plutusScriptHash :: C.ScriptHash
+    plutusScriptHash = C.hashScript plutusScript
     plutusScriptAddr :: C.Address C.ShelleyAddr
-    plutusScriptAddr =
-      C.makeShelleyAddress
-        networkId
-        (C.PaymentCredentialByScript $ C.hashScript plutusScript)
-        C.NoStakeAddress
+    plutusScriptAddr = C.makeShelleyAddress networkId (C.PaymentCredentialByScript plutusScriptHash) C.NoStakeAddress
+
+  p2 "plutusScriptHash" plutusScriptHash
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
@@ -377,11 +382,14 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Second transaction: spend the UTXO specified in the first transaction
 
-  HE.threadDelay 5000000 -- wait for the first transaction to be accepted
+  HE.threadDelay 2_000_000 -- wait for the first transaction to be accepted
 
   txIn_ <- head . Map.keys . C.unUTxO <$> findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
 
   p2 "plutusScriptAddr" plutusScriptAddr
+  p2 "plutusScriptAddr C.serialiseAddress" $ C.serialiseAddress plutusScriptAddr
+  p2 "plutusScriptAddr C.serialiseToRawBytes" $ C.serialiseToRawBytes plutusScriptAddr
+
   scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
   scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
 
@@ -435,6 +443,15 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
   redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
 
-  exit_
-  -- Just to get a test going...
-  "2" === ("2" :: Text)
+  H.threadDelay 1_500_000
+
+  r :: String <- liftIO $ do
+    sqlConnection <- Sql.open sqlitedb
+    (Sql.Only r : _) <- Sql.query_ sqlConnection "SELECT hex(scriptAddress) FROM script_transactions"
+    pure r
+
+  let lhs = map toLower r
+      rhs = TL.unpack $ TL.decodeUtf8 $ BS.toLazyByteString $ BS.byteStringHex $ C.serialiseToRawBytes plutusScriptHash
+  liftIO $ putStrLn lhs
+  liftIO $ putStrLn rhs
+  lhs === rhs

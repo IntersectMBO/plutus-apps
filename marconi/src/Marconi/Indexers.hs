@@ -168,7 +168,7 @@ scriptTxWorker
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
   -> IO ()
-scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Depth 2160) >>= loop
+scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Depth 0) >>= loop
   where
     loop :: ScriptTx.ScriptTxIndex -> IO ()
     loop index = do
