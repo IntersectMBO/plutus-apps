@@ -50,16 +50,17 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoTxOutDatumInTx
   , toCardanoTxOutValue
   , toCardanoAddressInEra
-  , toCardanoMintValue
   , toCardanoValue
   , adaToCardanoValue
   , toCardanoFee
   , toCardanoValidityRange
   , toCardanoScriptInEra
   , toCardanoPaymentKeyHash
+  , toCardanoPolicyId
   , toCardanoScriptData
   , toCardanoScriptDataHash
   , toCardanoScriptHash
+  , toCardanoStakeKeyHash
   , toCardanoPlutusScript
   , toCardanoScriptInAnyLang
   , toCardanoTxId
@@ -403,24 +404,6 @@ toCardanoTxId (PV1.TxId bs) =
     tag "toCardanoTxId"
     $ deserialiseFromRawBytes C.AsTxId $ PlutusTx.fromBuiltin bs
 
-toCardanoMintWitness :: PV1.Redeemers -> Int -> P.Versioned P.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
-toCardanoMintWitness redeemers idx (P.Versioned (P.MintingPolicy script) lang) = do
-    let redeemerPtr = PV1.RedeemerPtr PV1.Mint (fromIntegral idx)
-    P.Redeemer redeemer <- maybe (Left MissingMintingPolicyRedeemer) Right (Map.lookup redeemerPtr redeemers)
-    case lang of
-      P.PlutusV1 ->
-        C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-            <*> pure C.NoScriptDatumForMint
-            <*> pure (C.fromPlutusData $ PV1.toData redeemer)
-            <*> pure zeroExecutionUnits
-      P.PlutusV2 ->
-        C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
-            <*> pure C.NoScriptDatumForMint
-            <*> pure (C.fromPlutusData $ PV1.toData redeemer)
-            <*> pure zeroExecutionUnits
-
 -- TODO Handle reference script once 'P.TxOut' supports it (or when we use
 -- exclusively 'C.TxOut' in all the codebase).
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> PV1.TxOut
@@ -571,21 +554,6 @@ fromCardanoMintValue :: C.TxMintValue build era -> PV1.Value
 fromCardanoMintValue C.TxMintNone              = mempty
 fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 
-toCardanoMintValue
-    :: PV1.Redeemers
-    -> PV1.Value
-    -> Map.Map P.MintingPolicyHash (P.Versioned P.MintingPolicy)
-    -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
-toCardanoMintValue redeemers value mps =
-    let indexedMps = Prelude.zip [0..] $ Map.toList mps
-     in C.TxMintValue C.MultiAssetInBabbageEra
-        <$> toCardanoValue value
-        <*> (C.BuildTxWith . Map.fromList <$> traverse indexedMpsToCardanoMintWitness indexedMps)
- where
-    indexedMpsToCardanoMintWitness (idx, (mph, mp)) =
-        (,) <$> toCardanoPolicyId mph
-            <*> toCardanoMintWitness redeemers idx mp
-
 adaToCardanoValue :: P.Ada -> C.Value
 adaToCardanoValue (P.Lovelace n) = C.valueFromList [(C.AdaAssetId, C.Quantity n)]
 
@@ -731,10 +699,11 @@ data ToCardanoError
     | OutputHasZeroAda
     | StakingPointersNotSupported
     | SimpleScriptsNotSupportedToCardano
-    | MissingTxInType
-    | MissingMintingPolicyRedeemer
+    | MissingInputValidator
+    | MissingDatum
     | MissingMintingPolicy
     | ScriptPurposeNotSupported PV1.ScriptTag
+    | MissingStakeValidator
     | UnsupportedPlutusVersion P.Language
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
@@ -748,11 +717,12 @@ instance Pretty ToCardanoError where
     pretty OutputHasZeroAda                   = "Transaction outputs should not contain zero Ada"
     pretty StakingPointersNotSupported        = "Staking pointers are not supported"
     pretty SimpleScriptsNotSupportedToCardano = "Simple scripts are not supported"
-    pretty MissingTxInType                    = "Missing TxInType"
-    pretty MissingMintingPolicyRedeemer       = "Missing minting policy redeemer"
     pretty MissingMintingPolicy               = "Missing minting policy"
     pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
     pretty (UnsupportedPlutusVersion v)       = "Plutus version not supported:" <+> viaShow v
+    pretty MissingInputValidator              = "Missing input validator."
+    pretty MissingDatum                       = "Missing required datum."
+    pretty MissingStakeValidator              = "Missing stake validator."
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
 zeroExecutionUnits :: C.ExecutionUnits

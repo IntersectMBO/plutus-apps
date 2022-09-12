@@ -302,10 +302,13 @@ emulatorStateInitialDist networkId mp = do
             , txMint = foldMap snd $ Map.toList mp
             , txFee = mempty
             , txValidRange = WAPI.defaultSlotRange
-            , txMintScripts = mempty
+            , txMintingScripts = mempty
+            , txWithdrawals = mempty
+            , txCertificates = mempty
             , txSignatures = mempty
-            , txRedeemers = mempty
+            , txScripts = mempty
             , txData = mempty
+            , txMetadata = mempty
             }
     where
         -- See [Creating wallets with multiple outputs]

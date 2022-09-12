@@ -15,8 +15,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Tx
-    ( module Ledger.Tx.Internal
-    , module Plutus.V1.Ledger.Tx
+    ( module Export
     -- * ChainIndexTxOut
     , ChainIndexTxOut(..)
     , toTxOut
@@ -63,40 +62,36 @@ module Ledger.Tx
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.Serialise (Serialise)
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (isJust, mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Tuple (swap)
 import GHC.Generics (Generic)
 import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
+import Ledger.Params (Params (pNetworkId))
 import Ledger.Slot (SlotRange)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..), toCardanoTxBody)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Tx.Internal hiding (updateUtxoCollateral)
 import Ledger.Validation qualified
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api qualified as V1
-import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
-
--- for re-export
-import Cardano.Api.Shelley qualified as C
-import Data.Default (def)
-import Data.Tuple (swap)
-import Ledger.Params (Params (pNetworkId))
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress, outValue,
-                            pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutAddress, txOutDatum, txOutDatumHash,
-                            txOutPubKey)
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn (..), TxInType (..))
-
-type PrivateKey = Crypto.XPrv
+import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
+-- for re-export
+import Ledger.Tx.Internal as Export
+import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
+                                      outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
 
 -- | Transaction output that comes from a chain index query.
 --
@@ -172,7 +167,6 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
-
 {- Note [Why we have the Both constructor in CardanoTx]
 
 We want to do validation with both the emulator and with the cardano-ledger library, at least as long
@@ -212,11 +206,11 @@ instance Pretty CardanoTx where
                 , "mint:" <+> pretty (getCardanoTxMint tx)
                 , "fee:" <+> pretty (getCardanoTxFee tx)
                 ] ++ onCardanoTx (\tx' ->
-                    [ hang 2 (vsep ("mps:": fmap pretty (Map.toList (txMintScripts tx'))))
+                    [ hang 2 (vsep ("mps:": fmap pretty (Map.toList (txMintingScripts tx'))))
                     , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList (txSignatures tx'))))
                     ]) (const []) tx ++
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
-                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList $ getCardanoTxRedeemers tx) ))
+                , hang 2 (vsep ("redeemers:": fmap pretty (Map.elems $ getCardanoTxRedeemers tx)))
                 , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList (getCardanoTxData tx))))
                 ]
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
@@ -250,17 +244,19 @@ getCardanoApiTxId :: SomeCardanoApiTx -> V1.Tx.TxId
 getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
 getCardanoTxInputs :: CardanoTx -> [TxIn]
-getCardanoTxInputs = onCardanoTx txInputs
+getCardanoTxInputs = onCardanoTx (\tx -> map (fillTxInputWitnesses tx) $ txInputs tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
 getCardanoTxCollateralInputs :: CardanoTx -> [TxIn]
-getCardanoTxCollateralInputs = onCardanoTx txCollateral
+getCardanoTxCollateralInputs = onCardanoTx
+    (\tx -> map (fillTxInputWitnesses tx) $ txCollateral tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
 
 getCardanoTxReferenceInputs :: CardanoTx -> [TxIn]
-getCardanoTxReferenceInputs = onCardanoTx txReferenceInputs
+getCardanoTxReferenceInputs = onCardanoTx
+    (\tx -> map (fillTxInputWitnesses tx) $ txReferenceInputs tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         txInsReferenceToPlutusTxIns txInsReference)
  where
@@ -310,8 +306,10 @@ getCardanoTxData = onCardanoTx txData
             let d' = V1.Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
     -- TODO: add txMetaData
 
-getCardanoTxRedeemers :: CardanoTx -> Redeemers
-getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty) -- TODO: To implement
+
+-- TODO: To implement
+-- getCardanoTxRedeemers :: CardanoTx -> Redeemers
+-- getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty)
     -- (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
     --     Map.fromList $ mapMaybe (\(C.TxOut _ _ d _) -> fromCardanoTxOutDatum d) txOuts)
     -- where
@@ -322,22 +320,31 @@ getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty) -- TODO: To im
     --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
     --     fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
     --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
+getCardanoTxRedeemers :: CardanoTx -> Map V1.ScriptPurpose V1.Redeemer
+getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty)
 
+-- Defined here as uses `txId`.
 instance Pretty Tx where
-    pretty tx =
-        let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (txInputs tx)))
-                , hang 2 (vsep ("reference inputs:" : fmap pretty (txReferenceInputs tx)))
-                , hang 2 (vsep ("collateral inputs:" : fmap pretty (txCollateral tx)))
-                , hang 2 (vsep ("outputs:" : fmap pretty (txOutputs tx)))
-                , "mint:" <+> pretty (txMint tx)
-                , "fee:" <+> pretty (txFee tx)
-                , hang 2 (vsep ("mps:": fmap pretty (Map.toList $ txMintScripts tx)))
-                , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList $ txSignatures tx)))
-                , "validity range:" <+> viaShow (txValidRange tx)
-                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList $ txRedeemers tx) ))
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList $ txData tx) ))
+    pretty tx@(Tx _txInputs _txReferenceInputs _txCollateral _txOutputs _txMint _txFee
+                 _txValidRange _txMintingScripts _txWithdrawals _txCertificates
+                 _txSignatures _txScripts _txData _txMetadata) =
+        let showNonEmpty empty x = [x | not empty]
+            lines' =
+                [ hang 2 (vsep ("inputs:" : fmap pretty _txInputs))
+                , hang 2 (vsep ("reference inputs:" : fmap pretty _txReferenceInputs))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty _txCollateral))
+                , hang 2 (vsep ("outputs:" : fmap pretty _txOutputs))
+                , "mint:" <+> pretty _txMint
+                , "fee:" <+> pretty _txFee
+                , hang 2 (vsep ("mps:": fmap pretty (Map.assocs _txMintingScripts)))
+                , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList _txSignatures)))
+                , "validity range:" <+> viaShow _txValidRange
                 ]
+                <> (showNonEmpty (Map.null _txData) $ hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _txData))))
+                <> (showNonEmpty (Map.null _txScripts) $ hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys _txScripts))))
+                <> (showNonEmpty (null _txWithdrawals) $ hang 2 (vsep ("withdrawals:": fmap pretty _txWithdrawals)))
+                <> (showNonEmpty (null _txCertificates) $ hang 2 (vsep ("certificates:": fmap pretty _txCertificates)))
+                <> (["metadata: present" | isJust _txMetadata])
             txid = txId tx
         in nest 2 $ vsep ["Tx" <+> pretty txid <> colon, braces (vsep lines')]
 
@@ -379,6 +386,8 @@ addCardanoTxSignature privKey = cardanoTxMap (addSignature' privKey) addSignatur
         addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
         addSignatureCardano (CardanoApiEmulatorEraTx ctx)
             = CardanoApiEmulatorEraTx (Ledger.Validation.addSignature privKey ctx)
+
+type PrivateKey = Crypto.XPrv
 
 -- | Sign the transaction with a 'PrivateKey' and passphrase (ByteString) and add the signature to the
 --   transaction's list of signatures.

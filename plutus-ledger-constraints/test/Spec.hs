@@ -21,8 +21,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, toTxOut, txInRef,
-                         unitDatum, unitRedeemer)
+import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, scriptTxInputs, toTxOut,
+                         txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
@@ -167,7 +167,7 @@ mustUseOutputAsCollateralProp = property $ do
         Right utx -> do
             let coll = txCollateral (view OC.tx utx)
             Hedgehog.assert $ length coll == 1
-            Hedgehog.assert $ Ledger.txInRef (head coll) == txOutRef
+            Hedgehog.assert $ Ledger.txInputRef (head coll) == txOutRef
 
 -- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
 testScriptInputs
@@ -183,7 +183,7 @@ testScriptInputs lookups txc = property $ do
                  $ Constraints.mkTx lookups txc
     let params = def
     let valM = do
-            Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
+            Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxInputs)) tx
             pure Nothing
         txOuts = traverse (toCardanoTxOutUnsafe (pNetworkId params) toCardanoTxOutDatumHash)
                    $ Ledger.toTxOut <$> Constraints.slTxOutputs lookups

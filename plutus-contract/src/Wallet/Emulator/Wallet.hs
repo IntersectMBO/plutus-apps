@@ -59,7 +59,7 @@ import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Index (UtxoIndex (UtxoIndex, getIndex))
 import Ledger.Params (Params (Params, pNetworkId, pProtocolParams, pSlotConfig))
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxIn, TxOut (TxOut))
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatumHash, toCardanoTxOutUnsafe)
 import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
@@ -416,10 +416,10 @@ lookupValue ::
     ( Member (Error WAPI.WalletAPIError) effs
     , Member ChainIndexQueryEffect effs
     )
-    => Tx.TxIn
+    => Tx.TxInput
     -> Eff effs Value
-lookupValue outputRef@Tx.TxIn {Tx.txInRef} = do
-    txoutMaybe <- ChainIndex.unspentTxOutFromRef txInRef
+lookupValue outputRef@Tx.TxInput {Tx.txInputRef} = do
+    txoutMaybe <- ChainIndex.unspentTxOutFromRef txInputRef
     case txoutMaybe of
         Just txout -> pure $ view Ledger.ciTxOutValue txout
         Nothing ->
@@ -451,7 +451,7 @@ handleBalanceTx utxo utx = do
         remainingCollFees = collFees PlutusTx.- fold collateral
         balance = left PlutusTx.- right
         -- filter out inputs from utxo that are already in unBalancedTx
-        inputsOutRefs = map Tx.txInRef txInputs
+        inputsOutRefs = map Tx.txInputRef txInputs
         filteredUtxo = flip Map.filterWithKey utxo $ \txOutRef _ ->
             txOutRef `notElem` inputsOutRefs
         outRefsWithValue = second (view Ledger.ciTxOutValue) <$> Map.toList filteredUtxo
@@ -472,7 +472,7 @@ handleBalanceTx utxo utx = do
                 pure tx'
             else do
                 logDebug $ AddingInputsFor neg
-                pure $ tx' & over Tx.inputs (sort . (++) newTxIns)
+                pure $ tx' & over Tx.inputs (sort . (++) (fmap Tx.pubKeyTxInput newTxIns))
 
     if remainingCollFees `Value.leq` PlutusTx.zero
     then do
@@ -482,12 +482,16 @@ handleBalanceTx utxo utx = do
         logDebug $ AddingCollateralInputsFor remainingCollFees
         addCollateral utxo remainingCollFees tx''
 
-calculateTxChanges :: ( Member (Error WAPI.WalletAPIError) effs)
+type PubKeyTxIn = TxOutRef
+
+calculateTxChanges
+    :: ( Member (Error WAPI.WalletAPIError) effs
+       )
     => Params
     -> Address -- ^ The address for the change output
     -> [(TxOutRef, Value)] -- ^ The current wallet's unspent transaction outputs.
     -> (Value, Value) -- ^ The unbalanced tx's negative and positive balance.
-    -> Eff effs ((Value, [TxIn]), (Value, [TxOut]))
+    -> Eff effs ((Value, [PubKeyTxIn]), (Value, [TxOut]))
 calculateTxChanges params addr utxos (neg, pos) = do
     -- Calculate the change output with minimal ada
     (newNeg, newPos, extraTxOuts) <- if Value.isZero pos
@@ -512,7 +516,7 @@ calculateTxChanges params addr utxos (neg, pos) = do
     if Value.isZero change
         then do
             -- No change, so the new inputs and outputs have balanced the transaction
-            pure ((newNeg, Tx.pubKeyTxIn . fst <$> spend), (newPos, extraTxOuts))
+            pure ((newNeg, fst <$> spend), (newPos, extraTxOuts))
         else if null extraTxOuts
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
@@ -533,7 +537,7 @@ addCollateral
 addCollateral mp vl tx = do
     (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
     let addTxCollateral =
-            let ins = Tx.pubKeyTxIn . fst <$> spend
+            let ins = Tx.pubKeyTxInput . fst <$> spend
             in over Tx.collateralInputs (sort . (++) ins)
     pure $ tx & addTxCollateral
 

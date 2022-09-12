@@ -15,6 +15,7 @@ module Ledger.Generators(
     genMockchain',
     emptyChain,
     GeneratorModel(..),
+    TxInputWitnessed(..),
     generatorModel,
     -- * Transactions
     genValidTransaction,
@@ -71,7 +72,7 @@ import Data.List (sort)
 import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (isNothing)
+import Data.Maybe (catMaybes, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Stack (HasCallStack)
@@ -79,15 +80,16 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
+import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Datum, Interval, Language (PlutusV1), OnChainTx (Valid),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
-               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
-               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
-               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut, TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
-               ValidationCtx (ValidationCtx), Value, _runValidation, addCardanoTxSignature, pubKeyTxIn, pubKeyTxOut,
-               toPublicKey, txOutValue)
+               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext),
+               Slot (Slot), SlotRange, SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
+               Tx (txFee, txInputs, txMint, txOutputs, txValidRange), TxInInfo (txInInfoOutRef),
+               TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
+               TxInputType (TxConsumePublicKeyAddress), TxOut, TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
+               ValidationCtx (ValidationCtx), Validator, Value, Versioned, _runValidation, addCardanoTxSignature,
+               addMintingPolicy, getValidator, pubKeyTxOut, scriptHash, toPublicKey, txData, txOutValue, txScripts,
+               validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -97,6 +99,7 @@ import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Scripts (Versioned (Versioned), datumHash)
 import Plutus.Script.Utils.V1.Generators as ScriptGen
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
@@ -197,20 +200,23 @@ genValidTransaction' g (Mockchain _ ops _) = do
     nUtxo <- if Map.null ops
                 then Gen.discard
                 else Gen.int (Range.linear 1 (Map.size ops))
-    let ins = pubKeyTxIn . fst <$> inUTXO
+    let ins = (`TxInputWitnessed` ConsumePublicKeyAddress) . fst <$> inUTXO
         inUTXO = take nUtxo $ Map.toList ops
         totalVal = foldl' (<>) mempty $ map (txOutValue . snd) inUTXO
     genValidTransactionSpending' g ins totalVal
 
 genValidTransactionSpending :: MonadGen m
-    => [TxIn]
+    => [TxInputWitnessed]
     -> Value
     -> m CardanoTx
 genValidTransactionSpending = genValidTransactionSpending' generatorModel
 
+-- | A transaction input, consisting of a transaction output reference and an input type with data witnesses.
+data TxInputWitnessed = TxInputWitnessed !TxOutRef !Ledger.TxInType
+
 genValidTransactionSpending' :: MonadGen m
     => GeneratorModel
-    -> [TxIn]
+    -> [TxInputWitnessed]
     -> Value
     -> m CardanoTx
 genValidTransactionSpending' g ins totalVal = do
@@ -237,20 +243,32 @@ genValidTransactionSpending' g ins totalVal = do
                           maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOut)
                                           $ List.sort splitOutVals
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
-            let txOutputs = map (fromRight (error "did someone change gmPubKeys?")) $ (\(v, ppk) -> pubKeyTxOut v ppk Nothing) <$> zip outVals (Set.toList $ gmPubKeys g) -- FIXME
-                tx = EmulatorTx $ mempty
-                        { txInputs = ins
+                txOutputs = map (fromRight (error "did someone change gmPubKeys?")) $ (\(v, ppk) -> pubKeyTxOut v ppk Nothing) <$> zip outVals (Set.toList $ gmPubKeys g) -- FIXME
+                (ins', witnesses) = unzip $ map txInToTxInput ins
+                (scripts, datums) = unzip $ catMaybes witnesses
+                tx = mempty
+                        { txInputs = ins'
                         , txOutputs = txOutputs
                         , txMint = maybe mempty id mintValue
-                        , txMintScripts = Map.singleton ScriptGen.alwaysSucceedPolicyHash ScriptGen.alwaysSucceedPolicyVersioned
-                        , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
                         , txFee = Ada.toValue fee'
+                        , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
+                        , txScripts = Map.fromList (map ((\s -> (scriptHash s, s)) . fmap getValidator) scripts)
                         }
+                    & addMintingPolicy (Versioned ScriptGen.alwaysSucceedPolicy PlutusV1) Script.unitRedeemer
+                    & EmulatorTx
 
                 -- sign the transaction with all known wallets
                 -- this is somewhat crude (but technically valid)
             pure (signAll tx)
         else Gen.discard
+
+    where
+        -- | Translate TxIn to TxInput taking out data witnesses if present.
+        txInToTxInput :: TxInputWitnessed -> (TxInput, Maybe (Versioned Validator, Datum))
+        txInToTxInput (TxInputWitnessed outref txInType) = case txInType of
+            Ledger.ConsumePublicKeyAddress -> (TxInput outref TxConsumePublicKeyAddress, Nothing)
+            Ledger.ConsumeSimpleScriptAddress -> (TxInput outref Ledger.TxConsumeSimpleScriptAddress, Nothing)
+            Ledger.ConsumeScriptAddress vl rd dt -> (TxInput outref (Ledger.TxConsumeScriptAddress rd (validatorHash  vl) (datumHash dt)), Just (vl, dt))
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.
