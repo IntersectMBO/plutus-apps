@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE ViewPatterns        #-}
 {-| The chain index' version of a transaction
 -}
 module Plutus.ChainIndex.Tx(
@@ -51,8 +50,7 @@ import Ledger.Address (Address)
 import Ledger.Scripts (Redeemer, RedeemerHash)
 import Ledger.Tx (TxInputType (TxConsumeScriptAddress), fillTxInputWitnesses)
 import Plutus.ChainIndex.Types
-import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity, toCardanoTxOut,
-                                   toCardanoTxOutDatumHash)
+import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
 import Plutus.Script.Utils.Scripts (redeemerHash)
 import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
