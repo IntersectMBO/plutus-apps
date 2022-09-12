@@ -29,8 +29,7 @@ module Plutus.PAB.App(
     handleContractDefinition
     ) where
 
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper, unNetworkIdWrapper))
-import Cardano.Api.Shelley (ProtocolParameters)
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper))
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
 import Cardano.Node.Client (handleNodeClientClient, runChainSyncWithCfg)
@@ -52,7 +51,6 @@ import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce (coerce)
-import Data.Default (def)
 import Data.Pool (Pool)
 import Data.Pool qualified as Pool
 import Data.Text (Text, pack, unpack)
@@ -81,7 +79,6 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMs
                                         WalletClientMsg)
 import Plutus.PAB.Timeout (Timeout (Timeout))
 import Plutus.PAB.Types (ChainQueryConfig (..), ChainQueryEnv (..), Config (Config), DbConfig (..),
-                         DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
                          WebserverConfig (WebserverConfig), chainQueryConfig, dbConfig, endpointTimeout,
                          getBlockfrostEnv, getChainIndexEnv, nodeServerConfig, pabWebserverConfig, walletServerConfig)
