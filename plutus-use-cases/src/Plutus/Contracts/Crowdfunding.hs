@@ -77,6 +77,8 @@ import Schema (ToArgument, ToSchema)
 import Wallet.Emulator (Wallet (..), knownWallet)
 import Wallet.Emulator qualified as Emulator
 
+import Debug.Trace
+
 -- | A crowdfunding campaign.
 data Campaign = Campaign
     { campaignDeadline           :: POSIXTime
@@ -155,9 +157,9 @@ validRefund campaign contributor txinfo =
 validCollection :: Campaign -> TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
-    (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
+    -- (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
@@ -241,7 +243,10 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
     _ <- awaitTime $ campaignDeadline cmp
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
 
+    traceShowM $ Haskell.show $ collectionRange cmp
+
     let tx = Constraints.collectFromTheScript unspentOutputs Collect
+            <> Constraints.mustBeSignedBy (campaignOwner cmp)
             <> Constraints.mustValidateIn (collectionRange cmp)
 
     logInfo @Text "Collecting funds"

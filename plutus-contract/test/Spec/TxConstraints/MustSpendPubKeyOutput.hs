@@ -44,10 +44,7 @@ tests =
         , mustSpendSingleUtxoFromOtherWallet
         , mustSpendAllUtxosFromOtherWallet
         , contractErrorWhenAttemptingToSpendNonExistentOutput
-
-        -- TODO: uncomment after enabling 2nd phase validation
-        -- See note [Second phase validation]
-        -- , phase2FailureWhenTxoIsNotSpent
+        , phase2FailureWhenTxoIsNotSpent
         ]
 
 nonExistentTxoRef :: TxOutRef

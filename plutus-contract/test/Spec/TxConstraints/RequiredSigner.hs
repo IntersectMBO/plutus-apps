@@ -40,11 +40,8 @@ tests =
         [
           ownWallet
         , otherWallet
-        -- TODO: uncomment after enabling 2nd phase validation
-        -- See note [Second phase validation]
-        --
-        -- , otherWalletNoSigningProcess
-        -- , phase2FailureMustBeSignedBy
+        , otherWalletNoSigningProcess
+        , phase2FailureMustBeSignedBy
         , withoutOffChainMustBeSignedBy
         ]
 
@@ -124,8 +121,8 @@ withoutOffChainMustBeSignedBy =
         trace = do
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract pk pkh
             void $ Trace.waitNSlots 1
-    in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint passes mustBeSignedBy on-chain validation because required signer is still included in txbody"
-    (assertValidatedTransactionCount 2)
+    in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint required signer is not included in txbody so phase-2 validation fails"
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
     (void trace)
 
 phase2FailureMustBeSignedBy :: TestTree

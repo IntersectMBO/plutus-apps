@@ -45,11 +45,8 @@ tests =
         --, spendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup -- FAILING
         , contractErrorWhenUnableToSpendMoreThanScriptTokenBalance
         , contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing
-
-        -- TODO: uncomment after enabling 2nd phase validation
-        -- See note [Second phase validation]
-        -- , phase2FailureWhenProducedAdaAmountIsNotSatisfied
-        -- , phase2FailureWhenProducedTokenAmountIsNotSatisfied
+        , phase2FailureWhenProducedAdaAmountIsNotSatisfied
+        , phase2FailureWhenProducedTokenAmountIsNotSatisfied
         ]
 
 someTokens :: Integer -> Value.Value

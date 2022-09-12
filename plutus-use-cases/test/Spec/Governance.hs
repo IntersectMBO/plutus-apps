@@ -15,6 +15,7 @@ import Data.Foldable (traverse_)
 import Data.Maybe (listToMaybe)
 
 import Ledger qualified
+import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Wallet.Emulator qualified as EM
