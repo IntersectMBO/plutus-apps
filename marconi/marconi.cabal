@@ -47,6 +47,8 @@ library
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
     Marconi.Indexers
+    Marconi.Logging
+    Marconi.Orphans
 
   --------------------
   -- Local components
@@ -64,6 +66,7 @@ library
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
+    , iohk-monitoring
     , plutus-ledger-api
     , plutus-streaming
 
@@ -76,18 +79,18 @@ library
     , containers
     , lens
     , mwc-random
+    , prettyprinter
     , serialise
     , sqlite-simple
     , stm
     , streaming
+    , text
+    , time
 
 executable marconi
   import:         lang
   hs-source-dirs: app
   main-is:        Main.hs
-  other-modules:
-    Marconi.Logging
-    Marconi.Orphans
 
   --------------------
   -- Local components
@@ -115,11 +118,8 @@ executable marconi
     , containers
     , lens
     , optparse-applicative
-    , prettyprinter
     , stm
     , streaming
-    , text
-    , time
 
 test-suite marconi-test
   import:         lang
@@ -133,7 +133,9 @@ test-suite marconi-test
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi
+  build-depends:
+    , marconi
+    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies
@@ -141,6 +143,7 @@ test-suite marconi-test
   build-depends:
     , cardano-api:{cardano-api, gen}
     , cardano-testnet
+    , iohk-monitoring
     , ouroboros-network
     , plutus-ledger-api
 
@@ -155,6 +158,7 @@ test-suite marconi-test
     , filepath
     , hedgehog
     , hedgehog-extras
+    , prettyprinter
     , tasty
     , tasty-hedgehog
     , text
