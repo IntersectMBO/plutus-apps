@@ -59,7 +59,7 @@ Glossary
 
       This is implemented in the Alonzo hard fork of the Cardano blockchain.
 
-      See :ref:`what_is_a_ledger`.
+      See `What is a ledger? <https://plutus.readthedocs.io/en/latest/explanations/ledger.html>`_
 
     minting
       A transaction which mints tokens creates new tokens, providing that
