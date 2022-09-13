@@ -23,7 +23,6 @@ import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (unpack)
 import Ledger (Block, Slot (..), TxId (..))
-import Ledger.Params (Params (pNetworkId))
 import Marconi.Index.TxConfirmationStatus (TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -329,7 +328,7 @@ processMockBlock
     -> STM (Either SyncActionFailure (Slot, BlockNumber))
 processMockBlock
   instancesState
-  env@BlockchainEnv{beCurrentSlot, beLastSyncedBlockSlot, beLastSyncedBlockNo, beParams}
+  env@BlockchainEnv{beCurrentSlot, beLastSyncedBlockSlot, beLastSyncedBlockNo}
   transactions
   slot = do
 

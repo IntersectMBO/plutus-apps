@@ -29,8 +29,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (IsString)
 import Ledger (TxIn (..), TxOut (..), TxOutRef (..))
-import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
-                             scriptDataFromCardanoTxBody)
+import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromTxScriptValidity, scriptDataFromCardanoTxBody)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))

@@ -12,7 +12,6 @@ module Cardano.ChainIndex.Server(
     , ChainIndexServerMsg
     ) where
 
-import Cardano.Api.Shelley (NetworkId)
 import Control.Concurrent.Availability (Availability, available)
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
@@ -37,17 +36,17 @@ import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, serveChainIndexQuery
 -- with datums)
 
 main :: ChainIndexTrace -> ChainIndexConfig -> FilePath -> Params -> Availability -> IO ()
-main trace ChainIndexConfig{ciBaseUrl} socketPath Params{pNetworkId,pSlotConfig} ccaAvailability = runLogEffects trace $ do
+main trace ChainIndexConfig{ciBaseUrl} socketPath Params{pSlotConfig} ccaAvailability = runLogEffects trace $ do
     tVarState <- liftIO $ STM.atomically $ STM.newTVar mempty
 
     logInfo StartingNodeClientThread
-    _ <- liftIO $ runChainSync socketPath pSlotConfig $ updateChainState tVarState pNetworkId
+    _ <- liftIO $ runChainSync socketPath pSlotConfig $ updateChainState tVarState
 
     logInfo $ StartingChainIndex servicePort
     available ccaAvailability
     liftIO $ serveChainIndexQueryServer servicePort tVarState
     where
         servicePort = baseUrlPort (coerce ciBaseUrl)
-        updateChainState :: TVar ChainIndexEmulatorState -> NetworkId -> Block -> Slot -> IO ()
-        updateChainState tv networkId block slot = do
-          processChainIndexEffects trace tv $ syncState networkId block slot
+        updateChainState :: TVar ChainIndexEmulatorState -> Block -> Slot -> IO ()
+        updateChainState tv block slot = do
+          processChainIndexEffects trace tv $ syncState block slot
