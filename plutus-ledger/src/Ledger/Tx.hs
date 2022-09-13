@@ -63,8 +63,10 @@ module Ledger.Tx
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Cardano.Crypto.Hash (SHA256, digest)
 import Cardano.Crypto.Wallet qualified as Crypto
-import Codec.Serialise (Serialise)
+import Codec.CBOR.Write qualified as Write
+import Codec.Serialise (Serialise (encode))
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (def)
@@ -81,7 +83,7 @@ import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Slot (SlotRange)
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..), toCardanoTxBody)
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation qualified
 import Plutus.Script.Utils.Scripts (datumHash)
@@ -89,6 +91,8 @@ import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn (..), TxInType (..))
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 -- for re-export
+import Control.DeepSeq (NFData)
+import Data.Data (Proxy (Proxy))
 import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
                                       outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
@@ -132,7 +136,7 @@ data ChainIndexTxOut =
       -- as a hash reference.
       _ciTxOutValidator       :: (V1.ValidatorHash, Maybe (Versioned V1.Validator))
     }
-  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
+  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, NFData, OpenApi.ToSchema)
 
 makeLenses ''ChainIndexTxOut
 makePrisms ''ChainIndexTxOut
@@ -350,9 +354,10 @@ instance Pretty Tx where
 
 -- | Compute the id of a transaction.
 txId :: Tx -> V1.Tx.TxId
-txId tx = case toCardanoTxBody def [] tx of
-  Left e       -> error (show e)
-  Right txBody -> CardanoAPI.fromCardanoTxId $ C.getTxId txBody
+txId tx = TxId $ V1.toBuiltin
+               $ digest (Proxy @SHA256)
+               $ digest (Proxy @SHA256)
+               (Write.toStrictByteString $ encode $ strip tx)
 
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.

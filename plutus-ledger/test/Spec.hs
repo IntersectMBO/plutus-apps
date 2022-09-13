@@ -7,14 +7,11 @@ module Main(main) where
 
 import Cardano.Api qualified as Api
 import Cardano.Crypto.Hash qualified as Crypto
-import Control.Monad (forM_)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Internal qualified as Aeson
 import Data.ByteString.Lazy qualified as BSL
 import Data.List (sort)
-import Data.Map qualified as Map
-import Data.Maybe (fromJust)
 import Data.String (IsString (fromString))
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
