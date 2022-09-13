@@ -57,6 +57,7 @@ import Control.Monad.Freer.State (State)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
+import Data.Either (fromRight)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -77,6 +78,7 @@ import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper), testnetNetworkId)
 import Cardano.BM.Tracing (toObject)
+import Ledger.Params (testnet)
 import Plutus.PAB.Arbitrary ()
 
 -- Configuration ------------------------------------------------------------------------------------------------------
@@ -252,8 +254,8 @@ initialAppState wallets = do
 -- | 'ChainState' with initial values
 initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
 initialChainState =
-    fromEmulatorChainState . view EM.chainState .
-    MultiAgent.emulatorStateInitialDist . Map.mapKeys EM.mockWalletPaymentPubKeyHash
+    fromEmulatorChainState . view EM.chainState . fromRight (error "Can't initialise chain state") .
+    MultiAgent.emulatorStateInitialDist testnet . Map.mapKeys EM.mockWalletPaymentPubKeyHash
 
 -- Effects -------------------------------------------------------------------------------------------------------------
 

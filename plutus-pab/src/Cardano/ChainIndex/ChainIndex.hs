@@ -38,7 +38,7 @@ syncState ::
     -> Eff effs ()
 syncState networkId block slot = do
     currentTip <- ChainIndex.getTip
-    appendNewTipBlock networkId currentTip block slot
+    appendNewTipBlock currentTip block slot
 
 -- | Process the chain index effects for the emulator.
 processChainIndexEffects ::

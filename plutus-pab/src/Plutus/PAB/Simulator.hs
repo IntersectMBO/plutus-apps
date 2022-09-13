@@ -98,8 +98,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId,
-               TxOut (TxOut, txOutAddress, txOutValue), eitherTx, getCardanoTxFee, getCardanoTxId)
+import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, TxOut (TxOut), eitherTx,
+               getCardanoTxFee, getCardanoTxId, txOutAddress, txOutValue)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -460,7 +460,7 @@ handleChainControl eff = do
             -- Adds a new tip on the chain index given the block and slot number
             runChainIndexEffects @t $ do
               currentTip <- getTip
-              appendNewTipBlock (pNetworkId params) currentTip txns slot
+              appendNewTipBlock currentTip txns slot
 
             void $ liftIO $ STM.atomically $ BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot
 
@@ -689,7 +689,7 @@ valueAtSTM address = do
     SimulatorState{_chainState} <- Core.askUserEnv @t @(SimulatorState t)
     pure $ do
         Chain.ChainState{Chain._index=UtxoIndex.UtxoIndex mp} <- STM.readTVar _chainState
-        pure $ foldMap txOutValue $ filter (\TxOut{txOutAddress} -> txOutAddress == address) $ fmap snd $ Map.toList mp
+        pure $ foldMap txOutValue $ filter (\txout -> txOutAddress txout == address) $ fmap snd $ Map.toList mp
 
 -- | The total value currently at an address
 valueAt :: forall t. Address -> Simulation t Value

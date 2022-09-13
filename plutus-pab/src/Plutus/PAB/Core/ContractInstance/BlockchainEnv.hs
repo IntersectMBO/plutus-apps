@@ -47,7 +47,7 @@ import Control.Lens
 import Control.Monad (forM_, void, when)
 import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
-import Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe, maybeToList)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
@@ -221,7 +221,7 @@ processBlock instancesState header env@BlockchainEnv{beTxChanges} transactions e
       tip = fromCardanoBlockHeader header
       -- We ignore cardano transactions that we couldn't convert to
       -- our 'ChainIndexTx'.
-      ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
+      ciTxs = fromCardanoTx era <$> transactions
 
   stmResult <- STM.atomically $ do
     STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
@@ -343,7 +343,6 @@ processMockBlock
   when (slot > lastCurrentSlot ) $ do
     STM.writeTVar beCurrentSlot slot
 
-  let networkId = pNetworkId beParams
   if null transactions
      then do
        result <- (,) <$> STM.readTVar beLastSyncedBlockSlot <*> STM.readTVar beLastSyncedBlockNo
@@ -352,11 +351,11 @@ processMockBlock
       blockNumber <- STM.readTVar beLastSyncedBlockNo
 
       instEnv <- S.instancesClientEnv instancesState
-      updateInstances (indexBlock $ fmap (fromOnChainTx networkId) transactions) instEnv
+      updateInstances (indexBlock $ fmap fromOnChainTx transactions) instEnv
 
       let tip = Tip { tipSlot = slot
                     , tipBlockId = blockId transactions
                     , tipBlockNo = blockNumber
                     }
 
-      updateEmulatorTransactionState tip env (txEvent <$> fmap (fromOnChainTx networkId) transactions)
+      updateEmulatorTransactionState tip env (txEvent <$> fmap fromOnChainTx transactions)
