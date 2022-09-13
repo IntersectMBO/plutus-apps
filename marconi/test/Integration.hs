@@ -1,7 +1,7 @@
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
@@ -10,16 +10,24 @@ module Integration where
 import Control.Concurrent qualified as IO
 import Control.Exception (catch)
 import Control.Monad (void)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Aeson ((.:))
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Builder qualified as BS
 import Data.Char (toLower)
-import Data.HashMap.Lazy (HashMap)
+import Data.Function ((&))
 import Data.HashMap.Lazy qualified as HM
-import Data.Monoid (Last (Last))
+import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Data.Text qualified as T
+import Data.Text (Text)
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
+import Database.SQLite.Simple qualified as Sql
+import GHC.Stack qualified as GHC
+import System.Directory qualified as IO
+import System.Environment qualified as IO
+import System.FilePath ((</>))
+
 import Hedgehog (MonadTest, Property, assert, eval, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
@@ -30,10 +38,6 @@ import Hedgehog.Extras.Test.File qualified as H
 import Hedgehog.Extras.Test.Process qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Prettyprinter.Render.Text (renderStrict)
-import System.Directory qualified as IO
-import System.Environment qualified as IO
-import System.FilePath ((</>))
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -41,36 +45,25 @@ import Cardano.Api (CardanoEra (AlonzoEra))
 import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson ((.:))
-import Data.Function ((&))
-import Data.Functor ((<&>))
-import Data.Map qualified as Map
-import Data.Text (Text)
-import Gen.Cardano.Api.Typed qualified as CGen
-import Ouroboros.Network.Protocol.LocalTxSubmission.Type
-import Test.Base qualified as H
-import Test.Base qualified as T
-import Test.Process qualified as H
-import Testnet.Cardano qualified as H
-import Testnet.Cardano qualified as TN
-import Testnet.Conf qualified as H
-import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
-import Testnet.SubmitApi qualified as TN
-
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
-import Database.SQLite.Simple qualified as Sql
-import Marconi.Indexers qualified
-import Marconi.Logging qualified
+import Gen.Cardano.Api.Typed qualified as CGen
+import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+import Test.Base qualified as H
+import Testnet.Cardano qualified as TN
+import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
+
+import Marconi.Indexers qualified
+import Marconi.Logging qualified
 
 -- Copied from plutus-example/test/Test/PlutusExample/SubmitApi/TxInLockingPlutus
 data Utxo = Utxo
   { address :: Text
-  , value   :: HashMap Text Integer
+  , value   :: HM.HashMap Text Integer
   } deriving (Eq, Show)
 
 instance Aeson.FromJSON Utxo where
@@ -98,37 +91,14 @@ exit2 label v = exit $ label <> ": " <> show v
 exit_ :: m ()
 exit_ = exit "MANUAL EXIT"
 
-main :: IO ()
-main = defaultMain tests
-
 -- /Tmp
-
-readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
-readAs as path = H.leftFailM . liftIO $ C.readFileTextEnvelope as path
-
-findUTxOByAddress
-  :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> C.AddressAny -> m (C.UTxO C.AlonzoEra)
-findUTxOByAddress localNodeConnectInfo address = let
-  query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
-    C.QueryUTxOByAddress $ Set.singleton address
-  in
-  H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra C.AlonzoEraInCardanoMode query
-
-failOnTxSubmitFail :: (Show a, Applicative m) => SubmitResult a -> m ()
-failOnTxSubmitFail submitResult =
-  case submitResult of
-    SubmitFail reason -> exit2 "reason" reason
-    SubmitSuccess     -> pure ()
-
 
 tests :: TestTree
 tests = testGroup "Integration"
   [ testProperty "prop_script_hashes_in_tx_match" testIndex ]
 
 testIndex :: Property
-testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
+testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
 
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
@@ -138,18 +108,20 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
       (tempAbsBasePath' <> "/")
       Nothing
 
+  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
+        && tempAbsPath == (tempBaseAbsPath <> "/")
+
   H.threadDelay 10000
 
   TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
   let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
-
-  let socketPath = IO.sprocketArgumentName (head bftSprockets)
+  socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
   socketPathAbs <- H.note $ tempAbsPath </> socketPath
 
   H.threadDelay 1_000_000
 
   -- Start indexer
-  let sqlitedb = tempAbsPath </> "script-tx.db"
+  let sqliteDb = tempAbsPath </> "script-tx.db"
   void $ liftIO $ IO.forkIO $ do
     let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
     c <- defaultConfigStdout
@@ -158,16 +130,13 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
         socketPathAbs
         networkId
         chainPoint
-        (Marconi.Indexers.combinedIndexer Nothing Nothing (Just sqlitedb) . Marconi.Logging.logging trace)
+        (Marconi.Indexers.combinedIndexer Nothing Nothing (Just sqliteDb) . Marconi.Logging.logging trace)
         `catch` \NoIntersectionFound ->
           logError trace $
             renderStrict $
               layoutPretty defaultLayoutOptions $
                 "No intersection found when looking for the chain point" <+> pretty chainPoint <> "."
                   <+> "Please check the slot number and the block hash do belong to the chain"
-
-  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
-        && tempAbsPath == (tempBaseAbsPath <> "/")
 
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
@@ -177,8 +146,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   plutusScript <- C.PlutusScript C.PlutusScriptV1
     <$> readAs (C.AsPlutusScript C.AsPlutusScriptV1) plutusScriptFileInUse
   let
-    plutusScriptHash :: C.ScriptHash
-    plutusScriptHash = C.hashScript plutusScript
+    plutusScriptHash = C.hashScript plutusScript :: C.ScriptHash
     plutusScriptAddr :: C.Address C.ShelleyAddr
     plutusScriptAddr = C.makeShelleyAddress networkId (C.PaymentCredentialByScript plutusScriptHash) C.NoStakeAddress
 
@@ -191,8 +159,8 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   genesisVKey :: C.VerificationKey C.GenesisUTxOKey <-
     readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
-
-  genesisSKey :: C.SigningKey C.GenesisUTxOKey <- readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
+  genesisSKey :: C.SigningKey C.GenesisUTxOKey <-
+    readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
 
   let
     paymentKey = C.castVerificationKey genesisVKey :: C.VerificationKey C.PaymentKey
@@ -208,11 +176,11 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   -- era.
   let epochSlots = C.EpochSlots 21600
       localNodeConnectInfo =
-          C.LocalNodeConnectInfo
-              { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-              , C.localNodeNetworkId = networkId
-              , C.localNodeSocketPath = socketPathAbs
-              }
+        C.LocalNodeConnectInfo
+          { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+          , C.localNodeNetworkId = networkId
+          , C.localNodeSocketPath = socketPathAbs
+          }
 
   utxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny address
 
@@ -229,22 +197,19 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   let scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
-  p2 "scriptDatumHash" scriptDatumHash
 
-  -- TODO [X] Create with Cardano.Api.TxBody instead of the CLI
-  let
       txOut1 :: C.TxOut ctx C.AlonzoEra
       txOut1 =
-          C.TxOut
-            (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) plutusScriptAddr)
-            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace lovelaceAtTxinDiv3)
-            (C.TxOutDatumHash C.ScriptDataInAlonzoEra scriptDatumHash)
+        C.TxOut
+          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) plutusScriptAddr)
+          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace lovelaceAtTxinDiv3)
+          (C.TxOutDatumHash C.ScriptDataInAlonzoEra scriptDatumHash)
       txOut2 :: C.TxOut ctx C.AlonzoEra
       txOut2 =
-          C.TxOut
-            (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
-            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace $ 2 * lovelaceAtTxinDiv3 - 271)
-            C.TxOutDatumNone
+        C.TxOut
+          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
+          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace $ 2 * lovelaceAtTxinDiv3 - 271)
+          C.TxOutDatumNone
       txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
       txBodyContent =
         C.TxBodyContent {
@@ -265,15 +230,12 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
         }
 
   tx1body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
-  p2 "tx1body" tx1body
   let
     kw :: C.KeyWitness C.AlonzoEra
     kw = C.makeShelleyKeyWitness tx1body (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
     tx1 = C.makeSignedTransaction [kw] tx1body
 
-  submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
-    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx1 C.AlonzoEraInCardanoMode
-  failOnTxSubmitFail submitResult
+  submitTx localNodeConnectInfo tx1
 
   -- Second transaction: spend the UTXO specified in the first transaction
 
@@ -285,8 +247,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
 
   redeemer <- H.forAll CGen.genScriptData
-  let
-      executionUnits = C.ExecutionUnits {C.executionSteps = 500000,C.executionMemory = 500000 }
+  let executionUnits = C.ExecutionUnits {C.executionSteps = 500000,C.executionMemory = 500000 }
       fee = 100343
 
       C.PlutusScript _lang plutusScript_ = plutusScript
@@ -327,16 +288,49 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   tx2body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody tx2bodyContent
   let tx2 = C.signShelleyTransaction tx2body [C.WitnessGenesisUTxOKey genesisSKey]
 
-  tx2submitResult <- liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx2 C.AlonzoEraInCardanoMode
-  failOnTxSubmitFail tx2submitResult
+  submitTx localNodeConnectInfo tx2
 
   H.threadDelay 1_500_000
 
   r :: String <- liftIO $ do
-    sqlConnection <- Sql.open sqlitedb
+    sqlConnection <- Sql.open sqliteDb
     (Sql.Only r : _) <- Sql.query_ sqlConnection "SELECT hex(scriptAddress) FROM script_transactions"
     pure r
 
   let lhs = map toLower r
       rhs = TL.unpack $ TL.decodeUtf8 $ BS.toLazyByteString $ BS.byteStringHex $ C.serialiseToRawBytes plutusScriptHash
   lhs === rhs
+
+
+-- * Helpers
+
+readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
+readAs as path = H.leftFailM . liftIO $ C.readFileTextEnvelope as path
+
+findUTxOByAddress
+  :: (MonadIO m, MonadTest m)
+  => C.LocalNodeConnectInfo C.CardanoMode -> C.AddressAny -> m (C.UTxO C.AlonzoEra)
+findUTxOByAddress localNodeConnectInfo address = let
+  query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
+    C.QueryUTxOByAddress $ Set.singleton address
+  in
+  H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
+    C.QueryInEra C.AlonzoEraInCardanoMode query
+
+submitTx :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> C.Tx C.AlonzoEra -> m ()
+submitTx localNodeConnectInfo tx = do
+  submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.AlonzoEraInCardanoMode
+  failOnTxSubmitFail submitResult
+  where
+    failOnTxSubmitFail :: (Show a, MonadTest m) => SubmitResult a -> m ()
+    failOnTxSubmitFail = \case
+      SubmitFail reason -> H.failMessage GHC.callStack $ "Transaction failed: " <> show reason
+      SubmitSuccess     -> pure ()
+
+
+-- TODO: remove when this is exported from hedgehog-extras/src/Hedgehog/Extras/Test/Base.hs
+headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
+headM (a:_) = return a
+headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
+

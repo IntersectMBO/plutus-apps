@@ -208,7 +208,6 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = S.foldM_ 
       when (isJust scriptTxPath) $ do
         ch <- atomically . dupTChan $ _channel coordinator
         void . forkIO . scriptTxWorker coordinator ch $ fromJust scriptTxPath
-      pure coordinator
 
     step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
     step c@Coordinator{_barrier, _indexerCount, _channel} event = do
