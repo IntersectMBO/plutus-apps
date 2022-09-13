@@ -216,7 +216,6 @@ test-suite plutus-ledger-test
     , aeson
     , base            >=4.9 && <5
     , bytestring
-    , containers
     , data-default
     , hedgehog
     , tasty

@@ -98,8 +98,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, TxOut (TxOut), eitherTx,
-               getCardanoTxFee, getCardanoTxId, txOutAddress, txOutValue)
+import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, eitherTx, getCardanoTxFee,
+               getCardanoTxId, txOutAddress, txOutValue)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
