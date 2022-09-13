@@ -69,6 +69,7 @@ test-suite rewindable-index-test
   main-is:        Spec.hs
   other-modules:
     RewindableIndex.Model
+    RewindableIndex.Spec.StorableSql
     RewindableIndex.Spec.VSplit
     RewindableIndex.Spec.VSqlite
 

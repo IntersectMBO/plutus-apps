@@ -6,6 +6,7 @@ module RewindableIndex.Storable
   , State
   , connection
   , config
+  , emptyState
     -- * API
   , insert
   , insertMany
@@ -16,10 +17,11 @@ module RewindableIndex.Storable
 import Control.Applicative ((<|>))
 import Control.Lens.Operators ((%~), (.~), (^.))
 import Control.Lens.TH qualified as Lens
+import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.Foldable (foldlM)
 import Data.Function ((&))
-import Data.Functor ((<&>))
 import Data.Vector qualified as V
+import Data.Vector.Generic qualified as VG
 import Data.Vector.Mutable qualified as VM
 
 import RewindableIndex.Index (IxMonad, IxPoint, Storable)
@@ -34,7 +36,7 @@ data Config = Config
 $(Lens.makeLenses ''Config)
 
 data Storage c e = Storage
-  { _events :: V.Vector (Event e)
+  { _events :: VM.MVector (PrimState (IxMonad c)) (Event e)
   , _cursor :: Int
   }
 $(Lens.makeLenses ''Storage)
@@ -46,42 +48,64 @@ data State c e = State
   }
 $(Lens.makeLenses ''State)
 
+emptyState
+  :: Monad (IxMonad c)
+  => PrimMonad (IxMonad c)
+  => Int
+  -> Int
+  -> c
+  -> IxMonad c (State c e)
+emptyState bufferSz rewindLen con = do
+  v <- VM.new bufferSz
+  pure $ State { _config = Config { _bufferSize = bufferSz
+                                  , _maxRewindLength = rewindLen
+                                  }
+               , _storage = Storage { _events = v
+                                    , _cursor = 0
+                                    }
+               , _connection = con
+               }
+
 getBufferedEvents
   :: Storage c e
-  -> V.Vector (Event e)
-getBufferedEvents s = V.slice 0 (s ^. cursor) (s ^. events)
+  -> V.MVector (PrimState (IxMonad c)) (Event e)
+getBufferedEvents s = VM.slice 0 (s ^. cursor) (s ^. events)
 
 insert
   :: Storable c e
-  => Monad (IxMonad c)
+  => PrimMonad (IxMonad c)
   => IxPoint e
   -> e
   -> State c e
   -> IxMonad c (State c e)
-insert e p s =
-  flushBuffer s <&> storage %~ appendEvent e p
+insert p e s = do
+  state'   <- flushBuffer s
+  storage' <- appendEvent p e (state' ^. storage)
+  pure $ state' { _storage = storage' }
 
 appendEvent
-  :: IxPoint e
+  :: PrimMonad (IxMonad c)
+  => IxPoint e
   -> e
   -> Storage c e
-  -> Storage c e
+  -> IxMonad c (Storage c e)
 appendEvent p e s = do
   let cr = s ^. cursor
-  s & events %~ V.modify (\v -> VM.write v cr (p, e))
-    & cursor %~ (+1)
+  VM.write (s ^. events) cr (p, e)
+  pure $ s & cursor %~ (+1)
 
 flushBuffer
   :: Storable c e
-  => Monad (IxMonad c)
+  => PrimMonad (IxMonad c)
   => State c e
   -> IxMonad c (State c e)
 flushBuffer s = do
   let cr = s ^. storage . cursor
       es = getBufferedEvents $ s ^. storage
-  if V.length es == cr
+  if VM.length es == cr
   then do
-    c' <- Ix.store es $ s ^. connection
+    v  <- V.freeze es
+    c' <- Ix.store v $ s ^. connection
     pure $ s & connection       .~ c'
              & storage . cursor .~ 0
   else pure s
@@ -89,7 +113,7 @@ flushBuffer s = do
 insertMany
   :: Foldable f
   => Storable c e
-  => Monad (IxMonad c)
+  => PrimMonad (IxMonad c)
   => f (Event e)
   -> State c e
   -> IxMonad c (State c e)
@@ -98,18 +122,22 @@ insertMany es s =
 
 rewind
   :: forall c e. Storable c e
-  => Monad (IxMonad c)
+  => PrimMonad (IxMonad c)
   => Eq (IxPoint e)
   => IxPoint e
   -> State c e
   -> IxMonad c (Maybe (State c e))
-rewind p s = (rewindMemory <|>) <$> rewindStorage
+rewind p s = do
+  m' <- rewindMemory
+  s' <- rewindStorage
+  pure $ m' <|> s'
   where
-    rewindMemory :: Maybe (State c e)
+    rewindMemory :: IxMonad c (Maybe (State c e))
     rewindMemory = do
-      ix <- V.findIndex ((== p) . fst) $ s ^. storage . events
-      pure $
-        s & storage . cursor .~ (ix + 1)
+      v <- V.freeze $ s ^. storage . events
+      pure $ do
+        ix <- VG.findIndex ((== p) . fst) v
+        pure $ s & storage . cursor .~ (ix + 1)
     rewindStorage :: IxMonad c (Maybe (State c e))
     rewindStorage = do
       (fmap . fmap) (\c -> s & connection .~ c) $
