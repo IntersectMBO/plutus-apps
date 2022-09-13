@@ -334,3 +334,13 @@ headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
 headM (a:_) = return a
 headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
 
+{-
+- Add comments to magic values
+- Add test verification for the CBOR of the 2nd transaction
+- See whether we can add a waitForFileToBeAvailable function in Hedgehog.Extras. At the very least, we can impl
+ement it to replace some of the thread delays that we have when spinning up the testnet.
+- Change plutusScriptFileInUse so that we use the Plutus Script written in Haskell code.
+- Story: Put Plutus Tools balancing function in separate package (cardano-api-extended) and use it here.
+- Spike: Investigate how to replace the threadDelay calls with await actions
+- Replace the SQLite connection with the query interface of Marconi
+-}
