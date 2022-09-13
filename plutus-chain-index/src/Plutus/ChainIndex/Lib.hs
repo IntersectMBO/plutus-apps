@@ -129,8 +129,8 @@ data ChainSyncEvent
     -- ^ Roll back to the given point. The tip is current tip of the node.
     deriving (Show)
 
-toCardanoChainSyncHandler :: RunRequirements -> ChainSyncHandler -> C.ChainSyncEvent -> IO ()
-toCardanoChainSyncHandler runReq handler = \case
+toCardanoChainSyncHandler :: ChainSyncHandler -> C.ChainSyncEvent -> IO ()
+toCardanoChainSyncHandler handler = \case
     C.RollBackward cp ct -> handler (RollBackward (fromCardanoPoint cp) (fromCardanoTip ct))
     C.Resume cp -> handler (Resume (fromCardanoPoint cp))
     C.RollForward block ct ->
@@ -186,7 +186,7 @@ syncChainIndex config runReq syncHandler = do
         (Config.cicSlotConfig config)
         (Config.cicNetworkId  config)
         resumePoints
-        (toCardanoChainSyncHandler runReq syncHandler)
+        (toCardanoChainSyncHandler syncHandler)
 
 runChainIndexDuringSync
   :: RunRequirements
