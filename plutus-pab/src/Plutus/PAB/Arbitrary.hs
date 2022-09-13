@@ -21,7 +21,7 @@ import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Params (testnet)
 import Ledger.Slot (Slot)
-import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef,
+import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)
 import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
