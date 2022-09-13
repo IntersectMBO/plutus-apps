@@ -62,7 +62,6 @@ import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Database.SQLite.Simple qualified as Sql
-import Gen qualified
 import Marconi.Indexers qualified
 import Marconi.Logging qualified
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
@@ -131,7 +130,7 @@ tests = testGroup "Integration"
 testIndex :: Property
 testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
 
-  base <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
+  base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
@@ -140,24 +139,20 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
       Nothing
 
   H.threadDelay 10000
-  p "\n\n"
-  p2 "tempAbsPath" tempAbsPath -- "/tmp/chairman/$random/"
-  p2 "base" base -- current git repo dir
 
-  TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
+  TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
   let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
 
-  let socketFilePath = IO.sprocketArgumentName (head bftSprockets)
-      socketPathAbs = tempAbsPath </> socketFilePath
-  p2 "socketFilePath" socketFilePath
+  let socketPath = IO.sprocketArgumentName (head bftSprockets)
+  socketPathAbs <- H.note $ tempAbsPath </> socketPath
 
   H.threadDelay 1_000_000
 
+  -- Start indexer
   let sqlitedb = tempAbsPath </> "script-tx.db"
-  liftIO $ IO.forkIO $ do
+  void $ liftIO $ IO.forkIO $ do
     let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
     c <- defaultConfigStdout
-    p2 "getCurrentDirectory" =<< IO.getCurrentDirectory
     withTrace c "marconi" $ \trace ->
       withChainSyncEventStream
         socketPathAbs
@@ -171,24 +166,8 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
                 "No intersection found when looking for the chain point" <+> pretty chainPoint <> "."
                   <+> "Please check the slot number and the block hash do belong to the chain"
 
-  env <- H.evalIO IO.getEnvironment
-
-  execConfig <- eval H.ExecConfig
-        { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", socketFilePath)
-          ]
-          -- The environment must be passed onto child process on Windows in order to
-          -- successfully start that process.
-          <> env
-        , H.execConfigCwd = Last $ Just tempBaseAbsPath
-        }
-
-  H.note_ base
-  work <- H.note tempAbsPath
-
   assert $ tempAbsPath == (tempAbsBasePath' <> "/")
         && tempAbsPath == (tempBaseAbsPath <> "/")
-        && work == (tempAbsBasePath' <> "/")
 
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
@@ -203,8 +182,6 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     plutusScriptAddr :: C.Address C.ShelleyAddr
     plutusScriptAddr = C.makeShelleyAddress networkId (C.PaymentCredentialByScript plutusScriptHash) C.NoStakeAddress
 
-  p2 "plutusScriptHash" plutusScriptHash
-
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
 
@@ -212,14 +189,7 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   -- by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
   -- in order to accomodate this.
 
-  plutusScriptAddrBech32 <- H.execCli
-    [ "address", "build"
-    , "--payment-script-file", plutusScriptFileInUse
-    , "--testnet-magic", show @Int testnetMagic
-    ]
-
-  -- TODO [X] Create the address using Cardano.Api
-  genesisVKey :: C.VerificationKey C.GenesisUTxOKey <- -- /cardano-node/cardano-api/src/Cardano/Api/KeysShelley.hs::1031
+  genesisVKey :: C.VerificationKey C.GenesisUTxOKey <-
     readAs (C.AsVerificationKey C.AsGenesisUTxOKey) utxoVKeyFile
 
   genesisSKey :: C.SigningKey C.GenesisUTxOKey <- readAs (C.AsSigningKey C.AsGenesisUTxOKey) utxoSKeyFile
@@ -232,19 +202,6 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
       (C.PaymentCredentialByKey (C.verificationKeyHash paymentKey :: C.Hash C.PaymentKey))
       C.NoStakeAddress :: C.Address C.ShelleyAddr
 
-  p2 "address" address -- QUESTION: any way to verify this is correct
-                       -- (i.e same as the following utxoAddr)?
-
-  utxoAddrStr <- H.execCli
-    [ "address", "build"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--payment-verification-key-file", utxoVKeyFile
-    ]
-  p2 "utxoAddr genesisKey" genesisVKey
-  p2 "utxoAddr" utxoAddrStr
-
-  -- TODO [ ] Query the utxo using the query interface of the node
-
   -- Boilerplate codecs used for protocol serialisation.  The number
   -- of epochSlots is specific to each blockchain instance. This value
   -- what the cardano main and testnet uses. Only applies to the Byron
@@ -254,64 +211,24 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
           C.LocalNodeConnectInfo
               { C.localConsensusModeParams = C.CardanoModeParams epochSlots
               , C.localNodeNetworkId = networkId
-              , C.localNodeSocketPath = work </> socketFilePath
+              , C.localNodeSocketPath = socketPathAbs
               }
 
   utxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny address
---  exit2 "utxo" utxo
+
   let utxoMap = C.unUTxO utxo
   txIn <- H.noteShow $ head $ Map.keys utxoMap
---  exit2 "txIn" txIn
 
   (C.Lovelace lovelaceAtTxin) <- H.nothingFailM . H.noteShow $ (\(C.TxOut _ v _) -> C.txOutValueToLovelace v) <$> (utxoMap & Map.lookup txIn)
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
 
-  p2 "utxo" utxo
-  p2 "lovelaceAtTxin" lovelaceAtTxin -- 900 ADA
-  p2 "lovelaceAtTxinDiv3" lovelaceAtTxinDiv3
+  pparams <- H.leftFailM . H.leftFailM . liftIO
+    $ C.queryNodeLocalState localNodeConnectInfo Nothing
+    $ C.QueryInEra C.AlonzoEraInCardanoMode
+    $ C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo C.QueryProtocolParameters
 
-  -- old utxo code
-  void $ H.execCli' execConfig
-    [ "query", "utxo"
-    , "--address", utxoAddrStr
-    , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "utxo-1.json"
-    ]
-  H.cat $ work </> "utxo-1.json"
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  utxo1 <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @(HashMap Text Utxo) utxo1Json
-  txinStr <- H.noteShow $ head $ HM.keys utxo1
-  lovelaceAtTxin <- H.nothingFailM . H.noteShow $ ((utxo1 & HM.lookup txinStr) >>= HM.lookup "lovelace" . value)
-  lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
-  -- /old utxo code
-
-  -- TODO [X] Query the PP using the IPC interface. See Plutus.PAB.Run.Cli:151 on
-  -- how to query some interface from the socket connection.
-  -- Would need to use stuff from Cardano.Api.IPC and Cardano.Api.Query.
-  void $ H.execCli' execConfig
-    [ "query", "protocol-parameters"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "pparams.json"
-    ]
-  pparams <-
-      H.leftFailM . H.leftFailM . liftIO
-        $ C.queryNodeLocalState localNodeConnectInfo Nothing
-        $ C.QueryInEra C.AlonzoEraInCardanoMode
-        $ C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo C.QueryProtocolParameters
-  -- p2 "pparams" pparams
-
-  let dummyAddressBech32 = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
-      -- targetaddress = "addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh"
-
-  -- Convert the string 'dummyAddressBech32' into an actual 'C.Address C.ShelleyAddr'.
-  dummyAddress <- H.leftFail $ C.deserialiseFromBech32 (C.AsAddress C.AsShelleyAddr) dummyAddressBech32
-
-  -- This datum hash is the hash of the untyped 42
-  let scriptDatumHashStr = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
-      scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
+  let scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
-  -- scriptDatumHash <- H.nothingFail $ C.deserialiseFromRawBytes (C.AsHash C.AsScriptData) scriptDatumHashStr
   p2 "scriptDatumHash" scriptDatumHash
 
   -- TODO [X] Create with Cardano.Api.TxBody instead of the CLI
@@ -358,48 +275,21 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx1 C.AlonzoEraInCardanoMode
   failOnTxSubmitFail submitResult
 
-  void $ H.execCli' execConfig
-    [ "transaction", "build"
-    , "--alonzo-era"
-    , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--change-address", T.unpack dummyAddressBech32
-    , "--tx-in", T.unpack txinStr
-    , "--tx-out", plutusScriptAddrBech32 <> "+" <> show @Integer lovelaceAtTxinDiv3
-    , "--tx-out-datum-hash", scriptDatumHashStr
-    , "--tx-out", utxoAddrStr <> "+" <> show @Integer lovelaceAtTxinDiv3
-    , "--protocol-params-file", work </> "pparams.json"
-    , "--out-file", work </> "create-datum-output.body"
-    ]
-
-  {-
-     What to do next:
-        - Fix the todos and fully use the Cardano.Api types
-        - Submit a 2nd transaction which spends the txout locked by a Plutus script
-        - Run the Marconi indexer
-        - Query the Marconi indexer and see that it returns a single script (which has the same hash as the one we initially used).
-  -}
-
   -- Second transaction: spend the UTXO specified in the first transaction
 
   HE.threadDelay 2_000_000 -- wait for the first transaction to be accepted
 
   txIn_ <- head . Map.keys . C.unUTxO <$> findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
 
-  p2 "plutusScriptAddr" plutusScriptAddr
-  p2 "plutusScriptAddr C.serialiseAddress" $ C.serialiseAddress plutusScriptAddr
-  p2 "plutusScriptAddr C.serialiseToRawBytes" $ C.serialiseToRawBytes plutusScriptAddr
-
   scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
   scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
 
   redeemer <- H.forAll CGen.genScriptData
---  executionUnits <- H.forAll Gen.genExecutionUnits -- QUESTION: this is maybe not a good idea?
   let
       executionUnits = C.ExecutionUnits {C.executionSteps = 500000,C.executionMemory = 500000 }
       fee = 100343
 
-      C.PlutusScript lang plutusScript_ = plutusScript
+      C.PlutusScript _lang plutusScript_ = plutusScript
       scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
       scriptWitness = C.ScriptWitness C.ScriptWitnessForSpending $
         C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript_
@@ -440,9 +330,6 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   tx2submitResult <- liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx2 C.AlonzoEraInCardanoMode
   failOnTxSubmitFail tx2submitResult
 
-  datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
-  redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
-
   H.threadDelay 1_500_000
 
   r :: String <- liftIO $ do
@@ -452,6 +339,4 @@ testIndex = T.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   let lhs = map toLower r
       rhs = TL.unpack $ TL.decodeUtf8 $ BS.toLazyByteString $ BS.byteStringHex $ C.serialiseToRawBytes plutusScriptHash
-  liftIO $ putStrLn lhs
-  liftIO $ putStrLn rhs
   lhs === rhs
