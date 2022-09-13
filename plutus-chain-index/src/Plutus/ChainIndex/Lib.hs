@@ -58,7 +58,7 @@ import Database.SQLite.Simple qualified as Sqlite
 import Cardano.Api qualified as C
 import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
-import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
+import Cardano.BM.Trace (Trace, logDebug, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)

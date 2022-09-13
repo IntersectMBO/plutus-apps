@@ -29,7 +29,7 @@ import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, ScriptError (EvaluationError),
                Tx (txMint), TxInType (ConsumeScriptAddress), TxOut (TxOut), ValidationError (ScriptFailure), Validator,
                Value, Versioned (Versioned), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs, getCardanoTxOutputs,
-               mkValidatorScript, onCardanoTx, outputs, scriptTxIn, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
+               mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Gen
