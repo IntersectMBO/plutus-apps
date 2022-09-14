@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Integration where
 
@@ -60,24 +61,13 @@ import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlF
 import Marconi.Indexers qualified
 import Marconi.Logging qualified
 
--- Copied from plutus-example/test/Test/PlutusExample/SubmitApi/TxInLockingPlutus
-data Utxo = Utxo
-  { address :: Text
-  , value   :: HM.HashMap Text Integer
-  } deriving (Eq, Show)
-
-instance Aeson.FromJSON Utxo where
-  parseJSON = Aeson.withObject "Utxo" $ \v -> Utxo
-    <$> v .: "address"
-    <*> v .: "value"
-
 -- * Tmp
 
 p :: (MonadIO m) => String -> m ()
 p = liftIO . putStrLn
 
-p2 :: (Show a, MonadIO m) => String -> a -> m ()
-p2 str a = liftIO $ putStrLn $ str <> ": " <> show a
+p2 :: (Show a, MonadIO m) => String -> a -> m a
+p2 str a = liftIO (putStrLn $ str <> ": " <> show a) >> pure a
 
 pause :: MonadIO m => m ()
 pause = liftIO readLn
@@ -97,6 +87,20 @@ tests :: TestTree
 tests = testGroup "Integration"
   [ testProperty "prop_script_hashes_in_tx_match" testIndex ]
 
+{- | We test the script transaction indexer by setting up a testnet,
+   adding a script to it and then spending it, and then see if the
+   script shows up on the indexer.
+
+   Specifically, we:
+
+    - spin up a testnet and the script transaction indexer
+
+    - create a plutus script, then submit a transaction which contains
+      an UTxO where this script is the validator
+
+    - submit a second transaction that spends this UTxO, then query
+      the indexer to see if it was indexed properly
+-}
 testIndex :: Property
 testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
 
@@ -111,14 +115,10 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   assert $ tempAbsPath == (tempAbsBasePath' <> "/")
         && tempAbsPath == (tempBaseAbsPath <> "/")
 
-  H.threadDelay 10000
-
   TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
   let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
   socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
-  socketPathAbs <- H.note $ tempAbsPath </> socketPath
-
-  H.threadDelay 1_000_000
+  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
 
   -- Start indexer
   let sqliteDb = tempAbsPath </> "script-tx.db"
@@ -182,13 +182,10 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
           , C.localNodeSocketPath = socketPathAbs
           }
 
-  utxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny address
-
-  let utxoMap = C.unUTxO utxo
-  txIn <- H.noteShow $ head $ Map.keys utxoMap
-
-  (C.Lovelace lovelaceAtTxin) <- H.nothingFailM . H.noteShow $ (\(C.TxOut _ v _) -> C.txOutValueToLovelace v) <$> (utxoMap & Map.lookup txIn)
-  lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
+  (tx1in, C.TxOut _ v _) <- do
+    utxo <- findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
+    headM $ Map.toList $ C.unUTxO utxo
+  let totalLovelace = C.txOutValueToLovelace v
 
   pparams <- H.leftFailM . H.leftFailM . liftIO
     $ C.queryNodeLocalState localNodeConnectInfo Nothing
@@ -198,25 +195,30 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   let scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
 
+      tx1fee = 271 :: C.Lovelace
+      amountPaid = 10_000_000 :: C.Lovelace -- 10 ADA
+      -- Must return everything that was not paid to script and that didn't went to fees:
+      amountReturned = totalLovelace - amountPaid - tx1fee :: C.Lovelace
+
       txOut1 :: C.TxOut ctx C.AlonzoEra
       txOut1 =
         C.TxOut
           (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) plutusScriptAddr)
-          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace lovelaceAtTxinDiv3)
+          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountPaid)
           (C.TxOutDatumHash C.ScriptDataInAlonzoEra scriptDatumHash)
       txOut2 :: C.TxOut ctx C.AlonzoEra
       txOut2 =
         C.TxOut
           (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
-          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace $ 2 * lovelaceAtTxinDiv3 - 271)
+          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountReturned)
           C.TxOutDatumNone
       txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
       txBodyContent =
         C.TxBodyContent {
-          C.txIns              = [(txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)],
+          C.txIns              = [(tx1in, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)],
           C.txInsCollateral    = C.TxInsCollateralNone,
           C.txOuts             = [txOut1, txOut2],
-          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra $ C.Lovelace 271,
+          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx1fee,
           C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
           C.txMetadata         = C.TxMetadataNone,
           C.txAuxScripts       = C.TxAuxScriptsNone,
@@ -228,7 +230,6 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
           C.txMintValue        = C.TxMintNone,
           C.txScriptValidity   = C.TxScriptValidityNone
         }
-
   tx1body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
   let
     kw :: C.KeyWitness C.AlonzoEra
@@ -241,14 +242,24 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   HE.threadDelay 2_000_000 -- wait for the first transaction to be accepted
 
-  txIn_ <- head . Map.keys . C.unUTxO <$> findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
+  tx2collateralTxIn <- headM . Map.keys . C.unUTxO =<< findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
 
-  scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
-  scriptTxIn <- H.noteShow $ head $ Map.keys $ C.unUTxO scriptUtxo
+  (scriptTxIn, C.TxOut _ valueAtScript _) <- do
+    scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
+    headM $ Map.toList $ C.unUTxO scriptUtxo
 
-  redeemer <- H.forAll CGen.genScriptData
-  let executionUnits = C.ExecutionUnits {C.executionSteps = 500000,C.executionMemory = 500000 }
-      fee = 100343
+  let lovelaceAtScript = C.txOutValueToLovelace valueAtScript
+  assert $ lovelaceAtScript == 10_000_000 -- script has the 10 ADA we put there in tx1
+
+  redeemer <- H.forAll CGen.genScriptData -- The script always returns true so any redeemer will do
+  let
+      -- The following execution unit and fee values were found by
+      -- trial and error. When the transaction which we are in the
+      -- process of creating, fails, then it will report the values it
+      -- wants. And although they change again after you correct them,
+      -- then the procedure converges quickly.
+      executionUnits = C.ExecutionUnits {C.executionSteps = 500_000, C.executionMemory = 10_000 }
+      tx2fee = 1000303 :: C.Lovelace
 
       C.PlutusScript _lang plutusScript_ = plutusScript
       scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
@@ -256,14 +267,14 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
         C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript_
         (C.ScriptDatumForTxIn scriptDatum) redeemer executionUnits
 
-      collateral = C.TxInsCollateral C.CollateralInAlonzoEra [txIn_]
+      collateral = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
 
       tx2out :: C.TxOut ctx C.AlonzoEra
       tx2out =
           C.TxOut
             (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
              -- send ADA back to the original genesis address               ^
-            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ C.Lovelace $ lovelaceAtTxinDiv3 - fee)
+            (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ lovelaceAtScript - tx2fee)
             C.TxOutDatumNone
 
       tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
@@ -272,7 +283,7 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
           C.txIns              = [(scriptTxIn, C.BuildTxWith scriptWitness)],
           C.txInsCollateral    = collateral,
           C.txOuts             = [tx2out],
-          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra $ C.Lovelace fee,
+          C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx2fee,
           C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
           C.txMetadata         = C.TxMetadataNone,
           C.txAuxScripts       = C.TxAuxScriptsNone,
@@ -290,7 +301,7 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   submitTx localNodeConnectInfo tx2
 
-  H.threadDelay 1_500_000
+  H.threadDelay 3_000_000
 
   r :: String <- liftIO $ do
     sqlConnection <- Sql.open sqliteDb
@@ -303,6 +314,9 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
 
 -- * Helpers
+
+deriving instance Real C.Lovelace
+deriving instance Integral C.Lovelace
 
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = H.leftFailM . liftIO $ C.readFileTextEnvelope as path
