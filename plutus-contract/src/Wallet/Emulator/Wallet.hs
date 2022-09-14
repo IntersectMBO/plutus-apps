@@ -52,14 +52,13 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (
                TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPrivateKey (..), paymentPubKeyHash)
+import Ledger.Address (PaymentPrivateKey (..))
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
-import Ledger.Generators qualified as Generators
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (makeTransactionBody)
 import Ledger.Validation (fromPlutusIndex, fromPlutusTx, getRequiredSigners)
