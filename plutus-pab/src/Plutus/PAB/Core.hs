@@ -51,6 +51,7 @@ module Plutus.PAB.Core
     , ContractInstanceEffects
     , handleAgentThread
     , stopInstance
+    , removeInstance
     , instanceActivity
     -- * Querying the state
     , instanceState
@@ -298,10 +299,11 @@ instanceStateInternal instanceId = do
         >>= liftIO . Instances.instanceState instanceId
         >>= maybe (throwError $ ContractInstanceNotFound instanceId) pure
 
--- | Delete the instance from the 'InstancesState' of the @PABEnvironment@
+-- | Delete the instance from the 'InstancesState' of the @PABEnvironment@ and from `InMemInstances` / Beam db.
 removeInstance :: forall t env. ContractInstanceId -> PABAction t env ()
 removeInstance instanceId = do
     asks @(PABEnvironment t env) instancesState >>= liftIO . Instances.removeInstance instanceId
+    Contract.deleteState @t instanceId
 
 -- | Stop the instance.
 stopInstance :: forall t env. ContractInstanceId -> PABAction t env ()
@@ -314,7 +316,6 @@ stopInstance instanceId = do
                 _      -> pure (Just $ InstanceAlreadyStopped instanceId)
     traverse_ throwError r'
     removeInstance instanceId
-    Contract.deleteState @t instanceId
 
 -- | The 'Activity' of the instance.
 instanceActivity :: forall t env. ContractInstanceId -> PABAction t env Activity

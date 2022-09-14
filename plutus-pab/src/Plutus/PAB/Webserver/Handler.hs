@@ -143,15 +143,16 @@ contractInstanceState i = do
     Just ContractActivationArgs{caWallet, caID} -> do
       let wallet = fromMaybe (knownWallet 1) caWallet
       yieldedExportedTxs <- Core.yieldedExportTxs i
-      stopUnlessActive s i
-      fmap ( fromInternalState caID i s wallet yieldedExportedTxs
-             . fromResp
-             . Contract.serialisableState (Proxy @t)
-           ) $ Contract.getState @t i
+      istate <- fmap ( fromInternalState caID i s wallet yieldedExportedTxs
+                       . fromResp
+                       . Contract.serialisableState (Proxy @t)
+                     ) $ Contract.getState @t i
+      removeUnlessActive s i
+      pure istate
     _ -> throwError @PABError (ContractInstanceNotFound i)
 
-stopUnlessActive :: ContractActivityStatus -> ContractInstanceId -> PABAction t env ()
-stopUnlessActive s i = unless (s == Active) (Core.stopInstance i)
+removeUnlessActive :: ContractActivityStatus -> ContractInstanceId -> PABAction t env ()
+removeUnlessActive s i = unless (s == Active) (Core.removeInstance i)
 
 callEndpoint :: forall t env. ContractInstanceId -> String -> JSON.Value -> PABAction t env ()
 callEndpoint a b v = Core.callEndpointOnInstance a b v >>= traverse_ (throwError @PABError . EndpointCallError)
