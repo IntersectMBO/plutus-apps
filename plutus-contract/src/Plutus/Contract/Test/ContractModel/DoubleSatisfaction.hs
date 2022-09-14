@@ -159,7 +159,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
           show (validateWrappedTx c1)
         | DoubleSatisfactionCounterexample _ c0 c1 _ _ _ <- potentialCEs ]
       QC.monitor $ tabulate "Reasons the steal candidate (that shouldn't work) is rejected"
-        [ {- head . words . -} show $ r
+        [ head . words . show $ r
         | DoubleSatisfactionCounterexample _ c0 c1 _ _ _ <- potentialCEs
         , Prelude.not $ validateWrappedTx c0
         , Just r <- [validateWrappedTx' c1] ]
