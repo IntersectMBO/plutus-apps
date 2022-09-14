@@ -318,7 +318,6 @@ handleBalance utx' = do
     params@Params { pSlotConfig } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-        signersForEstimation = requiredSigners ++ map paymentPubKeyHash Generators.knownPaymentPublicKeys
         eitherTx = U.unBalancedTxTx utx
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     case eitherTx of
@@ -326,7 +325,7 @@ handleBalance utx' = do
             -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
             let calcFee n fee = do
                     tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-                    newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex signersForEstimation tx
+                    newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
                     if newFee /= fee
                         then if n == (0 :: Int)
                             -- If we don't reach a fixed point, pick the larger fee
