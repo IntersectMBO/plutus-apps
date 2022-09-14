@@ -26,7 +26,9 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,10000000)])) (TxOutDatumInTx' ScriptDataInBabbageEra "77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51" (ScriptDataBytes "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167")) ReferenceScriptNone
+                      - Value (Map [(,Map [("",10000000)])]) with datum
+                        77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 addressed to
+                        ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
                     mint: Value (Map [])
                     fee: Value (Map [])
                     mps:
@@ -50,8 +52,12 @@ Slot 1: W[2]: Finished balancing:
                     - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!20
 
                   outputs:
-                    TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,10000000)])) (TxOutDatumInTx' ScriptDataInBabbageEra "77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51" (ScriptDataBytes "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167")) ReferenceScriptNone
-                    TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (KeyHashObj (KeyHash "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,9817647)])) TxOutDatumNone ReferenceScriptNone
+                    - Value (Map [(,Map [("",10000000)])]) with datum
+                      77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 addressed to
+                      ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                    - Value (Map [(,Map [("",9817647)])]) with datum
+                       addressed to
+                      PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",182353)])])
                   mps:
@@ -74,7 +80,9 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,10000000)])) (TxOutDatumInTx' ScriptDataInBabbageEra "2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122" (ScriptDataBytes ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|")) ReferenceScriptNone
+                      - Value (Map [(,Map [("",10000000)])]) with datum
+                        2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 addressed to
+                        ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
                     mint: Value (Map [])
                     fee: Value (Map [])
                     mps:
@@ -98,8 +106,12 @@ Slot 1: W[3]: Finished balancing:
                     - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!0
 
                   outputs:
-                    TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,10000000)])) (TxOutDatumInTx' ScriptDataInBabbageEra "2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122" (ScriptDataBytes ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|")) ReferenceScriptNone
-                    TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (KeyHashObj (KeyHash "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,9817647)])) TxOutDatumNone ReferenceScriptNone
+                    - Value (Map [(,Map [("",10000000)])]) with datum
+                      2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 addressed to
+                      ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                    - Value (Map [(,Map [("",9817647)])]) with datum
+                       addressed to
+                      PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",182353)])])
                   mps:
@@ -118,7 +130,9 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,2500000)])) (TxOutDatumInTx' ScriptDataInBabbageEra "63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969" (ScriptDataBytes "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =")) ReferenceScriptNone
+                      - Value (Map [(,Map [("",2500000)])]) with datum
+                        63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 addressed to
+                        ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
                     mint: Value (Map [])
                     fee: Value (Map [])
                     mps:
@@ -140,8 +154,12 @@ Slot 1: W[4]: Finished balancing:
                     - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!10
 
                   outputs:
-                    TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,2500000)])) (TxOutDatumInTx' ScriptDataInBabbageEra "63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969" (ScriptDataBytes "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =")) ReferenceScriptNone
-                    TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (KeyHashObj (KeyHash "557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,7323675)])) TxOutDatumNone ReferenceScriptNone
+                    - Value (Map [(,Map [("",2500000)])]) with datum
+                      63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 addressed to
+                      ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                    - Value (Map [(,Map [("",7323675)])]) with datum
+                       addressed to
+                      PubKeyCredential: 557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d (no staking credential)
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",176325)])])
                   mps:
@@ -185,11 +203,17 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                  Requires signatures:
                  Utxo index:
                    ( 1392dd20a08de6c8f41ed6a1418bd6092c75f95ecbf5e3507e2039b601fc00ba!0
-                   , TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,2500000)])) (TxOutDatumHash ScriptDataInBabbageEra "63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969") ReferenceScriptNone )
+                   , - Value (Map [(,Map [("",2500000)])]) with datum
+                       63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
                    ( 4f3549b97ce27589661068a58674751f01484a0035f20c7704728dc591fc7a54!0
-                   , TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,10000000)])) (TxOutDatumHash ScriptDataInBabbageEra "2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122") ReferenceScriptNone )
+                   , - Value (Map [(,Map [("",10000000)])]) with datum
+                       2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
                    ( a461d756dcb403971b1cad49aa06db9ded2ae9913c3a4f4ab9693814ed8f5f42!0
-                   , TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (ScriptHashObj (ScriptHash "8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,10000000)])) (TxOutDatumHash ScriptDataInBabbageEra "77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51") ReferenceScriptNone )
+                   , - Value (Map [(,Map [("",10000000)])]) with datum
+                       77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
                  Validity range:
                    [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W[1]: Finished balancing:
@@ -206,7 +230,9 @@ Slot 20: W[1]: Finished balancing:
                      - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!50
 
                    outputs:
-                     TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraBabbage) (ShelleyAddress Testnet (KeyHashObj (KeyHash "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2")) StakeRefNull)) (TxOutValue MultiAssetInBabbageEra (valueFromList [(AdaAssetId,22199419)])) TxOutDatumNone ReferenceScriptNone
+                     - Value (Map [(,Map [("",22199419)])]) with datum
+                        addressed to
+                       PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
                    mint: Value (Map [])
                    fee: Value (Map [(,Map [("",300581)])])
                    mps:

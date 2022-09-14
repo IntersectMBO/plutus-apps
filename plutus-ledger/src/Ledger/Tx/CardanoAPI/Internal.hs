@@ -25,6 +25,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoTxOut
   , fromCardanoTxOutDatumHash
   , fromCardanoTxOutDatum
+  , fromCardanoTxOutValue
   , fromCardanoAddressInEra
   , fromCardanoAddress
   , fromCardanoMintValue

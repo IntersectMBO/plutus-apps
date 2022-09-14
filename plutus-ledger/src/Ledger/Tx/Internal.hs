@@ -40,7 +40,8 @@ import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Slot
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoValue)
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOutDatumHash, fromCardanoTxOutValue,
+                                      fromCardanoValue)
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
@@ -222,7 +223,12 @@ instance OpenApi.ToSchema TxOut where
 
 
 instance Pretty TxOut where
-  pretty = viaShow . getTxOut
+  pretty (TxOut (C.TxOut addr v dh _rs)) =
+    hang 2 $ vsep
+      ["-" <+> pretty (fromCardanoTxOutValue v) <+> "with datum"
+      , pretty (fromCardanoTxOutDatumHash dh) <+> "addressed to"
+      , pretty (fromCardanoAddressInEra addr)
+      ]
 
 -- | A Babbage-era transaction, including witnesses for its inputs.
 data Tx = Tx {
