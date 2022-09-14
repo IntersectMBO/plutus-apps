@@ -65,7 +65,6 @@ import Control.Monad.Trans.Writer (runWriter)
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
 import Data.Default (Default (def))
-import Data.Either (fromRight)
 import Data.Foldable (fold, foldl')
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
