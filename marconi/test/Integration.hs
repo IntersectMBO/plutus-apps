@@ -10,7 +10,7 @@ module Integration where
 
 import Control.Concurrent qualified as IO
 import Control.Exception (catch)
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson ((.:))
 import Data.Aeson qualified as Aeson
@@ -21,13 +21,16 @@ import Data.HashMap.Lazy qualified as HM
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Text qualified as TS
+import Data.Text.Encoding qualified as TS
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
 import Database.SQLite.Simple qualified as Sql
 import GHC.Stack qualified as GHC
 import System.Directory qualified as IO
 import System.Environment qualified as IO
-import System.FilePath ((</>))
+import System.FilePath (takeDirectory, takeFileName, (</>))
+import System.INotify
 
 import Hedgehog (MonadTest, Property, assert, eval, (===))
 import Hedgehog qualified as H
@@ -342,11 +345,24 @@ submitTx localNodeConnectInfo tx = do
       SubmitFail reason -> H.failMessage GHC.callStack $ "Transaction failed: " <> show reason
       SubmitSuccess     -> pure ()
 
-
 -- TODO: remove when this is exported from hedgehog-extras/src/Hedgehog/Extras/Test/Base.hs
 headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
 headM (a:_) = return a
 headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
+
+-- | Block until file at @path@ appears
+untilFileExists :: FilePath -> IO ()
+untilFileExists path = do
+  lock <- IO.newEmptyMVar
+  inotify <- initINotify
+  let
+    filePart = TS.encodeUtf8 $ TS.pack $ takeFileName path
+    dirPart = TS.encodeUtf8 $ TS.pack $ takeDirectory path
+  void $ addWatch inotify [Create] dirPart $ \case
+    Created False createdFile ->
+      when (filePart == createdFile) $ IO.putMVar lock ()
+    _ -> pure ()
+  IO.takeMVar lock
 
 {-
 - Add comments to magic values

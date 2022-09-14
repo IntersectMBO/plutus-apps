@@ -159,6 +159,7 @@ test-suite marconi-test
     , filepath
     , hedgehog
     , hedgehog-extras
+    , hinotify
     , prettyprinter
     , sqlite-simple
     , tasty
