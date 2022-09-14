@@ -335,32 +335,6 @@ scriptAnyLangType = SumType (
     , DataConstructor {_sigConstructor = "PlutusScriptLanguageV2", _sigValues = Nullary}
   ] [Eq,GenericShow,Json,Ord,Generic]
 
--- TODO: implement a proper SumType, this is a stub to make purescript compile
-babbageEra :: SumType 'Haskell
-babbageEra = SumType (
-      TypeInfo {
-        _typePackage = "crdn-p-1.33.0-c62ffc00"
-      , _typeModule = "Cardano.Api.Eras"
-      , _typeName = "BabbageEra"
-      , _typeParameters = []
-    }
-  ) [
-      DataConstructor {_sigConstructor = "BabbageEra", _sigValues = Nullary}
-  ] [Eq,GenericShow,Json,Ord,Generic]
-
--- TODO: implement a proper SumType, this is a stub to make purescript compile
-ctxTx :: SumType 'Haskell
-ctxTx = SumType (
-      TypeInfo {
-        _typePackage = "crdn-p-1.33.0-c62ffc00"
-      , _typeModule = "Cardano.Api.TxBody"
-      , _typeName = "CtxTx"
-      , _typeParameters = []
-    }
-  ) [
-      DataConstructor {_sigConstructor = "CtxTx", _sigValues = Nullary}
-  ] [Eq,GenericShow,Json,Ord,Generic]
-
 plutusTxOut :: SumType 'Haskell
 plutusTxOut = equal . genericShow . argonaut $ mkSumType @Plutus.V1.Ledger.Api.TxOut
 
@@ -409,8 +383,6 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @PV2.OutputDatum
     , equal . genericShow . argonaut $ mkSumType @ReferenceScript
     , scriptAnyLangType
-    , babbageEra
-    , ctxTx
     , cardanoTxOut
     -- v2-end
     , functor . equal . genericShow . argonaut $ mkSumType @(Extended A)
