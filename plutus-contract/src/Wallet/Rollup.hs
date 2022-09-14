@@ -81,7 +81,7 @@ annotateTransaction sequenceId tx = do
         AnnotatedTx
             { sequenceId
             , txId
-            , tx = tx
+            , tx = eitherTx id id tx
             , dereferencedInputs
             , balances = newBalances
             , valid = eitherTx (const False) (const True) tx
