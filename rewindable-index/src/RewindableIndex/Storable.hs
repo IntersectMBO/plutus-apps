@@ -49,8 +49,7 @@ data State c e = State
 $(Lens.makeLenses ''State)
 
 emptyState
-  :: Monad (IxMonad c)
-  => PrimMonad (IxMonad c)
+  :: PrimMonad (IxMonad c)
   => Int
   -> Int
   -> c
@@ -136,7 +135,7 @@ rewind p s = do
     rewindMemory = do
       v <- V.freeze $ s ^. storage . events
       pure $ do
-        ix <- VG.findIndex ((== p) . fst) v
+        ix   <- VG.findIndex ((== p) . fst) v
         pure $ s & storage . cursor .~ (ix + 1)
     rewindStorage :: IxMonad c (Maybe (State c e))
     rewindStorage = do
