@@ -61,8 +61,6 @@ executable doc-doctests
   build-tool-depends: doctest:doctest
   other-modules:
     BasicApps
-    BasicPlutusTx
-    BasicPolicies
     BasicValidators
     Escrow
     Escrow2

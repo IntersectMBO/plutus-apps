@@ -149,10 +149,10 @@ makeTest {
       assert "plutus" in res, "Expected string 'plutus' from 'http://plutus-playground:8080'. Actual: {}".format(res)
 
       res = playgrounds.succeed("curl --silent http://plutus-playground:8080/doc/")
-      assert "The Plutus Platform" in res, "Expected string 'The Plutus Platform' from 'http://plutus-playground:8080/doc/'. Actual: {}".format(res)
+      assert "Plutus Tools" in res, "Expected string 'Plutus Tools' from 'http://plutus-playground:8080/doc/'. Actual: {}".format(res)
 
       res = playgrounds.succeed("curl --silent http://plutus-playground:8080/doc/plutus/tutorials/")
-      assert "The Plutus Platform" in res, "Expected string 'Tutorials' from 'http://plutus-playground:8080/doc/plutus/tutorials/'. Actual: {}".format(res)
+      assert "Tutorials" in res, "Expected string 'Tutorials' from 'http://plutus-playground:8080/doc/plutus/tutorials/'. Actual: {}".format(res)
 
     #
     # webghc asserts

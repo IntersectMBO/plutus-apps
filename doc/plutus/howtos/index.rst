@@ -8,9 +8,7 @@ How-to guides
    :titlesonly:
 
    getting-started
-   exporting-a-script
    writing-a-scalable-app
    handling-blockchain-events
    analysing-scripts
-   profiling-scripts
    plutus-spending-script-example
