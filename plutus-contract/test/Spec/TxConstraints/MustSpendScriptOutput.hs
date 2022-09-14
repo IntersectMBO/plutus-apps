@@ -63,24 +63,6 @@ mustPayToTheScriptWithMultipleOutputs :: Integer -> [TxConstraints i Integer] ->
 mustPayToTheScriptWithMultipleOutputs 0 constraints = mconcat constraints
 mustPayToTheScriptWithMultipleOutputs n constraints = mustPayToTheScriptWithMultipleOutputs (n-1) (constraints ++ [Constraints.mustPayToTheScript (n-1) utxoValue])
 
--- BUG?: causes ScriptHashNotFound because uses typedValidatorLookups
--- mustSpendScriptOutputsContract :: Integer -> Integer -> Contract () Empty ContractError ()
--- mustSpendScriptOutputsContract nScriptOutputs nScriptOutputsToSpend = do
---     let lookups1 = Constraints.typedValidatorLookups typedMustSpendScriptOutputValidator
---         tx1 = mustPayToTheScriptWithMultipleOutputs nScriptOutputs []
---     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
---     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-
---     scriptUtxos <- utxosAt mustSpendScriptOutputScrAddress
---     let lookups2 = Constraints.typedValidatorLookups typedMustSpendScriptOutputValidator <>
---             Constraints.unspentOutputs scriptUtxos
---         tx2 = mconcat $ mustSpendScriptOutputs (M.keys $ M.take (fromIntegral nScriptOutputsToSpend) scriptUtxos)
---     ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputValType lookups2 tx2
---     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
---     where
---         mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints i o]
---         mustSpendScriptOutputs scriptTxOutRefs = fmap (\txOutRef -> Constraints.mustSpendScriptOutput txOutRef (asRedeemer scriptTxOutRefs)) scriptTxOutRefs
-
 -- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputs constraint to spend some of the outputs each with unique datum
 mustSpendScriptOutputsContract :: Integer -> Integer -> Contract () Empty ContractError ()
 mustSpendScriptOutputsContract nScriptOutputs nScriptOutputsToSpend = do
@@ -90,7 +72,7 @@ mustSpendScriptOutputsContract nScriptOutputs nScriptOutputsToSpend = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     scriptUtxos <- utxosAt mustSpendScriptOutputScrAddress
-    let lookups2 = Constraints.plutusV1OtherScript mustSpendScriptOutputVal <>
+    let lookups2 = Constraints.typedValidatorLookups typedMustSpendScriptOutputValidator <>
             Constraints.unspentOutputs scriptUtxos
         tx2 = mconcat $ mustSpendScriptOutputs (M.keys $ M.take (fromIntegral nScriptOutputsToSpend) scriptUtxos)
     ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputValType lookups2 tx2

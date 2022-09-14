@@ -178,9 +178,13 @@ instance Monoid (ScriptLookups a) where
 -- @
 typedValidatorLookups :: TypedValidator a -> ScriptLookups a
 typedValidatorLookups inst =
-    let (MintingPolicyHash mph, mp) = (Typed.forwardingMintingPolicyHash inst, Typed.vForwardingMintingPolicy inst)
+    let (ValidatorHash vh, v) = (Typed.tvValidatorHash inst, Typed.tvValidator inst)
+        (MintingPolicyHash mph, mp) = (Typed.forwardingMintingPolicyHash inst, Typed.vForwardingMintingPolicy inst)
     in mempty
-        { slOtherScripts = Map.singleton (ScriptHash mph) (fmap getMintingPolicy mp)
+        { slOtherScripts =
+            Map.fromList [ (ScriptHash vh, fmap getValidator v)
+                         , (ScriptHash mph, fmap getMintingPolicy mp)
+                         ]
         , slTypedValidator = Just inst
         }
 
