@@ -17,8 +17,9 @@ import Plutus.V1.Ledger.Credential (Credential(..))
 import Ledger.Crypto (PubKey, Signature)
 import Plutus.V1.Ledger.Interval (Interval)
 import Ledger.Slot (Slot)
-import Ledger.Tx.Internal (Tx, TxInput, TxIn)
-import Plutus.V1.Ledger.Tx (TxOut(..), TxOutRef(..), TxId)
+import Ledger.Tx.Internal (Tx, TxInput, TxIn, TxOut(..))
+import Plutus.V1.Ledger.Tx (TxOutRef(..), TxId)
+import Cardano.Api.TxBody as C
 import Plutus.V1.Ledger.Value (Value)
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput, SequenceId, TxKey, _TxKey)
 
@@ -124,7 +125,7 @@ _txKeyTxOutRefIdx :: Lens' TxKey BigInt
 _txKeyTxOutRefIdx = _TxKey <<< prop (Proxy :: _ "_txKeyTxOutRefIdx")
 
 toBeneficialOwner :: TxOut -> BeneficialOwner
-toBeneficialOwner (TxOut { txOutAddress }) =
+toBeneficialOwner (TxOut { getTxOut: C.TxOut { txOutAddress } }) =
   let
     Address { addressCredential } = txOutAddress
   in
