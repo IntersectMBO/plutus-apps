@@ -498,7 +498,7 @@ addMissingValueSpent = do
                                      , PV1.txOutValue=missing
                                      , PV1.txOutDatumHash=Nothing
                                      }
-            case C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1TxOut of
+            case C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash pv1TxOut of
               Left _      -> throwError OwnPubKeyMissing
               Right txOut -> unbalancedTx . tx . Tx.outputs %= (TxOut txOut:)
 
@@ -511,7 +511,7 @@ updateUtxoIndex
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
     networkId <- gets $ pNetworkId . cpsParams
-    case traverse (C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash . Tx.toTxOut) slTxOutputs of
+    case traverse (C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash . Tx.toTxOut) slTxOutputs of
         Left err      -> throwError $ TxOutCardanoError err
         Right slUtxos -> unbalancedTx . utxoIndex <>= fmap TxOut slUtxos
 
@@ -710,7 +710,7 @@ processConstraint = \case
                                  }
         let txInDatum = C.toCardanoTxOutDatumInTx mdv
         let cardanoTxOut =
-              TxOut <$> C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1TxOut <&> outDatumHash .~ txInDatum
+              TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash pv1TxOut <&> outDatumHash .~ txInDatum
         case cardanoTxOut of
           Left err    -> throwError $ TxOutCardanoError err
           Right txOut -> unbalancedTx . tx . Tx.outputs %= (txOut :)
@@ -725,7 +725,7 @@ processConstraint = \case
 
         let txInDatum = C.toCardanoTxOutDatumInTx (Just dv)
         let cardanoTxOut =
-              TxOut <$> C.toCardanoTxOutUnsafe networkId C.toCardanoTxOutDatumHash pv1script <&> outDatumHash .~ txInDatum
+              TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash pv1script <&> outDatumHash .~ txInDatum
         case cardanoTxOut of
           Left err       -> throwError $ TxOutCardanoError err
           Right txScript -> unbalancedTx . tx . Tx.outputs %= (txScript :)

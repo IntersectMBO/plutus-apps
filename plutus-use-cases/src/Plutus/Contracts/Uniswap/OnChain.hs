@@ -276,7 +276,7 @@ mkUniswapValidator _  c (Pool lp _)   Swap        ctx = validateSwap lp c ctx
 mkUniswapValidator us c (Factory lps) Close       ctx = validateCloseFactory us c lps ctx
 mkUniswapValidator us _ (Pool _  _)   Close       ctx = validateClosePool us ctx
 mkUniswapValidator _  c (Pool lp a)   Remove      ctx = validateRemove c lp a ctx
-mkUniswapValidator _  c (Pool lp a)   Add         ctx = validateAdd c lp a ctx -- This one is failing fix Datum
+mkUniswapValidator _  c (Pool lp a)   Add         ctx = validateAdd c lp a ctx
 mkUniswapValidator _  _ _             _           _   = False
 
 {-# INLINABLE validateLiquidityMinting #-}

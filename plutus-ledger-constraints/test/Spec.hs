@@ -36,7 +36,7 @@ import Ledger.Index qualified as Ledger
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Tx (Tx (txCollateral, txOutputs), TxOut (TxOut), txOutAddress)
-import Ledger.Tx.CardanoAPI (toCardanoTxOutDatumHash, toCardanoTxOutUnsafe)
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Generators qualified as Gen
@@ -185,7 +185,7 @@ testScriptInputs lookups txc = property $ do
     let valM = do
             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxInputs)) tx
             pure Nothing
-        txOuts = traverse (toCardanoTxOutUnsafe (pNetworkId params) toCardanoTxOutDatumHash)
+        txOuts = traverse (toCardanoTxOut (pNetworkId params) toCardanoTxOutDatumHash)
                    $ Ledger.toTxOut <$> Constraints.slTxOutputs lookups
     case txOuts of
         Left err -> do

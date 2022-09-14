@@ -44,7 +44,6 @@ module Ledger.Tx.CardanoAPI.Internal(
   , makeTransactionBody
   , toCardanoTxIn
   , toCardanoTxOut
-  , toCardanoTxOutUnsafe
   , toCardanoTxOutDatumHash
   , toCardanoTxOutDatumInline
   , toCardanoTxOutDatumInTx
@@ -87,7 +86,6 @@ import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
 import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes, TkSimple))
 import Control.Applicative ((<|>))
 import Control.Lens ((&), (.~), (?~))
-import Control.Monad (when)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser, parseFail, prependFailure, typeMismatch)
@@ -424,17 +422,6 @@ toCardanoTxOut networkId fromHash (PV1.TxOut addr value datumHash) =
             <*> fromHash datumHash
             <*> pure C.ReferenceScriptNone
 
-toCardanoTxOutUnsafe
-    :: C.NetworkId
-    -> (Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
-    -> PV1.TxOut
-    -> Either ToCardanoError (C.TxOut ctx C.BabbageEra)
-toCardanoTxOutUnsafe networkId fromHash (PV1.TxOut addr value datumHash) =
-    C.TxOut <$> toCardanoAddressInEra networkId addr
-            <*> toCardanoTxOutValueUnsafe value
-            <*> fromHash datumHash
-            <*> pure C.ReferenceScriptNone
-
 fromCardanoAddressInEra :: C.AddressInEra era -> P.Address
 fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
 fromCardanoAddressInEra (C.AddressInEra _ address)                      = fromCardanoAddress address
@@ -514,12 +501,7 @@ fromCardanoTxOutValue (C.TxOutAdaOnly _ lovelace) = fromCardanoLovelace lovelace
 fromCardanoTxOutValue (C.TxOutValue _ value)      = fromCardanoValue value
 
 toCardanoTxOutValue :: PV1.Value -> Either ToCardanoError (C.TxOutValue C.BabbageEra)
-toCardanoTxOutValue value = do
-    when (Ada.fromValue value == mempty) (Left OutputHasZeroAda)
-    C.TxOutValue C.MultiAssetInBabbageEra <$> toCardanoValue value
-
-toCardanoTxOutValueUnsafe :: PV1.Value -> Either ToCardanoError (C.TxOutValue C.BabbageEra)
-toCardanoTxOutValueUnsafe value = C.TxOutValue C.MultiAssetInBabbageEra <$> toCardanoValue value
+toCardanoTxOutValue value = C.TxOutValue C.MultiAssetInBabbageEra <$> toCardanoValue value
 
 fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
 fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing

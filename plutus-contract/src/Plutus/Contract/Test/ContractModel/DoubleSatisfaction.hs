@@ -34,6 +34,8 @@ import PlutusTx.Builtins hiding (error)
 
 
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Control.Lens
 import Control.Monad.Cont
 import Control.Monad.Freer (Eff, run)
@@ -43,40 +45,35 @@ import Data.Default
 import Data.Either
 import Data.Map qualified as Map
 import Data.Maybe
-import Ledger.Params (EmulatorEra)
 
-import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
+import Ledger qualified as P
+import Ledger.Ada qualified as Ada
 import Ledger.Crypto
 import Ledger.Generators
 import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (mint)
+import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOut, toCardanoAddressInEra, toCardanoTxOutDatumInTx,
+                             toCardanoTxOutDatumInline)
 import Ledger.Validation qualified as Validation
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
 import Streaming qualified as S
-import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbitraryAction, initialState, monitoring,
-                                   nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
-import Test.QuickCheck.StateModel qualified as StateModel
 
 import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||.))
 import Test.QuickCheck.Monadic (monadic)
 import Test.QuickCheck.Monadic qualified as QC
+import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbitraryAction, initialState, monitoring,
+                                   nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
+import Test.QuickCheck.StateModel qualified as StateModel
 
 import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), eteEvent)
 import Wallet.Emulator.Stream (EmulatorErr)
 
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Ledger qualified as P
-import Ledger.Ada qualified as Ada
-import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOut, toCardanoAddressInEra, toCardanoTxOutDatumInTx,
-                             toCardanoTxOutDatumInline)
 import Prettyprinter
 
 -- Double satisfaction magic
@@ -336,8 +333,8 @@ doubleSatisfactionCounterexamples dsc = do
    -- Then stealerKey can try to steal it
    stealerKey <- signatories
    (stealerWallet, stealerPrivKey) <-
-      filter (\(w, _) -> unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
-             (zip knownWallets (unPaymentPrivateKey <$> knownPaymentPrivateKeys))
+      filter (\(w, _) -> P.unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
+             (zip knownWallets (P.unPaymentPrivateKey <$> knownPaymentPrivateKeys))
    let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
        stealerCardanoAddress =  fromRight (error "invalid address") (toCardanoAddressInEra P.testnet stealerAddr)
        scriptCardanoAddress = fromRight (error "invalid address")
@@ -382,5 +379,5 @@ doubleSatisfactionCounterexamples dsc = do
       , dsceStealerWallet       = stealerWallet
       }
 
-toCardanoUtxoIndex :: UtxoIndex -> Validation.UTxO EmulatorEra
+toCardanoUtxoIndex :: UtxoIndex -> Validation.UTxO P.EmulatorEra
 toCardanoUtxoIndex idx = either (error . show) id $ Validation.fromPlutusIndex idx
