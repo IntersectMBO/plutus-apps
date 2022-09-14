@@ -4,16 +4,20 @@
 {-# OPTIONS_GHC -Wmissing-import-lists #-}
 module Ledger.Tx.CardanoAPISpec(tests) where
 
-import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash), NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), PaymentCredential (PaymentCredentialByKey),
+import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), AssetId (AdaAssetId, AssetId), Key (verificationKeyHash),
+                    NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic),
+                    PaymentCredential (PaymentCredentialByKey), PolicyId (PolicyId),
                     StakeAddressReference (NoStakeAddress, StakeAddressByValue), StakeCredential, makeShelleyAddress,
                     shelleyAddressInEra)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
+import Gen.Cardano.Api.Typed (genAssetName, genScriptHash, genValueDefault)
 import Gen.Cardano.Api.Typed qualified as Gen
+import Ledger.Generators (genAssetClass, genMintingPolicyHash, genTokenName, genValue)
 import Ledger.Test (someValidator)
 import Ledger.Tx (RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx (txMint, txMintScripts, txRedeemers))
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, makeTransactionBody, toCardanoAddressInEra,
-                             toCardanoTxBodyContent)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, fromCardanoAssetId, fromCardanoAssetName, fromCardanoPolicyId,
+                             fromCardanoValue, makeTransactionBody, toCardanoAddressInEra, toCardanoAssetId,
+                             toCardanoAssetName, toCardanoPolicyId, toCardanoTxBodyContent, toCardanoValue)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
@@ -22,7 +26,8 @@ import Plutus.V1.Ledger.Scripts (unitRedeemer)
 import Data.Default (def)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Hedgehog (Gen, Property, forAll, property, (===))
+import Data.String (fromString)
+import Hedgehog (Gen, Property, evalEither, forAll, property, tripping, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -33,7 +38,77 @@ tests :: TestTree
 tests = testGroup "Ledger.CardanoAPI"
     [ testProperty "Cardano Address -> Plutus Address roundtrip" addressRoundTripSpec
     , testProperty "Tx conversion retains minting policy scripts" convertMintingTx
+    , testProperty "MintingPolicyHash <- Cardano PolicyId roundtrip" cardanoPolicyIdRoundTrip
+    , testProperty "MintingPolicyHash -> Cardano PolicyId roundtrip" mintingPolicyHashRoundTrip
+    , testProperty "TokenName <- Cardano AssetName roundtrip" cardanoAssetNameRoundTrip
+    , testProperty "TokenName -> Cardano AssetName roundtrip" tokenNameRoundTrip
+    , testProperty "AssetClass <- Cardano AssetId roundtrip" cardanoAssetIdRoundTrip
+    , testProperty "AssetClass -> Cardano AssetId roundtrip" assetClassRoundTrip
+    , testProperty "Plutus Value <- Cardano Value roundtrip" cardanoValueRoundTrip
+    , testProperty "Plutus Value -> Cardano Value roundtrip" plutusValueRoundTrip
     ]
+
+-- Copied from Gen.Cardano.Api.Typed, because it's not exported.
+genPolicyId :: Gen PolicyId
+genPolicyId =
+  Gen.frequency
+      -- mostly from a small number of choices, so we get plenty of repetition
+    [ (9, Gen.element [ fromString (x : replicate 55 '0') | x <- ['a'..'c'] ])
+
+       -- and some from the full range of the type
+    , (1, PolicyId <$> genScriptHash)
+    ]
+
+-- Copied from Gen.Cardano.Api.Typed, because it's not exported.
+genAssetId :: Gen AssetId
+genAssetId = Gen.choice
+    [ AssetId <$> genPolicyId <*> genAssetName
+    , return AdaAssetId
+    ]
+
+cardanoPolicyIdRoundTrip :: Property
+cardanoPolicyIdRoundTrip = property $ do
+    policyId <- forAll genPolicyId
+    tripping policyId fromCardanoPolicyId toCardanoPolicyId
+
+mintingPolicyHashRoundTrip :: Property
+mintingPolicyHashRoundTrip = property $ do
+    policyHash <- forAll genMintingPolicyHash
+    policyId   <- evalEither $ toCardanoPolicyId policyHash
+    policyHash === fromCardanoPolicyId policyId
+
+cardanoAssetNameRoundTrip :: Property
+cardanoAssetNameRoundTrip = property $ do
+    assetName <- forAll genAssetName
+    tripping assetName fromCardanoAssetName toCardanoAssetName
+
+tokenNameRoundTrip :: Property
+tokenNameRoundTrip = property $ do
+    tokenName <- forAll genTokenName
+    assetName <- evalEither $ toCardanoAssetName tokenName
+    tokenName === fromCardanoAssetName assetName
+
+cardanoAssetIdRoundTrip :: Property
+cardanoAssetIdRoundTrip = property $ do
+    assetId <- forAll genAssetId
+    tripping assetId fromCardanoAssetId toCardanoAssetId
+
+assetClassRoundTrip :: Property
+assetClassRoundTrip = property $ do
+    assetClass <- forAll genAssetClass
+    assetId    <- evalEither $ toCardanoAssetId assetClass
+    assetClass === fromCardanoAssetId assetId
+
+cardanoValueRoundTrip :: Property
+cardanoValueRoundTrip = property $ do
+    value <- forAll genValueDefault
+    tripping value fromCardanoValue toCardanoValue
+
+plutusValueRoundTrip :: Property
+plutusValueRoundTrip = property $ do
+    plutusValue  <- forAll genValue
+    cardanoValue <- evalEither $ toCardanoValue plutusValue
+    plutusValue === fromCardanoValue cardanoValue
 
 -- | From a cardano address, we should be able to convert it to a plutus address,
 -- back to the same initial cardano address.

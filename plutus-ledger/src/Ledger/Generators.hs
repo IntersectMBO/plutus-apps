@@ -36,6 +36,9 @@ module Ledger.Generators(
     -- * Etc.
     genSomeCardanoApiTx,
     genAda,
+    genMintingPolicyHash,
+    genCurrencySymbol,
+    genAssetClass,
     genValue,
     genValueNonNegative,
     genSizedByteString,
@@ -74,7 +77,7 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
+import Ledger (Ada, AssetClass, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
                ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
@@ -94,6 +97,7 @@ import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusTx.Prelude qualified as PlutusTx
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
@@ -339,25 +343,48 @@ genTokenName = Gen.choice
     , pure Ada.adaToken
     ]
 
--- | A currency symbol is either a validator hash (bytestring of length 32)
+-- | A minting policy hash is an arbitrary bytestring of length 28
+genMintingPolicyHash :: MonadGen m => m Script.MintingPolicyHash
+genMintingPolicyHash =
+    Script.MintingPolicyHash . PlutusTx.toBuiltin <$> genSizedByteStringExact 28
+
+-- | A currency symbol is either a minting policy hash (bytestring of length 28)
 -- or the ada symbol (empty bytestring).
 genCurrencySymbol :: MonadGen m => m CurrencySymbol
 genCurrencySymbol = Gen.choice
-    [ Value.currencySymbol <$> genSizedByteStringExact 32
+    [ Value.mpsSymbol <$> genMintingPolicyHash
     , pure Ada.adaSymbol
     ]
+
+-- | An asset class is either the ada symbol with the ada token name
+-- or a minting policy hash symbol with an arbitrary token name
+genAssetClass :: MonadGen m => m AssetClass
+genAssetClass =
+    Gen.choice
+        [ pure adaAssetClass
+        , Value.assetClass
+            <$> (Value.mpsSymbol <$> genMintingPolicyHash)
+            <*> genTokenName
+        ]
+  where
+    adaAssetClass :: AssetClass
+    adaAssetClass = Value.assetClass Ada.adaSymbol Ada.adaToken
+
+genSingleton :: MonadGen m => Range Integer -> m Value
+genSingleton range =
+    uncurry Value.singleton
+        <$> (Value.unAssetClass <$> genAssetClass)
+        <*> Gen.integral range
 
 genValue' :: MonadGen m => Range Integer -> m Value
 genValue' valueRange = do
     let
-        sngl = Value.singleton <$> genCurrencySymbol <*> genTokenName <*> Gen.integral valueRange
-
         -- generate values with no more than 5 elements to avoid the tests
         -- taking too long (due to the map-as-list-of-kv-pairs implementation)
         maxCurrencies = 5
 
     numValues <- Gen.int (Range.linear 0 maxCurrencies)
-    fold <$> traverse (const sngl) [0 .. numValues]
+    fold <$> traverse (const $ genSingleton valueRange) [0 .. numValues]
 
 -- | Generate a 'Value' with a value range of @minBound .. maxBound@.
 genValue :: MonadGen m => m Value
