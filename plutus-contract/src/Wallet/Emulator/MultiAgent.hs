@@ -26,23 +26,25 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, handleObs
 import Control.Monad.Freer.Extras.Modify (handleZoomedState, raiseEnd, writeIntoState)
 import Control.Monad.Freer.State (State, get)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
-import Prettyprinter (Pretty (pretty), colon, (<+>))
-
 import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
-import Ledger.Index qualified as Index
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Index.Internal qualified as Index
+import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
+import Prettyprinter (Pretty (pretty), colon, (<+>))
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
@@ -289,7 +291,9 @@ we create 10 Ada-only outputs per wallet here.
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
-emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
+emulatorStateInitialDist mp = emulatorStatePool [cTx] where
+    cTx = Validation.fromPlutusTxSigned def cUtxoIndex tx CW.knownPaymentKeys
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex def mempty
     tx = Tx
             { txInputs = mempty
             , txCollateral = mempty

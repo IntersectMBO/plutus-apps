@@ -1910,15 +1910,15 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     checkOnchain = assertChainEvents checkEvents
 
     checkOffchain :: TracePredicate
-    checkOffchain = assertFailedTransaction (\ _ _ -> all (either checkEvent (const True) . sveResult))
+    checkOffchain = assertFailedTransaction (\ _ ve -> case ve of {ScriptFailure e -> checkEvent e; _ -> False})
 
     checkEvent :: ScriptError -> Bool
     checkEvent (EvaluationError log msg) | "CekEvaluationFailure" `isPrefixOf` msg = listToMaybe (reverse log) `isAcceptedBy` whitelist
     checkEvent (EvaluationError _ msg) | "BuiltinEvaluationFailure" `isPrefixOf` msg = False
-    checkEvent _                                            = False
+    checkEvent _ = False
 
     checkEvents :: [ChainEvent] -> Bool
-    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _ _) <- events ]
+    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _) <- events ]
 
     go :: TracePredicate -> Actions m -> Property
     go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts (\ _ _ -> check) $ do

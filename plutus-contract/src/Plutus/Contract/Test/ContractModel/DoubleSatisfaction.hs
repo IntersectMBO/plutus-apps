@@ -15,6 +15,7 @@
 {-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE QuantifiedConstraints      #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TupleSections              #-}
@@ -32,21 +33,18 @@ module Plutus.Contract.Test.ContractModel.DoubleSatisfaction
 import PlutusTx qualified
 import PlutusTx.Builtins hiding (error)
 
-
-
 import Control.Lens
 import Control.Monad.Cont
 import Control.Monad.Freer (Eff, run)
 import Control.Monad.Freer.Extras.Log (LogMessage, logMessageContent)
 import Control.Monad.State qualified as State
-import Data.Default
-import Data.Either
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Ledger.Params (EmulatorEra, Params)
 
 import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto
 import Ledger.Generators
 import Ledger.Index as Index
@@ -73,7 +71,7 @@ import Test.QuickCheck.Monadic qualified as QC
 
 import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), eteEvent)
-import Wallet.Emulator.Stream (EmulatorErr)
+import Wallet.Emulator.Stream (EmulatorConfig (_params), EmulatorErr)
 
 
 import Prettyprinter
@@ -88,6 +86,7 @@ data WrappedTx = WrappedTx
   , _dsTx        :: Tx
   , _dsUtxoIndex :: UtxoIndex
   , _dsSlot      :: Slot
+  , _dsParams    :: Params
   } deriving Show
 makeLenses ''WrappedTx
 
@@ -147,7 +146,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
 
    QC.monitor $ tabulate "Number of ChainEvents" (bucket 10 $ length chainEvents)
    QC.monitor $ tabulate "ChainEvent type" (map chainEventType chainEvents)
-   case getDSCounterexamples chainEvents of
+   case getDSCounterexamples (_params $ _emulatorConfig opts) chainEvents of
     (cands, potentialCEs, []) -> do
       QC.monitor $ tabulate "Validating candidate counterexamples?" [ show $ validateWrappedTx c
                                                                     | c <- cands ]
@@ -173,9 +172,8 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
       QC.assert False
    return env
     where
-      chainEventType (TxnValidate _ constr ces) = "TxnValidate "
+      chainEventType (TxnValidate _ constr) = "TxnValidate "
         ++ (head . words . show $ constr)
-        ++ " " ++ concat [ if isLeft (sveResult ce) then "E" else "_" | ce <- ces ]
       chainEventType ce = head . words . show $ ce
 
       finalState = StateModel.stateAfter (toStateModelActions acts)
@@ -186,28 +184,28 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
 --      potentially be stolen
 --    * the list of actual counterexamples, i.e. if this is non-empty a vulnerability has been
 --      discovered.
-getDSCounterexamples :: [ChainEvent] -> ( [WrappedTx]
+getDSCounterexamples :: Params -> [ChainEvent] -> ( [WrappedTx]
                                         , [DoubleSatisfactionCounterexample]
                                         , [DoubleSatisfactionCounterexample]
                                         )
-getDSCounterexamples cs = go 0 mempty cs
+getDSCounterexamples params cs = go 0 mempty cs
   where
     go _ _ [] = ([], [], [])
     go slot idx (e:es) = case e of
       SlotAdd slot' -> go slot' idx es
-      TxnValidate _ txn@(view -> Just tx) ces
-        | all (isRight . sveResult) ces ->
-          let idx' = case fst $ runValidation (validateTransaction slot tx)
-                                              (ValidationCtx idx def) of
-                       Just (Index.Phase1, _) -> idx
-                       Just (Index.Phase2, _) -> Index.insertCollateral txn idx
-                       Nothing                -> Index.insert txn idx
-              cands = doubleSatisfactionCandidates slot idx e
+      TxnValidate _ txn ->
+          let
+              cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+              e' = Validation.validateCardanoTx params slot cUtxoIndex txn
+              idx' = case e' of
+                  Just (Index.Phase1, _) -> idx
+                  Just (Index.Phase2, _) -> Index.insertCollateral txn idx
+                  Nothing                -> Index.insert txn idx
+              cands = doubleSatisfactionCandidates params slot idx e
               potentialCEs = doubleSatisfactionCounterexamples =<< cands
-              actualCEs = checkForDoubleSatisfactionVulnerability slot idx e
+              actualCEs = checkForDoubleSatisfactionVulnerability params slot idx e
               (candsRest, potentialRest, counterexamplesRest) = go slot idx' es
           in (cands ++ candsRest, potentialCEs ++ potentialRest, actualCEs ++ counterexamplesRest)
-        | otherwise                    -> go slot idx es
       -- NOTE: We are not including spent collateral inputs here, but that's fine because
       -- the transactions we mutate are never mutated to include these unspent inputs. We only
       -- need to keep track of what UTxOs exist for the validator to validate the transactions
@@ -216,33 +214,32 @@ getDSCounterexamples cs = go 0 mempty cs
       -- you may need to be more careful here (or, you know, rewrite all this code from scratch).
       _ -> go slot idx es
 
-    view (Both tx _)     = Just tx
-    view (EmulatorTx tx) = Just tx
-    view _               = Nothing
-
 -- | Take a chain event and wrap it up as a `WrappedTx` if it was a transaction
 --   validation event.
-doubleSatisfactionCandidates :: Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
-doubleSatisfactionCandidates slot idx event = case event of
-  TxnValidate txid (EmulatorTx tx) _ -> [WrappedTx txid tx idx slot]
-  TxnValidate txid (Both tx _) _     -> [WrappedTx txid tx idx slot]
-  _                                  -> []
+doubleSatisfactionCandidates :: Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
+doubleSatisfactionCandidates params slot idx event = case event of
+  TxnValidate txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
+  _                                -> []
 
 -- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
 --   failed with error @err@.
 validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
-validateWrappedTx' cand = fst $ runValidation (validateTransaction (cand ^. dsSlot) (cand ^. dsTx))
-                                              (ValidationCtx (cand ^.dsUtxoIndex) def)
+validateWrappedTx' WrappedTx{..} =
+  let
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsParams _dsUtxoIndex
+    signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
+    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
+  in e'
 
 -- | Run validation for a `WrappedTx`. Returns @True@ if successful.
 validateWrappedTx :: WrappedTx -> Bool
 validateWrappedTx = isNothing . validateWrappedTx'
 
 -- | Actual counterexamples showing a double satisfaction vulnerability for the given chain event.
-checkForDoubleSatisfactionVulnerability :: Slot -> UtxoIndex -> ChainEvent -> [DoubleSatisfactionCounterexample]
-checkForDoubleSatisfactionVulnerability slot idx = filter isVulnerable
+checkForDoubleSatisfactionVulnerability :: Params -> Slot -> UtxoIndex -> ChainEvent -> [DoubleSatisfactionCounterexample]
+checkForDoubleSatisfactionVulnerability params slot idx = filter isVulnerable
                                                  . doubleSatisfactionCounterexamples
-                                                 <=< doubleSatisfactionCandidates slot idx
+                                                 <=< doubleSatisfactionCandidates params slot idx
 
 -- | This is an actual counterexample if the first transaction passes validation, the second fails,
 --   and the third passes.

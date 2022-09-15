@@ -18,7 +18,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (Address, CardanoTx, TxId, getCardanoTxId)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
+import Ledger.Index (ValidationError, ValidationPhase)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -61,7 +61,6 @@ data TxBalanceMsg =
         TxId
         CardanoTx
         ValidationError
-        [ScriptValidationEvent]
         Value -- ^ The amount of collateral stored in the transaction.
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -78,6 +77,6 @@ instance Pretty TxBalanceMsg where
         FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
         SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
         SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
-        ValidationFailed p i _ e _ _ -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
+        ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 
 makePrisms ''TxBalanceMsg

@@ -45,8 +45,11 @@ tests =
         --, spendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup -- FAILING
         , contractErrorWhenUnableToSpendMoreThanScriptTokenBalance
         , contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing
-        , phase2FailureWhenProducedAdaAmountIsNotSatisfied
-        , phase2FailureWhenProducedTokenAmountIsNotSatisfied
+
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        -- , phase2FailureWhenProducedAdaAmountIsNotSatisfied
+        -- , phase2FailureWhenProducedTokenAmountIsNotSatisfied
         ]
 
 someTokens :: Integer -> Value.Value
@@ -207,7 +210,7 @@ phase2FailureWhenProducedAdaAmountIsNotSatisfied =
     in  checkPredicateOptions
         options
         "Fail phase-2 validation when on-chain mustProduceAtLeast is greater than script's ada balance"
-        (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L6":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L6":_) _) -> True; _ -> False }))
         (void $ trace contract)
 
 -- Uses onchain and offchain constraint mustProduceAtLeast with a higher expected token value onchain, asserts script evaluation error.
@@ -221,7 +224,7 @@ phase2FailureWhenProducedTokenAmountIsNotSatisfied =
     in  checkPredicateOptions
         options
         "Fail phase-2 validation when on-chain mustProduceAtLeast is greater than script's token balance"
-        (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L6":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L6":_) _) -> True; _ -> False }))
         (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}

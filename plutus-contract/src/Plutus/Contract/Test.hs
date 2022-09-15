@@ -66,7 +66,7 @@ module Plutus.Contract.Test(
     , checkPredicateInner
     , checkPredicateInnerStream
     , checkEmulatorFails
-    , CheckOptions
+    , CheckOptions(..)
     , defaultCheckOptions
     , minLogLevel
     , emulatorConfig
@@ -80,7 +80,7 @@ import Control.Applicative (liftA2)
 import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
-import Control.Lens (_Left, at, ix, makeLenses, over, preview, to, (&), (.~), (^.))
+import Control.Lens (_Left, at, ix, makeLenses, over, preview, (&), (.~), (^.))
 import Control.Monad (unless)
 import Control.Monad.Freer (Eff, interpretM, runM)
 import Control.Monad.Freer.Error (Error, runError)
@@ -124,7 +124,7 @@ import Ledger qualified
 import Ledger.Address (Address)
 import Ledger.Generators (GeneratorModel, Mockchain (..))
 import Ledger.Generators qualified as Gen
-import Ledger.Index (ScriptValidationEvent, ValidationError)
+import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
 import Plutus.V1.Ledger.Scripts (Validator)
@@ -254,7 +254,7 @@ checkPredicateInnerStream :: forall m.
     -> (CoverageData -> m ())
     -> m ()
 checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePredicate predicate) theStream annot assert cover = do
-    let dist = _emulatorConfig ^. initialChainState . to initialDist
+    let dist = initialDist _emulatorConfig
         consumedStream :: Eff (TestEffects :++: '[m]) Bool
         consumedStream = S.fst' <$> foldEmulatorStreamM (liftA2 (&&) predicate generateCoverage) theStream
 
@@ -633,13 +633,13 @@ assertChainEvents' logMsg predicate = TracePredicate $
 
 -- | Assert that at least one transaction failed to validate, and that all
 --   transactions that failed meet the predicate.
-assertFailedTransaction :: (Tx -> ValidationError -> [ScriptValidationEvent] -> Bool) -> TracePredicate
+assertFailedTransaction :: (Tx -> ValidationError -> Bool) -> TracePredicate
 assertFailedTransaction predicate = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> do
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
-        xs -> pure (all (\(_, t, e, evts, _) -> onCardanoTx (\t' -> predicate t' e evts) (const True) t) xs)
+        xs -> pure (all (\(_, t, e, _) -> onCardanoTx (\t' -> predicate t' e) (const True) t) xs)
 
 -- | Assert that no transaction failed to validate.
 assertNoFailedTransactions :: TracePredicate
@@ -647,7 +647,7 @@ assertNoFailedTransactions = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> pure True
         xs -> do
-            let prettyTxFail (i, _, err, _, _) = pretty i <> colon <+> pretty err
+            let prettyTxFail (i, _, err, _) = pretty i <> colon <+> pretty err
             tell @(Doc Void) $ vsep ("Transactions failed to validate:" : fmap prettyTxFail xs)
             pure False
 
