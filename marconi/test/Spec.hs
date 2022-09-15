@@ -31,8 +31,8 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [ -- testProperty "prop_script_hashes_in_tx_match" getTxBodyScriptsRoundtrip
-    Integration.tests
+  [ testProperty "prop_script_hashes_in_tx_match" getTxBodyScriptsRoundtrip
+  , Integration.tests
   ]
 
 getTxBodyScriptsRoundtrip :: Property
