@@ -223,11 +223,17 @@ instance OpenApi.ToSchema TxOut where
 
 
 instance Pretty TxOut where
-  pretty (TxOut (C.TxOut addr v dh _rs)) =
+  pretty (TxOut (C.TxOut addr v d rs)) =
     hang 2 $ vsep
-      ["-" <+> pretty (fromCardanoTxOutValue v) <+> "with datum"
-      , pretty (fromCardanoTxOutDatumHash dh) <+> "addressed to"
+      ["-" <+> pretty (fromCardanoTxOutValue v) <> "addressed to"
       , pretty (fromCardanoAddressInEra addr)
+      , "with" <+> case fromCardanoTxOutDatumHash d of
+          Nothing -> "datum"
+          Just dh -> "datum hash" <+> pretty dh
+      , "and with" <+> case rs of
+          C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
+            "reference script hash" <+> viaShow (C.hashScript s)
+          C.ReferenceScriptNone -> "no reference script"
       ]
 
 -- | A Babbage-era transaction, including witnesses for its inputs.
