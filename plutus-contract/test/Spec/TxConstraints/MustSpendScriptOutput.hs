@@ -75,7 +75,7 @@ mustSpendScriptOutputsContract nScriptOutputs nScriptOutputsToSpend = do
     let lookups2 = Constraints.typedValidatorLookups typedMustSpendScriptOutputValidator <>
             Constraints.unspentOutputs scriptUtxos
         tx2 = mconcat $ mustSpendScriptOutputs (M.keys $ M.take (fromIntegral nScriptOutputsToSpend) scriptUtxos)
-    ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputValType lookups2 tx2
+    ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputType lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
     where
         mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints i o]
@@ -89,10 +89,10 @@ mustSpendScriptOutputWithMatchingDatumAndValueContract nScriptOutputs (offChainM
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     scriptUtxos <- utxosAt mustSpendScriptOutputWithMatchingDatumAndValueScrAddress
-    let lookups2 = Constraints.plutusV1OtherScript mustSpendScriptOutputWithMatchingDatumAndValueVal <>
+    let lookups2 = Constraints.typedValidatorLookups typedMustSpendScriptOutputWithMatchingDatumAndValueValidator <>
             Constraints.unspentOutputs scriptUtxos
         tx2 = Constraints.mustSpendScriptOutputWithMatchingDatumAndValue mustSpendScriptOutputWithMatchingDatumAndValueValHash (\d -> d == asDatum offChainMatchingDatum) (\v -> v == offChainMatchingValue) (asRedeemer [(onChainMatchingDatum, onChainMatchingValue)])
-    ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputValType lookups2 tx2
+    ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputWithMatchingDatumAndValueType lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
@@ -132,10 +132,10 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
             scriptUtxos <- utxosAt mustSpendScriptOutputScrAddress
             w1Utxos <- utxosAt (mockWalletAddress w1)
             let w1Utxo = fst $ M.elemAt 2 w1Utxos
-                lookups2 = Constraints.plutusV1OtherScript mustSpendScriptOutputVal <>
+                lookups2 = Constraints.typedValidatorLookups typedMustSpendScriptOutputValidator <>
                     Constraints.unspentOutputs (scriptUtxos <> w1Utxos)
                 tx2 = Constraints.mustSpendScriptOutput w1Utxo (asRedeemer [w1Utxo])
-            ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputValType lookups2 tx2
+            ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputType lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
 
     in checkPredicateOptions
@@ -160,7 +160,7 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
                 lookups2 = Constraints.plutusV1OtherScript mustSpendScriptOutputVal <>
                     Constraints.unspentOutputs scriptUtxos
                 tx2 = Constraints.mustSpendScriptOutput scriptUtxo1 (asRedeemer [scriptUtxo2])
-            ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputValType lookups2 tx2
+            ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputType lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
 
     in checkPredicateOptions
@@ -238,13 +238,13 @@ mkMustSpendScriptOutputValidator _ txOutRefs ctx = P.traceIfFalse "mustSpendScri
     where
         mustSpendScriptOutputs = P.map (\txOutRef -> Constraints.mustSpendScriptOutput txOutRef (Redeemer P.$ PlutusTx.toBuiltinData txOutRef)) txOutRefs
 
-data MustSpendScriptOutputValType
-instance Scripts.ValidatorTypes MustSpendScriptOutputValType where
-    type instance DatumType MustSpendScriptOutputValType = Integer
-    type instance RedeemerType MustSpendScriptOutputValType = [Tx.TxOutRef]
+data MustSpendScriptOutputType
+instance Scripts.ValidatorTypes MustSpendScriptOutputType where
+    type instance DatumType MustSpendScriptOutputType = Integer
+    type instance RedeemerType MustSpendScriptOutputType = [Tx.TxOutRef]
 
-typedMustSpendScriptOutputValidator :: Scripts.TypedValidator MustSpendScriptOutputValType
-typedMustSpendScriptOutputValidator = Scripts.mkTypedValidator @MustSpendScriptOutputValType
+typedMustSpendScriptOutputValidator :: Scripts.TypedValidator MustSpendScriptOutputType
+typedMustSpendScriptOutputValidator = Scripts.mkTypedValidator @MustSpendScriptOutputType
     $$(PlutusTx.compile [||mkMustSpendScriptOutputValidator||])
     $$(PlutusTx.compile [|| wrap ||])
     where
@@ -261,10 +261,10 @@ mustSpendScriptOutputScrAddress = Ledger.scriptHashAddress mustSpendScriptOutput
 
 -----
 
-data MustSpendScriptOutputWithMatchingDatumAndValueValType
-instance Scripts.ValidatorTypes MustSpendScriptOutputWithMatchingDatumAndValueValType where
-    type instance DatumType MustSpendScriptOutputWithMatchingDatumAndValueValType = Integer
-    type instance RedeemerType MustSpendScriptOutputWithMatchingDatumAndValueValType = [(Datum, Value.Value)]
+data MustSpendScriptOutputWithMatchingDatumAndValueType
+instance Scripts.ValidatorTypes MustSpendScriptOutputWithMatchingDatumAndValueType where
+    type instance DatumType MustSpendScriptOutputWithMatchingDatumAndValueType = Integer
+    type instance RedeemerType MustSpendScriptOutputWithMatchingDatumAndValueType = [(Datum, Value.Value)]
 
 {-# INLINEABLE mkMustSpendScriptOutputWithMatchingDatumAndValueValidator #-}
 mkMustSpendScriptOutputWithMatchingDatumAndValueValidator :: Integer -> [(Datum, Value.Value)] -> ScriptContext -> Bool
@@ -272,8 +272,8 @@ mkMustSpendScriptOutputWithMatchingDatumAndValueValidator _ datumsAndValues ctx 
     where
         mustSpendScriptOutputsWithMatchingDatumAndValue = P.map (\(datum, value) -> Constraints.mustSpendScriptOutputWithMatchingDatumAndValue (Ledger.ownHash ctx) (\d -> d P.== datum) (\v -> v P.==  value) (Redeemer P.$ PlutusTx.toBuiltinData datumsAndValues)) datumsAndValues
 
-typedMustSpendScriptOutputWithMatchingDatumAndValueValidator :: Scripts.TypedValidator MustSpendScriptOutputWithMatchingDatumAndValueValType
-typedMustSpendScriptOutputWithMatchingDatumAndValueValidator = Scripts.mkTypedValidator @MustSpendScriptOutputWithMatchingDatumAndValueValType
+typedMustSpendScriptOutputWithMatchingDatumAndValueValidator :: Scripts.TypedValidator MustSpendScriptOutputWithMatchingDatumAndValueType
+typedMustSpendScriptOutputWithMatchingDatumAndValueValidator = Scripts.mkTypedValidator @MustSpendScriptOutputWithMatchingDatumAndValueType
     $$(PlutusTx.compile [||mkMustSpendScriptOutputWithMatchingDatumAndValueValidator||])
     $$(PlutusTx.compile [|| wrap ||])
     where
