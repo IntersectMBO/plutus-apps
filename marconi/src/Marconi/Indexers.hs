@@ -7,11 +7,11 @@ import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Lens.Operators ((&), (<&>), (^.))
-import Control.Monad (void, when)
+import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (assocs)
-import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
@@ -104,11 +104,9 @@ initialCoordinator indexerCount =
               <*> newQSemN 0
               <*> pure indexerCount
 
-datumWorker
-  :: Coordinator
-  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
-  -> FilePath
-  -> IO ()
+type Worker = Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO ()
+
+datumWorker :: Worker
 datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >>= innerLoop
   where
     innerLoop :: DatumIndex -> IO ()
@@ -126,11 +124,7 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
 
-utxoWorker
-  :: Coordinator
-  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
-  -> FilePath
-  -> IO ()
+utxoWorker :: Worker
 utxoWorker Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
@@ -148,11 +142,7 @@ utxoWorker Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= 
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
-scriptTxWorker
-  :: Coordinator
-  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
-  -> FilePath
-  -> IO ()
+scriptTxWorker :: Worker
 scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Depth 0) >>= loop
   where
     loop :: ScriptTx.ScriptTxIndex -> IO ()
@@ -176,16 +166,24 @@ combinedIndexer
   -> Maybe FilePath
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath = S.foldM_ step initial finish
+combinedIndexer utxoPath datumPath scriptTxPath = combineIndexers remainingIndexers
+  where
+    liftMaybe (worker, maybePath) = case maybePath of
+      Just path -> Just (worker, path)
+      _         -> Nothing
+    pairs = [(utxoWorker, utxoPath), (datumWorker, datumPath), (scriptTxWorker, scriptTxPath)]
+    remainingIndexers = catMaybes $ map liftMaybe pairs
+
+combineIndexers
+  :: [(Worker, FilePath)]
+  -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
+  -> IO ()
+combineIndexers indexers = S.foldM_ step initial finish
   where
     initial :: IO Coordinator
     initial = do
-      let indexerCount = length . catMaybes $ [utxoPath, datumPath, scriptTxPath]
-      coordinator <- initialCoordinator indexerCount
-      let forkIndexer' worker maybePath = maybe (pure ()) (forkIndexer coordinator worker) maybePath
-      forkIndexer' datumWorker datumPath
-      forkIndexer' utxoWorker utxoPath
-      forkIndexer' scriptTxWorker scriptTxPath
+      coordinator <- initialCoordinator $ length indexers
+      mapM_ (uncurry (forkIndexer coordinator)) indexers
       pure coordinator
 
     step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
@@ -197,11 +195,7 @@ combinedIndexer utxoPath datumPath scriptTxPath = S.foldM_ step initial finish
     finish :: Coordinator -> IO ()
     finish _ = pure ()
 
-forkIndexer
-  :: Coordinator
-  -> (Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> a -> IO ())
-  -> a
-  -> IO ()
-forkIndexer coordinator worker path = do
-  ch <- atomically . dupTChan $ _channel coordinator
-  void . forkIO . worker coordinator ch $ path
+    forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
+    forkIndexer coordinator worker path = do
+      ch <- atomically . dupTChan $ _channel coordinator
+      void . forkIO . worker coordinator ch $ path
