@@ -1,12 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections  #-}
 
 module Main (main) where
 
 import Control.Monad (replicateM)
 import Data.Coerce (coerce)
-import Data.Int (Int64)
-import Data.Map (Map)
 import Data.Set qualified as S
 
 import Hedgehog (Gen, Property, assert, forAll, property)
@@ -16,7 +13,6 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
 import Cardano.Api qualified as C
-import Gen.Cardano.Api.Metadata qualified as CGen
 import Gen.Cardano.Api.Typed qualified as CGen
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
