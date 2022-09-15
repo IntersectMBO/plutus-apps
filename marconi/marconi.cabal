@@ -146,6 +146,10 @@ test-suite marconi-test
     , plutus-ledger-api
     , plutus-tx
 
+  --  {-# OPTIONS_GHC -fobject-code #-} -- makes `cabal repl` work, see https://github.com/input-output-hk/plutus/issues/1956#issuecomment-610825537
+  ghc-options:    -fobject-code
+  build-depends:  plutus-tx-plugin
+
   ------------------------
   -- Non-IOG dependencies
   ------------------------

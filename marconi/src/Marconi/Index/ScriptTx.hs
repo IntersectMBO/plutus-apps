@@ -106,7 +106,9 @@ open dbPath (Depth k) = do
 
   where
     onInsert :: ScriptTxIndex -> ScriptTxUpdate -> IO [()]
-    onInsert _ix _update = pure []
+    onInsert _ix update = do
+      print ("on insert" :: String, show update)
+      pure []
 
     store :: ScriptTxIndex -> IO ()
     store ix = do
