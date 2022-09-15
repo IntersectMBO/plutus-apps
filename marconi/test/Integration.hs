@@ -2,12 +2,15 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DataKinds          #-}
 
 module Integration where
 
+import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
 import Control.Exception (catch)
 import Control.Monad (void, when)
@@ -15,6 +18,8 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson ((.:))
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Builder qualified as BS
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
 import Data.Char (toLower)
 import Data.Function ((&))
 import Data.HashMap.Lazy qualified as HM
@@ -55,6 +60,8 @@ import Cardano.BM.Tracing (defaultConfigStdout)
 import Gen.Cardano.Api.Typed qualified as CGen
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
+import Plutus.V1.Ledger.Scripts qualified as Plutus
+import PlutusTx qualified
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 import Test.Base qualified as H
@@ -144,17 +151,17 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
 
-  -- Create the Shelley Address from the actual Plutus script.
-  plutusScriptFileInUse <- H.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
-  plutusScript <- C.PlutusScript C.PlutusScriptV1
-    <$> readAs (C.AsPlutusScript C.AsPlutusScriptV1) plutusScriptFileInUse
   let
-    plutusScriptHash = C.hashScript plutusScript :: C.ScriptHash
+    -- Create an always succeeding validator script
+    plutusScript :: C.PlutusScript C.PlutusScriptV1
+    plutusScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ Plutus.unValidatorScript validator
+      where
+        validator :: Plutus.Validator
+        validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| \_ _ _ -> () ||])
+
+    plutusScriptHash = C.hashScript $ C.PlutusScript C.PlutusScriptV1 plutusScript :: C.ScriptHash
     plutusScriptAddr :: C.Address C.ShelleyAddr
     plutusScriptAddr = C.makeShelleyAddress networkId (C.PaymentCredentialByScript plutusScriptHash) C.NoStakeAddress
-
-  -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
-  -- Script at: $plutusscriptinuse
 
   -- Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
   -- by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
@@ -264,10 +271,9 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
       executionUnits = C.ExecutionUnits {C.executionSteps = 500_000, C.executionMemory = 10_000 }
       tx2fee = 1000303 :: C.Lovelace
 
-      C.PlutusScript _lang plutusScript_ = plutusScript
       scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
       scriptWitness = C.ScriptWitness C.ScriptWitnessForSpending $
-        C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript_
+        C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript
         (C.ScriptDatumForTxIn scriptDatum) redeemer executionUnits
 
       collateral = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]

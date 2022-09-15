@@ -146,6 +146,7 @@ test-suite marconi-test
     , iohk-monitoring
     , ouroboros-network
     , plutus-ledger-api
+    , plutus-tx
 
   ------------------------
   -- Non-IOG dependencies
@@ -161,6 +162,7 @@ test-suite marconi-test
     , hedgehog-extras
     , hinotify
     , prettyprinter
+    , serialise
     , sqlite-simple
     , tasty
     , tasty-hedgehog
