@@ -26,9 +26,10 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      - Value (Map [(,Map [("",10000000)])]) with datum
-                        77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 addressed to
+                      - Value (Map [(,Map [("",10000000)])])addressed to
                         ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                        with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                        and with no reference script
                     mint: Value (Map [])
                     fee: Value (Map [])
                     mps:
@@ -52,12 +53,14 @@ Slot 1: W[2]: Finished balancing:
                     - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!20
 
                   outputs:
-                    - Value (Map [(,Map [("",10000000)])]) with datum
-                      77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 addressed to
+                    - Value (Map [(,Map [("",10000000)])])addressed to
                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
-                    - Value (Map [(,Map [("",9817647)])]) with datum
-                       addressed to
+                      with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                      and with no reference script
+                    - Value (Map [(,Map [("",9817647)])])addressed to
                       PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
+                      with datum
+                      and with no reference script
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",182353)])])
                   mps:
@@ -80,9 +83,10 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      - Value (Map [(,Map [("",10000000)])]) with datum
-                        2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 addressed to
+                      - Value (Map [(,Map [("",10000000)])])addressed to
                         ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                        with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                        and with no reference script
                     mint: Value (Map [])
                     fee: Value (Map [])
                     mps:
@@ -106,12 +110,14 @@ Slot 1: W[3]: Finished balancing:
                     - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!0
 
                   outputs:
-                    - Value (Map [(,Map [("",10000000)])]) with datum
-                      2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 addressed to
+                    - Value (Map [(,Map [("",10000000)])])addressed to
                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
-                    - Value (Map [(,Map [("",9817647)])]) with datum
-                       addressed to
+                      with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                      and with no reference script
+                    - Value (Map [(,Map [("",9817647)])])addressed to
                       PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
+                      with datum
+                      and with no reference script
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",182353)])])
                   mps:
@@ -130,9 +136,10 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      - Value (Map [(,Map [("",2500000)])]) with datum
-                        63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 addressed to
+                      - Value (Map [(,Map [("",2500000)])])addressed to
                         ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                        with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                        and with no reference script
                     mint: Value (Map [])
                     fee: Value (Map [])
                     mps:
@@ -154,12 +161,14 @@ Slot 1: W[4]: Finished balancing:
                     - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!10
 
                   outputs:
-                    - Value (Map [(,Map [("",2500000)])]) with datum
-                      63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 addressed to
+                    - Value (Map [(,Map [("",2500000)])])addressed to
                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
-                    - Value (Map [(,Map [("",7323675)])]) with datum
-                       addressed to
+                      with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                      and with no reference script
+                    - Value (Map [(,Map [("",7323675)])])addressed to
                       PubKeyCredential: 557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d (no staking credential)
+                      with datum
+                      and with no reference script
                   mint: Value (Map [])
                   fee: Value (Map [(,Map [("",176325)])])
                   mps:
@@ -203,17 +212,20 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                  Requires signatures:
                  Utxo index:
                    ( 1392dd20a08de6c8f41ed6a1418bd6092c75f95ecbf5e3507e2039b601fc00ba!0
-                   , - Value (Map [(,Map [("",2500000)])]) with datum
-                       63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 addressed to
-                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
+                   , - Value (Map [(,Map [("",2500000)])])addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                       with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                       and with no reference script )
                    ( 4f3549b97ce27589661068a58674751f01484a0035f20c7704728dc591fc7a54!0
-                   , - Value (Map [(,Map [("",10000000)])]) with datum
-                       2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 addressed to
-                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
+                   , - Value (Map [(,Map [("",10000000)])])addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                       with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                       and with no reference script )
                    ( a461d756dcb403971b1cad49aa06db9ded2ae9913c3a4f4ab9693814ed8f5f42!0
-                   , - Value (Map [(,Map [("",10000000)])]) with datum
-                       77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 addressed to
-                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential) )
+                   , - Value (Map [(,Map [("",10000000)])])addressed to
+                       ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
+                       with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                       and with no reference script )
                  Validity range:
                    [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W[1]: Finished balancing:
@@ -230,9 +242,10 @@ Slot 20: W[1]: Finished balancing:
                      - 379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f!50
 
                    outputs:
-                     - Value (Map [(,Map [("",22199419)])]) with datum
-                        addressed to
+                     - Value (Map [(,Map [("",22199419)])])addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
+                       with datum
+                       and with no reference script
                    mint: Value (Map [])
                    fee: Value (Map [(,Map [("",300581)])])
                    mps:
