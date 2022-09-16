@@ -1,0 +1,72 @@
+cabal-version: 2.2
+name:          pab-blockfrost
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:
+  valentino.cerutti@joinplank.com, tomas.osiecki@joinplank.com
+
+author:        Valentino Cerutti, Tomas Osiecki
+homepage:
+  https://github.com/joinplank/plutus-apps/tree/plank-pab-blockfrost/pab-blockfrost#readme
+
+bug-reports:   https://github.com/joinplank/plutus-apps/issues
+description:
+  Please see the README on GitHub at <https://github.com/joinplank/plutus-apps/tree/plank-pab-blockfrost/pab-blockfrost#readme>
+
+build-type:    Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities
+
+library
+  import:          lang
+  exposed-modules:
+    Plutus.Blockfrost.Client
+    Plutus.Blockfrost.Queries
+    Plutus.Blockfrost.Responses
+    Plutus.Blockfrost.Types
+    Plutus.Blockfrost.Utils
+
+  hs-source-dirs:  src
+  build-depends:
+    , freer-extras
+    , plutus-chain-index-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+
+  build-depends:
+    , aeson
+    , aeson-qq
+    , async
+    , base               >=4.7 && <5
+    , blockfrost-api
+    , blockfrost-client
+    , bytestring
+    , cardano-api
+    , containers
+    , freer-simple
+    , hex-text
+    , mtl
+    , safe-money
+    , text

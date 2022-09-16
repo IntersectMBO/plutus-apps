@@ -5,6 +5,7 @@ packages: doc
           freer-extras
           marconi
           playground-common
+          pab-blockfrost
           plutus-chain-index
           plutus-chain-index-core
           plutus-contract

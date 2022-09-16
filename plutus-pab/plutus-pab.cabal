@@ -127,6 +127,7 @@ library
   --------------------
   build-depends:
     , freer-extras
+    , pab-blockfrost
     , playground-common
     , plutus-chain-index
     , plutus-chain-index-core

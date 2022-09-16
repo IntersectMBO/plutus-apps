@@ -39,7 +39,8 @@ import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings),
 import Ledger (POSIXTime (POSIXTime))
 import Ledger.TimeSlot (SlotConfig (SlotConfig))
 import Ouroboros.Consensus.Shelley.Eras (StandardShelley)
-import Plutus.PAB.Types (Config (chainIndexConfig, dbConfig, developmentOptions, nodeServerConfig, pabWebserverConfig, walletServerConfig),
+import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
+                         Config (chainQueryConfig, dbConfig, developmentOptions, nodeServerConfig, pabWebserverConfig, walletServerConfig),
                          DbConfig (dbConfigFile, dbConfigPoolSize),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
                          WebserverConfig (baseUrl))
@@ -247,7 +248,7 @@ pabWebserverBaseConfig
     def { dbConfig = def { dbConfigFile = Text.pack $ getPabDbFilePath pabDbConfigFile
                          , dbConfigPoolSize = pabOptsDbPoolSize
                          }
-        , chainIndexConfig = def { ciBaseUrl = chainIndexUrl }
+        , chainQueryConfig = ChainIndexConfig def { ciBaseUrl = chainIndexUrl }
         , nodeServerConfig = nodeServerConfig
         , pabWebserverConfig = pabWebserverConfig
         , developmentOptions =

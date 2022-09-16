@@ -58,7 +58,8 @@ import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
-import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig),
+import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
+                         Config (Config, chainQueryConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig),
                          DbConfig (..))
 import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
@@ -119,7 +120,7 @@ bumpConfig
 bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverConfig{PAB.Types.baseUrl=p_u}
                                , walletServerConfig
                                , nodeServerConfig     = n@Node.Types.PABServerConfig{Node.Types.pscBaseUrl=n_u,Node.Types.pscSocketPath=soc}
-                               , chainIndexConfig     = c@ChainIndex.Types.ChainIndexConfig{ChainIndex.Types.ciBaseUrl=c_u}
+                               , chainQueryConfig     = PAB.Types.ChainIndexConfig c@ChainIndex.Types.ChainIndexConfig{ChainIndex.Types.ciBaseUrl=c_u}
                                , dbConfig             = db@PAB.Types.DbConfig{PAB.Types.dbConfigFile=dbFile}
                                } = newConf
   where
@@ -128,7 +129,7 @@ bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverCon
       = conf { pabWebserverConfig   = p { PAB.Types.baseUrl          = bump p_u }
              , walletServerConfig   = over (Wallet.Types.walletSettingsL . Wallet.Types.baseUrlL) (coerce . bump . coerce) walletServerConfig
              , nodeServerConfig     = n { Node.Types.pscBaseUrl      = bump n_u, Node.Types.pscSocketPath = soc ++ "." ++ show x }
-             , chainIndexConfig     = c { ChainIndex.Types.ciBaseUrl = coerce $ bump $ coerce c_u }
+             , chainQueryConfig     = PAB.Types.ChainIndexConfig $ c { ChainIndex.Types.ciBaseUrl = coerce $ bump $ coerce c_u }
              , dbConfig             = db { PAB.Types.dbConfigFile    = "file::" <> dbName <> "?mode=memory&cache=shared" }
              }
 
@@ -161,7 +162,7 @@ startPab services pabConfig = do
 -- from the primary one (the ones we're not starting).
 secondaryConfig :: Config -> Config -> Config
 secondaryConfig primary other =
-  other { chainIndexConfig = chainIndexConfig primary
+  other { chainQueryConfig = chainQueryConfig primary
         }
 
 startPrimaryPab :: Config -> IO ()

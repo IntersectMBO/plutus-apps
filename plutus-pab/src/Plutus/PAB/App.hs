@@ -29,12 +29,13 @@ module Plutus.PAB.App(
     handleContractDefinition
     ) where
 
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper))
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
 import Cardano.Node.Client (handleNodeClientClient, runChainSyncWithCfg)
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types (ChainSyncHandle, NodeMode (AlonzoNode, MockNode),
-                           PABServerConfig (PABServerConfig, pscBaseUrl, pscNodeMode, pscSocketPath))
+                           PABServerConfig (PABServerConfig, pscBaseUrl, pscNetworkId, pscNodeMode, pscSocketPath))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.LocalClient qualified as LocalWalletClient
 import Cardano.Wallet.Mock.Client qualified as WalletMockClient
@@ -82,10 +83,11 @@ import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
 import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
                                         WalletClientMsg)
 import Plutus.PAB.Timeout (Timeout (Timeout))
-import Plutus.PAB.Types (Config (Config), DBConnection (..), DbConfig (..),
+import Plutus.PAB.Types (ChainQueryConfig (..), ChainQueryEnv (..), Config (Config), DBConnection (..), DbConfig (..),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
-                         WebserverConfig (WebserverConfig), _PostgresPool, _SqlitePool, chainIndexConfig, dbConfig,
-                         endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
+                         WebserverConfig (WebserverConfig), _PostgresPool, _SqlitePool, chainQueryConfig, dbConfig,
+                         endpointTimeout, getBlockfrostEnv, getChainIndexEnv, nodeServerConfig, pabWebserverConfig,
+                         walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
 import Wallet.API (NodeClientEffect)
 import Wallet.Effects (WalletEffect)
@@ -95,6 +97,9 @@ import Wallet.Types (ContractInstanceId)
 
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Sqlite (Sqlite)
+import Plutus.Blockfrost.Client as BlockfrostClient
+import Plutus.Blockfrost.Types qualified as BF (BlockfrostConfig (bfTokenPath), BlockfrostEnv (..))
+
 ------------------------------------------------------------
 
 -- | Application environment with a contract type `a`.
@@ -103,7 +108,7 @@ data AppEnv a =
         { dbPool                :: DBConnection
         , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
-        , chainIndexEnv         :: ClientEnv
+        , chainQueryEnv         :: ChainQueryEnv
         , txSendHandle          :: Maybe MockClient.TxSendHandle -- No 'TxSendHandle' required when connecting to the real node.
         , chainSyncHandle       :: ChainSyncHandle
         , appConfig             :: Config
@@ -192,8 +197,11 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             -- handle 'ChainIndexEffect'
             . flip handleError (throwError . ChainIndexError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv chainIndexEnv)
-            . reinterpret2 (ChainIndex.handleChainIndexClient @IO)
+            . (case chainQueryConfig config of
+                ChainIndexConfig _ -> reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv (getChainIndexEnv . chainQueryEnv))
+                                    . reinterpret2 (ChainIndex.handleChainIndexClient @IO)
+                BlockfrostConfig _ -> reinterpret (Core.handleMappedReader @(AppEnv a) @BF.BlockfrostEnv (getBlockfrostEnv . chainQueryEnv))
+                                    . reinterpret2 (BlockfrostClient.handleBlockfrostClient @IO))
 
             -- handle 'WalletEffect'
             . flip handleError (throwError . WalletClientError)
@@ -266,13 +274,13 @@ data StorageBackend = BeamBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscNodeMode}
+             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscNodeMode, pscNetworkId}
              , walletServerConfig
-             , chainIndexConfig
+             , chainQueryConfig
              } = do
     walletClientEnv <- maybe (pure Nothing) (fmap Just . clientEnv) $ preview Wallet._LocalWalletConfig walletServerConfig
     nodeClientEnv <- clientEnv pscBaseUrl
-    chainIndexEnv <- clientEnv (ChainIndex.ciBaseUrl chainIndexConfig)
+    chainQueryEnv <- mkChainQueryEnv
     dbPool <- dbConnect dbConfig appTrace
     txSendHandle <-
       case pscNodeMode of
@@ -290,6 +298,13 @@ mkEnv appTrace appConfig@Config { dbConfig
         newManager $
         tlsManagerSettings { managerModifyRequest = pure . setRequestIgnoreStatus
                            , managerResponseTimeout = responseTimeoutMicro 60_000_000 }
+
+    mkChainQueryEnv :: IO ChainQueryEnv
+    mkChainQueryEnv = case chainQueryConfig of
+        ChainIndexConfig config -> ChainIndexEnv <$> clientEnv (ChainIndex.ciBaseUrl config)
+        BlockfrostConfig config -> return $ BlockfrostEnv $
+            BF.BlockfrostEnv { envBfTokenPath = BF.bfTokenPath config
+                             , envNetworkId = unNetworkIdWrapper pscNetworkId}
 
 logDebugString :: Trace IO (PABLogMsg t) -> Text -> IO ()
 logDebugString trace = logDebug trace . SMultiAgent . UserLog
