@@ -20,7 +20,7 @@ import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContex
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustMintCurrency,
                                                                   mustMintCurrencyWithRedeemer, mustMintValue,
                                                                   mustMintValueWithRedeemer, mustPayToTheScript)
-import Ledger.Test (coinMintingPolicy)
+import Ledger.Test (coinMintingPolicy, coinMintingPolicyCurrencySymbol, coinMintingPolicyHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
@@ -46,6 +46,7 @@ tests =
         , mustMintCurrencySuccessfulMint
         , mustMintValueWithRedeemerSuccessfulMint
         , mustMintValueSuccessfulMint
+        -- todo: burn
         ]
 
 trace ::  Contract () Empty ContractError () -> Trace.EmulatorTrace ()
@@ -64,12 +65,6 @@ tknAmount = 21_000_000
 
 tknValue :: Ledger.Value
 tknValue = Value.singleton coinMintingPolicyCurrencySymbol tknName tknAmount
-
-coinMintingPolicyHash :: MintingPolicyHash
-coinMintingPolicyHash = PSU.V1.mintingPolicyHash coinMintingPolicy
-
-coinMintingPolicyCurrencySymbol :: CurrencySymbol
-coinMintingPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData coinMintingPolicyHash
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to mint tokens
 mustMintCurrencyWithRedeemerSuccessfulMint :: TestTree

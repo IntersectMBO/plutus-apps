@@ -245,6 +245,7 @@ test-suite plutus-contract-test
     Spec.ThreadToken
     Spec.TxConstraints.MustIncludeDatum
     Spec.TxConstraints.MustMint
+    Spec.TxConstraints.MustPayToOtherScript
     Spec.TxConstraints.MustPayToPubKeyAddress
     Spec.TxConstraints.MustSpendAtLeast
     Spec.TxConstraints.MustSpendScriptOutput
