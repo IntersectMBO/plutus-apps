@@ -43,10 +43,6 @@ library
   exposed-modules:
     Cardano.Protocol.Socket.Client
     Cardano.Protocol.Socket.Type
-    Marconi.Index.Datum
-    Marconi.Index.ScriptTx
-    Marconi.Index.TxConfirmationStatus
-    Marconi.Index.Utxo
     Plutus.ChainIndex
     Plutus.ChainIndex.Api
     Plutus.ChainIndex.ChainIndexError
@@ -79,19 +75,14 @@ library
     , freer-extras
     , plutus-ledger
     , plutus-script-utils
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
     , cardano-api
-    , cardano-binary
-    , cardano-ledger-alonzo
     , cardano-ledger-byron
     , cardano-ledger-core
-    , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , io-classes
     , iohk-monitoring
     , ouroboros-consensus
@@ -127,7 +118,6 @@ library
     , lens
     , memory
     , mtl
-    , mwc-random
     , nothunks
     , openapi3
     , prettyprinter         >=1.1.0.1
@@ -155,7 +145,6 @@ test-suite plutus-chain-index-test
   hs-source-dirs: test
   other-modules:
     Generators
-    MarconiSpec
     Plutus.ChainIndex.Emulator.DiskStateSpec
     Plutus.ChainIndex.Emulator.HandlersSpec
     Plutus.ChainIndex.HandlersSpec
@@ -165,7 +154,6 @@ test-suite plutus-chain-index-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-api:gen
     , freer-extras
     , plutus-chain-index-core
     , plutus-ledger
@@ -174,7 +162,6 @@ test-suite plutus-chain-index-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
     , plutus-ledger-api
     , plutus-tx
 

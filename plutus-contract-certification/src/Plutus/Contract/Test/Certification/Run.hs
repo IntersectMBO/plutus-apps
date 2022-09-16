@@ -111,6 +111,7 @@ certResJSON = unpack . encode
 data CertificationEvent = QuickCheckTestEvent (Maybe Bool)  -- ^ Nothing if discarded, otherwise test result
                         | StartCertificationTask CertificationTask
                         | FinishedTask Bool
+                        | CertificationDone
   deriving (Eq, Show)
 
 data CertificationTask = UnitTestsTask
@@ -121,7 +122,7 @@ data CertificationTask = UnitTestsTask
                        | CrashToleranceTask
                        | WhitelistTask
                        | DLTestsTask
-  deriving (Eq, Show, Enum, Bounded)
+  deriving (Eq, Show, Enum, Bounded, Ord)
 
 hasQuickCheckTests :: CertificationTask -> Bool
 hasQuickCheckTests t = t /= UnitTestsTask
@@ -306,6 +307,9 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
   wlRes        <- checkWhitelist @m certWhitelist opts certCoverageIndex
   -- DL tests
   dlRes        <- checkDLTests @m certDLTests opts certCoverageIndex
+  case certEventChannel opts of
+    Just ch -> liftIO $ writeChan ch CertificationDone
+    Nothing -> pure ()
   -- Final results
   return $ CertificationReport
             { _certRes_standardPropertyResult       = qcRes

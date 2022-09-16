@@ -14,6 +14,7 @@ import Spec.ThreadToken qualified
 import Spec.TxConstraints.MustMint qualified
 import Spec.TxConstraints.MustProduceAtLeast qualified
 import Spec.TxConstraints.MustSpendAtLeast qualified
+import Spec.TxConstraints.MustSpendPubKeyOutput qualified
 import Spec.TxConstraints.RequiredSigner qualified
 import Spec.TxConstraints.TimeValidity qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -31,6 +32,7 @@ tests = testGroup "plutus-contract" [
     Spec.TxConstraints.MustMint.tests,
     Spec.TxConstraints.MustProduceAtLeast.tests,
     Spec.TxConstraints.MustSpendAtLeast.tests,
+    Spec.TxConstraints.MustSpendPubKeyOutput.tests,
     Spec.TxConstraints.RequiredSigner.tests,
     Spec.TxConstraints.TimeValidity.tests,
     Spec.Secrets.tests,
