@@ -106,7 +106,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "L7" -- "Public key output not spent"
         $ maybe False (isNoOutputDatum . txOutDatum . txInInfoResolved) (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
-    MustSpendScriptOutput txOutRef _ ->
+    MustSpendScriptOutput txOutRef _ _ ->
         traceIfFalse "L8" -- "Script output not spent"
         -- Unfortunately we can't check the redeemer, because TxInfo only
         -- gives us the redeemer's hash, but 'MustSpendScriptOutput' gives
