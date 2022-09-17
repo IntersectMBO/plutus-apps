@@ -67,6 +67,8 @@ module Ledger.Constraints.OffChain(
     , lookupTxOutRef
     , lookupScript
     , resolveScriptTxOut
+    , resolveScriptTxOutValidator
+    , resolveScriptTxOutDatumAndValue
     ) where
 
 import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.~), (<&>), (<>=), (?=), (^?))
@@ -102,8 +104,9 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId))
-import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), TxOut (TxOut), TxOutRef, Versioned (Versioned),
-                  outDatumHash, txOutValue)
+import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr),
+                  ScriptTag (Mint, Spend), TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef,
+                  Versioned (Versioned))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -569,6 +572,7 @@ data MkTxError =
     | TxOutCardanoError C.ToCardanoError
     | TxOutRefNotFound TxOutRef
     | TxOutRefWrongType TxOutRef
+    | TxOutRefNoReferenceScript TxOutRef
     | DatumNotFound DatumHash
     | MintingPolicyNotFound MintingPolicyHash
     | ScriptHashNotFound ScriptHash
@@ -587,6 +591,7 @@ instance Pretty MkTxError where
         TxOutCardanoError e            -> "Tx out cardano conversion error:" <+> pretty e
         TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
         TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
+        TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
         DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found"
         MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
         ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
@@ -671,14 +676,34 @@ processConstraint = \case
               unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
               valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (TxOutRefWrongType txo)
-    MustSpendScriptOutput txo red -> do
+    MustSpendScriptOutput txo red mref -> do
         txout <- lookupTxOutRef txo
-        mscriptTXO <- resolveScriptTxOut txout
-        case mscriptTXO of
-            Just ((_, validator), (_, datum), value) -> do
-                unbalancedTx . tx %= Tx.addScriptTxInput txo validator red datum
-                valueSpentInputs <>= provided value
-            _ -> throwError (TxOutRefWrongType txo)
+        valOrRef <- case mref of
+          Just ref -> do
+            refTxOut <- lookupTxOutRef ref
+            case _ciTxOutReferenceScript refTxOut of
+                Just val -> pure $ Right ref <$ val
+                _        -> throwError (TxOutRefNoReferenceScript ref)
+          Nothing -> do
+            mscriptTXO <- resolveScriptTxOutValidator txout
+            case mscriptTXO of
+                Just (_, val) -> pure $ Left <$> val
+                _             -> throwError (TxOutRefWrongType txo)
+        mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
+        case mDatumAndValue of
+          Just ((dvh, datum), value) -> do
+            -- TODO: When witnesses are properly segregated we can
+            --       probably get rid of the 'slOtherData' map and of
+            --       'lookupDatum'
+            let input = Tx.TxIn txo $ Just $ Tx.ScriptAddress valOrRef red datum
+            unbalancedTx . tx . Tx.inputs %= (input :)
+            inputs <- use (unbalancedTx . tx . Tx.inputs)
+            -- We use fromJust because we can garanty that it will always be Just.
+            let idx = fromJust $ elemIndex input inputs
+            unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
+            unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
+            valueSpentInputs <>= provided value
+          _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral txo -> do
         unbalancedTx . tx . Tx.collateralInputs <>= [Tx.pubKeyTxInput txo]
     MustReferenceOutput txo -> do
@@ -747,7 +772,7 @@ processConstraintFun = \case
         -- TODO: Need to precalculate the validator hash or else this won't work
         -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
         -- include the hash.
-        let matches (Just ((validatorHash, _), (_, datum), value)) =
+        let matches (Just ((validatorHash, _), ((_, datum), value))) =
                 validatorHash == vh && datumPred datum && valuePred value
             matches Nothing = False
         opts <- filter (matches . snd)
@@ -755,8 +780,9 @@ processConstraintFun = \case
                          (Map.toList slTxOutputs)
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just ((_, validator), (_, datum), value))] -> do
-                unbalancedTx . tx %=  Tx.addScriptTxInput ref validator red datum
+            [(ref, Just ((_, validator), ((_, datum), value)))] -> do
+                let input = Tx.scriptTxIn ref validator red datum
+                unbalancedTx . tx . Tx.inputs %= (input :)
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
 
@@ -764,23 +790,43 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Versioned Validator), (DatumHash, Datum), Value))
-resolveScriptTxOut
+    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Versioned Validator), ((DatumHash, Datum), Value)))
+resolveScriptTxOut txo = do
+    v <- resolveScriptTxOutValidator txo
+    dv <- resolveScriptTxOutDatumAndValue txo
+    pure $ (,) <$> v <*> dv
+
+resolveScriptTxOutValidator
+    :: ( MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => ChainIndexTxOut -> m (Maybe (ValidatorHash, Versioned Validator))
+resolveScriptTxOutValidator
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutValidator = (vh, v)
-            , Tx._ciTxOutScriptDatum = (dh, d)
-            , Tx._ciTxOutValue
             } = do
     -- first check in the 'ChainIndexTxOut' for the validator, then
     -- look for it in the 'slOtherScripts' map.
     validator <- maybe (lookupValidator vh) pure v
+    pure $ Just (vh, validator)
+resolveScriptTxOutValidator _ = pure Nothing
+
+resolveScriptTxOutDatumAndValue
+    :: ( MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => ChainIndexTxOut -> m (Maybe ((DatumHash, Datum), Value))
+resolveScriptTxOutDatumAndValue
+        Tx.ScriptChainIndexTxOut
+            { Tx._ciTxOutScriptDatum = (dh, d)
+            , Tx._ciTxOutValue
+            } = do
 
     -- first check in the 'ChainIndexTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
     dataValue <- maybe (lookupDatum dh) pure d
-
-    pure $ Just ((vh, validator), (dh, dataValue), _ciTxOutValue)
-resolveScriptTxOut _ = pure Nothing
+    pure $ Just ((dh, dataValue), _ciTxOutValue)
+resolveScriptTxOutDatumAndValue _ = pure Nothing
 
 toCardanoTxOutWithHashedDatum
   :: ( MonadState ConstraintProcessingState m, MonadError MkTxError m)
