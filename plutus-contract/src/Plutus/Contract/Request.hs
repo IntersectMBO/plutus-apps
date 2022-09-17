@@ -83,6 +83,7 @@ module Plutus.Contract.Request(
     , ownPaymentPubKeyHashes
     , ownFirstPaymentPubKeyHash
     , ownAddresses
+    , ownAddress
     , ownUtxos
     -- ** Submitting transactions
     , adjustUnbalancedTx
@@ -822,6 +823,10 @@ ownPaymentPubKeyHash = ownFirstPaymentPubKeyHash
 --     the mockchain n=1)
 ownAddresses :: forall w s e. (AsContractError e) => Contract w s e (NonEmpty Address)
 ownAddresses = pabReq OwnAddressesReq E._OwnAddressesResp
+
+-- | Get the first address of the wallet that runs this contract.
+ownAddress :: forall w s e. (AsContractError e) => Contract w s e Address
+ownAddress = NonEmpty.head <$> ownAddresses
 
 ownPaymentPubKeyHashes :: forall w s e. (AsContractError e) => Contract w s e [PaymentPubKeyHash]
 ownPaymentPubKeyHashes = do
