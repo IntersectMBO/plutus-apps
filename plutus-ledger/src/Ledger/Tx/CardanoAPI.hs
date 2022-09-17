@@ -636,8 +636,8 @@ fromCardanoValue :: C.Value -> P.Value
 fromCardanoValue (C.valueToList -> list) =
     foldMap fromSingleton list
   where
-    fromSingleton (fromCardanoAssetId -> Value.AssetClass (cs, tn), C.Quantity q) =
-        Value.singleton cs tn q
+    fromSingleton (fromCardanoAssetId -> assetClass, C.Quantity quantity) =
+        Value.assetClassValue assetClass quantity
 
 toCardanoValue :: P.Value -> Either ToCardanoError C.Value
 toCardanoValue =

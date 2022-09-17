@@ -372,9 +372,7 @@ genAssetClass =
 
 genSingleton :: MonadGen m => Range Integer -> m Value
 genSingleton range =
-    uncurry Value.singleton
-        <$> (Value.unAssetClass <$> genAssetClass)
-        <*> Gen.integral range
+    Value.assetClassValue <$> genAssetClass <*> Gen.integral range
 
 genValue' :: MonadGen m => Range Integer -> m Value
 genValue' valueRange = do
