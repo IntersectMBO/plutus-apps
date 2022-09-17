@@ -301,6 +301,23 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
 mkRedeemers :: P.Tx -> [ExportTxRedeemer]
 mkRedeemers = map (uncurry scriptPurposeToExportRedeemer) . Map.assocs . txRedeemers
 
+mkSpendingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
+mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract txInputs) where
+    extract TxIn{txInType=Just (ScriptAddress _ redeemer _), txInRef} =
+        pure [SpendingRedeemer{redeemer, redeemerOutRef=txInRef}]
+    extract _ = pure []
+
+mkMintingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
+mkMintingRedeemers P.Tx{P.txRedeemers, P.txMintScripts} =
+    catMaybes <$> traverse extract (Map.toList txRedeemers)
+ where
+    indexedMintScriptHashes = Map.fromList $ zip [0..] $ Map.keys txMintScripts
+    extract (PV1.RedeemerPtr PV1.Mint idx, redeemer) = do
+        redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) Right (Map.lookup idx indexedMintScriptHashes)
+        pure $ Just MintingRedeemer{redeemer, redeemerPolicyId}
+    -- Some other redeemer (like a spending redeemer) which is ignored
+    extract (PV1.RedeemerPtr _ _, _) = pure Nothing
+
 scriptPurposeToExportRedeemer :: Ledger.ScriptPurpose -> Redeemer -> ExportTxRedeemer
 scriptPurposeToExportRedeemer (Ledger.Spending ref)     rd = SpendingRedeemer {redeemerOutRef = ref, redeemer=rd}
 scriptPurposeToExportRedeemer (Ledger.Minting cs)       rd = MintingRedeemer {redeemerPolicyId = currencyMPSHash cs, redeemer=rd}
