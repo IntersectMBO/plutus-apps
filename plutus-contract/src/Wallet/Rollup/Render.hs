@@ -82,6 +82,10 @@ newtype RenderPretty a =
 instance Pretty a => Render (RenderPretty a) where
     render (RenderPretty a) = pure $ pretty a
 
+instance (Render a, Render b) => Render (Either a b) where
+    render (Left a)  = render a
+    render (Right b) = render b
+
 instance Render [[AnnotatedTx]] where
     render blockchain =
         vsep . intersperse mempty . fold <$>
@@ -284,9 +288,9 @@ instance Render TxIn where
     render (TxIn txInRef Nothing) = render txInRef
 
 instance Render TxInType where
-    render (ConsumeScriptAddress validator _ _) = render (unversioned validator)
-    render ConsumePublicKeyAddress              = pure mempty
-    render ConsumeSimpleScriptAddress           = pure mempty
+    render (ScriptAddress validator _ _) = render (unversioned validator)
+    render ConsumePublicKeyAddress       = pure mempty
+    render ConsumeSimpleScriptAddress    = pure mempty
 
 instance Render TxOutRef where
     render TxOutRef {txOutRefId, txOutRefIdx} =

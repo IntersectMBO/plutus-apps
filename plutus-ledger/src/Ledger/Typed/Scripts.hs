@@ -11,7 +11,7 @@ module Ledger.Typed.Scripts
   , makeTypedScriptTxIn
   ) where
 
-import Ledger.Tx.Internal (TxIn (TxIn), TxInType (ConsumeScriptAddress))
+import Ledger.Tx.Internal (TxIn (TxIn), TxInType (ScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
 import Plutus.Script.Utils.Typed as Export
 import Plutus.Script.Utils.V1.Typed.Scripts as Export
@@ -41,5 +41,5 @@ makeTypedScriptTxIn si r tyRef =
       vs = vValidatorScript si
       rs = Redeemer (toBuiltinData r)
       ds = Datum (toBuiltinData d)
-      txInT = ConsumeScriptAddress vs rs ds
+      txInT = ScriptAddress (fmap Left vs) rs ds
    in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef

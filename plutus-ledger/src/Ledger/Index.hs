@@ -144,8 +144,8 @@ lkpTxOut t = lookup t . vctxIndex =<< ask
 -- | Filter to get only the script inputs.
 scriptTxIns :: Fold [TxIn] TxIn
 scriptTxIns = (\x -> folding x) . filter $ \case
-    TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
-    _                                              -> False
+    TxIn{ txInType = Just ScriptAddress{} } -> True
+    _                                       -> False
 
 -- | Filter to get only the pubkey inputs.
 pubKeyTxIns :: Fold [TxIn] TxIn
@@ -290,7 +290,7 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ConsumeScriptAddress (Versioned v lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ScriptAddress (Versioned (Left v) lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (PV2.datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         case lang of
           PlutusV1 ->
