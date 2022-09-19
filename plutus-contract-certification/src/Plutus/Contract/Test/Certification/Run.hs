@@ -109,6 +109,7 @@ certResJSON :: CertificationReport m -> String
 certResJSON = unpack . encode
 
 data CertificationEvent = QuickCheckTestEvent (Maybe Bool)  -- ^ Nothing if discarded, otherwise test result
+                        | QuickCheckNumTestsEvent Int
                         | StartCertificationTask CertificationTask
                         | FinishedTask Bool
                         | CertificationDone
@@ -261,6 +262,10 @@ finishTaskEvent :: CertificationOptions -> Bool -> CertMonad ()
 finishTaskEvent opts res | Just ch <- certEventChannel opts = liftIO $ writeChan ch $ FinishedTask res
                          | otherwise                        = pure ()
 
+numTestsEvent :: CertificationOptions -> CertMonad ()
+numTestsEvent opts | Just ch <- certEventChannel opts = liftIO $ writeChan ch $ QuickCheckNumTestsEvent $ certOptNumTests opts
+                   | otherwise                        = pure ()
+
 certify :: forall m. ContractModel m => Certification m -> IO (CertificationReport m)
 certify = certifyWithOptions defaultCertificationOptions
 
@@ -279,7 +284,7 @@ wrapQCTask :: CertificationOptions
            -> CertificationTask
            -> CertMonad QC.Result
            -> CertMonad QC.Result
-wrapQCTask opts task = wrapTask opts task QC.isSuccess
+wrapQCTask opts task m = wrapTask opts task QC.isSuccess $ numTestsEvent opts >> m
 
 certifyWithOptions :: forall m. ContractModel m
                    => CertificationOptions
