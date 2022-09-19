@@ -75,28 +75,6 @@ import Marconi.Index.ScriptTx qualified as M
 import Marconi.Indexers qualified as M
 import Marconi.Logging qualified
 
--- * Tmp
-
-p :: (MonadIO m) => String -> m ()
-p = liftIO . putStrLn
-
-p2 :: (Show a, MonadIO m) => String -> a -> m a
-p2 str a = liftIO (putStrLn $ str <> ": " <> show a) >> pure a
-
-pause :: MonadIO m => m ()
-pause = liftIO readLn
-
-exit :: String -> m ()
-exit = error
-
-exit2 :: Show a => String -> a -> m ()
-exit2 label v = exit $ label <> ": " <> show v
-
-exit_ :: m ()
-exit_ = exit "MANUAL EXIT"
-
--- /Tmp
-
 tests :: TestTree
 tests = testGroup "Integration"
   [ testProperty "prop_script_hashes_in_tx_match" testIndex ]
@@ -360,28 +338,3 @@ submitTx localNodeConnectInfo tx = do
 headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
 headM (a:_) = return a
 headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
-
--- | Block until file at @path@ appears
-untilFileExists :: FilePath -> IO ()
-untilFileExists path = do
-  lock <- IO.newEmptyMVar
-  inotify <- initINotify
-  let
-    filePart = TS.encodeUtf8 $ TS.pack $ takeFileName path
-    dirPart = TS.encodeUtf8 $ TS.pack $ takeDirectory path
-  void $ addWatch inotify [Create] dirPart $ \case
-    Created False createdFile ->
-      when (filePart == createdFile) $ IO.putMVar lock ()
-    _ -> pure ()
-  IO.takeMVar lock
-
-{-
-- Add comments to magic values
-- Add test verification for the CBOR of the 2nd transaction
-- See whether we can add a waitForFileToBeAvailable function in Hedgehog.Extras. At the very least, we can impl
-ement it to replace some of the thread delays that we have when spinning up the testnet.
-- Change plutusScriptFileInUse so that we use the Plutus Script written in Haskell code.
-- Story: Put Plutus Tools balancing function in separate package (cardano-api-extended) and use it here.
-- Spike: Investigate how to replace the threadDelay calls with await actions
-- Replace the SQLite connection with the query interface of Marconi
--}
