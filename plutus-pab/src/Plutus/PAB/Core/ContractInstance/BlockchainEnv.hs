@@ -23,7 +23,6 @@ import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (unpack)
 import Ledger (Block, Slot (..), TxId (..))
-import Ledger.Params (Params (pNetworkId))
 import Marconi.Index.TxConfirmationStatus (TxInfo (..))
 import Marconi.Index.TxConfirmationStatus qualified as Ix
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -47,7 +46,7 @@ import Control.Lens
 import Control.Monad (forM_, void, when)
 import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
-import Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe, maybeToList)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
@@ -219,9 +218,7 @@ processBlock :: forall era. C.IsCardanoEra era
 processBlock instancesState header env@BlockchainEnv{beTxChanges} transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
       tip = fromCardanoBlockHeader header
-      -- We ignore cardano transactions that we couldn't convert to
-      -- our 'ChainIndexTx'.
-      ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
+      ciTxs = fromCardanoTx era <$> transactions
 
   stmResult <- STM.atomically $ do
     STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
@@ -329,7 +326,7 @@ processMockBlock
     -> STM (Either SyncActionFailure (Slot, BlockNumber))
 processMockBlock
   instancesState
-  env@BlockchainEnv{beCurrentSlot, beLastSyncedBlockSlot, beLastSyncedBlockNo, beParams}
+  env@BlockchainEnv{beCurrentSlot, beLastSyncedBlockSlot, beLastSyncedBlockNo}
   transactions
   slot = do
 
@@ -343,7 +340,6 @@ processMockBlock
   when (slot > lastCurrentSlot ) $ do
     STM.writeTVar beCurrentSlot slot
 
-  let networkId = pNetworkId beParams
   if null transactions
      then do
        result <- (,) <$> STM.readTVar beLastSyncedBlockSlot <*> STM.readTVar beLastSyncedBlockNo
@@ -352,11 +348,11 @@ processMockBlock
       blockNumber <- STM.readTVar beLastSyncedBlockNo
 
       instEnv <- S.instancesClientEnv instancesState
-      updateInstances (indexBlock $ fmap (fromOnChainTx networkId) transactions) instEnv
+      updateInstances (indexBlock $ fmap fromOnChainTx transactions) instEnv
 
       let tip = Tip { tipSlot = slot
                     , tipBlockId = blockId transactions
                     , tipBlockNo = blockNumber
                     }
 
-      updateEmulatorTransactionState tip env (txEvent <$> fmap (fromOnChainTx networkId) transactions)
+      updateEmulatorTransactionState tip env (txEvent <$> fmap fromOnChainTx transactions)

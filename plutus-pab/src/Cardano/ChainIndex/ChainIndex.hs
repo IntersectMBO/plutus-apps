@@ -9,7 +9,6 @@ module Cardano.ChainIndex.ChainIndex
     , syncState
     ) where
 
-import Cardano.Api.Shelley (NetworkId)
 import Cardano.BM.Data.Trace (Trace)
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
@@ -32,13 +31,12 @@ syncState ::
     ( Member ChainIndex.ChainIndexControlEffect effs
     , Member ChainIndex.ChainIndexQueryEffect effs
     )
-    => NetworkId
-    -> Block
+    => Block
     -> Slot
     -> Eff effs ()
-syncState networkId block slot = do
+syncState block slot = do
     currentTip <- ChainIndex.getTip
-    appendNewTipBlock networkId currentTip block slot
+    appendNewTipBlock currentTip block slot
 
 -- | Process the chain index effects for the emulator.
 processChainIndexEffects ::

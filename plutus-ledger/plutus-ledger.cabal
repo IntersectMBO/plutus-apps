@@ -83,6 +83,7 @@ library
     Ledger.Tokens
     Ledger.Tx
     Ledger.Tx.CardanoAPI
+    Ledger.Tx.CardanoAPI.Internal
     Ledger.Tx.Internal
     Ledger.Tx.Orphans
     Ledger.Tx.Orphans.V1
@@ -123,6 +124,7 @@ library
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
@@ -214,7 +216,6 @@ test-suite plutus-ledger-test
     , aeson
     , base            >=4.9 && <5
     , bytestring
-    , containers
     , data-default
     , hedgehog
     , tasty

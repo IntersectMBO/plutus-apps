@@ -90,7 +90,9 @@ balanceTxnMinAda2 =
         wallet2Contract :: Contract () EmptySchema ContractError ()
         wallet2Contract = do
             utxos <- utxosAt someAddress
-            let txOutRef = head (Map.keys utxos)
+            let txOutRef = case (Map.keys utxos) of
+                             (x:_) -> x
+                             []    -> error $ "there's no utxo at the address " <> show someAddress
                 lookups = L.Constraints.unspentOutputs utxos
                         <> L.Constraints.plutusV1OtherScript someValidator
                         <> L.Constraints.plutusV1MintingPolicy mps

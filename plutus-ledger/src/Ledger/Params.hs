@@ -12,6 +12,7 @@ module Ledger.Params(
   -- * cardano-ledger specific types and conversion functions
   EmulatorEra,
   slotLength,
+  testnet,
   emulatorEpochSize,
   emulatorGlobals,
   emulatorPParams,
@@ -69,8 +70,13 @@ increaseTransactionLimits = over protocolParamsL fixParams
       , protocolParamMaxTxExUnits = protocolParamMaxTxExUnits pp >>= (\ExecutionUnits {executionSteps, executionMemory} -> pure $ ExecutionUnits {executionSteps = 10 * executionSteps, executionMemory = 10 * executionMemory})
       }
 
+
+-- | The network id used by default by 'Param'
+testnet :: NetworkId
+testnet = Testnet $ NetworkMagic 1
+
 instance Default Params where
-  def = Params def def (Testnet $ NetworkMagic 1)
+  def = Params def def testnet
 
 instance Default ProtocolParameters where
   -- The protocol parameters as they are in the Alonzo era.

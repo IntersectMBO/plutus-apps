@@ -58,7 +58,7 @@ import Database.SQLite.Simple qualified as Sqlite
 import Cardano.Api qualified as C
 import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
-import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
+import Cardano.BM.Trace (Trace, logDebug, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
@@ -129,17 +129,13 @@ data ChainSyncEvent
     -- ^ Roll back to the given point. The tip is current tip of the node.
     deriving (Show)
 
-toCardanoChainSyncHandler :: RunRequirements -> ChainSyncHandler -> C.ChainSyncEvent -> IO ()
-toCardanoChainSyncHandler runReq handler = \case
+toCardanoChainSyncHandler :: ChainSyncHandler -> C.ChainSyncEvent -> IO ()
+toCardanoChainSyncHandler handler = \case
     C.RollBackward cp ct -> handler (RollBackward (fromCardanoPoint cp) (fromCardanoTip ct))
     C.Resume cp -> handler (Resume (fromCardanoPoint cp))
-    C.RollForward block ct -> do
-        let ciBlock = fromCardanoBlock block
-        case ciBlock of
-            Left err    ->
-                logError (convertLog PrettyObject $ CI.trace runReq) (CI.ConversionFailed err)
-            Right txs ->
-                handler (RollForward (CI.Block (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
+    C.RollForward block ct ->
+        let txs = fromCardanoBlock block
+        in handler (RollForward (CI.Block (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
@@ -190,7 +186,7 @@ syncChainIndex config runReq syncHandler = do
         (Config.cicSlotConfig config)
         (Config.cicNetworkId  config)
         resumePoints
-        (toCardanoChainSyncHandler runReq syncHandler)
+        (toCardanoChainSyncHandler syncHandler)
 
 runChainIndexDuringSync
   :: RunRequirements

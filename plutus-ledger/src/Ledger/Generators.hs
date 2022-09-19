@@ -49,11 +49,13 @@ module Ledger.Generators(
     signAll,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys,
+    knownXPrvs,
     someTokenValue,
     genTxInfo
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Crypto.Wallet qualified as Crypto
 import Control.Applicative ((<|>))
 import Control.Lens ((&))
 import Control.Monad (replicateM)
@@ -83,9 +85,10 @@ import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Datum, Interval, Lan
                Slot (Slot), SlotRange, SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), TokenName,
                Tx (txFee, txInputs, txMint, txOutputs, txValidRange), TxInInfo (txInInfoOutRef),
                TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
-               TxInputType (TxConsumePublicKeyAddress), TxOut (txOutValue), TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
+               TxInputType (TxConsumePublicKeyAddress), TxOut, TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
                ValidationCtx (ValidationCtx), Validator, Value, Versioned, _runValidation, addCardanoTxSignature,
-               addMintingPolicy, getValidator, pubKeyTxOut, scriptHash, toPublicKey, txData, txScripts, validatorHash)
+               addMintingPolicy, getValidator, pubKeyTxOut, scriptHash, toPublicKey, txData, txOutValue, txScripts,
+               validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -168,8 +171,8 @@ genInitialTransaction ::
        GeneratorModel
     -> (CardanoTx, [TxOut])
 genInitialTransaction GeneratorModel{..} =
-    let
-        o = fmap (\f -> f Nothing) $ (uncurry $ flip pubKeyTxOut) <$> Map.toList gmInitialBalance
+    let o = either (error . ("Cannot create outputs: " <>) . show) id
+          $ traverse (\(ppk, v) -> pubKeyTxOut v ppk Nothing) $ Map.toList gmInitialBalance
         t = fold gmInitialBalance
     in (EmulatorTx $ mempty {
         txOutputs = o,
@@ -240,11 +243,13 @@ genValidTransactionSpending' g ins totalVal = do
                           maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOut)
                                           $ List.sort splitOutVals
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
-            let (ins', witnesses) = unzip $ map txInToTxInput ins
-            let (scripts, datums) = unzip $ catMaybes witnesses
-            let tx = mempty
+                txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
+                          $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
+                (ins', witnesses) = unzip $ map txInToTxInput ins
+                (scripts, datums) = unzip $ catMaybes witnesses
+                tx = mempty
                         { txInputs = ins'
-                        , txOutputs = fmap (\f -> f Nothing) $ uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
+                        , txOutputs = txOutputs
                         , txMint = maybe mempty id mintValue
                         , txFee = Ada.toValue fee'
                         , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
@@ -400,7 +405,7 @@ validateMockchain :: Mockchain -> CardanoTx -> Maybe Index.ValidationError
 validateMockchain (Mockchain txPool _ params) cardanoTx = result where
     h      = 1
     idx    = Index.initialise [map Valid txPool]
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
     ctx = ValidationCtx idx params
     (err, _) = cardanoTx & Ledger.mergeCardanoTxWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
@@ -465,6 +470,9 @@ knownPaymentPublicKeys =
 
 knownPaymentPrivateKeys :: [PaymentPrivateKey]
 knownPaymentPrivateKeys = CW.paymentPrivateKey <$> CW.knownMockWallets
+
+knownXPrvs :: [Crypto.XPrv]
+knownXPrvs = unPaymentPrivateKey <$> knownPaymentPrivateKeys
 
 -- | Seed suitable for testing a seed but not for actual wallets as ScrubbedBytes isn't used to ensure
 --  memory isn't inspectable

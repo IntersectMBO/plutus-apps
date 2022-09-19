@@ -57,15 +57,13 @@ module Ledger.Index(
 import Prelude hiding (lookup)
 
 import Cardano.Api (Lovelace (..))
-import Control.Lens (Fold, folding, toListOf, view, (^.))
+import Control.Lens (Fold, folding, toListOf, view, (&), (^.))
 import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.Either (fromRight)
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
-import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -76,11 +74,12 @@ import Ledger.Crypto
 import Ledger.Index.Internal
 import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
+import Ledger.Scripts (mintingPolicyHash)
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
-import Plutus.Script.Utils.Scripts (datumHash, mintingPolicyHash)
+import Ledger.Tx.CardanoAPI (fromCardanoTxOut)
+import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
@@ -292,7 +291,7 @@ matchInputOutput :: ValidationMonad m
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
     (Just (ConsumeScriptAddress (Versioned v lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
-        unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
+        unless (PV2.datumHash d == dh) $ throwError $ InvalidDatumHash d dh
         case lang of
           PlutusV1 ->
               unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
@@ -392,8 +391,8 @@ checkMinAdaInTxOutputs t@Tx { txOutputs } = do
     params <- vctxParams <$> ask
     for_ txOutputs $ \txOut -> do
         let
-            minAdaTxOut' = fromRight minAdaTxOut $
-                fromPlutusTxOutUnsafe params txOut <&> \txOut' -> evaluateMinLovelaceOutput params txOut'
+            minAdaTxOut' =
+                fromPlutusTxOut txOut & \txOut' -> evaluateMinLovelaceOutput params txOut'
         if Ada.fromValue (txOutValue txOut) >= minAdaTxOut'
             then pure ()
             else throwError $ ValueContainsLessThanMinAda t txOut (Ada.toValue minAdaTxOut')
@@ -428,10 +427,11 @@ mkPV1TxInfo :: ValidationMonad m => Tx -> m PV1.TxInfo
 mkPV1TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txins <- traverse mkPV1TxInInfo $ view inputs tx
-    let ptx = PV1.TxInfo
+    let plutusTxOutputs = map (fromCardanoTxOut . getTxOut) $ txOutputs tx
+    pure $ PV1.TxInfo
             { PV1.txInfoInputs = txins
             -- See note [Mint and Fee fields must have ada symbol]
-            , PV1.txInfoOutputs = txOutputs tx
+            , PV1.txInfoOutputs = plutusTxOutputs
             , PV1.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV1.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , PV1.txInfoDCert = [] -- DCerts not supported in emulator
@@ -441,14 +441,13 @@ mkPV1TxInfo tx = do
             , PV1.txInfoData = Map.toList (tx ^. datumWitnesses)
             , PV1.txInfoId = txId tx
             }
-    pure ptx
 
 
 -- | Create the data about a transaction input which will be passed to a
 -- PlutusV1 validator script.
 mkPV1TxInInfo :: ValidationMonad m => TxInput -> m PV1.TxInInfo
 mkPV1TxInInfo i = do
-    txOut <- lkpTxOut $ txInputRef i
+    txOut <- fromCardanoTxOut . getTxOut <$> lkpTxOut (txInputRef i)
     pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInputRef i, PV1.txInInfoResolved=txOut}
 
 -- | Create the data about the transaction which will be passed to a PV2
@@ -458,11 +457,12 @@ mkPV2TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txIns <- traverse mkPV2TxInInfo $ view inputs tx
     txRefIns <- traverse mkPV2TxInInfo $ view referenceInputs tx
-    let ptx = PV2.TxInfo
+    let plutusTxOutputs = map (fromCardanoTxOut . getTxOut) $ txOutputs tx
+    pure $ PV2.TxInfo
             { PV2.txInfoInputs = txIns
             , PV2.txInfoReferenceInputs = txRefIns
             -- See note [Mint and Fee fields must have ada symbol]
-            , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> txOutputs tx
+            , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> plutusTxOutputs
             , PV2.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV2.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , PV2.txInfoDCert = [] -- DCerts not supported in emulator
@@ -473,13 +473,12 @@ mkPV2TxInfo tx = do
             , PV2.txInfoRedeemers = AMap.fromList . Map.toList $ txRedeemers tx
             , PV2.txInfoId = txId tx
             }
-    pure ptx
 
 -- | Create the data about a transaction input which will be passed to a
 -- PlutusV2 validator script.
 mkPV2TxInInfo :: ValidationMonad m => TxInput -> m PV2.TxInInfo
 mkPV2TxInInfo TxInput{txInputRef} = do
-    txOut <- lkpTxOut txInputRef
+    txOut <- fromCardanoTxOut . getTxOut <$> lkpTxOut txInputRef
     pure $ PV2.TxInInfo txInputRef (txOutV1ToTxOutV2 txOut)
 
 -- Temporary. Might not exist anymore once we remove our custom ledger rules

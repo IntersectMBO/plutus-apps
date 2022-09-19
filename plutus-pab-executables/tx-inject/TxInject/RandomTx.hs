@@ -26,7 +26,7 @@ import Ledger.Generators qualified as Generators
 import Ledger.Index (UtxoIndex (..), ValidationCtx (..), runValidation, validateTransaction)
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), TxOut (..))
+import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -65,12 +65,12 @@ generateTx gen slot (UtxoIndex utxo) = do
   -- We definitely need this for creating multi currency transactions!
         =
           filter
-            (\(_, TxOut {txOutValue}) ->
-                txOutValue ==
-                  Ada.toValue (Ada.fromValue txOutValue)) $
+            (\(_, txOut ) ->
+                txOutValue txOut ==
+                  Ada.toValue (Ada.fromValue $ txOutValue txOut)) $
           filter
-            (\(_, TxOut {txOutAddress}) ->
-                txOutAddress == sourceAddress) $
+            (\(_, txOut) ->
+                txOutAddress txOut == sourceAddress) $
           Map.toList utxo
   -- list of inputs owned by 'sourcePrivKey' that we are going to spend
   -- in the transaction

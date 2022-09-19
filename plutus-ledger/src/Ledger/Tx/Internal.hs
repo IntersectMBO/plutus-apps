@@ -3,45 +3,59 @@
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
     , Language(..)
+    , TxOut (..)
+    , TxOutRef (..)
     , Versioned(..)
     ) where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C hiding (toShelleyTxOut)
+import Cardano.Binary qualified as C
 import Cardano.Ledger.Alonzo.Genesis ()
 import Codec.CBOR.Write qualified as Write
-import Codec.Serialise (Serialise, encode)
-import Control.DeepSeq (NFData)
-import Control.Lens
+import Codec.Serialise (Serialise, decode, encode)
+import Control.DeepSeq (NFData, rnf)
+import Control.Lens ((&), (.~), (?~))
+import Control.Lens qualified as L
 import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
+import Data.Data (Proxy (Proxy))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
-import Ledger.Scripts (MintingPolicy (MintingPolicy, getMintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                       ScriptHash (ScriptHash), StakeValidator (StakeValidator),
-                       StakeValidatorHash (StakeValidatorHash), Validator (Validator, getValidator),
-                       ValidatorHash (ValidatorHash))
 import Ledger.Slot
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOutDatumHash, fromCardanoTxOutValue,
+                                      fromCardanoValue)
+import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 import Plutus.Script.Utils.Scripts
-import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash),
-                             TxOut (txOutValue), TxOutRef)
-import Plutus.V1.Ledger.Tx (txOutDatum)
+import Plutus.V1.Ledger.Address (toPubKeyHash)
+import Plutus.V1.Ledger.Address qualified as V1
+import Plutus.V1.Ledger.Api (Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash), dataToBuiltinData)
+import Plutus.V1.Ledger.Scripts
+import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
+                            pubKeyTxIns, scriptTxIn, scriptTxIns)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
+import PlutusTx.Prelude (BuiltinByteString)
+import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
@@ -51,7 +65,7 @@ data TxInType =
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
 
 -- | A transaction input, consisting of a transaction output reference and an input type.
 data TxIn = TxIn {
@@ -59,7 +73,8 @@ data TxIn = TxIn {
     txInType :: Maybe TxInType
     }
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+
 
 instance Pretty TxIn where
     pretty TxIn{txInRef,txInType} =
@@ -106,13 +121,13 @@ instance Pretty TxInput where
         in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
 
 -- | The 'TxOutRef' spent by a transaction input.
-inputRef :: Lens' TxInput TxOutRef
-inputRef = lens txInputRef s where
+inputRef :: L.Lens' TxInput TxOutRef
+inputRef = L.lens txInputRef s where
     s txi r = txi { txInputRef = r }
 
 -- | The type of a transaction input.
-inputType :: Lens' TxInput TxInputType
-inputType = lens txInputType s where
+inputType :: L.Lens' TxInput TxInputType
+inputType = L.lens txInputType s where
     s txi t = txi { txInputType = t }
 
 -- | Stake withdrawal, if applicable the script should be included in txScripts.
@@ -145,22 +160,22 @@ inScripts TxIn{ txInType = t } = case t of
     _                                 -> Nothing
 
 -- | The 'TxOutRef' spent by a transaction input.
-inRef :: Lens' TxInput TxOutRef
-inRef = lens txInputRef s where
+inRef :: L.Lens' TxInput TxOutRef
+inRef = L.lens txInputRef s where
     s txi r = txi { txInputRef = r }
 
 -- | The type of a transaction input.
-inType :: Lens' TxInput TxInputType
-inType = lens txInputType s where
+inType :: L.Lens' TxInput TxInputType
+inType = L.lens txInputType s where
     s txi t = txi { txInputType = t }
 
 -- | Filter to get only the pubkey inputs.
-pubKeyTxInputs :: Fold [TxInput] TxInput
-pubKeyTxInputs = folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
+pubKeyTxInputs :: L.Fold [TxInput] TxInput
+pubKeyTxInputs = L.folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
 
 -- | Filter to get only the script inputs.
-scriptTxInputs :: Fold [TxInput] TxInput
-scriptTxInputs = (\x -> folding x) . filter $ \case
+scriptTxInputs :: L.Fold [TxInput] TxInput
+scriptTxInputs = (\x -> L.folding x) . filter $ \case
     TxInput{ txInputType = TxConsumeScriptAddress{} } -> True
     _                                                 -> False
 
@@ -171,6 +186,55 @@ scriptTxInputs = (\x -> folding x) . filter $ \case
 --     Just (ConsumeScriptAddress v r d) -> Just (pv, v, r, d)
 --     _                                   -> Nothing
 -- inScripts _ _ = Nothing
+
+newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+instance C.ToCBOR TxOut where
+  toCBOR (TxOut txout) = C.toCBOR $ C.toShelleyTxOut C.ShelleyBasedEraBabbage txout
+
+instance C.FromCBOR TxOut where
+  fromCBOR = do
+    txout <- C.fromCBOR
+    pure $ TxOut $ C.fromShelleyTxOut C.ShelleyBasedEraBabbage txout
+
+instance Serialise TxOut where
+  encode = C.toCBOR
+  decode = C.fromCBOR
+
+instance NFData TxOut where
+  rnf (TxOut tx) = seq tx ()
+
+instance OpenApi.ToSchema TxOut where
+    declareNamedSchema _ = do
+      addressSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy (C.AddressInEra C.BabbageEra))
+      valueSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Value)
+      bsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Datum)
+      pure $ OpenApi.NamedSchema (Just "TxOut") $ mempty
+        & OpenApi.type_ ?~ OpenApi.OpenApiObject
+        & OpenApi.properties .~
+          [ ("address", addressSchema)
+          , ("value", valueSchema)
+          , ("datum", bsSchema)
+          , ("referenceScript", bsSchema)
+          ]
+        & OpenApi.required .~ ["address","value"]
+
+
+instance Pretty TxOut where
+  pretty (TxOut (C.TxOut addr v d rs)) =
+    hang 2 $ vsep
+      ["-" <+> pretty (fromCardanoTxOutValue v) <+> "addressed to"
+      , pretty (fromCardanoAddressInEra addr)
+      , "with" <+> case fromCardanoTxOutDatumHash d of
+          Nothing -> "no datum"
+          Just dh -> "datum hash" <+> pretty dh
+      , "and with" <+> case rs of
+          C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
+            "reference script hash" <+> viaShow (C.hashScript s)
+          C.ReferenceScriptNone -> "no reference script"
+      ]
 
 -- | A Babbage-era transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -232,68 +296,68 @@ instance BA.ByteArrayAccess Tx where
     withByteArray = BA.withByteArray . Write.toStrictByteString . encode
 
 -- | The inputs of a transaction.
-inputs :: Lens' Tx [TxInput]
-inputs = lens g s where
+inputs :: L.Lens' Tx [TxInput]
+inputs = L.lens g s where
     g = txInputs
     s tx i = tx { txInputs = i }
 
 -- | The reference inputs of a transaction.
-referenceInputs :: Lens' Tx [TxInput]
-referenceInputs = lens g s where
+referenceInputs :: L.Lens' Tx [TxInput]
+referenceInputs = L.lens g s where
     g = txReferenceInputs
     s tx i = tx { txReferenceInputs = i }
 
 -- | The collateral inputs of a transaction for paying fees when validating the transaction fails.
-collateralInputs :: Lens' Tx [TxInput]
-collateralInputs = lens g s where
+collateralInputs :: L.Lens' Tx [TxInput]
+collateralInputs = L.lens g s where
     g = txCollateral
     s tx i = tx { txCollateral = i }
 
 -- | The outputs of a transaction.
-outputs :: Lens' Tx [TxOut]
-outputs = lens g s where
+outputs :: L.Lens' Tx [TxOut]
+outputs = L.lens g s where
     g = txOutputs
     s tx o = tx { txOutputs = o }
 
 -- | The validity range of a transaction.
-validRange :: Lens' Tx SlotRange
-validRange = lens g s where
+validRange :: L.Lens' Tx SlotRange
+validRange = L.lens g s where
     g = txValidRange
     s tx o = tx { txValidRange = o }
 
-signatures :: Lens' Tx (Map PubKey Signature)
-signatures = lens g s where
+signatures :: L.Lens' Tx (Map PubKey Signature)
+signatures = L.lens g s where
     g = txSignatures
     s tx sig = tx { txSignatures = sig }
 
-fee :: Lens' Tx Value
-fee = lens g s where
+fee :: L.Lens' Tx Value
+fee = L.lens g s where
     g = txFee
     s tx v = tx { txFee = v }
 
-mint :: Lens' Tx Value
-mint = lens g s where
+mint :: L.Lens' Tx Value
+mint = L.lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: Lens' Tx (Map MintingPolicyHash Redeemer)
-mintScripts = lens g s where
+mintScripts :: L.Lens' Tx (Map MintingPolicyHash Redeemer)
+mintScripts = L.lens g s where
     g = txMintingScripts
     s tx fs = tx { txMintingScripts = fs }
 
-scriptWitnesses :: Lens' Tx (Map ScriptHash (Versioned Script))
-scriptWitnesses = lens g s where
+scriptWitnesses :: L.Lens' Tx (Map ScriptHash (Versioned Script))
+scriptWitnesses = L.lens g s where
     g = txScripts
     s tx fs = tx { txScripts = fs }
 
-datumWitnesses :: Lens' Tx (Map DatumHash Datum)
-datumWitnesses = lens g s where
+datumWitnesses :: L.Lens' Tx (Map DatumHash Datum)
+datumWitnesses = L.lens g s where
     g = txData
     s tx dat = tx { txData = dat }
 
 -- | The inputs of a transaction.
-metadata :: Lens' Tx (Maybe BuiltinByteString)
-metadata = lens g s where
+metadata :: L.Lens' Tx (Maybe BuiltinByteString)
+metadata = L.lens g s where
     g = txMetadata
     s tx i = tx { txMetadata = i }
 
@@ -309,6 +373,20 @@ validValuesTx Tx{..}
   = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
     where
       nonNegative i = V.geq i mempty
+
+txOutValue :: TxOut -> Value
+txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
+  fromCardanoValue $ C.txOutValueToValue tov
+
+outValue :: L.Lens TxOut TxOut Value (C.TxOutValue C.BabbageEra)
+outValue = L.lens
+  txOutValue
+  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
+
+outValue' :: L.Lens' TxOut (C.TxOutValue C.BabbageEra)
+outValue' = L.lens
+  (\(TxOut (C.TxOut _aie tov _tod _rs)) -> tov)
+  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
 
 -- | A babbage era transaction without witnesses for its inputs.
 data TxStripped = TxStripped {
@@ -336,7 +414,45 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 
 txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
+txOutTxDatum (TxOutTx tx (TxOut (C.TxOut _aie _tov tod _rs))) =
+  case tod of
+    C.TxOutDatumNone ->
+      Nothing
+    C.TxOutDatumHash _era scriptDataHash ->
+      lookupDatum tx $ DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptDataHash)
+    C.TxOutDatumInline _era scriptData ->
+      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+    C.TxOutDatumInTx _era scriptData ->
+      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+
+-- | Get a hash from the stored TxOutDatum (either dirctly or by hashing the inlined datum)
+txOutDatumHash :: TxOut -> Maybe DatumHash
+txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
+  case tod of
+    C.TxOutDatumNone ->
+      Nothing
+    C.TxOutDatumHash _era scriptDataHash ->
+      Just $ DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptDataHash)
+    C.TxOutDatumInline _era scriptData ->
+      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+    C.TxOutDatumInTx _era scriptData ->
+      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+
+txOutPubKey :: TxOut -> Maybe PubKeyHash
+txOutPubKey (TxOut (C.TxOut aie _ _ _)) = toPubKeyHash $ fromCardanoAddressInEra aie
+
+txOutAddress :: TxOut -> V1.Address
+txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = fromCardanoAddressInEra aie
+
+outAddress :: L.Lens TxOut TxOut V1.Address (C.AddressInEra C.BabbageEra)
+outAddress = L.lens
+  txOutAddress
+  (\(TxOut (C.TxOut _ tov tod rs)) aie -> TxOut (C.TxOut aie tov tod rs))
+
+outDatumHash :: L.Lens TxOut TxOut (Maybe DatumHash) (C.TxOutDatum C.CtxTx C.BabbageEra)
+outDatumHash = L.lens
+  txOutDatumHash
+  (\(TxOut (C.TxOut aie tov _ rs)) tod -> TxOut (C.TxOut aie tov tod rs))
 
 lookupScript :: Map ScriptHash (Versioned Script) -> ScriptHash -> Maybe (Versioned Script)
 lookupScript txScripts hash  = Map.lookup hash txScripts
@@ -358,6 +474,12 @@ lookupMintingPolicy :: Map ScriptHash (Versioned Script) -> MintingPolicyHash ->
 lookupMintingPolicy txScripts = (fmap . fmap) MintingPolicy . lookupScript txScripts . toScriptHash
     where
         toScriptHash (MintingPolicyHash b) = ScriptHash b
+
+deriving instance OpenApi.ToSchema Tx
+deriving instance OpenApi.ToSchema TxInputType
+deriving instance OpenApi.ToSchema TxInput
+deriving instance OpenApi.ToSchema Withdrawal
+deriving instance OpenApi.ToSchema Certificate
 
 lookupStakeValidator :: Map ScriptHash (Versioned Script) -> StakeValidatorHash -> Maybe (Versioned StakeValidator)
 lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txScripts . toScriptHash

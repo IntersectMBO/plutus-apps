@@ -69,7 +69,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (.=), (<>=), (^?))
+import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.~), (<&>), (<>=), (?=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -77,7 +77,6 @@ import Control.Monad.State (MonadState (get, put), execStateT, gets)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (def)
 import Data.Foldable (traverse_)
-import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (Compose))
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -88,6 +87,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
+import Ledger (outValue)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -101,21 +101,22 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
-import Ledger.Params (Params)
-import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), TxOut (txOutAddress, txOutDatumHash, txOutValue),
-                  TxOutRef, Versioned (Versioned))
+import Ledger.Params (Params (pNetworkId))
+import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), TxOut (TxOut), TxOutRef, Versioned (Versioned),
+                  outDatumHash, txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
                              ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Typed
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
+import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash (MintingPolicyHash),
-                             POSIXTimeRange, Validator, ValidatorHash, Value, getMintingPolicy)
-import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), Script, ScriptHash (ScriptHash),
-                                 Validator (Validator, getValidator), ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, POSIXTimeRange, Validator (getValidator), Value,
+                             getMintingPolicy)
+import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                                 ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Tx qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
@@ -464,15 +465,18 @@ adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxO
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
 adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
-adjustTxOut params txOut =
-    -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    let txOutEstimate = txOut { txOutValue = txOutValue txOut <> Ada.toValue minAdaTxOut }
-     in fromPlutusTxOutUnsafe params txOutEstimate <&> \txOut' ->
-         let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
-             missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
-         in if missingLovelace > 0
-             then ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
-             else ([], txOut)
+adjustTxOut params txOut = do
+     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
+    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue minAdaTxOut
+    let txOutEstimate = txOut & outValue .~ withMinAdaValue
+        minAdaTxOut' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
+        missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
+    if missingLovelace > 0
+    then do
+      adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
+      pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
+    else pure ([], txOut)
+
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]
@@ -484,7 +488,6 @@ addMissingValueSpent
     => m ()
 addMissingValueSpent = do
     missing <- gets totalMissingValue
-
     if Value.isZero missing
         then pure ()
         else do
@@ -494,19 +497,23 @@ addMissingValueSpent = do
             -- Step 4 of the process described in [Balance of value spent]
             pkh <- asks slOwnPaymentPubKeyHash >>= maybe (throwError OwnPubKeyMissing) pure
             skh <- asks slOwnStakePubKeyHash
-            unbalancedTx . tx . Tx.outputs %= (Tx.TxOut { txOutAddress=pubKeyHashAddress pkh skh
-                                                        , txOutValue=missing
-                                                        , txOutDatumHash=Nothing
-                                                        } :)
+            let pv1TxOut = PV1.TxOut { PV1.txOutAddress=pubKeyHashAddress pkh skh
+                                     , PV1.txOutValue=missing
+                                     , PV1.txOutDatumHash=Nothing
+                                     }
+            txOut <- toCardanoTxOutWithHashedDatum pv1TxOut
+            unbalancedTx . tx . Tx.outputs %= (txOut:)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
        , MonadState ConstraintProcessingState m
+       , MonadError MkTxError m
        )
     => m ()
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
-    unbalancedTx . utxoIndex <>= fmap Tx.toTxOut slTxOutputs
+    slUtxos <- traverse (toCardanoTxOutWithHashedDatum . Tx.toTxOut) slTxOutputs
+    unbalancedTx . utxoIndex <>= slUtxos
 
 -- | Add a typed input, checking the type of the output it spends. Return the value
 --   of the spent output.
@@ -533,7 +540,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 pure (Tx.toTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
-        vl   = Tx.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
+        vl   = PV1.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
     valueSpentInputs <>= provided vl
     case Typed.tyTxInTxIn txIn of
         -- this is what makeTypedScriptTxIn makes
@@ -559,6 +566,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
 
 data MkTxError =
     TypeCheckFailed Typed.ConnectionError
+    | TxOutCardanoError C.ToCardanoError
     | TxOutRefNotFound TxOutRef
     | TxOutRefWrongType TxOutRef
     | DatumNotFound DatumHash
@@ -576,6 +584,7 @@ data MkTxError =
 instance Pretty MkTxError where
     pretty = \case
         TypeCheckFailed e              -> "Type check failed:" <+> pretty e
+        TxOutCardanoError e            -> "Tx out cardano conversion error:" <+> pretty e
         TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
         TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
         DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found"
@@ -647,7 +656,7 @@ processConstraint
 processConstraint = \case
     MustIncludeDatum dv ->
         let theHash = P.datumHash dv in
-        unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
+        unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
     MustValidateIn timeRange ->
         unbalancedTx . validityTimeRange %= (timeRange /\)
     MustBeSignedBy pk ->
@@ -693,24 +702,30 @@ processConstraint = \case
         -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
-            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) .= Just dv
-        let hash = P.datumHash <$> mdv
-        unbalancedTx . tx . Tx.outputs %= (Tx.TxOut{ txOutAddress=pubKeyHashAddress pk skhM
-                                                   , txOutValue=vl
-                                                   , txOutDatumHash=hash
-                                                   } :)
+            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) ?= dv
+        let pv1TxOut = PV1.TxOut { PV1.txOutAddress=pubKeyHashAddress pk skhM
+                                 , PV1.txOutValue=vl
+                                 , PV1.txOutDatumHash=Nothing
+                                 }
+        let txInDatum = C.toCardanoTxOutDatumInTx mdv
+        txOut <- toCardanoTxOutWithHashedDatum pv1TxOut <&> outDatumHash .~ txInDatum
+        unbalancedTx . tx . Tx.outputs %= (txOut :)
         valueSpentOutputs <>= provided vl
     MustPayToOtherScript vlh svhM dv _refScript vl -> do
         -- TODO: implement adding reference script
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = P.datumHash dv
-        unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
-        unbalancedTx . tx . Tx.outputs %= (scriptAddressTxOut addr vl dv :)
+            pv1script = scriptAddressTxOut addr vl dv
+        unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
+
+        let txInDatum = C.toCardanoTxOutDatumInTx (Just dv)
+        txScript <- toCardanoTxOutWithHashedDatum pv1script <&> outDatumHash .~ txInDatum
+        unbalancedTx . tx . Tx.outputs %= (txScript :)
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
         unless (P.datumHash dv == dvh)
             (throwError $ DatumWrongHash dvh dv)
-        unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just dv
+        unbalancedTx . tx . Tx.datumWitnesses . at dvh ?= dv
     MustSatisfyAnyOf xs -> do
         s <- get
         let tryNext [] =
@@ -766,3 +781,13 @@ resolveScriptTxOut
 
     pure $ Just ((vh, validator), (dh, dataValue), _ciTxOutValue)
 resolveScriptTxOut _ = pure Nothing
+
+toCardanoTxOutWithHashedDatum
+  :: ( MonadState ConstraintProcessingState m, MonadError MkTxError m)
+  => PV1.TxOut -> m TxOut
+toCardanoTxOutWithHashedDatum txout = do
+  networkId <- gets $ pNetworkId . cpsParams
+  let cardanoTxOut = TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash txout
+  case cardanoTxOut of
+    Left err     -> throwError $ TxOutCardanoError err
+    Right cTxOut -> pure cTxOut

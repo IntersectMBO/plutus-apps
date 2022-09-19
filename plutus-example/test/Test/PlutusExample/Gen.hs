@@ -16,6 +16,7 @@ import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
 import Gen.Cardano.Api.Typed
 import Ledger qualified as Plutus
+import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusExample.PlutusVersion1.RedeemerContextScripts
 import PlutusExample.ScriptContextChecker
 
@@ -23,7 +24,7 @@ import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 
-genPlutusTxOut :: Gen Plutus.TxOut
+genPlutusTxOut :: Gen PV1.TxOut
 genPlutusTxOut = do
   alonzoTxOut <-
     TxOut <$> (shelleyAddressInEra <$> genAddressShelley)

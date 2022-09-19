@@ -31,7 +31,6 @@ module Ledger.Validation(
   fromPlutusTx,
   fromPlutusIndex,
   fromPlutusTxOut,
-  fromPlutusTxOutUnsafe,
   fromPlutusTxOutRef,
   -- * Lenses
   ledgerEnv,
@@ -42,8 +41,7 @@ module Ledger.Validation(
   emulatorGlobals,
   ) where
 
-import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraBabbage), makeSignedTransaction, toShelleyTxId,
-                            toShelleyTxOut)
+import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraBabbage), makeSignedTransaction, toShelleyTxId)
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
@@ -89,7 +87,7 @@ import Ledger.Params (EmulatorEra, emulatorGlobals, emulatorPParams)
 import Ledger.Params qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Tx.Internal qualified as P
-import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Api qualified as V1 hiding (TxOut (..))
 import Plutus.V1.Ledger.Scripts qualified as P
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.ErrorCodes (checkHasFailedError)
@@ -278,13 +276,13 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
     -- Failing transactions throw a checkHasFailedError error, but we don't want to deal with those yet.
     -- We might be able to do that in the future.
     -- But for now just return a zero execution cost so it will run later where we do handle failing transactions.
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (V1.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (V1.CekError ce) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
-    toCardanoLedgerError (C.Ledger.ValidationFailedV2 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
+    toCardanoLedgerError (C.Ledger.ValidationFailedV2 (V1.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
       Right $ ExUnits 0 0
-    toCardanoLedgerError (C.Ledger.ValidationFailedV2 (P.CekError ce) logs) =
+    toCardanoLedgerError (C.Ledger.ValidationFailedV2 (V1.CekError ce) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
     toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
 
@@ -331,23 +329,18 @@ addSignature privKey (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isV
       C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
       _                             -> Set.empty
 
-fromPlutusIndex :: P.Params -> P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
-fromPlutusIndex params (P.UtxoIndex m) = first Right $
-  UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (fromPlutusTxOutUnsafe params)) (Map.toList m)
+fromPlutusIndex :: P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
+fromPlutusIndex (P.UtxoIndex m) =
+  first Right $ UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (pure . fromPlutusTxOut)) (Map.toList m)
 
 fromPlutusTxOutRef :: P.TxOutRef -> Either P.ToCardanoError (TxIn StandardCrypto)
 fromPlutusTxOutRef (P.TxOutRef txId i) = TxIn <$> fromPlutusTxId txId <*> pure (mkTxIxPartial i)
 
-fromPlutusTxId :: P.TxId -> Either P.ToCardanoError (TxId StandardCrypto)
+fromPlutusTxId :: V1.TxId -> Either P.ToCardanoError (TxId StandardCrypto)
 fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 
-fromPlutusTxOut :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
-fromPlutusTxOut params = fmap (toShelleyTxOut ShelleyBasedEraBabbage) . P.toCardanoTxOut (P.pNetworkId params) P.toCardanoTxOutDatumHash
-
-
--- | Like 'fromPlutusTxOut', but ignores the check for zeros in txOuts.
-fromPlutusTxOutUnsafe :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
-fromPlutusTxOutUnsafe params = fmap (toShelleyTxOut ShelleyBasedEraBabbage) . P.toCardanoTxOutUnsafe (P.pNetworkId params) P.toCardanoTxOutDatumHash
+fromPlutusTxOut :: P.TxOut -> TxOut EmulatorEra
+fromPlutusTxOut = C.Api.toShelleyTxOut ShelleyBasedEraBabbage . C.Api.toCtxUTxOTxOut . P.getTxOut
 
 fromPaymentPrivateKey :: Crypto.XPrv -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.BabbageEra
 fromPaymentPrivateKey xprv txBody

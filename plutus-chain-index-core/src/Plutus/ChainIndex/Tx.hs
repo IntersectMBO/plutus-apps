@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE ViewPatterns        #-}
 {-| The chain index' version of a transaction
 -}
 module Plutus.ChainIndex.Tx(
@@ -39,21 +38,19 @@ module Plutus.ChainIndex.Tx(
     , _ValidTx
     ) where
 
-import Cardano.Api (NetworkId)
 import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Tuple (swap)
 import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx (SomeTx), Tx (..),
-               TxInput (txInputType), TxOutRef (..), onCardanoTx, txCertifyingRedeemers, txId, txMintingRedeemers,
-               txRewardingRedeemers)
+               TxInput (txInputType), TxOut (getTxOut), TxOutRef (..), onCardanoTx, txCertifyingRedeemers, txId,
+               txMintingRedeemers, txRewardingRedeemers)
 import Ledger.Address (Address)
 import Ledger.Scripts (Redeemer, RedeemerHash)
 import Ledger.Tx (TxInputType (TxConsumeScriptAddress), fillTxInputWitnesses)
 import Plutus.ChainIndex.Types
-import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity, toCardanoTxOut,
-                                   toCardanoTxOutDatumHash)
+import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
 import Plutus.Script.Utils.Scripts (redeemerHash)
 import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
@@ -82,17 +79,15 @@ txOutRefMapForAddr addr tx =
 -- | Convert a 'OnChainTx' to a 'ChainIndexTx'. An invalid 'OnChainTx' will not
 -- produce any 'ChainIndexTx' outputs and the collateral inputs of the
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
-fromOnChainTx :: NetworkId -> OnChainTx -> ChainIndexTx
-fromOnChainTx networkId = \case
+fromOnChainTx :: OnChainTx -> ChainIndexTx
+fromOnChainTx = \case
     Valid ctx ->
         onCardanoTx
             (\case tx@Tx{txInputs, txOutputs, txValidRange, txData, txScripts} ->
                     ChainIndexTx
                         { _citxTxId = txId tx
                         , _citxInputs = map (fillTxInputWitnesses tx) txInputs
-                        , _citxOutputs = case traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) txOutputs of
-                            Right txs -> either (const InvalidTx) ValidTx $ traverse fromCardanoTxOut txs
-                            Left _    -> InvalidTx
+                        , _citxOutputs = ValidTx $ map (fromCardanoTxOut . getTxOut) txOutputs
                         , _citxValidRange = txValidRange
                         , _citxData = txData
                         , _citxRedeemers = calculateRedeemerPointers tx
@@ -127,8 +122,7 @@ txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
 -- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
 -- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
 fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
-fromOnChainCardanoTx validity (SomeTx tx era) =
-    either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
+fromOnChainCardanoTx validity (SomeTx tx era) = fromCardanoTx era $ setValidity validity tx
 
 -- TODO: the index of the txin is probably incorrect as we take it from the set.
 -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and

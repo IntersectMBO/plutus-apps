@@ -1,5 +1,5 @@
 ==== Slot #0, Tx #0 ====
-TxId:       161afa70667cfca2e083d7b65ba860cd3be1c9b2717bd9c80664d4907988e24f
+TxId:       379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f
 Fee:        -
 Mint:       Ada:      Lovelace:  1000000000
 Signatures  -
@@ -551,18 +551,18 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
-TxId:       a0ee24deee2076d376899e943fa5ce583c3ab5721038681d15a78bb371daa57a
+TxId:       5568796b424a4afb1246eaa957edf9f4ae89ac2f35b11ee74ea5d6f2f58a9563
 Fee:        Ada:      Lovelace:  184333
 Mint:       -
 Signatures  PubKey: 8d9de88fbf445b7f6c3875a14daba94caee2ffcb...
-              Signature: 58402c3c6c479e8799881dfd91ba8ffadec21612...
+              Signature: 5840aae5611913f8c960b9a98d394d80226068af...
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     161afa70667cfca2e083d7b65ba860cd3be1c9b2717bd9c80664d4907988e24f
+    Tx:     379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f
     Output #50
 
 
@@ -571,7 +571,7 @@ Inputs:
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     161afa70667cfca2e083d7b65ba860cd3be1c9b2717bd9c80664d4907988e24f
+    Tx:     379d8ae9af82de10d7d35ded1bdd533276afa32b7b6049e7c13f6ebaf63c3c7f
     Output #51
 
 

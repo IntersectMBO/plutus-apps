@@ -32,9 +32,9 @@ import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), EmulatorEra, OnChainTx (..), Params (..), ScriptValidationEvent,
-               Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxId, TxIn (txInRef), TxOut (txOutValue), Value,
-               eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
-               mergeCardanoTxWith)
+               Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxId, TxIn (txInRef), Value, eitherTx,
+               getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
+               mergeCardanoTxWith, txOutValue)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -174,7 +174,7 @@ validateBlock params slot@(Slot s) idx txns =
         nextSlot = Slot (s + 1)
         events   = (uncurry3 (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
 
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
 
     in ValidatedBlock block events rest idx'
 

@@ -54,7 +54,7 @@ module Ledger.Tx.Constraints.OffChain(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), (<>=))
-import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError)
+import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
@@ -198,7 +198,7 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} 
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
             -- P.addMissingValueSpent
-            P.updateUtxoIndex
+            mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
         setValidityRange ranges
 
 -- | Reinject the validityRange inside the unbalanced Tx.

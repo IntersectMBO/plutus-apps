@@ -178,7 +178,7 @@ runInstance networkId contract event = do
                 handleObservableStateRequest sender
                 mkAgentSysCall Normal WaitForMessage >>= runInstance networkId contract
             Just (NewSlot block _) -> do
-                processNewTransactions @w @s @e networkId (join block)
+                processNewTransactions @w @s @e (join block)
                 runInstance networkId contract Nothing
             _ -> waitForNextMessage True >>= runInstance networkId contract
 
@@ -287,13 +287,12 @@ processNewTransactions ::
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
-    => NetworkId
-    -> [OnChainTx]
+    => [OnChainTx]
     -> Eff effs ()
-processNewTransactions networkId txns = do
+processNewTransactions txns = do
     updateTxStatus @w @s @e txns
 
-    let ciTxns = fmap (fromOnChainTx networkId) txns
+    let ciTxns = fmap fromOnChainTx txns
     updateTxOutStatus @w @s @e ciTxns
 
     let blck = indexBlock ciTxns

@@ -6,7 +6,7 @@
 {-# LANGUAGE NamedFieldPuns           #-}
 -- Code temporarily copied over from cardano-api,
 -- until https://github.com/input-output-hk/cardano-node/pull/2936 or something similar gets merged.
-module Ledger.Tx.CardanoAPITemp (makeTransactionBody') where
+module Ledger.Tx.CardanoAPITemp (makeTransactionBody', toShelleyTxOut) where
 
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
@@ -140,7 +140,7 @@ makeTransactionBody'
 
     scripts :: [Ledger.Script StandardBabbage]
     scripts = Maybe.catMaybes
-      [ toShelleyScript <$> (scriptWitnessScript scriptwitness)
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -218,6 +218,8 @@ toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
 toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
+-- | Copied from Cardano API to handle all TxOut contexts, we can
+-- propose a PR to cardano-node to propagate this version and remove the code duplication
 toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)

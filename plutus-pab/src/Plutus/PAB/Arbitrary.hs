@@ -12,15 +12,18 @@ import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
+import Data.Either.Combinators (rightToMaybe)
+import Ledger (TxOut (TxOut))
 import Ledger qualified
 import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
 import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Params (testnet)
 import Ledger.Slot (Slot)
-import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef,
+import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)
-import Ledger.Tx.CardanoAPI (ToCardanoError)
+import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoTxOut, toCardanoTxOutDatumHash)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
@@ -30,7 +33,7 @@ import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
-import Test.QuickCheck (Gen, Positive (..), oneof, sized)
+import Test.QuickCheck (Gen, Positive (..), oneof, sized, suchThatMap)
 import Test.QuickCheck.Arbitrary.Generic (Arbitrary, arbitrary, genericArbitrary, genericShrink, shrink)
 import Test.QuickCheck.Instances ()
 import Wallet (WalletAPIError)
@@ -112,8 +115,8 @@ instance Arbitrary TxInput where
     shrink = genericShrink
 
 instance Arbitrary TxOut where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
+    arbitrary = fmap (fmap TxOut . toCardanoTxOut testnet toCardanoTxOutDatumHash) genericArbitrary `suchThatMap` rightToMaybe
+    shrink = pure
 
 instance Arbitrary TxOutRef where
     arbitrary = genericArbitrary

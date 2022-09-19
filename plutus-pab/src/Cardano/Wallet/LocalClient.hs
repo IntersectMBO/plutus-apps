@@ -114,11 +114,8 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
              fromApiAddress :: Text -> Maybe Address
              fromApiAddress addrBech32 = do
                  case Cardano.Api.deserialiseFromBech32 (Cardano.Api.AsAddress Cardano.Api.AsShelleyAddr) addrBech32 of
-                   Left _ -> Nothing
-                   Right addrCApi -> do
-                       case fromCardanoAddress addrCApi of
-                         Left _     -> Nothing
-                         Right addr -> Just addr
+                   Left _         -> Nothing
+                   Right addrCApi -> Just $ fromCardanoAddress addrCApi
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do

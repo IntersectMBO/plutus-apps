@@ -271,7 +271,7 @@ close us CloseParams{..} = do
         tx       = Constraints.mustPayToTheScript usDat usVal          <>
                    Constraints.mustMintValue (negate $ psVal <> lVal) <>
                    Constraints.mustSpendScriptOutput oref1 redeemer    <>
-                   Constraints.mustSpendScriptOutput oref2 redeemer    <>
+                   Constraints.mustSpendScriptOutput oref2 redeemer <>
                    Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
 
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed

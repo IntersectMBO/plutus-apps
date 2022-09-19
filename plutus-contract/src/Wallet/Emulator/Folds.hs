@@ -69,7 +69,7 @@ import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (CardanoTx, TxOut (txOutValue), getCardanoTxFee)
+import Ledger.Tx (CardanoTx, getCardanoTxFee, txOutValue)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)

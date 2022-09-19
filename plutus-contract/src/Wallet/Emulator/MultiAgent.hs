@@ -34,10 +34,12 @@ import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
+import Cardano.Api (NetworkId)
 import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
@@ -288,13 +290,15 @@ we create 10 Ada-only outputs per wallet here.
 
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
-emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
-emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
-    tx = Tx
+emulatorStateInitialDist :: NetworkId -> Map PaymentPubKeyHash Value -> Either ToCardanoError EmulatorState
+emulatorStateInitialDist networkId mp = do
+    outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) $ Map.toList mp >>= mkOutputs
+    pure $ emulatorStatePool $ pure $ EmulatorTx $
+         Tx
             { txInputs = mempty
             , txReferenceInputs = mempty
             , txCollateral = mempty
-            , txOutputs = Map.toList mp >>= mkOutputs
+            , txOutputs = TxOut <$> outs
             , txMint = foldMap snd $ Map.toList mp
             , txFee = mempty
             , txValidRange = WAPI.defaultSlotRange
@@ -306,15 +310,16 @@ emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
             , txData = mempty
             , txMetadata = mempty
             }
-    -- See [Creating wallets with multiple outputs]
-    mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
-    splitInto10 vl = replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
-        where
-            ada = if Value.isAdaOnlyValue vl then Ada.fromValue vl else Ada.fromValue vl - minAdaTxOut
-            -- Make sure we don't make the outputs too small
-            count = min 10 $ ada `div` minAdaTxOut
-            remainder = [ vl <> Ada.toValue (-ada) | not (Value.isAdaOnlyValue vl) ]
-    mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
+    where
+        -- See [Creating wallets with multiple outputs]
+        mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
+        splitInto10 vl = replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
+            where
+                ada = if Value.isAdaOnlyValue vl then Ada.fromValue vl else Ada.fromValue vl - minAdaTxOut
+                -- Make sure we don't make the outputs too small
+                count = min 10 $ ada `div` minAdaTxOut
+                remainder = [ vl <> Ada.toValue (-ada) | not (Value.isAdaOnlyValue vl) ]
+        mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =
     '[ State EmulatorState

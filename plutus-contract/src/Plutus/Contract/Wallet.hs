@@ -261,7 +261,7 @@ export params utx =
     let utxFinal = finalize (P.pSlotConfig params) utx
         requiredSigners = Set.toList (unBalancedTxRequiredSignatories utxFinal)
         fromCardanoTx ctx = do
-            utxo <- fromPlutusIndex params $ P.UtxoIndex (unBalancedTxUtxoIndex utxFinal)
+            utxo <- fromPlutusIndex $ P.UtxoIndex (unBalancedTxUtxoIndex utxFinal)
             makeTransactionBody params utxo ctx
      in ExportTx
         <$> fmap (C.makeSignedTransaction [])
@@ -282,19 +282,19 @@ finalize slotConfig utx@UnbalancedEmulatorTx{unBalancedTxValidityTimeRange} =
     .~ posixTimeRangeToContainedSlotRange slotConfig unBalancedTxValidityTimeRange
 finalize _ utx@UnbalancedCardanoTx{} = utx
 
-mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
+mkInputs :: C.NetworkId -> Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
 
-toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> Plutus.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
-toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} Plutus.TxOut{Plutus.txOutAddress, Plutus.txOutValue, Plutus.txOutDatumHash} = do
-    cardanoValue <- CardanoAPI.toCardanoValue txOutValue
+toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> P.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
+toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = do
+    cardanoValue <- CardanoAPI.toCardanoValue (P.txOutValue txOut)
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId
         <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> CardanoAPI.toCardanoAddressInEra networkId txOutAddress
+        <*> CardanoAPI.toCardanoAddressInEra networkId (P.txOutAddress txOut)
         <*> pure (C.selectLovelace cardanoValue)
-        <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
+        <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> P.txOutDatumHash txOut)
         <*> pure otherQuantities
 
 -- TODO: Here there's hidden error of script DCert missing its redeemer - this just counts as no DCert. Don't know if bad.

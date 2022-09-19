@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
@@ -52,7 +53,7 @@ import Streaming (Stream)
 import Streaming qualified as S
 import Streaming.Prelude (Of)
 import Streaming.Prelude qualified as S
-import Wallet.API (WalletAPIError)
+import Wallet.API (Params (pNetworkId), WalletAPIError)
 import Wallet.Emulator (EmulatorEvent, EmulatorEvent')
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
@@ -60,7 +61,6 @@ import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTim
                                    MultiAgentEffect, chainEvent, eteEvent)
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
-import Ledger.Params (Params)
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 
@@ -159,9 +159,13 @@ instance Default EmulatorConfig where
           }
 
 initialState :: EmulatorConfig -> EM.EmulatorState
-initialState EmulatorConfig{_initialChainState} =
-    either
-        (EM.emulatorStateInitialDist . Map.mapKeys EM.mockWalletPaymentPubKeyHash)
+initialState EmulatorConfig{..} = let
+    networkId = pNetworkId _params
+    in either
+        (either
+          (error . ("Cannot build the initial state: " <>) . show)
+          id
+          . EM.emulatorStateInitialDist networkId . Map.mapKeys EM.mockWalletPaymentPubKeyHash)
         EM.emulatorStatePool
         _initialChainState
 
