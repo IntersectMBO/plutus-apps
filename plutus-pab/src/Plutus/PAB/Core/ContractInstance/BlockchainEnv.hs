@@ -218,8 +218,6 @@ processBlock :: forall era. C.IsCardanoEra era
 processBlock instancesState header env@BlockchainEnv{beTxChanges} transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
       tip = fromCardanoBlockHeader header
-      -- We ignore cardano transactions that we couldn't convert to
-      -- our 'ChainIndexTx'.
       ciTxs = fromCardanoTx era <$> transactions
 
   stmResult <- STM.atomically $ do

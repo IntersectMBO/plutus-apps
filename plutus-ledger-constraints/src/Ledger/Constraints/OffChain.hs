@@ -69,7 +69,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.=), (.~), (<&>), (<>=), (?=), (^?))
+import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.~), (<&>), (<>=), (?=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -462,6 +462,7 @@ adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxO
 -- and return the adjustment (if any) and the updated TxOut.
 adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
 adjustTxOut params txOut = do
+     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
     withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue minAdaTxOut
     let txOutEstimate = txOut & outValue .~ withMinAdaValue
         minAdaTxOut' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
@@ -483,8 +484,6 @@ addMissingValueSpent
     => m ()
 addMissingValueSpent = do
     missing <- gets totalMissingValue
-    networkId <- gets $ pNetworkId . cpsParams
-
     if Value.isZero missing
         then pure ()
         else do
@@ -498,9 +497,8 @@ addMissingValueSpent = do
                                      , PV1.txOutValue=missing
                                      , PV1.txOutDatumHash=Nothing
                                      }
-            case C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash pv1TxOut of
-              Left _      -> throwError OwnPubKeyMissing
-              Right txOut -> unbalancedTx . tx . Tx.outputs %= (TxOut txOut:)
+            txOut <- toCardanoTxOutWithHashedDatum pv1TxOut
+            unbalancedTx . tx . Tx.outputs %= (txOut:)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
@@ -510,10 +508,8 @@ updateUtxoIndex
     => m ()
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
-    networkId <- gets $ pNetworkId . cpsParams
-    case traverse (C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash . Tx.toTxOut) slTxOutputs of
-        Left err      -> throwError $ TxOutCardanoError err
-        Right slUtxos -> unbalancedTx . utxoIndex <>= fmap TxOut slUtxos
+    slUtxos <- traverse (toCardanoTxOutWithHashedDatum . Tx.toTxOut) slTxOutputs
+    unbalancedTx . utxoIndex <>= slUtxos
 
 -- | Add a typed input, checking the type of the output it spends. Return the value
 --   of the spent output.
@@ -701,39 +697,31 @@ processConstraint = \case
     MustPayToPubKeyAddress pk skhM mdv _refScript vl -> do
         -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
-        networkId <- gets $ pNetworkId . cpsParams
         forM_ mdv $ \dv -> do
-            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) .= Just dv
+            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) ?= dv
         let pv1TxOut = PV1.TxOut { PV1.txOutAddress=pubKeyHashAddress pk skhM
                                  , PV1.txOutValue=vl
                                  , PV1.txOutDatumHash=Nothing
                                  }
         let txInDatum = C.toCardanoTxOutDatumInTx mdv
-        let cardanoTxOut =
-              TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash pv1TxOut <&> outDatumHash .~ txInDatum
-        case cardanoTxOut of
-          Left err    -> throwError $ TxOutCardanoError err
-          Right txOut -> unbalancedTx . tx . Tx.outputs %= (txOut :)
+        txOut <- toCardanoTxOutWithHashedDatum pv1TxOut <&> outDatumHash .~ txInDatum
+        unbalancedTx . tx . Tx.outputs %= (txOut :)
         valueSpentOutputs <>= provided vl
     MustPayToOtherScript vlh svhM dv _refScript vl -> do
         -- TODO: implement adding reference script
-        networkId <- gets $ pNetworkId . cpsParams
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = P.datumHash dv
             pv1script = scriptAddressTxOut addr vl dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
 
         let txInDatum = C.toCardanoTxOutDatumInTx (Just dv)
-        let cardanoTxOut =
-              TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash pv1script <&> outDatumHash .~ txInDatum
-        case cardanoTxOut of
-          Left err       -> throwError $ TxOutCardanoError err
-          Right txScript -> unbalancedTx . tx . Tx.outputs %= (txScript :)
+        txScript <- toCardanoTxOutWithHashedDatum pv1script <&> outDatumHash .~ txInDatum
+        unbalancedTx . tx . Tx.outputs %= (txScript :)
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
         unless (P.datumHash dv == dvh)
             (throwError $ DatumWrongHash dvh dv)
-        unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just dv
+        unbalancedTx . tx . Tx.datumWitnesses . at dvh ?= dv
     MustSatisfyAnyOf xs -> do
         s <- get
         let tryNext [] =
@@ -789,3 +777,13 @@ resolveScriptTxOut
 
     pure $ Just ((vh, validator), (dh, dataValue), _ciTxOutValue)
 resolveScriptTxOut _ = pure Nothing
+
+toCardanoTxOutWithHashedDatum
+  :: ( MonadState ConstraintProcessingState m, MonadError MkTxError m)
+  => PV1.TxOut -> m TxOut
+toCardanoTxOutWithHashedDatum txout = do
+  networkId <- gets $ pNetworkId . cpsParams
+  let cardanoTxOut = TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash txout
+  case cardanoTxOut of
+    Left err     -> throwError $ TxOutCardanoError err
+    Right cTxOut -> pure cTxOut
