@@ -97,9 +97,7 @@ executable marconi
   --------------------
   build-depends:
     , marconi
-    , plutus-ledger
     , plutus-streaming
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -107,7 +105,6 @@ executable marconi
   build-depends:
     , cardano-api
     , iohk-monitoring
-    , plutus-ledger-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -115,11 +112,8 @@ executable marconi
   build-depends:
     , base                  >=4.9 && <5
     , bytestring
-    , containers
-    , lens
     , optparse-applicative
-    , stm
-    , streaming
+    , prettyprinter
 
 test-suite marconi-test
   import:         lang
@@ -150,19 +144,14 @@ test-suite marconi-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
-    , base                  >=4.9 && <5
+    , base             >=4.9 && <5
     , bytestring
     , containers
     , directory
     , filepath
     , hedgehog
     , hedgehog-extras
-    , hinotify
     , prettyprinter
     , serialise
-    , sqlite-simple
     , tasty
     , tasty-hedgehog
-    , text
-    , unordered-containers

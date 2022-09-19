@@ -1,67 +1,43 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-missing-import-lists #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE DataKinds          #-}
+{-# OPTIONS_GHC -Wno-orphans    #-}
 
-module Integration where
+module Integration (tests) where
 
-import Codec.Serialise (deserialise, serialise)
+import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
 import Control.Exception (catch)
-import Control.Monad (void, when)
+import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson ((.:))
-import Data.Aeson qualified as Aeson
-import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Data.Char (toLower)
-import Data.Coerce (coerce)
-import Data.Function ((&))
 import Data.Functor (($>))
-import Data.HashMap.Lazy qualified as HM
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Data.Text (Text)
-import Data.Text qualified as TS
-import Data.Text.Encoding qualified as TS
-import Data.Text.Lazy qualified as TL
-import Data.Text.Lazy.Encoding qualified as TL
-import Database.SQLite.Simple qualified as Sql
 import GHC.Stack qualified as GHC
 import System.Directory qualified as IO
-import System.Environment qualified as IO
-import System.FilePath (takeDirectory, takeFileName, (</>))
-import System.INotify
+import System.FilePath ((</>))
 
-import Hedgehog (MonadTest, Property, assert, eval, (===))
+import Hedgehog (MonadTest, Property, assert, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
-import Hedgehog.Extras.Test.Concurrent qualified as H
-import Hedgehog.Extras.Test.File qualified as H
-import Hedgehog.Extras.Test.Process qualified as H
-import Hedgehog.Gen qualified as Gen
-import Hedgehog.Range qualified as Range
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
-import Cardano.Api (CardanoEra (AlonzoEra))
 import Cardano.Api qualified as C
-import Cardano.Api.Byron qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Gen.Cardano.Api.Typed qualified as CGen
-import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
+import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Plutus.V1.Ledger.Scripts qualified as Plutus
 import PlutusTx qualified
@@ -73,7 +49,7 @@ import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlF
 
 import Marconi.Index.ScriptTx qualified as M
 import Marconi.Indexers qualified as M
-import Marconi.Logging qualified
+import Marconi.Logging ()
 
 tests :: TestTree
 tests = testGroup "Integration"
