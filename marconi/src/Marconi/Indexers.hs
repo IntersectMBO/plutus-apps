@@ -157,7 +157,7 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
               Ix.rewind offset index
 
 scriptTxWorker :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()]) -> Worker
-scriptTxWorker onInsert Coordinator{_barrier} ch path = ScriptTx.open onInsert path (ScriptTx.Depth 0) >>= loop
+scriptTxWorker onInsert Coordinator{_barrier} ch path = ScriptTx.open onInsert path (ScriptTx.Depth 2160) >>= loop
   where
     loop :: ScriptTx.ScriptTxIndex -> IO ()
     loop index = do

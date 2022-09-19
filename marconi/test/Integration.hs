@@ -10,7 +10,7 @@
 
 module Integration where
 
-import Codec.Serialise (serialise)
+import Codec.Serialise (deserialise, serialise)
 import Control.Concurrent qualified as IO
 import Control.Exception (catch)
 import Control.Monad (void, when)
@@ -21,8 +21,11 @@ import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.Char (toLower)
+import Data.Coerce (coerce)
 import Data.Function ((&))
+import Data.Functor (($>))
 import Data.HashMap.Lazy qualified as HM
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -68,6 +71,7 @@ import Test.Base qualified as H
 import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
+import Marconi.Index.ScriptTx qualified as M
 import Marconi.Indexers qualified as M
 import Marconi.Logging qualified
 
@@ -116,36 +120,38 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
+  -- Start testnet
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
     TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
       (tempAbsBasePath' <> "/")
       Nothing
-
   assert $ tempAbsPath == (tempAbsBasePath' <> "/")
         && tempAbsPath == (tempBaseAbsPath <> "/")
-
   TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
   let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
   socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
   socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
+
+  -- Create a channel that is passed into the indexer, such that it
+  -- can write index updates to it and we can await for them (also
+  -- making us not need threadDelay)
+  indexedTxs <- liftIO IO.newChan
+  let writeScriptUpdate (M.ScriptTxUpdate txScripts _slotNo) = case txScripts of
+        (x : xs) -> IO.writeChan indexedTxs $ x :| xs
+        _        -> pure ()
 
   -- Start indexer
   let sqliteDb = tempAbsPath </> "script-tx.db"
   void $ liftIO $ IO.forkIO $ do
     let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
     c <- defaultConfigStdout
-
     withTrace c "marconi" $ \trace -> let
-
       chainSync = withChainSyncEventStream socketPathAbs networkId chainPoint
-      indexer = M.combineIndexers [(M.scriptTxWorker, sqliteDb)]
+      indexer = M.combineIndexers [(M.scriptTxWorker (\_ update -> writeScriptUpdate update $> []), sqliteDb)]
       handleException NoIntersectionFound = logError trace $ renderStrict $ layoutPretty defaultLayoutOptions $
-        "No intersection found when looking for the chain point" <+> pretty chainPoint <> "."
-        <+> "Please check the slot number and the block hash do belong to the chain"
-
-      in do
-      chainSync indexer `catch` handleException :: IO ()
+        "No intersection found for chain point" <+> pretty chainPoint <> "."
+      in chainSync indexer `catch` handleException :: IO ()
 
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
@@ -249,7 +255,7 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   -- Second transaction: spend the UTXO specified in the first transaction
 
-  HE.threadDelay 2_000_000 -- wait for the first transaction to be accepted
+  _ <- liftIO $ IO.readChan indexedTxs -- wait for the first transaction to be accepted
 
   tx2collateralTxIn <- headM . Map.keys . C.unUTxO =<< findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
 
@@ -309,16 +315,15 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   submitTx localNodeConnectInfo tx2
 
-  H.threadDelay 3_000_000
+  (M.TxCbor tx, M.ScriptAddress indexedScriptHash) <- liftIO $ let
+      loop = do
+        (txCbor', scriptAddresses') :| _ <- IO.readChan indexedTxs
+        case scriptAddresses' of
+          scriptAddress : _ -> return (txCbor', scriptAddress)
+          _                 -> loop
+    in loop
 
-  r :: String <- liftIO $ do
-    sqlConnection <- Sql.open sqliteDb
-    (Sql.Only r : _) <- Sql.query_ sqlConnection "SELECT hex(scriptAddress) FROM script_transactions"
-    pure r
-
-  let lhs = map toLower r
-      rhs = TL.unpack $ TL.decodeUtf8 $ BS.toLazyByteString $ BS.byteStringHex $ C.serialiseToRawBytes plutusScriptHash
-  lhs === rhs
+  plutusScriptHash === indexedScriptHash
 
 -- * Helpers
 
