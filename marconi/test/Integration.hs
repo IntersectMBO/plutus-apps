@@ -322,8 +322,10 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
           scriptAddress : _ -> return (txCbor', scriptAddress)
           _                 -> loop
     in loop
+  indexedTx2 :: C.Tx C.AlonzoEra <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) tx
 
   plutusScriptHash === indexedScriptHash
+  tx2 === indexedTx2
 
 -- * Helpers
 
