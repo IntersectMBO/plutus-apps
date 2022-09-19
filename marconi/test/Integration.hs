@@ -269,13 +269,9 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   submitTx localNodeConnectInfo tx2
 
-  (M.TxCbor tx, M.ScriptAddress indexedScriptHash) <- liftIO $ let
-      loop = do
-        (txCbor', scriptAddresses') :| _ <- IO.readChan indexedTxs
-        case scriptAddresses' of
-          scriptAddress : _ -> return (txCbor', scriptAddress)
-          _                 -> loop
-    in loop
+  (M.TxCbor tx, indexedScriptHashes) :| _ <- liftIO $ IO.readChan indexedTxs
+  M.ScriptAddress indexedScriptHash <- headM indexedScriptHashes
+
   indexedTx2 :: C.Tx C.AlonzoEra <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) tx
 
   plutusScriptHash === indexedScriptHash
