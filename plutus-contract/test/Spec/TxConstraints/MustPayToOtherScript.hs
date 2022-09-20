@@ -17,7 +17,8 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Constraints (plutusV1MintingPolicy, plutusV1OtherScript, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (mustMintValueWithRedeemer, mustPayToOtherScript,
-                                                                  mustPayToOtherScriptAddress)
+                                                                  mustPayToOtherScriptAddress,
+                                                                  mustSpendScriptOutputWithMatchingDatumAndValue)
 import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (someValidator, someValidatorHash)
@@ -42,8 +43,8 @@ tests =
     testGroup "MustPayToOtherScript"
         [ successfulUseOfMustPayToOtherScriptWithMintedToken
         , successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
-        --, successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present
-        --, successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance                     -- FAILING with WalletContractError InsufficientFunds, it seems to only be considering wallet for token, not the someValidatorHash script
+        --, successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
+        , successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance
         , successfulUseOfMustPayToOtherScriptWhenOnchainExpectsLowerAdaValue
         , contractErrorWhenAttemptingToSpendMoreThanAdaBalance
         , contractErrorWhenAttemptingToSpendMoreThanTokenBalance
@@ -114,7 +115,7 @@ successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnly
     (void $ trace contract)
 
 -- | Valid scenario using mustPayToOtherScript offchain constraint to include ada and token whilst onchain constraint checks for ada value only
--- FAILING when onchain checks for only ada value and token is present
+-- FAILING when onchain checks for only ada value and token is present -- PLT-885
 successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyAda :: TestTree
 successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyAda =
     let onChainConstraint = asRedeemer $ MustPayToOtherScript someValidatorHash someDatum adaValue
@@ -125,8 +126,7 @@ successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnly
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
--- | Valid scenario using offchain and onchain constraint mustPayToOtherScript with script's exact token balance
--- FAILING with WalletContractError InsufficientFunds, it seems to only be considering wallet for token, not the someValidatorHash script
+-- | Valid scenario using offchain and onchain constraint mustPayToOtherScript in combination with mustSpendScriptOutputWithMatchingDatumAndValue to spend script's exact token balance
 successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance :: TestTree
 successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance =
         let otherValidatorHash = alwaysSucceedValidatorHash
@@ -141,15 +141,16 @@ successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance =
 
                 scriptUtxos <- utxosAt $ Ledger.scriptHashAddress someValidatorHash
                 let lookups2 = Constraints.plutusV1OtherScript someValidator
-                             <> Constraints.unspentOutputs scriptUtxos
+                            <> Constraints.unspentOutputs scriptUtxos
                             <> Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
                     tx2 = Constraints.mustPayToOtherScript otherValidatorHash someDatum adaAndOtherTokenValue
+                       <> Constraints.mustSpendScriptOutputWithMatchingDatumAndValue someValidatorHash (\d -> d == someDatum) (\v -> v == adaAndOtherTokenValue) (asRedeemer ())
                        <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
                 ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
                 awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     in checkPredicateOptions options
-    "Successful use of offchain and onchain mustPayToOtherScript constraint with script's exact token balance"
+    "Successful use of offchain and onchain mustPayToOtherScript constraint in combination with mustSpendScriptOutputWithMatchingDatumAndValue to spend script's exact token balance"
     (assertValidatedTransactionCount 2)
     (void $ trace contract)
 
