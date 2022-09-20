@@ -514,7 +514,8 @@ updateUtxoIndex
     => m ()
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
-    slUtxos <- traverse (toCardanoTxOutWithHashedDatum . Tx.toTxOut) slTxOutputs
+    networkId <- gets $ pNetworkId . cpsParams
+    slUtxos <- traverse (throwTxOutCardanoError . Tx.toTxOut networkId) slTxOutputs
     unbalancedTx . utxoIndex <>= slUtxos
 
 -- | Add a typed input, checking the type of the output it spends. Return the value
@@ -539,7 +540,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
           (txOut, datum) <- maybe (throwError UnknownRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
                                 datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
-                                pure (Tx.toTxOut ciTxOut, datum)
+                                pure (Tx.toTxInfoTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let txIn = Typed.makeTypedScriptTxIn inst icRedeemer typedOutRef
         vl   = PV1.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
@@ -827,7 +828,8 @@ toCardanoTxOutWithHashedDatum
   => PV1.TxOut -> m TxOut
 toCardanoTxOutWithHashedDatum txout = do
   networkId <- gets $ pNetworkId . cpsParams
-  let cardanoTxOut = TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash txout
-  case cardanoTxOut of
-    Left err     -> throwError $ TxOutCardanoError err
-    Right cTxOut -> pure cTxOut
+  throwTxOutCardanoError $ TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash txout
+
+throwTxOutCardanoError :: MonadError MkTxError m => Either C.ToCardanoError a -> m a
+throwTxOutCardanoError (Left err) = throwError $ TxOutCardanoError err
+throwTxOutCardanoError (Right a)  = pure a

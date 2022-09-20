@@ -185,13 +185,12 @@ testScriptInputs lookups txc = property $ do
     let valM = do
             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxInputs)) tx
             pure Nothing
-        txOuts = traverse (toCardanoTxOut (pNetworkId params) toCardanoTxOutDatumHash)
-                   $ Ledger.toTxOut <$> Constraints.slTxOutputs lookups
+        txOuts = traverse (Ledger.toTxOut (pNetworkId params)) $ Constraints.slTxOutputs lookups
     case txOuts of
         Left err -> do
             Hedgehog.annotateShow err
             Hedgehog.failure
-        Right index -> case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (TxOut <$> index)) params) of
+        Right index -> case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex index) params) of
                             (Nothing, _) -> pure ()
                             (Just err, _) -> do
                                 Hedgehog.annotateShow err
