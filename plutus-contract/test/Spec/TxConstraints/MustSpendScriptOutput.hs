@@ -81,6 +81,7 @@ mustSpendScriptOutputsContract nScriptOutputs nScriptOutputsToSpend = do
         mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints i o]
         mustSpendScriptOutputs scriptTxOutRefs = fmap (\txOutRef -> Constraints.mustSpendScriptOutput txOutRef (asRedeemer scriptTxOutRefs)) scriptTxOutRefs
 
+-- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputWithMatchingDatumAndValue constraint to spend one of the outputs
 mustSpendScriptOutputWithMatchingDatumAndValueContract :: Integer -> (Integer, Integer) -> (Value.Value, Value.Value) -> Contract () Empty ContractError ()
 mustSpendScriptOutputWithMatchingDatumAndValueContract nScriptOutputs (offChainMatchingDatum, onChainMatchingDatum) (offChainMatchingValue, onChainMatchingValue)  = do
     let lookups1 = Constraints.typedValidatorLookups typedMustSpendScriptOutputWithMatchingDatumAndValueValidator

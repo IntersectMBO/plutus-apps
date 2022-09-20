@@ -20,17 +20,15 @@ import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContex
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustMintCurrency,
                                                                   mustMintCurrencyWithRedeemer, mustMintValue,
                                                                   mustMintValueWithRedeemer, mustPayToTheScript)
-import Ledger.Test (coinMintingPolicy)
+import Ledger.Test (coinMintingPolicy, coinMintingPolicyCurrencySymbol, coinMintingPolicyHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
+import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
-import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (MintingPolicyHash, Redeemer, ToData (toBuiltinData),
-                             UnsafeFromData (unsafeFromBuiltinData))
+import Plutus.V1.Ledger.Api (MintingPolicyHash, Redeemer)
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptError (EvaluationError),
                                  ScriptHash (ScriptHash), unitRedeemer)
 import Plutus.V1.Ledger.Value qualified as Value
@@ -46,6 +44,7 @@ tests =
         , mustMintCurrencySuccessfulMint
         , mustMintValueWithRedeemerSuccessfulMint
         , mustMintValueSuccessfulMint
+        -- TODO: test token burn -- PLT-882
         ]
 
 trace ::  Contract () Empty ContractError () -> Trace.EmulatorTrace ()
@@ -64,12 +63,6 @@ tknAmount = 21_000_000
 
 tknValue :: Ledger.Value
 tknValue = Value.singleton coinMintingPolicyCurrencySymbol tknName tknAmount
-
-coinMintingPolicyHash :: MintingPolicyHash
-coinMintingPolicyHash = PSU.V1.mintingPolicyHash coinMintingPolicy
-
-coinMintingPolicyCurrencySymbol :: CurrencySymbol
-coinMintingPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData coinMintingPolicyHash
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to mint tokens
 mustMintCurrencyWithRedeemerSuccessfulMint :: TestTree

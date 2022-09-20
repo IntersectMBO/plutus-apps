@@ -37,7 +37,9 @@ import PlutusTx.Prelude qualified as P
 tests :: TestTree
 tests =
     testGroup "MustPayToPubKeyAddress"
-        [ successfulUseOfMustPayToPubKeyWithExactTokenValue
+        [ successfulUseOfMustPayToPubKeyWithMintedTokenValue
+        , successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
+        , successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda
         , successfulUseOfMustPayToPubKeyExpectingALowerAdaValue
         , successfulUseOfMustPayToPubKeyAddress
         , successfulUseOfMustPayWithDatumToPubKey
@@ -83,9 +85,9 @@ trace contract = do
     void $ Trace.activateContractWallet w1 contract
     void $ Trace.waitNSlots 1
 
--- | Valid scenario using offchain and onchain constraint mustPayToPubKey with exact token value
-successfulUseOfMustPayToPubKeyWithExactTokenValue :: TestTree
-successfulUseOfMustPayToPubKeyWithExactTokenValue =
+-- | Valid scenario using offchain and onchain constraint mustPayToPubKey with exact token value being minted
+successfulUseOfMustPayToPubKeyWithMintedTokenValue :: TestTree
+successfulUseOfMustPayToPubKeyWithMintedTokenValue =
     let adaAndTokenValue = adaValue <> tknValue
         onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
         contract = do
@@ -97,6 +99,40 @@ successfulUseOfMustPayToPubKeyWithExactTokenValue =
 
     in checkPredicateOptions defaultCheckOptions
     "Successful use of offchain and onchain mustPayToPubKey constraint for native token value"
+    (assertValidatedTransactionCount 1)
+    (void $ trace contract)
+
+-- | Valid scenario using mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for token value only
+successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken :: TestTree
+successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken =
+    let adaAndTokenValue = adaValue <> tknValue
+        onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash tknValue
+        contract = do
+            let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
+                tx1 = Constraints.mustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
+                   <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    in checkPredicateOptions defaultCheckOptions
+    "Successful use of mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for token value only"
+    (assertValidatedTransactionCount 1)
+    (void $ trace contract)
+
+-- | Valid scenario using mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for ada value only
+successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda :: TestTree
+successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda =
+    let adaAndTokenValue = adaValue <> tknValue
+        onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash adaValue
+        contract = do
+            let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
+                tx1 = Constraints.mustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
+                   <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    in checkPredicateOptions defaultCheckOptions
+    "Successful use of mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for ada value only"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
@@ -116,7 +152,7 @@ successfulUseOfMustPayToPubKeyExpectingALowerAdaValue =
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
--- | Valid scenario using offchain and onchain constraint mustPayToPubKeyAddress with ada value
+-- | Valid scenario using offchain and onchain constraint mustPayToPubKeyAddress with ada-only value
 successfulUseOfMustPayToPubKeyAddress :: TestTree
 successfulUseOfMustPayToPubKeyAddress =
     let onChainConstraint = asRedeemer $ MustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
@@ -128,7 +164,7 @@ successfulUseOfMustPayToPubKeyAddress =
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicateOptions defaultCheckOptions
-    "Successful use of offchain and onchain mustPayToPubKeyAddress constraint for ada value"
+    "Successful use of offchain and onchain mustPayToPubKeyAddress constraint for ada-only value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
@@ -213,12 +249,10 @@ phase2FailureWhenUsingUnexpectedValue =
     (void $ trace contract)
 
 data UnitTest
-instance Scripts.ValidatorTypes UnitTest where
-    type instance DatumType UnitTest = P.BuiltinData
-    type instance RedeemerType UnitTest = P.BuiltinData
+instance Scripts.ValidatorTypes UnitTest
 
 {-# INLINEABLE mkMustPayToPubKeyAddressPolicy #-}
-mkMustPayToPubKeyAddressPolicy :: ConstraintType -> Ledger.ScriptContext -> Bool
+mkMustPayToPubKeyAddressPolicy :: ConstraintParams -> Ledger.ScriptContext -> Bool
 mkMustPayToPubKeyAddressPolicy t = case t of
     MustPayToPubKey ppkh v                        -> Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKey ppkh v)
     MustPayToPubKeyAddress ppkh spkh v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKeyAddress ppkh spkh v)
@@ -236,10 +270,10 @@ mustPayToPubKeyAddressPolicyHash = PSU.V1.mintingPolicyHash mustPayToPubKeyAddre
 mustPayToPubKeyAddressPolicyCurrencySymbol :: CurrencySymbol
 mustPayToPubKeyAddressPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToPubKeyAddressPolicyHash
 
-data ConstraintType = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
-                    | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value
-                    | MustPayWithDatumToPubKey Ledger.PaymentPubKeyHash Datum Value.Value
-                    | MustPayWithDatumToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Datum Value.Value
+data ConstraintParams = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
+                      | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value
+                      | MustPayWithDatumToPubKey Ledger.PaymentPubKeyHash Datum Value.Value
+                      | MustPayWithDatumToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Datum Value.Value
     deriving (Show)
 
-PlutusTx.unstableMakeIsData ''ConstraintType
+PlutusTx.unstableMakeIsData ''ConstraintParams
