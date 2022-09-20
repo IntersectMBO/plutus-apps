@@ -254,25 +254,13 @@ processConstraint = \case
                 Just (Tx.Versioned _ lang) -> do
                     txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                     unbalancedTx . tx . txInsReference <>= [ txIn ]
-                    pure $ case lang of
-                        Tx.PlutusV1 ->
-                            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 $
-                                C.PReferenceScript txIn Nothing
-                        Tx.PlutusV2 ->
-                            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 $
-                                C.PReferenceScript txIn Nothing
+                    throwLeft ToCardanoError $ C.toCardanoTxInReferenceWitnessHeader (Tx.Versioned ref lang)
                 _ -> throwError (LedgerMkTxError $ P.TxOutRefNoReferenceScript ref)
           Nothing -> do
             mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just (_, Tx.Versioned validator lang) ->
-                    throwLeft ToCardanoError $ case lang of
-                        Tx.PlutusV1 ->
-                            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 . C.PScript <$>
-                                C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) (getValidator validator)
-                        Tx.PlutusV2 ->
-                            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 . C.PScript <$>
-                                C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator)
+                Just (_, validator) ->
+                    throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
         mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of

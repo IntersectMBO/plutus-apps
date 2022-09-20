@@ -60,7 +60,7 @@ import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
 data TxInType =
-      ConsumeScriptAddress !(Versioned Validator) !Redeemer !Datum
+      ScriptAddress !(Versioned (Either Validator TxOutRef)) !Redeemer !Datum
       -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
@@ -80,7 +80,7 @@ instance Pretty TxIn where
     pretty TxIn{txInRef,txInType} =
                 let rest =
                         case txInType of
-                            Just (ConsumeScriptAddress _ redeemer _) ->
+                            Just (ScriptAddress _ redeemer _) ->
                                 pretty redeemer
                             _ -> mempty
                 in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
@@ -91,11 +91,12 @@ pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
 scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> TxIn
-scriptTxIn ref v r d = TxIn ref . Just $ ConsumeScriptAddress v r d
+scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (fmap Left v) r d
 
 -- | The type of a transaction input. Contains redeemer if consumes a script.
 data TxInputType =
-      TxConsumeScriptAddress !Redeemer !ValidatorHash !DatumHash -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
+      TxScriptAddress !Redeemer !(Either ValidatorHash (Versioned TxOutRef)) !DatumHash
+      -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
     | TxConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | TxConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
@@ -115,7 +116,7 @@ instance Pretty TxInput where
     pretty TxInput{txInputRef,txInputType} =
         let rest =
                 case txInputType of
-                    TxConsumeScriptAddress redeemer _ _ ->
+                    TxScriptAddress redeemer _ _ ->
                         pretty redeemer
                     _ -> mempty
         in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
@@ -156,8 +157,8 @@ instance Pretty Certificate where
 --   "pay to script" output.
 inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Datum)
 inScripts TxIn{ txInType = t } = case t of
-    Just (ConsumeScriptAddress v r d) -> Just (v, r, d)
-    _                                 -> Nothing
+    Just (ScriptAddress (Versioned (Left v) lang) r d) -> Just (Versioned v lang, r, d)
+    _                                                  -> Nothing
 
 -- | The 'TxOutRef' spent by a transaction input.
 inRef :: L.Lens' TxInput TxOutRef
@@ -176,8 +177,8 @@ pubKeyTxInputs = L.folding (filter (\TxInput{ txInputType = t } -> t == TxConsum
 -- | Filter to get only the script inputs.
 scriptTxInputs :: L.Fold [TxInput] TxInput
 scriptTxInputs = (\x -> L.folding x) . filter $ \case
-    TxInput{ txInputType = TxConsumeScriptAddress{} } -> True
-    _                                                 -> False
+    TxInput{ txInputType = TxScriptAddress{} } -> True
+    _                                          -> False
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
@@ -491,10 +492,13 @@ fillTxInputWitnesses :: Tx -> TxInput -> TxIn
 fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
     TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
     TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
-    TxConsumeScriptAddress redeemer vlh dh -> TxIn outRef $ do
+    TxScriptAddress redeemer (Left vlh) dh -> TxIn outRef $ do
         datum <- Map.lookup dh (txData tx)
         validator <- lookupValidator (txScripts tx) vlh
-        Just $ ConsumeScriptAddress validator redeemer datum
+        Just $ ScriptAddress (fmap Left validator) redeemer datum
+    TxScriptAddress redeemer (Right ref) dh -> TxIn outRef $ do
+        datum <- Map.lookup dh (txData tx)
+        Just $ ScriptAddress (fmap Right ref) redeemer datum
 
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
@@ -507,16 +511,23 @@ addMintingPolicy vvl rd tx@Tx{txMintingScripts, txScripts} = tx
     where
         mph@(MintingPolicyHash b) = mintingPolicyHash vvl
 
-
--- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
+-- | Add validator together with the redeemer and datum into txInputs, txData and txScripts accordingly.
 addScriptTxInput :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> Tx -> Tx
 addScriptTxInput outRef vl rd dt tx@Tx{txInputs, txScripts, txData} = tx
-    {txInputs = TxInput outRef (TxConsumeScriptAddress rd vlHash dtHash) : txInputs,
+    {txInputs = TxInput outRef (TxScriptAddress rd (Left vlHash) dtHash) : txInputs,
      txScripts = Map.insert (ScriptHash b) (fmap getValidator vl) txScripts,
      txData = Map.insert dtHash dt txData}
     where
         dtHash = datumHash dt
         vlHash@(ValidatorHash b) = validatorHash vl
+
+-- | Add script reference together with the redeemer and datum into txInputs and txData accordingly.
+addReferenceTxInput :: TxOutRef -> Versioned TxOutRef -> Redeemer -> Datum -> Tx -> Tx
+addReferenceTxInput outRef vref rd dt tx@Tx{txInputs, txData} = tx
+    {txInputs = TxInput outRef (TxScriptAddress rd (Right vref) dtHash) : txInputs,
+     txData = Map.insert dtHash dt txData}
+    where
+        dtHash = datumHash dt
 
 txRedeemers :: Tx -> Map ScriptPurpose Redeemer
 txRedeemers = (Map.mapKeys Spending . txSpendingRedeemers)
@@ -526,7 +537,7 @@ txRedeemers = (Map.mapKeys Spending . txSpendingRedeemers)
 
 txSpendingRedeemers :: Tx -> Map TxOutRef Redeemer
 txSpendingRedeemers Tx{txInputs} = flip execState Map.empty $ traverse_ extract txInputs where
-    extract TxInput{txInputType=TxConsumeScriptAddress redeemer _ _, txInputRef} =
+    extract TxInput{txInputType=TxScriptAddress redeemer _ _, txInputRef} =
         modify' $ Map.insert txInputRef redeemer
     extract _ = return ()
 
