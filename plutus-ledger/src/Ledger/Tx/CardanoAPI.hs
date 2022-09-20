@@ -22,6 +22,8 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxBodyContent
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
+  , toCardanoTxInReferenceWitnessHeader
+  , toCardanoTxInScriptWitnessHeader
   , toCardanoMintValue
   , ToCardanoError(..)
   , FromCardanoError(..)
@@ -148,30 +150,42 @@ toCardanoTxInWitness :: P.Tx -> P.TxInputType -> Either ToCardanoError (C.Witnes
 toCardanoTxInWitness _ P.TxConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
 toCardanoTxInWitness _ P.TxConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
 toCardanoTxInWitness tx
-    (P.TxConsumeScriptAddress
+    (P.TxScriptAddress
         (P.Redeemer redeemer)
-        valh
+        valhOrRef
         dh)
     = do
       (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (P.txData tx)
-      (P.Versioned (P.Validator validator) lang) <- maybe (Left MissingInputValidator) pure $ P.lookupValidator (P.txScripts tx) valh
-      case lang of
+      mkWitness <- case valhOrRef of
+        Left valh -> maybe (Left MissingInputValidator) (toCardanoTxInScriptWitnessHeader . fmap PV1.getValidator) $ P.lookupValidator (P.txScripts tx) valh
+        Right vref -> toCardanoTxInReferenceWitnessHeader vref
+      pure $ C.ScriptWitness C.ScriptWitnessForSpending $ mkWitness
+            (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
+            (toCardanoScriptData redeemer)
+            zeroExecutionUnits
+
+type WitnessHeader = C.ScriptDatum C.WitCtxTxIn -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness C.WitCtxTxIn C.BabbageEra
+
+toCardanoTxInReferenceWitnessHeader :: P.Versioned PV1.TxOutRef -> Either ToCardanoError WitnessHeader
+toCardanoTxInReferenceWitnessHeader (P.Versioned ref lang) = do
+    txIn <- toCardanoTxIn ref
+    pure $ case lang of
         P.PlutusV1 ->
-          C.ScriptWitness C.ScriptWitnessForSpending <$>
-            (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) validator)
-            <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
-            <*> pure (toCardanoScriptData redeemer)
-            <*> pure zeroExecutionUnits
-            )
+            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 $
+                C.PReferenceScript txIn Nothing
         P.PlutusV2 ->
-          C.ScriptWitness C.ScriptWitnessForSpending <$>
-            (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-            <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) validator)
-            <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
-            <*> pure (toCardanoScriptData redeemer)
-            <*> pure zeroExecutionUnits
-            )
+            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 $
+                C.PReferenceScript txIn Nothing
+
+toCardanoTxInScriptWitnessHeader :: P.Versioned PV1.Script -> Either ToCardanoError WitnessHeader
+toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
+    case lang of
+        P.PlutusV1 ->
+            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 . C.PScript <$>
+                toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
+        P.PlutusV2 ->
+            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 . C.PScript <$>
+                toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
 
 toCardanoMintValue :: P.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue tx@P.Tx{..} =

@@ -104,9 +104,8 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId))
-import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), RedeemerPtr (RedeemerPtr),
-                  ScriptTag (Mint, Spend), TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef,
-                  Versioned (Versioned))
+import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), TxOut (TxOut), TxOutRef,
+                  Versioned (Versioned), outDatumHash, txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -547,8 +546,10 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     valueSpentInputs <>= provided vl
     case Typed.tyTxInTxIn txIn of
         -- this is what makeTypedScriptTxIn makes
-        Tx.TxIn outRef (Just (Tx.ConsumeScriptAddress validator rs dt)) -> do
-            unbalancedTx . tx %= Tx.addScriptTxInput outRef validator rs dt
+        Tx.TxIn outRef (Just (Tx.ScriptAddress (Versioned (Left val) lang) rs dt)) -> do
+            unbalancedTx . tx %= Tx.addScriptTxInput outRef (Versioned val lang) rs dt
+        Tx.TxIn outRef (Just (Tx.ScriptAddress (Versioned (Right ref) lang) rs dt)) -> do
+            unbalancedTx . tx %= Tx.addReferenceTxInput outRef (Versioned ref lang) rs dt
         _ -> error "Impossible txIn in addOwnInput."
 
 
@@ -682,26 +683,20 @@ processConstraint = \case
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
             case _ciTxOutReferenceScript refTxOut of
-                Just val -> pure $ Right ref <$ val
+                Just val -> pure $ Tx.addReferenceTxInput txo (ref <$ val)
                 _        -> throwError (TxOutRefNoReferenceScript ref)
           Nothing -> do
             mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just (_, val) -> pure $ Left <$> val
+                Just (_, val) -> pure $ Tx.addScriptTxInput txo val
                 _             -> throwError (TxOutRefWrongType txo)
         mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
         case mDatumAndValue of
-          Just ((dvh, datum), value) -> do
+          Just ((_, datum), value) -> do
             -- TODO: When witnesses are properly segregated we can
             --       probably get rid of the 'slOtherData' map and of
             --       'lookupDatum'
-            let input = Tx.TxIn txo $ Just $ Tx.ScriptAddress valOrRef red datum
-            unbalancedTx . tx . Tx.inputs %= (input :)
-            inputs <- use (unbalancedTx . tx . Tx.inputs)
-            -- We use fromJust because we can garanty that it will always be Just.
-            let idx = fromJust $ elemIndex input inputs
-            unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
-            unbalancedTx . tx . Tx.redeemers . at (RedeemerPtr Spend (fromIntegral idx)) .= Just red
+            unbalancedTx . tx %= valOrRef red datum
             valueSpentInputs <>= provided value
           _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral txo -> do
@@ -781,8 +776,7 @@ processConstraintFun = \case
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just ((_, validator), ((_, datum), value)))] -> do
-                let input = Tx.scriptTxIn ref validator red datum
-                unbalancedTx . tx . Tx.inputs %= (input :)
+                unbalancedTx . tx %= Tx.addScriptTxInput ref validator red datum
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
 

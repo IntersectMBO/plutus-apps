@@ -48,13 +48,10 @@ import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx 
                txMintingRedeemers, txRewardingRedeemers)
 import Ledger.Address (Address)
 import Ledger.Scripts (Redeemer, RedeemerHash)
-import Ledger.Tx (TxInputType (TxConsumeScriptAddress), fillTxInputWitnesses)
+import Ledger.Tx (TxInputType (TxScriptAddress), fillTxInputWitnesses)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
-import Plutus.Script.Utils.Scripts (Versioned (Versioned), datumHash, redeemerHash, scriptHash)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                             Redeemer, RedeemerHash, Script, Validator (Validator))
-import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))
+import Plutus.Script.Utils.Scripts (redeemerHash)
 import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
 
@@ -117,31 +114,6 @@ fromOnChainTx = \case
             (fromOnChainCardanoTx False)
             ctx
 
--- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
--- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
-fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
-fromOnChainCardanoTx validity (SomeTx tx era) =
-    either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
-
-mintingPolicies :: Map MintingPolicyHash (Versioned MintingPolicy) -> Map ScriptHash (Versioned Script)
-mintingPolicies = Map.fromList . fmap toScript . Map.toList
-  where
-    toScript (MintingPolicyHash mph, mp) = (ScriptHash mph, fmap getMintingPolicy mp)
-
-validators :: [TxIn] -> (Map ScriptHash (Versioned Script), Map DatumHash Datum, Redeemers)
-validators = foldMap (\(ix, txIn) -> maybe mempty (withHash ix) $ txInType txIn) . zip [0..] . sort
-  -- we sort the inputs to make sure that the indices match with redeemer pointers
-  where
-    -- TODO: the index of the txin is probably incorrect as we take it from the set.
-    -- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
-    -- sort them by using the standard `Ord` instance.
-    withHash ix (ScriptAddress (Versioned (Left (Validator val)) lang) red dat) =
-        ( Map.singleton (scriptHash (Versioned val lang)) (Versioned val lang)
-        , Map.singleton (datumHash dat) dat
-        , Map.singleton (RedeemerPtr Spend ix) red
-        )
-    withHash _ _ = mempty
-
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
 txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
     $ fmap (\r -> (redeemerHash r, r))
@@ -166,5 +138,5 @@ calculateRedeemerPointers tx = spends <> rewards <> mints <> certs
         spends = Map.fromList $ mapMaybe (uncurry getRd) $ zip [0..] $ fmap txInputType $ sort $ txInputs tx
 
         getRd n = \case
-            TxConsumeScriptAddress rd _ _ -> Just (RedeemerPtr Spend n, rd)
-            _                             -> Nothing
+            TxScriptAddress rd _ _ -> Just (RedeemerPtr Spend n, rd)
+            _                      -> Nothing
