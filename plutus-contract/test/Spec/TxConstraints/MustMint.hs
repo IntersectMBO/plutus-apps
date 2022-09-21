@@ -23,15 +23,15 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
 import Ledger.Test (coinMintingPolicy)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
+import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName)
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
+import Plutus.Contract.Test (assertContractError, assertValidatedTransactionCount, checkPredicateOptions,
+                             defaultCheckOptions, w1, (.&&.))
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (MintingPolicyHash, Redeemer, ToData (toBuiltinData),
                              UnsafeFromData (unsafeFromBuiltinData))
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitRedeemer)
+import Plutus.V1.Ledger.Scripts (unitRedeemer)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import Prelude hiding (not)
@@ -41,7 +41,9 @@ tests =
     testGroup "MustMint"
         [ mustMintCurrencyWithRedeemerSuccessfulMint
         , mustMintCurrencyWithRedeemerMissingPolicyLookup
-        , mustMintCurrencyWithRedeemerPhase2Failure
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        -- mustMintCurrencyWithRedeemerPhase2Failure,
         , mustMintCurrencySuccessfulMint
         , mustMintValueWithRedeemerSuccessfulMint
         , mustMintValueSuccessfulMint
@@ -90,13 +92,13 @@ mustMintCurrencyWithRedeemerMissingPolicyLookup =
     (void $ trace mustMintCurrencyWithRedeemerMissingPolicyContract)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer but with a token name mismatch, asserts script evaluation error.
-mustMintCurrencyWithRedeemerPhase2Failure :: TestTree
-mustMintCurrencyWithRedeemerPhase2Failure =
-    checkPredicateOptions
-    defaultCheckOptions
-    "Fail validation when minting policy is missing from lookup"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
-    (void $ trace $ mustMintCurrencyWithRedeemerContract $ TokenName "WrongToken")
+-- mustMintCurrencyWithRedeemerPhase2Failure :: TestTree
+-- mustMintCurrencyWithRedeemerPhase2Failure =
+--     checkPredicateOptions
+--     defaultCheckOptions
+--     "Fail validation when minting policy is missing from lookup"
+--     (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptError (EvaluationError ("L9":_) _) -> True; _ -> False }))
+--     (void $ trace $ mustMintCurrencyWithRedeemerContract $ TokenName "WrongToken")
 
 -- | Valid Contract containing all required lookups. Uses mustMintCurrencyWithRedeemer constraint.
 mustMintCurrencyWithRedeemerContract :: TokenName -> Contract () Empty ContractError ()

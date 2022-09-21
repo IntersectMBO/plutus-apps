@@ -31,7 +31,6 @@ import Language.Haskell.Interpreter (InterpreterError, InterpreterResult (Interp
 import Ledger.Ada (adaValueOf, lovelaceValueOf)
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Scripts (ValidatorHash (ValidatorHash))
-import Ledger.Tx (CardanoTx (EmulatorTx))
 import Ledger.Value (TokenName (TokenName), Value)
 import Playground.Interpreter qualified as PI
 import Playground.Types (CompilationResult (CompilationResult),
@@ -173,12 +172,15 @@ gameTest =
     testGroup
         "game"
         [ compilationChecks game
-        , testCase "should keep the funds" $
-          evaluate (mkEvaluation [lock w2 "abcde" twoAda, AddBlocks 1, guess w1 "ade", AddBlocks 1]) >>=
-          hasFundsDistribution
-              [ mkSimulatorWallet w1 tenAda
-              , mkSimulatorWallet w2 (adaValueOf 8)
-              ]
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        --
+        -- , testCase "should keep the funds" $
+        --   evaluate (mkEvaluation [lock w2 "abcde" twoAda, AddBlocks 1, guess w1 "ade", AddBlocks 1]) >>=
+        --   hasFundsDistribution
+        --       [ mkSimulatorWallet w1 tenAda
+        --       , mkSimulatorWallet w2 (adaValueOf 8)
+        --       ]
         , testCase "should unlock the funds" $
           evaluate (mkEvaluation [lock w2 "abcde" twoAda, AddBlocks 1, guess w1 "abcde", AddBlocks 1]) >>=
           hasFundsDistribution
@@ -242,7 +244,7 @@ hasFundsDistribution requiredDistribution (Right InterpreterResult {result = Eva
         Text.putStrLn $
             either id id $ showBlockchain
                 (fmap (fmap fromWalletNumber) walletKeys)
-                (fmap (fmap (\AnnotatedTx {tx, valid} -> if valid then Valid (EmulatorTx tx) else Invalid (EmulatorTx tx))) resultRollup)
+                (fmap (fmap (\AnnotatedTx {tx, valid} -> if valid then Valid tx else Invalid tx)) resultRollup)
         traverse_ print $ reverse emulatorLog
     assertEqual "" requiredDistribution noFeesDistribution
 

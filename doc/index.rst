@@ -1,19 +1,8 @@
-Plutus Tools SDK User Guide
+Plutus tools SDK user guide
 ===============================
 
-Intended Audience
+Plutus tools SDK
 -------------------------------
-
-This user guide is intended for developers who are authoring distributed applications 
-("DApps") by using smart contracts on the Cardano blockchain. 
-
-.. note::
-   If you are a developer who wants to contribute to the Plutus Tools SDK project, 
-   please refer to documentation residing in the `Plutus Tools SDK repository <https://github.com/
-   input-output-hk/plutus-apps>`_.
-
-Plutus Tools SDK
-===============================
 
 The Plutus Tools SDK is a collection of off-chain infrastructure resources built 
 for external developers. The `Plutus Tools SDK repository <https://github.com/
@@ -23,7 +12,15 @@ code. The term “off-chain code” refers to the part of a contract application
 which runs outside of the blockchain. Off-chain code responds to events happening 
 on or off the blockchain, usually by producing transactions. 
 
-Plutus Tools SDK Repository
+This user guide is intended for developers who are authoring distributed applications 
+("DApps") by using smart contracts on the Cardano blockchain. 
+
+.. note::
+   If you are a developer who wants to contribute to the Plutus Tools SDK project, 
+   please refer to documentation residing in the `Plutus Tools SDK repository <https://github.com/
+   input-output-hk/plutus-apps>`_.
+
+Plutus tools SDK repository
 ------------------------------------------------
 
 The `Plutus Tools SDK repository <https://github.com/input-output-hk/plutus-apps>`_ 
@@ -49,19 +46,19 @@ contains packages such as:
 
 * a variety of other Plutus packages. 
 
-Use Cases
+Use cases
 ---------------------------
 
 Please refer to these `use cases <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-use-cases>`_ 
 to see examples of Plutus applications. 
 
-Plutus Starter Template Repository
+Plutus starter template repository
 ----------------------------------------
 
 See the `Plutus starter template repository <https://github.com/input-output-hk/plutus-starter>`_ 
 for a simple starter project using the Plutus Tools SDK. 
 
-Public Plutus Libraries Documentation
+Public Plutus libraries documentation
 ------------------------------------------------
 
 See also the `public Plutus libraries documentation <https://playground.plutus.iohkdev.io/doc/haddock/>`_ 
@@ -77,7 +74,7 @@ to access Haddock-generated documentation of all the code, including Plutus Core
    plutus/troubleshooting
 
 .. toctree::
-   :caption: Architecture design records
+   :caption: Architectural decision records
    :maxdepth: 1
 
    adr/index

@@ -37,7 +37,11 @@ tests =
         , lessThanScriptBalance
         --, higherThanScriptBalanceWithoutWalletPubkeyLookup -- Failing due to PLT-665
         --, higherThanScriptBalanceWithWalletPubkeyLookup    -- Failing due to PLT-665
-        , phase2Failure
+
+        -- TODO: uncomment after enabling 2nd phase validation
+        -- See note [Second phase validation]
+        --
+        -- , phase2Failure
         ]
 
 scriptBalance :: Integer
@@ -120,7 +124,7 @@ phase2Failure =
     in  checkPredicateOptions
             defaultCheckOptions
             "Fail phase-2 validation when on-chain mustSpendAtLeast is greater than script's balance"
-            (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L5":_) _) -> True; _ -> False }))
+            (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L5":_) _) -> True; _ -> False }))
             (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}

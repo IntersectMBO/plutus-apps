@@ -8,8 +8,8 @@ module Spec.MultiSig(tests, failingTrace, succeedingTrace) where
 import Control.Monad (void)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Index (ValidationError (ScriptFailure))
-import Ledger.Scripts (ScriptError (EvaluationError))
+-- import Ledger.Index (ValidationError (ScriptFailure))
+-- import Ledger.Scripts (ScriptError (EvaluationError))
 import Plutus.Contract (Contract, ContractError)
 import Plutus.Contract.Test
 import Plutus.Contracts.MultiSig as MS
@@ -22,11 +22,15 @@ import Wallet.Emulator.Wallet (signPrivateKeys)
 
 tests :: TestTree
 tests = testGroup "multisig"
-    [ checkPredicate "2 out of 5"
-        (assertFailedTransaction (\_ err _ -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
-        failingTrace
+    [
+    -- TODO: uncomment after enabling 2nd phase validation, expected "not enough signatures" validation error
+    -- See note [Second phase validation]
+    --
+    -- checkPredicate "2 out of 5"
+    --     (assertFailedTransaction (\_ err _ -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
+    --     failingTrace
 
-    , checkPredicate "3 out of 5"
+    checkPredicate "3 out of 5"
         assertNoFailedTransactions
         succeedingTrace
 

@@ -67,8 +67,8 @@ import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartNode))
-import Plutus.PAB.Types (Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig, nodeServerConfig,
-                         walletServerConfig)
+import Plutus.PAB.Types (ChainQueryConfig (..), Config (Config, dbConfig, pabWebserverConfig), chainQueryConfig,
+                         nodeServerConfig, walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, pretty)
@@ -109,19 +109,23 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Mi
     App.migrate (toPABMsg ccaTrace) dbConfig
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
     params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
         (pscSocketPath nodeServerConfig)
         params
-        (ChainIndex.ciBaseUrl chainIndexConfig)
+        (ChainIndex.ciBaseUrl ciConfig)
         ccaAvailability
 
 -- Run mock wallet service
 runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig = RemoteWalletConfig}} MockWallet =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet in remote wallet config."
+
+-- Run mock wallet service
+runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {chainQueryConfig = BlockfrostConfig _}} MockWallet =
+    error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet with BlockfrostConfig."
 
 -- Run mock node server
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode = do
@@ -223,13 +227,17 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
       pure asyncId
 
 -- Run the chain-index service
-runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig }} ChainIndex =
+runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig }} ChainIndex =
     ChainIndex.main
         (toChainIndexLog ccaTrace)
-        chainIndexConfig
+        ciConfig
         (pscSocketPath nodeServerConfig)
         (pscSlotConfig nodeServerConfig)
         ccaAvailability
+
+-- Run the chain-index service
+runConfigCommand _ ConfigCommandArgs{ccaPABConfig=Config {chainQueryConfig = BlockfrostConfig _ }} ChainIndex =
+    error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run Chain Index with BlockfrostConfig."
 
 -- Get the state of a contract
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do

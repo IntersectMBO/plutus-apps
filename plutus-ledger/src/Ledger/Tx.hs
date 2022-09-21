@@ -32,7 +32,6 @@ module Ledger.Tx
     , cardanoApiTx
     , emulatorTx
     , onCardanoTx
-    , mergeCardanoTxWith
     , cardanoTxMap
     , getCardanoTxId
     , getCardanoTxInputs
@@ -50,6 +49,7 @@ module Ledger.Tx
     -- * Transactions
     , addSignature
     , addSignature'
+    , addCardanoTxSignature
     , pubKeyTxOut
     , scriptTxOut
     , scriptTxOut'
@@ -62,7 +62,11 @@ module Ledger.Tx
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Hash (SHA256, digest)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.TxBody (TxBody)
+import Cardano.Ledger.Alonzo.TxWitness (txwitsVKey)
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
@@ -78,6 +82,7 @@ import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
 import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
+import Ledger.Params (EmulatorEra)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.Script.Utils.Scripts (datumHash)
@@ -150,21 +155,9 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
-
-{- Note [Why we have the Both constructor in CardanoTx]
-
-We want to do validation with both the emulator and with the cardano-ledger library, at least as long
-as we don't have Phase2 validation errors via the cardano-ledger library.
-
-To do that we need the required signers which are only available in UnbalancedTx during balancing.
-So during balancing we can create the SomeCardanoApiTx, while proper validation can only happen in
-Wallet.Emulator.Chain.validateBlock, since that's when we know the right Slot number. This means that
-we need both transaction types in the path from balancing to validateBlock. -}
-
 data CardanoTx
     = EmulatorTx { _emulatorTx :: Tx }
     | CardanoApiTx { _cardanoApiTx :: SomeCardanoApiTx }
-    | Both { _emulatorTx :: Tx, _cardanoApiTx :: SomeCardanoApiTx }
     deriving (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, Serialise)
 
@@ -198,16 +191,11 @@ instance Pretty CardanoTx where
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
 onCardanoTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
-onCardanoTx l r = mergeCardanoTxWith l r const
-
-mergeCardanoTxWith :: (Tx -> a) -> (SomeCardanoApiTx -> a) -> (a -> a -> a) -> CardanoTx -> a
-mergeCardanoTxWith l _ _ (EmulatorTx tx)    = l tx
-mergeCardanoTxWith l r m (Both tx ctx)      = m (l tx) (r ctx)
-mergeCardanoTxWith _ r _ (CardanoApiTx ctx) = r ctx
+onCardanoTx l _ (EmulatorTx tx)    = l tx
+onCardanoTx _ r (CardanoApiTx ctx) = r ctx
 
 cardanoTxMap :: (Tx -> Tx) -> (SomeCardanoApiTx -> SomeCardanoApiTx) -> CardanoTx -> CardanoTx
 cardanoTxMap l _ (EmulatorTx tx)    = EmulatorTx (l tx)
-cardanoTxMap l r (Both tx ctx)      = Both (l tx) (r ctx)
 cardanoTxMap _ r (CardanoApiTx ctx) = CardanoApiTx (r ctx)
 
 getCardanoTxId :: CardanoTx -> TxId
@@ -313,6 +301,29 @@ scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: Value -> PaymentPubKey -> Maybe StakePubKey -> TxOut
 pubKeyTxOut v pk sk = TxOut (pubKeyAddress pk sk) v Nothing
+
+addCardanoTxSignature :: PrivateKey -> CardanoTx -> CardanoTx
+addCardanoTxSignature privKey = cardanoTxMap (addSignature' privKey) addSignatureCardano
+    where
+        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
+        addSignatureCardano (CardanoApiEmulatorEraTx ctx)
+            = CardanoApiEmulatorEraTx (addSignatureCardano' ctx)
+
+        addSignatureCardano' (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isValid aux))
+            = C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits' isValid aux)
+          where
+            wits' = wits <> mempty { txwitsVKey = newWits }
+            newWits = case fromPaymentPrivateKey privKey body of
+              C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
+              _                             -> Set.empty
+
+        fromPaymentPrivateKey :: PrivateKey -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.AlonzoEra
+        fromPaymentPrivateKey xprv txBody
+          = C.Api.makeShelleyKeyWitness
+              (C.Api.ShelleyTxBody C.Api.ShelleyBasedEraAlonzo txBody notUsed notUsed notUsed notUsed)
+              (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
+          where
+            notUsed = undefined -- hack so we can reuse code from cardano-api
 
 -- | Sign the transaction with a 'PrivateKey' and passphrase (ByteString) and add the signature to the
 --   transaction's list of signatures.
