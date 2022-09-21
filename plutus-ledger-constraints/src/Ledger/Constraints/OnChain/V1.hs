@@ -114,7 +114,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "La" -- "MustPayToPubKey"
         $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
-            && maybe True (\dv -> any (checkOutput dv) outs) (fmap getOutDatum mdv) -- FIXME
+            && maybe True (\dv -> any (checkOutput $ getOutDatum dv) outs) mdv -- FIXME
             && isNothing refScript
     MustPayToOtherScript vlh _ dv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo

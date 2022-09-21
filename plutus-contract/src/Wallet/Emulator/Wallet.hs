@@ -57,11 +57,11 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
-import Ledger.Index (UtxoIndex (UtxoIndex, getIndex))
+import Ledger.Index.Internal (UtxoIndex (UtxoIndex, getIndex))
 import Ledger.Params (Params (Params, pNetworkId, pProtocolParams, pSlotConfig))
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxOut (TxOut))
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Tx.CardanoAPI.Internal (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatum)
 import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
@@ -71,18 +71,18 @@ import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffec
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Wallet (finalize)
 import Plutus.V1.Ledger.Api (PubKeyHash, TxOutRef, ValidatorHash, Value)
-import Plutus.V1.Ledger.Tx qualified as V1
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
-import Wallet.API (WalletAPIError)
 import Wallet.Effects qualified as WAPI (getClientParams)
-import Wallet.Error qualified as WAPI (WalletAPIError (InsufficientFunds, PaymentPrivateKeyNotFound, ToCardanoError, ValidationError),
-                                       throwOtherError)
+import Wallet.Emulator.Error qualified as WAPI (WalletAPIError (InsufficientFunds, PaymentPrivateKeyNotFound, ToCardanoError, ValidationError),
+                                                throwOtherError)
+import Wallet.Error (WalletAPIError)
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Ledger qualified
+import Plutus.V2.Ledger.Tx qualified as PV2
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
@@ -323,7 +323,7 @@ handleBalance utx' = do
     let utx = finalize pSlotConfig utx'
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
         eitherTx = U.unBalancedTxTx utx
-        plUtxo = traverse (toCardanoTxOut pNetworkId toCardanoTxOutDatumHash . Tx.toTxOut) utxo
+        plUtxo = traverse (toCardanoTxOut pNetworkId toCardanoTxOutDatum . Tx.toTxOut) utxo
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) (pure . fmap TxOut) plUtxo
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo
     case eitherTx of
@@ -500,7 +500,7 @@ calculateTxChanges params addr utxos (neg, pos) = do
             txOut <- either
               (throwError . WAPI.ToCardanoError)
               (pure . TxOut)
-              $ toCardanoTxOut (pNetworkId params) toCardanoTxOutDatumHash $ V1.TxOut addr pos Nothing
+              $ toCardanoTxOut (pNetworkId params) toCardanoTxOutDatum $ PV2.TxOut addr pos PV2.NoOutputDatum Nothing
             (missing, extraTxOut) <-
                 either (throwError . WAPI.ToCardanoError) pure
                 $ U.adjustTxOut params txOut

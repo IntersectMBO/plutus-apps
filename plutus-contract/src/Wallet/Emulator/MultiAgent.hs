@@ -39,12 +39,13 @@ import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatum)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
+import Plutus.V2.Ledger.Tx qualified as V2
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
@@ -292,7 +293,7 @@ we create 10 Ada-only outputs per wallet here.
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: NetworkId -> Map PaymentPubKeyHash Value -> Either ToCardanoError EmulatorState
 emulatorStateInitialDist networkId mp = do
-    outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatumHash) $ Map.toList mp >>= mkOutputs
+    outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatum) $ Map.toList mp >>= mkOutputs
     pure $ emulatorStatePool $ pure $ EmulatorTx $
          Tx
             { txInputs = mempty
@@ -319,7 +320,7 @@ emulatorStateInitialDist networkId mp = do
                 -- Make sure we don't make the outputs too small
                 count = min 10 $ ada `div` minAdaTxOut
                 remainder = [ vl <> Ada.toValue (-ada) | not (Value.isAdaOnlyValue vl) ]
-        mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
+        mkOutput key vl = V2.pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =
     '[ State EmulatorState

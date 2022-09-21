@@ -35,14 +35,15 @@ import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnes
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
 import Ledger.Params (Params (Params, pNetworkId))
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatum)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
-import Plutus.Script.Utils.V1.Tx (scriptTxOut)
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Contexts (ScriptContext)
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
@@ -217,7 +218,7 @@ invalidScript = property $ do
     index <- forAll $ Gen.int (Range.linear 0 ((length $ getCardanoTxOutputs txn1) - 1))
     let emulatorTx = onCardanoTx id (\_ -> error "Unexpected Cardano.Api.Tx") txn1
     let setOutputs o = either (const Hedgehog.failure) (pure . TxOut) $
-           toCardanoTxOut pNetworkId toCardanoTxOutDatumHash $ scriptTxOut failValidator (txOutValue o) unitDatum
+            toCardanoTxOut pNetworkId toCardanoTxOutDatum $ PV2.TxOut (mkValidatorAddress failValidator) (txOutValue o) (PV2.OutputDatum unitDatum) Nothing
     outs <- traverse setOutputs $ emulatorTx ^. outputs
     let scriptTxn = EmulatorTx $
             emulatorTx
