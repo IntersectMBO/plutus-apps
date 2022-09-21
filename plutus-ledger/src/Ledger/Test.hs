@@ -39,3 +39,9 @@ coinMintingPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBui
 
 someToken :: Ledger.Value
 someToken = Value.singleton coinMintingPolicyCurrencySymbol "someToken" 1
+
+asRedeemer :: PlutusTx.ToData a => a -> Ledger.Redeemer
+asRedeemer a = Ledger.Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
+
+asDatum :: PlutusTx.ToData a => a -> Ledger.Datum
+asDatum a = Ledger.Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
