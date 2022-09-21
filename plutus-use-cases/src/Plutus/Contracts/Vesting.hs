@@ -34,7 +34,7 @@ import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
@@ -178,7 +178,7 @@ vestingContract vesting = selectList [vest, retrieve]
             Dead  -> pure ()
 
 payIntoContract :: Value -> TxConstraints () ()
-payIntoContract = mustPayToTheScript ()
+payIntoContract = mustPayToTheScriptWithDatumInTx ()
 
 vestFundsC
     :: ( AsVestingError e

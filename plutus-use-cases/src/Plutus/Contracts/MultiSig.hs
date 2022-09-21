@@ -77,7 +77,7 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSig
 lock :: AsContractError e => Promise () MultiSigSchema e ()
 lock = endpoint @"lock" $ \(ms, vl) -> do
     let inst = typedValidator ms
-    let tx = Constraints.mustPayToTheScript () vl
+    let tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
         lookups = Constraints.typedValidatorLookups inst
     mkTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx

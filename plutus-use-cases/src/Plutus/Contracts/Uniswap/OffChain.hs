@@ -206,7 +206,7 @@ start = do
     let c    = mkCoin cs uniswapTokenName
         us   = uniswap cs
         inst = uniswapInstance us
-        tx   = mustPayToTheScript (Factory []) $ unitValue c
+        tx   = mustPayToTheScriptWithDatumInTx (Factory []) $ unitValue c
 
     mkTxConstraints (Constraints.typedValidatorLookups inst) tx
       >>= adjustUnbalancedTx >>= submitTxConfirmed
@@ -237,8 +237,8 @@ create us CreateParams{..} = do
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us) <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
-        tx       = Constraints.mustPayToTheScript usDat1 usVal                                     <>
-                   Constraints.mustPayToTheScript usDat2 lpVal                                     <>
+        tx       = Constraints.mustPayToTheScriptWithDatumInTx usDat1 usVal                                     <>
+                   Constraints.mustPayToTheScriptWithDatumInTx usDat2 lpVal                                     <>
                    Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)              <>
                    Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData $ Create lp)
 
@@ -268,11 +268,11 @@ close us CloseParams{..} = do
                    Constraints.ownPaymentPubKeyHash pkh                   <>
                    Constraints.unspentOutputs (Map.singleton oref1 o1 <> Map.singleton oref2 o2)
 
-        tx       = Constraints.mustPayToTheScript usDat usVal          <>
+        tx       = Constraints.mustPayToTheScriptWithDatumInTx usDat usVal <>
                    Constraints.mustMintValue (negate $ psVal <> lVal) <>
-                   Constraints.mustSpendScriptOutput oref1 redeemer    <>
+                   Constraints.mustSpendScriptOutput oref1 redeemer <>
                    Constraints.mustSpendScriptOutput oref2 redeemer <>
-                   Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
+                   Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
 
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
@@ -304,7 +304,7 @@ remove us RemoveParams{..} = do
                    Constraints.unspentOutputs (Map.singleton oref o) <>
                    Constraints.ownPaymentPubKeyHash pkh
 
-        tx       = Constraints.mustPayToTheScript dat val          <>
+        tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
                    Constraints.mustMintValue (negate lVal)        <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
@@ -344,7 +344,7 @@ add us AddParams{..} = do
                    Constraints.ownPaymentPubKeyHash pkh                        <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
-        tx       = Constraints.mustPayToTheScript dat val          <>
+        tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
                    Constraints.mustMintValue lVal                  <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
@@ -385,7 +385,7 @@ swap us SwapParams{..} = do
                   Constraints.ownPaymentPubKeyHash pkh
 
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
-                  Constraints.mustPayToTheScript (Pool lp liquidity) val
+                  Constraints.mustPayToTheScriptWithDatumInTx (Pool lp liquidity) val
 
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 

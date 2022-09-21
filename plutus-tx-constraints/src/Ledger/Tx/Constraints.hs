@@ -7,10 +7,16 @@ module Ledger.Tx.Constraints(
     , TC.ScriptOutputConstraint(..)
     -- * Defining constraints
     , TC.mustPayToTheScript
+    , TC.mustPayToTheScriptWithDatumInTx
+    , TC.mustPayToTheScriptWithInlineDatum
     , TC.mustPayToPubKey
     , TC.mustPayToPubKeyAddress
     , TC.mustPayWithDatumToPubKey
     , TC.mustPayWithDatumToPubKeyAddress
+    , TC.mustPayWithDatumInTxToPubKey
+    , TC.mustPayWithDatumInTxToPubKeyAddress
+    , TC.mustPayWithInlineDatumToPubKey
+    , TC.mustPayWithInlineDatumToPubKeyAddress
     , TC.mustPayToAddressWithReferenceScript
     , TC.mustPayToAddressWithReferenceValidator
     , TC.mustPayToAddressWithReferenceMintingPolicy
@@ -29,10 +35,14 @@ module Ledger.Tx.Constraints(
     , TC.mustValidateIn
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast
-    , TC.mustIncludeDatum
+    , TC.mustIncludeDatumInTxWithHash
+    , TC.mustIncludeDatumInTx
     , TC.mustPayToOtherScript
+    , TC.mustPayToOtherScriptWithDatumInTx
+    , TC.mustPayToOtherScriptWithInlineDatum
     , TC.mustPayToOtherScriptAddress
-    , TC.mustHashDatum
+    , TC.mustPayToOtherScriptAddressWithDatumInTx
+    , TC.mustPayToOtherScriptAddressWithInlineDatum
     , TC.mustSatisfyAnyOf
     -- * Defining off-chain only constraints
     , TC.collectFromPlutusV1Script

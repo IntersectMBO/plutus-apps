@@ -36,7 +36,8 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                     data:
-                      "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
+                      ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                      , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )}
                 Requires signatures:
                 Utxo index:
                 Validity range:
@@ -66,9 +67,10 @@ Slot 1: W[2]: Finished balancing:
                   mps:
                   signatures:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
-                  redeemers:
                   data:
-                    "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
+                    ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                    , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
+                  redeemers:}
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
@@ -93,7 +95,8 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                     data:
-                      ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"}
+                      ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                      , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )}
                 Requires signatures:
                 Utxo index:
                 Validity range:
@@ -123,9 +126,10 @@ Slot 1: W[3]: Finished balancing:
                   mps:
                   signatures:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
-                  redeemers:
                   data:
-                    ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"}
+                    ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                    , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
+                  redeemers:}
 Slot 1: W[3]: Signing tx: 4f3549b97ce27589661068a58674751f01484a0035f20c7704728dc591fc7a54
 Slot 1: W[3]: Submitting tx: 4f3549b97ce27589661068a58674751f01484a0035f20c7704728dc591fc7a54
 Slot 1: W[3]: TxSubmit: 4f3549b97ce27589661068a58674751f01484a0035f20c7704728dc591fc7a54
@@ -146,7 +150,8 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                     data:
-                      "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="}
+                      ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                      , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )}
                 Requires signatures:
                 Utxo index:
                 Validity range:
@@ -174,9 +179,10 @@ Slot 1: W[4]: Finished balancing:
                   mps:
                   signatures:
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
-                  redeemers:
                   data:
-                    "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="}
+                    ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                    , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
+                  redeemers:}
 Slot 1: W[4]: Signing tx: 1392dd20a08de6c8f41ed6a1418bd6092c75f95ecbf5e3507e2039b601fc00ba
 Slot 1: W[4]: Submitting tx: 1392dd20a08de6c8f41ed6a1418bd6092c75f95ecbf5e3507e2039b601fc00ba
 Slot 1: W[4]: TxSubmit: 1392dd20a08de6c8f41ed6a1418bd6092c75f95ecbf5e3507e2039b601fc00ba
@@ -204,9 +210,12 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                      signatures:
                      validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                      data:
-                       ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
-                       "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
-                       "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"
+                       ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                       , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
+                       ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                       , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
+                       ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                       , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                      attached scripts:
                        8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f}
                  Requires signatures:
@@ -251,14 +260,17 @@ Slot 20: W[1]: Finished balancing:
                    mps:
                    signatures:
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
+                   data:
+                     ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                     , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
+                     ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                     , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
+                     ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                     , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                    redeemers:
                      <>
                      <>
-                     <>
-                   data:
-                     ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
-                     "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
-                     "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
+                     <>}
 Slot 20: W[1]: Signing tx: 0ef047e168d9ca4da973ed6010146ebc2bf02498a8e51f3058c958f8b1367ec3
 Slot 20: W[1]: Submitting tx: 0ef047e168d9ca4da973ed6010146ebc2bf02498a8e51f3058c958f8b1367ec3
 Slot 20: W[1]: TxSubmit: 0ef047e168d9ca4da973ed6010146ebc2bf02498a8e51f3058c958f8b1367ec3

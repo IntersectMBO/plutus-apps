@@ -73,7 +73,7 @@ pubKeyContract
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     let inst = typedValidator pk
         address = Scripts.validatorAddress inst
-        tx = Constraints.mustPayToTheScript () vl
+        tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
 
     ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx

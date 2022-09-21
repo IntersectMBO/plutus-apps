@@ -22,7 +22,8 @@ module Ledger.Tx.CardanoAPI.Internal(
   , unspentOutputsTx
   , fromCardanoTxId
   , fromCardanoTxIn
-  , fromCardanoTxOut
+  , fromCardanoTxOutToPV1TxInfoTxOut
+  , fromCardanoTxOutToPV2TxInfoTxOut
   , fromCardanoTxOutDatumHash
   , fromCardanoTxOutDatum
   , fromCardanoTxOutValue
@@ -47,6 +48,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoTxOut
   , toCardanoTxOutDatum
   , toCardanoTxOutDatumHash
+  , toCardanoTxOutDatumHashFromDatum
   , toCardanoTxOutDatumInline
   , toCardanoTxOutDatumInTx
   , toCardanoTxOutNoDatum
@@ -286,7 +288,7 @@ txOutRefs (SomeTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) _) =
   mkOut <$> zip [0..] plutusTxOuts
   where
     mkOut (i, o) = (o, PV1.TxOutRef (fromCardanoTxId $ C.getTxId txBody) i)
-    plutusTxOuts = fromCardanoTxOut <$> txOuts
+    plutusTxOuts = fromCardanoTxOutToPV1TxInfoTxOut <$> txOuts
 
 unspentOutputsTx :: SomeCardanoApiTx -> Map PV1.TxOutRef PV1.TxOut
 unspentOutputsTx tx = Map.fromList $ swap <$> txOutRefs tx
@@ -408,12 +410,26 @@ toCardanoTxId (PV1.TxId bs) =
 
 -- TODO Handle reference script once 'P.TxOut' supports it (or when we use
 -- exclusively 'C.TxOut' in all the codebase).
-fromCardanoTxOut :: C.TxOut C.CtxTx era -> PV1.TxOut
-fromCardanoTxOut (C.TxOut addr value datumHash _) =
+fromCardanoTxOutToPV1TxInfoTxOut :: C.TxOut C.CtxTx era -> PV1.TxOut
+fromCardanoTxOutToPV1TxInfoTxOut (C.TxOut addr value datumHash _) =
     PV1.TxOut
     (fromCardanoAddressInEra addr)
     (fromCardanoTxOutValue value)
     (fromCardanoTxOutDatumHash datumHash)
+
+fromCardanoTxOutToPV2TxInfoTxOut :: C.TxOut C.CtxTx era -> PV2.TxOut
+fromCardanoTxOutToPV2TxInfoTxOut (C.TxOut addr value datum refScript) =
+    PV2.TxOut
+    (fromCardanoAddressInEra addr)
+    (fromCardanoTxOutValue value)
+    (fromCardanoTxOutDatum datum)
+    (refScriptToScriptHash refScript)
+
+refScriptToScriptHash :: C.ReferenceScript era -> Maybe PV2.ScriptHash
+refScriptToScriptHash C.ReferenceScriptNone = Nothing
+refScriptToScriptHash (C.ReferenceScript _ (C.ScriptInAnyLang _ s)) =
+    let (PV2.ValidatorHash h) = fromCardanoScriptHash $ C.hashScript s
+     in Just $ PV2.ScriptHash h
 
 toCardanoTxOut
     :: C.NetworkId
@@ -529,6 +545,14 @@ toCardanoTxOutDatumInTx =
 toCardanoTxOutDatumInline :: PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
 toCardanoTxOutDatumInline =
     C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum
+
+toCardanoTxOutDatumHashFromDatum :: PV2.Datum -> C.TxOutDatum ctx C.BabbageEra
+toCardanoTxOutDatumHashFromDatum =
+      C.TxOutDatumHash C.ScriptDataInBabbageEra
+    . C.hashScriptData
+    . C.fromPlutusData
+    . PV2.builtinDataToData
+    . PV2.getDatum
 
 toCardanoTxOutDatumHash :: P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
 toCardanoTxOutDatumHash datumHash = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash datumHash

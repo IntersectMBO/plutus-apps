@@ -73,7 +73,7 @@ badRemove us BadRemoveParams{..} = do
                    Constraints.unspentOutputs (Map.singleton oref o) <>
                    Constraints.ownPaymentPubKeyHash pkh
 
-        tx       = Constraints.mustPayToTheScript dat val          <>
+        tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
                    Constraints.mustMintValue (negate lVal)         <>
                    Constraints.mustSpendScriptOutput oref redeemer
 

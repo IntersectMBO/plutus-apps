@@ -145,7 +145,7 @@ payTx
     ::
     Value
     -> TxConstraints (Scripts.RedeemerType TokenAccount) (Scripts.DatumType TokenAccount)
-payTx = Constraints.mustPayToTheScript ()
+payTx = Constraints.mustPayToTheScriptWithDatumInTx ()
 
 -- | Pay some money to the given token account
 pay

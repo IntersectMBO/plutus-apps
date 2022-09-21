@@ -22,7 +22,7 @@ import Data.Text qualified as T
 
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot qualified as TimeSlot
@@ -157,7 +157,7 @@ vestingContract vesting = selectList [vest, retrieve]
             Dead  -> pure ()
 
 payIntoContract :: Value -> TxConstraints () ()
-payIntoContract = mustPayToTheScript ()
+payIntoContract = mustPayToTheScriptWithDatumInTx ()
 
 vestFundsC
     :: VestingParams

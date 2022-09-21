@@ -152,7 +152,9 @@ mustReferenceOutputV1ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV1ValidatorAddress
         lookups = TC.unspentOutputs utxos
-        tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        datum = Datum $ PlutusTx.toBuiltinData utxoRef
+        tx = TC.mustIncludeDatumInTx datum
+          <> TC.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
@@ -176,7 +178,9 @@ mustReferenceOutputTxV1ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV1ValidatorAddress
         lookups = Tx.Constraints.unspentOutputs utxos
-        tx = Tx.Constraints.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        datum = Datum $ PlutusTx.toBuiltinData utxoRef
+        tx = Tx.Constraints.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
+          <> Tx.Constraints.mustIncludeDatumInTx datum
           <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
     submitTxConfirmed $ mkTx lookups tx
@@ -221,7 +225,9 @@ mustReferenceOutputV2ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = TC.unspentOutputs utxos
-        tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        datum = Datum $ PlutusTx.toBuiltinData utxoRef
+        tx = TC.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
+          <> TC.mustIncludeDatumInTx datum
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
@@ -245,7 +251,9 @@ mustReferenceOutputTxV2ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = Tx.Constraints.unspentOutputs utxos
-        tx = Tx.Constraints.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        datum = Datum $ PlutusTx.toBuiltinData utxoRef
+        tx = Tx.Constraints.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
+          <> Tx.Constraints.mustIncludeDatumInTx datum
           <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
     submitTxConfirmed $ mkTx lookups tx
@@ -276,12 +284,16 @@ mustSpendScriptOutputWithReferenceV2ConTest = do
         ValidatorHash vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = TC.unspentOutputs utxos
                <> TC.plutusV2OtherScript mustReferenceOutputV2Validator
-        tx = TC.mustPayToOtherScript (ValidatorHash vh) (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        tx = TC.mustPayToOtherScriptWithDatumInTx
+                (ValidatorHash vh)
+                (Datum $ PlutusTx.toBuiltinData utxoRef)
+                (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
           <> TC.mustPayToAddressWithReferenceScript
                 myAddr
                 (ScriptHash vh)
-                Nothing (Ada.adaValueOf 25)
+                Nothing
+                (Ada.adaValueOf 30)
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
     -- Trying to unlock the Ada in the script address
@@ -306,13 +318,17 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
         ValidatorHash vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = Tx.Constraints.unspentOutputs utxos
                <> Tx.Constraints.plutusV2OtherScript mustReferenceOutputV2Validator
-        tx = Tx.Constraints.mustPayToOtherScript (ValidatorHash vh) (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        tx = Tx.Constraints.mustPayToOtherScriptWithDatumInTx
+                (ValidatorHash vh)
+                (Datum $ PlutusTx.toBuiltinData utxoRef)
+                (Ada.adaValueOf 5)
           <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
           <> Tx.Constraints.mustPayToAddressWithReferenceScript
                 myAddr
                 (ScriptHash vh)
-                Nothing (Ada.adaValueOf 25)
+                Nothing
+                (Ada.adaValueOf 30)
     submitTxConfirmed $ mkTx lookups tx
 
     -- Trying to unlock the Ada in the script address

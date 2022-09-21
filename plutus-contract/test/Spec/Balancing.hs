@@ -49,22 +49,40 @@ balanceTxnMinAda =
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
-            let constraints1 = L.Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
+            let constraints1 =
+                    L.Constraints.mustPayToOtherScriptWithDatumInTx
+                        vHash
+                        unitDatum
+                        (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
+                 <> L.Constraints.mustIncludeDatumInTx unitDatum
                 utx1 = either (error . show) id $ L.Constraints.mkTx @Void mempty constraints1
             submitTxConfirmed utx1
             utxo <- utxosAt someAddress
             let txOutRef = head (Map.keys utxo)
-                constraints2 = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
-                    <> L.Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
-                lookups2 = L.Constraints.unspentOutputs utxo <> L.Constraints.plutusV1OtherScript someValidator
-            utx2 <- Con.adjustUnbalancedTx $ either (error . show) id $ L.Constraints.mkTx @Void lookups2 constraints2
+                constraints2 =
+                    L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
+                    <> L.Constraints.mustPayToOtherScriptWithDatumInTx
+                         vHash
+                         unitDatum
+                         (Value.scale 200 ee)
+                    <> L.Constraints.mustIncludeDatumInTx unitDatum
+                lookups2 =
+                    L.Constraints.unspentOutputs utxo
+                    <> L.Constraints.plutusV1OtherScript someValidator
+            utx2 <- Con.adjustUnbalancedTx
+                  $ either (error . show) id
+                  $ L.Constraints.mkTx @Void lookups2 constraints2
             submitTxConfirmed utx2
 
         trace = do
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 2
 
-    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" (assertValidatedTransactionCount 2) (void trace)
+    in checkPredicateOptions
+         options
+         "balancing doesn't create outputs with no Ada"
+         (assertValidatedTransactionCount 2)
+         (void trace)
 
 balanceTxnMinAda2 :: TestTree
 balanceTxnMinAda2 =
@@ -76,14 +94,24 @@ balanceTxnMinAda2 =
             & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
         vHash = Scripts.validatorHash someValidator
         payToWallet w = L.Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
-        mkTx lookups constraints = Con.adjustUnbalancedTx . either (error . show) id $ L.Constraints.mkTx @Void lookups constraints
+        mkTx lookups constraints =
+            Con.adjustUnbalancedTx . either (error . show) id
+            $ L.Constraints.mkTx @Void lookups constraints
 
         setupContract :: Contract () EmptySchema ContractError ()
         setupContract = do
             -- Make sure there is a utxo with 1 A, 1 B, and 4 ada at w2
-            submitTxConfirmed =<< mkTx mempty (payToWallet w2 (vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)))
+            submitTxConfirmed
+              =<< mkTx mempty
+                       (payToWallet w2 ( vA 1
+                                      <> vB 1
+                                      <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)
+                                       ))
             -- Make sure there is a UTxO with 1 B and datum () at the script
-            submitTxConfirmed =<< mkTx mempty (L.Constraints.mustPayToOtherScript vHash unitDatum (vB 1))
+            submitTxConfirmed
+              =<< mkTx mempty ( L.Constraints.mustPayToOtherScriptWithDatumInTx vHash unitDatum (vB 1)
+                             <> L.Constraints.mustIncludeDatumInTx unitDatum
+                              )
             -- utxo0 @ wallet2 = 1 A, 1 B, 4 Ada
             -- utxo1 @ script  = 1 B, 2 Ada
 
@@ -96,9 +124,12 @@ balanceTxnMinAda2 =
                 lookups =  L.Constraints.unspentOutputs utxos
                         <> L.Constraints.plutusV1OtherScript someValidator
                         <> L.Constraints.plutusV1MintingPolicy mps
+                datum = Datum $ PlutusTx.toBuiltinData (0 :: Integer)
                 constraints = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
-                            <> L.Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
-                            <> L.Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
+                            <> L.Constraints.mustPayToOtherScriptWithDatumInTx vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
+                            <> L.Constraints.mustPayToOtherScriptWithDatumInTx vHash datum (vB 1) -- 2 ada and 1 B to script (different datum)
+                            <> L.Constraints.mustIncludeDatumInTx unitDatum
+                            <> L.Constraints.mustIncludeDatumInTx datum
                             <> L.Constraints.mustMintValue (vL 1) -- 1 L and 2 ada to wallet2
             submitTxConfirmed =<< mkTx lookups constraints
 

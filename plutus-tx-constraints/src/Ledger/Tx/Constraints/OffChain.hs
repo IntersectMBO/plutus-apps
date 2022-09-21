@@ -53,7 +53,7 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), (<>=))
+import Control.Lens (Lens', Traversal', coerced, iso, lens, makeLensesFor, set, use, (%=), (.=), (<>=))
 import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
@@ -61,14 +61,16 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
+import Data.List qualified as List
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL)
 import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
-import Ledger.Constraints.TxConstraints (OutDatum (Hashed, Inline), ScriptOutputConstraint, TxConstraint,
-                                         TxConstraints (TxConstraints, txConstraints, txOwnOutputs))
+import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
+                                         TxConstraints (TxConstraints, txConstraints, txOwnOutputs),
+                                         TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Ledger.Interval ()
 import Ledger.Orphans ()
 import Ledger.Scripts (ScriptHash, getDatum, getRedeemer, getValidator)
@@ -76,6 +78,7 @@ import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
+import Plutus.V2.Ledger.Api (Datum)
 import PlutusTx (FromData, ToData)
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), MeetSemiLattice ((/\)))
 import Prettyprinter (Pretty (pretty), colon, (<+>))
@@ -188,11 +191,23 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} 
       extractPosixTimeRange = \case
         P.MustValidateIn range -> Left range
         other                  -> Right other
-      (ranges, otherConstraints) = partitionEithers $ extractPosixTimeRange <$> txConstraints
+      (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> txConstraints
+
+      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
+      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
+      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
+      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
+      -- must yield the same behavior.
+      isIncludeDatumInTxConstraint = \case
+        P.MustIncludeDatumInTxWithHash {} -> True
+        P.MustIncludeDatumInTx {}         -> True
+        _                                 -> False
+      (includeDatumsConstraints, otherConstraints) = List.partition isIncludeDatumInTxConstraint nonRangeConstraints
     in do
         flip runReaderT lookups $ do
-            ownOutputConstraints <- traverse addOwnOutput txOwnOutputs
-            traverse_ processConstraint (otherConstraints <> ownOutputConstraints)
+            ownOutputConstraints <- concat <$> traverse addOwnOutput txOwnOutputs
+            let constraints = otherConstraints <> ownOutputConstraints <> includeDatumsConstraints
+            traverse_ processConstraint constraints
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
@@ -229,6 +244,14 @@ mkTx params lookups txc = mkSomeTx params [P.SomeLookupsAndConstraints lookups t
 throwLeft :: (MonadState s m, MonadError err m) => (b -> err) -> Either b r -> m r
 throwLeft f = either (throwError . f) pure
 
+-- | The address of a transaction output.
+txOutDatum :: Lens' (C.TxOut ctx era) (C.TxOutDatum ctx era)
+txOutDatum = lens getTxOutDatum s
+ where
+    s txOut a = setTxOutDatum txOut a
+    getTxOutDatum (C.TxOut _ _ d _) = d
+    setTxOutDatum (C.TxOut a v _ r) d = C.TxOut a v d r
+
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
@@ -236,6 +259,16 @@ processConstraint
     :: TxConstraint
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) ()
 processConstraint = \case
+    P.MustIncludeDatumInTx d -> do
+        -- We map to all known transaction outputs and change the datum to also
+        -- be included in the transaction body. The current behavior is
+        -- sensitive to the order of the constraints.
+        -- @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@ and
+        -- @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@ yield a
+        -- different result.
+        let datumInTx = C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum d))
+        unbalancedTx . tx . txOuts %=
+            \outs -> fmap (set txOutDatum datumInTx) outs
     P.MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
         case txout of
@@ -287,14 +320,10 @@ processConstraint = \case
     P.MustPayToPubKeyAddress pk mskh md refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
-        let txInDatum = case md of
-                Nothing         -> C.toCardanoTxOutNoDatum
-                Just (Hashed d) -> C.toCardanoTxOutDatumInTx d
-                Just (Inline d) -> C.toCardanoTxOutDatumInline d
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
-            <*> pure txInDatum
+            <*> pure (toTxOutDatum md)
             <*> pure refScript
 
         unbalancedTx . tx . txOuts <>= [ out ]
@@ -302,13 +331,10 @@ processConstraint = \case
     P.MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
-        let txInDatum = case dv of
-                Hashed d -> C.toCardanoTxOutDatumInTx d
-                Inline d -> C.toCardanoTxOutDatumInline d
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
             <*> C.toCardanoTxOutValue vl
-            <*> pure txInDatum
+            <*> pure (toTxOutDatum $ Just dv)
             <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 
@@ -327,10 +353,17 @@ lookupScriptAsReferenceScript msh = mapLedgerMkTxError $ P.lookupScriptAsReferen
 addOwnOutput
     :: ToData (DatumType a)
     => ScriptOutputConstraint (DatumType a)
-    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) TxConstraint
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) [TxConstraint]
 addOwnOutput soc = mapLedgerMkTxError $ P.addOwnOutput soc
 
 mapLedgerMkTxError
     :: ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except P.MkTxError)) b
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) b
 mapLedgerMkTxError = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError)))
+
+toTxOutDatum :: Maybe (TxOutDatum Datum) -> C.TxOutDatum C.CtxTx C.BabbageEra
+toTxOutDatum = \case
+    Nothing                   -> C.toCardanoTxOutNoDatum
+    Just (TxOutDatumHash d)   -> C.toCardanoTxOutDatumHashFromDatum d
+    Just (TxOutDatumInTx d)   -> C.toCardanoTxOutDatumInTx d
+    Just (TxOutDatumInline d) -> C.toCardanoTxOutDatumInline d

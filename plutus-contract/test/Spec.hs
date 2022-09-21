@@ -28,11 +28,11 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "plutus-contract" [
     Spec.Contract.tests,
-    Spec.Contract.TxConstraints.tests,
     Spec.Emulator.tests,
     Spec.State.tests,
     Spec.Rows.tests,
     Spec.ThreadToken.tests,
+    Spec.Contract.TxConstraints.tests,
     Spec.TxConstraints.MustIncludeDatum.tests,
     Spec.TxConstraints.MustMint.tests,
     Spec.TxConstraints.MustPayToOtherScript.tests,
