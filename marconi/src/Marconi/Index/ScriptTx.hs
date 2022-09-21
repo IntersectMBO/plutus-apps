@@ -116,24 +116,29 @@ open onInsert dbPath (Depth k) = do
       forM_ rows $
         SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor) VALUES (?, ?)"
 
-    query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
-    query ix scriptAddress' memory = let
-        filterByScriptAddress :: [ScriptTxUpdate] -> [TxCbor]
-        filterByScriptAddress updates' = do
-          ScriptTxUpdate update _slotNo <- updates'
-          map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) update
-      in do
-      persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
-        "SELECT txCbor FROM utxos WHERE scriptAddress = ?" (SQL.Only scriptAddress')
+query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
+query ix scriptAddress' memory = let
+    filterByScriptAddress :: [ScriptTxUpdate] -> [TxCbor]
+    filterByScriptAddress updates' = do
+      ScriptTxUpdate update _slotNo <- updates'
+      map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) update
+  in do
+  persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
+    "SELECT txCbor FROM script_transactions WHERE scriptAddress = ?" (SQL.Only scriptAddress')
 
-      buffered <- Ix.getBuffer $ ix ^. Ix.storage
-      let
-        both :: [TxCbor]
-        both = filterByScriptAddress memory
-          <> filterByScriptAddress buffered
-          <> map (\(SQL.Only txCbor') -> txCbor') persisted
+  count :: [SQL.Only Int] <- SQL.query_ (ix ^. Ix.handle)
+    "SELECT count(*) FROM script_transactions"
+  print ("count", count)
 
-      return both
+
+  buffered <- Ix.getBuffer $ ix ^. Ix.storage
+  let
+    both :: [TxCbor]
+    both = filterByScriptAddress memory
+      <> filterByScriptAddress buffered
+      <> map (\(SQL.Only txCbor') -> txCbor') persisted
+
+  return both
 
 -- * Copy-paste
 --

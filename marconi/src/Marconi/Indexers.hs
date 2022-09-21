@@ -156,8 +156,13 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
-scriptTxWorker :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()]) -> Worker
-scriptTxWorker onInsert Coordinator{_barrier} ch path = ScriptTx.open onInsert path (ScriptTx.Depth 2160) >>= loop
+scriptTxWorker_
+  :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
+  -> ScriptTx.Depth
+  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), ScriptTx.ScriptTxIndex)
+scriptTxWorker_ onInsert depth Coordinator{_barrier} ch path = do
+  indexer <- ScriptTx.open onInsert path depth
+  pure (loop indexer, indexer)
   where
     loop :: ScriptTx.ScriptTxIndex -> IO ()
     loop index = do
@@ -173,6 +178,13 @@ scriptTxWorker onInsert Coordinator{_barrier} ch path = ScriptTx.open onInsert p
               slot   <- chainPointToSlotNo cp
               offset <- findIndex  (\u -> ScriptTx.slotNo u < slot) events
               Ix.rewind offset index
+
+scriptTxWorker
+  :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
+  -> Worker
+scriptTxWorker onInsert coordinator ch path = do
+  (loop, _) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator ch path
+  loop
 
 combinedIndexer
   :: Maybe FilePath
@@ -210,7 +222,7 @@ combineIndexers indexers = S.foldM_ step initial finish
     finish :: Coordinator -> IO ()
     finish _ = pure ()
 
-    forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
-    forkIndexer coordinator worker path = do
-      ch <- atomically . dupTChan $ _channel coordinator
-      void . forkIO . worker coordinator ch $ path
+forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
+forkIndexer coordinator worker path = do
+  ch <- atomically . dupTChan $ _channel coordinator
+  void . forkIO . worker coordinator ch $ path

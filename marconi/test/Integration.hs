@@ -10,6 +10,7 @@ module Integration (tests) where
 
 import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
+import Control.Concurrent.STM qualified as IO
 import Control.Exception (catch)
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -20,6 +21,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
+import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
 import System.FilePath ((</>))
 
@@ -47,7 +49,8 @@ import Test.Base qualified as H
 import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
-import Marconi.Index.ScriptTx qualified as M
+import Hedgehog.Extras qualified as H
+import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Indexers qualified as M
 import Marconi.Logging ()
 
@@ -91,21 +94,33 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   -- can write index updates to it and we can await for them (also
   -- making us not need threadDelay)
   indexedTxs <- liftIO IO.newChan
-  let writeScriptUpdate (M.ScriptTxUpdate txScripts _slotNo) = case txScripts of
+  let writeScriptUpdate (ScriptTx.ScriptTxUpdate txScripts _slotNo) = case txScripts of
         (x : xs) -> IO.writeChan indexedTxs $ x :| xs
         _        -> pure ()
 
   -- Start indexer
   let sqliteDb = tempAbsPath </> "script-tx.db"
-  void $ liftIO $ IO.forkIO $ do
-    let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
-    c <- defaultConfigStdout
-    withTrace c "marconi" $ \trace -> let
-      chainSync = withChainSyncEventStream socketPathAbs networkId chainPoint
-      indexer = M.combineIndexers [(M.scriptTxWorker (\_ update -> writeScriptUpdate update $> []), sqliteDb)]
-      handleException NoIntersectionFound = logError trace $ renderStrict $ layoutPretty defaultLayoutOptions $
-        "No intersection found for chain point" <+> pretty chainPoint <> "."
-      in chainSync indexer `catch` handleException :: IO ()
+  indexer <- liftIO $ do
+
+    coordinator <- M.initialCoordinator 1
+    ch <- IO.atomically . IO.dupTChan $ M._channel coordinator
+    (loop, indexer) <- M.scriptTxWorker_ (\_ update -> writeScriptUpdate update $> []) (ScriptTx.Depth 0) coordinator ch sqliteDb
+
+    -- Receive ChainSyncEvents and pass them on to indexer's channel
+    void $ IO.forkIO $ do
+      let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
+      c <- defaultConfigStdout
+      withTrace c "marconi" $ \trace -> let
+        indexerWorker = withChainSyncEventStream socketPathAbs networkId chainPoint $ S.mapM_ $
+          \chainSyncEvent -> IO.atomically $ IO.writeTChan ch chainSyncEvent
+        handleException NoIntersectionFound = logError trace $ renderStrict $ layoutPretty defaultLayoutOptions $
+          "No intersection found for chain point" <+> pretty chainPoint <> "."
+        in indexerWorker `catch` handleException :: IO ()
+
+    -- Start indexer worker loop
+    void $ IO.forkIO loop
+
+    return indexer
 
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
@@ -269,13 +284,38 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
   submitTx localNodeConnectInfo tx2
 
-  (M.TxCbor tx, indexedScriptHashes) :| _ <- liftIO $ IO.readChan indexedTxs
-  M.ScriptAddress indexedScriptHash <- headM indexedScriptHashes
+
+  {- Test if what the indexer got is what we sent.
+
+  We test both of (1) what we get from `onInsert` callback and (2)
+  with `query` (what ends up in the sqlite database). For the `query`
+  we currently need to use threadDelay and poll to query the database
+  because the indexer runs in a separate thread and there is no way
+  of awaiting the data to be flushed into the database. -}
+
+  (ScriptTx.TxCbor tx, indexedScriptHashes) :| _ <- liftIO $ IO.readChan indexedTxs
+
+  ScriptTx.ScriptAddress indexedScriptHash <- headM indexedScriptHashes
 
   indexedTx2 :: C.Tx C.AlonzoEra <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) tx
 
   plutusScriptHash === indexedScriptHash
   tx2 === indexedTx2
+
+  -- The query poll
+  queriedTx2 :: C.Tx C.AlonzoEra <- do
+    let
+      queryLoop n = do
+        H.threadDelay 250_000 -- wait 250ms before querying
+        liftIO $ putStrLn $ "query poll #" <> show (n :: Int)
+        txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
+        case txCbors of
+          result : _ -> pure result
+          _          -> queryLoop (n + 1)
+    ScriptTx.TxCbor txCbor <- queryLoop 0
+    H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
+
+  tx2 === queriedTx2
 
 -- * Helpers
 
