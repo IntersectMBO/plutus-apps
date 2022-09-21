@@ -75,43 +75,39 @@ initialFee :: Value
 initialFee = Ada.lovelaceValueOf 100_000 -- Defined as 1% of initialDeposit
 
 tests :: TestTree
-tests = testGroup "Stablecoin" [
-    -- TODO: should be uncommented after fix of Oracle
-    -- [ checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins"
-    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee))
-    --     .&&. assertNoFailedTransactions
-    --     .&&. walletFundsChange user (Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee))
-    --     )
-    --     $ initialise >>= mintReserveCoins (RC 10_000_000) one
+tests = testGroup "Stablecoin"
+    [ checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins"
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee))
+        .&&. assertNoFailedTransactions
+        .&&. walletFundsChange user (Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee))
+        )
+        $ initialise >>= mintReserveCoins (RC 10_000_000) one
 
-    -- TODO: should be uncommented after fix of Oracle
-    -- , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins and stablecoins"
-    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
-    --     .&&. assertNoFailedTransactions
-    --     .&&. walletFundsChange user (Stablecoin.stableCoins coin 5_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
-    --     )
-    --     $ do
-    --         hdl <- initialise
-    --         mintReserveCoins (RC 10_000_000) one hdl
-    --         -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD
-    --         void $ mintStableCoins (SC 5_000_000) one hdl
+    , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins and stablecoins"
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
+        .&&. assertNoFailedTransactions
+        .&&. walletFundsChange user (Stablecoin.stableCoins coin 5_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
+        )
+        $ do
+            hdl <- initialise
+            mintReserveCoins (RC 10_000_000) one hdl
+            -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD
+            void $ mintStableCoins (SC 5_000_000) one hdl
 
-    -- TODO: should be uncommented after fix of Oracle
-    -- , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins, stablecoins and redeem stablecoin at a different price"
-    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
-    --     .&&. assertNoFailedTransactions
-    --     .&&. walletFundsChange user (Stablecoin.stableCoins coin 3_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
-    --     )
-    --     stablecoinTrace
+    , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins, stablecoins and redeem stablecoin at a different price"
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
+        .&&. assertNoFailedTransactions
+        .&&. walletFundsChange user (Stablecoin.stableCoins coin 3_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
+        )
+        stablecoinTrace
 
-    -- TODO: should be uncommented after fix of Oracle
-    -- , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = Rational 20000000 1}, actual = BC {unBC = Rational 20173235 1}}. The transition is not allowed." in
-    --   checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "Cannot exceed the maximum reserve ratio"
-    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
-    --     .&&. assertNoFailedTransactions
-    --     .&&. assertInstanceLog (Trace.walletInstanceTag w1) ((==) (Just expectedLogMsg) . listToMaybe . reverse . mapMaybe (preview (eteEvent . cilMessage . _ContractLog)))
-    --     )
-    --     maxReservesExceededTrace
+    , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = Rational 20000000 1}, actual = BC {unBC = Rational 20173235 1}}. The transition is not allowed." in
+      checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "Cannot exceed the maximum reserve ratio"
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
+        .&&. assertNoFailedTransactions
+        .&&. assertInstanceLog (Trace.walletInstanceTag w1) ((==) (Just expectedLogMsg) . listToMaybe . reverse . mapMaybe (preview (eteEvent . cilMessage . _ContractLog)))
+        )
+        maxReservesExceededTrace
 
     ]
 

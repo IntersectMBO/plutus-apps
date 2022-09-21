@@ -231,22 +231,6 @@ validateCardanoTx params slot utxo txn =
       (\(CardanoApiEmulatorEraTx tx) -> if utxo == UTxO (Map.fromList []) then Nothing else hasValidationErrors params (fromIntegral slot) utxo tx)
       txn
 
-{- Note [Second phase validation]
-There are two phases of transaction validation:
-1. When we use the cardano-ledger 'applyTx' to validate the transaction's body in 'hasValidationErrors'.
-2. When we execute plutus scripts in the transaction to get the execution units in 'getTxExUnits'.
-
-At the moment we have to turn off the second phase validation in 'hasValidationErrors' because there are tests
-that fail with 'check' error in 'getTxExUnits'.
-
-Failing transactions throw a checkHasFailedError error, but we don't want to deal with those yet.
-We might be able to do that in the future. But for now just return a zero execution cost
-so it will run later where we do handle failing transactions.
-
-We also have to comment the tests that expect the script's failure. They should be uncommented
-when we will fix the rest failing tests.
--}
-
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
   case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of

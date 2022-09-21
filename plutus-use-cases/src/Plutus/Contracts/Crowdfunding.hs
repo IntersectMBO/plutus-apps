@@ -77,8 +77,6 @@ import Schema (ToArgument, ToSchema)
 import Wallet.Emulator (Wallet (..), knownWallet)
 import Wallet.Emulator qualified as Emulator
 
-import Debug.Trace
-
 -- | A crowdfunding campaign.
 data Campaign = Campaign
     { campaignDeadline           :: POSIXTime
@@ -125,7 +123,8 @@ mkCampaign ddl collectionDdl ownerWallet =
 {-# INLINABLE collectionRange #-}
 collectionRange :: Campaign -> POSIXTimeRange
 collectionRange cmp =
-    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 1)
+    -- We have to subtract '2', see Note [Validity Interval's upper bound]
+    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 2)
 
 -- | The 'POSIXTimeRange' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
@@ -157,9 +156,9 @@ validRefund campaign contributor txinfo =
 validCollection :: Campaign -> TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
-    -- (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
+    (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
@@ -206,6 +205,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
+                -- We have to subtract '2', see Note [Validity Interval's upper bound]
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
@@ -242,8 +242,6 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
 
     _ <- awaitTime $ campaignDeadline cmp
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-
-    traceShowM $ Haskell.show $ collectionRange cmp
 
     let tx = Constraints.collectFromTheScript unspentOutputs Collect
             <> Constraints.mustBeSignedBy (campaignOwner cmp)

@@ -75,7 +75,6 @@ import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 import Prelude (Semigroup (..), foldMap)
 import Prelude qualified as Haskell
 
-
 type EscrowSchema =
         Endpoint "pay-escrow" Value
         .\/ Endpoint "redeem-escrow" ()
