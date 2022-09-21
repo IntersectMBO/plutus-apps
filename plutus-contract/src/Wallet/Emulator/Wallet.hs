@@ -19,6 +19,7 @@
 {-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Remove once TotalFunds gets removed
 
 module Wallet.Emulator.Wallet where
 

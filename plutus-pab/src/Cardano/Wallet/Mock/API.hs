@@ -42,5 +42,6 @@ type API walletId -- see note [WalletID type in wallet API]
       :<|> Capture "walletId" walletId :> "own-payment-public-key-hash" :> Get '[JSON] PaymentPubKeyHash
       :<|> Capture "walletId" walletId :> "own-addresses" :> Get '[JSON] (NonEmpty Address)
       :<|> Capture "walletId" walletId :> "balance-tx" :> ReqBody '[JSON] UnbalancedTx :> Post '[JSON] (Either WalletAPIError CardanoTx)
+      -- TODO: Should we removed as deprecated
       :<|> Capture "walletId" walletId :> "total-funds" :> Get '[JSON] Value
       :<|> Capture "walletId" walletId :> "sign" :> ReqBody '[JSON] CardanoTx :> Post '[JSON] CardanoTx
