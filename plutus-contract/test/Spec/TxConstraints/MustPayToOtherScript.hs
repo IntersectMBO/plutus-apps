@@ -14,11 +14,11 @@ import Test.Tasty (TestTree, testGroup)
 import Control.Lens ((&))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (plutusV1MintingPolicy, plutusV1OtherScript, unspentOutputs)
+import Ledger.Constraints qualified as Constraints (OutDatum (Hashed), mustMintValueWithRedeemer, mustPayToOtherScript,
+                                                    mustPayToOtherScriptAddress,
+                                                    mustSpendScriptOutputWithMatchingDatumAndValue,
+                                                    plutusV1MintingPolicy, plutusV1OtherScript, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (mustMintValueWithRedeemer, mustPayToOtherScript,
-                                                                  mustPayToOtherScriptAddress,
-                                                                  mustSpendScriptOutputWithMatchingDatumAndValue)
 import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (asRedeemer, someValidator, someValidatorHash)
@@ -84,7 +84,7 @@ trace contract = do
 mustPayToOtherScriptContract :: Value.Value -> Ledger.Redeemer -> Contract () Empty ContractError ()
 mustPayToOtherScriptContract offChainValue onChainConstraint = do
     let lookups1 = Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
-        tx1 = Constraints.mustPayToOtherScript someValidatorHash someDatum offChainValue
+        tx1 = Constraints.mustPayToOtherScript someValidatorHash (Constraints.Hashed someDatum) offChainValue
            <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -145,7 +145,6 @@ successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance =
                     <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
             ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
-
     in checkPredicateOptions options
     "Successful use of offchain and onchain mustPayToOtherScript constraint in combination with mustSpendScriptOutputWithMatchingDatumAndValue to spend script's exact token balance"
     (assertValidatedTransactionCount 2)
@@ -202,8 +201,8 @@ instance Scripts.ValidatorTypes UnitTest
 {-# INLINEABLE mkMustPayToOtherScriptPolicy #-}
 mkMustPayToOtherScriptPolicy :: ConstraintParams -> Ledger.ScriptContext -> Bool
 mkMustPayToOtherScriptPolicy t = case t of
-    MustPayToOtherScript vh d v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh d v)
-    MustPayToOtherScriptAddress vh svh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh d v)
+    MustPayToOtherScript vh d v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh (Constraints.Hashed d) v)
+    MustPayToOtherScriptAddress vh svh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh (Constraints.Hashed d) v)
 
 mustPayToOtherScriptPolicy :: Scripts.MintingPolicy
 mustPayToOtherScriptPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])

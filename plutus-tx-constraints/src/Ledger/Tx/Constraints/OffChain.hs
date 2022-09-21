@@ -285,7 +285,7 @@ processConstraint = \case
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.toCardanoScriptData . getDatum) md)
+            <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.toCardanoScriptData . getDatum) (P.getOutDatum <$> md)) -- FIXME
             <*> pure refScript
 
         unbalancedTx . tx . txOuts <>= [ out ]
@@ -296,7 +296,7 @@ processConstraint = \case
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum dv)))
+            <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum $ P.getOutDatum dv))) -- FIXME
             <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 

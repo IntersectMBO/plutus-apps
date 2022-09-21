@@ -212,7 +212,7 @@ tests =
 
         , let c :: Contract [Maybe DatumHash] Schema ContractError () = do
                 let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
-                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum (Ada.adaValueOf 10)
+                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash (Constraints.Hashed datum) (Ada.adaValueOf 10)
                 tx <- submitTx payment
                 let txOuts = fmap fst $ Ledger.getCardanoTxOutRefs tx
                 -- tell the tx out' datum hash that was specified by 'mustPayWithDatumToPubKey'
@@ -232,11 +232,11 @@ tests =
         -- in case of two transactions with 'mustPayWithDatumToPubKey'
         , let c1 :: Contract [Maybe DatumHash] Schema ContractError () = do
                 let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
-                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum1 (Ada.adaValueOf 10)
+                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash (Constraints.Hashed datum1) (Ada.adaValueOf 10)
                 void $ submitTx payment
               c2 :: Contract [Maybe DatumHash] Schema ContractError () = do
                 let w3PubKeyHash = mockWalletPaymentPubKeyHash w3
-                let payment = Constraints.mustPayWithDatumToPubKey w3PubKeyHash datum2 (Ada.adaValueOf 50)
+                let payment = Constraints.mustPayWithDatumToPubKey w3PubKeyHash (Constraints.Hashed datum2) (Ada.adaValueOf 50)
                 void $ submitTx payment
 
               datum1 = Datum $ PlutusTx.toBuiltinData (23 :: Integer)

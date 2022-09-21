@@ -6,6 +6,8 @@ module Ledger.Constraints(
     , TC.ScriptInputConstraint(..)
     , TC.ScriptOutputConstraint(..)
     -- * Defining constraints
+    , TC.OutDatum(..)
+    , TC.getOutDatum
     , TC.mustPayToTheScript
     , TC.mustPayToPubKey
     , TC.mustPayToPubKeyAddress

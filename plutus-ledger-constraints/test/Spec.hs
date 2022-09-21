@@ -137,7 +137,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
     let svh = Ledger.StakeValidatorHash $ examplePlutusScriptAlwaysSucceedsHash WitCtxStake
-        txE = Constraints.mkTx @Void mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+        txE = Constraints.mkTx @Void mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh (Constraints.Inline Ledger.unitDatum) (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err

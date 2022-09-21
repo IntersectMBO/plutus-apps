@@ -13,11 +13,10 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (plutusV1MintingPolicy)
+import Ledger.Constraints qualified as Constraints (OutDatum (Hashed), mustMintValueWithRedeemer, mustPayToPubKey,
+                                                    mustPayToPubKeyAddress, mustPayWithDatumToPubKey,
+                                                    mustPayWithDatumToPubKeyAddress, plutusV1MintingPolicy)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (mustMintValueWithRedeemer, mustPayToPubKey,
-                                                                  mustPayToPubKeyAddress, mustPayWithDatumToPubKey,
-                                                                  mustPayWithDatumToPubKeyAddress)
 import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
@@ -169,7 +168,7 @@ successfulUseOfMustPayWithDatumToPubKey =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
-                tx1 = Constraints.mustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumToPubKey w2PaymentPubKeyHash (Constraints.Hashed someDatum) adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -185,7 +184,7 @@ successfulUseOfMustPayWithDatumToPubKeyAddress =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
-                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash (Constraints.Hashed someDatum) adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -201,7 +200,7 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
-                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w1PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w1PaymentPubKeyHash w2StakePubKeyHash (Constraints.Hashed someDatum) adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -217,7 +216,7 @@ phase2FailureWhenUsingUnexpectedDatum =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash otherDatum adaValue
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
-                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash (Constraints.Hashed someDatum) adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -233,7 +232,7 @@ phase2FailureWhenUsingUnexpectedValue =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum (Ada.lovelaceValueOf $ adaAmount + 1)
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
-                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash (Constraints.Hashed someDatum) adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -251,8 +250,8 @@ mkMustPayToPubKeyAddressPolicy :: ConstraintParams -> Ledger.ScriptContext -> Bo
 mkMustPayToPubKeyAddressPolicy t = case t of
     MustPayToPubKey ppkh v                        -> Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKey ppkh v)
     MustPayToPubKeyAddress ppkh spkh v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKeyAddress ppkh spkh v)
-    MustPayWithDatumToPubKey ppkh d v             -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKey ppkh d v)
-    MustPayWithDatumToPubKeyAddress ppkh spkh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKeyAddress ppkh spkh d v)
+    MustPayWithDatumToPubKey ppkh d v             -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKey ppkh (Constraints.Hashed d) v)
+    MustPayWithDatumToPubKeyAddress ppkh spkh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKeyAddress ppkh spkh (Constraints.Hashed d) v)
 
 mustPayToPubKeyAddressPolicy :: Scripts.MintingPolicy
 mustPayToPubKeyAddressPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])

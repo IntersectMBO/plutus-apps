@@ -13,12 +13,11 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (plutusV1MintingPolicy, typedValidatorLookups,
-                                                             unspentOutputs)
+import Ledger.Constraints qualified as Constraints (OutDatum (..), collectFromTheScript, mustIncludeDatum,
+                                                    mustMintValueWithRedeemer, mustPayToOtherScript, mustPayToTheScript,
+                                                    mustPayWithDatumToPubKey, plutusV1MintingPolicy,
+                                                    typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
-                                                                  mustMintValueWithRedeemer, mustPayToOtherScript,
-                                                                  mustPayToTheScript, mustPayWithDatumToPubKey)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
@@ -75,8 +74,8 @@ mustIncludeDatumWhenPayingToScriptContract offChainDatums onChainDatums = do
     where
         mustPayToTheScriptAndIncludeDatumsIfUsingOffChainConstraint =
             if null offChainDatums
-            then Constraints.mustPayToOtherScript valHash validatorDatum (Ada.lovelaceValueOf 2_000_000)
-            else mconcat $ fmap (\datum -> Constraints.mustPayToOtherScript valHash validatorDatum (Ada.lovelaceValueOf 2_000_000) <> Constraints.mustIncludeDatum datum) offChainDatums
+            then Constraints.mustPayToOtherScript valHash (Constraints.Hashed validatorDatum) (Ada.lovelaceValueOf 2_000_000)
+            else mconcat $ fmap (\datum -> Constraints.mustPayToOtherScript valHash (Constraints.Hashed validatorDatum) (Ada.lovelaceValueOf 2_000_000) <> Constraints.mustIncludeDatum datum) offChainDatums
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -165,7 +164,7 @@ mustIncludeDatumToPubKeyAddress =
     let onChainConstraintDatumsAsRedeemer = Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ([validatorDatum] :: [Datum])
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustIncludeDatumPolicy
-                tx1 = Constraints.mustPayWithDatumToPubKey (mockWalletPaymentPubKeyHash w1) validatorDatum (Ada.lovelaceValueOf 25_000_000)
+                tx1 = Constraints.mustPayWithDatumToPubKey (mockWalletPaymentPubKeyHash w1) (Constraints.Hashed validatorDatum) (Ada.lovelaceValueOf 25_000_000)
                    <> Constraints.mustIncludeDatum validatorDatum
                    <> Constraints.mustMintValueWithRedeemer onChainConstraintDatumsAsRedeemer tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1

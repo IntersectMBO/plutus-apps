@@ -48,6 +48,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoTxOutDatumHash
   , toCardanoTxOutDatumInline
   , toCardanoTxOutDatumInTx
+  , toCardanoTxOutNoDatum
   , toCardanoTxOutValue
   , toCardanoAddressInEra
   , toCardanoValue
@@ -516,15 +517,16 @@ fromCardanoTxOutDatum (C.TxOutDatumHash _ h) = PV2.OutputDatumHash $ PV2.DatumHa
 fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 fromCardanoTxOutDatum (C.TxOutDatumInline _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 
-toCardanoTxOutDatumInTx :: Maybe PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
-toCardanoTxOutDatumInTx Nothing = C.TxOutDatumNone
-toCardanoTxOutDatumInTx (Just d) =
-    C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum $ d
+toCardanoTxOutNoDatum  :: C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutNoDatum = C.TxOutDatumNone
 
-toCardanoTxOutDatumInline :: Maybe PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
-toCardanoTxOutDatumInline Nothing = C.TxOutDatumNone
-toCardanoTxOutDatumInline (Just d) =
-    C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum $ d
+toCardanoTxOutDatumInTx :: PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutDatumInTx =
+    C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum
+
+toCardanoTxOutDatumInline :: PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutDatumInline =
+    C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum
 
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone

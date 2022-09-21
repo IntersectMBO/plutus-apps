@@ -52,6 +52,20 @@ import Data.Maybe (fromMaybe)
 import Prelude qualified as Haskell
 import Prettyprinter.Render.String (renderShowS)
 
+-- | How tx out datum are embedded in a a Tx
+data OutDatum = Inline Datum | Hashed Datum
+    deriving stock (Haskell.Show, Generic, Haskell.Eq)
+    deriving anyclass (ToJSON, FromJSON)
+
+getOutDatum :: OutDatum -> Datum
+getOutDatum (Hashed d) = d
+getOutDatum (Inline d) = d
+
+instance Pretty OutDatum where
+  pretty = \case
+    Inline d -> "inline datum" <+> pretty d
+    Hashed d -> "hashed datum" <+> pretty d
+
 -- | Constraints on transactions that want to spend script outputs
 data TxConstraint =
       MustHashDatum DatumHash Datum
@@ -80,9 +94,9 @@ data TxConstraint =
     -- ^ The transaction must reference (not spend) the given unspent transaction output.
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
     -- ^ The transaction must mint the given token and amount.
-    | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe Datum) (Maybe ScriptHash) Value
+    | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe OutDatum) (Maybe ScriptHash) Value
     -- ^ The transaction must create a transaction output with a public key address.
-    | MustPayToOtherScript ValidatorHash (Maybe StakeValidatorHash) Datum (Maybe ScriptHash) Value
+    | MustPayToOtherScript ValidatorHash (Maybe StakeValidatorHash) OutDatum (Maybe ScriptHash) Value
     -- ^ The transaction must create a transaction output with a script address.
     | MustSatisfyAnyOf [[TxConstraint]]
     -- ^ The transaction must satisfy constraints given as an alternative of conjuctions (DNF),
@@ -337,7 +351,7 @@ mustPayToPubKeyAddress pkh skh vl =
 mustPayWithDatumToPubKey
     :: forall i o
      . PaymentPubKeyHash
-    -> Datum
+    -> OutDatum
     -> Value
     -> TxConstraints i o
 mustPayWithDatumToPubKey pk datum vl =
@@ -358,7 +372,7 @@ mustPayWithDatumToPubKeyAddress
     :: forall i o
      . PaymentPubKeyHash
     -> StakePubKeyHash
-    -> Datum
+    -> OutDatum
     -> Value
     -> TxConstraints i o
 mustPayWithDatumToPubKeyAddress pkh skh datum vl =
@@ -370,7 +384,7 @@ mustPayToAddressWithReferenceValidator
     :: forall i o
     . Address
     -> ValidatorHash
-    -> Maybe Datum
+    -> Maybe OutDatum
     -> Value
     -> TxConstraints i o
 mustPayToAddressWithReferenceValidator addr (ValidatorHash vh) = mustPayToAddressWithReferenceScript addr (ScriptHash vh)
@@ -381,7 +395,7 @@ mustPayToAddressWithReferenceMintingPolicy
     :: forall i o
     . Address
     -> MintingPolicyHash
-    -> Maybe Datum
+    -> Maybe OutDatum
     -> Value
     -> TxConstraints i o
 mustPayToAddressWithReferenceMintingPolicy addr (MintingPolicyHash vh) = mustPayToAddressWithReferenceScript addr (ScriptHash vh)
@@ -401,7 +415,7 @@ mustPayToAddressWithReferenceScript
     :: forall i o
     . Address
     -> ScriptHash
-    -> Maybe Datum
+    -> Maybe OutDatum
     -> Value
     -> TxConstraints i o
 mustPayToAddressWithReferenceScript
@@ -412,17 +426,17 @@ mustPayToAddressWithReferenceScript
         singleton (MustPayToPubKeyAddress (PaymentPubKeyHash pkh) Nothing datum (Just scriptHash) value)
 mustPayToAddressWithReferenceScript
     (Address (ScriptCredential vh) (Just (StakingHash (ScriptCredential (ValidatorHash sh))))) scriptHash datum value =
-        singleton (MustPayToOtherScript vh (Just (StakeValidatorHash sh)) (fromMaybe unitDatum datum) (Just scriptHash) value)
+        singleton (MustPayToOtherScript vh (Just (StakeValidatorHash sh)) (fromMaybe (Inline unitDatum) datum) (Just scriptHash) value)
 mustPayToAddressWithReferenceScript
     (Address (ScriptCredential vh) Nothing) scriptHash datum value =
-        singleton (MustPayToOtherScript vh Nothing (fromMaybe unitDatum datum) (Just scriptHash) value)
+        singleton (MustPayToOtherScript vh Nothing (fromMaybe (Inline unitDatum) datum) (Just scriptHash) value)
 mustPayToAddressWithReferenceScript
     addr _ _ _ = Haskell.error $ "Ledger.Constraints.TxConstraints.mustPayToAddressWithReferenceScript: unsupported address " Haskell.++ Haskell.show addr
 
 {-# INLINABLE mustPayToOtherScript #-}
 -- | @mustPayToOtherScript vh d v@ is the same as
 -- 'mustPayToOtherScriptAddress', but without the staking key hash.
-mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScript :: forall i o. ValidatorHash -> OutDatum -> Value -> TxConstraints i o
 mustPayToOtherScript vh dv vl =
     singleton (MustPayToOtherScript vh Nothing dv Nothing vl)
 
@@ -437,7 +451,7 @@ mustPayToOtherScript vh dv vl =
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the script transaction output with
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
-mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> OutDatum -> Value -> TxConstraints i o
 mustPayToOtherScriptAddress vh svh dv vl =
     singleton (MustPayToOtherScript vh (Just svh) dv Nothing vl)
 

@@ -14,7 +14,7 @@ import Test.Tasty (TestTree, testGroup)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as L.Constraints
-import Ledger.Scripts (unitDatum, unitRedeemer)
+import Ledger.Scripts (unitRedeemer)
 import Ledger.Test
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Value qualified as Value
@@ -29,6 +29,9 @@ import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
+
+unitDatum :: L.Constraints.OutDatum
+unitDatum = L.Constraints.Hashed Ledger.unitDatum
 
 tests :: TestTree
 tests =
@@ -90,15 +93,15 @@ balanceTxnMinAda2 =
         wallet2Contract :: Contract () EmptySchema ContractError ()
         wallet2Contract = do
             utxos <- utxosAt someAddress
-            let txOutRef = case (Map.keys utxos) of
+            let txOutRef = case Map.keys utxos of
                              (x:_) -> x
                              []    -> error $ "there's no utxo at the address " <> show someAddress
-                lookups = L.Constraints.unspentOutputs utxos
+                lookups =  L.Constraints.unspentOutputs utxos
                         <> L.Constraints.plutusV1OtherScript someValidator
                         <> L.Constraints.plutusV1MintingPolicy mps
                 constraints = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
                             <> L.Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
-                            <> L.Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
+                            <> L.Constraints.mustPayToOtherScript vHash (L.Constraints.Hashed $ Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
                             <> L.Constraints.mustMintValue (vL 1) -- 1 L and 2 ada to wallet2
             submitTxConfirmed =<< mkTx lookups constraints
 

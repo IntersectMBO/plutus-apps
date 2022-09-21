@@ -92,12 +92,14 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
 import Ledger.Address qualified as Address
-import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
+import Ledger.Constraints.TxConstraints (OutDatum (Hashed, Inline),
+                                         ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
-                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
+                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
+                                         getOutDatum)
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
@@ -562,7 +564,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = Datum (toBuiltinData ocDatum)
-    pure $ MustPayToOtherScript (Typed.tvValidatorHash inst) Nothing dsV ocReferenceScriptHash ocValue
+    pure $ MustPayToOtherScript (Typed.tvValidatorHash inst) Nothing (Hashed dsV) ocReferenceScriptHash ocValue
 
 data MkTxError =
     TypeCheckFailed Typed.ConnectionError
@@ -702,23 +704,30 @@ processConstraint = \case
         -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
-            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) ?= dv
+            let d = getOutDatum dv -- FIXME
+            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash d) ?= d
         let pv1TxOut = PV1.TxOut { PV1.txOutAddress=pubKeyHashAddress pk skhM
                                  , PV1.txOutValue=vl
                                  , PV1.txOutDatumHash=Nothing
                                  }
-        let txInDatum = C.toCardanoTxOutDatumInTx mdv
+        let txInDatum = case mdv of
+                Nothing         -> C.toCardanoTxOutNoDatum
+                Just (Hashed d) -> C.toCardanoTxOutDatumInTx d
+                Just (Inline d) -> C.toCardanoTxOutDatumInline d
         txOut <- toCardanoTxOutWithHashedDatum pv1TxOut <&> outDatumHash .~ txInDatum
         unbalancedTx . tx . Tx.outputs %= (txOut :)
         valueSpentOutputs <>= provided vl
     MustPayToOtherScript vlh svhM dv _refScript vl -> do
         -- TODO: implement adding reference script
         let addr = Address.scriptValidatorHashAddress vlh svhM
-            theHash = P.datumHash dv
-            pv1script = scriptAddressTxOut addr vl dv
-        unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
+            d = getOutDatum dv
+            theHash = P.datumHash d
+            pv1script = scriptAddressTxOut addr vl d
+        unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= d
 
-        let txInDatum = C.toCardanoTxOutDatumInTx (Just dv)
+        let txInDatum = case dv of
+                Hashed _ -> C.toCardanoTxOutDatumInTx d
+                Inline _ -> C.toCardanoTxOutDatumInline d
         txScript <- toCardanoTxOutWithHashedDatum pv1script <&> outDatumHash .~ txInDatum
         unbalancedTx . tx . Tx.outputs %= (txScript :)
         valueSpentOutputs <>= provided vl
