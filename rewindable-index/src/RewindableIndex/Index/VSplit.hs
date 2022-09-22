@@ -189,13 +189,13 @@ insert e ix = do
         c  = ix ^. storage . cursor
         vs = VGM.length es
     VGM.unsafeWrite es c e
+    ns <- (ix ^. onInsert) ix e
     let ix' = storage            %~ updateSizes                $
-              (storage . cursor) %~ (\c' -> (c' + 1) `rem` vs) $ ix
-    res <- if isStorageFull (ix' ^. storage)
-      then storeEvents ix'
-      else pure        ix'
-    (ix ^. onInsert) ix e
-    return res
+              (storage . cursor) %~ (\c' -> (c' + 1) `rem` vs) $
+              notifications      %~ (ns++)                     $ ix
+    if isStorageFull (ix' ^. storage)
+    then storeEvents ix'
+    else pure        ix'
 
   where
     updateSizes :: Storage v m e -> Storage v m e
