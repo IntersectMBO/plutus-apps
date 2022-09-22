@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
@@ -31,6 +32,8 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoAddressInEra
   , fromCardanoAddress
   , fromCardanoMintValue
+  , fromCardanoAssetId
+  , fromCardanoAssetName
   , fromCardanoValue
   , fromCardanoPolicyId
   , fromCardanoFee
@@ -54,6 +57,9 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxOutValue
   , toCardanoAddressInEra
   , toCardanoMintValue
+  , toCardanoAssetId
+  , toCardanoAssetName
+  , toCardanoPolicyId
   , toCardanoValue
   , toCardanoFee
   , toCardanoValidityRange
@@ -81,7 +87,7 @@ import Codec.Serialise qualified as Codec
 import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
 import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes, TkSimple))
 import Control.Applicative ((<|>))
-import Control.Lens ((&), (.~), (?~))
+import Control.Lens ((&), (.~), (<&>), (?~))
 import Control.Monad (when)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
 import Data.Aeson qualified as Aeson
@@ -627,32 +633,52 @@ toCardanoMintValue redeemers value mps =
         <*> (C.BuildTxWith . Map.fromList <$> traverse (\(idx, mp) -> (,) <$> (toCardanoPolicyId . P.mintingPolicyHash) mp <*> toCardanoMintWitness redeemers idx mp) (Prelude.zip [0..] $ Set.toList mps))
 
 fromCardanoValue :: C.Value -> P.Value
-fromCardanoValue (C.valueToList -> list) = foldMap toValue list
-    where
-        toValue (C.AdaAssetId, C.Quantity q) = Ada.lovelaceValueOf q
-        toValue (C.AssetId policyId assetName, C.Quantity q)
-            = Value.singleton (Value.mpsSymbol $ fromCardanoPolicyId policyId) (fromCardanoAssetName assetName) q
+fromCardanoValue (C.valueToList -> list) =
+    foldMap fromSingleton list
+  where
+    fromSingleton (fromCardanoAssetId -> assetClass, C.Quantity quantity) =
+        Value.assetClassValue assetClass quantity
 
 toCardanoValue :: P.Value -> Either ToCardanoError C.Value
-toCardanoValue = fmap C.valueFromList . traverse fromValue . Value.flattenValue
-    where
-        fromValue (currencySymbol, tokenName, amount)
-            | currencySymbol == Ada.adaSymbol && tokenName == Ada.adaToken =
-                pure (C.AdaAssetId, C.Quantity amount)
-            | otherwise =
-                (,) <$> (C.AssetId <$> toCardanoPolicyId (Value.currencyMPSHash currencySymbol) <*> pure (toCardanoAssetName tokenName)) <*> pure (C.Quantity amount)
+toCardanoValue =
+    fmap C.valueFromList . traverse toSingleton . Value.flattenValue
+  where
+    toSingleton (cs, tn, q) =
+        toCardanoAssetId (Value.assetClass cs tn) <&> (, C.Quantity q)
 
 fromCardanoPolicyId :: C.PolicyId -> P.MintingPolicyHash
 fromCardanoPolicyId (C.PolicyId scriptHash) = P.MintingPolicyHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptHash)
 
 toCardanoPolicyId :: P.MintingPolicyHash -> Either ToCardanoError C.PolicyId
-toCardanoPolicyId (P.MintingPolicyHash bs) = C.PolicyId <$> tag "toCardanoPolicyId" (tag (show (BS.length (PlutusTx.fromBuiltin bs)) <> " bytes") (deserialiseFromRawBytes C.AsScriptHash (PlutusTx.fromBuiltin bs)))
+toCardanoPolicyId (P.MintingPolicyHash bs) =
+    tag "toCardanoPolicyId" $
+        tag (show (BS.length (PlutusTx.fromBuiltin bs)) <> " bytes")
+            (deserialiseFromRawBytes C.AsPolicyId (PlutusTx.fromBuiltin bs))
 
 fromCardanoAssetName :: C.AssetName -> Value.TokenName
 fromCardanoAssetName (C.AssetName bs) = Value.TokenName $ PlutusTx.toBuiltin bs
 
-toCardanoAssetName :: Value.TokenName -> C.AssetName
-toCardanoAssetName (Value.TokenName bs) = C.AssetName $ PlutusTx.fromBuiltin bs
+toCardanoAssetName :: Value.TokenName -> Either ToCardanoError C.AssetName
+toCardanoAssetName (Value.TokenName bs) =
+    tag "toCardanoAssetName" $
+        tag (show (BS.length (PlutusTx.fromBuiltin bs)) <> " bytes")
+            (deserialiseFromRawBytes C.AsAssetName (PlutusTx.fromBuiltin bs))
+
+fromCardanoAssetId :: C.AssetId -> Value.AssetClass
+fromCardanoAssetId C.AdaAssetId = Value.assetClass Ada.adaSymbol Ada.adaToken
+fromCardanoAssetId (C.AssetId policyId assetName) =
+    Value.assetClass
+        (Value.mpsSymbol . fromCardanoPolicyId $ policyId)
+        (fromCardanoAssetName assetName)
+
+toCardanoAssetId :: Value.AssetClass -> Either ToCardanoError C.AssetId
+toCardanoAssetId (Value.AssetClass (currencySymbol, tokenName))
+    | currencySymbol == Ada.adaSymbol && tokenName == Ada.adaToken =
+        pure C.AdaAssetId
+    | otherwise =
+        C.AssetId
+            <$> toCardanoPolicyId (Value.currencyMPSHash currencySymbol)
+            <*> toCardanoAssetName tokenName
 
 fromCardanoFee :: C.TxFee era -> P.Value
 fromCardanoFee (C.TxFeeImplicit _)          = mempty
