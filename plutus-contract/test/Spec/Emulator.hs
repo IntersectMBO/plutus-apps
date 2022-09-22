@@ -28,8 +28,9 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, ScriptError (EvaluationError),
                Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), ValidationError (ScriptFailure), Validator, Value,
-               Versioned (Versioned), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs, getCardanoTxOutputs,
-               mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
+               Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs,
+               getCardanoTxOutputs, mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer,
+               unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Gen
@@ -217,7 +218,7 @@ invalidScript = property $ do
     index <- forAll $ Gen.int (Range.linear 0 ((length $ getCardanoTxOutputs txn1) - 1))
     let emulatorTx = onCardanoTx id (\_ -> error "Unexpected Cardano.Api.Tx") txn1
     let setOutputs o = either (const Hedgehog.failure) (pure . TxOut) $
-           toCardanoTxOut pNetworkId toCardanoTxOutDatumHash $ scriptTxOut failValidator (txOutValue o) unitDatum
+           toCardanoTxOut pNetworkId toCardanoTxOutDatumHash $ scriptTxOut (unversioned failValidator) (txOutValue o) unitDatum
     outs <- traverse setOutputs $ emulatorTx ^. outputs
     let scriptTxn = EmulatorTx $
             emulatorTx
@@ -227,7 +228,7 @@ invalidScript = property $ do
     let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
-    invalidTxn <- forAll $ Gen.genValidTransactionSpending [TxInputWitnessed (snd outToSpend) (ScriptAddress (Versioned (Left failValidator) PlutusV1) unitRedeemer unitDatum)] totalVal
+    invalidTxn <- forAll $ Gen.genValidTransactionSpending [TxInputWitnessed (snd outToSpend) (ScriptAddress (Left failValidator) unitRedeemer unitDatum)] totalVal
     Hedgehog.annotateShow invalidTxn
 
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
@@ -253,8 +254,8 @@ invalidScript = property $ do
 
     checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (getCardanoTxFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
-        failValidator :: Validator
-        failValidator = mkValidatorScript $$(PlutusTx.compile [|| mkUntypedValidator validator ||])
+        failValidator :: Versioned Validator
+        failValidator = Versioned (mkValidatorScript $$(PlutusTx.compile [|| mkUntypedValidator validator ||])) PlutusV1
         validator :: () -> () -> ScriptContext -> Bool
         validator _ _ _ = PlutusTx.traceError "I always fail everything"
 

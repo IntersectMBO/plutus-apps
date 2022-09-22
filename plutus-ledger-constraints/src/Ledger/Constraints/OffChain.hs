@@ -547,10 +547,10 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     valueSpentInputs <>= provided vl
     case Typed.tyTxInTxIn txIn of
         -- this is what makeTypedScriptTxIn makes
-        Tx.TxIn outRef (Just (Tx.ScriptAddress (Versioned (Left val) lang) rs dt)) -> do
-            unbalancedTx . tx %= Tx.addScriptTxInput outRef (Versioned val lang) rs dt
-        Tx.TxIn outRef (Just (Tx.ScriptAddress (Versioned (Right ref) lang) rs dt)) -> do
-            unbalancedTx . tx %= Tx.addReferenceTxInput outRef (Versioned ref lang) rs dt
+        Tx.TxIn outRef (Just (Tx.ScriptAddress (Left val) rs dt)) -> do
+            unbalancedTx . tx %= Tx.addScriptTxInput outRef val rs dt
+        Tx.TxIn outRef (Just (Tx.ScriptAddress (Right ref) rs dt)) -> do
+            unbalancedTx . tx %= Tx.addReferenceTxInput outRef ref rs dt
         _ -> error "Impossible txIn in addOwnInput."
 
 

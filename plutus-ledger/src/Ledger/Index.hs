@@ -74,13 +74,12 @@ import Ledger.Crypto
 import Ledger.Index.Internal
 import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
-import Ledger.Scripts (mintingPolicyHash)
+import Ledger.Scripts (mintingPolicyHash, validatorHash)
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx
 import Ledger.Tx.CardanoAPI (fromCardanoTxOut)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as PV1
@@ -269,9 +268,8 @@ checkMintingScripts tx = do
 -- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
 data InOutMatch =
     ScriptMatch
-        Language
         TxOutRef
-        Validator
+        (Versioned Validator)
         Redeemer
         Datum
     | PubKeyMatch TxId PubKey Signature
@@ -290,15 +288,10 @@ matchInputOutput :: ValidationMonad m
     -- ^ The unspent transaction output we are trying to unlock
     -> m InOutMatch
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ScriptAddress (Versioned (Left v) lang) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
+    (Just (ScriptAddress (Left v) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (PV2.datumHash d == dh) $ throwError $ InvalidDatumHash d dh
-        case lang of
-          PlutusV1 ->
-              unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
-          PlutusV2 ->
-              unless (PV2.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
-
-        pure $ ScriptMatch lang (txInRef txin) v r d
+        unless (validatorHash v == vh) $ throwError $ InvalidScriptHash (unversioned v) vh
+        pure $ ScriptMatch (txInRef txin) v r d
     (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->
         let sigMatches = flip fmap (Map.toList mp) $ \(pk,sig) ->
                 if pubKeyHash pk == pkh
@@ -316,7 +309,7 @@ matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txO
 --   locks it.
 checkMatch :: ValidationMonad m => Tx -> InOutMatch -> m ()
 checkMatch tx = \case
-    ScriptMatch PlutusV1 txOutRef vl r d -> do
+    ScriptMatch txOutRef (Versioned vl PlutusV1) r d -> do
         txInfo <- mkPV1TxInfo tx
         let
             ptx' = PV1.ScriptContext { PV1.scriptContextTxInfo = txInfo, PV1.scriptContextPurpose = PV1.Spending txOutRef }
@@ -326,7 +319,7 @@ checkMatch tx = \case
                 tell [validatorScriptValidationEvent vd vl d r (Left e)]
                 throwError $ ScriptFailure e
             res -> tell [validatorScriptValidationEvent vd vl d r res]
-    ScriptMatch PlutusV2 txOutRef vl r d -> do
+    ScriptMatch txOutRef (Versioned vl PlutusV2) r d -> do
         txInfo <- mkPV2TxInfo tx
         let
             ptx' = PV2.ScriptContext { PV2.scriptContextTxInfo = txInfo, PV2.scriptContextPurpose = PV2.Spending txOutRef }
