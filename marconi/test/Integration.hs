@@ -56,7 +56,7 @@ import Marconi.Logging ()
 
 tests :: TestTree
 tests = testGroup "Integration"
-  [ testProperty "prop_script_hashes_in_tx_match" testIndex ]
+  [ testProperty "prop_script_hash_in_local_testnet_tx_match" testIndex ]
 
 {- | We test the script transaction indexer by setting up a testnet,
    adding a script to it and then spending it, and then see if the
