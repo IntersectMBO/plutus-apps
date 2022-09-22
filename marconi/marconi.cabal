@@ -55,6 +55,7 @@ library
   --------------------
   build-depends:
     , plutus-ledger
+    , plutus-streaming
     , rewindable-index
 
   --------------------------
@@ -68,7 +69,6 @@ library
     , cardano-ledger-shelley-ma
     , iohk-monitoring
     , plutus-ledger-api
-    , plutus-streaming
 
   ------------------------
   -- Non-IOG dependencies
