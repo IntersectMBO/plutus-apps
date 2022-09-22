@@ -272,7 +272,10 @@
               (vardecl MustSpendPubKeyOutput (fun TxOutRef TxConstraint))
               (vardecl
                 MustSpendScriptOutput
-                (fun TxOutRef (fun (con data) TxConstraint))
+                (fun
+                  TxOutRef
+                  (fun (con data) (fun [ Maybe TxOutRef ] TxConstraint))
+                )
               )
               (vardecl MustUseOutputAsCollateral (fun TxOutRef TxConstraint))
               (vardecl
