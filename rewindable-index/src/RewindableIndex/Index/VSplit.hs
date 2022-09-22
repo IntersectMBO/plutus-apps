@@ -243,3 +243,4 @@ rewind n ix
       adjust p
         | p < 0     = maxSize (ix ^. storage) + p
         | otherwise = p
+
