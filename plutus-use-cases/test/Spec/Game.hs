@@ -51,14 +51,11 @@ tests =
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
         successTrace
 
-    -- TODO: uncomment after enabling 2nd phase validation
-    -- See note [Second phase validation]
-    --
-    -- , checkPredicate "run a failed trace"
-    --     (walletFundsChange w2 mempty
-    --     .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
-    --     .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
-    --     failTrace
+    , checkPredicate "run a failed trace"
+        (walletFundsChange w2 mempty
+        .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
+        .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
+        failTrace
 
     , goldenPir "test/Spec/game.pir" $$(PlutusTx.compile [|| G.mkValidator ||])
 

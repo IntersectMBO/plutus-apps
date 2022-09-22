@@ -60,23 +60,20 @@ tests = testGroup "simple-escrow"
 
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl params
-    -- TODO: uncomment after enabling 2nd phase validation
-    -- See note [Second phase validation]
-    --
-    -- , checkPredicate "only locking wallet can request refund"
-    --     ( walletFundsChange w1 (Ada.adaValueOf (-10))
-    --       .&&. walletFundsChange w2 mempty
-    --     )
-    --     $ do
-    --         startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-    --         let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
+    , checkPredicate "only locking wallet can request refund"
+        ( walletFundsChange w1 (Ada.adaValueOf (-10))
+          .&&. walletFundsChange w2 mempty
+        )
+        $ do
+            startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
+            let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
-    --         hdl1 <- Trace.activateContractWallet w1 lockEp
-    --         Trace.callEndpoint @"lock" hdl1 params
+            hdl1 <- Trace.activateContractWallet w1 lockEp
+            Trace.callEndpoint @"lock" hdl1 params
 
-    --         hdl2 <- Trace.activateContractWallet w2 (void refundEp)
-    --         void $ Trace.waitNSlots 100
-    --         void $ Trace.callEndpoint @"refund" hdl2 params
+            hdl2 <- Trace.activateContractWallet w2 (void refundEp)
+            void $ Trace.waitNSlots 100
+            void $ Trace.callEndpoint @"refund" hdl2 params
     , checkPredicateOptions options "can't redeem if you can't pay"
         ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> token1 (-10))
           .&&. walletFundsChange w2 mempty

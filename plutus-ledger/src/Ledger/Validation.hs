@@ -51,7 +51,7 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo (TxOut)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
@@ -90,8 +90,6 @@ import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx qualified as P
-import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.ErrorCodes (checkHasFailedError)
 
 type CardanoLedgerError = Either P.ValidationErrorInPhase P.ToCardanoError
 
@@ -209,16 +207,12 @@ validateMockchain (Mockchain _ utxo params) tx = result where
     result = validateCardanoTx params 1 cUtxoIndex (signTx tx)
 
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
-hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
+hasValidationErrors params slotNo utxo tx'@(C.Api.ShelleyTx _ tx) =
   case res of
     Left e  -> Just (P.Phase1, e)
-    Right _ -> Nothing
-    -- TODO: uncomment to fix the issues with plutus scripts in tests
-    -- See note [Second phase validation]
-    --
-    -- case getTxExUnits params utxo tx' of
-    --   Left (Left e) -> Just e
-    --   _ -> Nothing
+    Right _ -> case getTxExUnits params utxo tx' of
+      Left (Left e) -> Just e
+      _             -> Nothing
   where
     state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
@@ -237,22 +231,6 @@ validateCardanoTx params slot utxo txn =
       (\(CardanoApiEmulatorEraTx tx) -> if utxo == UTxO (Map.fromList []) then Nothing else hasValidationErrors params (fromIntegral slot) utxo tx)
       txn
 
-{- Note [Second phase validation]
-There are two phases of transaction validation:
-1. When we use the cardano-ledger 'applyTx' to validate the transaction's body in 'hasValidationErrors'.
-2. When we execute plutus scripts in the transaction to get the execution units in 'getTxExUnits'.
-
-At the moment we have to turn off the second phase validation in 'hasValidationErrors' because there are tests
-that fail with 'check' error in 'getTxExUnits'.
-
-Failing transactions throw a checkHasFailedError error, but we don't want to deal with those yet.
-We might be able to do that in the future. But for now just return a zero execution cost
-so it will run later where we do handle failing transactions.
-
-We also have to comment the tests that expect the script's failure. They should be uncommented
-when we will fix the rest failing tests.
--}
-
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
   case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
@@ -263,9 +241,6 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
     ss = systemStart eg
     ei = epochInfo eg
     costmdls = array (minBound, maxBound) . Map.toList $ getField @"_costmdls" $ emulatorPParams params
-    -- See note [Second phase validation]
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
-      Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError ce) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
     toCardanoLedgerError (C.Ledger.ValidationFailedV2 (P.CekError ce) logs) =
