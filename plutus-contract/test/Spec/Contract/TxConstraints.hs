@@ -83,6 +83,19 @@ tests = testGroup "contract tx constraints"
             void $ activateContract w1 mustReferenceOutputV2ConTest tag
             void $ Trace.waitNSlots 3
 
+    , checkPredicateOptions
+        (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+        "mustSpendScriptOutputWithReference can be used on-chain to unlock funds in a PlutusV2 script"
+        -- TODO: 2nd tx fails because the emulator validation doesn't understand reference scripts,
+        -- Reenable following lines when the emulator validation has been removed
+        -- (walletFundsChange w1 (Ada.adaValueOf 0)
+        -- .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
+        -- .&&. assertValidatedTransactionCount 2
+        (assertValidatedTransactionCountOfTotal 1 2
+        ) $ do
+            void $ activateContract w1 mustSpendScriptOutputWithReferenceV2ConTest tag
+            void $ Trace.waitNSlots 3
+
     -- Testing package plutus-tx-constraints
 
     , checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
@@ -103,7 +116,7 @@ tests = testGroup "contract tx constraints"
 
     , checkPredicateOptions
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-        "A reference script can be used to witness a PlutusV2 script"
+        "Tx.Constraints.mustSpendScriptOutputWithReference can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Ada.adaValueOf 0)
         .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
         .&&. assertValidatedTransactionCount 2
@@ -253,6 +266,35 @@ mustReferenceOutputTxV2ConTest = do
 get3 :: [a] -> (a, a, a)
 get3 (a:b:c:_) = (a, b, c)
 get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+
+mustSpendScriptOutputWithReferenceV2ConTest :: Contract () EmptySchema ContractError ()
+mustSpendScriptOutputWithReferenceV2ConTest = do
+
+    utxos <- ownUtxos
+    myAddr <- Con.ownAddress
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
+        ValidatorHash vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        lookups = TC.unspentOutputs utxos
+               <> TC.plutusV2OtherScript mustReferenceOutputV2Validator
+        tx = TC.mustPayToOtherScript (ValidatorHash vh) (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+          <> TC.mustSpendPubKeyOutput utxoRefForBalance1
+          <> TC.mustPayToAddressWithReferenceScript
+                myAddr
+                (ScriptHash vh)
+                Nothing (Ada.adaValueOf 25)
+    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
+
+    -- Trying to unlock the Ada in the script address
+    scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
+    utxos' <- ownUtxos
+    let
+        scriptUtxo = fst . last . Map.toList $ scriptUtxos
+        refScriptUtxo = fst . head . filter (isJust . Tx._ciTxOutReferenceScript . snd) . Map.toList $ utxos'
+        lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos <> utxos')
+        tx = TC.mustReferenceOutput utxoRef
+          <> TC.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo
+          <> TC.mustSpendPubKeyOutput utxoRefForBalance2
+    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 
 mustSpendScriptOutputWithReferenceTxV2ConTest :: Contract () EmptySchema ContractError ()
 mustSpendScriptOutputWithReferenceTxV2ConTest = do
