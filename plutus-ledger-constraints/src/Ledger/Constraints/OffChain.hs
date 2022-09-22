@@ -66,6 +66,7 @@ module Ledger.Constraints.OffChain(
     , updateUtxoIndex
     , lookupTxOutRef
     , lookupScript
+    , lookupScriptAsReferenceScript
     , resolveScriptTxOut
     , resolveScriptTxOutValidator
     , resolveScriptTxOutDatumAndValue
@@ -104,8 +105,8 @@ import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId))
-import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), TxOut (TxOut), TxOutRef,
-                  Versioned (Versioned), outDatumHash, txOutValue)
+import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), ReferenceScript,
+                  TxOut (TxOut), TxOutRef, Versioned (Versioned), outDatumHash, outReferenceScript, txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator,
@@ -515,7 +516,7 @@ updateUtxoIndex
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
     networkId <- gets $ pNetworkId . cpsParams
-    slUtxos <- traverse (throwTxOutCardanoError . Tx.toTxOut networkId) slTxOutputs
+    slUtxos <- traverse (throwToCardanoError . Tx.toTxOut networkId) slTxOutputs
     unbalancedTx . utxoIndex <>= slUtxos
 
 -- | Add a typed input, checking the type of the output it spends. Return the value
@@ -571,7 +572,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
 
 data MkTxError =
     TypeCheckFailed Typed.ConnectionError
-    | TxOutCardanoError C.ToCardanoError
+    | ToCardanoError C.ToCardanoError
     | TxOutRefNotFound TxOutRef
     | TxOutRefWrongType TxOutRef
     | TxOutRefNoReferenceScript TxOutRef
@@ -590,7 +591,7 @@ data MkTxError =
 instance Pretty MkTxError where
     pretty = \case
         TypeCheckFailed e              -> "Type check failed:" <+> pretty e
-        TxOutCardanoError e            -> "Tx out cardano conversion error:" <+> pretty e
+        ToCardanoError e               -> "Cardano conversion error:" <+> pretty e
         TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
         TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
         TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
@@ -650,6 +651,16 @@ lookupScript sh =
     let err = throwError (ScriptHashNotFound sh) in
     asks slOtherScripts >>= maybe err pure . view (at sh)
 
+lookupScriptAsReferenceScript
+    :: ( MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => Maybe ScriptHash
+    -> m ReferenceScript
+lookupScriptAsReferenceScript msh = do
+    mscript <- traverse lookupScript msh
+    throwToCardanoError $ C.toCardanoReferenceScript mscript
+
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
@@ -680,26 +691,23 @@ processConstraint = \case
           _ -> throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red mref -> do
         txout <- lookupTxOutRef txo
-        valOrRef <- case mref of
+        mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
+        ((_, datum), value) <- maybe (throwError (TxOutRefWrongType txo)) pure mDatumAndValue
+        valueSpentInputs <>= provided value
+        case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
             case _ciTxOutReferenceScript refTxOut of
-                Just val -> pure $ Tx.addReferenceTxInput txo (ref <$ val)
+                Just val -> do
+                    unbalancedTx . tx %= Tx.addReferenceTxInput txo (ref <$ val) red datum
+                    unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
                 _        -> throwError (TxOutRefNoReferenceScript ref)
           Nothing -> do
             mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just (_, val) -> pure $ Tx.addScriptTxInput txo val
+                Just (_, val) -> do
+                    unbalancedTx . tx %= Tx.addScriptTxInput txo val red datum
                 _             -> throwError (TxOutRefWrongType txo)
-        mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
-        case mDatumAndValue of
-          Just ((_, datum), value) -> do
-            -- TODO: When witnesses are properly segregated we can
-            --       probably get rid of the 'slOtherData' map and of
-            --       'lookupDatum'
-            unbalancedTx . tx %= valOrRef red datum
-            valueSpentInputs <>= provided value
-          _ -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral txo -> do
         unbalancedTx . tx . Tx.collateralInputs <>= [Tx.pubKeyTxInput txo]
     MustReferenceOutput txo -> do
@@ -719,8 +727,8 @@ processConstraint = \case
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash red
         unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
         unbalancedTx . tx . Tx.mint <>= value i
-    MustPayToPubKeyAddress pk skhM mdv _refScript vl -> do
-        -- TODO: implement adding reference script
+    MustPayToPubKeyAddress pk skhM mdv refScriptHashM vl -> do
+        refScript <- lookupScriptAsReferenceScript refScriptHashM
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
             unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash dv) ?= dv
@@ -729,18 +737,22 @@ processConstraint = \case
                                  , PV1.txOutDatumHash=Nothing
                                  }
         let txInDatum = C.toCardanoTxOutDatumInTx mdv
-        txOut <- toCardanoTxOutWithHashedDatum pv1TxOut <&> outDatumHash .~ txInDatum
+        txOut <- toCardanoTxOutWithHashedDatum pv1TxOut
+            <&> outDatumHash .~ txInDatum
+            <&> outReferenceScript .~ refScript
         unbalancedTx . tx . Tx.outputs %= (txOut :)
         valueSpentOutputs <>= provided vl
-    MustPayToOtherScript vlh svhM dv _refScript vl -> do
-        -- TODO: implement adding reference script
+    MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
+        refScript <- lookupScriptAsReferenceScript refScriptHashM
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = P.datumHash dv
             pv1script = scriptAddressTxOut addr vl dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
 
         let txInDatum = C.toCardanoTxOutDatumInTx (Just dv)
-        txScript <- toCardanoTxOutWithHashedDatum pv1script <&> outDatumHash .~ txInDatum
+        txScript <- toCardanoTxOutWithHashedDatum pv1script
+            <&> outDatumHash .~ txInDatum
+            <&> outReferenceScript .~ refScript
         unbalancedTx . tx . Tx.outputs %= (txScript :)
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
@@ -828,8 +840,8 @@ toCardanoTxOutWithHashedDatum
   => PV1.TxOut -> m TxOut
 toCardanoTxOutWithHashedDatum txout = do
   networkId <- gets $ pNetworkId . cpsParams
-  throwTxOutCardanoError $ TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash txout
+  throwToCardanoError $ TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatumHash txout
 
-throwTxOutCardanoError :: MonadError MkTxError m => Either C.ToCardanoError a -> m a
-throwTxOutCardanoError (Left err) = throwError $ TxOutCardanoError err
-throwTxOutCardanoError (Right a)  = pure a
+throwToCardanoError :: MonadError MkTxError m => Either C.ToCardanoError a -> m a
+throwToCardanoError (Left err) = throwError $ ToCardanoError err
+throwToCardanoError (Right a)  = pure a

@@ -74,7 +74,6 @@ import Ledger.Orphans ()
 import Ledger.Scripts (ScriptHash, getDatum, getRedeemer, getValidator)
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (toCardanoScriptInAnyLang)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
 import PlutusTx (FromData, ToData)
@@ -316,11 +315,7 @@ lookupTxOutRef txo = mapLedgerMkTxError $ P.lookupTxOutRef txo
 lookupScriptAsReferenceScript
     :: Maybe ScriptHash
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
-lookupScriptAsReferenceScript Nothing = pure C.ReferenceScriptNone
-lookupScriptAsReferenceScript (Just sh) = do
-    script <- mapLedgerMkTxError $ P.lookupScript sh
-    scriptInAnyLang <- either (throwError . ToCardanoError) pure $ toCardanoScriptInAnyLang script
-    pure $ C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra scriptInAnyLang
+lookupScriptAsReferenceScript msh = mapLedgerMkTxError $ P.lookupScriptAsReferenceScript msh
 
 addOwnOutput
     :: ToData (DatumType a)

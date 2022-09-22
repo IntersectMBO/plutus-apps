@@ -455,6 +455,16 @@ outDatumHash = L.lens
   txOutDatumHash
   (\(TxOut (C.TxOut aie tov _ rs)) tod -> TxOut (C.TxOut aie tov tod rs))
 
+type ReferenceScript = C.ReferenceScript C.BabbageEra
+
+txOutReferenceScript :: TxOut -> ReferenceScript
+txOutReferenceScript (TxOut (C.TxOut _aie _tov _tod rs)) = rs
+
+outReferenceScript :: L.Lens' TxOut ReferenceScript
+outReferenceScript = L.lens
+  txOutReferenceScript
+  (\(TxOut (C.TxOut aie tov tod _)) rs -> TxOut (C.TxOut aie tov tod rs))
+
 lookupScript :: Map ScriptHash (Versioned Script) -> ScriptHash -> Maybe (Versioned Script)
 lookupScript txScripts hash  = Map.lookup hash txScripts
 
