@@ -335,7 +335,7 @@ refund inst escrow = do
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustBeSignedBy pk
-                <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
+                <> Constraints.mustValidateIn (from (escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do
         utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
