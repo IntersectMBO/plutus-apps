@@ -10,7 +10,6 @@ module Test.PlutusExample.SubmitApi.TxInLockingPlutus
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.IO.Class
 import Data.Aeson (FromJSON (..), Value, (.:))
 import Data.Bool (not)
 import Data.Eq
@@ -25,7 +24,7 @@ import Data.Text (Text)
 import GHC.Num
 import GHC.Real
 import Hedgehog (Property, (===))
-import Prelude
+import Prelude (head)
 import System.FilePath ((</>))
 import Text.Show (Show (..))
 
@@ -129,8 +128,6 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
     , "--testnet-magic", show @Int testnetMagic
     , "--payment-verification-key-file", utxoVKeyFile
     ]
-
-  liftIO $ print . (\a -> ("utxoVKeyFile",a)) =<< readFile utxoVKeyFile
 
   void $ Test.execCli' execConfig
     [ "query", "utxo"
