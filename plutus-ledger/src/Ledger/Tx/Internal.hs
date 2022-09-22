@@ -61,7 +61,8 @@ import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 -- | The type of a transaction input.
 data TxInType =
       ScriptAddress !(Either (Versioned Validator) (Versioned TxOutRef)) !Redeemer !Datum
-      -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
+      -- ^ A transaction input that consumes (with a validator) or references (with a txOutRef)
+      -- a script address with the given the redeemer and datum.
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
@@ -93,10 +94,11 @@ pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> TxIn
 scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (Left v) r d
 
--- | The type of a transaction input. Contains redeemer if consumes a script.
+-- | The type of a transaction input with hashes.
 data TxInputType =
       TxScriptAddress !Redeemer !(Either ValidatorHash (Versioned TxOutRef)) !DatumHash
-      -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
+      -- ^ A transaction input that consumes (with a validator hash) or references (with a txOutRef)
+      -- a script address with the given the redeemer and datum hash.
     | TxConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | TxConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
