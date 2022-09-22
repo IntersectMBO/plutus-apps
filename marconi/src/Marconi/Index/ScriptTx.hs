@@ -117,7 +117,6 @@ open onInsert dbPath (Depth k) = do
       forM_ rows $
         SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor) VALUES (?, ?)"
       SQL.execute_ (ix ^. Ix.handle) "COMMIT"
-      putStrLn "AFTER STORE"
 
 query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
 query ix scriptAddress' memory = let
@@ -128,11 +127,6 @@ query ix scriptAddress' memory = let
   in do
   persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
     "SELECT txCbor FROM script_transactions WHERE scriptAddress = ?" (SQL.Only scriptAddress')
-
-  count :: [SQL.Only Int] <- SQL.query_ (ix ^. Ix.handle)
-    "SELECT count(*) FROM script_transactions"
-  print ("count", count)
-
 
   buffered <- Ix.getBuffer $ ix ^. Ix.storage
   let
