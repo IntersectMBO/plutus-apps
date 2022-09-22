@@ -41,5 +41,5 @@ makeTypedScriptTxIn si r tyRef =
       vs = vValidatorScript si
       rs = Redeemer (toBuiltinData r)
       ds = Datum (toBuiltinData d)
-      txInT = ScriptAddress (fmap Left vs) rs ds
+      txInT = ScriptAddress (Left vs) rs ds
    in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef

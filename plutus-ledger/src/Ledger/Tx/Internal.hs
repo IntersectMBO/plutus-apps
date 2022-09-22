@@ -60,7 +60,7 @@ import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
 data TxInType =
-      ScriptAddress !(Versioned (Either Validator TxOutRef)) !Redeemer !Datum
+      ScriptAddress !(Either (Versioned Validator) (Versioned TxOutRef)) !Redeemer !Datum
       -- ^ A transaction input that consumes a script address with the given the language type, validator, redeemer, and datum.
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
@@ -91,7 +91,7 @@ pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
 scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> TxIn
-scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (fmap Left v) r d
+scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (Left v) r d
 
 -- | The type of a transaction input. Contains redeemer if consumes a script.
 data TxInputType =
@@ -157,8 +157,8 @@ instance Pretty Certificate where
 --   "pay to script" output.
 inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Datum)
 inScripts TxIn{ txInType = t } = case t of
-    Just (ScriptAddress (Versioned (Left v) lang) r d) -> Just (Versioned v lang, r, d)
-    _                                                  -> Nothing
+    Just (ScriptAddress (Left v) r d) -> Just (v, r, d)
+    _                                 -> Nothing
 
 -- | The 'TxOutRef' spent by a transaction input.
 inRef :: L.Lens' TxInput TxOutRef
@@ -495,10 +495,10 @@ fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
     TxScriptAddress redeemer (Left vlh) dh -> TxIn outRef $ do
         datum <- Map.lookup dh (txData tx)
         validator <- lookupValidator (txScripts tx) vlh
-        Just $ ScriptAddress (fmap Left validator) redeemer datum
+        Just $ ScriptAddress (Left validator) redeemer datum
     TxScriptAddress redeemer (Right ref) dh -> TxIn outRef $ do
         datum <- Map.lookup dh (txData tx)
-        Just $ ScriptAddress (fmap Right ref) redeemer datum
+        Just $ ScriptAddress (Right ref) redeemer datum
 
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress

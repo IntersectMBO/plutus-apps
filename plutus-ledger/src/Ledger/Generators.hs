@@ -269,11 +269,10 @@ genValidTransactionSpending' g ins totalVal = do
         txInToTxInput (TxInputWitnessed outref txInType) = case txInType of
             Ledger.ConsumePublicKeyAddress -> (TxInput outref TxConsumePublicKeyAddress, (Nothing, Nothing))
             Ledger.ConsumeSimpleScriptAddress -> (TxInput outref Ledger.TxConsumeSimpleScriptAddress, (Nothing, Nothing))
-            Ledger.ScriptAddress (Versioned (Left vl) lang) rd dt ->
-                let vvl = Versioned vl lang in
-                (TxInput outref (Ledger.TxScriptAddress rd (Left $ validatorHash vvl) (datumHash dt)), (Just vvl, Just dt))
-            Ledger.ScriptAddress (Versioned (Right ref) lang) rd dt ->
-                (TxInput outref (Ledger.TxScriptAddress rd (Right $ Versioned ref lang) (datumHash dt)), (Nothing, Just dt))
+            Ledger.ScriptAddress (Left vl) rd dt ->
+                (TxInput outref (Ledger.TxScriptAddress rd (Left $ validatorHash vl) (datumHash dt)), (Just vl, Just dt))
+            Ledger.ScriptAddress (Right ref) rd dt ->
+                (TxInput outref (Ledger.TxScriptAddress rd (Right ref) (datumHash dt)), (Nothing, Just dt))
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.
