@@ -7,6 +7,8 @@
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeOperators     #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Remove once TotalFunds gets removed
+
 module Cardano.Wallet.LocalClient where
 
 import Cardano.Api qualified
