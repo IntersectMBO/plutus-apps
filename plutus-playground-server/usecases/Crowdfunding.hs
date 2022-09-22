@@ -89,7 +89,8 @@ mkCampaign ddl collectionDdl ownerWallet =
 -- | The 'POSIXTimeRange' during which the funds can be collected
 collectionRange :: Campaign -> POSIXTimeRange
 collectionRange cmp =
-    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 1)
+    -- We have to subtract '2', see Note [Validity Interval's upper bound]
+    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 2)
 
 -- | The 'POSIXTimeRange' during which a refund may be claimed
 refundRange :: Campaign -> POSIXTimeRange
@@ -203,6 +204,7 @@ scheduleCollection cmp =
         unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
 
         let tx = Constraints.collectFromTheScript unspentOutputs Collect
+                <> Constraints.mustBeSignedBy (campaignOwner cmp)
                 <> Constraints.mustValidateIn (collectionRange cmp)
         void $ submitTxConstraintsSpending inst unspentOutputs tx
 
