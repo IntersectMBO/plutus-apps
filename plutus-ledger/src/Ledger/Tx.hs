@@ -115,7 +115,7 @@ data ChainIndexTxOut =
       _ciTxOutAddress         :: Address,
       -- | Value of the transaction output.
       _ciTxOutValue           :: V2.Value,
-      -- | Optional datum attached to the transaction output.
+      -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
       _ciTxOutPublicKeyDatum  :: Maybe (V2.DatumHash, Maybe V2.Datum),
       -- | Optional reference script attached to the transaction output.
       _ciTxOutReferenceScript :: Maybe (Versioned V1.Script)
@@ -126,7 +126,7 @@ data ChainIndexTxOut =
       _ciTxOutAddress         :: Address,
       -- | Value of the transaction output.
       _ciTxOutValue           :: V1.Value,
-      -- | Datum attached to the transaction output, either in full or as a
+      -- | Datum attached to the transaction output, either in full (inline datum or datum in transaction body) or as a
       -- hash reference. A transaction output protected by a Plutus script
       -- is guardateed to have an associated datum.
       _ciTxOutScriptDatum     :: (V2.DatumHash, Maybe V2.Datum),

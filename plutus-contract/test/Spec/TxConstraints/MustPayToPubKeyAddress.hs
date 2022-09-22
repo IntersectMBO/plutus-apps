@@ -13,20 +13,25 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints qualified as Constraints (OutDatum (Hashed), mustMintValueWithRedeemer, mustPayToPubKey,
-                                                    mustPayToPubKeyAddress, mustPayWithDatumToPubKey,
-                                                    mustPayWithDatumToPubKeyAddress, plutusV1MintingPolicy)
+import Ledger.Constraints qualified as Constraints (OutDatum (Hashed, Inline), mustMintValueWithRedeemer,
+                                                    mustPayToPubKey, mustPayToPubKeyAddress, mustPayWithDatumToPubKey,
+                                                    mustPayWithDatumToPubKeyAddress, plutusV1MintingPolicy,
+                                                    plutusV2MintingPolicy)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
+import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
-                             defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicate,
+                             checkPredicateOptions, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
+import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Script
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Contexts qualified as V2.Script
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 
@@ -40,6 +45,7 @@ tests =
         , successfulUseOfMustPayToPubKeyExpectingALowerAdaValue
         , successfulUseOfMustPayToPubKeyAddress
         , successfulUseOfMustPayWithDatumToPubKey
+        , successfulUseOfMustPayWithInlineDatumToPubKeyV2
         , successfulUseOfMustPayWithDatumToPubKeyAddress
         , phase2FailureWhenUsingUnexpectedPaymentPubKeyHash
         --, phase2FailureWhenUsingUnexpectedStakePubKeyHash -- onchain check not implemented
@@ -61,6 +67,9 @@ adaValue = Ada.lovelaceValueOf adaAmount
 
 tknValue :: Value.Value
 tknValue = Value.singleton mustPayToPubKeyAddressPolicyCurrencySymbol "mint-me" 1
+
+tknValueV2 :: Value.Value
+tknValueV2 = Value.singleton mustPayToPubKeyAddressPolicyCurrencySymbolV2 "mint-me" 1
 
 w1PaymentPubKeyHash :: Ledger.PaymentPubKeyHash
 w1PaymentPubKeyHash = mockWalletPaymentPubKeyHash w1
@@ -91,7 +100,7 @@ successfulUseOfMustPayToPubKeyWithMintedTokenValue =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of offchain and onchain mustPayToPubKey constraint for native token value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
@@ -108,7 +117,7 @@ successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for token value only"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
@@ -125,7 +134,7 @@ successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for ada value only"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
@@ -141,7 +150,7 @@ successfulUseOfMustPayToPubKeyExpectingALowerAdaValue =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of onchain mustPayToPubKey constraint when it expects less ada than the actual value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
@@ -157,7 +166,7 @@ successfulUseOfMustPayToPubKeyAddress =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of offchain and onchain mustPayToPubKeyAddress constraint for ada-only value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
@@ -173,8 +182,24 @@ successfulUseOfMustPayWithDatumToPubKey =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of offchain and onchain mustPayWithDatumToPubKey constraint with bytestring datum and ada value"
+    (assertValidatedTransactionCount 1)
+    (void $ trace contract)
+
+-- | Valid scenario using offchain and onchain constraint mustPayWithDatumToPubKey with inline bytestring datum and ada value
+successfulUseOfMustPayWithInlineDatumToPubKeyV2 :: TestTree
+successfulUseOfMustPayWithInlineDatumToPubKeyV2 =
+    let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
+        contract = do
+            let lookups1 = Constraints.plutusV2MintingPolicy mustPayToPubKeyAddressPolicyV2
+                tx1 = Constraints.mustPayWithDatumToPubKey w2PaymentPubKeyHash (Constraints.Inline someDatum) adaValue
+                   <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValueV2
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    in checkPredicate
+    "Successful use of offchain and onchain mustPayWithDatumToPubKey constraint with inline bytestring datum and ada value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
@@ -189,7 +214,7 @@ successfulUseOfMustPayWithDatumToPubKeyAddress =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Successful use of offchain and onchain mustPayWithDatumToPubKeyAddress constraint with bytestring datum and ada value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
@@ -205,7 +230,7 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumToPubKeyAddress constraint sees an unexpected PaymentPubkeyHash"
     (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
@@ -221,7 +246,7 @@ phase2FailureWhenUsingUnexpectedDatum =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumToPubKeyAddress constraint sees an unexpected Datum"
     (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
@@ -237,7 +262,7 @@ phase2FailureWhenUsingUnexpectedValue =
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    in checkPredicateOptions defaultCheckOptions
+    in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumToPubKeyAddress constraint sees an unexpected Value"
     (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
@@ -253,16 +278,35 @@ mkMustPayToPubKeyAddressPolicy t = case t of
     MustPayWithDatumToPubKey ppkh d v             -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKey ppkh (Constraints.Hashed d) v)
     MustPayWithDatumToPubKeyAddress ppkh spkh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKeyAddress ppkh spkh (Constraints.Hashed d) v)
 
+{-# INLINEABLE mkMustPayToPubKeyAddressPolicyV2 #-}
+mkMustPayToPubKeyAddressPolicyV2 :: ConstraintParams -> V2.Script.ScriptContext -> Bool
+mkMustPayToPubKeyAddressPolicyV2 t = case t of
+    MustPayToPubKey ppkh v                        -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKey ppkh v)
+    MustPayToPubKeyAddress ppkh spkh v            -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKeyAddress ppkh spkh v)
+    MustPayWithDatumToPubKey ppkh d v             -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKey ppkh (Constraints.Inline d) v)
+    MustPayWithDatumToPubKeyAddress ppkh spkh d v -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKeyAddress ppkh spkh (Constraints.Inline d) v)
+
 mustPayToPubKeyAddressPolicy :: Scripts.MintingPolicy
 mustPayToPubKeyAddressPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         wrap = Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicy
 
+mustPayToPubKeyAddressPolicyV2 :: V2.Script.MintingPolicy
+mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+    where
+        wrap = V2.Script.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicyV2
+
 mustPayToPubKeyAddressPolicyHash :: Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash = PSU.V1.mintingPolicyHash mustPayToPubKeyAddressPolicy
 
-mustPayToPubKeyAddressPolicyCurrencySymbol :: Ledger.CurrencySymbol
-mustPayToPubKeyAddressPolicyCurrencySymbol = Value.mpsSymbol mustPayToPubKeyAddressPolicyHash
+mustPayToPubKeyAddressPolicyHashV2 :: Ledger.MintingPolicyHash
+mustPayToPubKeyAddressPolicyHashV2 = PSU.V2.mintingPolicyHash mustPayToPubKeyAddressPolicyV2
+
+mustPayToPubKeyAddressPolicyCurrencySymbol :: CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToPubKeyAddressPolicyHash
+
+mustPayToPubKeyAddressPolicyCurrencySymbolV2 :: CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbolV2 = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToPubKeyAddressPolicyHashV2
 
 data ConstraintParams = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
                       | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value

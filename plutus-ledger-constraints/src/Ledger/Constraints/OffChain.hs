@@ -626,7 +626,8 @@ lookupMintingPolicy
        )
     => MintingPolicyHash
     -> m (Versioned MintingPolicy)
-lookupMintingPolicy (MintingPolicyHash mph) = fmap MintingPolicy <$> lookupScript (ScriptHash mph)
+lookupMintingPolicy (MintingPolicyHash mph) =
+  fmap MintingPolicy <$> lookupScript (ScriptHash mph)
 
 lookupValidator
     :: ( MonadReader (ScriptLookups a) m

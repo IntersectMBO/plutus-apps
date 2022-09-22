@@ -534,7 +534,7 @@ toCardanoTxOutDatumHash datumHash = C.TxOutDatumHash C.ScriptDataInBabbageEra <$
 
 toCardanoTxOutDatum :: PV2.OutputDatum -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
 toCardanoTxOutDatum PV2.NoOutputDatum        = pure toCardanoTxOutNoDatum
-toCardanoTxOutDatum (PV2.OutputDatum d)      = pure $ toCardanoTxOutDatumInTx d
+toCardanoTxOutDatum (PV2.OutputDatum d)      = pure $ toCardanoTxOutDatumInline d
 toCardanoTxOutDatum (PV2.OutputDatumHash dh) = toCardanoTxOutDatumHash dh
 
 toCardanoScriptDataHash :: P.DatumHash -> Either ToCardanoError (C.Hash C.ScriptData)
