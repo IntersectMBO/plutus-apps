@@ -314,9 +314,13 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   --         _          -> queryLoop (n + 1)
   --   ScriptTx.TxCbor txCbor <- queryLoop 0
   --   H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
+  liftIO $ putStrLn "before store query"
   txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
+  liftIO $ putStrLn "after store query"
   ScriptTx.TxCbor txCbor <- headM txCbors
+  liftIO $ putStrLn "after headM"
   queriedTx2 <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
+  liftIO $ putStrLn "after deserialiseFromCBOR"
 
   tx2 === queriedTx2
 

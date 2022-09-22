@@ -49,7 +49,7 @@ newtype TxCbor = TxCbor BS.ByteString
 data ScriptTxRow = ScriptTxRow
   { scriptAddress :: !ScriptAddress
   , txCbor        :: !TxCbor
-  } deriving (Generic)
+  } deriving (Generic, Show)
 
 instance SQL.ToField ScriptAddress where
   toField (ScriptAddress hash)  = SQL.SQLBlob . Shelley.serialiseToRawBytes $ hash
@@ -114,9 +114,18 @@ open onInsert dbPath (Depth k) = do
             scriptAddr <- scriptAddrs
             pure $ ScriptTxRow scriptAddr txCbor'
       SQL.execute_ (ix ^. Ix.handle) "BEGIN"
+      print ("rows", length rows)
       forM_ rows $
         SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor) VALUES (?, ?)"
+
+      count :: [SQL.Only Int] <- SQL.query_ (ix ^. Ix.handle)
+        "SELECT count(*) FROM script_transactions"
+      print ("after insert, within same sql transaction, count", count)
+
       SQL.execute_ (ix ^. Ix.handle) "COMMIT"
+      count :: [SQL.Only Int] <- SQL.query_ (ix ^. Ix.handle)
+        "SELECT count(*) FROM script_transactions"
+      print ("after insert, within same sql transaction, count", count)
       putStrLn "AFTER STORE"
 
 query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
