@@ -113,8 +113,11 @@ open onInsert dbPath (Depth k) = do
             (txCbor', scriptAddrs) <- txScriptAddrs
             scriptAddr <- scriptAddrs
             pure $ ScriptTxRow scriptAddr txCbor'
+      SQL.execute_ (ix ^. Ix.handle) "BEGIN"
       forM_ rows $
         SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor) VALUES (?, ?)"
+      SQL.execute_ (ix ^. Ix.handle) "COMMIT"
+      putStrLn "AFTER STORE"
 
 query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
 query ix scriptAddress' memory = let

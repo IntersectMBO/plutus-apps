@@ -303,17 +303,20 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   tx2 === indexedTx2
 
   -- The query poll
-  queriedTx2 :: C.Tx C.AlonzoEra <- do
-    let
-      queryLoop n = do
-        H.threadDelay 250_000 -- wait 250ms before querying
-        liftIO $ putStrLn $ "query poll #" <> show (n :: Int)
-        txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
-        case txCbors of
-          result : _ -> pure result
-          _          -> queryLoop (n + 1)
-    ScriptTx.TxCbor txCbor <- queryLoop 0
-    H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
+  -- queriedTx2 :: C.Tx C.AlonzoEra <- do
+  --   let
+  --     queryLoop n = do
+  --       H.threadDelay 250_000 -- wait 250ms before querying
+  --       liftIO $ putStrLn $ "query poll #" <> show (n :: Int)
+  --       txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
+  --       case txCbors of
+  --         result : _ -> pure result
+  --         _          -> queryLoop (n + 1)
+  --   ScriptTx.TxCbor txCbor <- queryLoop 0
+  --   H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
+  txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
+  ScriptTx.TxCbor txCbor <- headM txCbors
+  queriedTx2 <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
 
   tx2 === queriedTx2
 
