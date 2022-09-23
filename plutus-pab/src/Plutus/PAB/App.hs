@@ -368,9 +368,9 @@ runBeamMigrationSqlite trace conn = Sqlite.runBeamSqliteDebug (logDebugString tr
   autoMigrate Sqlite.migrationBackend checkedSqliteDb
 
 dbConnectSqlite :: Sqlite.DbConfig -> Trace IO (PABLogMsg (Builtin a)) -> IO (Pool Sqlite.Connection)
-dbConnectSqlite Sqlite.DbConfig {dbConfigPoolSize} trace = do
-  pool <- Pool.createPool (Sqlite.open $ unpack "./plutus-pab.db") Sqlite.close dbConfigPoolSize 5_000_000 5
-  logDebugString trace $ "Connecting to DB: " <> "./plutus-pab.db"
+dbConnectSqlite Sqlite.DbConfig {dbConfigFile, dbConfigPoolSize} trace = do
+  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
+  logDebugString trace $ "Connecting to DB: " <> dbConfigFile
   return pool
 
 handleContractDefinition ::
