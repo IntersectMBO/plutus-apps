@@ -626,8 +626,7 @@ lookupMintingPolicy
        )
     => MintingPolicyHash
     -> m (Versioned MintingPolicy)
-lookupMintingPolicy (MintingPolicyHash mph) =
-  fmap MintingPolicy <$> lookupScript (ScriptHash mph)
+lookupMintingPolicy (MintingPolicyHash mph) = fmap MintingPolicy <$> lookupScript (ScriptHash mph)
 
 lookupValidator
     :: ( MonadReader (ScriptLookups a) m
@@ -658,6 +657,7 @@ processConstraint
     => TxConstraint
     -> m ()
 processConstraint = \case
+
     MustIncludeDatum dv ->
         let theHash = P.datumHash dv in
         unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= dv
@@ -667,6 +667,7 @@ processConstraint = \case
         unbalancedTx . requiredSignatories <>= Set.singleton pk
     MustSpendAtLeast vl -> valueSpentInputs <>= required vl
     MustProduceAtLeast vl -> valueSpentOutputs <>= required vl
+
     MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
         case txout of
@@ -675,6 +676,7 @@ processConstraint = \case
               unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
               valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (TxOutRefWrongType txo)
+
     MustSpendScriptOutput txo red -> do
         txout <- lookupTxOutRef txo
         mscriptTXO <- resolveScriptTxOut txout
@@ -698,15 +700,15 @@ processConstraint = \case
         if i < 0
             then valueSpentInputs <>= provided (value (negate i))
             else valueSpentOutputs <>= provided (value i)
-
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash red
         unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
         unbalancedTx . tx . Tx.mint <>= value i
+
     MustPayToPubKeyAddress pk skhM mdv _refScript vl -> do
         -- TODO: implement adding reference script
         -- if datum is presented, add it to 'datumWitnesses'
         forM_ mdv $ \dv -> do
-            let d = getOutDatum dv -- FIXME
+            let d = getOutDatum dv
             unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash d) ?= d
         let pv2TxOut = PV2.TxOut { PV2.txOutAddress=pubKeyHashAddress pk skhM
                                  , PV2.txOutValue=vl
@@ -720,6 +722,7 @@ processConstraint = \case
         txOut <- toCardanoTxOutWithOutputDatum pv2TxOut <&> outDatumHash .~ txInDatum
         unbalancedTx . tx . Tx.outputs %= (txOut :)
         valueSpentOutputs <>= provided vl
+
     MustPayToOtherScript vlh svhM dv _refScript vl -> do
         -- TODO: implement adding reference script
         let addr = Address.scriptValidatorHashAddress vlh svhM

@@ -25,13 +25,13 @@ import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicate,
-                             checkPredicateOptions, mockWalletPaymentPubKeyHash, w1, w2)
+                             mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Script
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Contexts qualified as V2.Script
+import Plutus.V2.Ledger.Contexts qualified as V2.Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 
@@ -47,6 +47,7 @@ tests =
         , successfulUseOfMustPayWithDatumToPubKey
         , successfulUseOfMustPayWithInlineDatumToPubKeyV2
         , successfulUseOfMustPayWithDatumToPubKeyAddress
+        , phase1FailureWhenUsingInlineDatumWithV1
         , phase2FailureWhenUsingUnexpectedPaymentPubKeyHash
         --, phase2FailureWhenUsingUnexpectedStakePubKeyHash -- onchain check not implemented
         , phase2FailureWhenUsingUnexpectedDatum
@@ -219,6 +220,22 @@ successfulUseOfMustPayWithDatumToPubKeyAddress =
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
+-- | Phase-1 failure when mustPayToPubKeyAddress in a V1 script use inline datum
+phase1FailureWhenUsingInlineDatumWithV1 :: TestTree
+phase1FailureWhenUsingInlineDatumWithV1 =
+    let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
+        contract = do
+            let lookups1 = Constraints.plutusV1MintingPolicy mustPayToPubKeyAddressPolicy
+                tx1 = Constraints.mustPayWithDatumToPubKey w2PaymentPubKeyHash (Constraints.Inline someDatum) adaValue
+                   <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    in checkPredicate
+    "Phase-1 failure when mustPayToPubKeyAddress in a V1 script use inline datum"
+    (assertFailedTransaction (\_ err _ -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
+    (void $ trace contract)
+
 -- | Phase-2 failure when onchain mustPayWithDatumToPubKeyAddress constraint cannot verify the PaymentPubkeyHash"
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash :: TestTree
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash =
@@ -279,7 +296,7 @@ mkMustPayToPubKeyAddressPolicy t = case t of
     MustPayWithDatumToPubKeyAddress ppkh spkh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayWithDatumToPubKeyAddress ppkh spkh (Constraints.Hashed d) v)
 
 {-# INLINEABLE mkMustPayToPubKeyAddressPolicyV2 #-}
-mkMustPayToPubKeyAddressPolicyV2 :: ConstraintParams -> V2.Script.ScriptContext -> Bool
+mkMustPayToPubKeyAddressPolicyV2 :: ConstraintParams -> V2.Scripts.ScriptContext -> Bool
 mkMustPayToPubKeyAddressPolicyV2 t = case t of
     MustPayToPubKey ppkh v                        -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKey ppkh v)
     MustPayToPubKeyAddress ppkh spkh v            -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToPubKeyAddress ppkh spkh v)
@@ -291,10 +308,10 @@ mustPayToPubKeyAddressPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile 
     where
         wrap = Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicy
 
-mustPayToPubKeyAddressPolicyV2 :: V2.Script.MintingPolicy
+mustPayToPubKeyAddressPolicyV2 :: V2.Scripts.MintingPolicy
 mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
-        wrap = V2.Script.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicyV2
+        wrap = V2.Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicyV2
 
 mustPayToPubKeyAddressPolicyHash :: Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash = PSU.V1.mintingPolicyHash mustPayToPubKeyAddressPolicy

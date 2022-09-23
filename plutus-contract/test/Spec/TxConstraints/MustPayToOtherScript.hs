@@ -14,11 +14,13 @@ import Test.Tasty (TestTree, testGroup)
 import Control.Lens ((&))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints qualified as Constraints (OutDatum (Hashed), mustMintValueWithRedeemer, mustPayToOtherScript,
-                                                    mustPayToOtherScriptAddress,
+import Ledger.Constraints qualified as Constraints (OutDatum (Hashed, Inline), mustMintValueWithRedeemer,
+                                                    mustPayToOtherScript, mustPayToOtherScriptAddress,
                                                     mustSpendScriptOutputWithMatchingDatumAndValue,
-                                                    plutusV1MintingPolicy, plutusV1OtherScript, unspentOutputs)
+                                                    plutusV1MintingPolicy, plutusV1OtherScript, plutusV2MintingPolicy,
+                                                    unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
+import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (asRedeemer, someValidator, someValidatorHash)
@@ -29,10 +31,13 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, w1)
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedValidatorHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
+import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), ToData (toBuiltinData),
                              UnsafeFromData (unsafeFromBuiltinData))
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Contexts qualified as V2.Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Wallet (WalletAPIError (InsufficientFunds))
@@ -42,14 +47,16 @@ tests :: TestTree
 tests =
     testGroup "MustPayToOtherScript"
         [ successfulUseOfMustPayToOtherScriptWithMintedToken
+        , successfulUseOfMustPayToOtherScriptWithMintedTokenV2
         , successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
         --, successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
         , successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance
         , successfulUseOfMustPayToOtherScriptWhenOnchainExpectsLowerAdaValue
         , contractErrorWhenAttemptingToSpendMoreThanAdaBalance
         , contractErrorWhenAttemptingToSpendMoreThanTokenBalance
+        , phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum
         , phase2ErrorWhenExpectingMoreThanValue
-         ]
+        ]
 
 someDatum :: Datum
 someDatum = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ("datum" :: P.BuiltinByteString)
@@ -69,8 +76,14 @@ adaValue = Ada.lovelaceValueOf adaAmount
 tknValue :: Value.Value
 tknValue = Value.singleton mustPayToOtherScriptPolicyCurrencySymbol "mint-me" 1
 
+tknValueV2 :: Value.Value
+tknValueV2 = Value.singleton mustPayToOtherScriptPolicyCurrencySymbolV2 "mint-me" 1
+
 adaAndTokenValue :: Value.Value
 adaAndTokenValue = adaValue <> tknValue
+
+adaAndTokenValueV2 :: Value.Value
+adaAndTokenValueV2 = adaValue <> tknValueV2
 
 otherTokenValue :: Value.Value
 otherTokenValue = someTokenValue "someToken" 1
@@ -97,6 +110,28 @@ successfulUseOfMustPayToOtherScriptWithMintedToken =
 
     in checkPredicateOptions defaultCheckOptions
     "Successful use of offchain and onchain mustPayToOtherScript constraint with wallet's exact ada balance"
+    (assertValidatedTransactionCount 1)
+    (void $ trace contract)
+
+-- | Contract to a single transaction with mustSpendScriptOutputs offchain constraint and mint with policy using
+-- matching onchain constraint, using Plutus V2 script and inline datum
+mustPayToOtherScriptInlineContractV2 :: Value.Value -> Redeemer -> Contract () Empty ContractError ()
+mustPayToOtherScriptInlineContractV2 offChainValue onChainConstraint = do
+    let lookups1 = Constraints.plutusV2MintingPolicy mustPayToOtherScriptPolicyV2
+        tx1 = Constraints.mustPayToOtherScript someValidatorHash (Constraints.Inline someDatum) offChainValue
+           <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValueV2
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+-- | Valid scenario using offchain and onchain constraint mustPayToOtherScript with exact token value being minted
+-- using inline datum
+successfulUseOfMustPayToOtherScriptWithMintedTokenV2 :: TestTree
+successfulUseOfMustPayToOtherScriptWithMintedTokenV2 =
+    let onChainConstraint = asRedeemer $ MustPayToOtherScript someValidatorHash someDatum adaAndTokenValueV2
+        contract = mustPayToOtherScriptInlineContractV2 adaAndTokenValueV2 onChainConstraint
+
+    in checkPredicateOptions defaultCheckOptions
+    "Successful use of offchain and onchain mustPayToOtherScript constraint with wallet's exact ada balance with inline datum"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
@@ -161,6 +196,15 @@ successfulUseOfMustPayToOtherScriptWhenOnchainExpectsLowerAdaValue =
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
+-- | Invalid contract that try to used inline datum in a V1 script
+mustPayToOtherScriptInlineContract :: Value.Value -> Redeemer -> Contract () Empty ContractError ()
+mustPayToOtherScriptInlineContract offChainValue onChainConstraint = do
+    let lookups1 = Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
+        tx1 = Constraints.mustPayToOtherScript someValidatorHash (Constraints.Inline someDatum) offChainValue
+           <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
 -- | Contract error when ada amount to send to other script is greater than wallet balance
 contractErrorWhenAttemptingToSpendMoreThanAdaBalance :: TestTree
 contractErrorWhenAttemptingToSpendMoreThanAdaBalance =
@@ -184,6 +228,19 @@ contractErrorWhenAttemptingToSpendMoreThanTokenBalance =
     (assertContractError contract (Trace.walletInstanceTag w1) (\case WalletContractError (InsufficientFunds _) -> True; _ -> False) "failed to throw error")
     (void $ trace contract)
 
+-- | Phase-1 failure when mustPayToOtherScript in a V1 script use inline datum
+phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum :: TestTree
+phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum =
+    let onChainConstraint = asRedeemer $ MustPayToOtherScript someValidatorHash someDatum adaAndTokenValue
+        contract = mustPayToOtherScriptInlineContract adaAndTokenValue onChainConstraint
+
+    in checkPredicateOptions defaultCheckOptions
+    "Phase-1 failure when mustPayToOtherScript in a V1 script use inline datum"
+    (assertFailedTransaction (\_ err _ -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
+    (void $ trace contract)
+
+
+
 -- | Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects more than actual ada value
 phase2ErrorWhenExpectingMoreThanValue :: TestTree
 phase2ErrorWhenExpectingMoreThanValue =
@@ -204,16 +261,33 @@ mkMustPayToOtherScriptPolicy t = case t of
     MustPayToOtherScript vh d v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh (Constraints.Hashed d) v)
     MustPayToOtherScriptAddress vh svh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh (Constraints.Hashed d) v)
 
+{-# INLINEABLE mkMustPayToOtherScriptPolicyV2 #-}
+mkMustPayToOtherScriptPolicyV2 :: ConstraintParams -> V2.Scripts.ScriptContext -> Bool
+mkMustPayToOtherScriptPolicyV2 t = case t of
+    MustPayToOtherScript vh d v            -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh (Constraints.Inline d) v)
+    MustPayToOtherScriptAddress vh svh d v -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh (Constraints.Inline d) v)
+
 mustPayToOtherScriptPolicy :: Scripts.MintingPolicy
 mustPayToOtherScriptPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         wrap = Scripts.mkUntypedMintingPolicy mkMustPayToOtherScriptPolicy
 
+mustPayToOtherScriptPolicyV2 :: V2.Scripts.MintingPolicy
+mustPayToOtherScriptPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+    where
+        wrap = V2.Scripts.mkUntypedMintingPolicy mkMustPayToOtherScriptPolicyV2
+
 mustPayToOtherScriptPolicyHash :: Ledger.MintingPolicyHash
 mustPayToOtherScriptPolicyHash = PSU.V1.mintingPolicyHash mustPayToOtherScriptPolicy
 
+mustPayToOtherScriptPolicyHashV2 :: Ledger.MintingPolicyHash
+mustPayToOtherScriptPolicyHashV2 = PSU.V2.mintingPolicyHash mustPayToOtherScriptPolicyV2
+
 mustPayToOtherScriptPolicyCurrencySymbol :: CurrencySymbol
 mustPayToOtherScriptPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToOtherScriptPolicyHash
+
+mustPayToOtherScriptPolicyCurrencySymbolV2 :: CurrencySymbol
+mustPayToOtherScriptPolicyCurrencySymbolV2 = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToOtherScriptPolicyHashV2
 
 data ConstraintParams = MustPayToOtherScript PSU.V1.ValidatorHash Datum Value.Value
                       | MustPayToOtherScriptAddress PSU.V1.ValidatorHash PSU.V1.StakeValidatorHash Datum Value.Value
