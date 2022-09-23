@@ -143,6 +143,9 @@ library
   build-depends:
     , cardano-addresses
     , cardano-api
+    , cardano-ledger-alonzo
+    , cardano-ledger-core
+    , cardano-ledger-shelley
     , cardano-slotting
     , cardano-wallet
     , cardano-wallet-cli

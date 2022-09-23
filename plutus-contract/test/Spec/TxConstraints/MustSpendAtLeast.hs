@@ -120,7 +120,7 @@ phase2Failure =
     in  checkPredicateOptions
             defaultCheckOptions
             "Fail phase-2 validation when on-chain mustSpendAtLeast is greater than script's balance"
-            (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L5":_) _) -> True; _ -> False }))
+            (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L5":_) _) -> True; _ -> False }))
             (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}

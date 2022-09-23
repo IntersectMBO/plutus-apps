@@ -30,7 +30,6 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPISpec qualified
 import Ledger.Value qualified as Value
-import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -82,9 +81,6 @@ tests = testGroup "all tests" [
     testGroup "Tx" [
         testProperty "TxOut fromTxOut/toTxOut" ciTxOutRoundTrip
         ],
-    testGroup "TxInfo" [
-        testProperty "TxInfo has non empty ada txMint and txFee" txInfoNonEmptyAda
-    ],
     testGroup "TimeSlot" [
         testProperty "time range of starting slot" initialSlotToTimeProp,
         testProperty "slot of starting time range" initialTimeToSlotProp,
@@ -324,13 +320,3 @@ signAndVerifyTest = property $ do
     pubKey = Ledger.toPublicKey privKey
   payload <- forAll $ Gen.bytes $ Range.singleton 128
   Hedgehog.assert $ (\x -> Ledger.signedBy x pubKey payload) $ Ledger.sign payload privKey pass
-
--- | Check that `txInfoMint` and `txInfoFee` contain ada symbol.
---
--- See note [Mint and Fee fields must have ada symbol].
-txInfoNonEmptyAda :: Property
-txInfoNonEmptyAda = property $ do
-    mockChain <- forAll Gen.genMockchain
-    txInfo <- forAll $ Gen.genTxInfo mockChain
-    Hedgehog.assert $ (AMap.member Ada.adaSymbol . Value.getValue) $ Ledger.txInfoMint txInfo
-    Hedgehog.assert $ (AMap.member Ada.adaSymbol . Value.getValue) $ Ledger.txInfoFee txInfo

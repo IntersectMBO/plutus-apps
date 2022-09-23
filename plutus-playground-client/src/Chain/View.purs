@@ -16,8 +16,7 @@ import Data.BigInt.Argonaut as BigInt
 import Data.Foldable (foldMap, foldr)
 import Data.Foldable.Extra (interleave)
 import Data.FoldableWithIndex (foldMapWithIndex, foldrWithIndex)
-import Data.FunctorWithIndex (mapWithIndex)
-import Data.Lens (Traversal', _Just, filtered, has, preview, to, view)
+import Data.Lens (Traversal', _Just, filtered, has, preview, view)
 import Data.Lens.Index (ix)
 import Data.Map (Map)
 import Data.Map as Map
@@ -27,17 +26,16 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.String.Extra (abbreviate)
 import Data.Tuple.Nested ((/\))
-import Halogen.HTML (ClassName(..), HTML, IProp, br_, div, div_, h2_, hr_, li_, p_, small_, span_, strong_, table, tbody_, td, text, th, th_, thead_, tr, tr_, ul_)
+import Halogen.HTML (ClassName(..), HTML, IProp, br_, div, div_, h2_, hr_, p_, small_, span_, strong_, table, tbody_, td, text, th, th_, thead_, tr, tr_)
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes, colSpan, rowSpan)
 import PlutusTx.AssocMap as AssocMap
-import Plutus.V1.Ledger.Crypto (PubKey(..), PubKeyHash(..))
-import Ledger.Extra (humaniseSlotInterval)
+import Plutus.V1.Ledger.Crypto (PubKeyHash(..))
 import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Tx (TxOut(..))
 import Plutus.V1.Ledger.TxId (TxId(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
-import Prologue (Ordering(..), Tuple, const, eq, pure, show, zero, ($), (<$>), (<<<), (<>))
+import Prologue (Ordering(..), Tuple, const, eq, show, zero, ($), (<$>), (<<<), (<>))
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput(..), SequenceId(..))
 import Web.UIEvent.MouseEvent (MouseEvent)
 
@@ -68,14 +66,8 @@ chainView namingFn state annotatedBlockchain =
 slotClass :: ClassName
 slotClass = ClassName "slot"
 
-feeClass :: ClassName
-feeClass = ClassName "fee"
-
 notFoundClass :: ClassName
 notFoundClass = ClassName "not-found"
-
-forgeClass :: ClassName
-forgeClass = ClassName "forge"
 
 amountClass :: ClassName
 amountClass = ClassName "amount"
@@ -122,36 +114,10 @@ transactionDetailView namingFn annotatedBlockchain annotatedTx =
                     [ div
                         [ class_ textTruncate ]
                         [ txIdView (view _txIdOf annotatedTx) ]
-                    , div [ class_ textTruncate ]
-                        [ strong_ [ text "Validity:" ]
-                        , nbsp
-                        , text $ humaniseSlotInterval (view (_tx <<< _txValidRange) annotatedTx)
-                        ]
-                    , div [ class_ textTruncate ]
-                        [ strong_ [ text "Signatures:" ]
-                        , case Array.fromFoldable (view (_tx <<< _txSignatures <<< to Map.keys) annotatedTx) of
-                            [] -> text "None"
-                            pubKeys -> ul_ (li_ <<< pure <<< showPubKey <$> pubKeys)
-                        ]
+                    , div [ class_ textTruncate ] []
+                    , div [ class_ textTruncate ] []
                     ]
                 ]
-            , forgeView (view (_tx <<< _txMint) annotatedTx)
-            ]
-        , col3_
-            [ h2_ [ text "Outputs" ]
-            , feeView (view (_tx <<< _txFee) annotatedTx)
-            , div_
-                ( mapWithIndex
-                    ( \index txout ->
-                        outputView
-                          namingFn
-                          (view _txIdOf annotatedTx)
-                          annotatedBlockchain
-                          (BigInt.fromInt index)
-                          txout
-                    )
-                    (view (_tx <<< _txOutputs) annotatedTx)
-                )
             ]
         ]
     , balancesTable
@@ -173,28 +139,6 @@ entryClass = ClassName "entry"
 
 triangleRight :: forall p i. HTML p i
 triangleRight = div [ class_ $ ClassName "triangle-right" ] []
-
-feeView :: forall p i. Value -> HTML p i
-feeView (Value { getValue: (AssocMap.Map []) }) = empty
-
-feeView txFee =
-  div [ classes [ card, entryClass, feeClass ] ]
-    [ cardHeader_ [ text "Fee" ]
-    , cardBody_
-        [ valueView txFee
-        ]
-    ]
-
-forgeView :: forall p i. Value -> HTML p i
-forgeView (Value { getValue: (AssocMap.Map []) }) = empty
-
-forgeView txForge =
-  div [ classes [ card, entryClass, forgeClass ] ]
-    [ cardHeader_ [ text "Forge" ]
-    , cardBody_
-        [ valueView txForge
-        ]
-    ]
 
 balancesTable :: forall p. NamingFn -> SequenceId -> Map BeneficialOwner Value -> HTML p Action
 balancesTable namingFn sequenceId balances =
@@ -342,23 +286,6 @@ dereferencedInputView _ _ (InputNotFound txKey) =
         ]
     ]
 
-outputView :: forall p. NamingFn -> TxId -> AnnotatedBlockchain -> BigInt -> TxOut -> HTML p Action
-outputView namingFn txId annotatedBlockchain outputIndex txOut =
-  txOutOfView namingFn false txOut
-    $ case consumedInTx of
-        Just linkedTx ->
-          Just
-            $ div
-                [ class_ clickable, onClickFocusTx (view _txIdOf linkedTx) ]
-                [ text "Spent in:", nbsp, sequenceIdView (view _sequenceId linkedTx) ]
-        Nothing ->
-          Just
-            $ div_
-                [ text "Unspent" ]
-  where
-  consumedInTx :: Maybe AnnotatedTx
-  consumedInTx = findConsumptionPoint outputIndex txId annotatedBlockchain
-
 txOutOfView :: forall p. NamingFn -> Boolean -> TxOut -> Maybe (HTML p Action) -> HTML p Action
 txOutOfView namingFn showArrow txOut@(TxOut { txOutValue }) mFooter =
   div
@@ -398,17 +325,6 @@ beneficialOwnerView _ (OwnedByScript a) =
           [ text "Script"
           , nbsp
           , text a
-          ]
-      )
-
-showPubKey :: forall p. PubKey -> HTML p Action
-showPubKey (PubKey { getPubKey: p }) =
-  ClipboardAction
-    <$> showShortCopyLong p
-      ( Just
-          [ text "PubKey"
-          , nbsp
-          , text p
           ]
       )
 

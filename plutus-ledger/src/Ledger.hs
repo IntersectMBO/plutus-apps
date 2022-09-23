@@ -13,7 +13,7 @@ import Ledger.Crypto as Export
 import Ledger.Index as Export
 import Ledger.Orphans ()
 import Ledger.Params as Export
-import Ledger.Tx as Export
+import Ledger.Tx as Export hiding (pubKeyTxIns, scriptTxIns)
 import Ledger.Value as Export (noAdaValue)
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Contexts as Export

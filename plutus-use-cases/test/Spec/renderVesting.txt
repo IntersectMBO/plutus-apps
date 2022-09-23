@@ -1,8 +1,7 @@
 ==== Slot #0, Tx #0 ====
-TxId:       ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
-Fee:        -
+TxId:       e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
+Fee:        Ada:      Lovelace:  0
 Mint:       Ada:      Lovelace:  1000000000
-Signatures  -
 Inputs:
   
 
@@ -551,74 +550,65 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
-TxId:       07ca437c6855dde17b3f6aa2360a8528f6a3675e812e08974b6f0770d0ca2cd7
+TxId:       1128fc0d06390478c6df73f553b8a654bf26054ca4acb5364c78c0bd9deb512c
 Fee:        Ada:      Lovelace:  211129
 Mint:       -
-Signatures  PubKey: 98c77c40ccc536e0d433874dae97d4a0787b10b3...
-              Signature: 584034a6a9efd5bfb0a52ade5cbe175c7f412517...
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #20
-
 
   ---- Input 1 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #21
-
 
   ---- Input 2 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #22
-
 
   ---- Input 3 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #23
-
 
   ---- Input 4 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #24
-
 
   ---- Input 5 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #25
-
 
   ---- Input 6 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
+    Tx:     e0003dd5ccd2f89acf4e18d6299e78a44ceb30e06b64ae4f0103ff4942e018af
     Output #26
-
 
 
 Outputs:
@@ -679,20 +669,17 @@ Balances Carried Forward:
     Ada:      Lovelace:  60000000
 
 ==== Slot #2, Tx #0 ====
-TxId:       b13ee4cbd2a420021c487bb1e4ca008ab1cba913d3255a8cc30d642ab1bfde66
+TxId:       574d7a6b5e76455e98b54ec6c5923def84c392f9ea2646d7b28bc055e7016e09
 Fee:        Ada:      Lovelace:  452257
 Mint:       -
-Signatures  PubKey: 8d9de88fbf445b7f6c3875a14daba94caee2ffcb...
-              Signature: 5840c5b2032a694d389ee5a7f290e60c07ae0841...
 Inputs:
   ---- Input 0 ----
   Destination:  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
   Value:
     Ada:      Lovelace:  60000000
   Source:
-    Tx:     07ca437c6855dde17b3f6aa2360a8528f6a3675e812e08974b6f0770d0ca2cd7
+    Tx:     1128fc0d06390478c6df73f553b8a654bf26054ca4acb5364c78c0bd9deb512c
     Output #0
-    Script: 590e860100003323232323232323232323232323...
 
 
 Outputs:

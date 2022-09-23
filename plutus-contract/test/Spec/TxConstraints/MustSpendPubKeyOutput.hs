@@ -228,7 +228,7 @@ phase2FailureWhenTxoIsNotSpent =
             void $ Trace.waitNSlots 1
 
     in checkPredicate "Fail phase-2 validation when txo expected by on-chain mustSpendPubKeyOutput does not exist"
-        (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L7":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L7":_) _) -> True; _ -> False }))
         (void trace)
 
 {-# INLINEABLE mkValidator #-}

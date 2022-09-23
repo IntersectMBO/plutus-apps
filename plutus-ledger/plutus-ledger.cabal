@@ -63,6 +63,7 @@ library
     Ledger.Crypto
     Ledger.Fee
     Ledger.Generators
+    Ledger.Generators.Internal
     Ledger.Index
     Ledger.Index.Internal
     Ledger.Orphans

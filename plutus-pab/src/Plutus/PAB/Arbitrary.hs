@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -8,10 +9,17 @@
 -- across to the test suite.
 module Plutus.PAB.Arbitrary where
 
+import Cardano.Ledger.Alonzo.Rules.Utxos qualified as C.Ledger
+import Cardano.Ledger.Alonzo.Scripts (Tag (Spend))
+import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
+import Cardano.Ledger.Alonzo.TxWitness qualified as C.Ledger
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
+import Data.Set qualified as Set
 import Ledger qualified
 import Ledger.Address (Address (..), PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
 import Ledger.Bytes (LedgerBytes)
@@ -57,6 +65,22 @@ instance Arbitrary Ledger.MintingPolicy where
 instance Arbitrary Ledger.MintingPolicyHash where
     arbitrary = genericArbitrary
     shrink = genericShrink
+
+instance Arbitrary (C.Ledger.ApplyTxError Ledger.EmulatorEra) where
+    arbitrary = pure $ C.Ledger.ApplyTxError []
+    shrink _ = []
+
+instance Arbitrary (C.Ledger.UtxosPredicateFailure Ledger.EmulatorEra) where
+    arbitrary = pure $ C.Ledger.CollectErrors []
+    shrink _ = []
+
+instance Arbitrary (C.Ledger.ScriptFailure StandardCrypto) where
+    arbitrary = pure $ C.Ledger.MissingScript (C.Ledger.RdmrPtr Spend 0)
+    shrink _ = []
+
+instance Arbitrary (C.Ledger.BasicFailure StandardCrypto) where
+    arbitrary = pure $ C.Ledger.UnknownTxIns Set.empty
+    shrink _ = []
 
 instance Arbitrary Ledger.ValidationError where
     arbitrary = genericArbitrary

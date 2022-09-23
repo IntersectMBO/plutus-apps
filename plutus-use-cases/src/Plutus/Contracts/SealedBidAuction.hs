@@ -175,7 +175,8 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
     -- A new bid is placed, a bidder is only allowed to bid once
     (Ongoing bids, PlaceBid bid)
       | sealedBidBidder bid `notElem` map sealedBidBidder bids ->
-        let constraints = Constraints.mustValidateIn (Interval.to $ apEndTime - 1)
+        -- We have to subtract '2', see Note [Validity Interval's upper bound]
+        let constraints = Constraints.mustValidateIn (Interval.to $ apEndTime - 2)
             newState =
               State
                   { stateData  = Ongoing (bid:bids)
@@ -186,7 +187,8 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
     -- The first bid is revealed
     (Ongoing bids, RevealBid bid)
       | sealBid bid `elem` bids ->
-        let constraints = Constraints.mustValidateIn (Interval.interval apEndTime (apPayoutTime - 1))
+        -- We have to subtract '2', see Note [Validity Interval's upper bound]
+        let constraints = Constraints.mustValidateIn (Interval.interval apEndTime (apPayoutTime - 2))
             newState =
               State
                   { stateData  = AwaitingPayout bid (filter (/= sealBid bid) bids)
@@ -210,7 +212,8 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
     (AwaitingPayout highestBid sealedBids, RevealBid bid)
       | revealedBid bid > revealedBid highestBid
         && sealBid bid `elem` sealedBids ->
-        let constraints = Constraints.mustValidateIn (Interval.to $ apPayoutTime - 1)
+        -- We have to subtract '2', see Note [Validity Interval's upper bound]
+        let constraints = Constraints.mustValidateIn (Interval.to $ apPayoutTime - 2)
                         <> Constraints.mustPayToPubKey (revealedBidBidder highestBid) (valueOfBid highestBid)
             newState =
               State

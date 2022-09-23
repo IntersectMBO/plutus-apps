@@ -11,9 +11,9 @@ import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Data.List (isInfixOf)
 import Data.Maybe (fromJust)
 import Data.String (fromString)
+import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet as CW
@@ -41,8 +41,8 @@ tests =
           ownWallet
         , otherWallet
         , otherWalletNoSigningProcess
-        , withoutOffChainMustBeSignedBy
         , phase2FailureMustBeSignedBy
+        , withoutOffChainMustBeSignedBy
         ]
 
 mustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
@@ -111,7 +111,7 @@ otherWalletNoSigningProcess =
             void $ Trace.activateContractWallet w1 $ mustBeSignedByContract pk pkh
             void $ Trace.waitNSlots 1
     in checkPredicateOptions defaultCheckOptions "without Trace.setSigningProcess fails phase-1 validation"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.CardanoLedgerValidationError str -> isInfixOf "MissingRequiredSigners" str; _ -> False  }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
     (void trace)
 
 withoutOffChainMustBeSignedBy :: TestTree -- there's no "required signer" in the txbody logs but still passes phase-2 so it must be there. Raised https://github.com/input-output-hk/plutus-apps/issues/645. It'd be good to check log output for expected required signer pubkey in these tests.
@@ -121,8 +121,8 @@ withoutOffChainMustBeSignedBy =
         trace = do
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract pk pkh
             void $ Trace.waitNSlots 1
-    in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint passes mustBeSignedBy on-chain validation because required signer is still included in txbody"
-    (assertValidatedTransactionCount 2)
+    in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint required signer is not included in txbody so phase-2 validation fails"
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
     (void trace)
 
 phase2FailureMustBeSignedBy :: TestTree
@@ -133,7 +133,7 @@ phase2FailureMustBeSignedBy =
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract pk pkh
             void $ Trace.waitNSlots 1
     in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain mustBeSignedBy constraint validation"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
     (void trace)
 
 {-

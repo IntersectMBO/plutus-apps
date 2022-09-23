@@ -24,7 +24,10 @@ module Ledger.CardanoWallet(
     paymentPubKeyHash,
     paymentPubKey,
     stakePubKeyHash,
-    stakePubKey
+    stakePubKey,
+    knownPaymentKeys,
+    knownPaymentPublicKeys,
+    knownPaymentPrivateKeys
     ) where
 
 import Cardano.Crypto.Wallet qualified as Crypto
@@ -36,13 +39,14 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.Hashable (Hashable (..))
 import Data.List (findIndex)
+import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
-import Ledger (PaymentPrivateKey (PaymentPrivateKey), PaymentPubKey (PaymentPubKey, unPaymentPubKey),
-               PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash)
-import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash), StakePubKey (StakePubKey, unStakePubKey),
-                       StakePubKeyHash (StakePubKeyHash, unStakePubKeyHash))
+import Ledger.Address (PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
+                       PaymentPubKey (PaymentPubKey, unPaymentPubKey),
+                       PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash),
+                       StakePubKey (StakePubKey, unStakePubKey), StakePubKeyHash (StakePubKeyHash, unStakePubKeyHash))
 import Ledger.Crypto (PubKey (..))
 import Ledger.Crypto qualified as Crypto
 import Plutus.V1.Ledger.Api (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
@@ -138,3 +142,14 @@ stakePubKeyHash w = StakePubKeyHash . Crypto.pubKeyHash . unStakePubKey <$> stak
 -- | The mock wallet's stake public key
 stakePubKey :: MockWallet -> Maybe StakePubKey
 stakePubKey w = StakePubKey . Crypto.toPublicKey . unMockPrivateKey <$> mwStakeKey w
+
+knownPaymentPublicKeys :: [PaymentPubKey]
+knownPaymentPublicKeys =
+    PaymentPubKey . Crypto.toPublicKey . unPaymentPrivateKey <$> knownPaymentPrivateKeys
+
+knownPaymentKeys :: Map.Map PaymentPubKey PaymentPrivateKey
+knownPaymentKeys = Map.fromList $ map
+    (\k -> (PaymentPubKey $ Crypto.toPublicKey $ unPaymentPrivateKey k, k)) knownPaymentPrivateKeys
+
+knownPaymentPrivateKeys :: [PaymentPrivateKey]
+knownPaymentPrivateKeys = paymentPrivateKey <$> knownMockWallets

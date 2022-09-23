@@ -22,8 +22,9 @@ import Wallet.Emulator.Wallet (signPrivateKeys)
 
 tests :: TestTree
 tests = testGroup "multisig"
-    [ checkPredicate "2 out of 5"
-        (assertFailedTransaction (\_ err _ -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
+    [
+    checkPredicate "2 out of 5"
+        (assertFailedTransaction (\_ err -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
         failingTrace
 
     , checkPredicate "3 out of 5"

@@ -7,6 +7,8 @@
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeOperators     #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Remove once TotalFunds gets removed
+
 module Cardano.Wallet.LocalClient where
 
 import Cardano.Api qualified
@@ -184,7 +186,6 @@ toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.AllegraEraInCardanoMode)) = Ri
 toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.MaryEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.MaryEra tx
 toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.AlonzoEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AlonzoEra tx
 toSealedTx params (EmulatorTx tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody params [] tx
-toSealedTx params (Both tx _) = C.sealedTxFromCardanoBody <$> toCardanoTxBody params [] tx
 
 throwOtherError :: (Member (Error WalletAPIError) effs, Show err) => err -> Eff effs a
 throwOtherError = throwError . OtherError . pack . show

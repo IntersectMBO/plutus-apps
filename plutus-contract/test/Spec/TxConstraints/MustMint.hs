@@ -23,7 +23,7 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
 import Ledger.Test (coinMintingPolicy)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
+import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (..))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
@@ -95,7 +95,7 @@ mustMintCurrencyWithRedeemerPhase2Failure =
     checkPredicateOptions
     defaultCheckOptions
     "Fail validation when minting policy is missing from lookup"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
     (void $ trace $ mustMintCurrencyWithRedeemerContract $ TokenName "WrongToken")
 
 -- | Valid Contract containing all required lookups. Uses mustMintCurrencyWithRedeemer constraint.

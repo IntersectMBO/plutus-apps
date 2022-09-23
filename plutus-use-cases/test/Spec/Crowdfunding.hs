@@ -26,6 +26,7 @@ import Data.Default (Default (..))
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as T
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
@@ -35,7 +36,6 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
 
-import Data.List (isSubsequenceOf)
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -90,10 +90,10 @@ tests = testGroup "crowdfunding"
 
     , checkPredicate "cannot collect money too late"
         (walletFundsChange w1 PlutusTx.zero
-        .&&. assertFailedTransaction (\_ err _ ->
+        .&&. assertFailedTransaction (\_ err ->
             case err of
                 Ledger.CardanoLedgerValidationError msg ->
-                    "OutsideValidityIntervalUTxO" `isSubsequenceOf` msg
+                    "OutsideValidityIntervalUTxO" `Text.isInfixOf` msg
                 _ -> False
             ))
         $ do
