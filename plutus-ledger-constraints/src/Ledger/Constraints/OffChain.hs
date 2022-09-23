@@ -69,7 +69,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     ) where
 
-import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.~), (<&>), (<>=), (?=), (^?))
+import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.~), (<&>), (<>=), (?=), (^.), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -87,6 +87,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
 import Ledger (Redeemer (Redeemer), outValue)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
@@ -679,7 +680,7 @@ processConstraint = \case
 
     MustSpendScriptOutput txo red -> do
         txout <- lookupTxOutRef txo
-        mscriptTXO <- resolveScriptTxOut txout
+        mscriptTXO <- runMaybeT $ resolveScriptTxOut txout
         case mscriptTXO of
             Just ((_, validator), (_, datum), value) -> do
                 unbalancedTx . tx %= Tx.addScriptTxInput txo validator red datum
@@ -720,7 +721,7 @@ processConstraint = \case
                 Just (Hashed d) -> C.toCardanoTxOutDatumInTx d
                 Just (Inline d) -> C.toCardanoTxOutDatumInline d
         txOut <- toCardanoTxOutWithOutputDatum pv2TxOut <&> outDatumHash .~ txInDatum
-        unbalancedTx . tx . Tx.outputs %= (txOut :)
+        unbalancedTx . tx . Tx.outputs <>= [txOut]
         valueSpentOutputs <>= provided vl
 
     MustPayToOtherScript vlh svhM dv _refScript vl -> do
@@ -735,7 +736,7 @@ processConstraint = \case
                 Hashed _ -> C.toCardanoTxOutDatumInTx d
                 Inline _ -> C.toCardanoTxOutDatumInline d
         txScript <- toCardanoTxOutWithOutputDatum pv2script <&> outDatumHash .~ txInDatum
-        unbalancedTx . tx . Tx.outputs %= (txScript :)
+        unbalancedTx . tx . Tx.outputs <>= [txScript]
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
         unless (P.datumHash dv == dvh)
@@ -746,7 +747,7 @@ processConstraint = \case
         let tryNext [] =
                 throwError CannotSatisfyAny
             tryNext (hs:qs) = do
-                traverse_ processConstraint hs `catchError` \_ -> put s >> tryNext qs
+                traverse_ processConstraint hs `catchError` const (put s >> tryNext qs)
         tryNext xs
 
 processConstraintFun
@@ -766,7 +767,7 @@ processConstraintFun = \case
                 validatorHash == vh && datumPred datum && valuePred value
             matches Nothing = False
         opts <- filter (matches . snd)
-            <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
+            <$> traverse (traverse $ runMaybeT . resolveScriptTxOut)
                          (Map.toList slTxOutputs)
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
@@ -779,23 +780,16 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Versioned Validator), (DatumHash, Datum), Value))
-resolveScriptTxOut
-        Tx.ScriptChainIndexTxOut
-            { Tx._ciTxOutValidator = (vh, v)
-            , Tx._ciTxOutScriptDatum = (dh, d)
-            , Tx._ciTxOutValue
-            } = do
+    => ChainIndexTxOut -> MaybeT m ((ValidatorHash, Versioned Validator), (DatumHash, Datum), Value)
+resolveScriptTxOut ci = do
     -- first check in the 'ChainIndexTxOut' for the validator, then
     -- look for it in the 'slOtherScripts' map.
+    (vh, v) <- hoistMaybe $ ci ^? Tx.ciTxOutValidator
     validator <- maybe (lookupValidator vh) pure v
-
-    -- first check in the 'ChainIndexTxOut' for the datum, then
-    -- look for it in the 'slOtherData' map.
+    (dh, d) <- hoistMaybe $ ci ^? Tx.ciTxOutScriptDatum
     dataValue <- maybe (lookupDatum dh) pure d
-
-    pure $ Just ((vh, validator), (dh, dataValue), _ciTxOutValue)
-resolveScriptTxOut _ = pure Nothing
+    let _ciTxOutValue = ci ^. Tx.ciTxOutValue
+    pure ((vh, validator), (dh, dataValue), _ciTxOutValue)
 
 toCardanoTxOutWithOutputDatum
   :: ( MonadState ConstraintProcessingState m, MonadError MkTxError m)
@@ -806,3 +800,6 @@ toCardanoTxOutWithOutputDatum txout = do
   case cardanoTxOut of
     Left err     -> throwError $ TxOutCardanoError err
     Right cTxOut -> pure cTxOut
+
+hoistMaybe :: Applicative m => Maybe a -> MaybeT m a
+hoistMaybe = MaybeT . pure
