@@ -57,6 +57,7 @@ import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), 
 import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
+import Control.Monad.Trans.Maybe (MaybeT (runMaybeT))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
@@ -247,7 +248,7 @@ processConstraint = \case
 
     P.MustSpendScriptOutput txo redeemer -> do
         txout <- lookupTxOutRef txo
-        mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.resolveScriptTxOut txout
+        mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ runMaybeT $ P.resolveScriptTxOut txout
         case mscriptTXO of
             Just ((_, Tx.Versioned validator lang), (_, datum), _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
