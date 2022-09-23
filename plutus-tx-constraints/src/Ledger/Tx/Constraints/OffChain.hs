@@ -67,7 +67,7 @@ import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
-import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
+import Ledger.Constraints.TxConstraints (OutDatum (Hashed, Inline), ScriptOutputConstraint, TxConstraint,
                                          TxConstraints (TxConstraints, txConstraints, txOwnOutputs))
 import Ledger.Interval ()
 import Ledger.Orphans ()
@@ -282,10 +282,14 @@ processConstraint = \case
     P.MustPayToPubKeyAddress pk mskh md refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
+        let txInDatum = case md of
+                Nothing         -> C.toCardanoTxOutNoDatum
+                Just (Hashed d) -> C.toCardanoTxOutDatumInTx d
+                Just (Inline d) -> C.toCardanoTxOutDatumInline d
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.toCardanoScriptData . getDatum) (P.getOutDatum <$> md)) -- FIXME
+            <*> pure txInDatum
             <*> pure refScript
 
         unbalancedTx . tx . txOuts <>= [ out ]
@@ -293,10 +297,13 @@ processConstraint = \case
     P.MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
+        let txInDatum = case dv of
+                Hashed d -> C.toCardanoTxOutDatumInTx d
+                Inline d -> C.toCardanoTxOutDatumInline d
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum $ P.getOutDatum dv))) -- FIXME
+            <*> pure txInDatum
             <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 

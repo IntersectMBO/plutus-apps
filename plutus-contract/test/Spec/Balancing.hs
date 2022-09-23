@@ -11,10 +11,10 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as L.Constraints
-import Ledger.Scripts (unitRedeemer)
 import Ledger.Test
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Value qualified as Value
@@ -29,9 +29,6 @@ import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
-
-unitDatum :: L.Constraints.OutDatum
-unitDatum = L.Constraints.Hashed Ledger.unitDatum
 
 tests :: TestTree
 tests =
@@ -101,7 +98,7 @@ balanceTxnMinAda2 =
                         <> L.Constraints.plutusV1MintingPolicy mps
                 constraints = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
                             <> L.Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
-                            <> L.Constraints.mustPayToOtherScript vHash (L.Constraints.Hashed $ Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
+                            <> L.Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
                             <> L.Constraints.mustMintValue (vL 1) -- 1 L and 2 ada to wallet2
             submitTxConfirmed =<< mkTx lookups constraints
 

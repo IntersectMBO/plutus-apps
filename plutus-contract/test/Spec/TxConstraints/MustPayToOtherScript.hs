@@ -14,8 +14,9 @@ import Test.Tasty (TestTree, testGroup)
 import Control.Lens ((&))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints qualified as Constraints (OutDatum (Hashed, Inline), mustMintValueWithRedeemer,
-                                                    mustPayToOtherScript, mustPayToOtherScriptAddress,
+import Ledger.Constraints qualified as Constraints (mustMintValueWithRedeemer, mustPayToOtherScript,
+                                                    mustPayToOtherScriptAddress, mustPayToOtherScriptAddressInlineDatum,
+                                                    mustPayToOtherScriptInlineDatum,
                                                     mustSpendScriptOutputWithMatchingDatumAndValue,
                                                     plutusV1MintingPolicy, plutusV1OtherScript, plutusV2MintingPolicy,
                                                     unspentOutputs)
@@ -97,7 +98,7 @@ trace contract = do
 mustPayToOtherScriptContract :: Value.Value -> Ledger.Redeemer -> Contract () Empty ContractError ()
 mustPayToOtherScriptContract offChainValue onChainConstraint = do
     let lookups1 = Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
-        tx1 = Constraints.mustPayToOtherScript someValidatorHash (Constraints.Hashed someDatum) offChainValue
+        tx1 = Constraints.mustPayToOtherScript someValidatorHash someDatum offChainValue
            <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -118,7 +119,7 @@ successfulUseOfMustPayToOtherScriptWithMintedToken =
 mustPayToOtherScriptInlineContractV2 :: Value.Value -> Redeemer -> Contract () Empty ContractError ()
 mustPayToOtherScriptInlineContractV2 offChainValue onChainConstraint = do
     let lookups1 = Constraints.plutusV2MintingPolicy mustPayToOtherScriptPolicyV2
-        tx1 = Constraints.mustPayToOtherScript someValidatorHash (Constraints.Inline someDatum) offChainValue
+        tx1 = Constraints.mustPayToOtherScriptInlineDatum someValidatorHash someDatum offChainValue
            <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValueV2
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -200,7 +201,7 @@ successfulUseOfMustPayToOtherScriptWhenOnchainExpectsLowerAdaValue =
 mustPayToOtherScriptInlineContract :: Value.Value -> Redeemer -> Contract () Empty ContractError ()
 mustPayToOtherScriptInlineContract offChainValue onChainConstraint = do
     let lookups1 = Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
-        tx1 = Constraints.mustPayToOtherScript someValidatorHash (Constraints.Inline someDatum) offChainValue
+        tx1 = Constraints.mustPayToOtherScriptInlineDatum someValidatorHash someDatum offChainValue
            <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -258,14 +259,14 @@ instance Scripts.ValidatorTypes UnitTest
 {-# INLINEABLE mkMustPayToOtherScriptPolicy #-}
 mkMustPayToOtherScriptPolicy :: ConstraintParams -> Ledger.ScriptContext -> Bool
 mkMustPayToOtherScriptPolicy t = case t of
-    MustPayToOtherScript vh d v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh (Constraints.Hashed d) v)
-    MustPayToOtherScriptAddress vh svh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh (Constraints.Hashed d) v)
+    MustPayToOtherScript vh d v            -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh d v)
+    MustPayToOtherScriptAddress vh svh d v -> Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh d v)
 
 {-# INLINEABLE mkMustPayToOtherScriptPolicyV2 #-}
 mkMustPayToOtherScriptPolicyV2 :: ConstraintParams -> V2.Scripts.ScriptContext -> Bool
 mkMustPayToOtherScriptPolicyV2 t = case t of
-    MustPayToOtherScript vh d v            -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScript vh (Constraints.Inline d) v)
-    MustPayToOtherScriptAddress vh svh d v -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddress vh svh (Constraints.Inline d) v)
+    MustPayToOtherScript vh d v            -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptInlineDatum vh d v)
+    MustPayToOtherScriptAddress vh svh d v -> V2.Constraints.checkScriptContext @() @() (Constraints.mustPayToOtherScriptAddressInlineDatum vh svh d v)
 
 mustPayToOtherScriptPolicy :: Scripts.MintingPolicy
 mustPayToOtherScriptPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])

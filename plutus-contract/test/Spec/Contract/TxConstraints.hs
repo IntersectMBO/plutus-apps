@@ -128,7 +128,7 @@ mustReferenceOutputV1ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV1ValidatorAddress
         lookups = TC.unspentOutputs utxos
-        tx = TC.mustPayToOtherScript vh (TC.Hashed $ Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
@@ -152,7 +152,7 @@ mustReferenceOutputTxV1ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV1ValidatorAddress
         lookups = Tx.Constraints.unspentOutputs utxos
-        tx = Tx.Constraints.mustPayToOtherScript vh (TC.Hashed $ Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        tx = Tx.Constraints.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
           <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
     submitTxConfirmed $ mkTx lookups tx
@@ -197,7 +197,7 @@ mustReferenceOutputV2ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = TC.unspentOutputs utxos
-        tx = TC.mustPayToOtherScript vh (TC.Hashed $ Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        tx = TC.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
 
@@ -221,7 +221,7 @@ mustReferenceOutputTxV2ConTest = do
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
         vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = Tx.Constraints.unspentOutputs utxos
-        tx = Tx.Constraints.mustPayToOtherScript vh (TC.Hashed $ Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
+        tx = Tx.Constraints.mustPayToOtherScript vh (Datum $ PlutusTx.toBuiltinData utxoRef) (Ada.adaValueOf 5)
           <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
     submitTxConfirmed $ mkTx lookups tx
