@@ -21,7 +21,7 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (mustMintValueW
                                                                   mustSpendScriptOutputWithMatchingDatumAndValue)
 import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (ScriptError (EvaluationError))
-import Ledger.Test (someValidator, someValidatorHash)
+import Ledger.Test (asRedeemer, someValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
@@ -30,8 +30,8 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedValidatorHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), Redeemer (Redeemer),
-                             ToData (toBuiltinData), UnsafeFromData (unsafeFromBuiltinData))
+import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), ToData (toBuiltinData),
+                             UnsafeFromData (unsafeFromBuiltinData))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -75,16 +75,13 @@ adaAndTokenValue = adaValue <> tknValue
 otherTokenValue :: Value.Value
 otherTokenValue = someTokenValue "someToken" 1
 
-asRedeemer :: PlutusTx.ToData a => a -> Redeemer
-asRedeemer a = Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
-
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
     void $ Trace.activateContractWallet w1 contract
     void $ Trace.waitNSlots 1
 
 -- | Contract to a single transaction with mustSpendScriptOutputs offchain constraint and mint with policy using matching onchain constraint
-mustPayToOtherScriptContract :: Value.Value -> Redeemer -> Contract () Empty ContractError ()
+mustPayToOtherScriptContract :: Value.Value -> Ledger.Redeemer -> Contract () Empty ContractError ()
 mustPayToOtherScriptContract offChainValue onChainConstraint = do
     let lookups1 = Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
         tx1 = Constraints.mustPayToOtherScript someValidatorHash someDatum offChainValue
@@ -129,25 +126,25 @@ successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnly
 -- | Valid scenario using offchain and onchain constraint mustPayToOtherScript in combination with mustSpendScriptOutputWithMatchingDatumAndValue to spend script's exact token balance
 successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance :: TestTree
 successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance =
-        let otherValidatorHash = alwaysSucceedValidatorHash
-            adaAndOtherTokenValue = adaValue <> otherTokenValue
-            onChainConstraint = asRedeemer $ MustPayToOtherScript someValidatorHash someDatum otherTokenValue
-            options = defaultCheckOptions & changeInitialWalletValue w1 (otherTokenValue <>)
-            contract = do
-                let lookups1 = Constraints.plutusV1OtherScript someValidator
-                    tx1 = Constraints.mustPayToOtherScript someValidatorHash someDatum adaAndOtherTokenValue
-                ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
-                awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+    let otherValidatorHash = alwaysSucceedValidatorHash
+        adaAndOtherTokenValue = adaValue <> otherTokenValue
+        onChainConstraint = asRedeemer $ MustPayToOtherScript someValidatorHash someDatum otherTokenValue
+        options = defaultCheckOptions & changeInitialWalletValue w1 (otherTokenValue <>)
+        contract = do
+            let lookups1 = Constraints.plutusV1OtherScript someValidator
+                tx1 = Constraints.mustPayToOtherScript someValidatorHash someDatum adaAndOtherTokenValue
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-                scriptUtxos <- utxosAt $ Ledger.scriptHashAddress someValidatorHash
-                let lookups2 = Constraints.plutusV1OtherScript someValidator
-                            <> Constraints.unspentOutputs scriptUtxos
-                            <> Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
-                    tx2 = Constraints.mustPayToOtherScript otherValidatorHash someDatum adaAndOtherTokenValue
-                       <> Constraints.mustSpendScriptOutputWithMatchingDatumAndValue someValidatorHash (\d -> d == someDatum) (\v -> v == adaAndOtherTokenValue) (asRedeemer ())
-                       <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
-                ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
-                awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+            scriptUtxos <- utxosAt $ Ledger.scriptHashAddress someValidatorHash
+            let lookups2 = Constraints.plutusV1OtherScript someValidator
+                        <> Constraints.unspentOutputs scriptUtxos
+                        <> Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy
+                tx2 = Constraints.mustPayToOtherScript otherValidatorHash someDatum adaAndOtherTokenValue
+                    <> Constraints.mustSpendScriptOutputWithMatchingDatumAndValue someValidatorHash (\d -> d == someDatum) (\v -> v == adaAndOtherTokenValue) (asRedeemer ())
+                    <> Constraints.mustMintValueWithRedeemer onChainConstraint tknValue
+            ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     in checkPredicateOptions options
     "Successful use of offchain and onchain mustPayToOtherScript constraint in combination with mustSpendScriptOutputWithMatchingDatumAndValue to spend script's exact token balance"
