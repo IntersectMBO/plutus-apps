@@ -23,8 +23,8 @@ import Ledger.Constraints qualified as Constraints (mustMintValueWithRedeemer, m
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Generators (someTokenValue)
-import Ledger.Scripts (ScriptError (EvaluationError))
-import Ledger.Test (asRedeemer, someValidator, someValidatorHash)
+import Ledger.Scripts (Redeemer, ScriptError (EvaluationError))
+import Ledger.Test (asDatum, asRedeemer, someValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
@@ -35,8 +35,6 @@ import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), ToData (toBuiltinData),
-                             UnsafeFromData (unsafeFromBuiltinData))
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Contexts qualified as V2.Scripts
 import PlutusTx qualified
@@ -59,11 +57,11 @@ tests =
         , phase2ErrorWhenExpectingMoreThanValue
         ]
 
-someDatum :: Datum
-someDatum = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ("datum" :: P.BuiltinByteString)
+someDatum :: Ledger.Datum
+someDatum = asDatum @P.BuiltinByteString "datum"
 
-otherDatum :: Datum
-otherDatum = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ("other datum" :: P.BuiltinByteString)
+otherDatum :: Ledger.Datum
+otherDatum = asDatum @P.BuiltinByteString "other datum"
 
 utxoValue :: Value.Value
 utxoValue = Ada.lovelaceValueOf 10_000_000
@@ -284,14 +282,14 @@ mustPayToOtherScriptPolicyHash = PSU.V1.mintingPolicyHash mustPayToOtherScriptPo
 mustPayToOtherScriptPolicyHashV2 :: Ledger.MintingPolicyHash
 mustPayToOtherScriptPolicyHashV2 = PSU.V2.mintingPolicyHash mustPayToOtherScriptPolicyV2
 
-mustPayToOtherScriptPolicyCurrencySymbol :: CurrencySymbol
-mustPayToOtherScriptPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToOtherScriptPolicyHash
+mustPayToOtherScriptPolicyCurrencySymbol :: Ledger.CurrencySymbol
+mustPayToOtherScriptPolicyCurrencySymbol = Value.mpsSymbol mustPayToOtherScriptPolicyHash
 
-mustPayToOtherScriptPolicyCurrencySymbolV2 :: CurrencySymbol
-mustPayToOtherScriptPolicyCurrencySymbolV2 = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToOtherScriptPolicyHashV2
+mustPayToOtherScriptPolicyCurrencySymbolV2 :: Ledger.CurrencySymbol
+mustPayToOtherScriptPolicyCurrencySymbolV2 = Value.mpsSymbol mustPayToOtherScriptPolicyHashV2
 
-data ConstraintParams = MustPayToOtherScript PSU.V1.ValidatorHash Datum Value.Value
-                      | MustPayToOtherScriptAddress PSU.V1.ValidatorHash PSU.V1.StakeValidatorHash Datum Value.Value
+data ConstraintParams = MustPayToOtherScript PSU.V1.ValidatorHash Ledger.Datum Value.Value
+                      | MustPayToOtherScriptAddress PSU.V1.ValidatorHash PSU.V1.StakeValidatorHash Ledger.Datum Value.Value
     deriving (Show)
 
 PlutusTx.unstableMakeIsData ''ConstraintParams

@@ -320,11 +320,11 @@ mustPayToPubKeyAddressPolicyHash = PSU.V1.mintingPolicyHash mustPayToPubKeyAddre
 mustPayToPubKeyAddressPolicyHashV2 :: Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHashV2 = PSU.V2.mintingPolicyHash mustPayToPubKeyAddressPolicyV2
 
-mustPayToPubKeyAddressPolicyCurrencySymbol :: CurrencySymbol
-mustPayToPubKeyAddressPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToPubKeyAddressPolicyHash
+mustPayToPubKeyAddressPolicyCurrencySymbol :: Ledger.CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbol = Value.mpsSymbol mustPayToPubKeyAddressPolicyHash
 
-mustPayToPubKeyAddressPolicyCurrencySymbolV2 :: CurrencySymbol
-mustPayToPubKeyAddressPolicyCurrencySymbolV2 = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToPubKeyAddressPolicyHashV2
+mustPayToPubKeyAddressPolicyCurrencySymbolV2 :: Ledger.CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbolV2 = Value.mpsSymbol mustPayToPubKeyAddressPolicyHashV2
 
 data ConstraintParams = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
                       | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value
