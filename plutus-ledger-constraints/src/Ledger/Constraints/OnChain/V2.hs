@@ -125,10 +125,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
             checkOutput _ _                                            = True
         in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk && any (checkOutput $ fmap getOutDatum mdv) outs -- FIXME
+        $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk && any (checkOutput $ fmap getOutDatum mdv) outs
     MustPayToOtherScript vlh _skh dv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
-            hsh = PV2.findDatumHash (getOutDatum dv) scriptContextTxInfo -- FIXME
+            -- We only chek the datum, we do not distinguish how it is paased
+            hsh = PV2.findDatumHash (getOutDatum dv) scriptContextTxInfo
             addr = Address (ScriptCredential vlh) Nothing
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash dh} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
@@ -140,7 +141,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                    Ada.fromValue txOutValue >= Ada.fromValue vl
                 && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && Value.noAdaValue txOutValue == Value.noAdaValue vl
-                && getOutDatum dv == id -- FIXME
+                && getOutDatum dv == id
                 && txOutAddress == addr
             checkOutput _ = False
         in

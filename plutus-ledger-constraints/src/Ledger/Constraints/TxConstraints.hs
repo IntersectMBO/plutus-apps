@@ -53,6 +53,10 @@ import Prelude qualified as Haskell
 import Prettyprinter.Render.String (renderShowS)
 
 -- | How tx out datum are embedded in a a Tx
+--
+-- We do not use 'TxOutDatum' from cardano-node as we need to have a distinction at the type leve between constraints
+-- that require a Datum and constraints (like 'MustPayToOtherScript') with an optional datum
+-- (like 'MustPayToPubKeyAddress').
 data OutDatum = Inline Datum | Hashed Datum
     deriving stock (Haskell.Show, Generic, Haskell.Eq)
     deriving anyclass (ToJSON, FromJSON)
