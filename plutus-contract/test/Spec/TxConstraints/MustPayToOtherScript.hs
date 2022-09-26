@@ -46,15 +46,22 @@ tests :: TestTree
 tests =
     testGroup "MustPayToOtherScript"
         [ successfulUseOfMustPayToOtherScriptWithMintedToken
-        , successfulUseOfMustPayToOtherScriptWithMintedTokenV2
         , successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
         --, successfulUseOfMustPayToOtherScriptWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
         , successfulUseOfMustPayToOtherScriptWithScriptsExactTokenBalance
         , successfulUseOfMustPayToOtherScriptWhenOnchainExpectsLowerAdaValue
         , contractErrorWhenAttemptingToSpendMoreThanAdaBalance
         , contractErrorWhenAttemptingToSpendMoreThanTokenBalance
-        , phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum
         , phase2ErrorWhenExpectingMoreThanValue
+        -- test Plutus v2 features
+        , v2Tests
+        ]
+
+v2Tests :: TestTree
+v2Tests =
+    testGroup "Test of Plutus V2 features"
+        [ successfulUseOfMustPayToOtherScriptWithMintedTokenV2
+        , phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum
         ]
 
 someDatum :: Ledger.Datum

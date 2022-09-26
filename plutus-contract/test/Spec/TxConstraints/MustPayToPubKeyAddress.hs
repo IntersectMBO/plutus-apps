@@ -46,14 +46,21 @@ tests =
         , successfulUseOfMustPayToPubKeyExpectingALowerAdaValue
         , successfulUseOfMustPayToPubKeyAddress
         , successfulUseOfMustPayWithDatumToPubKey
-        , successfulUseOfMustPayWithInlineDatumToPubKeyV2
         , successfulUseOfMustPayWithDatumToPubKeyAddress
-        , phase1FailureWhenUsingInlineDatumWithV1
         , phase2FailureWhenUsingUnexpectedPaymentPubKeyHash
         --, phase2FailureWhenUsingUnexpectedStakePubKeyHash -- onchain check not implemented
         , phase2FailureWhenUsingUnexpectedDatum
         , phase2FailureWhenUsingUnexpectedValue
-         ]
+        -- test Plutus v2 features
+        , v2Tests
+        ]
+
+v2Tests :: TestTree
+v2Tests =
+    testGroup "Test of Plutus V2 features"
+        [ successfulUseOfMustPayWithInlineDatumToPubKeyV2
+        , phase1FailureWhenUsingInlineDatumWithV1
+        ]
 
 someDatum :: Ledger.Datum
 someDatum = asDatum @P.BuiltinByteString "datum"
