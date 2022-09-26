@@ -183,6 +183,12 @@ scriptTxInputs = (\x -> L.folding x) . filter $ \case
     TxInput{ txInputType = TxScriptAddress{} } -> True
     _                                          -> False
 
+-- | Filter to get only the script inputs.
+referenceScriptTxInputs :: L.Fold [TxInput] TxInput
+referenceScriptTxInputs = (\x -> L.folding x) . filter $ \case
+    TxInput{ txInputType = TxScriptAddress _ (Right _) _ } -> True
+    _                                                      -> False
+
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
 -- inScripts :: Tx -> TxInput -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)

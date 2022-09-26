@@ -56,6 +56,7 @@ import Control.Lens (Lens', Traversal', coerced, iso, lens, makeLensesFor, set, 
 import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
+import Control.Monad.Trans.Maybe (MaybeT (runMaybeT))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
@@ -288,12 +289,12 @@ processConstraint = \case
                     throwLeft ToCardanoError $ C.toCardanoTxInReferenceWitnessHeader (Tx.Versioned ref lang)
                 _ -> throwError (LedgerMkTxError $ P.TxOutRefNoReferenceScript ref)
           Nothing -> do
-            mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutValidator txout
+            mscriptTXO <- mapLedgerMkTxError $ runMaybeT $ P.resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just validator ->
+                Just (_, validator) ->
                     throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
-        mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutDatumAndValue txout
+        mscriptTXO <- mapLedgerMkTxError $ runMaybeT $ P.resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of
             Just (datum, _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
