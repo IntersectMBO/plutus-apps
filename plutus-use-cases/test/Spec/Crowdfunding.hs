@@ -157,7 +157,7 @@ tests = testGroup "crowdfunding"
         "test/Spec/contractError.txt"
         (pure $ renderWalletLog (void $ Trace.activateContractWallet w1 con))
 
-    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Crowdfunding
+    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 100 prop_Crowdfunding
 
     ]
 
