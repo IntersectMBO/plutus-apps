@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs               #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,6 +21,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (IsString)
+import Data.Text (pack)
 import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
                             metavar, option, readerError, strOption, (<**>), (<|>))
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
@@ -28,7 +30,7 @@ import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo,
+                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo, deserialiseFromBech32,
                     deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.Api qualified as C
 import Cardano.BM.Setup (withTrace)
@@ -39,15 +41,16 @@ import Cardano.BM.Tracing (defaultConfigStdout)
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
 import Ledger (TxIn (TxIn), TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
+
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
                              scriptDataFromCardanoTxBody, withIsCardanoEra)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
 import RewindableIndex.Index.VSplit qualified as Ix
 
+import Data.List.NonEmpty qualified as NonEmpty (NonEmpty, nonEmpty)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
-import Marconi.Index.ScriptTx ()
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
@@ -62,13 +65,16 @@ import Marconi.Logging (logging)
 --     > select slotNo, datumHash, datum from kv_datumhsh_datum where slotNo = 39920450;
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
+type TargetAddresses = NonEmpty.NonEmpty (C.Address C.ShelleyAddr )
+
 data Options = Options
-  { optionsSocketPath   :: String,
-    optionsNetworkId    :: NetworkId,
-    optionsChainPoint   :: ChainPoint,
-    optionsUtxoPath     :: Maybe FilePath,
-    optionsDatumPath    :: Maybe FilePath,
-    optionsScriptTxPath :: Maybe FilePath
+  { optionsSocketPath      :: String,
+    optionsNetworkId       :: NetworkId,
+    optionsChainPoint      :: ChainPoint,
+    optionsUtxoPath        :: Maybe FilePath,
+    optionsDatumPath       :: Maybe FilePath,
+    optionsScriptTxPath    :: Maybe FilePath,
+    optionsTargetAddresses :: Maybe TargetAddresses
   }
   deriving (Show)
 
@@ -84,6 +90,20 @@ optionsParser =
     <*> optStrParser (long "utxo-db" <> help "Path to the utxo database.")
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
     <*> optStrParser (long "script-tx-db" <> help "Path to the script transactions' database.")
+    <*> optAddressesParser
+    where
+        optAddressesParser =
+            builtinDataAddresses <$> optStrParser (long "addresses-to-index"
+                                          <> help ( "White space separated list of addresses to index."
+                                                    <>  " i.e \"address-1 address-2 address-3 ...\"" ) )
+        builtinDataAddresses :: Maybe String -> Maybe TargetAddresses
+        builtinDataAddresses x =  x >>= traverse maybeAddress . words >>= NonEmpty.nonEmpty
+
+        eitherAddress :: String -> Either C.Bech32DecodeError (C.Address  C.ShelleyAddr )
+        eitherAddress  =  deserialiseFromBech32 (proxyToAsType Proxy) . pack
+
+        maybeAddress  :: String -> Maybe (C.Address  C.ShelleyAddr )
+        maybeAddress = either (const Nothing) Just  . eitherAddress
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
 optStrParser fields = Just <$> strOption fields <|> pure Nothing
@@ -121,7 +141,6 @@ chainPointParser =
     maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
     maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
 
-
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extractDatumsFromTx txs
@@ -133,16 +152,25 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
       let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
 
+isTargetTxOut :: TargetAddresses -> C.TxOut C.CtxTx era -> Bool
+isTargetTxOut targetAddresses (C.TxOut address _ _) = case  address of
+    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
+    _                                                -> False
+
 -- UtxoIndexer
 getOutputs
-  :: C.Tx era
+  :: Maybe TargetAddresses
+  -> C.Tx era
   -> Maybe [(TxOut, TxOutRef)]
-getOutputs (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-  outs <- either (const Nothing) Just $ traverse fromCardanoTxOut txOuts
-  pure $ outs
-    &  zip ([0..] :: [Integer])
-   <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
-                                     , txOutRefIdx = ix
+getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
+    outs <- case maybeTargetAddresses of
+        Just targetAddresses ->
+            either (const Nothing) Just $ traverse fromCardanoTxOut . filter (isTargetTxOut targetAddresses) $ txOuts
+        Nothing ->
+            either (const Nothing) Just $ traverse fromCardanoTxOut  txOuts
+    pure $ outs &  zip ([0..] :: [Integer])
+        <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
+                                          , txOutRefIdx = ix
                                      }))
 
 getInputs
@@ -160,10 +188,11 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
 getUtxoUpdate
   :: SlotNo
   -> [C.Tx era]
+  -> Maybe TargetAddresses
   -> UtxoUpdate
-getUtxoUpdate slot txs =
+getUtxoUpdate slot txs addresses =
   let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-      outs = concat . catMaybes $ getOutputs <$> txs
+      outs = concat . catMaybes $ getOutputs addresses <$> txs
   in  UtxoUpdate { _inputs  = ins
                  , _outputs = outs
                  , _slotNo  = slot
@@ -218,8 +247,9 @@ utxoWorker
   :: Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
+  -> Maybe TargetAddresses
   -> IO ()
-utxoWorker Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+utxoWorker Coordinator{_barrier} ch path maybeTargetAddresses = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
@@ -227,7 +257,7 @@ utxoWorker Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= 
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct ->
-          Ix.insert (getUtxoUpdate slotNo txs) index >>= innerLoop
+            Ix.insert (getUtxoUpdate slotNo txs maybeTargetAddresses) index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
@@ -257,15 +287,16 @@ scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Dept
               slot   <- chainPointToSlotNo cp
               offset <- findIndex  (\u -> ScriptTx.slotNo u < slot) events
               Ix.rewind offset index
-
 combinedIndexer
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
+  -> Maybe TargetAddresses
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath = S.foldM_ step initial finish
+combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = S.foldM_ step initial finish
   where
+
     initial :: IO Coordinator
     initial = do
       let indexerCount = length . catMaybes $ [utxoPath, datumPath, scriptTxPath]
@@ -275,7 +306,7 @@ combinedIndexer utxoPath datumPath scriptTxPath = S.foldM_ step initial finish
         void . forkIO . datumWorker coordinator ch $ fromJust datumPath
       when (isJust utxoPath) $ do
         ch <- atomically . dupTChan $ _channel coordinator
-        void . forkIO . utxoWorker coordinator ch $ fromJust utxoPath
+        void . forkIO . utxoWorker coordinator ch (fromJust utxoPath) $ maybeTargetAddresses
       when (isJust scriptTxPath) $ do
         ch <- atomically . dupTChan $ _channel coordinator
         void . forkIO . scriptTxWorker coordinator ch $ fromJust scriptTxPath
@@ -297,7 +328,8 @@ main = do
           , optionsChainPoint
           , optionsUtxoPath
           , optionsDatumPath
-          , optionsScriptTxPath } <- parseOptions
+          , optionsScriptTxPath
+          , optionsTargetAddresses } <- parseOptions
 
   c <- defaultConfigStdout
 
@@ -306,7 +338,7 @@ main = do
       optionsSocketPath
       optionsNetworkId
       optionsChainPoint
-      (combinedIndexer optionsUtxoPath optionsDatumPath optionsScriptTxPath . logging trace)
+      (combinedIndexer optionsUtxoPath optionsDatumPath optionsScriptTxPath optionsTargetAddresses . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $
