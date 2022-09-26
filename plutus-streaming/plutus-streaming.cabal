@@ -43,9 +43,11 @@ library
   ------------------------
   build-depends:
     , async
-    , base       >=4.9 && <5
+    , base        >=4.9 && <5
+    , containers
     , stm
     , streaming
+    , text
 
 executable plutus-streaming-example-1
   import:         lang
