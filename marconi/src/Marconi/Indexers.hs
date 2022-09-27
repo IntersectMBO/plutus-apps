@@ -8,12 +8,12 @@ import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Lens.Operators ((&), (<&>), (^.))
-import Control.Monad (void, when)
+import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (assocs)
-import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
@@ -141,12 +141,12 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               Ix.rewind offset index
 
 utxoWorker
-  :: Coordinator
+  :: Maybe TargetAddresses
+  -> Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
-  -> Maybe TargetAddresses
   -> IO ()
-utxoWorker Coordinator{_barrier} ch path maybeTargetAddresses = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
@@ -199,15 +199,11 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = S.foldM_ 
     initial = do
       let indexerCount = length . catMaybes $ [utxoPath, datumPath, scriptTxPath]
       coordinator <- initialCoordinator indexerCount
-      when (isJust datumPath) $ do
-        ch <- atomically . dupTChan $ _channel coordinator
-        void . forkIO . datumWorker coordinator ch $ fromJust datumPath
-      when (isJust utxoPath) $ do
-        ch <- atomically . dupTChan $ _channel coordinator
-        void . forkIO . utxoWorker coordinator ch (fromJust utxoPath) $ maybeTargetAddresses
-      when (isJust scriptTxPath) $ do
-        ch <- atomically . dupTChan $ _channel coordinator
-        void . forkIO . scriptTxWorker coordinator ch $ fromJust scriptTxPath
+      let forkIndexer' worker maybePath = maybe (pure ()) (forkIndexer coordinator worker) maybePath
+      forkIndexer' datumWorker datumPath
+      forkIndexer' (utxoWorker maybeTargetAddresses) utxoPath
+      forkIndexer' scriptTxWorker scriptTxPath
+      pure coordinator
 
     step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
     step c@Coordinator{_barrier, _indexerCount, _channel} event = do
@@ -217,3 +213,12 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = S.foldM_ 
 
     finish :: Coordinator -> IO ()
     finish _ = pure ()
+
+forkIndexer
+  :: Coordinator
+  -> (Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> a -> IO ())
+  -> a
+  -> IO ()
+forkIndexer coordinator worker path = do
+  ch <- atomically . dupTChan $ _channel coordinator
+  void . forkIO . worker coordinator ch $ path
