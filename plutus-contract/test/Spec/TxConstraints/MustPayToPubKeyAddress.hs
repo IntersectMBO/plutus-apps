@@ -54,13 +54,13 @@ v1Tests :: TestTree
 v1Tests = testGroup "Plutus V1" $
    [ v1FeaturesTests
    , v2FeaturesNotAvailableTests
-   ] ?? testContextV1
+   ] ?? languageContextV1
 
 v2Tests :: TestTree
 v2Tests = testGroup "Plutus V2" $
   [ v1FeaturesTests
   , v2FeaturesTests
-  ] ?? testContextV2
+  ] ?? languageContextV2
 
 v1FeaturesTests :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 v1FeaturesTests t = testGroup "Plutus V1 features" $
@@ -351,15 +351,15 @@ mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compil
     where
         wrap = V2.Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicy
 
-testContextV1 :: LanguageContextV1
-testContextV1 = LanguageContext
+languageContextV1 :: LanguageContextV1
+languageContextV1 = LanguageContext
     mustPayToPubKeyAddressPolicyV1
     Constraints.plutusV1MintingPolicy
     PSU.V1.mintingPolicyHash
 
 
-testContextV2 :: LanguageContextV2
-testContextV2 = LanguageContext
+languageContextV2 :: LanguageContextV2
+languageContextV2 = LanguageContext
     mustPayToPubKeyAddressPolicyV2
     Constraints.plutusV2MintingPolicy
     PSU.V2.mintingPolicyHash
