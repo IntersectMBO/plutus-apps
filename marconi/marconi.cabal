@@ -43,6 +43,7 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
+    Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
@@ -79,6 +80,7 @@ library
     , containers
     , lens
     , mwc-random
+    , optparse-applicative
     , prettyprinter
     , serialise
     , sqlite-simple
@@ -111,7 +113,6 @@ executable marconi
   ------------------------
   build-depends:
     , base                  >=4.9 && <5
-    , bytestring
     , optparse-applicative
     , prettyprinter
     , text
