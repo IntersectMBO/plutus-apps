@@ -324,16 +324,6 @@ data UnitTest
 instance Scripts.ValidatorTypes UnitTest
 
 
-class MintingPolicySupport sc where
-    checkScriptContext :: forall i o. PlutusTx.ToData o => Constraints.TxConstraints i o -> sc -> Bool
-
-instance MintingPolicySupport Ledger.ScriptContext where
-    checkScriptContext = Constraints.checkScriptContext
-
-instance MintingPolicySupport V2.Scripts.ScriptContext where
-    checkScriptContext = V2.Constraints.checkScriptContext
-
-
 data LanguageContext
    = LanguageContext
    { mustPayToPubKeyAddressPolicy :: Ledger.MintingPolicy
@@ -349,12 +339,14 @@ data LanguageContext
 mustPayToPubKeyAddressPolicyV1 :: Ledger.MintingPolicy
 mustPayToPubKeyAddressPolicyV1 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
-        wrap = Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicy
+        checkedMkMustPayToPubKeyAddressPolicy = mkMustPayToPubKeyAddressPolicy Constraints.checkScriptContext
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToPubKeyAddressPolicy
 
 mustPayToPubKeyAddressPolicyV2 :: Ledger.MintingPolicy
 mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
-        wrap = V2.Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicy
+        checkedMkMustPayToPubKeyAddressPolicy = mkMustPayToPubKeyAddressPolicy V2.Constraints.checkScriptContext
+        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToPubKeyAddressPolicy
 
 languageContextV1 :: LanguageContext
 languageContextV1 = LanguageContext
@@ -370,12 +362,12 @@ languageContextV2 = LanguageContext
     PSU.V2.mintingPolicyHash
 
 
-mkMustPayToPubKeyAddressPolicy :: MintingPolicySupport sc => ConstraintParams -> sc -> Bool
-mkMustPayToPubKeyAddressPolicy = \case
-    MustPayToPubKey ppkh v                        -> checkScriptContext (Constraints.mustPayToPubKey @() @() ppkh v)
-    MustPayToPubKeyAddress ppkh spkh v            -> checkScriptContext (Constraints.mustPayToPubKeyAddress @() @() ppkh spkh v)
-    MustPayWithDatumToPubKey ppkh d v             -> checkScriptContext (Constraints.mustPayWithDatumToPubKey @() @() ppkh d v)
-    MustPayWithDatumToPubKeyAddress ppkh spkh d v -> checkScriptContext (Constraints.mustPayWithDatumToPubKeyAddress @() @() ppkh spkh d v)
+mkMustPayToPubKeyAddressPolicy :: (Constraints.TxConstraints () () -> sc -> Bool) -> ConstraintParams -> sc -> Bool
+mkMustPayToPubKeyAddressPolicy checkScriptContext = \case
+    MustPayToPubKey ppkh v                        -> checkScriptContext (Constraints.mustPayToPubKey ppkh v)
+    MustPayToPubKeyAddress ppkh spkh v            -> checkScriptContext (Constraints.mustPayToPubKeyAddress ppkh spkh v)
+    MustPayWithDatumToPubKey ppkh d v             -> checkScriptContext (Constraints.mustPayWithDatumToPubKey ppkh d v)
+    MustPayWithDatumToPubKeyAddress ppkh spkh d v -> checkScriptContext (Constraints.mustPayWithDatumToPubKeyAddress ppkh spkh d v)
 
 mustPayToPubKeyAddressPolicyHash :: LanguageContext -> Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash tc = mintingPolicyHash tc $ mustPayToPubKeyAddressPolicy tc
