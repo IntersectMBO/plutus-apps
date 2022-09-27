@@ -114,11 +114,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "La" -- "MustPayToPubKey"
         $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
-            && maybe True (\dv -> any (checkOutput $ getOutDatum dv) outs) mdv -- FIXME
+            && maybe True (\dv -> any (checkOutput $ getOutDatum dv) outs) mdv
             && isNothing refScript
     MustPayToOtherScript vlh _ dv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
-            hsh = V.findDatumHash (getOutDatum dv) scriptContextTxInfo -- FIXME
+            hsh = V.findDatumHash (getOutDatum dv) scriptContextTxInfo
             addr = Address.scriptHashAddress vlh
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatumHash=Just svh} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl

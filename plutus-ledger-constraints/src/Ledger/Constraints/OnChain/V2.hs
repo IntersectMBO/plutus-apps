@@ -119,13 +119,13 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustPayToPubKeyAddress (PaymentPubKeyHash pk) _skh mdv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
             hsh dv = PV2.findDatumHash dv scriptContextTxInfo
-            checkOutput (Just dv) TxOut{txOutDatum=OutputDatumHash dh} = hsh dv == Just dh
-            checkOutput (Just dv) TxOut{txOutDatum=OutputDatum d}      = dv == d
-            -- return 'True' by default meaning we fail only when the provided datum is not found
-            checkOutput _ _                                            = True
+            checkOutput dv TxOut{txOutDatum=OutputDatumHash dh} = hsh dv == Just dh
+            checkOutput dv TxOut{txOutDatum=OutputDatum d}      = dv == d
+            checkOutput _ _                                     = False
         in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk && any (checkOutput $ fmap getOutDatum mdv) outs
+        $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk
+            && maybe True (\dv -> any (checkOutput $ getOutDatum dv) outs) mdv
     MustPayToOtherScript vlh _skh dv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
             -- We only chek the datum, we do not distinguish how it is paased
