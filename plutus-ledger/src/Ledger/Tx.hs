@@ -151,13 +151,13 @@ makePrisms ''ChainIndexTxOut
 -- 'ChainIndexTxOut' to 'TxOut' and back is therefore lossy.
 toTxOut :: ChainIndexTxOut -> V2.Tx.TxOut
 toTxOut (PublicKeyChainIndexTxOut addr v datum referenceScript) =
-    V2.Tx.TxOut addr v (toPlutuvOutDatum datum) (scriptHash <$> referenceScript)
+    V2.Tx.TxOut addr v (toPlutusOutDatum datum) (scriptHash <$> referenceScript)
 toTxOut (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
-    V2.Tx.TxOut addr v (toPlutuvOutDatum $ Just datum) (scriptHash <$> referenceScript)
+    V2.Tx.TxOut addr v (toPlutusOutDatum $ Just datum) (scriptHash <$> referenceScript)
 
-toPlutuvOutDatum :: Maybe (V2.DatumHash, Maybe V2.Datum) -> V2.Tx.OutputDatum
-toPlutuvOutDatum Nothing       = V2.Tx.NoOutputDatum
-toPlutuvOutDatum (Just (d, _)) = V2.Tx.OutputDatumHash d
+toPlutusOutDatum :: Maybe (V2.DatumHash, Maybe V2.Datum) -> V2.Tx.OutputDatum
+toPlutusOutDatum Nothing       = V2.Tx.NoOutputDatum
+toPlutusOutDatum (Just (d, _)) = V2.Tx.OutputDatumHash d
 
 -- | Converts a plutus-ledger-api transaction output to the chain index
 -- transaction output.
