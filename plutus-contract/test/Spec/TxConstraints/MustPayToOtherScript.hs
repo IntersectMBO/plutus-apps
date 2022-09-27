@@ -202,7 +202,7 @@ successfulUseOfMustPayToOtherScriptWhenOnchainExpectsLowerAdaValue =
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
--- | Invalid contract that try to used inline datum in a V1 script
+-- | Invalid contract that tries to use inline datum in a V1 script
 mustPayToOtherScriptInlineContract :: Value.Value -> Redeemer -> Contract () Empty ContractError ()
 mustPayToOtherScriptInlineContract offChainValue onChainConstraint = do
     let lookups1 = Constraints.plutusV1MintingPolicy mustPayToOtherScriptPolicy

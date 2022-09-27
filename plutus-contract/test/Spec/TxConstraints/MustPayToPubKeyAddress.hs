@@ -34,7 +34,6 @@ import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Contexts qualified as V2.Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 

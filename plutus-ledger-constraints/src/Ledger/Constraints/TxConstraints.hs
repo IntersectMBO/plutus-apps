@@ -52,15 +52,17 @@ import Data.Maybe (fromMaybe)
 import Prelude qualified as Haskell
 import Prettyprinter.Render.String (renderShowS)
 
--- | How tx out datum are embedded in a a Tx
+-- | How tx outs datum are embedded in a a Tx
 --
--- We do not use 'TxOutDatum' from cardano-node as we need to have a distinction at the type leve between constraints
+-- We do not use 'TxOutDatum' from cardano-node to provide easier to handel type (we don't type witnesses)
+-- and to have a distinction at the type leve between constraints
 -- that require a Datum and constraints (like 'MustPayToOtherScript') with an optional datum
 -- (like 'MustPayToPubKeyAddress').
 data OutDatum = Inline Datum | Hashed Datum
     deriving stock (Haskell.Show, Generic, Haskell.Eq)
     deriving anyclass (ToJSON, FromJSON)
 
+{-# INLINABLE getOutDatum #-}
 getOutDatum :: OutDatum -> Datum
 getOutDatum (Hashed d) = d
 getOutDatum (Inline d) = d
