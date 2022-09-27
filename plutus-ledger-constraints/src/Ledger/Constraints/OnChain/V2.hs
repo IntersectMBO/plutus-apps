@@ -39,7 +39,7 @@ import Plutus.V2.Ledger.Contexts qualified as PV2
 import Plutus.V2.Ledger.Tx (OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash))
 import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.AssocMap qualified as AMap
-import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)), Functor (fmap), Maybe (Just, Nothing),
+import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)), Maybe (Just, Nothing),
                          Ord ((<=), (>=)), all, any, elem, isJust, maybe, traceIfFalse, ($), (&&), (.), (>>))
 
 {-# INLINABLE checkScriptContext #-}
