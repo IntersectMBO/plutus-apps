@@ -76,19 +76,7 @@ testIndex :: Property
 testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
 
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
-
-  -- Start testnet
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
-    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
-      (tempAbsBasePath' <> "/")
-      Nothing
-  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
-        && tempAbsPath == (tempBaseAbsPath <> "/")
-  TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
-  let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
-  socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
-  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
+  (socketPathAbs, networkId, tempAbsPath) <- startTestnet base tempAbsBasePath'
 
   -- Create a channel that is passed into the indexer, such that it
   -- can write index updates to it and we can await for them (also
@@ -318,6 +306,21 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   tx2 === queriedTx2
 
 -- * Helpers
+
+startTestnet :: FilePath -> FilePath -> H.Integration (String, C.NetworkId, FilePath)
+startTestnet base tempAbsBasePath' = do
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
+    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
+      (tempAbsBasePath' <> "/")
+      Nothing
+  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
+        && tempAbsPath == (tempBaseAbsPath <> "/")
+  TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
+  let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
+  socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
+  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
+  pure (socketPathAbs, networkId, tempAbsPath)
 
 deriving instance Real C.Lovelace
 deriving instance Integral C.Lovelace
