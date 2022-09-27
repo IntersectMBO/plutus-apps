@@ -18,6 +18,9 @@ args = Args
   <*> Opt.strOption (Opt.long "db" <> Opt.metavar "FILE" <> Opt.help "Path to the utxo database.")
   <*> pNetworkId
   where
+    -- TODO: `pNetworkId` and `pTestnetMagic` are copied from
+    -- https://github.com/input-output-hk/cardano-node/blob/988c93085022ed3e2aea5d70132b778cd3e622b9/cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs#L2009-L2027
+    -- Use them from there whenever they are exported.
     pNetworkId :: Opt.Parser C.NetworkId
     pNetworkId =
       pMainnet Opt.<|> fmap C.Testnet pTestnetMagic
@@ -28,7 +31,6 @@ args = Args
           (  Opt.long "mainnet"
           <> Opt.help "Use the mainnet magic id."
           )
-
     pTestnetMagic :: Opt.Parser C.NetworkMagic
     pTestnetMagic =
       C.NetworkMagic <$>
