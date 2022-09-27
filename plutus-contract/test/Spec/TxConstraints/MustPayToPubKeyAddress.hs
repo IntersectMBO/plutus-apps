@@ -39,17 +39,9 @@ import PlutusTx.Prelude qualified as P
 
 -- Constraint's functions should soon be changed to use Address instead of PaymentPubKeyHash and StakeKeyHash
 tests :: TestTree
-tests =
-    testGroup "MustPayToPubKeyAddress"
-      [ testGroup "ledger constraints"
-        [ v1Tests ledgerSubmitTx
-        , v2Tests ledgerSubmitTx
-        ]
-      {- testGroup "cardano constraints"
-        [ v1Tests ledgerSubmitTx
-        , v2Tests ledgerSubmitTx
-        ]
-      -} -- uncomment when MustPayToPubKey is implemented for Tx.Constraints
+tests = testGroup "MustPayToPubKeyAddress"
+      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx
+      --, testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
       ]
 
 v1Tests :: SubmitTx -> TestTree
