@@ -5,6 +5,7 @@ packages: cardano-streaming
           doc
           freer-extras
           marconi
+          marconi-mamba
           playground-common
           pab-blockfrost
           plutus-chain-index
