@@ -96,8 +96,8 @@ getTxBodyScripts body = let
 getTxScripts :: forall era . C.Tx era -> [ScriptAddress]
 getTxScripts (C.Tx txBody _ws) = getTxBodyScripts txBody
 
-open :: FilePath -> Depth -> IO ScriptTxIndex
-open dbPath (Depth k) = do
+open :: (ScriptTxIndex -> ScriptTxUpdate -> IO [()]) -> FilePath -> Depth -> IO ScriptTxIndex
+open onInsert dbPath (Depth k) = do
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL)"
@@ -105,9 +105,6 @@ open dbPath (Depth k) = do
   pure ix
 
   where
-    onInsert :: ScriptTxIndex -> ScriptTxUpdate -> IO [()]
-    onInsert _ix _update = pure []
-
     store :: ScriptTxIndex -> IO ()
     store ix = do
       buffered <- Ix.getBuffer $ ix ^. Ix.storage

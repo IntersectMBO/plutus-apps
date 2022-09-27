@@ -13,7 +13,7 @@ import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (assocs)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
@@ -156,8 +156,8 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
-scriptTxWorker :: Worker
-scriptTxWorker Coordinator{_barrier} ch path = ScriptTx.open path (ScriptTx.Depth 0) >>= loop
+scriptTxWorker :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()]) -> Worker
+scriptTxWorker onInsert Coordinator{_barrier} ch path = ScriptTx.open onInsert path (ScriptTx.Depth 0) >>= loop
   where
     loop :: ScriptTx.ScriptTxIndex -> IO ()
     loop index = do
@@ -186,8 +186,8 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIn
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
-    pairs = [(utxoWorker maybeTargetAddresses, utxoPath), (datumWorker, datumPath), (scriptTxWorker, scriptTxPath)]
-    remainingIndexers = catMaybes $ map liftMaybe pairs
+    pairs = [(utxoWorker maybeTargetAddresses, utxoPath), (datumWorker, datumPath), (scriptTxWorker (\_ _ -> pure []), scriptTxPath)]
+    remainingIndexers = mapMaybe liftMaybe pairs
 
 combineIndexers
   :: [(Worker, FilePath)]

@@ -68,7 +68,7 @@ import Test.Base qualified as H
 import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
-import Marconi.Indexers qualified
+import Marconi.Indexers qualified as M
 import Marconi.Logging qualified
 
 -- * Tmp
@@ -135,18 +135,17 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   void $ liftIO $ IO.forkIO $ do
     let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
     c <- defaultConfigStdout
-    withTrace c "marconi" $ \trace ->
-      withChainSyncEventStream
-        socketPathAbs
-        networkId
-        chainPoint
-        (Marconi.Indexers.combinedIndexer Nothing Nothing (Just sqliteDb) . Marconi.Logging.logging trace)
-        `catch` \NoIntersectionFound ->
-          logError trace $
-            renderStrict $
-              layoutPretty defaultLayoutOptions $
-                "No intersection found when looking for the chain point" <+> pretty chainPoint <> "."
-                  <+> "Please check the slot number and the block hash do belong to the chain"
+
+    withTrace c "marconi" $ \trace -> let
+
+      chainSync = withChainSyncEventStream socketPathAbs networkId chainPoint
+      indexer = M.combineIndexers [(M.scriptTxWorker, sqliteDb)]
+      handleException NoIntersectionFound = logError trace $ renderStrict $ layoutPretty defaultLayoutOptions $
+        "No intersection found when looking for the chain point" <+> pretty chainPoint <> "."
+        <+> "Please check the slot number and the block hash do belong to the chain"
+
+      in do
+      chainSync indexer `catch` handleException :: IO ()
 
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
@@ -320,7 +319,6 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   let lhs = map toLower r
       rhs = TL.unpack $ TL.decodeUtf8 $ BS.toLazyByteString $ BS.byteStringHex $ C.serialiseToRawBytes plutusScriptHash
   lhs === rhs
-
 
 -- * Helpers
 
