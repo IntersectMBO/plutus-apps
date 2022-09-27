@@ -32,7 +32,7 @@ import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Value (leq)
 import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
                                   TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
-                                  TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
+                                  TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoRedeemers, txInfoValidRange),
                                   TxOut (TxOut, txOutAddress, txOutDatum, txOutValue))
 import Plutus.V2.Ledger.Contexts qualified as PV2
 import Plutus.V2.Ledger.Tx (OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash))
@@ -106,12 +106,13 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "L7" -- "Public key output not spent"
         $ maybe False (isNoOutputDatum . txOutDatum . txInInfoResolved) (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
-    MustSpendScriptOutput txOutRef _ mRefTxOutRef ->
+    MustSpendScriptOutput txOutRef rdmr mRefTxOutRef ->
         traceIfFalse "L8" -- "Script output not spent"
         -- Unfortunately we can't check the redeemer, because TxInfo only
         -- gives us the redeemer's hash, but 'MustSpendScriptOutput' gives
         -- us the full redeemer
-        $ isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
+        $ rdmr `elem` (txInfoRedeemers scriptContextTxInfo)
+          && isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
           && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
@@ -161,7 +162,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
 {-# INLINABLE checkTxConstraintFun #-}
 checkTxConstraintFun :: ScriptContext -> TxConstraintFun -> Bool
 checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
-    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred _ ->
+    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred rdmr ->
         let findDatum NoOutputDatum        = Nothing
             findDatum (OutputDatumHash dh) = PV2.findDatum dh scriptContextTxInfo
             findDatum (OutputDatum d)      = PV2.findDatumHash d scriptContextTxInfo >> Just d
@@ -171,3 +172,4 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
         $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
+        && rdmr `elem` (txInfoRedeemers scriptContextTxInfo)

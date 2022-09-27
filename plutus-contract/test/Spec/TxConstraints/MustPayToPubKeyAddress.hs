@@ -11,7 +11,6 @@ module Spec.TxConstraints.MustPayToPubKeyAddress(tests) where
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Constraints (plutusV1MintingPolicy)
@@ -20,6 +19,7 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (mustMintValueW
                                                                   mustPayToPubKeyAddress, mustPayWithDatumToPubKey,
                                                                   mustPayWithDatumToPubKeyAddress)
 import Ledger.Scripts (ScriptError (EvaluationError))
+import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
@@ -27,8 +27,6 @@ import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransaction
                              defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), Redeemer (Redeemer),
-                             ToData (toBuiltinData), UnsafeFromData (unsafeFromBuiltinData))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -50,11 +48,11 @@ tests =
         , phase2FailureWhenUsingUnexpectedValue
          ]
 
-someDatum :: Datum
-someDatum = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ("datum" :: P.BuiltinByteString)
+someDatum :: Ledger.Datum
+someDatum = asDatum @P.BuiltinByteString "datum"
 
-otherDatum :: Datum
-otherDatum = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ("other datum" :: P.BuiltinByteString)
+otherDatum :: Ledger.Datum
+otherDatum = asDatum @P.BuiltinByteString "other datum"
 
 adaAmount :: Integer
 adaAmount = 5_000_000
@@ -72,13 +70,10 @@ w2PaymentPubKeyHash :: Ledger.PaymentPubKeyHash
 w2PaymentPubKeyHash = mockWalletPaymentPubKeyHash w2
 
 w1StakePubKeyHash :: Ledger.StakePubKeyHash
-w1StakePubKeyHash = Ledger.StakePubKeyHash $ unPaymentPubKeyHash w1PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w1 -- is Nothing
+w1StakePubKeyHash = Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w1PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w1 -- is Nothing
 
 w2StakePubKeyHash :: Ledger.StakePubKeyHash
-w2StakePubKeyHash = Ledger.StakePubKeyHash $ unPaymentPubKeyHash w2PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w2 -- is Nothing
-
-asRedeemer :: PlutusTx.ToData a => a -> Redeemer
-asRedeemer a = Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
+w2StakePubKeyHash = Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w2PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w2 -- is Nothing
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -267,13 +262,13 @@ mustPayToPubKeyAddressPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile 
 mustPayToPubKeyAddressPolicyHash :: Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash = PSU.V1.mintingPolicyHash mustPayToPubKeyAddressPolicy
 
-mustPayToPubKeyAddressPolicyCurrencySymbol :: CurrencySymbol
-mustPayToPubKeyAddressPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData mustPayToPubKeyAddressPolicyHash
+mustPayToPubKeyAddressPolicyCurrencySymbol :: Ledger.CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbol = Value.mpsSymbol mustPayToPubKeyAddressPolicyHash
 
 data ConstraintParams = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
                       | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value
-                      | MustPayWithDatumToPubKey Ledger.PaymentPubKeyHash Datum Value.Value
-                      | MustPayWithDatumToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Datum Value.Value
+                      | MustPayWithDatumToPubKey Ledger.PaymentPubKeyHash Ledger.Datum Value.Value
+                      | MustPayWithDatumToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Ledger.Datum Value.Value
     deriving (Show)
 
 PlutusTx.unstableMakeIsData ''ConstraintParams

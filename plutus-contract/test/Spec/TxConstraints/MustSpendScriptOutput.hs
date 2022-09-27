@@ -21,13 +21,14 @@ import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (NoMatchi
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (mustPayToTheScript, mustSpendScriptOutput,
                                                                   mustSpendScriptOutputWithMatchingDatumAndValue)
+import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, valueAtAddress, w1, (.&&.))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Datum (Datum), Redeemer (Redeemer), ScriptContext, ValidatorHash)
+import Plutus.V1.Ledger.Api (ScriptContext, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -42,22 +43,17 @@ tests =
         , validUseOfMustSpendScriptOutputUsingSomeScriptOutputs
         , contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef
         , phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef
-        --, phase2ErrorWhenMustSpendScriptOutputUsesWrongRedeemer -- redeemer is currently not checked onchain (only can be for V2)
+        , phase2ErrorWhenMustSpendScriptOutputUsesWrongRedeemer
         , validUseOfMustSpendScriptOutputWithMatchingDatumAndValue
         , contractErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum
         , contractErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue
         , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum
         , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue
+        , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemer
         ]
 
 utxoValue :: Value.Value
 utxoValue = Ada.lovelaceValueOf 10_000_000
-
-asDatum :: PlutusTx.ToData a => a -> Datum
-asDatum a = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
-
-asRedeemer :: PlutusTx.ToData a => a -> Redeemer
-asRedeemer a = Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
 
 mustPayToTheScriptWithMultipleOutputs :: Integer -> [TxConstraints i Integer] -> TxConstraints i Integer
 mustPayToTheScriptWithMultipleOutputs 0 constraints = mconcat constraints
@@ -81,9 +77,8 @@ mustSpendScriptOutputsContract nScriptOutputs nScriptOutputsToSpend = do
         mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints i o]
         mustSpendScriptOutputs scriptTxOutRefs = fmap (\txOutRef -> Constraints.mustSpendScriptOutput txOutRef (asRedeemer scriptTxOutRefs)) scriptTxOutRefs
 
--- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputWithMatchingDatumAndValue constraint to spend one of the outputs
-mustSpendScriptOutputWithMatchingDatumAndValueContract :: Integer -> (Integer, Integer) -> (Value.Value, Value.Value) -> Contract () Empty ContractError ()
-mustSpendScriptOutputWithMatchingDatumAndValueContract nScriptOutputs (offChainMatchingDatum, onChainMatchingDatum) (offChainMatchingValue, onChainMatchingValue)  = do
+mustSpendScriptOutputWithMatchingDatumAndValueContractWithRdmr :: Integer -> (Integer, Integer) -> (Value.Value, Value.Value) -> Redeemer -> Contract () Empty ContractError ()
+mustSpendScriptOutputWithMatchingDatumAndValueContractWithRdmr nScriptOutputs (offChainMatchingDatum, _) (offChainMatchingValue, _) rdmr = do
     let lookups1 = Constraints.typedValidatorLookups typedMustSpendScriptOutputWithMatchingDatumAndValueValidator
         tx1 = mustPayToTheScriptWithMultipleOutputs nScriptOutputs []
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
@@ -92,9 +87,14 @@ mustSpendScriptOutputWithMatchingDatumAndValueContract nScriptOutputs (offChainM
     scriptUtxos <- utxosAt mustSpendScriptOutputWithMatchingDatumAndValueScrAddress
     let lookups2 = Constraints.typedValidatorLookups typedMustSpendScriptOutputWithMatchingDatumAndValueValidator <>
             Constraints.unspentOutputs scriptUtxos
-        tx2 = Constraints.mustSpendScriptOutputWithMatchingDatumAndValue mustSpendScriptOutputWithMatchingDatumAndValueValHash (\d -> d == asDatum offChainMatchingDatum) (\v -> v == offChainMatchingValue) (asRedeemer [(onChainMatchingDatum, onChainMatchingValue)])
+        tx2 = Constraints.mustSpendScriptOutputWithMatchingDatumAndValue mustSpendScriptOutputWithMatchingDatumAndValueValHash (\d -> d == asDatum offChainMatchingDatum) (\v -> v == offChainMatchingValue) rdmr
     ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputWithMatchingDatumAndValueType lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
+
+-- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputWithMatchingDatumAndValue constraint to spend one of the outputs
+mustSpendScriptOutputWithMatchingDatumAndValueContract :: Integer -> (Integer, Integer) -> (Value.Value, Value.Value) -> Contract () Empty ContractError ()
+mustSpendScriptOutputWithMatchingDatumAndValueContract nScriptOutputs (offChainMatchingDatum, onChainMatchingDatum) (offChainMatchingValue, onChainMatchingValue) =
+    mustSpendScriptOutputWithMatchingDatumAndValueContractWithRdmr nScriptOutputs (offChainMatchingDatum, onChainMatchingDatum) (offChainMatchingValue, onChainMatchingValue) (asRedeemer [(onChainMatchingDatum, onChainMatchingValue)])
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -170,6 +170,30 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
         (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L8":_) _) -> True; _ -> False }))
         (void $ trace contract)
 
+-- | Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different redeeemer
+phase2ErrorWhenMustSpendScriptOutputUsesWrongRedeemer :: TestTree
+phase2ErrorWhenMustSpendScriptOutputUsesWrongRedeemer =
+    let contract :: Contract () Empty ContractError () = do
+            let lookups1 = Constraints.typedValidatorLookups typedMustSpendScriptOutputValidator
+                tx1 = mustPayToTheScriptWithMultipleOutputs 3 []
+            ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+            scriptUtxos <- utxosAt mustSpendScriptOutputScrAddress
+            let scriptUtxo1 = fst $ M.elemAt 0 scriptUtxos
+                scriptUtxo2 = fst $ M.elemAt 1 scriptUtxos
+                lookups2 = Constraints.plutusV1OtherScript mustSpendScriptOutputVal <>
+                    Constraints.unspentOutputs scriptUtxos
+                tx2 = Constraints.mustSpendScriptOutput scriptUtxo2 (asRedeemer [scriptUtxo1])
+            ledgerTx4 <- submitTxConstraintsWith @MustSpendScriptOutputType lookups2 tx2
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
+
+    in checkPredicateOptions
+        defaultCheckOptions
+        "Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different redeemer"
+        (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L8":_) _) -> True; _ -> False }))
+        (void $ trace contract)
+
 -- | Uses onchain and offchain constraint mustSpendScriptOutputWithMatchingDatumAndValue to spend a UTxO locked by the script with matching datum and value
 validUseOfMustSpendScriptOutputWithMatchingDatumAndValue :: TestTree
 validUseOfMustSpendScriptOutputWithMatchingDatumAndValue =
@@ -233,11 +257,23 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue =
         (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
         (void $ trace $ mustSpendScriptOutputWithMatchingDatumAndValueContract nScriptOutputs (scriptOutputIdx, scriptOutputIdx) (utxoValue, wrongValue))
 
+phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemer :: TestTree
+phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemer =
+    let nScriptOutputs  = 5
+        scriptOutputIdx = nScriptOutputs - 1
+        wrongValue = Ada.lovelaceValueOf (1 + (Ada.getLovelace $ Ada.fromValue utxoValue))
+        wrongRedeemer = (asRedeemer [(utxoValue, utxoValue)])
+    in checkPredicateOptions
+        defaultCheckOptions
+        "Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different redeemer"
+        (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
+        (void $ trace $ mustSpendScriptOutputWithMatchingDatumAndValueContractWithRdmr nScriptOutputs (scriptOutputIdx, scriptOutputIdx) (utxoValue, wrongValue) wrongRedeemer)
+
 {-# INLINEABLE mkMustSpendScriptOutputValidator #-}
 mkMustSpendScriptOutputValidator :: Integer -> [Tx.TxOutRef] -> ScriptContext -> Bool
 mkMustSpendScriptOutputValidator _ txOutRefs ctx = P.traceIfFalse "mustSpendScriptOutput not satisfied" (Constraints.checkScriptContext @() @() (P.mconcat mustSpendScriptOutputs) ctx)
     where
-        mustSpendScriptOutputs = P.map (\txOutRef -> Constraints.mustSpendScriptOutput txOutRef (Redeemer P.$ PlutusTx.toBuiltinData txOutRef)) txOutRefs
+        mustSpendScriptOutputs = P.map (\txOutRef -> Constraints.mustSpendScriptOutput txOutRef (Ledger.Redeemer P.$ PlutusTx.toBuiltinData txOutRef)) txOutRefs
 
 data MustSpendScriptOutputType
 instance Scripts.ValidatorTypes MustSpendScriptOutputType where
@@ -265,13 +301,13 @@ mustSpendScriptOutputScrAddress = Ledger.scriptHashAddress mustSpendScriptOutput
 data MustSpendScriptOutputWithMatchingDatumAndValueType
 instance Scripts.ValidatorTypes MustSpendScriptOutputWithMatchingDatumAndValueType where
     type instance DatumType MustSpendScriptOutputWithMatchingDatumAndValueType = Integer
-    type instance RedeemerType MustSpendScriptOutputWithMatchingDatumAndValueType = [(Datum, Value.Value)]
+    type instance RedeemerType MustSpendScriptOutputWithMatchingDatumAndValueType = [(Ledger.Datum, Value.Value)]
 
 {-# INLINEABLE mkMustSpendScriptOutputWithMatchingDatumAndValueValidator #-}
-mkMustSpendScriptOutputWithMatchingDatumAndValueValidator :: Integer -> [(Datum, Value.Value)] -> ScriptContext -> Bool
+mkMustSpendScriptOutputWithMatchingDatumAndValueValidator :: Integer -> [(Ledger.Datum, Value.Value)] -> ScriptContext -> Bool
 mkMustSpendScriptOutputWithMatchingDatumAndValueValidator _ datumsAndValues ctx = P.traceIfFalse "mustSpendScriptOutputWithMatchingDatumAndValue not satisfied" (Constraints.checkScriptContext @() @() (P.mconcat mustSpendScriptOutputsWithMatchingDatumAndValue) ctx)
     where
-        mustSpendScriptOutputsWithMatchingDatumAndValue = P.map (\(datum, value) -> Constraints.mustSpendScriptOutputWithMatchingDatumAndValue (Ledger.ownHash ctx) (\d -> d P.== datum) (\v -> v P.==  value) (Redeemer P.$ PlutusTx.toBuiltinData datumsAndValues)) datumsAndValues
+        mustSpendScriptOutputsWithMatchingDatumAndValue = P.map (\(datum, value) -> Constraints.mustSpendScriptOutputWithMatchingDatumAndValue (Ledger.ownHash ctx) (\d -> d P.== datum) (\v -> v P.==  value) (Ledger.Redeemer P.$ PlutusTx.toBuiltinData datumsAndValues)) datumsAndValues
 
 typedMustSpendScriptOutputWithMatchingDatumAndValueValidator :: Scripts.TypedValidator MustSpendScriptOutputWithMatchingDatumAndValueType
 typedMustSpendScriptOutputWithMatchingDatumAndValueValidator = Scripts.mkTypedValidator @MustSpendScriptOutputWithMatchingDatumAndValueType
