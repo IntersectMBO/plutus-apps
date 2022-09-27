@@ -62,7 +62,7 @@ v2Tests = testGroup "Plutus V2" $
   , v2FeaturesTests
   ] ?? testContextV2
 
-v1FeaturesTests :: MintingPolicySupport sc => TestContext sc -> TestTree
+v1FeaturesTests :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 v1FeaturesTests t = testGroup "Plutus V1 features" $
     [ successfulUseOfMustPayToPubKeyWithMintedTokenValue
     , successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
@@ -77,12 +77,12 @@ v1FeaturesTests t = testGroup "Plutus V1 features" $
     , phase2FailureWhenUsingUnexpectedValue
     ] ?? t
 
-v2FeaturesTests :: MintingPolicySupport sc => TestContext sc -> TestTree
+v2FeaturesTests :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 v2FeaturesTests t = testGroup "Plutus V2 features" $
     [ successfulUseOfMustPayWithInlineDatumToPubKeyV2
     ] ?? t
 
-v2FeaturesNotAvailableTests :: MintingPolicySupport sc => TestContext sc -> TestTree
+v2FeaturesNotAvailableTests :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 v2FeaturesNotAvailableTests t = testGroup "Plutus V2 features" $
     [ phase1FailureWhenUsingInlineDatumWithV1
     ] ?? t
@@ -99,7 +99,7 @@ adaAmount = 5_000_000
 adaValue :: Value.Value
 adaValue = Ada.lovelaceValueOf adaAmount
 
-tknValue :: MintingPolicySupport sc => TestContext sc -> Value.Value
+tknValue :: MintingPolicySupport sc => LanguageContext sc -> Value.Value
 tknValue tc = Value.singleton (mustPayToPubKeyAddressPolicyCurrencySymbol tc) "mint-me" 1
 
 w1PaymentPubKeyHash :: Ledger.PaymentPubKeyHash
@@ -120,12 +120,12 @@ trace contract = do
     void $ Trace.waitNSlots 1
 
 -- | Valid scenario using offchain and onchain constraint mustPayToPubKey with exact token value being minted
-successfulUseOfMustPayToPubKeyWithMintedTokenValue :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayToPubKeyWithMintedTokenValue :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayToPubKeyWithMintedTokenValue tc =
     let adaAndTokenValue = adaValue <> tknValue tc
         onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
         contract = do
-            let lookups1 = _mintingPolicy tc (_mustPayToPubKeyAddressPolicy tc)
+            let lookups1 = mintingPolicy tc (mustPayToPubKeyAddressPolicy tc)
                 tx1 = Constraints.mustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -137,12 +137,12 @@ successfulUseOfMustPayToPubKeyWithMintedTokenValue tc =
     (void $ trace contract)
 
 -- | Valid scenario using mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for token value only
-successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken tc =
     let adaAndTokenValue = adaValue <> tknValue tc
         onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash (tknValue tc)
         contract = do
-            let lookups1 = _mintingPolicy tc (_mustPayToPubKeyAddressPolicy tc)
+            let lookups1 = mintingPolicy tc (mustPayToPubKeyAddressPolicy tc)
                 tx1 = Constraints.mustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -154,12 +154,12 @@ successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
     (void $ trace contract)
 
 -- | Valid scenario using mustPayToPubKey offchain constraint to include ada and token whilst onchain constraint checks for ada value only
-successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda tc =
     let adaAndTokenValue = adaValue <> tknValue tc
         onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayToPubKey w2PaymentPubKeyHash adaAndTokenValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -171,11 +171,11 @@ successfulUseOfMustPayToPubKeyWhenOffchainIncludesTokenAndOnchainChecksOnlyAda t
     (void $ trace contract)
 
 -- | Valid scenario where the onchain mustPayToPubKey constraint expects less ada than the actual value
-successfulUseOfMustPayToPubKeyExpectingALowerAdaValue :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayToPubKeyExpectingALowerAdaValue :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayToPubKeyExpectingALowerAdaValue tc =
     let onChainConstraint = asRedeemer $ MustPayToPubKey w2PaymentPubKeyHash (Ada.lovelaceValueOf $ adaAmount - 1)
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayToPubKey w2PaymentPubKeyHash adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -187,11 +187,11 @@ successfulUseOfMustPayToPubKeyExpectingALowerAdaValue tc =
     (void $ trace contract)
 
 -- | Valid scenario using offchain and onchain constraint mustPayToPubKeyAddress with ada-only value
-successfulUseOfMustPayToPubKeyAddress :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayToPubKeyAddress :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayToPubKeyAddress tc =
     let onChainConstraint = asRedeemer $ MustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -203,11 +203,11 @@ successfulUseOfMustPayToPubKeyAddress tc =
     (void $ trace contract)
 
 -- | Valid scenario using offchain and onchain constraint mustPayWithDatumToPubKey with bytestring datum and ada value
-successfulUseOfMustPayWithDatumToPubKey :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayWithDatumToPubKey :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayWithDatumToPubKey tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -219,11 +219,11 @@ successfulUseOfMustPayWithDatumToPubKey tc =
     (void $ trace contract)
 
 -- | Valid scenario using offchain and onchain constraint mustPayWithDatumToPubKeyAddress with bytestring datum and ada value
-successfulUseOfMustPayWithDatumToPubKeyAddress :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayWithDatumToPubKeyAddress :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayWithDatumToPubKeyAddress tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -235,11 +235,11 @@ successfulUseOfMustPayWithDatumToPubKeyAddress tc =
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumToPubKeyAddress constraint cannot verify the PaymentPubkeyHash"
-phase2FailureWhenUsingUnexpectedPaymentPubKeyHash :: MintingPolicySupport sc => TestContext sc -> TestTree
+phase2FailureWhenUsingUnexpectedPaymentPubKeyHash :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumToPubKeyAddress w1PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -251,11 +251,11 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash tc =
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumToPubKeyAddress constraint cannot verify the Datum"
-phase2FailureWhenUsingUnexpectedDatum :: MintingPolicySupport sc => TestContext sc -> TestTree
+phase2FailureWhenUsingUnexpectedDatum :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 phase2FailureWhenUsingUnexpectedDatum tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash otherDatum adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -267,11 +267,11 @@ phase2FailureWhenUsingUnexpectedDatum tc =
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumToPubKeyAddress constraint cannot verify the Value"
-phase2FailureWhenUsingUnexpectedValue :: MintingPolicySupport sc => TestContext sc -> TestTree
+phase2FailureWhenUsingUnexpectedValue :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 phase2FailureWhenUsingUnexpectedValue tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum (Ada.lovelaceValueOf $ adaAmount + 1)
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -285,11 +285,11 @@ phase2FailureWhenUsingUnexpectedValue tc =
 
 
 -- | Valid scenario using offchain and onchain constraint mustPayWithDatumToPubKey with inline bytestring datum and ada value
-successfulUseOfMustPayWithInlineDatumToPubKeyV2 :: MintingPolicySupport sc => TestContext sc -> TestTree
+successfulUseOfMustPayWithInlineDatumToPubKeyV2 :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 successfulUseOfMustPayWithInlineDatumToPubKeyV2 tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -301,11 +301,11 @@ successfulUseOfMustPayWithInlineDatumToPubKeyV2 tc =
     (void $ trace contract)
 
 -- | Phase-1 failure when mustPayToPubKeyAddress in a V1 script use inline datum
-phase1FailureWhenUsingInlineDatumWithV1 :: MintingPolicySupport sc => TestContext sc -> TestTree
+phase1FailureWhenUsingInlineDatumWithV1 :: MintingPolicySupport sc => LanguageContext sc -> TestTree
 phase1FailureWhenUsingInlineDatumWithV1 tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
-            let lookups1 = _mintingPolicy tc $ _mustPayToPubKeyAddressPolicy tc
+            let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithInlineDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -331,16 +331,15 @@ instance MintingPolicySupport V2.Scripts.ScriptContext where
     checkScriptContext = V2.Constraints.checkScriptContext
 
 
-data TestContext sc
-   = TestContext
-   { _mkMustPayToPubKeyAddressPolicy :: ConstraintParams -> sc -> Bool
-   , _mustPayToPubKeyAddressPolicy   :: Ledger.MintingPolicy
-   , _mintingPolicy                  :: forall a. Ledger.MintingPolicy -> Constraints.ScriptLookups a
-   , _mintingPolicyHash              :: Ledger.MintingPolicy -> Ledger.MintingPolicyHash
+data LanguageContext sc
+   = LanguageContext
+   { mustPayToPubKeyAddressPolicy :: Ledger.MintingPolicy
+   , mintingPolicy                :: forall a. Ledger.MintingPolicy -> Constraints.ScriptLookups a
+   , mintingPolicyHash            :: Ledger.MintingPolicy -> Ledger.MintingPolicyHash
    }
 
-type TestContextV1 = TestContext Ledger.ScriptContext
-type TestContextV2 = TestContext V2.Scripts.ScriptContext
+type LanguageContextV1 = LanguageContext Ledger.ScriptContext
+type LanguageContextV2 = LanguageContext V2.Scripts.ScriptContext
 
 mustPayToPubKeyAddressPolicyV1 :: Ledger.MintingPolicy
 mustPayToPubKeyAddressPolicyV1 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
@@ -352,17 +351,15 @@ mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compil
     where
         wrap = V2.Scripts.mkUntypedMintingPolicy mkMustPayToPubKeyAddressPolicy
 
-testContextV1 :: TestContextV1
-testContextV1 = TestContext
-    mkMustPayToPubKeyAddressPolicy
+testContextV1 :: LanguageContextV1
+testContextV1 = LanguageContext
     mustPayToPubKeyAddressPolicyV1
     Constraints.plutusV1MintingPolicy
     PSU.V1.mintingPolicyHash
 
 
-testContextV2 :: TestContextV2
-testContextV2 = TestContext
-    mkMustPayToPubKeyAddressPolicy
+testContextV2 :: LanguageContextV2
+testContextV2 = LanguageContext
     mustPayToPubKeyAddressPolicyV2
     Constraints.plutusV2MintingPolicy
     PSU.V2.mintingPolicyHash
@@ -375,10 +372,10 @@ mkMustPayToPubKeyAddressPolicy = \case
     MustPayWithDatumToPubKey ppkh d v             -> checkScriptContext (Constraints.mustPayWithDatumToPubKey @() @() ppkh d v)
     MustPayWithDatumToPubKeyAddress ppkh spkh d v -> checkScriptContext (Constraints.mustPayWithDatumToPubKeyAddress @() @() ppkh spkh d v)
 
-mustPayToPubKeyAddressPolicyHash :: TestContext sc -> Ledger.MintingPolicyHash
-mustPayToPubKeyAddressPolicyHash tc = _mintingPolicyHash tc $ _mustPayToPubKeyAddressPolicy tc
+mustPayToPubKeyAddressPolicyHash :: LanguageContext sc -> Ledger.MintingPolicyHash
+mustPayToPubKeyAddressPolicyHash tc = mintingPolicyHash tc $ mustPayToPubKeyAddressPolicy tc
 
-mustPayToPubKeyAddressPolicyCurrencySymbol :: MintingPolicySupport sc => TestContext sc -> Ledger.CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbol :: MintingPolicySupport sc => LanguageContext sc -> Ledger.CurrencySymbol
 mustPayToPubKeyAddressPolicyCurrencySymbol = Value.mpsSymbol . mustPayToPubKeyAddressPolicyHash
 
 
