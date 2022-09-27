@@ -17,7 +17,6 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints (ScriptLookups, TxConstraints, mustMintValueWithRedeemer,
                                                     mustPayToOtherScript, mustPayToOtherScriptAddress,
-                                                    mustPayToOtherScriptAddressInlineDatum,
                                                     mustPayToOtherScriptInlineDatum,
                                                     mustSpendScriptOutputWithMatchingDatumAndValue,
                                                     plutusV1MintingPolicy, plutusV1OtherScript, plutusV2MintingPolicy,
