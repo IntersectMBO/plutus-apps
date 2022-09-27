@@ -330,11 +330,6 @@ data LanguageContext
    , mintingPolicyHash            :: Ledger.MintingPolicy -> Ledger.MintingPolicyHash
    }
 
--- ScriptLookups UnbalancedTx
--- submitUnbalancedTx
---     :: forall w (s :: Row *) e.
---        AsContractError e => ScriptLookups UnitTest -> TxConstraints () () -> Contract w s e CardanoTx
-
 mustPayToPubKeyAddressPolicyV1 :: Ledger.MintingPolicy
 mustPayToPubKeyAddressPolicyV1 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
