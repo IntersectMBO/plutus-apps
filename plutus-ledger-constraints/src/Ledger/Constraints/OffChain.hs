@@ -692,7 +692,7 @@ processConstraint = \case
     MustSpendScriptOutput txo red mref -> do
         txout <- lookupTxOutRef txo
         mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
-        ((_, datum), value) <- maybe (throwError (TxOutRefWrongType txo)) pure mDatumAndValue
+        (datum, value) <- maybe (throwError (TxOutRefWrongType txo)) pure mDatumAndValue
         valueSpentInputs <>= provided value
         case mref of
           Just ref -> do
@@ -705,7 +705,7 @@ processConstraint = \case
           Nothing -> do
             mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just (_, val) -> do
+                Just val -> do
                     unbalancedTx . tx %= Tx.addScriptTxInput txo val red datum
                 _             -> throwError (TxOutRefWrongType txo)
     MustUseOutputAsCollateral txo -> do
@@ -780,15 +780,14 @@ processConstraintFun = \case
         -- TODO: Need to precalculate the validator hash or else this won't work
         -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
         -- include the hash.
-        let matches (Just ((validatorHash, _), ((_, datum), value))) =
-                validatorHash == vh && datumPred datum && valuePred value
-            matches Nothing = False
+        let matches (Just (_, datum, value)) = datumPred datum && valuePred value
+            matches Nothing                  = False
         opts <- filter (matches . snd)
             <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
-                         (Map.toList slTxOutputs)
+                (filter ((== vh) . fst . Tx._ciTxOutValidator . snd) (Map.toList slTxOutputs))
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just ((_, validator), ((_, datum), value)))] -> do
+            [(ref, Just (validator, datum, value))] -> do
                 unbalancedTx . tx %= Tx.addScriptTxInput ref validator red datum
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
@@ -797,17 +796,17 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe ((ValidatorHash, Versioned Validator), ((DatumHash, Datum), Value)))
+    => ChainIndexTxOut -> m (Maybe (Versioned Validator, Datum, Value))
 resolveScriptTxOut txo = do
-    v <- resolveScriptTxOutValidator txo
-    dv <- resolveScriptTxOutDatumAndValue txo
-    pure $ (,) <$> v <*> dv
+    mv <- resolveScriptTxOutValidator txo
+    mdv <- resolveScriptTxOutDatumAndValue txo
+    pure $ (\v (d, value) -> (v, d, value)) <$> mv <*> mdv
 
 resolveScriptTxOutValidator
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (ValidatorHash, Versioned Validator))
+    => ChainIndexTxOut -> m (Maybe (Versioned Validator))
 resolveScriptTxOutValidator
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutValidator = (vh, v)
@@ -815,14 +814,14 @@ resolveScriptTxOutValidator
     -- first check in the 'ChainIndexTxOut' for the validator, then
     -- look for it in the 'slOtherScripts' map.
     validator <- maybe (lookupValidator vh) pure v
-    pure $ Just (vh, validator)
+    pure $ Just validator
 resolveScriptTxOutValidator _ = pure Nothing
 
 resolveScriptTxOutDatumAndValue
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe ((DatumHash, Datum), Value))
+    => ChainIndexTxOut -> m (Maybe (Datum, Value))
 resolveScriptTxOutDatumAndValue
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutScriptDatum = (dh, d)
@@ -832,7 +831,7 @@ resolveScriptTxOutDatumAndValue
     -- first check in the 'ChainIndexTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
     dataValue <- maybe (lookupDatum dh) pure d
-    pure $ Just ((dh, dataValue), _ciTxOutValue)
+    pure $ Just (dataValue, _ciTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
 
 toCardanoTxOutWithHashedDatum

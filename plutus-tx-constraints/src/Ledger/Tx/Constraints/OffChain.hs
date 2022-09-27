@@ -258,12 +258,12 @@ processConstraint = \case
           Nothing -> do
             mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just (_, validator) ->
+                Just validator ->
                     throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
         mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of
-            Just ((_, datum), _) -> do
+            Just (datum, _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
                 let witness
                         = C.ScriptWitness C.ScriptWitnessForSpending $

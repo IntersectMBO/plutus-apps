@@ -288,7 +288,7 @@ mustSpendScriptOutputWithReferenceV2ConTest = do
     scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
     utxos' <- ownUtxos
     let
-        scriptUtxo = fst . last . Map.toList $ scriptUtxos
+        scriptUtxo = fst . head . Map.toList $ scriptUtxos
         refScriptUtxo = fst . head . filter (isJust . Tx._ciTxOutReferenceScript . snd) . Map.toList $ utxos'
         lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx = TC.mustReferenceOutput utxoRef
