@@ -2,14 +2,16 @@
 module Main where
 
 import Cardano.Api qualified as C
+import Marconi.CLI qualified as M
 import Marconi.Indexers qualified as I
 import Options.Applicative qualified as Opt
 import Plutus.Streaming (withChainSyncEventStream)
 
 data Args = Args
-  { socket    :: FilePath
-  , dbPath    :: FilePath
-  , networkId :: C.NetworkId
+  { socket     :: FilePath
+  , dbPath     :: FilePath
+  , networkId  :: C.NetworkId
+  , chainPoint :: C.ChainPoint
   } deriving (Show)
 
 args :: Opt.Parser Args
@@ -17,6 +19,7 @@ args = Args
   <$> Opt.strOption (Opt.long "socket" <> Opt.metavar "FILE" <> Opt.help "Socket path to node")
   <*> Opt.strOption (Opt.long "db" <> Opt.metavar "FILE" <> Opt.help "Path to the utxo database.")
   <*> pNetworkId
+  <*> M.chainPointParser
   where
     -- TODO: `pNetworkId` and `pTestnetMagic` are copied from
     -- https://github.com/input-output-hk/cardano-node/blob/988c93085022ed3e2aea5d70132b778cd3e622b9/cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs#L2009-L2027
@@ -47,8 +50,7 @@ opts = Opt.info (args Opt.<**> Opt.helper)
 
 main :: IO ()
 main = do
-  Args {socket, dbPath, networkId} <- Opt.execParser opts
+  Args {socket, dbPath, networkId, chainPoint} <- Opt.execParser opts
   let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
 
-  let chainPoint = C.ChainPointAtGenesis
   withChainSyncEventStream socket networkId chainPoint indexers
