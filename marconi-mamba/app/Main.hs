@@ -3,6 +3,7 @@ module Main where
 
 import Cardano.Api qualified as C
 import Marconi.Indexers qualified as I
+import Marconi.Server.HttpServer qualified as Http
 import Options.Applicative qualified as Opt
 import Plutus.Streaming (withChainSyncEventStream)
 
@@ -44,9 +45,10 @@ opts = Opt.info (args Opt.<**> Opt.helper)
  <> Opt.header "marconi-mamba - Cardano blockchain indexer" )
 
 main :: IO ()
-main = do
-  Args {socket, dbPath, networkId} <- Opt.execParser opts
-  let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
+main = Http.main
+-- main = do
+--   Args {socket, dbPath, networkId} <- Opt.execParser opts
+--   let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
 
-  let chainPoint = C.ChainPointAtGenesis
-  withChainSyncEventStream socket networkId chainPoint indexers
+--   let chainPoint = C.ChainPointAtGenesis
+--   withChainSyncEventStream socket networkId chainPoint indexers

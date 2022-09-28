@@ -39,6 +39,42 @@ common lang
     -Wnoncanonical-monad-instances -Wredundant-constraints
     -Wunused-packages
 
+library
+  import:          lang
+  hs-source-dirs:  src
+  exposed-modules:
+    Marconi.JsonRpc.Types
+    Marconi.Server.HttpServer
+    Marconi.Server.Routes
+    Marconi.Server.Types
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , marconi
+    , plutus-ledger
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:   cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , containers
+    , http-media
+    , optparse-applicative
+    , servant
+    , servant-server
+    , text
+    , time
+    , warp
+
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
@@ -49,6 +85,7 @@ executable marconi-mamba
   --------------------
   build-depends:
     , marconi
+    , marconi-mamba
     , plutus-streaming
 
   --------------------------
@@ -60,5 +97,34 @@ executable marconi-mamba
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , aeson
     , base                  >=4.9 && <5
+    , http-media
     , optparse-applicative
+
+-- executable marconi-mamba-client-exe
+--   import:         lang
+--   hs-source-dirs: marconi-mamba-client/app
+--   main-is:        Main.hs
+
+--   --------------------
+--   -- Local components
+--   --------------------
+--   build-depends:
+--     , marconi
+--     , plutus-streaming
+--     , marconi-mamba
+
+--   --------------------------
+--   -- Other IOG dependencies
+--   --------------------------
+--   build-depends:  cardano-api
+
+--   ------------------------
+--   -- Non-IOG dependencies
+--   ------------------------
+--   build-depends:
+--     , aeson
+--     , base                  >=4.9 && <5
+--     , http-media
+--     , optparse-applicative

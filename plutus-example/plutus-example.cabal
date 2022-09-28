@@ -61,6 +61,7 @@ library
     PlutusExample.MintingScript
     PlutusExample.ScriptContextChecker
     PlutusExample.Sum
+    Server.JsonRpc
 
   --------------------
   -- Local components
@@ -89,8 +90,11 @@ library
     , aeson
     , bytestring
     , containers
+    , http-media
     , serialise
+    , servant
     , strict-containers
+    , text
     , transformers
     , transformers-except
 
