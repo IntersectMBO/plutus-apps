@@ -364,7 +364,7 @@ tests =
             .&&. walletFundsChange w3 mempty)
             auctionTrace2
         , testProperty "QuickCheck property" $
-            withMaxSuccess 10 prop_FinishAuction
+            withMaxSuccess 100 prop_FinishAuction
         , testProperty "NLFP fails" $
             expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
