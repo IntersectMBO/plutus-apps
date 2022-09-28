@@ -2,11 +2,11 @@
 module Main where
 
 import Cardano.Api qualified as C
+import Control.Concurrent.Async (race_)
 import Marconi.Indexers qualified as I
 import Marconi.Server.HttpServer qualified as Http
 import Options.Applicative qualified as Opt
 import Plutus.Streaming (withChainSyncEventStream)
-
 data Args = Args
   { socket    :: FilePath
   , dbPath    :: FilePath
@@ -44,11 +44,14 @@ opts = Opt.info (args Opt.<**> Opt.helper)
   ( Opt.fullDesc
  <> Opt.header "marconi-mamba - Cardano blockchain indexer" )
 
-main :: IO ()
-main = Http.main
--- main = do
---   Args {socket, dbPath, networkId} <- Opt.execParser opts
---   let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
+-- |  marconi cardano blockchain indexer
+marconiIndexer :: IO ()
+marconiIndexer = do
+  Args {socket, dbPath, networkId} <- Opt.execParser opts
+  let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
 
---   let chainPoint = C.ChainPointAtGenesis
---   withChainSyncEventStream socket networkId chainPoint indexers
+  let chainPoint = C.ChainPointAtGenesis
+  withChainSyncEventStream socket networkId chainPoint indexers
+
+main :: IO ()
+main = race_  Http.main marconiIndexer -- start marconiIndexer  & marconi JSON-RPC server

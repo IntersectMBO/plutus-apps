@@ -8,21 +8,18 @@ import Control.Exception (catch)
 import Data.ByteString.Char8 qualified as C8
 import Data.Proxy (Proxy (Proxy))
 import Data.String (IsString)
-import Data.Text (pack)
 import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
                             metavar, option, readerError, strOption, (<**>), (<|>))
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
 import Cardano.Api (BlockHeader, ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), deserialiseFromBech32, deserialiseFromRawBytesHex,
-                    proxyToAsType)
+                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
-import Data.List.NonEmpty qualified as NonEmpty (NonEmpty, nonEmpty)
 
-import Marconi.Indexers (combinedIndexer)
+import Marconi.Indexers (TargetAddresses, combinedIndexer, targetAddressParser)
 import Marconi.Logging (logging)
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 
@@ -67,13 +64,7 @@ optionsParser =
                                           <> help ( "White space separated list of addresses to index."
                                                     <>  " i.e \"address-1 address-2 address-3 ...\"" ) )
         builtinDataAddresses :: Maybe String -> Maybe TargetAddresses
-        builtinDataAddresses x =  x >>= traverse maybeAddress . words >>= NonEmpty.nonEmpty
-
-        eitherAddress :: String -> Either C.Bech32DecodeError (C.Address  C.ShelleyAddr )
-        eitherAddress  =  deserialiseFromBech32 (proxyToAsType Proxy) . pack
-
-        maybeAddress  :: String -> Maybe (C.Address  C.ShelleyAddr )
-        maybeAddress = either (const Nothing) Just  . eitherAddress
+        builtinDataAddresses = targetAddressParser
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
 optStrParser fields = Just <$> strOption fields <|> pure Nothing

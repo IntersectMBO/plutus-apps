@@ -58,7 +58,9 @@ library
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:   cardano-api
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
 
   ------------------------
   -- Non-IOG dependencies
@@ -71,6 +73,7 @@ library
     , optparse-applicative
     , servant
     , servant-server
+    , stm
     , text
     , time
     , warp
@@ -98,6 +101,7 @@ executable marconi-mamba
   ------------------------
   build-depends:
     , aeson
+    , async
     , base                  >=4.9 && <5
     , http-media
     , optparse-applicative

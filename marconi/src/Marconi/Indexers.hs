@@ -14,8 +14,10 @@ import Data.List (findIndex)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (assocs)
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Text (pack)
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
@@ -54,6 +56,14 @@ isTargetTxOut targetAddresses (C.TxOut address _ _) = case  address of
 
 -- UtxoIndexer
 type TargetAddresses = NonEmpty.NonEmpty (C.Address C.ShelleyAddr )
+targetAddressParser :: Maybe String -> Maybe TargetAddresses
+targetAddressParser x =  x >>= traverse maybeAddress . words >>= NonEmpty.nonEmpty
+    where
+        eitherAddress :: String -> Either C.Bech32DecodeError (C.Address  C.ShelleyAddr )
+        eitherAddress  =  C.deserialiseFromBech32 (C.proxyToAsType Proxy) . pack
+
+        maybeAddress  :: String -> Maybe (C.Address  C.ShelleyAddr )
+        maybeAddress = either (const Nothing) Just  . eitherAddress
 
 getOutputs
   :: Maybe TargetAddresses
