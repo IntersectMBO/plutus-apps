@@ -1,37 +1,31 @@
-{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 -- |
 -- This module provides support for writing handlers for JSON-RPC endpoints
-module Marconi.Server.Types
-    ( serveJsonRpc
-    , RouteJsonRpc (..)
-    , MaybeContent
-    , MaybeJsonRpcResponse
-    ) where
+module Marconi.Server.Types where
 
-
+import Cardano.Api qualified
+import Control.Concurrent.STM.TVar (TVar)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
 import Data.Aeson.Types (parseEither)
-import Data.Bifunctor (bimap)
-import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownSymbol, symbolVal)
+import Ledger (TxOutRef)
 import Servant.API (NoContent (NoContent), Post, ReqBody, (:<|>) ((:<|>)), (:>))
 import Servant.API.ContentTypes (AllCTRender (handleAcceptH))
 
+import Control.Lens (Bifunctor (bimap), makeClassy)
 import Marconi.JsonRpc.Types (JSONRPC, JsonRpc, JsonRpcErr (JsonRpcErr, errorData), JsonRpcNotification,
                               JsonRpcResponse (Errors, Result), RawJsonRpc, Request (Request), invalidParamsCode,
                               invalidRequestCode, methodNotFoundCode)
@@ -69,7 +63,7 @@ class RouteJsonRpc a where
     type RpcHandler a (m :: * -> *)
     jsonRpcRouter
         :: Monad m => Proxy a -> Proxy m -> RpcHandler a m
-        -> Map String (Value -> m (MaybeContent (Either (JsonRpcErr Value) Value)))
+        -> Map.Map String (Value -> m (MaybeContent (Either (JsonRpcErr Value) Value)))
     hoistRpcRouter :: Proxy a -> (forall x . m x -> n x) -> RpcHandler a m -> RpcHandler a n
 
 
@@ -148,3 +142,12 @@ serveJsonRpc px pxm hs (Request m v ix')
     missingMethod  = JsonRpcErr methodNotFoundCode ("Unknown method: " <> m) Nothing
     hmap           = jsonRpcRouter px pxm hs
     invalidRequest = JsonRpcErr invalidRequestCode "Missing id" Nothing
+
+type RpcPortNumber = Int
+type AddressTxOutRefMap = (Map.Map(Cardano.Api.Address Cardano.Api.ShelleyAddr) TxOutRef)
+type AddressTxOutRefCache = TVar AddressTxOutRefMap
+data HttpEnv = HttpEnv {
+    _portNumber             :: RpcPortNumber
+    , _addressTxOutRefCache :: AddressTxOutRefCache
+    }
+makeClassy ''HttpEnv

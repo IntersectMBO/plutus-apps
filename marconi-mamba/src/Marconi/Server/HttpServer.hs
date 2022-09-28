@@ -1,26 +1,34 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 
 module Marconi.Server.HttpServer where
 
+import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger (TxId (TxId), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
 import Marconi.JsonRpc.Types (JsonRpcErr)
 import Marconi.Server.Routes (API)
-import Marconi.Server.Types ()
+import Marconi.Server.Types (AddressTxOutRefCache, HasHttpEnv (addressTxOutRefCache, portNumber), HttpEnv)
 import Network.Wai.Handler.Warp (run)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
 
+httpMain :: HttpEnv -> IO ()
+httpMain env =
+    let
+        port = env ^. portNumber
+        cache = env ^. addressTxOutRefCache
+    in
+        run port (serve (Proxy @API) (server cache) )
 
-
-main :: IO ()
-main = run 8080 $ serve (Proxy @API) server
-
-server :: Server API
-server = (add :<|> echo :<|> findTxOutRef :<|> printMessage) :<|> (getTime :<|> printMessage)
+server :: AddressTxOutRefCache -> Server API
+server _ =  (add :<|> echo :<|> findTxOutRef :<|> printMessage) :<|> (getTime :<|> printMessage)
 
 add :: (Int, Int) -> Handler (Either (JsonRpcErr String) Int)
 add = pure . Right . uncurry (+)

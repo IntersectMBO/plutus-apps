@@ -70,6 +70,8 @@ library
     , base                  >=4.9 && <5
     , containers
     , http-media
+    , lens
+    , mtl
     , optparse-applicative
     , servant
     , servant-server
@@ -103,8 +105,10 @@ executable marconi-mamba
     , aeson
     , async
     , base                  >=4.9 && <5
+    , containers
     , http-media
     , optparse-applicative
+    , stm
 
 -- executable marconi-mamba-client-exe
 --   import:         lang

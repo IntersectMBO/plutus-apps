@@ -3,13 +3,18 @@ module Main where
 
 import Cardano.Api qualified as C
 import Control.Concurrent.Async (race_)
+import Control.Concurrent.STM.TVar (newTVarIO)
+import Data.Map qualified
 import Marconi.Indexers qualified as I
 import Marconi.Server.HttpServer qualified as Http
+import Marconi.Server.Types (HttpEnv (HttpEnv))
 import Options.Applicative qualified as Opt
 import Plutus.Streaming (withChainSyncEventStream)
+
 data Args = Args
   { socket    :: FilePath
   , dbPath    :: FilePath
+  , httpPort  :: Int
   , networkId :: C.NetworkId
   } deriving (Show)
 
@@ -17,6 +22,7 @@ args :: Opt.Parser Args
 args = Args
   <$> Opt.strOption (Opt.long "socket" <> Opt.metavar "FILE" <> Opt.help "Socket path to node")
   <*> Opt.strOption (Opt.long "db" <> Opt.metavar "FILE" <> Opt.help "Path to the utxo database.")
+  <*> Opt.option  Opt.auto (Opt.long "port" <> Opt.metavar "HTTP-PORT" <> Opt.help "JSON-RPC http port number.")
   <*> pNetworkId
   where
     pNetworkId :: Opt.Parser C.NetworkId
@@ -45,13 +51,17 @@ opts = Opt.info (args Opt.<**> Opt.helper)
  <> Opt.header "marconi-mamba - Cardano blockchain indexer" )
 
 -- |  marconi cardano blockchain indexer
-marconiIndexer :: IO ()
-marconiIndexer = do
-  Args {socket, dbPath, networkId} <- Opt.execParser opts
-  let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
-
-  let chainPoint = C.ChainPointAtGenesis
-  withChainSyncEventStream socket networkId chainPoint indexers
+marconiIndexer :: Args -> IO ()
+marconiIndexer (Args socket dbPath _ networkId) =
+  let
+      indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
+      chainPoint = C.ChainPointAtGenesis
+  in
+      withChainSyncEventStream socket networkId chainPoint indexers
 
 main :: IO ()
-main = race_  Http.main marconiIndexer -- start marconiIndexer  & marconi JSON-RPC server
+main = do
+    a@(Args _ _ port _)  <- Opt.execParser opts
+    cache <- newTVarIO Data.Map.empty
+    let httpEnv = HttpEnv port cache
+    race_  (Http.httpMain httpEnv) (marconiIndexer a) -- start marconiIndexer  & marconi JSON-RPC server
