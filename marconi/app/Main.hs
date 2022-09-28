@@ -17,16 +17,15 @@ import Prettyprinter.Render.Text (renderStrict)
 import Cardano.Api (BlockHeader, ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
                     NetworkMagic (NetworkMagic), SlotNo (SlotNo), deserialiseFromBech32, deserialiseFromRawBytesHex,
                     proxyToAsType)
+import Cardano.Api qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
-import Data.List.NonEmpty qualified as NonEmpty (NonEmpty, nonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 
-import Marconi.Indexers (combinedIndexer)
+import Marconi.Indexers (TargetAddresses, combinedIndexer)
 import Marconi.Logging (logging)
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-
-
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
 --     against the mainnet (meant to be used for testing).

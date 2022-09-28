@@ -114,6 +114,7 @@ executable marconi
     , bytestring
     , optparse-applicative
     , prettyprinter
+    , text
 
 test-suite marconi-test
   import:         lang
