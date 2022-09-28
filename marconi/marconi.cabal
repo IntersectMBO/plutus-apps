@@ -140,6 +140,7 @@ test-suite marconi-test
     , ouroboros-network
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
