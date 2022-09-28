@@ -57,6 +57,7 @@ import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), 
 import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
+import Control.Monad.Trans.Maybe (MaybeT (runMaybeT))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
@@ -67,7 +68,7 @@ import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
-import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
+import Ledger.Constraints.TxConstraints (OutDatum (Hashed, Inline), ScriptOutputConstraint, TxConstraint,
                                          TxConstraints (TxConstraints, txConstraints, txOwnOutputs))
 import Ledger.Interval ()
 import Ledger.Orphans ()
@@ -247,7 +248,7 @@ processConstraint = \case
 
     P.MustSpendScriptOutput txo redeemer -> do
         txout <- lookupTxOutRef txo
-        mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.resolveScriptTxOut txout
+        mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ runMaybeT $ P.resolveScriptTxOut txout
         case mscriptTXO of
             Just ((_, Tx.Versioned validator lang), (_, datum), _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
@@ -282,10 +283,14 @@ processConstraint = \case
     P.MustPayToPubKeyAddress pk mskh md refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
+        let txInDatum = case md of
+                Nothing         -> C.toCardanoTxOutNoDatum
+                Just (Hashed d) -> C.toCardanoTxOutDatumInTx d
+                Just (Inline d) -> C.toCardanoTxOutDatumInline d
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (maybe C.TxOutDatumNone (C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.toCardanoScriptData . getDatum) md)
+            <*> pure txInDatum
             <*> pure refScript
 
         unbalancedTx . tx . txOuts <>= [ out ]
@@ -293,10 +298,13 @@ processConstraint = \case
     P.MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
+        let txInDatum = case dv of
+                Hashed d -> C.toCardanoTxOutDatumInTx d
+                Inline d -> C.toCardanoTxOutDatumInline d
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
             <*> C.toCardanoTxOutValue vl
-            <*> pure (C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum dv)))
+            <*> pure txInDatum
             <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 

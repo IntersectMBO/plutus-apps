@@ -86,9 +86,11 @@ import Ledger.Slot (SlotRange)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation qualified
-import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (datumHash, scriptHash)
 import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn (..), TxInType (..))
+import Plutus.V2.Ledger.Api qualified as V2
+import Plutus.V2.Ledger.Tx qualified as V2.Tx hiding (TxIn (..), TxInType (..))
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 -- for re-export
 import Control.DeepSeq (NFData)
@@ -112,9 +114,9 @@ data ChainIndexTxOut =
       -- public key hash.
       _ciTxOutAddress         :: Address,
       -- | Value of the transaction output.
-      _ciTxOutValue           :: V1.Value,
-      -- | Optional datum attached to the transaction output.
-      _ciTxOutPublicKeyDatum  :: Maybe (V1.DatumHash, Maybe V1.Datum),
+      _ciTxOutValue           :: V2.Value,
+      -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
+      _ciTxOutPublicKeyDatum  :: Maybe (V2.DatumHash, Maybe V2.Datum),
       -- | Optional reference script attached to the transaction output.
       _ciTxOutReferenceScript :: Maybe (Versioned V1.Script)
     }
@@ -124,10 +126,10 @@ data ChainIndexTxOut =
       _ciTxOutAddress         :: Address,
       -- | Value of the transaction output.
       _ciTxOutValue           :: V1.Value,
-      -- | Datum attached to the transaction output, either in full or as a
+      -- | Datum attached to the transaction output, either in full (inline datum or datum in transaction body) or as a
       -- hash reference. A transaction output protected by a Plutus script
       -- is guardateed to have an associated datum.
-      _ciTxOutScriptDatum     :: (V1.DatumHash, Maybe V1.Datum),
+      _ciTxOutScriptDatum     :: (V2.DatumHash, Maybe V2.Datum),
       -- | Optional reference script attached to the transaction output.
       -- The reference script is, in genereal, unrelated to the validator
       -- script althought it could also be the same.
@@ -147,12 +149,16 @@ makePrisms ''ChainIndexTxOut
 -- Note that 'ChainIndexTxOut' supports features such inline datums and
 -- reference scripts which are not supported by V1 TxOut. Converting from
 -- 'ChainIndexTxOut' to 'TxOut' and back is therefore lossy.
-toTxOut :: ChainIndexTxOut -> V1.Tx.TxOut
-toTxOut (PublicKeyChainIndexTxOut addr v datum _referenceScript) =
-  V1.Tx.TxOut addr v (fst <$> datum)
-toTxOut (ScriptChainIndexTxOut addr v (dh, _) _referenceScript _validator)     =
-  V1.Tx.TxOut addr v (Just dh)
---
+toTxOut :: ChainIndexTxOut -> V2.Tx.TxOut
+toTxOut (PublicKeyChainIndexTxOut addr v datum referenceScript) =
+    V2.Tx.TxOut addr v (toPlutusOutDatum datum) (scriptHash <$> referenceScript)
+toTxOut (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
+    V2.Tx.TxOut addr v (toPlutusOutDatum $ Just datum) (scriptHash <$> referenceScript)
+
+toPlutusOutDatum :: Maybe (V2.DatumHash, Maybe V2.Datum) -> V2.Tx.OutputDatum
+toPlutusOutDatum Nothing       = V2.Tx.NoOutputDatum
+toPlutusOutDatum (Just (d, _)) = V2.Tx.OutputDatumHash d
+
 -- | Converts a plutus-ledger-api transaction output to the chain index
 -- transaction output.
 fromTxOut :: V1.TxOut -> Maybe ChainIndexTxOut

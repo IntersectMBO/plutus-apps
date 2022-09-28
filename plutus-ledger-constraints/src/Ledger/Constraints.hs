@@ -11,6 +11,8 @@ module Ledger.Constraints(
     , TC.mustPayToPubKeyAddress
     , TC.mustPayWithDatumToPubKey
     , TC.mustPayWithDatumToPubKeyAddress
+    , TC.mustPayWithInlineDatumToPubKey
+    , TC.mustPayWithInlineDatumToPubKeyAddress
     , TC.mustPayToAddressWithReferenceScript
     , TC.mustPayToAddressWithReferenceValidator
     , TC.mustPayToAddressWithReferenceMintingPolicy
@@ -30,7 +32,9 @@ module Ledger.Constraints(
     , TC.mustProduceAtLeast
     , TC.mustIncludeDatum
     , TC.mustPayToOtherScript
+    , TC.mustPayToOtherScriptInlineDatum
     , TC.mustPayToOtherScriptAddress
+    , TC.mustPayToOtherScriptAddressInlineDatum
     , TC.mustHashDatum
     , TC.mustSatisfyAnyOf
     -- * Defining off-chain only constraints

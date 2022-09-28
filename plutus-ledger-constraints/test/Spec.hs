@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -21,6 +22,7 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
+import Ledger (datumHash)
 import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, scriptTxInputs, toTxOut,
                          txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
@@ -36,13 +38,14 @@ import Ledger.Index qualified as Ledger
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Tx (Tx (txCollateral, txOutputs), TxOut (TxOut), txOutAddress)
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatum, toCardanoTxOutDatumHash, toCardanoTxOutNoDatum)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Generators qualified as Gen
 import Plutus.Script.Utils.V2.Scripts qualified as Ledger
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
 import Plutus.V2.Ledger.Api qualified as Ledger
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
@@ -185,7 +188,7 @@ testScriptInputs lookups txc = property $ do
     let valM = do
             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxInputs)) tx
             pure Nothing
-        txOuts = traverse (toCardanoTxOut (pNetworkId params) toCardanoTxOutDatumHash)
+        txOuts = traverse (toCardanoTxOut (pNetworkId params) toCardanoTxOutDatum)
                    $ Ledger.toTxOut <$> Constraints.slTxOutputs lookups
     case txOuts of
         Left err -> do

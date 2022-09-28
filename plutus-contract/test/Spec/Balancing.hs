@@ -11,10 +11,10 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as L.Constraints
-import Ledger.Scripts (unitDatum, unitRedeemer)
 import Ledger.Test
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Value qualified as Value
@@ -90,10 +90,10 @@ balanceTxnMinAda2 =
         wallet2Contract :: Contract () EmptySchema ContractError ()
         wallet2Contract = do
             utxos <- utxosAt someAddress
-            let txOutRef = case (Map.keys utxos) of
+            let txOutRef = case Map.keys utxos of
                              (x:_) -> x
                              []    -> error $ "there's no utxo at the address " <> show someAddress
-                lookups = L.Constraints.unspentOutputs utxos
+                lookups =  L.Constraints.unspentOutputs utxos
                         <> L.Constraints.plutusV1OtherScript someValidator
                         <> L.Constraints.plutusV1MintingPolicy mps
                 constraints = L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1

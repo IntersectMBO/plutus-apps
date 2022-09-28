@@ -45,9 +45,11 @@ module Ledger.Tx.CardanoAPI.Internal(
   , makeTransactionBody
   , toCardanoTxIn
   , toCardanoTxOut
+  , toCardanoTxOutDatum
   , toCardanoTxOutDatumHash
   , toCardanoTxOutDatumInline
   , toCardanoTxOutDatumInTx
+  , toCardanoTxOutNoDatum
   , toCardanoTxOutValue
   , toCardanoAddressInEra
   , toCardanoValue
@@ -414,14 +416,14 @@ fromCardanoTxOut (C.TxOut addr value datumHash _) =
 
 toCardanoTxOut
     :: C.NetworkId
-    -> (Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
-    -> PV1.TxOut
+    -> (PV2.OutputDatum -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
+    -> PV2.TxOut
     -> Either ToCardanoError (C.TxOut ctx C.BabbageEra)
-toCardanoTxOut networkId fromHash (PV1.TxOut addr value datumHash) =
+toCardanoTxOut networkId fromHash (PV2.TxOut addr value datum _rs) =
     C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValue value
-            <*> fromHash datumHash
-            <*> pure C.ReferenceScriptNone
+            <*> fromHash datum
+            <*> pure C.ReferenceScriptNone -- fixme
 
 fromCardanoAddressInEra :: C.AddressInEra era -> P.Address
 fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
@@ -513,22 +515,27 @@ fromCardanoTxOutDatumHash (C.TxOutDatumInline _ d) = Just $ P.DatumHash $ Plutus
 fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> PV2.OutputDatum
 fromCardanoTxOutDatum C.TxOutDatumNone       = PV2.NoOutputDatum
 fromCardanoTxOutDatum (C.TxOutDatumHash _ h) = PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
-fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
+fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) = PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 fromCardanoTxOutDatum (C.TxOutDatumInline _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 
-toCardanoTxOutDatumInTx :: Maybe PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
-toCardanoTxOutDatumInTx Nothing = C.TxOutDatumNone
-toCardanoTxOutDatumInTx (Just d) =
-    C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum $ d
+toCardanoTxOutNoDatum  :: C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutNoDatum = C.TxOutDatumNone
 
-toCardanoTxOutDatumInline :: Maybe PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
-toCardanoTxOutDatumInline Nothing = C.TxOutDatumNone
-toCardanoTxOutDatumInline (Just d) =
-    C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum $ d
+toCardanoTxOutDatumInTx :: PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutDatumInTx =
+    C.TxOutDatumInTx C.ScriptDataInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum
 
-toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
-toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
-toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash datumHash
+toCardanoTxOutDatumInline :: PV2.Datum -> C.TxOutDatum C.CtxTx C.BabbageEra
+toCardanoTxOutDatumInline =
+    C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra . C.fromPlutusData . PV2.builtinDataToData . PV2.getDatum
+
+toCardanoTxOutDatumHash :: P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
+toCardanoTxOutDatumHash datumHash = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash datumHash
+
+toCardanoTxOutDatum :: PV2.OutputDatum -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
+toCardanoTxOutDatum PV2.NoOutputDatum        = pure toCardanoTxOutNoDatum
+toCardanoTxOutDatum (PV2.OutputDatum d)      = pure $ toCardanoTxOutDatumInline d
+toCardanoTxOutDatum (PV2.OutputDatumHash dh) = toCardanoTxOutDatumHash dh
 
 toCardanoScriptDataHash :: P.DatumHash -> Either ToCardanoError (C.Hash C.ScriptData)
 toCardanoScriptDataHash (P.DatumHash bs) = tag "toCardanoTxOutDatumHash" (deserialiseFromRawBytes (C.AsHash C.AsScriptData) (PlutusTx.fromBuiltin bs))
