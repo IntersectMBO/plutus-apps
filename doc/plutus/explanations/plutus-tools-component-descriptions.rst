@@ -163,7 +163,7 @@ It provides a number of utilities including:
 +--------------+---------------------------------------------------------------+
 
 `Plutus ledger <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-ledger>`_ is a set of transitional types that simplify the cardano-api types. 
-It is intended to be a comprehensive, easy-to-use set of types that replicate the current era of cardano-api. 
+It is intended to be a comprehensive, easy-to-use set of types that replicate the current era of `cardano-api <https://input-output-hk.github.io/cardano-node/cardano-api/lib/Cardano-Api.html>`_. 
 It currently considers only the last era. 
 Plutus ledger contains data types and functions that complement `cardano-ledger <https://github.com/input-output-hk/cardano-ledger>`_ related to Plutus. 
 
