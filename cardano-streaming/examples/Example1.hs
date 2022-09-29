@@ -1,11 +1,11 @@
 module Main where
 
 import Cardano.Api qualified
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward), withChainSyncEventStream)
 import Common (Options (Options, optionsChainPoint, optionsNetworkId, optionsSocketPath), parseOptions)
 import Data.Aeson.Text qualified as Aeson
 import Data.Text.Lazy qualified as TL
 import Orphans ()
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), withChainSyncEventStream)
 import Streaming.Prelude qualified as S
 
 --
