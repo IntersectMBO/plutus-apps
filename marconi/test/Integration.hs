@@ -305,7 +305,7 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
 startTestnet :: FilePath -> FilePath -> H.Integration (String, C.NetworkId, FilePath)
 startTestnet base tempAbsBasePath' = do
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  configurationTemplate <- H.noteShow $ base </> "marconi/test/configuration.yaml"
   conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
     TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
       (tempAbsBasePath' <> "/")

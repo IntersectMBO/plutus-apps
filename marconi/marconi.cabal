@@ -117,11 +117,12 @@ executable marconi
     , text
 
 test-suite marconi-test
-  import:         lang
-  type:           exitcode-stdio-1.0
-  main-is:        Spec.hs
-  hs-source-dirs: test
-  other-modules:  Integration
+  import:             lang
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  other-modules:      Integration
+  extra-source-files: test/configuration.yaml
 
   --------------------
   -- Local components
