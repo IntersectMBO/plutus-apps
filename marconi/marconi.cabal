@@ -118,6 +118,7 @@ executable marconi
 
 test-suite marconi-test
   import:             lang
+  ghc-options:        -Wno-unused-packages
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
   hs-source-dirs:     test
