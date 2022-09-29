@@ -129,7 +129,6 @@ test-suite marconi-test
   --------------------
   build-depends:
     , marconi
-    , plutus-script-utils
     , plutus-streaming
 
   --------------------------
@@ -141,6 +140,8 @@ test-suite marconi-test
     , iohk-monitoring
     , ouroboros-network
     , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
