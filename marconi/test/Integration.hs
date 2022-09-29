@@ -295,12 +295,11 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     let
       queryLoop n = do
         H.threadDelay 250_000 -- wait 250ms before querying
-        liftIO $ putStrLn $ "query poll #" <> show (n :: Int)
         txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
         case txCbors of
           result : _ -> pure result
           _          -> queryLoop (n + 1)
-    ScriptTx.TxCbor txCbor <- queryLoop 0
+    ScriptTx.TxCbor txCbor <- queryLoop (0 :: Integer)
     H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
 
   tx2 === queriedTx2
@@ -309,7 +308,7 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
 
 startTestnet :: FilePath -> FilePath -> H.Integration (String, C.NetworkId, FilePath)
 startTestnet base tempAbsBasePath' = do
-  configurationTemplate <- H.noteShow $ base </> "marconi/test/configuration.yaml"
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
     TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
       (tempAbsBasePath' <> "/")
