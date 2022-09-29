@@ -44,6 +44,9 @@ getTime = timeString <$> liftIO getCurrentTime
     where
     timeString = formatTime defaultTimeLocale "%T"
 
+-- TODO
+-- need a readerT and serant Nat here
+--
 findTxOutRef :: String -> Handler (Either (JsonRpcErr String) TxOutRef)
 findTxOutRef _ =  pure . Right $ txoutref
     where

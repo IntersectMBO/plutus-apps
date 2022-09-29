@@ -1,40 +1,28 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
-module Main where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-import Control.Monad (void)
-import Control.Monad.IO.Class (liftIO)
+-- |
+-- This module provides support for generating JSON-RPC clients in the Servant framework.
+--
+-- Note: This client implementation runs over HTTP and the semantics of HTTP
+-- remove the need for the message id.
+module Marconi.Client.Types (
+    JsonRpcResponse
+    ) where
+
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Proxy (Proxy (..))
-import Network.HTTP.Client (defaultManagerSettings, newManager)
-import Servant.API (NoContent, (:<|>) (..))
-import Servant.Client (ClientM, client, mkClientEnv, parseBaseUrl, runClientM)
-import Servant.JsonRpc.Example (API, NonEndpoint)
+import GHC.TypeLits (KnownSymbol, symbolVal)
+import Servant.API (NoContent)
+import Servant.Client.Core (HasClient (..), RunClient)
 
+import Marconi.JsonRpc.Types
 
-main :: IO ()
-main = do
-    env <- mkClientEnv <$> newManager defaultManagerSettings <*> parseBaseUrl "http://localhost:8080"
-    void . flip runClientM env $ do
-        jsonRpcPrint "Starting RPC calls"
-        liftIO . print =<< add (2, 10)
-        liftIO . print =<< multiply (2, 10)
-
-        printMessage "Starting REST calls"
-        liftIO . print =<< getTime
-
-    -- A JSON-RPC error response
-    print =<< runClientM (launchMissiles 100) env
-
-
-add, multiply :: (Int, Int) -> ClientM (JsonRpcResponse String Int)
-jsonRpcPrint :: String -> ClientM NoContent
-getTime :: ClientM String
-printMessage :: String -> ClientM NoContent
-(add :<|> multiply :<|> jsonRpcPrint) :<|> (getTime :<|> printMessage) = client $ Proxy @API
-
-
-launchMissiles :: Int -> ClientM (JsonRpcResponse String Bool)
-launchMissiles = client $ Proxy @NonEndpoint
 
 -- | The 'RawJsonRpc' construct is completely transparent to clients
 instance (RunClient m, HasClient m api) => HasClient m (RawJsonRpc api) where
