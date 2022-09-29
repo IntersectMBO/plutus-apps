@@ -31,7 +31,7 @@ import Plutus.Script.Utils.V2.Contexts qualified as PV2 hiding (findTxInByTxOutR
 import Plutus.V1.Ledger.Address (Address (Address))
 import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Value (leq)
-import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
+import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), ScriptPurpose (Spending),
                                   TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
                                   TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoRedeemers, txInfoValidRange),
                                   TxOut (TxOut, txOutAddress, txOutDatum, txOutValue))
@@ -109,9 +109,9 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ maybe False (isNoOutputDatum . txOutDatum . txInInfoResolved) (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
     MustSpendScriptOutput txOutRef rdmr mRefTxOutRef ->
         traceIfFalse "L8" -- "Script output not spent"
-        $ rdmr `elem` (txInfoRedeemers scriptContextTxInfo)
-          && isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
-          && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
+        $ Just rdmr == AMap.lookup (Spending txOutRef) (txInfoRedeemers scriptContextTxInfo)
+        && isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
+        && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
@@ -165,10 +165,11 @@ checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
         let findDatum NoOutputDatum        = Nothing
             findDatum (OutputDatumHash dh) = PV2.findDatum dh scriptContextTxInfo
             findDatum (OutputDatum d)      = PV2.findDatumHash d scriptContextTxInfo >> Just d
-            isMatch (TxOut (Ledger.Address (ScriptCredential vh') _) val (findDatum -> Just d) _refScript) =
+            txOutIsMatch (TxOut (Ledger.Address (ScriptCredential vh') _) val (findDatum -> Just d) _refScript) =
                 vh == vh' && valuePred val && datumPred d
-            isMatch _ = False
+            txOutIsMatch _ = False
+            rdmrIsMatch txOutRef = Just rdmr == AMap.lookup (Spending txOutRef) (txInfoRedeemers scriptContextTxInfo)
         in
         traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
-        $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
-        && rdmr `elem` (txInfoRedeemers scriptContextTxInfo)
+        $ any (txOutIsMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
+        && any (rdmrIsMatch . txInInfoOutRef) (txInfoInputs scriptContextTxInfo)

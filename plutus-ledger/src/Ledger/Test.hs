@@ -3,9 +3,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 module Ledger.Test where
 
 import Ledger qualified
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.Typed as PSU
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V1.Ledger.Api (Address, CurrencySymbol (CurrencySymbol), ToData (toBuiltinData),
@@ -22,6 +25,9 @@ someValidatorHash = PV1.validatorHash someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
+
+someTypedValidator :: Scripts.TypedValidator Any
+someTypedValidator = Scripts.unsafeMkTypedValidator someValidator
 
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: () -> Ledger.ScriptContext -> Bool
