@@ -66,8 +66,8 @@ import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, Slot, TxOutRef, Value)
 import Ledger qualified
-import Ledger.Constraints (ScriptLookups, TxConstraints, mustMintValueWithRedeemer, mustPayToTheScript,
-                           mustSpendPubKeyOutput, plutusV1MintingPolicy)
+import Ledger.Constraints (ScriptLookups, TxConstraints, TxOutDatum (TxOutDatumInTx), mustMintValueWithRedeemer,
+                           mustPayToTheScriptWithDatumInTx, mustSpendPubKeyOutput, plutusV1MintingPolicy)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
@@ -434,7 +434,10 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
     mapError (review _SMContractError) $ do
       utxo <- ownUtxos
       let StateMachineInstance{stateMachine, typedValidator} = scInstance
-          constraints = mustPayToTheScript initialState (initialValue <> SM.threadTokenValueOrZero scInstance)
+          constraints =
+              mustPayToTheScriptWithDatumInTx
+                initialState
+                (initialValue <> SM.threadTokenValueOrZero scInstance)
               <> foldMap ttConstraints (smThreadToken stateMachine)
               <> customConstraints
           red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Mint))
@@ -546,7 +549,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
                         outputConstraints =
                             [ ScriptOutputConstraint
-                                { ocDatum = stateData newState
+                                { ocDatum = TxOutDatumInTx $ stateData newState
                                   -- Add the thread token value back to the output
                                 , ocValue = stateValue newState <> SM.threadTokenValueOrZero scInstance
                                 , ocReferenceScriptHash = Nothing

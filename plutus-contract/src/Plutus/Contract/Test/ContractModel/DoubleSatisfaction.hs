@@ -54,8 +54,8 @@ import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (mint)
-import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOut, toCardanoAddressInEra, toCardanoTxOutDatumInTx,
-                             toCardanoTxOutDatumInline)
+import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut, toCardanoAddressInEra,
+                             toCardanoTxOutDatumInTx, toCardanoTxOutDatumInline)
 import Ledger.Validation qualified as Validation
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
@@ -324,7 +324,7 @@ doubleSatisfactionCounterexamples dsc = do
    -- For each output in the candidate tx
    (idx, out) <- zip [0..] (dsc ^. dsTx . outputs)
    -- Is it a pubkeyout?
-   guard $ isPubKeyOut $ fromCardanoTxOut $ P.getTxOut out
+   guard $ isPubKeyOut $ fromCardanoTxOutToPV1TxInfoTxOut $ P.getTxOut out
    -- Whose key is not in the signatories?
    key <- maybeToList . txOutPubKey $ out
    let signatories = dsc ^. dsTx . signatures . to Map.keys

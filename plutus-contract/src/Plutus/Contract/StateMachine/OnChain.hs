@@ -29,7 +29,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                           TxConstraints (txOwnOutputs))
+                           TxConstraints (txOwnOutputs), TxOutDatum (TxOutDatumInTx))
 import Ledger.Constraints.OnChain.V1 (checkScriptContext)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, ValidatorTypes, validatorAddress,
                              validatorHash)
@@ -131,7 +131,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                             newConstraints
                                 { txOwnOutputs =
                                     [ ScriptOutputConstraint
-                                        { ocDatum = newData
+                                        { ocDatum = TxOutDatumInTx newData
                                           -- Check that the thread token value is still there
                                         , ocValue = newValue <> threadTokenValueInner threadToken (ownHash ptx)
                                         , ocReferenceScriptHash = Nothing

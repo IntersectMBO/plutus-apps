@@ -6,10 +6,30 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
+
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+
+{- Note [Oracle incorrect implementation]
+
+This current Oracle implementation uses the
+'Constraints.mustIncludeDatumInTxWithHash' constraint which used to add a datum
+in transaction body. However, cardano-ledger enforces a rule (rewording the
+rule here..) in which a datum in the transaction body needs to have the same
+hash as a datum in one of the transaction's outputs.
+
+However, now that we have fixed the bug in
+'Constraints.mustIncludeDatumInTxWithHash' so work with this ledger rule, the
+Oracle implementation does not work anymore, and examples in the
+plutus-use-cases Haskell package now fail because of this.
+
+Therefore, for now, we will comment out the failing test cases until we rewrite
+this Oracle module to work with inline datums instead of datums in the
+transaction body. This implies upgrades some of the examples in
+`plutus-use-cases` to PlutusV2.
+-}
 module Plutus.Contract.Oracle(
   -- * Signed messages
   -- $oracles
@@ -145,7 +165,7 @@ checkHashConstraints ::
 checkHashConstraints SignedMessage{osmMessageHash, osmDatum=Datum dt} =
     maybe
         (trace "Li" {-"DecodingError"-} $ Left DecodingError)
-        (\a -> pure (a, Constraints.mustHashDatum osmMessageHash (Datum dt)))
+        (\a -> pure (a, Constraints.mustIncludeDatumInTxWithHash osmMessageHash (Datum dt)))
         (fromBuiltinData dt)
 
 {-# INLINABLE verifySignedMessageConstraints #-}

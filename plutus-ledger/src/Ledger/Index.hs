@@ -78,7 +78,7 @@ import Ledger.Scripts (mintingPolicyHash, validatorHash)
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx
-import Ledger.Tx.CardanoAPI (fromCardanoTxOut)
+import Ledger.Tx.CardanoAPI (fromCardanoTxOutToPV1TxInfoTxOut, fromCardanoTxOutToPV2TxInfoTxOut)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
@@ -420,7 +420,7 @@ mkPV1TxInfo :: ValidationMonad m => Tx -> m PV1.TxInfo
 mkPV1TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txins <- traverse mkPV1TxInInfo $ view inputs tx
-    let plutusTxOutputs = map (fromCardanoTxOut . getTxOut) $ txOutputs tx
+    let plutusTxOutputs = map (fromCardanoTxOutToPV1TxInfoTxOut . getTxOut) $ txOutputs tx
     pure $ PV1.TxInfo
             { PV1.txInfoInputs = txins
             -- See note [Mint and Fee fields must have ada symbol]
@@ -440,7 +440,7 @@ mkPV1TxInfo tx = do
 -- PlutusV1 validator script.
 mkPV1TxInInfo :: ValidationMonad m => TxInput -> m PV1.TxInInfo
 mkPV1TxInInfo i = do
-    txOut <- fromCardanoTxOut . getTxOut <$> lkpTxOut (txInputRef i)
+    txOut <- fromCardanoTxOutToPV1TxInfoTxOut . getTxOut <$> lkpTxOut (txInputRef i)
     pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInputRef i, PV1.txInInfoResolved=txOut}
 
 -- | Create the data about the transaction which will be passed to a PV2
@@ -450,12 +450,12 @@ mkPV2TxInfo tx = do
     slotCfg <- pSlotConfig . vctxParams <$> ask
     txIns <- traverse mkPV2TxInInfo $ view inputs tx
     txRefIns <- traverse mkPV2TxInInfo $ view referenceInputs tx
-    let plutusTxOutputs = map (fromCardanoTxOut . getTxOut) $ txOutputs tx
+    let plutusTxOutputs = map (fromCardanoTxOutToPV2TxInfoTxOut . getTxOut) $ txOutputs tx
     pure $ PV2.TxInfo
             { PV2.txInfoInputs = txIns
             , PV2.txInfoReferenceInputs = txRefIns
             -- See note [Mint and Fee fields must have ada symbol]
-            , PV2.txInfoOutputs = txOutV1ToTxOutV2 <$> plutusTxOutputs
+            , PV2.txInfoOutputs = plutusTxOutputs
             , PV2.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
             , PV2.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
             , PV2.txInfoDCert = [] -- DCerts not supported in emulator
@@ -471,15 +471,8 @@ mkPV2TxInfo tx = do
 -- PlutusV2 validator script.
 mkPV2TxInInfo :: ValidationMonad m => TxInput -> m PV2.TxInInfo
 mkPV2TxInInfo TxInput{txInputRef} = do
-    txOut <- fromCardanoTxOut . getTxOut <$> lkpTxOut txInputRef
-    pure $ PV2.TxInInfo txInputRef (txOutV1ToTxOutV2 txOut)
-
--- Temporary. Might not exist anymore once we remove our custom ledger rules
-txOutV1ToTxOutV2 :: PV1.TxOut -> PV2.TxOut
-txOutV1ToTxOutV2 (PV1.TxOut address val datum) =
-    let v2Datum = maybe PV2.NoOutputDatum PV2.OutputDatumHash datum
-     in PV2.TxOut address val v2Datum Nothing
-
+    txOut <- fromCardanoTxOutToPV2TxInfoTxOut . getTxOut <$> lkpTxOut txInputRef
+    pure $ PV2.TxInInfo txInputRef txOut
 
 data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingPolicy
     deriving stock (Eq, Show, Generic)

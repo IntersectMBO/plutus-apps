@@ -222,8 +222,8 @@ instance Pretty CardanoTx where
                     , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList (txSignatures tx'))))
                     ]) (const []) tx ++
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
+                , hang 2 (vsep ("data:": fmap pretty (Map.toList (getCardanoTxData tx))))
                 , hang 2 (vsep ("redeemers:": fmap pretty (Map.elems $ getCardanoTxRedeemers tx)))
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList (getCardanoTxData tx))))
                 ]
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
@@ -352,7 +352,7 @@ instance Pretty Tx where
                 , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList _txSignatures)))
                 , "validity range:" <+> viaShow _txValidRange
                 ]
-                <> (showNonEmpty (Map.null _txData) $ hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _txData))))
+                <> (showNonEmpty (Map.null _txData) $ hang 2 (vsep ("data:": fmap pretty (Map.toList _txData))))
                 <> (showNonEmpty (Map.null _txScripts) $ hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys _txScripts))))
                 <> (showNonEmpty (null _txWithdrawals) $ hang 2 (vsep ("withdrawals:": fmap pretty _txWithdrawals)))
                 <> (showNonEmpty (null _txCertificates) $ hang 2 (vsep ("certificates:": fmap pretty _txCertificates)))

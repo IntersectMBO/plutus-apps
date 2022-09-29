@@ -13,11 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, typedValidatorLookups,
-                                                             unspentOutputs)
-import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
-                                                                  mustPayToTheScript, mustSpendAtLeast)
+import Ledger.Constraints.OffChain qualified as Constraints
+import Ledger.Constraints.OnChain.V1 qualified as Constraints
+import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
@@ -46,7 +44,9 @@ scriptBalance = 25_000_000
 mustSpendAtLeastContract :: Integer -> Integer -> Ledger.PaymentPubKeyHash-> Contract () Empty ContractError ()
 mustSpendAtLeastContract offAmt onAmt pkh = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScript onAmt (Ada.lovelaceValueOf scriptBalance)
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx
+                onAmt
+                (Ada.lovelaceValueOf scriptBalance)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -56,7 +56,7 @@ mustSpendAtLeastContract offAmt onAmt pkh = do
             <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
             Constraints.collectFromTheScript utxos ()
-            <> Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData onAmt)
+            <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
             <> Constraints.mustSpendAtLeast (Ada.lovelaceValueOf offAmt)
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2

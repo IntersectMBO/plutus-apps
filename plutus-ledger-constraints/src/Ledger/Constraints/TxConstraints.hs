@@ -28,7 +28,7 @@ import Prettyprinter (Pretty (pretty, prettyList), defaultLayoutOptions, hang, l
 
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
+import PlutusTx.Prelude (Bool (False, True), Eq, Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
                          Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concat, foldl, map, mapMaybe,
                          not, null, ($), (.), (==), (>>=), (||))
 
@@ -54,31 +54,66 @@ import Prettyprinter.Render.String (renderShowS)
 
 -- | How tx outs datum are embedded in a a Tx
 --
--- We do not use 'TxOutDatum' from cardano-node to provide easier to handel type (we don't type witnesses)
--- and to have a distinction at the type leve between constraints
--- that require a Datum and constraints (like 'MustPayToOtherScript') with an optional datum
--- (like 'MustPayToPubKeyAddress').
-data OutDatum = Inline Datum | Hashed Datum
-    deriving stock (Haskell.Show, Generic, Haskell.Eq)
+-- We do not use 'TxOutDatum' from cardano-node to provide easier to handel
+-- type (we don't type witnesses) and to have a distinction at the type leve
+-- between constraints that require a Datum and constraints (like
+-- 'MustPayToOtherScript') with an optional datum (like
+-- 'MustPayToPubKeyAddress').
+data TxOutDatum datum =
+    TxOutDatumHash datum
+    -- ^ A datum specified in a transaction output using only it's hash, i.e.
+    -- the datum is not inlined nor is it added in the transaction body.
+  | TxOutDatumInTx datum
+    -- ^ A datum specified in a transaction output using it's hash, while also
+    -- adding the actual datum in the transaction body.
+  | TxOutDatumInline datum
+    -- ^ A datum inlined in a transaction output. It is *not* added in the
+    -- transaction body.
+    deriving stock (Haskell.Show, Generic, Haskell.Eq, Haskell.Functor)
     deriving anyclass (ToJSON, FromJSON)
 
-{-# INLINABLE getOutDatum #-}
-getOutDatum :: OutDatum -> Datum
-getOutDatum (Hashed d) = d
-getOutDatum (Inline d) = d
+instance Eq d => Eq (TxOutDatum d) where
+    TxOutDatumHash d1 == TxOutDatumHash d2     = d1 == d2
+    TxOutDatumInTx d1 == TxOutDatumInTx d2     = d1 == d2
+    TxOutDatumInline d1 == TxOutDatumInline d2 = d1 == d2
+    _ == _                                     = False
 
-instance Pretty OutDatum where
+instance Functor TxOutDatum where
+    fmap f (TxOutDatumHash d)   = TxOutDatumHash $ f d
+    fmap f (TxOutDatumInTx d)   = TxOutDatumInTx $ f d
+    fmap f (TxOutDatumInline d) = TxOutDatumInline $ f d
+
+getTxOutDatum :: TxOutDatum d -> d
+getTxOutDatum (TxOutDatumHash d)   = d
+getTxOutDatum (TxOutDatumInTx d)   = d
+getTxOutDatum (TxOutDatumInline d) = d
+
+isTxOutDatumHash :: TxOutDatum d -> Bool
+isTxOutDatumHash (TxOutDatumHash _) = True
+isTxOutDatumHash _                  = False
+
+isTxOutDatumInTx :: TxOutDatum d -> Bool
+isTxOutDatumInTx (TxOutDatumInTx _) = True
+isTxOutDatumInTx _                  = False
+
+isTxOutDatumInline :: TxOutDatum d -> Bool
+isTxOutDatumInline (TxOutDatumInline _) = True
+isTxOutDatumInline _                    = False
+
+instance Pretty d => Pretty (TxOutDatum d) where
   pretty = \case
-    Inline d -> "inline datum" <+> pretty d
-    Hashed d -> "hashed datum" <+> pretty d
+    TxOutDatumHash d   -> "hashed datum" <+> pretty d
+    TxOutDatumInTx d   -> "datum in tx body" <+> pretty d
+    TxOutDatumInline d -> "inline datum" <+> pretty d
 
 -- | Constraints on transactions that want to spend script outputs
 data TxConstraint =
-      MustHashDatum DatumHash Datum
-    -- ^ The transaction's datum witnesses must contain the given 'DatumHash'
-    -- and 'Datum'. Useful when you already have a 'DatumHash' and
-    -- want to make sure that it is the actual hash of the 'Datum'.
-    | MustIncludeDatum Datum
+      MustIncludeDatumInTxWithHash DatumHash Datum
+    -- ^ The provided 'DatumHash' and 'Datum' must be included in the
+    -- transaction body. Like 'MustIncludeDatumInTx', but useful when you
+    -- already have a 'DatumHash' and want to make sure that is is the actual
+    -- hash of the 'Datum'.
+    | MustIncludeDatumInTx Datum
     -- ^ Like 'MustHashDatum', but the hash of the 'Datum' is computed automatically.
     | MustValidateIn POSIXTimeRange
     -- ^ The transaction's validity range must be set with the given 'POSIXTimeRange'.
@@ -100,9 +135,9 @@ data TxConstraint =
     -- ^ The transaction must reference (not spend) the given unspent transaction output.
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
     -- ^ The transaction must mint the given token and amount.
-    | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe OutDatum) (Maybe ScriptHash) Value
+    | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe (TxOutDatum Datum)) (Maybe ScriptHash) Value
     -- ^ The transaction must create a transaction output with a public key address.
-    | MustPayToOtherScript ValidatorHash (Maybe StakeValidatorHash) OutDatum (Maybe ScriptHash) Value
+    | MustPayToOtherScript ValidatorHash (Maybe StakeValidatorHash) (TxOutDatum Datum) (Maybe ScriptHash) Value
     -- ^ The transaction must create a transaction output with a script address.
     | MustSatisfyAnyOf [[TxConstraint]]
     -- ^ The transaction must satisfy constraints given as an alternative of conjuctions (DNF),
@@ -112,8 +147,10 @@ data TxConstraint =
 
 instance Pretty TxConstraint where
     pretty = \case
-        MustIncludeDatum dv ->
-            hang 2 $ vsep ["must include datum:", pretty dv]
+        MustIncludeDatumInTxWithHash dvh dv ->
+            hang 2 $ vsep ["must include datum in tx with hash:", pretty dvh, pretty dv]
+        MustIncludeDatumInTx dv ->
+            hang 2 $ vsep ["must include datum in tx:", pretty dv]
         MustValidateIn range ->
             "must validate in:" <+> viaShow range
         MustBeSignedBy signatory ->
@@ -134,8 +171,6 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must pay to pubkey address:", pretty pkh, pretty skh, pretty datum, pretty refScript, pretty v]
         MustPayToOtherScript vlh skh dv refScript vl ->
             hang 2 $ vsep ["must pay to script:", pretty vlh, pretty skh, pretty dv, pretty refScript, pretty vl]
-        MustHashDatum dvh dv ->
-            hang 2 $ vsep ["must hash datum:", pretty dvh, pretty dv]
         MustUseOutputAsCollateral ref ->
             hang 2 $ vsep ["must use output as collateral:", pretty ref]
         MustSatisfyAnyOf xs ->
@@ -206,7 +241,7 @@ deriving stock instance (Haskell.Eq a) => Haskell.Eq (ScriptInputConstraint a)
 -- output which pays to a target script.
 data ScriptOutputConstraint a =
     ScriptOutputConstraint
-        { ocDatum               :: a -- ^ Typed datum to be used with the target script
+        { ocDatum               :: TxOutDatum a -- ^ Typed datum to be used with the target script
         , ocValue               :: Value
         , ocReferenceScriptHash :: Maybe ScriptHash
         } deriving stock (Haskell.Show, Generic, Haskell.Functor)
@@ -292,33 +327,33 @@ mustValidateIn = singleton . MustValidateIn
 mustBeSignedBy :: forall i o. PaymentPubKeyHash -> TxConstraints i o
 mustBeSignedBy = singleton . MustBeSignedBy
 
-{-# INLINABLE mustHashDatum #-}
--- | @mustHashDatum dh d@ requires the transaction to include the datum hash
--- @dh@ and actual datum @d@.
+{-# INLINABLE mustIncludeDatumInTxWithHash #-}
+-- | @mustIncludeDatumInTxWithHash dh d@ requires the transaction body to
+-- include the datum hash @dh@ and actual datum @d@.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint adds @dh@ and @d@
--- in the transaction's datum witness set.
+-- in the transaction's body.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @dh@
--- and @d@ are part of the transaction's datum witness set.
-mustHashDatum :: DatumHash -> Datum -> TxConstraints i o
-mustHashDatum dvh = singleton . MustHashDatum dvh
+-- and @d@ are part of the transaction's body.
+mustIncludeDatumInTxWithHash :: DatumHash -> Datum -> TxConstraints i o
+mustIncludeDatumInTxWithHash dvh = singleton . MustIncludeDatumInTxWithHash dvh
 
-{-# INLINABLE mustIncludeDatum #-}
--- | @mustIncludeDatum d@ requires the transaction to include the datum @d@.
+{-# INLINABLE mustIncludeDatumInTx #-}
+-- | @mustIncludeDatumInTx d@ requires the transaction body to include the
+-- datum @d@.
 --
--- If used in 'Ledger.Constraints.OffChain', this constraint adds @d@
--- in the transaction's datum witness set alongside it's hash
--- (which is computed automatically).
+-- If used in 'Ledger.Constraints.OffChain', this constraint adds @d@ in the
+-- transaction's body alongside it's hash (which is computed automatically).
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@
--- is part of the transaction's datum witness set.
-mustIncludeDatum :: forall i o. Datum -> TxConstraints i o
-mustIncludeDatum = singleton . MustIncludeDatum
+-- is part of the transaction's body.
+mustIncludeDatumInTx :: forall i o. Datum -> TxConstraints i o
+mustIncludeDatumInTx = singleton . MustIncludeDatumInTx
 
 {-# INLINABLE mustPayToTheScript #-}
 -- | @mustPayToTheScript d v@ locks the value @v@ with a script alongside a
--- datum @d@.
+-- datum @d@ which is included in the transaction body.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
 -- output with @dt@ and @vl@ and adds @dt@ in the transaction's datum witness set.
@@ -331,7 +366,17 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- @dt@ and @vt@ is part of the transaction's outputs.
 mustPayToTheScript :: o -> Value -> TxConstraints i o
 mustPayToTheScript dt vl =
-    mempty { txOwnOutputs = [ScriptOutputConstraint dt vl Nothing] }
+    mempty { txOwnOutputs = [ScriptOutputConstraint (TxOutDatumHash dt) vl Nothing] }
+
+{-# INLINABLE mustPayToTheScriptWithDatumInTx #-}
+mustPayToTheScriptWithDatumInTx :: o -> Value -> TxConstraints i o
+mustPayToTheScriptWithDatumInTx dt vl =
+    mempty { txOwnOutputs = [ScriptOutputConstraint (TxOutDatumInTx dt) vl Nothing] }
+
+{-# INLINABLE mustPayToTheScriptWithInlineDatum #-}
+mustPayToTheScriptWithInlineDatum :: o -> Value -> TxConstraints i o
+mustPayToTheScriptWithInlineDatum dt vl =
+    mempty { txOwnOutputs = [ScriptOutputConstraint (TxOutDatumInline dt) vl Nothing] }
 
 {-# INLINABLE mustPayToPubKey #-}
 -- | @mustPayToPubKey pkh v@ is the same as
@@ -361,7 +406,19 @@ mustPayWithDatumToPubKey
     -> Value
     -> TxConstraints i o
 mustPayWithDatumToPubKey pk datum vl =
-    singleton (MustPayToPubKeyAddress pk Nothing (Just $ Hashed datum) Nothing vl)
+    singleton (MustPayToPubKeyAddress pk Nothing (Just $ TxOutDatumHash datum) Nothing vl)
+
+{-# INLINABLE mustPayWithDatumInTxToPubKey #-}
+-- | @mustPayWithDatumInTxToPubKey pkh d v@ is the same as
+-- 'mustPayWithDatumToPubKeyAddress', but with an inline datum and without the staking key hash.
+mustPayWithDatumInTxToPubKey
+    :: forall i o
+     . PaymentPubKeyHash
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayWithDatumInTxToPubKey pk datum vl =
+    singleton (MustPayToPubKeyAddress pk Nothing (Just $ TxOutDatumInTx datum) Nothing vl)
 
 {-# INLINABLE mustPayWithInlineDatumToPubKey #-}
 -- | @mustPayWithInlineDatumToPubKey pkh d v@ is the same as
@@ -373,7 +430,7 @@ mustPayWithInlineDatumToPubKey
     -> Value
     -> TxConstraints i o
 mustPayWithInlineDatumToPubKey pk datum vl =
-    singleton (MustPayToPubKeyAddress pk Nothing (Just $ Inline datum) Nothing vl)
+    singleton (MustPayToPubKeyAddress pk Nothing (Just $ TxOutDatumInline datum) Nothing vl)
 
 {-# INLINABLE mustPayWithDatumToPubKeyAddress #-}
 -- | @mustPayWithDatumToPubKeyAddress pkh skh d v@ locks a transaction output
@@ -394,7 +451,21 @@ mustPayWithDatumToPubKeyAddress
     -> Value
     -> TxConstraints i o
 mustPayWithDatumToPubKeyAddress pkh skh datum vl =
-    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ Hashed datum) Nothing vl)
+    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ TxOutDatumHash datum) Nothing vl)
+
+{-# INLINABLE mustPayWithDatumInTxToPubKeyAddress #-}
+-- | @mustPayWithDatumInTxToPubKeyAddress pkh d v@ is the same as
+-- 'mustPayWithDatumToPubKeyAddress', but the datum is also added in the
+-- transaction body.
+mustPayWithDatumInTxToPubKeyAddress
+    :: forall i o
+     . PaymentPubKeyHash
+    -> StakePubKeyHash
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayWithDatumInTxToPubKeyAddress pkh skh datum vl =
+    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ TxOutDatumInTx datum) Nothing vl)
 
 {-# INLINABLE mustPayWithInlineDatumToPubKeyAddress #-}
 -- | @mustPayWithInlineInlineDatumToPubKeyAddress pkh d v@ is the same as
@@ -407,7 +478,7 @@ mustPayWithInlineDatumToPubKeyAddress
     -> Value
     -> TxConstraints i o
 mustPayWithInlineDatumToPubKeyAddress pkh skh datum vl =
-    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ Inline datum) Nothing vl)
+    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ TxOutDatumInline datum) Nothing vl)
 
 {-# INLINABLE mustPayToAddressWithReferenceValidator #-}
 -- | @mustPayToAddressWithReferenceValidator@ is a helper that calls @mustPayToAddressWithReferenceScript@.
@@ -415,7 +486,7 @@ mustPayToAddressWithReferenceValidator
     :: forall i o
     . Address
     -> ValidatorHash
-    -> Maybe OutDatum
+    -> Maybe (TxOutDatum Datum)
     -> Value
     -> TxConstraints i o
 mustPayToAddressWithReferenceValidator addr (ValidatorHash vh) = mustPayToAddressWithReferenceScript addr (ScriptHash vh)
@@ -426,7 +497,7 @@ mustPayToAddressWithReferenceMintingPolicy
     :: forall i o
     . Address
     -> MintingPolicyHash
-    -> Maybe OutDatum
+    -> Maybe (TxOutDatum Datum)
     -> Value
     -> TxConstraints i o
 mustPayToAddressWithReferenceMintingPolicy addr (MintingPolicyHash vh) = mustPayToAddressWithReferenceScript addr (ScriptHash vh)
@@ -446,7 +517,7 @@ mustPayToAddressWithReferenceScript
     :: forall i o
     . Address
     -> ScriptHash
-    -> Maybe OutDatum
+    -> Maybe (TxOutDatum Datum)
     -> Value
     -> TxConstraints i o
 mustPayToAddressWithReferenceScript
@@ -457,10 +528,10 @@ mustPayToAddressWithReferenceScript
         singleton (MustPayToPubKeyAddress (PaymentPubKeyHash pkh) Nothing datum (Just scriptHash) value)
 mustPayToAddressWithReferenceScript
     (Address (ScriptCredential vh) (Just (StakingHash (ScriptCredential (ValidatorHash sh))))) scriptHash datum value =
-        singleton (MustPayToOtherScript vh (Just (StakeValidatorHash sh)) (fromMaybe (Inline unitDatum) datum) (Just scriptHash) value)
+        singleton (MustPayToOtherScript vh (Just (StakeValidatorHash sh)) (fromMaybe (TxOutDatumInline unitDatum) datum) (Just scriptHash) value)
 mustPayToAddressWithReferenceScript
     (Address (ScriptCredential vh) Nothing) scriptHash datum value =
-        singleton (MustPayToOtherScript vh Nothing (fromMaybe (Inline unitDatum) datum) (Just scriptHash) value)
+        singleton (MustPayToOtherScript vh Nothing (fromMaybe (TxOutDatumInline unitDatum) datum) (Just scriptHash) value)
 mustPayToAddressWithReferenceScript
     addr _ _ _ = Haskell.error $ "Ledger.Constraints.TxConstraints.mustPayToAddressWithReferenceScript: unsupported address " Haskell.++ Haskell.show addr
 
@@ -469,21 +540,21 @@ mustPayToAddressWithReferenceScript
 -- 'mustPayToOtherScriptAddress', but without the staking key hash.
 mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScript vh dv vl =
-    singleton (MustPayToOtherScript vh Nothing (Hashed dv) Nothing vl)
+    singleton (MustPayToOtherScript vh Nothing (TxOutDatumHash dv) Nothing vl)
 
-{-# INLINABLE mustPayToOtherScriptInlineDatum #-}
--- | @mustPayToOtherScript vh d v@ is the same as
+{-# INLINABLE mustPayToOtherScriptWithDatumInTx #-}
+-- | @mustPayToOtherScriptWithDatumInTx vh d v@ is the same as
+-- 'mustPayToOtherScriptAddress', but without the staking key hash.
+mustPayToOtherScriptWithDatumInTx :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScriptWithDatumInTx vh dv vl =
+    singleton (MustPayToOtherScript vh Nothing (TxOutDatumInTx dv) Nothing vl)
+
+{-# INLINABLE mustPayToOtherScriptWithInlineDatum #-}
+-- | @mustPayToOtherScriptWithInlineDatum vh d v@ is the same as
 -- 'mustPayToOtherScriptAddress', but with an inline datum and without the staking key hash.
-mustPayToOtherScriptInlineDatum :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptInlineDatum vh dv vl =
-    singleton (MustPayToOtherScript vh Nothing (Inline dv) Nothing vl)
-
-{-# INLINABLE mustPayToOtherScriptAddressInlineDatum #-}
--- | @mustPayToOtherScriptAddressInlineDatum vh d v@ is the same as
--- 'mustPayToOtherScriptAddress', but with an inline datum.
-mustPayToOtherScriptAddressInlineDatum :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptAddressInlineDatum vh svh dv vl =
-    singleton (MustPayToOtherScript vh (Just svh) (Inline dv) Nothing vl)
+mustPayToOtherScriptWithInlineDatum :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScriptWithInlineDatum vh dv vl =
+    singleton (MustPayToOtherScript vh Nothing (TxOutDatumInline dv) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptAddress #-}
 -- | @mustPayToOtherScriptAddress vh svh d v@ locks the value @v@ with the given script
@@ -498,7 +569,39 @@ mustPayToOtherScriptAddressInlineDatum vh svh dv vl =
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
 mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScriptAddress vh svh dv vl =
-    singleton (MustPayToOtherScript vh (Just svh) (Hashed dv) Nothing vl)
+    singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumHash dv) Nothing vl)
+
+{-# INLINABLE mustPayToOtherScriptAddressWithDatumInTx #-}
+-- | @mustPayToOtherScriptAddressWithDatumInTx vh svh d v@ locks the value @v@ with the given script
+-- hash @vh@ alonside a datum @d@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
+-- output with @vh@, @svh@, @d@ and @v@ and adds @d@ in the transaction's datum
+-- witness set.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
+-- part of the datum witness set and that the script transaction output with
+-- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
+mustPayToOtherScriptAddressWithDatumInTx
+    :: forall i o. ValidatorHash
+    -> StakeValidatorHash
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayToOtherScriptAddressWithDatumInTx vh svh dv vl =
+    singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumInTx dv) Nothing vl)
+
+{-# INLINABLE mustPayToOtherScriptAddressWithInlineDatum #-}
+-- | @mustPayToOtherScriptAddressInlineDatum vh d v@ is the same as
+-- 'mustPayToOtherScriptAddress', but with an inline datum.
+mustPayToOtherScriptAddressWithInlineDatum
+    :: forall i o. ValidatorHash
+    -> StakeValidatorHash
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayToOtherScriptAddressWithInlineDatum vh svh dv vl =
+    singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumInline dv) Nothing vl)
 
 {-# INLINABLE mustMintValue #-}
 -- | Same as 'mustMintValueWithRedeemer', but sets the redeemer to the unit
@@ -725,8 +828,8 @@ requiredMonetaryPolicies = foldMap f . txConstraints where
 {-# INLINABLE requiredDatums #-}
 requiredDatums :: forall i o. TxConstraints i o -> [Datum]
 requiredDatums = foldMap f . txConstraints where
-    f (MustIncludeDatum dv) = [dv]
-    f _                     = []
+    f (MustIncludeDatumInTx dv) = [dv]
+    f _                         = []
 
 {-# INLINABLE modifiesUtxoSet #-}
 -- | Check whether every transaction that satisfies the constraints has to

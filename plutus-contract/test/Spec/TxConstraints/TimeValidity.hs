@@ -56,7 +56,9 @@ contract = do
     now <- Con.currentTime
     logInfo @String $ "now: " ++ show now
     let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
-        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25000000)
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx
+                ()
+                (Ada.lovelaceValueOf 25000000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
     utxos <- utxosAt scrAddress
@@ -66,7 +68,7 @@ contract = do
             <> Constraints.unspentOutputs utxos
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
-            <> Constraints.mustIncludeDatum unitDatum
+            <> Constraints.mustIncludeDatumInTx unitDatum
             <> Constraints.mustValidateIn (from $ now + 1000)
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2

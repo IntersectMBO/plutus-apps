@@ -22,7 +22,7 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.List (sort)
 import Ledger qualified as P
-import Ledger.Tx.CardanoAPI as Export hiding (fromCardanoTxOut)
+import Ledger.Tx.CardanoAPI as Export
 import Plutus.ChainIndex.Types (ChainIndexTx (..), ChainIndexTxOut (..), ChainIndexTxOutputs (..), ReferenceScript (..))
 
 fromCardanoBlock :: C.BlockInMode C.CardanoMode -> [ChainIndexTx]

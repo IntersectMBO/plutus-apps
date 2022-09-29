@@ -20,7 +20,7 @@ import Ledger.Constraints.OffChain qualified as Cons (MkTxError (NoMatchingOutpu
                                                       mintingPolicy, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Constraints.TxConstraints qualified as Cons (mustMintValueWithRedeemer, mustPayToTheScript,
+import Ledger.Constraints.TxConstraints qualified as Cons (mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx,
                                                            mustSpendScriptOutput,
                                                            mustSpendScriptOutputWithMatchingDatumAndValue)
 import Ledger.Test (asDatum, asRedeemer, someAddress, someTypedValidator, someValidatorHash)
@@ -67,9 +67,16 @@ utxoValue = Ada.lovelaceValueOf 10_000_000
 tokenValue :: PSU.Versioned MintingPolicy -> V.Value
 tokenValue mp = V.singleton (PSU.scriptCurrencySymbol mp) "A" 1
 
-mustPayToTheScriptWithMultipleOutputs :: Integer -> [TxConstraints i P.BuiltinData] -> TxConstraints i P.BuiltinData
-mustPayToTheScriptWithMultipleOutputs 0 constraints = mconcat constraints
-mustPayToTheScriptWithMultipleOutputs n constraints = mustPayToTheScriptWithMultipleOutputs (n-1) (constraints ++ [Cons.mustPayToTheScript (PlutusTx.toBuiltinData (n-1)) utxoValue])
+mustPayToTheScriptWithMultipleOutputs
+    :: Integer
+    -> [TxConstraints i P.BuiltinData]
+    -> TxConstraints i P.BuiltinData
+mustPayToTheScriptWithMultipleOutputs 0 constraints =
+    mconcat constraints
+mustPayToTheScriptWithMultipleOutputs n constraints =
+    mustPayToTheScriptWithMultipleOutputs
+        (n-1)
+        (constraints ++ [Cons.mustPayToTheScriptWithDatumInTx (PlutusTx.toBuiltinData (n-1)) utxoValue])
 
 -- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputs
 -- constraint to spend some of the outputs each with unique datum
@@ -338,7 +345,7 @@ versionedMustSpendScriptOutputWithMatchingDatumAndValuePolicy l = case l of
 mkMustSpendScriptOutputPolicyV1 :: [(Tx.TxOutRef,  Redeemer)] -> PV1.ScriptContext -> Bool
 mkMustSpendScriptOutputPolicyV1 constraintParams ctx = P.traceIfFalse "mustSpendScriptOutput not satisfied" (Cons.V1.checkScriptContext @() @() (P.mconcat mustSpendScriptOutputs) ctx)
     where
-        mustSpendScriptOutputs = P.map (\(txOutRef, redeemer) -> Cons.mustSpendScriptOutput txOutRef redeemer) constraintParams
+        mustSpendScriptOutputs = P.map (uncurry Cons.mustSpendScriptOutput) constraintParams
 
 mustSpendScriptOutputPolicyV1 :: PV1.MintingPolicy
 mustSpendScriptOutputPolicyV1 = PV1.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
@@ -380,7 +387,7 @@ mustSpendScriptOutputWithMatchingDatumAndValuePolicyCurrencySymbolV1 = V.mpsSymb
 mkMustSpendScriptOutputPolicyV2 :: [(Tx.TxOutRef,  Redeemer)] -> PV2.ScriptContext -> Bool
 mkMustSpendScriptOutputPolicyV2 constraintParams ctx = P.traceIfFalse "mustSpendScriptOutput not satisfied" (Cons.V2.checkScriptContext @() @() (P.mconcat mustSpendScriptOutputs) ctx)
     where
-        mustSpendScriptOutputs = P.map (\(txOutRef, redeemer) -> Cons.mustSpendScriptOutput txOutRef redeemer) constraintParams
+        mustSpendScriptOutputs = P.map (uncurry Cons.mustSpendScriptOutput) constraintParams
 
 mustSpendScriptOutputPolicyV2 :: PV2.MintingPolicy
 mustSpendScriptOutputPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])

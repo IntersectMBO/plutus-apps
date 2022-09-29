@@ -237,7 +237,7 @@ pay ::
     -> Contract w s e TxId
 pay inst _escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
-    let tx = Constraints.mustPayToTheScript pk vl
+    let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
     utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
     getCardanoTxId <$> submitUnbalancedTx utx
 

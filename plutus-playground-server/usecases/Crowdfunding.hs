@@ -164,7 +164,7 @@ contribute :: AsContractError e => Campaign -> Promise () CrowdfundingSchema e (
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
-        tx = Constraints.mustPayToTheScript contributor contribValue
+        tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
