@@ -24,6 +24,7 @@ module Ledger.Constraints(
     , TC.mustSpendPubKeyOutput
     , TC.mustSpendOutputFromTheScript
     , TC.mustSpendScriptOutput
+    , TC.mustSpendScriptOutputWithReference
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
     , TC.mustUseOutputAsCollateral
     , TC.mustReferenceOutput

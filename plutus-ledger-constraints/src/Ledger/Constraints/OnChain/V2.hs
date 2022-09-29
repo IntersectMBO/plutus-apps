@@ -107,10 +107,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "L7" -- "Public key output not spent"
         $ maybe False (isNoOutputDatum . txOutDatum . txInInfoResolved) (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
-    MustSpendScriptOutput txOutRef rdmr ->
+    MustSpendScriptOutput txOutRef rdmr mRefTxOutRef ->
         traceIfFalse "L8" -- "Script output not spent"
         $ Just rdmr == AMap.lookup (Spending txOutRef) (txInfoRedeemers scriptContextTxInfo)
         && isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
+        && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v

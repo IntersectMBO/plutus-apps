@@ -65,6 +65,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoStakeKeyHash
   , toCardanoPlutusScript
   , toCardanoScriptInAnyLang
+  , toCardanoReferenceScript
   , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
@@ -666,6 +667,10 @@ toCardanoScriptInAnyLang (P.Versioned script P.PlutusV1) =
 toCardanoScriptInAnyLang (P.Versioned script P.PlutusV2) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) . C.PlutusScript C.PlutusScriptV2
     <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
+
+toCardanoReferenceScript :: Maybe (P.Versioned P.Script) -> Either ToCardanoError (C.ReferenceScript C.BabbageEra)
+toCardanoReferenceScript (Just script) = C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> toCardanoScriptInAnyLang script
+toCardanoReferenceScript Nothing = pure C.ReferenceScriptNone
 
 deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
 deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType

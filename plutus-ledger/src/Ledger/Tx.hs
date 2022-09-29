@@ -19,7 +19,7 @@ module Ledger.Tx
     -- * ChainIndexTxOut
     , ChainIndexTxOut(..)
     , toTxOut
-    , fromTxOut
+    , toTxInfoTxOut
     -- ** Lenses and Prisms
     , ciTxOutAddress
     , ciTxOutValue
@@ -67,8 +67,10 @@ import Cardano.Crypto.Hash (SHA256, digest)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
+import Control.DeepSeq (NFData)
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Data (Proxy (Proxy))
 import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -93,8 +95,6 @@ import Plutus.V2.Ledger.Api qualified as V2
 import Plutus.V2.Ledger.Tx qualified as V2.Tx hiding (TxIn (..), TxInType (..))
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 -- for re-export
-import Control.DeepSeq (NFData)
-import Data.Data (Proxy (Proxy))
 import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
                                       outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
@@ -143,33 +143,35 @@ data ChainIndexTxOut =
 makeLenses ''ChainIndexTxOut
 makePrisms ''ChainIndexTxOut
 
+toTxOut :: C.NetworkId -> ChainIndexTxOut -> Either ToCardanoError TxOut
+toTxOut networkId (PublicKeyChainIndexTxOut addr v datum referenceScript) =
+  TxOut <$> (C.TxOut
+    <$> CardanoAPI.toCardanoAddressInEra networkId addr
+    <*> CardanoAPI.toCardanoTxOutValue v
+    <*> maybe (pure CardanoAPI.toCardanoTxOutNoDatum) (CardanoAPI.toCardanoTxOutDatumHash . fst) datum
+    <*> CardanoAPI.toCardanoReferenceScript referenceScript)
+toTxOut networkId (ScriptChainIndexTxOut addr v (dh, _) referenceScript _validator) =
+  TxOut <$> (C.TxOut
+    <$> CardanoAPI.toCardanoAddressInEra networkId addr
+    <*> CardanoAPI.toCardanoTxOutValue v
+    <*> CardanoAPI.toCardanoTxOutDatumHash dh
+    <*> CardanoAPI.toCardanoReferenceScript referenceScript)
+
 -- | Converts a transaction output from the chain index to the plutus-ledger-api
 -- transaction output.
 --
 -- Note that 'ChainIndexTxOut' supports features such inline datums and
 -- reference scripts which are not supported by V1 TxOut. Converting from
 -- 'ChainIndexTxOut' to 'TxOut' and back is therefore lossy.
-toTxOut :: ChainIndexTxOut -> V2.Tx.TxOut
-toTxOut (PublicKeyChainIndexTxOut addr v datum referenceScript) =
+toTxInfoTxOut :: ChainIndexTxOut -> V2.Tx.TxOut
+toTxInfoTxOut (PublicKeyChainIndexTxOut addr v datum referenceScript) =
     V2.Tx.TxOut addr v (toPlutusOutDatum datum) (scriptHash <$> referenceScript)
-toTxOut (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
+toTxInfoTxOut (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
     V2.Tx.TxOut addr v (toPlutusOutDatum $ Just datum) (scriptHash <$> referenceScript)
 
 toPlutusOutDatum :: Maybe (V2.DatumHash, Maybe V2.Datum) -> V2.Tx.OutputDatum
 toPlutusOutDatum Nothing       = V2.Tx.NoOutputDatum
 toPlutusOutDatum (Just (d, _)) = V2.Tx.OutputDatumHash d
-
--- | Converts a plutus-ledger-api transaction output to the chain index
--- transaction output.
-fromTxOut :: V1.TxOut -> Maybe ChainIndexTxOut
-fromTxOut V1.TxOut { txOutAddress=a, txOutValue=v, txOutDatumHash=mdh } =
-  case V1.addressCredential a of
-    V1.PubKeyCredential _ ->
-      -- V1 transactions don't support inline datums and reference scripts
-      pure $ PublicKeyChainIndexTxOut a v ((, Nothing) <$> mdh) Nothing
-    V1.ScriptCredential vh ->
-      mdh >>= \dh ->
-        pure $ ScriptChainIndexTxOut a v (dh, Nothing) Nothing (vh, Nothing)
 
 instance Pretty ChainIndexTxOut where
     pretty PublicKeyChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =

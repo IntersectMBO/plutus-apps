@@ -62,7 +62,7 @@ import Control.Monad (replicateM)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Writer (runWriter)
-import Data.Bifunctor (Bifunctor (first))
+import Data.Bifunctor (Bifunctor (first), bimap)
 import Data.ByteString qualified as BS
 import Data.Default (Default (def))
 import Data.Foldable (fold, foldl')
@@ -246,7 +246,7 @@ genValidTransactionSpending' g ins totalVal = do
                 txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
                           $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
                 (ins', witnesses) = unzip $ map txInToTxInput ins
-                (scripts, datums) = unzip $ catMaybes witnesses
+                (scripts, datums) = bimap catMaybes catMaybes $ unzip witnesses
                 tx = mempty
                         { txInputs = ins'
                         , txOutputs = txOutputs
@@ -265,11 +265,14 @@ genValidTransactionSpending' g ins totalVal = do
 
     where
         -- | Translate TxIn to TxInput taking out data witnesses if present.
-        txInToTxInput :: TxInputWitnessed -> (TxInput, Maybe (Versioned Validator, Datum))
+        txInToTxInput :: TxInputWitnessed -> (TxInput, (Maybe (Versioned Validator), Maybe Datum))
         txInToTxInput (TxInputWitnessed outref txInType) = case txInType of
-            Ledger.ConsumePublicKeyAddress -> (TxInput outref TxConsumePublicKeyAddress, Nothing)
-            Ledger.ConsumeSimpleScriptAddress -> (TxInput outref Ledger.TxConsumeSimpleScriptAddress, Nothing)
-            Ledger.ConsumeScriptAddress vl rd dt -> (TxInput outref (Ledger.TxConsumeScriptAddress rd (validatorHash  vl) (datumHash dt)), Just (vl, dt))
+            Ledger.ConsumePublicKeyAddress -> (TxInput outref TxConsumePublicKeyAddress, (Nothing, Nothing))
+            Ledger.ConsumeSimpleScriptAddress -> (TxInput outref Ledger.TxConsumeSimpleScriptAddress, (Nothing, Nothing))
+            Ledger.ScriptAddress (Left vl) rd dt ->
+                (TxInput outref (Ledger.TxScriptAddress rd (Left $ validatorHash vl) (datumHash dt)), (Just vl, Just dt))
+            Ledger.ScriptAddress (Right ref) rd dt ->
+                (TxInput outref (Ledger.TxScriptAddress rd (Right ref) (datumHash dt)), (Nothing, Just dt))
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

@@ -48,7 +48,7 @@ import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx 
                txMintingRedeemers, txRewardingRedeemers)
 import Ledger.Address (Address)
 import Ledger.Scripts (Redeemer, RedeemerHash)
-import Ledger.Tx (TxInputType (TxConsumeScriptAddress), fillTxInputWitnesses)
+import Ledger.Tx (TxInputType (TxScriptAddress), fillTxInputWitnesses)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
 import Plutus.Script.Utils.Scripts (redeemerHash)
@@ -138,5 +138,5 @@ calculateRedeemerPointers tx = spends <> rewards <> mints <> certs
         spends = Map.fromList $ mapMaybe (uncurry getRd) $ zip [0..] $ fmap txInputType $ sort $ txInputs tx
 
         getRd n = \case
-            TxConsumeScriptAddress rd _ _ -> Just (RedeemerPtr Spend n, rd)
-            _                             -> Nothing
+            TxScriptAddress rd _ _ -> Just (RedeemerPtr Spend n, rd)
+            _                      -> Nothing

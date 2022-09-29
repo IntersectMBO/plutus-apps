@@ -69,6 +69,7 @@ module Plutus.Contract(
     , Request.ownPaymentPubKeyHashes
     , Request.ownFirstPaymentPubKeyHash
     , Request.ownAddresses
+    , Request.ownAddress
     , Request.ownUtxos
     -- * Contract instance Id
     , Wallet.Types.ContractInstanceId

@@ -38,8 +38,8 @@ import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, Tx (Tx), T
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Ada qualified as Ada
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
-import Ledger.Scripts (Datum (getDatum), Script, Validator, ValidatorHash (ValidatorHash), unValidatorScript,
-                       unversioned)
+import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
+                       Versioned (Versioned), unValidatorScript)
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
 import Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -81,6 +81,10 @@ newtype RenderPretty a =
 
 instance Pretty a => Render (RenderPretty a) where
     render (RenderPretty a) = pure $ pretty a
+
+instance (Render a, Render b) => Render (Either a b) where
+    render (Left a)  = render a
+    render (Right b) = render b
 
 instance Render [[AnnotatedTx]] where
     render blockchain =
@@ -284,9 +288,18 @@ instance Render TxIn where
     render (TxIn txInRef Nothing) = render txInRef
 
 instance Render TxInType where
-    render (ConsumeScriptAddress validator _ _) = render (unversioned validator)
-    render ConsumePublicKeyAddress              = pure mempty
-    render ConsumeSimpleScriptAddress           = pure mempty
+    render (ScriptAddress validator _ _) = render validator
+    render ConsumePublicKeyAddress       = pure mempty
+    render ConsumeSimpleScriptAddress    = pure mempty
+
+instance Render a => Render (Versioned a) where
+    render (Versioned a lang) = do
+        rlang <- render lang
+        ra <- render a
+        pure $ parens rlang <+> ra
+
+instance Render Language where
+    render = pure . viaShow
 
 instance Render TxOutRef where
     render TxOutRef {txOutRefId, txOutRefIdx} =

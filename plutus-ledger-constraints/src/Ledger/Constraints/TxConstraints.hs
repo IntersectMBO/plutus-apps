@@ -92,7 +92,7 @@ data TxConstraint =
     -- the given 'Value'.
     | MustSpendPubKeyOutput TxOutRef
     -- ^ The transaction must spend the given unspent transaction public key output.
-    | MustSpendScriptOutput TxOutRef Redeemer
+    | MustSpendScriptOutput TxOutRef Redeemer (Maybe TxOutRef)
     -- ^ The transaction must spend the given unspent transaction script output.
     | MustUseOutputAsCollateral TxOutRef
     -- ^ The transaction must include the utxo as collateral input.
@@ -124,8 +124,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must produce at least:", pretty vl]
         MustSpendPubKeyOutput ref ->
             hang 2 $ vsep ["must spend pubkey output:", pretty ref]
-        MustSpendScriptOutput ref red ->
-            hang 2 $ vsep ["must spend script output:", pretty ref, pretty red]
+        MustSpendScriptOutput ref red mref ->
+            hang 2 $ vsep ["must spend script output:", pretty ref, pretty red, pretty mref]
         MustReferenceOutput ref ->
             hang 2 $ vsep ["must reference output:", pretty ref]
         MustMintValue mps red tn i ->
@@ -607,14 +607,32 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.unspentOutputs'. The validator must be either provided by
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
--- 'Ledger.Constraints.OffChain.plutusV1OtherScript' . The datum must be either provided by
+-- 'Ledger.Constraints.OffChain.otherScript' . The datum must be either provided by
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
 -- 'Ledger.Constraints.OffChain.otherData'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
 mustSpendScriptOutput :: forall i o. TxOutRef -> Redeemer -> TxConstraints i o
-mustSpendScriptOutput txOutref = singleton . MustSpendScriptOutput txOutref
+mustSpendScriptOutput txOutref red = singleton $ MustSpendScriptOutput txOutref red Nothing
+
+{-# INLINABLE mustSpendScriptOutputWithReference #-}
+-- | @mustSpendScriptOutputWithReference utxo red refTxOutref@ must spend the given unspent
+-- transaction script output, using a script reference as witness.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint adds @utxo@ and
+-- @red@ as an input to the transaction, and @refTxOutref@ as reference input.
+-- Information about @utxo@ and @refTxOutref@ must be
+-- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.unspentOutputs'. The datum must be either provided by
+-- 'Ledger.Constraints.OffChain.unspentOutputs' or through
+-- 'Ledger.Constraints.OffChain.otherData'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- transaction spends this @utxo@.
+mustSpendScriptOutputWithReference :: TxOutRef -> Redeemer -> TxOutRef -> TxConstraints i o
+mustSpendScriptOutputWithReference txOutref red refTxOutref =
+    singleton (MustSpendScriptOutput txOutref red (Just refTxOutref))
 
 {-# INLINABLE mustSpendScriptOutputWithMatchingDatumAndValue #-}
 -- | @mustSpendScriptOutputWithMatchingDatumAndValue validatorHash datumPredicate valuePredicate redeemer@

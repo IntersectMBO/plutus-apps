@@ -57,7 +57,6 @@ import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), 
 import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
-import Control.Monad.Trans.Maybe (MaybeT (runMaybeT))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
@@ -75,7 +74,6 @@ import Ledger.Orphans ()
 import Ledger.Scripts (ScriptHash, getDatum, getRedeemer, getValidator)
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (toCardanoScriptInAnyLang)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
 import PlutusTx (FromData, ToData)
@@ -246,27 +244,33 @@ processConstraint = \case
               unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
           _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
 
-    P.MustSpendScriptOutput txo redeemer -> do
+    P.MustSpendScriptOutput txo redeemer mref -> do
         txout <- lookupTxOutRef txo
-        mscriptTXO <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ runMaybeT $ P.resolveScriptTxOut txout
+        mkWitness <- case mref of
+          Just ref -> do
+            refTxOut <- lookupTxOutRef ref
+            case Tx._ciTxOutReferenceScript refTxOut of
+                Just (Tx.Versioned _ lang) -> do
+                    txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
+                    unbalancedTx . tx . txInsReference <>= [ txIn ]
+                    throwLeft ToCardanoError $ C.toCardanoTxInReferenceWitnessHeader (Tx.Versioned ref lang)
+                _ -> throwError (LedgerMkTxError $ P.TxOutRefNoReferenceScript ref)
+          Nothing -> do
+            mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutValidator txout
+            case mscriptTXO of
+                Just validator ->
+                    throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+        mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of
-            Just ((_, Tx.Versioned validator lang), (_, datum), _) -> do
+            Just (datum, _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
-                witness <-
-                    throwLeft ToCardanoError $ C.ScriptWitness C.ScriptWitnessForSpending <$>
-                    case lang of
-                        Tx.PlutusV1 ->
-                            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-                                <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) (getValidator validator))
-                                <*> pure (C.ScriptDatumForTxIn $ C.toCardanoScriptData (getDatum datum))
-                                <*> pure (C.toCardanoScriptData (getRedeemer redeemer))
-                                <*> pure C.zeroExecutionUnits
-                        Tx.PlutusV2 ->
-                            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-                                <$> fmap C.PScript (C.toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) (getValidator validator))
-                                <*> pure (C.ScriptDatumForTxIn $ C.toCardanoScriptData (getDatum datum))
-                                <*> pure (C.toCardanoScriptData (getRedeemer redeemer))
-                                <*> pure C.zeroExecutionUnits
+                let witness
+                        = C.ScriptWitness C.ScriptWitnessForSpending $
+                            mkWitness
+                            (C.ScriptDatumForTxIn (C.toCardanoScriptData (getDatum datum)))
+                            (C.toCardanoScriptData (getRedeemer redeemer))
+                            C.zeroExecutionUnits
 
                 unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith witness)]
 
@@ -313,19 +317,20 @@ processConstraint = \case
 lookupTxOutRef
     :: Tx.TxOutRef
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.ChainIndexTxOut
-lookupTxOutRef txo = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupTxOutRef txo
+lookupTxOutRef txo = mapLedgerMkTxError $ P.lookupTxOutRef txo
 
 lookupScriptAsReferenceScript
     :: Maybe ScriptHash
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
-lookupScriptAsReferenceScript Nothing = pure C.ReferenceScriptNone
-lookupScriptAsReferenceScript (Just sh) = do
-    script <- mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.lookupScript sh
-    scriptInAnyLang <- either (throwError . ToCardanoError) pure $ toCardanoScriptInAnyLang script
-    pure $ C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra scriptInAnyLang
+lookupScriptAsReferenceScript msh = mapLedgerMkTxError $ P.lookupScriptAsReferenceScript msh
 
 addOwnOutput
     :: ToData (DatumType a)
     => ScriptOutputConstraint (DatumType a)
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) TxConstraint
-addOwnOutput soc = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError))) $ P.addOwnOutput soc
+addOwnOutput soc = mapLedgerMkTxError $ P.addOwnOutput soc
+
+mapLedgerMkTxError
+    :: ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except P.MkTxError)) b
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) b
+mapLedgerMkTxError = mapReaderT (mapStateT (mapExcept (first LedgerMkTxError)))
