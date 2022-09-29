@@ -40,9 +40,8 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Gen.Cardano.Api.Typed qualified as CGen
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
+import Plutus.Script.Utils.V1.Generators qualified as Plutus
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-import Plutus.V1.Ledger.Scripts qualified as Plutus
-import PlutusTx qualified
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 import Test.Base qualified as H
@@ -116,10 +115,7 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
   let
     -- Create an always succeeding validator script
     plutusScript :: C.PlutusScript C.PlutusScriptV1
-    plutusScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ Plutus.unValidatorScript validator
-      where
-        validator :: Plutus.Validator
-        validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| \_ _ _ -> () ||])
+    plutusScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise Plutus.alwaysSucceedValidator
 
     plutusScriptHash = C.hashScript $ C.PlutusScript C.PlutusScriptV1 plutusScript :: C.ScriptHash
     plutusScriptAddr :: C.Address C.ShelleyAddr
