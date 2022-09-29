@@ -108,9 +108,6 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ maybe False (isNoOutputDatum . txOutDatum . txInInfoResolved) (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
     MustSpendScriptOutput txOutRef rdmr mRefTxOutRef ->
         traceIfFalse "L8" -- "Script output not spent"
-        -- Unfortunately we can't check the redeemer, because TxInfo only
-        -- gives us the redeemer's hash, but 'MustSpendScriptOutput' gives
-        -- us the full redeemer
         $ rdmr `elem` (txInfoRedeemers scriptContextTxInfo)
           && isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
           && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
