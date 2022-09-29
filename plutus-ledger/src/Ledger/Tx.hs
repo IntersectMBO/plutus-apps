@@ -148,13 +148,13 @@ toTxOut networkId (PublicKeyChainIndexTxOut addr v datum referenceScript) =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId addr
     <*> CardanoAPI.toCardanoTxOutValue v
-    <*> CardanoAPI.toCardanoTxOutDatumHash (fst <$> datum)
+    <*> maybe (pure CardanoAPI.toCardanoTxOutNoDatum) (CardanoAPI.toCardanoTxOutDatumHash . fst) datum
     <*> CardanoAPI.toCardanoReferenceScript referenceScript)
 toTxOut networkId (ScriptChainIndexTxOut addr v (dh, _) referenceScript _validator) =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId addr
     <*> CardanoAPI.toCardanoTxOutValue v
-    <*> CardanoAPI.toCardanoTxOutDatumHash (Just dh)
+    <*> CardanoAPI.toCardanoTxOutDatumHash dh
     <*> CardanoAPI.toCardanoReferenceScript referenceScript)
 
 -- | Converts a transaction output from the chain index to the plutus-ledger-api

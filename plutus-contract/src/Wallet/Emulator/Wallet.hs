@@ -324,7 +324,7 @@ handleBalance utx' = do
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
         eitherTx = U.unBalancedTxTx utx
         plUtxo = traverse (Tx.toTxOut pNetworkId) utxo
-    mappedUtxo <- either (throwError . WAPI.ToCardanoError) (pure . fmap TxOut) plUtxo
+    mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure plUtxo
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo
     case eitherTx of
         Right _ -> do
