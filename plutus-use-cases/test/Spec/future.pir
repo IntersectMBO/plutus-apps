@@ -120,6 +120,15 @@
             (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
           )
         )
+        (datatypebind
+          (datatype
+            (tyvardecl OutDatum (type))
+
+            OutDatum_match
+            (vardecl Hashed (fun (con data) OutDatum))
+            (vardecl Inline (fun (con data) OutDatum))
+          )
+        )
         (typebind (tyvardecl TxOutRef (type)) (all a (type) (fun a a)))
         (let
           (rec)
@@ -151,7 +160,7 @@
                   (fun
                     [ Maybe (con bytestring) ]
                     (fun
-                      (con data)
+                      OutDatum
                       (fun
                         [ Maybe (con bytestring) ]
                         (fun
@@ -190,7 +199,7 @@
                   (fun
                     [ Maybe (con bytestring) ]
                     (fun
-                      [ Maybe (con data) ]
+                      [ Maybe OutDatum ]
                       (fun
                         [ Maybe (con bytestring) ]
                         (fun
@@ -8429,7 +8438,10 @@
                                                                                                                                                                       )
                                                                                                                                                                     }
                                                                                                                                                                   ]
-                                                                                                                                                                  unitDatum
+                                                                                                                                                                  [
+                                                                                                                                                                    Hashed
+                                                                                                                                                                    unitDatum
+                                                                                                                                                                  ]
                                                                                                                                                                 ]
                                                                                                                                                                 {
                                                                                                                                                                   Nothing
@@ -8486,7 +8498,10 @@
                                                                                                                                                                     )
                                                                                                                                                                   }
                                                                                                                                                                 ]
-                                                                                                                                                                unitDatum
+                                                                                                                                                                [
+                                                                                                                                                                  Hashed
+                                                                                                                                                                  unitDatum
+                                                                                                                                                                ]
                                                                                                                                                               ]
                                                                                                                                                               {
                                                                                                                                                                 Nothing
@@ -11180,7 +11195,10 @@
                                                                                                                                                                               )
                                                                                                                                                                             }
                                                                                                                                                                           ]
-                                                                                                                                                                          unitDatum
+                                                                                                                                                                          [
+                                                                                                                                                                            Hashed
+                                                                                                                                                                            unitDatum
+                                                                                                                                                                          ]
                                                                                                                                                                         ]
                                                                                                                                                                         {
                                                                                                                                                                           Nothing
@@ -11331,7 +11349,10 @@
                                                                                                                                                                             )
                                                                                                                                                                           }
                                                                                                                                                                         ]
-                                                                                                                                                                        unitDatum
+                                                                                                                                                                        [
+                                                                                                                                                                          Hashed
+                                                                                                                                                                          unitDatum
+                                                                                                                                                                        ]
                                                                                                                                                                       ]
                                                                                                                                                                       {
                                                                                                                                                                         Nothing

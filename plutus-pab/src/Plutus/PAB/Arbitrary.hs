@@ -23,13 +23,14 @@ import Ledger.Params (testnet)
 import Ledger.Slot (Slot)
 import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)
-import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoTxOut, toCardanoTxOutDatumHash)
+import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoTxOut, toCardanoTxOutDatum)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
@@ -114,8 +115,13 @@ instance Arbitrary TxInput where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary PV2.OutputDatum where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+
 instance Arbitrary TxOut where
-    arbitrary = fmap (fmap TxOut . toCardanoTxOut testnet toCardanoTxOutDatumHash) genericArbitrary `suchThatMap` rightToMaybe
+    arbitrary = fmap (fmap TxOut . toCardanoTxOut testnet toCardanoTxOutDatum) genericArbitrary `suchThatMap` rightToMaybe
     shrink = pure
 
 instance Arbitrary TxOutRef where

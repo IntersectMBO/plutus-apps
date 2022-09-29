@@ -23,7 +23,8 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
-                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
+                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
+                                         getOutDatum)
 import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Contexts qualified as PV2 hiding (findTxInByTxOutRef)
@@ -117,16 +118,17 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustPayToPubKeyAddress (PaymentPubKeyHash pk) _skh mdv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
             hsh dv = PV2.findDatumHash dv scriptContextTxInfo
-            checkOutput (Just dv) TxOut{txOutDatum=OutputDatumHash dh} = hsh dv == Just dh
-            checkOutput (Just dv) TxOut{txOutDatum=OutputDatum d}      = dv == d
-            -- return 'True' by default meaning we fail only when the provided datum is not found
-            checkOutput _ _                                            = True
+            checkOutput dv TxOut{txOutDatum=OutputDatumHash dh} = hsh dv == Just dh
+            checkOutput dv TxOut{txOutDatum=OutputDatum d}      = dv == d
+            checkOutput _ _                                     = False
         in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk && any (checkOutput mdv) outs
+        $ vl `leq` PV2.valuePaidTo scriptContextTxInfo pk
+            && maybe True (\dv -> any (checkOutput $ getOutDatum dv) outs) mdv
     MustPayToOtherScript vlh _skh dv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
-            hsh = PV2.findDatumHash dv scriptContextTxInfo
+            -- We only chek the datum, we do not distinguish how it is paased
+            hsh = PV2.findDatumHash (getOutDatum dv) scriptContextTxInfo
             addr = Address (ScriptCredential vlh) Nothing
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash dh} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
@@ -138,7 +140,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                    Ada.fromValue txOutValue >= Ada.fromValue vl
                 && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && Value.noAdaValue txOutValue == Value.noAdaValue vl
-                && dv == id
+                && getOutDatum dv == id
                 && txOutAddress == addr
             checkOutput _ = False
         in

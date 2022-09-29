@@ -343,13 +343,13 @@ doubleSatisfactionCounterexamples dsc = do
        datum         = Datum . mkB $ "<this is a unique string>"
        datumEmpty    = Datum . mkB $ ""
        redeemerEmpty = Redeemer . mkB $ ""
-       withDatumOut = out & outDatumHash .~ toCardanoTxOutDatumInTx (Just datum)
+       withDatumOut = out & outDatumHash .~ toCardanoTxOutDatumInTx datum
        -- Creating TxOut is ugly at the moment because we don't use Cardano addresses, values and datum in the
        -- emulator yet
        newFakeTxScriptOut = TxOut $ C.TxOut
                                   scriptCardanoAddress
                                   (C.TxOutValue C.MultiAssetInBabbageEra $ adaToCardanoValue $ Ada.fromValue $ txOutValue out)
-                                  (toCardanoTxOutDatumInline $ Just datumEmpty)
+                                  (toCardanoTxOutDatumInline datumEmpty)
                                   C.ReferenceScriptNone
        newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
                                   , txOutRefIdx = 1

@@ -13,12 +13,10 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints (plutusV1MintingPolicy, typedValidatorLookups,
-                                                             unspentOutputs)
+import Ledger.Constraints qualified as Constraints (collectFromTheScript, mustIncludeDatum, mustMintValueWithRedeemer,
+                                                    mustPayToOtherScript, mustPayToTheScript, mustPayWithDatumToPubKey,
+                                                    plutusV1MintingPolicy, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
-                                                                  mustMintValueWithRedeemer, mustPayToOtherScript,
-                                                                  mustPayToTheScript, mustPayWithDatumToPubKey)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con

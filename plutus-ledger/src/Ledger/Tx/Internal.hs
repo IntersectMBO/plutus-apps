@@ -40,7 +40,7 @@ import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Slot
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOutDatumHash, fromCardanoTxOutValue,
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOutDatum, fromCardanoTxOutValue,
                                       fromCardanoValue)
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
@@ -53,6 +53,7 @@ import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
                             pubKeyTxIns, scriptTxIn, scriptTxIns)
 import Plutus.V1.Ledger.Value as V
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Lattice
 import PlutusTx.Prelude (BuiltinByteString)
 import PlutusTx.Prelude qualified as PlutusTx
@@ -230,9 +231,10 @@ instance Pretty TxOut where
     hang 2 $ vsep
       ["-" <+> pretty (fromCardanoTxOutValue v) <+> "addressed to"
       , pretty (fromCardanoAddressInEra addr)
-      , "with" <+> case fromCardanoTxOutDatumHash d of
-          Nothing -> "no datum"
-          Just dh -> "datum hash" <+> pretty dh
+      , "with" <+> case fromCardanoTxOutDatum d of
+          PV2.NoOutputDatum      -> "no datum"
+          PV2.OutputDatum dv     -> "inline datum" <+> viaShow dv
+          PV2.OutputDatumHash dh -> "datum hash" <+> pretty dh
       , "and with" <+> case rs of
           C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
             "reference script hash" <+> viaShow (C.hashScript s)
