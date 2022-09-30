@@ -47,10 +47,11 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Emulator.DiskState (DiskState, addressMap, assetClassMap, dataMap, redeemerMap, scriptMap,
                                              txMap)
 import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
+import Plutus.ChainIndex.Tx (txOuts)
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainIndexTx, ChainIndexTxOut (..), ChainSyncBlock (..), Diagnostics (..),
-                                Point (PointAtGenesis), Tip (..), TxProcessOption (..), TxUtxoBalance (..), _ValidTx,
-                                citxOutputs, fromReferenceScript)
+                                Point (PointAtGenesis), Tip (..), TxProcessOption (..), TxUtxoBalance (..),
+                                fromReferenceScript)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.Script.Utils.Scripts (datumHash)
@@ -110,7 +111,7 @@ getTxOutFromRef ::
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
-  case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
+  case preview (txMap . ix txOutRefId . to txOuts . ix (fromIntegral txOutRefIdx)) ds of
     Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
     Just txout -> makeChainIndexTxOut txout
 
@@ -125,7 +126,7 @@ getUtxoutFromRef ::
 getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
-  case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
+  case preview (txMap . ix txOutRefId . to txOuts . ix (fromIntegral txOutRefIdx)) ds of
     Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
     Just txout -> do makeChainIndexTxOut txout
 

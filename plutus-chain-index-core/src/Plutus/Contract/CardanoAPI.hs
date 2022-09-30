@@ -48,6 +48,9 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) =
             else case txInsCollateral of
                    C.TxInsCollateralNone     -> []
                    C.TxInsCollateral _ txins -> txins
+        collateralOut = case txReturnCollateral of
+          C.TxReturnCollateralNone     -> Nothing
+          C.TxReturnCollateral _ txOut -> Just $ fromCardanoTxOut txOut
 
     in ChainIndexTx
             { _citxTxId = fromCardanoTxId (C.getTxId txBody)
@@ -56,7 +59,7 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) =
             , _citxInputs = fmap ((`P.TxIn` Nothing) . fromCardanoTxIn) inputs
             -- No outputs if the one of scripts failed
             , _citxOutputs = if isTxScriptValid then ValidTx txOutputs
-                                                else InvalidTx
+                                                else InvalidTx collateralOut
             , _citxData = datums
             , _citxRedeemers = redeemers
             , _citxScripts = scriptMap
