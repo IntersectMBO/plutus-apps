@@ -44,6 +44,33 @@ let
         inherit (config) src;
       in
       [
+        ({ pkgs, ... }: {
+          packages = {
+            network.postUnpack = let 
+              patch = pkgs.writeText "patch" ''
+                diff --git a/Network/Socket/Types.hsc b/Network/Socket/Types.hsc
+                index e0a2c5a..928b9ce 100644
+                --- a/Network/Socket/Types.hsc
+                +++ b/Network/Socket/Types.hsc
+                @@ -1151,7 +1151,9 @@ unixPathMax = #const sizeof(((struct sockaddr_un *)NULL)->sun_path)
+                 pokeSockAddr :: Ptr a -> SockAddr -> IO ()
+                 #if defined(DOMAIN_SOCKET_SUPPORT)
+                 pokeSockAddr p sa@(SockAddrUnix path) = do
+                -    when (length path > unixPathMax) $ error "pokeSockAddr: path is too long"
+                +    when (length path > unixPathMax) $ error
+                +       $ "pokeSockAddr: path is too long in SockAddrUnix " <> show path
+                +       <> ", length " <> show (length path) <> ", unixPathMax " <> show unixPathMax
+                     zeroMemory p $ fromIntegral $ sizeOfSockAddr sa
+                 # if defined(HAVE_STRUCT_SOCKADDR_SA_LEN)
+                     (#poke struct sockaddr_un, sun_len) p ((#const sizeof(struct sockaddr_un)) :: Word8)
+              '';
+             in 
+              ''
+                patch -u network-3.1.2.7/Network/Socket/Types.hsc -i ${patch}
+              '';
+          };
+        })
+
         ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
           packages = {
             # Things that need plutus-tx-plugin
