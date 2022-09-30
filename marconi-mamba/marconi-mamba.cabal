@@ -39,6 +39,16 @@ common lang
     -Wnoncanonical-monad-instances -Wredundant-constraints
     -Wunused-packages
 
+library
+  import:          lang
+  hs-source-dirs:  src
+  exposed-modules: Marconi.Mamba
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:   base
+
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
