@@ -21,7 +21,7 @@ module Plutus.ChainIndex.Handlers
 
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
-import Control.Lens (Lens', _Just, ix, view, (^?))
+import Control.Lens (Lens', _Just, ix, to, view, (^?))
 import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
@@ -168,7 +168,7 @@ getTxOutFromRef ::
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   mTx <- getTxFromTxId txOutRefId
   -- Find the output in the tx matching the output ref
-  case mTx ^? _Just . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx) of
+  case mTx ^? _Just . to txOuts . ix (fromIntegral txOutRefIdx) of
     Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
     Just txout -> makeChainIndexTxOut txout
 
@@ -454,12 +454,12 @@ insertUtxoDb txs utxoStates =
             , newUnspent ++ unspentRows
             , newUnmatched ++ unmatchedRows)
         (tr, ur, umr) = foldl go ([] :: [TipRow], [] :: [UnspentOutputRow], [] :: [UnmatchedInputRow]) utxoStates
-        txOuts = concatMap txOutsWithRef txs
+        outs = concatMap txOutsWithRef txs
     in insertRows $ mempty
         { tipRows = InsertRows tr
         , unspentOutputRows = InsertRows ur
         , unmatchedInputRows = InsertRows umr
-        , utxoOutRefRows = InsertRows $ map (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) txOuts
+        , utxoOutRefRows = InsertRows $ map (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) outs
         }
 
 reduceOldUtxoDb :: Tip -> BeamEffect ()

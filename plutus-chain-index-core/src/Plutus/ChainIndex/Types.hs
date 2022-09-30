@@ -174,10 +174,10 @@ instance Pretty ChainIndexTxOut where
     pretty ChainIndexTxOut {citoAddress, citoValue} =
         hang 2 $ vsep ["-" <+> pretty citoValue <+> "addressed to", pretty citoAddress]
 
--- | List of outputs of a transaction. There are no outputs if the transaction
--- is invalid.
+-- | List of outputs of a transaction. There is only an optional collateral output
+-- if the transaction is invalid.
 data ChainIndexTxOutputs =
-    InvalidTx -- ^ The transaction is invalid so there is no outputs
+    InvalidTx (Maybe ChainIndexTxOut) -- ^ The transaction is invalid so there is maybe a collateral output.
   | ValidTx [ChainIndexTxOut]
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
@@ -218,10 +218,10 @@ instance Pretty ChainIndexTx where
                 , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList _citxRedeemers) ))
                 ]
         in nest 2 $ vsep ["Valid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
-    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
+    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx mOutput, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
         let lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty _citxInputs))
-                , hang 2 (vsep ["no outputs:"])
+                , hang 2 (vsep ["collateral output:", maybe "-" pretty mOutput])
                 , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
                 , "validity range:" <+> viaShow _citxValidRange
                 , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _citxData) ))

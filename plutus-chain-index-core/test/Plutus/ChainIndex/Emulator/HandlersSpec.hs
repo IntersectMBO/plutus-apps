@@ -27,7 +27,7 @@ import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
-import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), _ValidTx, citxOutputs)
+import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), txOuts)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 import Hedgehog (Property, assert, forAll, property, (===))
@@ -116,7 +116,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
   let assetClasses =
         fmap (\(c, t, _) -> AssetClass (c, t))
              $ flattenValue
-             $ view (traverse . citxOutputs . _ValidTx . traverse . to citoValue) block
+             $ view (traverse . to txOuts . traverse . to citoValue) block
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index

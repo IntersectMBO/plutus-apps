@@ -25,14 +25,13 @@ import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger.Ada qualified as Ada
-import Plutus.ChainIndex (ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
+import Plutus.ChainIndex (ChainIndexTxOut (citoValue), ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
                           RunRequirements (RunRequirements), TxProcessOption (TxProcessOption, tpoStoreTx),
-                          appendBlocks, citxOutputs, citxTxId, runChainIndexEffects, txFromTxId, unspentTxOutFromRef,
+                          appendBlocks, citxTxId, runChainIndexEffects, txFromTxId, txOuts, unspentTxOutFromRef,
                           utxoSetMembership, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
-import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), _ValidTx)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
@@ -115,7 +114,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
         fmap (\(c, t, _) -> AssetClass (c, t))
              $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
              $ flattenValue
-             $ view (traverse . citxOutputs . _ValidTx . traverse . to citoValue) block
+             $ view (traverse . to txOuts . traverse . to citoValue) block
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
