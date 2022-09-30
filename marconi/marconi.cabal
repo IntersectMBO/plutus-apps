@@ -43,6 +43,7 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
+    Marconi.Api.IndexerCache
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
@@ -128,6 +129,7 @@ test-suite marconi-test
   build-depends:
     , marconi
     , plutus-streaming
+    , plutus-tx-plugin
 
   --------------------------
   -- Other IOG dependencies

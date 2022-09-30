@@ -56,6 +56,7 @@ isTargetTxOut targetAddresses (C.TxOut address _ _) = case  address of
 
 -- UtxoIndexer
 type TargetAddresses = NonEmpty.NonEmpty (C.Address C.ShelleyAddr )
+
 targetAddressParser :: Maybe String -> Maybe TargetAddresses
 targetAddressParser x =  x >>= traverse maybeAddress . words >>= NonEmpty.nonEmpty
     where
@@ -156,8 +157,10 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct ->
-          Ix.insert (getUtxoUpdate slotNo txs maybeTargetAddresses) index >>= innerLoop
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+          let utxoRow = getUtxoUpdate slotNo txs maybeTargetAddresses
+          cacheUtxos utxoRow
+          Ix.insert utxoRow index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
@@ -165,6 +168,10 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
               slot   <- chainPointToSlotNo cp
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
+
+
+cacheUtxos ::  UtxoUpdate -> IO ()
+cacheUtxos _ = pure ()
 
 scriptTxWorker_
   :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])

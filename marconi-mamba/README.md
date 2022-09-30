@@ -4,7 +4,7 @@ marconi-mamba
 This is an initial draft for the Marconi Mamba README file. Going forward, we will need to discuss and refine this document and/or the implementation so that they match.
 
 ## Description
-marconi-mamba is a JSON-RPC HTTP server on top of the [marconi](../marconi/README.md)
+marconi-mamba is a [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) HTTP server on top of the [marconi](../marconi/README.md)
 
 ## Playing with the RPC
 There is an example client/server JSON-RPC to experiment with the marconi-mamba. Here are the steps to build and execute the examples:
