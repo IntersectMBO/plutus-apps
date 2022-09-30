@@ -14,27 +14,25 @@
 -- This module provides support for writing handlers for JSON-RPC endpoints
 module Marconi.Server.Types where
 
-import Cardano.Api qualified
 import Control.Concurrent.STM.TVar (TVar)
+import Control.Lens (Bifunctor (bimap), makeClassy)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
 import Data.Aeson.Types (parseEither)
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Ledger (TxOutRef)
-import Servant.API (NoContent (NoContent), Post, ReqBody, (:<|>) ((:<|>)), (:>))
-import Servant.API.ContentTypes (AllCTRender (handleAcceptH))
-
-import Control.Lens (Bifunctor (bimap), makeClassy)
 import Marconi.JsonRpc.Types (JSONRPC, JsonRpc, JsonRpcErr (JsonRpcErr, errorData), JsonRpcNotification,
                               JsonRpcResponse (Errors, Result), RawJsonRpc, Request (Request), invalidParamsCode,
                               invalidRequestCode, methodNotFoundCode)
+import Servant.API (NoContent (NoContent), Post, ReqBody, (:<|>) ((:<|>)), (:>))
+import Servant.API.ContentTypes (AllCTRender (handleAcceptH))
 import Servant.Server (DefaultErrorFormatters, ErrorFormatters, Handler, HasContextEntry,
                        HasServer (hoistServerWithContext, route, type ServerT), type (.++))
 
-
 -- | We need a type that may or man not return content, since we collapsed the entire JSON RPC api to one endpoint.
-data MaybeContent a = SomeContent a | EmptyContent
+data MaybeContent a
+    = SomeContent a
+    | EmptyContent
 
 instance ToJSON a => AllCTRender '[JSONRPC] (MaybeContent a) where
     handleAcceptH px h = \case
@@ -66,7 +64,6 @@ class RouteJsonRpc a where
         -> Map.Map String (Value -> m (MaybeContent (Either (JsonRpcErr Value) Value)))
     hoistRpcRouter :: Proxy a -> (forall x . m x -> n x) -> RpcHandler a m -> RpcHandler a n
 
-
 generalizeResponse
     :: (ToJSON e, ToJSON r)
     => Either (JsonRpcErr e) r
@@ -75,54 +72,40 @@ generalizeResponse = bimap repack toJSON
     where
     repack e = e { errorData = toJSON <$> errorData e }
 
-
 onDecodeFail :: String -> JsonRpcErr e
 onDecodeFail msg = JsonRpcErr invalidParamsCode msg Nothing
 
-
-instance (KnownSymbol method, FromJSON p, ToJSON e, ToJSON r) => RouteJsonRpc (JsonRpc method p e r) where
+instance (KnownSymbol method, FromJSON p, ToJSON e, ToJSON r)
+    => RouteJsonRpc (JsonRpc method p e r) where
     type RpcHandler (JsonRpc method p e r) m = p -> m (Either (JsonRpcErr e) r)
-
     jsonRpcRouter _ _ h = Map.fromList [ (methodName, h') ]
         where
         methodName = symbolVal $ Proxy @method
         onDecode   = fmap generalizeResponse . h
-
         h' = fmap SomeContent
            . either (return . Left . onDecodeFail) onDecode
            . parseEither parseJSON
 
     hoistRpcRouter _ f x = f . x
 
-
 instance (KnownSymbol method, FromJSON p) => RouteJsonRpc (JsonRpcNotification method p) where
     type RpcHandler (JsonRpcNotification method p) m = p -> m NoContent
-
-    jsonRpcRouter _ _ h = Map.fromList [ (methodName, h') ]
-        where
+    jsonRpcRouter _ _ h = Map.fromList [ (methodName, h') ] where
         methodName = symbolVal $ Proxy @method
         onDecode x = EmptyContent <$ h x
-
         h' = either (return . SomeContent . Left . onDecodeFail) onDecode
            . parseEither parseJSON
-
     hoistRpcRouter _ f x = f . x
-
 
 instance (RouteJsonRpc a, RouteJsonRpc b) => RouteJsonRpc (a :<|> b) where
     type RpcHandler (a :<|> b) m = RpcHandler a m :<|> RpcHandler b m
-
     jsonRpcRouter _ pxm (ha :<|> hb) = jsonRpcRouter pxa pxm ha <> jsonRpcRouter pxb pxm hb
         where
         pxa = Proxy @a
         pxb = Proxy @b
-
     hoistRpcRouter _ f (x :<|> y) = hoistRpcRouter (Proxy @a) f x :<|> hoistRpcRouter (Proxy @b) f y
 
-
--- | This function is the glue required to convert a collection of
--- handlers in servant standard style to the handler that 'RawJsonRpc'
--- expects.
+-- | Collapse a to a single handler to handle RawJsonRpc
 serveJsonRpc
     :: (Monad m, RouteJsonRpc a)
     => Proxy a
@@ -142,12 +125,3 @@ serveJsonRpc px pxm hs (Request m v ix')
     missingMethod  = JsonRpcErr methodNotFoundCode ("Unknown method: " <> m) Nothing
     hmap           = jsonRpcRouter px pxm hs
     invalidRequest = JsonRpcErr invalidRequestCode "Missing id" Nothing
-
-type RpcPortNumber = Int
-type AddressTxOutRefMap = (Map.Map(Cardano.Api.Address Cardano.Api.ShelleyAddr) TxOutRef)
-type AddressTxOutRefCache = TVar AddressTxOutRefMap
-data HttpEnv = HttpEnv {
-    _portNumber             :: RpcPortNumber
-    , _addressTxOutRefCache :: AddressTxOutRefCache
-    }
-makeClassy ''HttpEnv

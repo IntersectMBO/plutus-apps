@@ -4,8 +4,8 @@ module Main where
 
 import Control.Concurrent.STM.TVar (newTVarIO)
 import Data.Map.Strict qualified
-import Marconi.Server.HttpServer (httpMain)
-import Marconi.Server.Types (AddressTxOutRefMap, HttpEnv (HttpEnv))
+import Marconi.Api.HttpServer (httpMain)
+import Marconi.Api.Types (HttpEnv (HttpEnv))
 
 
 main :: IO ()
@@ -16,5 +16,3 @@ main = do
         httpEnv = HttpEnv httpPort cache
     httpMain httpEnv
 
-mocTxOutRef :: AddressTxOutRefMap
-mocTxOutRef = undefined

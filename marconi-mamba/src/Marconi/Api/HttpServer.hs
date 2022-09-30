@@ -5,16 +5,17 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 
-module Marconi.Server.HttpServer where
+module Marconi.Api.HttpServer where
 
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger (TxId (TxId), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
+import Marconi.Api.Routes (API)
+import Marconi.Api.Types (AddressTxOutRefCache, HasHttpEnv (addressTxOutRefCache, portNumber), HttpEnv)
 import Marconi.JsonRpc.Types (JsonRpcErr)
-import Marconi.Server.Routes (API)
-import Marconi.Server.Types (AddressTxOutRefCache, HasHttpEnv (addressTxOutRefCache, portNumber), HttpEnv)
+import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (run)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)

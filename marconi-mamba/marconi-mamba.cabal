@@ -43,16 +43,15 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
-    Marconi.Client.Types
-    Marconi.JsonRpc.Types
-    Marconi.Server.HttpServer
-    Marconi.Server.Routes
-    Marconi.Server.Types
+    Marconi.Api.HttpServer
+    Marconi.Api.Routes
+    Marconi.Api.Types
 
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , json-rpc
     , marconi
     , plutus-ledger
 
@@ -83,6 +82,45 @@ library
     , time
     , warp
 
+library json-rpc
+  import:          lang
+  hs-source-dirs:  json-rpc/src
+  exposed-modules:
+    Marconi.Client.Types
+    Marconi.JsonRpc.Types
+    Marconi.Server.HttpServer
+    Marconi.Server.Types
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , containers
+    , http-media
+    , lens
+    , mtl
+    , optparse-applicative
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-server
+    , stm
+    , text
+    , time
+    , warp
+
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
@@ -92,6 +130,7 @@ executable marconi-mamba
   -- Local components
   --------------------
   build-depends:
+    , json-rpc
     , marconi
     , marconi-mamba
     , plutus-streaming
@@ -113,15 +152,16 @@ executable marconi-mamba
     , optparse-applicative
     , stm
 
-executable examples-jsonrpc-server
+executable examples-json-rpc-server
   import:         lang
-  hs-source-dirs: examples/jsonrpc-server/src
+  hs-source-dirs: examples/json-rpc-server/src
   main-is:        Main.hs
 
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , json-rpc
     , marconi
     , marconi-mamba
     , plutus-streaming
@@ -139,15 +179,16 @@ executable examples-jsonrpc-server
     , containers
     , stm
 
-executable examples-jsonrpc-client
+executable examples-json-rpc-client
   import:         lang
-  hs-source-dirs: examples/jsonrpc-client/src
+  hs-source-dirs: examples/json-rpc-client/src
   main-is:        Main.hs
 
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , json-rpc
     , marconi
     , marconi-mamba
     , plutus-streaming

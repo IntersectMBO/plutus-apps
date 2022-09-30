@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Marconi.Server.Routes where
+module Marconi.Api.Routes where
 import Ledger.Tx (TxOutRef)
 import Marconi.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
 import Servant.API (Get, NoContent, PlainText, Post, ReqBody, (:<|>), (:>))

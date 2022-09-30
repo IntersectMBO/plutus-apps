@@ -6,9 +6,9 @@ import Cardano.Api qualified as C
 import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM.TVar (newTVarIO)
 import Data.Map qualified
+import Marconi.Api.HttpServer qualified as Http
+import Marconi.Api.Types (HttpEnv (HttpEnv))
 import Marconi.Indexers qualified as I
-import Marconi.Server.HttpServer qualified as Http
-import Marconi.Server.Types (HttpEnv (HttpEnv))
 import Options.Applicative qualified as Opt
 import Plutus.Streaming (withChainSyncEventStream)
 
