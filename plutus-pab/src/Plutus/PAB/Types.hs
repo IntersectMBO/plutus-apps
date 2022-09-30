@@ -116,7 +116,9 @@ instance FromJSON DbConfig where
             (Nothing, Just a)  -> pure $ PostgresDB a
             (Nothing, Nothing) -> error $ unwords
                                   [ "No configuration available, expecting"
-                                  , "sqliteDB or postgresDB"
+                                  , "sqliteDB or postgresDB. Note if you have"
+                                  , "updated to the newer plutus you should change"
+                                  , "the dbConfig section in your yaml config file."
                                   ]
             (Just _, Just _)   -> error "Can't have Sqlite and Postgres databases"
     parseJSON _            = fail "Expecting object value"

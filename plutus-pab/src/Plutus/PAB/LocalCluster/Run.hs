@@ -287,7 +287,7 @@ launchPAB userContractHandler
                     , pscSlotConfig = slotConfig
                     , pscKeptBlocks = securityParam
                     }
-                , dbConfig = def
+                , dbConfig = SqliteDB def{ dbConfigFile = T.pack (dir </> "plutus-pab.db") }
                 , chainQueryConfig = ChainIndexConfig def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }
