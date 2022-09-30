@@ -59,9 +59,9 @@ import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
 
 -- | Get tx outputs from tx.
 txOuts :: ChainIndexTx -> [ChainIndexTxOut]
-txOuts ChainIndexTx { _citxOutputs = ValidTx outputs }                   = outputs
-txOuts ChainIndexTx{ _citxTxId, _citxOutputs = InvalidTx (Just output) } = [ output ]
-txOuts ChainIndexTx{ _citxOutputs = InvalidTx Nothing }                  = []
+txOuts ChainIndexTx { _citxOutputs = ValidTx outputs }         = outputs
+txOuts ChainIndexTx { _citxOutputs = InvalidTx (Just output) } = [ output ]
+txOuts ChainIndexTx { _citxOutputs = InvalidTx Nothing }       = []
 
 -- | Get tx output references from tx.
 txOutRefs :: ChainIndexTx -> [TxOutRef]
