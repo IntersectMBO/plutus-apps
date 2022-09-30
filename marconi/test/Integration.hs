@@ -12,7 +12,7 @@ import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
 import Control.Concurrent.STM qualified as IO
 import Control.Exception (catch)
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
@@ -23,7 +23,10 @@ import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
 import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
+import System.Environment qualified as IO
 import System.FilePath ((</>))
+import System.IO.Temp qualified as IO
+import System.Info qualified as IO
 
 import Hedgehog (MonadTest, Property, assert, (===))
 import Hedgehog qualified as H
@@ -73,7 +76,7 @@ tests = testGroup "Integration"
       the indexer to see if it was indexed properly
 -}
 testIndex :: Property
-testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
+testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBasePath' -> do
 
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
   (socketPathAbs, networkId, tempAbsPath) <- startTestnet base tempAbsBasePath'
@@ -353,3 +356,18 @@ submitTx localNodeConnectInfo tx = do
 headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
 headM (a:_) = return a
 headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
+
+workspace :: (MonadTest m, MonadIO m, GHC.HasCallStack) => FilePath -> (FilePath -> m ()) -> m ()
+workspace prefixPath f = GHC.withFrozenCallStack $ do
+  systemTemp <- case IO.os of
+    "darwin" -> pure "/tmp"
+    _        -> H.evalIO IO.getCanonicalTemporaryDirectory
+  maybeKeepWorkspace <- H.evalIO $ IO.lookupEnv "KEEP_WORKSPACE"
+  let systemPrefixPath = systemTemp <> "/" <> prefixPath
+  H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
+  ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
+  H.annotate $ "Workspace: " <> ws
+  -- liftIO $ IO.writeFile (ws <> "/module") callerModuleName
+  f ws
+  when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
+    H.evalIO $ IO.removeDirectoryRecursive ws

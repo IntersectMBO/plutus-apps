@@ -161,3 +161,4 @@ test-suite marconi-test
     , streaming
     , tasty
     , tasty-hedgehog
+    , temporary
