@@ -80,7 +80,6 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
 
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
   (socketPathAbs, networkId, tempAbsPath) <- startTestnet base tempAbsBasePath'
-  void $ liftIO $ putStrLn $ "socketPathAbs " <> socketPathAbs <> " " <> show (length socketPathAbs)
 
   -- Create a channel that is passed into the indexer, such that it
   -- can write index updates to it and we can await for them (also
