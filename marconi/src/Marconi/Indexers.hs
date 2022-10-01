@@ -18,6 +18,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (pack)
+import Marconi.IndexerCache
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
@@ -48,34 +49,14 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
     extractDatumsFromTx (Tx txBody _) =
       let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
-
-isTargetTxOut :: TargetAddresses -> C.TxOut C.CtxTx era -> Bool
-isTargetTxOut targetAddresses (C.TxOut address _ _) = case  address of
-    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
-    _                                                -> False
-
 -- UtxoIndexer
-type TargetAddresses = NonEmpty.NonEmpty (C.Address C.ShelleyAddr )
-
-targetAddressParser :: Maybe String -> Maybe TargetAddresses
-targetAddressParser x =  x >>= traverse maybeAddress . words >>= NonEmpty.nonEmpty
-    where
-        eitherAddress :: String -> Either C.Bech32DecodeError (C.Address  C.ShelleyAddr )
-        eitherAddress  =  C.deserialiseFromBech32 (C.proxyToAsType Proxy) . pack
-
-        maybeAddress  :: String -> Maybe (C.Address  C.ShelleyAddr )
-        maybeAddress = either (const Nothing) Just  . eitherAddress
 
 getOutputs
-  :: Maybe TargetAddresses
+  :: TargetAddresses
   -> C.Tx era
   -> Maybe [(TxOut, TxOutRef)]
-getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-    outs <- case maybeTargetAddresses of
-        Just targetAddresses ->
-            either (const Nothing) Just $ traverse fromCardanoTxOut . filter (isTargetTxOut targetAddresses) $ txOuts
-        Nothing ->
-            either (const Nothing) Just $ traverse fromCardanoTxOut  txOuts
+getOutputs targetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
+    outs <- either (const Nothing) Just $ traverse fromCardanoTxOut . filter (isTargetTxOut targetAddresses) $ txOuts
     pure $ outs &  zip ([0..] :: [Integer])
         <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
                                           , txOutRefIdx = ix
@@ -96,7 +77,7 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
 getUtxoUpdate
   :: SlotNo
   -> [C.Tx era]
-  -> Maybe TargetAddresses
+  -> TargetAddresses
   -> UtxoUpdate
 getUtxoUpdate slot txs addresses =
   let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
@@ -149,8 +130,10 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
 
-utxoWorker :: Maybe TargetAddresses -> Worker
-utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+utxoWorker :: IndexerAddressCache -> Worker
+utxoWorker cache Coordinator{_barrier} ch path = do
+    c <- Utxo.open path (Utxo.Depth 2160)
+    innerLoop c
   where
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
@@ -158,8 +141,9 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-          let utxoRow = getUtxoUpdate slotNo txs maybeTargetAddresses
-          cacheUtxos utxoRow
+          targetAddresses <- keys cache
+          let utxoRow = getUtxoUpdate slotNo txs (NonEmpty.fromList . Set.toList $ targetAddresses)
+          cacheUtxos utxoRow cache
           Ix.insert utxoRow index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
@@ -169,9 +153,11 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
+-- TODO cache hook
+-- , _outputs :: ![(TxOut, TxOutRef)]
 
-cacheUtxos ::  UtxoUpdate -> IO ()
-cacheUtxos _ = pure ()
+cacheUtxos ::  UtxoUpdate -> IndexerAddressCache -> IO ()
+cacheUtxos utxoOuts cache = pure ()
 
 scriptTxWorker_
   :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
@@ -207,15 +193,15 @@ combinedIndexer
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
-  -> Maybe TargetAddresses
+  -> IndexerAddressCache
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIndexers remainingIndexers
+combinedIndexer utxoPath datumPath scriptTxPath cache = combineIndexers remainingIndexers
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
-    pairs = [(utxoWorker maybeTargetAddresses, utxoPath), (datumWorker, datumPath), (scriptTxWorker (\_ _ -> pure []), scriptTxPath)]
+    pairs = [(utxoWorker cache, utxoPath), (datumWorker, datumPath), (scriptTxWorker (\_ _ -> pure []), scriptTxPath)]
     remainingIndexers = mapMaybe liftMaybe pairs
 
 combineIndexers

@@ -3,7 +3,6 @@
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -14,10 +13,9 @@
 -- This module provides support for writing handlers for JSON-RPC endpoints
 module Marconi.Server.Types where
 
-import Control.Concurrent.STM.TVar (TVar)
-import Control.Lens (Bifunctor (bimap), makeClassy)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
 import Data.Aeson.Types (parseEither)
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownSymbol, symbolVal)

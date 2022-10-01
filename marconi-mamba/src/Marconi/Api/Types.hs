@@ -14,19 +14,19 @@
 module Marconi.Api.Types where
 
 import Cardano.Api qualified
-import Control.Concurrent.STM.TVar (TVar)
-import Control.Lens
-import Data.Map.Strict qualified as Map
+import Control.Lens (makeClassy)
 import Ledger (TxOutRef)
+import Marconi.IndexerCache (ApiCache)
+import Network.Wai.Handler.Warp (Settings)
+
+
+-- | Typre represents mamba specific marconi indexer cache
+type MambaCache = ApiCache (Cardano.Api.Address Cardano.Api.ShelleyAddr ) TxOutRef
 
 type RpcPortNumber = Int
 
-type AddressTxOutRefMap = (Map.Map(Cardano.Api.Address Cardano.Api.ShelleyAddr) TxOutRef)
-
-type AddressTxOutRefCache = TVar AddressTxOutRefMap
-
-data HttpEnv = HttpEnv {
-    _portNumber             :: RpcPortNumber
-    , _addressTxOutRefCache :: AddressTxOutRefCache
+data JsonRpcEnv = JsonRpcEnv {
+    _httpSettings           :: Settings -- ^ HTTP server setting
+    , _addressTxOutRefCache :: MambaCache -- ^ In memory cache used between marconi indexer and the JSON-RPC server
     }
-makeClassy ''HttpEnv
+makeClassy ''JsonRpcEnv

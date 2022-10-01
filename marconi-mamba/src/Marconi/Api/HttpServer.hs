@@ -1,11 +1,13 @@
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
-
-module Marconi.Api.HttpServer where
+module Marconi.Api.HttpServer(
+    bootstrapHttp -- ^ starts the http boo
+    ) where
 
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
@@ -13,22 +15,20 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger (TxId (TxId), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (AddressTxOutRefCache, HasHttpEnv (addressTxOutRefCache, portNumber), HttpEnv)
+import Marconi.Api.Types (HasJsonRpcEnv (..), JsonRpcEnv, MambaCache)
 import Marconi.JsonRpc.Types (JsonRpcErr)
 import Marconi.Server.Types ()
-import Network.Wai.Handler.Warp (run)
+import Network.Wai.Handler.Warp (runSettings)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
 
-httpMain :: HttpEnv -> IO ()
-httpMain env =
-    let
-        port = env ^. portNumber
-        cache = env ^. addressTxOutRefCache
-    in
-        run port (serve (Proxy @API) (server cache) )
 
-server :: AddressTxOutRefCache -> Server API
+bootstrapHttp :: JsonRpcEnv -> IO ()
+bootstrapHttp env = runSettings
+    (env ^. httpSettings)
+    (serve (Proxy @API) (server (env ^. addressTxOutRefCache) ) )
+
+server :: MambaCache -> Server API
 server _ =  (add :<|> echo :<|> findTxOutRef :<|> printMessage) :<|> (getTime :<|> printMessage)
 
 add :: (Int, Int) -> Handler (Either (JsonRpcErr String) Int)
