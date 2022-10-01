@@ -12,6 +12,7 @@ module RewindableIndex.Storable
   , events
   , cursor
     -- * API
+  , QueryInterval(..)
   , Buffered(..)
   , Queryable(..)
   , Resumable(..)
@@ -33,19 +34,21 @@ import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Mutable qualified as VM
 
-data Interval p
+data QueryInterval p =
+    QEverything
+  | QInterval p p
 
 class Buffered c m e where
   persistToStorage :: Foldable f => f e -> c -> m c
 
 class Queryable c p m q r where
-  queryStorage :: Interval p -> c -> q -> m r
+  queryStorage :: QueryInterval p -> c -> q -> m r
 
 class Rewindable c m p where
   rewindStorage :: p -> c -> m (Maybe c)
 
 class Resumable c m p where
-  resumeFromStorage :: c -> m (Maybe p)
+  resumeFromStorage :: c -> m [p]
 
 class HasPoint e p where
   getPoint :: e -> p
@@ -161,5 +164,5 @@ rewind p s = do
 resume
   :: Resumable (State h p m e) m p
   => State h p m e
-  -> m (Maybe p)
+  -> m [p]
 resume = resumeFromStorage
