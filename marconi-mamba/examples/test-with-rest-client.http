@@ -7,19 +7,19 @@ Content-Type: application/json-rpc
 #
 #
 #
-POST http://localhost:9000/json-rpc
+POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
 #
 #
-POST http://localhost:9000/json-rpc
+POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
 #
 #
-POST http://localhost:9000/json-rpc
+POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {"jsonrpc": "2.0", "method": "txOutRef", "params": "0123", "id": 10}
 #
 #
-GET http://localhost:9000/rest/time
+GET http://localhost:3000/rest/time

@@ -11,14 +11,11 @@ import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (assocs)
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text (pack)
-import Marconi.IndexerCache
+import Marconi.IndexersHotStore
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
@@ -49,19 +46,29 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
     extractDatumsFromTx (Tx txBody _) =
       let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
+
 -- UtxoIndexer
-
 getOutputs
-  :: TargetAddresses
+  :: Maybe TargetAddresses
   -> C.Tx era
-  -> Maybe [(TxOut, TxOutRef)]
-getOutputs targetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-    outs <- either (const Nothing) Just $ traverse fromCardanoTxOut . filter (isTargetTxOut targetAddresses) $ txOuts
-    pure $ outs &  zip ([0..] :: [Integer])
-        <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
-                                          , txOutRefIdx = ix
-                                     }))
+  -> Maybe [ (TxOut, TxOutRef) ]
+getOutputs (Just targetAddresses) (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
+    (outs :: [TxOut]) <- either (const Nothing) Just $
+        traverse fromCardanoTxOut . filter
+           (isInTargetTxOut targetAddresses) $ txOuts
+    pure . txOutTxRefMap outs $ txBody
 
+getOutputs _ (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
+    (outs :: [TxOut]) <- either (const Nothing) Just $ traverse fromCardanoTxOut txOuts
+    pure . txOutTxRefMap outs $ txBody
+
+txOutTxRefMap ::[TxOut] -> C.TxBody era -> [(TxOut, TxOutRef)]
+txOutTxRefMap  outs txBody= outs &  zip ([0..] :: [Integer])
+    <&> (\(ix, out) -> (out
+                       , TxOutRef {
+                               txOutRefId  = fromCardanoTxId (C.getTxId txBody)
+                               , txOutRefIdx = ix
+                               }))
 getInputs
   :: C.Tx era
   -> Set TxOutRef
@@ -77,11 +84,11 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
 getUtxoUpdate
   :: SlotNo
   -> [C.Tx era]
-  -> TargetAddresses
+  -> Maybe TargetAddresses
   -> UtxoUpdate
-getUtxoUpdate slot txs addresses =
+getUtxoUpdate slot txs maybeAddresses =
   let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-      outs = concat . catMaybes $ getOutputs addresses <$> txs
+      outs = concat . catMaybes $ getOutputs maybeAddresses <$> txs
   in  UtxoUpdate { _inputs  = ins
                  , _outputs = outs
                  , _slotNo  = slot
@@ -130,10 +137,9 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
 
-utxoWorker :: IndexerAddressCache -> Worker
-utxoWorker cache Coordinator{_barrier} ch path = do
-    c <- Utxo.open path (Utxo.Depth 2160)
-    innerLoop c
+utxoHotStoreWorker :: IndexerHotStore -> TargetAddresses -> Worker
+utxoHotStoreWorker hotStore  targetAddresses Coordinator{_barrier} ch path =
+   Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
@@ -141,10 +147,9 @@ utxoWorker cache Coordinator{_barrier} ch path = do
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-          targetAddresses <- keys cache
-          let utxoRow = getUtxoUpdate slotNo txs (NonEmpty.fromList . Set.toList $ targetAddresses)
-          cacheUtxos utxoRow cache
+          let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
           Ix.insert utxoRow index >>= innerLoop
+          puts hotStore (Utxo.toRows utxoRow)
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
@@ -153,11 +158,27 @@ utxoWorker cache Coordinator{_barrier} ch path = do
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
--- TODO cache hook
--- , _outputs :: ![(TxOut, TxOutRef)]
 
-cacheUtxos ::  UtxoUpdate -> IndexerAddressCache -> IO ()
-cacheUtxos utxoOuts cache = pure ()
+
+utxoWorker :: Maybe TargetAddresses -> Worker
+utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
+    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+  where
+    innerLoop :: UtxoIndex -> IO ()
+    innerLoop index = do
+      signalQSemN _barrier 1
+      event <- atomically $ readTChan ch
+      case event of
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+          let utxoRow = getUtxoUpdate slotNo txs maybeTargetAddresses
+          Ix.insert utxoRow index >>= innerLoop
+        RollBackward cp _ct -> do
+          events <- Ix.getEvents (index ^. Ix.storage)
+          innerLoop $
+            fromMaybe index $ do
+              slot   <- chainPointToSlotNo cp
+              offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+              Ix.rewind offset index
 
 scriptTxWorker_
   :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
@@ -193,15 +214,20 @@ combinedIndexer
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
-  -> IndexerAddressCache
+  -> Maybe TargetAddresses
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath cache = combineIndexers remainingIndexers
+combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIndexers remainingIndexers
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
-    pairs = [(utxoWorker cache, utxoPath), (datumWorker, datumPath), (scriptTxWorker (\_ _ -> pure []), scriptTxPath)]
+    pairs =
+        [
+            (utxoWorker maybeTargetAddresses, utxoPath)
+            , (datumWorker, datumPath)
+            , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
+        ]
     remainingIndexers = mapMaybe liftMaybe pairs
 
 combineIndexers

@@ -67,18 +67,11 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
-    , base                  >=4.9 && <5
+    , base            >=4.9 && <5
     , containers
-    , http-media
     , lens
-    , mtl
-    , optparse-applicative
     , servant
-    , servant-client
-    , servant-client-core
     , servant-server
-    , stm
     , text
     , time
     , warp
@@ -110,12 +103,9 @@ library json-rpc
     , containers
     , http-media
     , servant
-    , servant-client
     , servant-client-core
     , servant-server
     , text
-    , time
-    , warp
 
 executable marconi-mamba
   import:         lang
@@ -140,71 +130,59 @@ executable marconi-mamba
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
     , async
     , base                  >=4.9 && <5
-    , containers
-    , http-media
     , optparse-applicative
+
+executable examples-json-rpc-server
+  import:         lang
+  hs-source-dirs: examples/json-rpc-server/src
+  main-is:        Main.hs
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , json-rpc
+    , marconi
+    , marconi-mamba
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base        >=4.9 && <5
+    , containers
     , stm
+    , warp
 
--- TODO uncomment me once the refactoring is completed
+executable examples-json-rpc-client
+  import:         lang
+  hs-source-dirs: examples/json-rpc-client/src
+  main-is:        Main.hs
 
--- executable examples-json-rpc-server
---   import:         lang
---   hs-source-dirs: examples/json-rpc-server/src
---   main-is:        Main.hs
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , json-rpc
+    , marconi-mamba
 
---   --------------------
---   -- Local components
---   --------------------
---   build-depends:
---     , json-rpc
---     , marconi
---     , marconi-mamba
---     , plutus-streaming
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  plutus-ledger
 
---   --------------------------
---   -- Other IOG dependencies
---   --------------------------
---   build-depends:  cardano-api
-
---   ------------------------
---   -- Non-IOG dependencies
---   ------------------------
---   build-depends:
---     , base        >=4.9 && <5
---     , containers
---     , stm
-
--- executable examples-json-rpc-client
---   import:         lang
---   hs-source-dirs: examples/json-rpc-client/src
---   main-is:        Main.hs
-
---   --------------------
---   -- Local components
---   --------------------
---   build-depends:
---     , json-rpc
---     , marconi
---     , marconi-mamba
---     , plutus-streaming
-
---   --------------------------
---   -- Other IOG dependencies
---   --------------------------
---   build-depends:
---     , cardano-api
---     , plutus-ledger
-
---   ------------------------
---   -- Non-IOG dependencies
---   ------------------------
---   build-depends:
---     , base            >=4.9 && <5
---     , containers
---     , http-client
---     , servant
---     , servant-client
---     , stm
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base            >=4.9 && <5
+    , http-client
+    , servant
+    , servant-client

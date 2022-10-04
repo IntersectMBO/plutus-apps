@@ -6,33 +6,37 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 module Marconi.Api.HttpServer(
-    bootstrapHttp -- ^ starts the http boo
+    bootstrap -- ^ starts the http server
     ) where
 
 import Control.Lens ((^.))
+import Control.Monad.IO.Class
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
+import Data.Set (Set)
+import Data.Text (pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger (TxId (TxId), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
+import Ledger.Tx.CardanoAPI (ToCardanoError (..), fromCardanoAddress)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (HasJsonRpcEnv (..), JsonRpcEnv, MambaCache)
-import Marconi.JsonRpc.Types (JsonRpcErr)
+import Marconi.Api.Types (HasJsonRpcEnv (..), JsonRpcEnv)
+import Marconi.IndexersHotStore
+import Marconi.JsonRpc.Types (JsonRpcErr (..), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
 
-
-bootstrapHttp :: JsonRpcEnv -> IO ()
-bootstrapHttp env = runSettings
+bootstrap :: JsonRpcEnv -> IO ()
+bootstrap env = runSettings
     (env ^. httpSettings)
     (serve (Proxy @API) (server (env ^. addressTxOutRefCache) ) )
 
-server :: MambaCache -> Server API
-server _ =  (add :<|> echo :<|> findTxOutRef :<|> printMessage) :<|> (getTime :<|> printMessage)
+server :: IndexerHotStore -> Server API
+server store =  ( add  :<|> echo :<|> (findTxOutRef store) :<|> printMessage) :<|> (getTime :<|> printMessage)
 
 add :: (Int, Int) -> Handler (Either (JsonRpcErr String) Int)
-add = pure . Right . uncurry (+)
+add  = pure . Right . uncurry (+)
 
 printMessage :: String -> Handler NoContent
 printMessage msg = NoContent <$ liftIO (putStrLn msg)
@@ -48,7 +52,16 @@ getTime = timeString <$> liftIO getCurrentTime
 -- TODO
 -- need a readerT and serant Nat here
 --
-findTxOutRef :: String -> Handler (Either (JsonRpcErr String) TxOutRef)
-findTxOutRef _ =  pure . Right $ txoutref
-    where
-        txoutref = TxOutRef{txOutRefId=TxId "08affff", txOutRefIdx=123456}
+findTxOutRef :: IndexerHotStore -> String -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
+findTxOutRef hotStore address =
+    liftIO $ (findByAddress hotStore ( pack address)) >>= pure . cardanoErrToRpcErr
+
+cardanoErrToRpcErr :: (Either ToCardanoError (Set TxOutRef) ) -> Either (JsonRpcErr String) (Set TxOutRef)
+cardanoErrToRpcErr = either (Left . f ) Right
+   where
+       f :: ToCardanoError -> JsonRpcErr String
+       f e = JsonRpcErr {
+           errorCode = parseErrorCode
+           , errorMessage = "address deserialization or conversion related error."
+           , errorData = Just . show $ e
+           }

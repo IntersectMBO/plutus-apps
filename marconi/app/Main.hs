@@ -19,7 +19,9 @@ import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 
-import Marconi.Indexers (TargetAddresses, combinedIndexer, targetAddressParser)
+import Control.Applicative (optional)
+import Marconi.Indexers (combinedIndexer)
+import Marconi.IndexersHotStore (TargetAddresses, targetAddressParser)
 import Marconi.Logging (logging)
 import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 
@@ -60,10 +62,11 @@ optionsParser =
     <*> optAddressesParser
     where
         optAddressesParser =
-            builtinDataAddresses <$> optStrParser (long "addresses-to-index"
-                                          <> help ( "White space separated list of addresses to index."
-                                                    <>  " i.e \"address-1 address-2 address-3 ...\"" ) )
-        builtinDataAddresses :: Maybe String -> Maybe TargetAddresses
+            optional $ builtinDataAddresses
+            <$> strOption (long "addresses-to-index"
+                           <> help ( "White space separated list of addresses to index."
+                                     <> " i.e \"address-1 address-2 address-3 ...\"" ) )
+        builtinDataAddresses :: String -> TargetAddresses
         builtinDataAddresses = targetAddressParser
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
@@ -113,6 +116,7 @@ main = do
           , optionsTargetAddresses } <- parseOptions
 
   c <- defaultConfigStdout
+  -- maybehotStore <- initCache <$> optionTargeAddresses
 
   withTrace c "marconi" $ \trace ->
     withChainSyncEventStream

@@ -46,8 +46,8 @@ library
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
-    Marconi.IndexerCache
     Marconi.Indexers
+    Marconi.IndexersHotStore
     Marconi.Logging
     Marconi.Orphans
 
@@ -87,6 +87,7 @@ library
     , streaming
     , text
     , time
+    , unordered-containers
 
 executable marconi
   import:         lang

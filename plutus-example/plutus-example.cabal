@@ -61,7 +61,6 @@ library
     PlutusExample.MintingScript
     PlutusExample.ScriptContextChecker
     PlutusExample.Sum
-    Server.JsonRpc
 
   --------------------
   -- Local components
