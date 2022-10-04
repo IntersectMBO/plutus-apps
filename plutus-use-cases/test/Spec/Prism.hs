@@ -103,8 +103,9 @@ data STOState = STOReady | STOPending | STODone
 data IssueState = NoIssue | Revoked | Issued
     deriving (Eq, Ord, Show, Data)
 
-newtype PrismModel = PrismModel
-    { _walletState :: Map Wallet (IssueState, STOState)
+data PrismModel = PrismModel
+    { _walletState   :: Map Wallet (IssueState, STOState)
+    , _numberOfCalls :: Integer
     }
     deriving (Show, Data)
 
@@ -146,7 +147,7 @@ instance ContractModel PrismModel where
                                   genUser Call]
         where genUser f = f <$> QC.elements users
 
-    initialState = PrismModel { _walletState = Map.empty }
+    initialState = PrismModel { _walletState = Map.empty, _numberOfCalls = 0 }
 
     initialInstances = StartContract MirrorH () : ((`StartContract` ()) . UserH <$> users)
 
@@ -157,6 +158,7 @@ instance ContractModel PrismModel where
     instanceContract _ UserH{} _ = C.subscribeSTO
 
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
+    precondition s (Call _)  = (s ^. contractState . numberOfCalls < 11)
     precondition _ _         = True
 
     nextState cmd = do
@@ -175,6 +177,7 @@ instance ContractModel PrismModel where
                 let stoValue = STO.coins stoData numTokens
                 mint stoValue
                 deposit w stoValue
+                numberOfCalls %= (+1)
 
     perform handle _ _ cmd = case cmd of
         Issue w   -> wrap $ delay 1 >> Trace.callEndpoint @"issue"   (handle MirrorH) CredentialOwnerReference{coTokenName=kyc, coOwner=w}
@@ -213,5 +216,5 @@ tests = testGroup "PRISM"
         )
         prismTrace
     , testProperty "QuickCheck property" $
-        withMaxSuccess 15 prop_Prism
+        withMaxSuccess 100 prop_Prism
     ]
