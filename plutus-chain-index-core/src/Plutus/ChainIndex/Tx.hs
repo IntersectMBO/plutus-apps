@@ -20,11 +20,13 @@ module Plutus.ChainIndex.Tx(
     , OutputDatum(..)
     , Value(..)
     , fromOnChainTx
+    , txOuts
     , txOutRefs
     , txOutsWithRef
     , txOutRefMap
     , txOutRefMapForAddr
     , txRedeemersWithHash
+    , validityFromChainIndex
     -- ** Lenses
     , citxTxId
     , citxInputs
@@ -55,16 +57,19 @@ import Plutus.Script.Utils.Scripts (redeemerHash)
 import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
 
+-- | Get tx outputs from tx.
+txOuts :: ChainIndexTx -> [ChainIndexTxOut]
+txOuts ChainIndexTx { _citxOutputs = ValidTx outputs }         = outputs
+txOuts ChainIndexTx { _citxOutputs = InvalidTx (Just output) } = [ output ]
+txOuts ChainIndexTx { _citxOutputs = InvalidTx Nothing }       = []
+
 -- | Get tx output references from tx.
 txOutRefs :: ChainIndexTx -> [TxOutRef]
-txOutRefs ChainIndexTx { _citxTxId, _citxOutputs = ValidTx outputs } =
-    map (\idx -> TxOutRef _citxTxId idx) [0 .. fromIntegral $ length outputs - 1]
-txOutRefs ChainIndexTx{_citxOutputs = InvalidTx} = []
+txOutRefs tx = [ TxOutRef (_citxTxId tx) (fromIntegral idx) | idx <- [0 .. length (txOuts tx) - 1] ]
 
 -- | Get tx output references and tx outputs from tx.
 txOutsWithRef :: ChainIndexTx -> [(ChainIndexTxOut, TxOutRef)]
-txOutsWithRef tx@ChainIndexTx { _citxOutputs = ValidTx outputs } = zip outputs $ txOutRefs tx
-txOutsWithRef ChainIndexTx { _citxOutputs = InvalidTx }          = []
+txOutsWithRef tx = zip (txOuts tx) (txOutRefs tx)
 
 -- | Get 'Map' of tx outputs references to tx.
 txOutRefMap :: ChainIndexTx -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx)
@@ -75,6 +80,12 @@ txOutRefMap tx =
 txOutRefMapForAddr :: Address -> ChainIndexTx -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx)
 txOutRefMapForAddr addr tx =
     Map.filter ((==) addr . citoAddress . fst) $ txOutRefMap tx
+
+validityFromChainIndex :: ChainIndexTx -> TxValidity
+validityFromChainIndex tx =
+  case _citxOutputs tx of
+    InvalidTx _ -> TxInvalid
+    ValidTx _   -> TxValid
 
 -- | Convert a 'OnChainTx' to a 'ChainIndexTx'. An invalid 'OnChainTx' will not
 -- produce any 'ChainIndexTx' outputs and the collateral inputs of the
@@ -103,7 +114,7 @@ fromOnChainTx = \case
                     ChainIndexTx
                         { _citxTxId = txId tx
                         , _citxInputs = map (fillTxInputWitnesses tx) txCollateral
-                        , _citxOutputs = InvalidTx
+                        , _citxOutputs = InvalidTx Nothing -- TODO: update when `Tx` supports collateral output
                         , _citxValidRange = txValidRange
                         , _citxData = txData
                         , _citxRedeemers = calculateRedeemerPointers tx

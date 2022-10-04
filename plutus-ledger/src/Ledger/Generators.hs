@@ -23,8 +23,6 @@ module Ledger.Generators(
     genValidTransactionSpending,
     genValidTransactionSpending',
     genInitialTransaction,
-    genValidatorContext,
-    genMintingPolicyContext,
     -- * Assertions
     assertValid,
     -- * Time
@@ -55,7 +53,6 @@ module Ledger.Generators(
     CW.knownPaymentKeys,
     knownXPrvs,
     someTokenValue,
-    genTxInfo
     ) where
 
 import Cardano.Api qualified as C
@@ -83,13 +80,12 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Ada, AssetClass, CurrencySymbol, Datum, Interval, Language (PlutusV1),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext),
-               Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx), TokenName,
-               Tx (txCollateral, txFee, txInputs, txMint, txOutputs, txValidRange), TxInInfo (txInInfoOutRef),
-               TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
-               TxInputType (TxConsumePublicKeyAddress), TxOut, TxOutRef (TxOutRef), UtxoIndex (UtxoIndex), Validator,
-               Value, Versioned, addMintingPolicy, addSignature', getValidator, pubKeyTxIn, pubKeyTxOut, scriptHash,
-               toPublicKey, txData, txOutValue, txScripts, validatorHash)
+               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
+               SomeCardanoApiTx (SomeTx), TokenName,
+               Tx (txCollateral, txFee, txInputs, txMint, txOutputs, txValidRange), TxInType (ConsumePublicKeyAddress),
+               TxInput (TxInput), TxInputType (TxConsumePublicKeyAddress), TxOut, TxOutRef (TxOutRef), Validator, Value,
+               Versioned, addMintingPolicy, addSignature', getValidator, pubKeyTxOut, scriptHash, txData, txOutValue,
+               txScripts, validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -103,7 +99,6 @@ import Ledger.Value qualified as Value
 import Numeric.Natural (Natural)
 import Plutus.Script.Utils.Scripts (Versioned (Versioned), datumHash)
 import Plutus.Script.Utils.V1.Generators as ScriptGen
-import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
 import PlutusTx.Prelude qualified as PlutusTx
@@ -466,39 +461,7 @@ splitVal mx init' = go 0 0 [] where
             else go (succ i) (v + c) (v : l)
     minAda = fromIntegral $ Ada.getLovelace $ Ledger.minAdaTxOut + Ledger.maxFee
 
-genTxInfo :: MonadGen m => Mockchain -> m TxInfo
-genTxInfo chain = do
-    tx <- genValidTransaction chain
-    let
-        idx = UtxoIndex $ mockchainUtxo chain
-        params = mockchainParams chain
-        (res, _) = undefined -- FIXME
-          -- runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkPV1TxInfo tx)) (ValidationCtx idx params)
-    either (const Gen.discard) pure res
-
-genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose
-genScriptPurposeSpending TxInfo{txInfoInputs} = Gen.element $ Contexts.Spending . txInInfoOutRef <$> txInfoInputs
-
-genScriptPurposeMinting :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose
-genScriptPurposeMinting TxInfo{txInfoMint} = Gen.element $ Contexts.Minting <$> Value.symbols txInfoMint
-
 -- TODO: add Rewarding and Certifying purposes
-
-genValidatorContext :: MonadGen m => Mockchain -> m ScriptContext
-genValidatorContext chain = do
-    txInfo <- genTxInfo chain
-    purpose <- genScriptPurposeSpending txInfo
-    pure $ ScriptContext txInfo purpose
-
-genMintingPolicyContext :: MonadGen m => Mockchain -> m ScriptContext
-genMintingPolicyContext chain = do
-    txInfo <- genTxInfo chain
-    purpose <- genScriptPurposeMinting txInfo
-    pure $ ScriptContext txInfo purpose
-
-knownPaymentPublicKeys :: [PaymentPubKey]
-knownPaymentPublicKeys =
-    PaymentPubKey . toPublicKey . unPaymentPrivateKey <$> knownPaymentPrivateKeys
 
 knownPaymentPrivateKeys :: [PaymentPrivateKey]
 knownPaymentPrivateKeys = CW.paymentPrivateKey <$> CW.knownMockWallets

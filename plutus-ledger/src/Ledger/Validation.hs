@@ -81,7 +81,7 @@ import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Text qualified as Text
@@ -327,13 +327,13 @@ fromPlutusTxSigned'
   -> Either CardanoLedgerError CardanoTx
 fromPlutusTxSigned' params utxo tx knownPaymentKeys =
   let
+    getPrivateKey = fmap P.unPaymentPrivateKey . flip Map.lookup knownPaymentKeys . P.PaymentPubKey
     getPublicKeys = Map.keys . P.txSignatures
-    privateKeys =
-        (map P.unPaymentPrivateKey . catMaybes .
-            map (flip Map.lookup knownPaymentKeys) .
-            map P.PaymentPubKey . getPublicKeys) tx
+    privateKeys = mapMaybe getPrivateKey $ getPublicKeys tx
     signTx txn = foldl' (flip addCardanoTxSignature) txn privateKeys
-    convertTx t = fmap (flip SomeTx C.BabbageEraInCardanoMode) $ fromPlutusTx params utxo (map (P.PaymentPubKeyHash . Crypto.pubKeyHash) $ getPublicKeys t) t
+    convertTx t =
+        flip SomeTx C.BabbageEraInCardanoMode
+        <$> fromPlutusTx params utxo (P.PaymentPubKeyHash . Crypto.pubKeyHash <$> getPublicKeys t) t
   in
     signTx . CardanoApiTx <$> convertTx tx
 

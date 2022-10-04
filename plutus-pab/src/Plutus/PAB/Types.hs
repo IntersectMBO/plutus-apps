@@ -20,7 +20,6 @@ import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
 import Data.Aeson (FromJSON, ToJSON, Value (..), object, parseJSON, toJSON, (.:), (.:?), (.=))
 import Data.Default (Default, def)
-import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Text (Text)

@@ -79,7 +79,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , deserialiseFromRawBytes
   , zeroExecutionUnits
   , tag
-,withIsCardanoEra) where
+  , withIsCardanoEra) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as C
@@ -221,6 +221,7 @@ withIsCardanoEra C.ShelleyEraInCardanoMode r = r
 withIsCardanoEra C.AllegraEraInCardanoMode r = r
 withIsCardanoEra C.MaryEraInCardanoMode r    = r
 withIsCardanoEra C.AlonzoEraInCardanoMode r  = r
+withIsCardanoEra C.BabbageEraInCardanoMode r = r
 
 parseByronInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
 parseByronInCardanoModeTx =

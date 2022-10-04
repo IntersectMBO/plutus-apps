@@ -232,7 +232,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
                                }
   where
     processTxOuts :: [UtxoOutput] -> IO ChainIndexTxOutputs
-    processTxOuts [] = return InvalidTx
+    processTxOuts [] = pure $ InvalidTx Nothing
     processTxOuts xs = ValidTx <$> mapM utxoOutputToTxOut xs
 
     utxoOutputToTxOut :: UtxoOutput -> IO CI.ChainIndexTxOut

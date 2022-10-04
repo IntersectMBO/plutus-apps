@@ -54,10 +54,10 @@ import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
 import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
-import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _citxOutputs, _citxTxId),
-                          ChainIndexTxOut (ChainIndexTxOut, citoAddress), ChainIndexTxOutputs (InvalidTx, ValidTx),
-                          RollbackState (Committed), TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid),
-                          _ValidTx, citxInputs, citxOutputs, fromOnChainTx, txOutRefs)
+import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
+                          ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
+                          TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), citxInputs, fromOnChainTx,
+                          txOutRefs, txOuts, validityFromChainIndex)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp (AwaitTxStatusChangeResp), matches)
 import Plutus.Contract.Effects qualified as E
@@ -344,12 +344,9 @@ updateTxOutStatus txns = do
     -- transaction output of any of the new transactions. If that is the case,
     -- call 'addResponse' to sent the response.
     let getSpentOutputs = map txInRef . view citxInputs
-        -- If the tx is invalid, there is not outputs
-        txWithTxOutStatus tx@ChainIndexTx {_citxTxId, _citxOutputs = InvalidTx} =
-          fmap (, Committed TxInvalid (Spent _citxTxId)) $ getSpentOutputs tx
-        txWithTxOutStatus tx@ChainIndexTx {_citxTxId, _citxOutputs = ValidTx {}} =
-             fmap (, Committed TxValid (Spent _citxTxId)) (getSpentOutputs tx)
-          <> fmap (, Committed TxValid Unspent) (txOutRefs tx)
+        txWithTxOutStatus tx = let validity = validityFromChainIndex tx in
+             fmap (, Committed validity (Spent (_citxTxId tx))) (getSpentOutputs tx)
+          <> fmap (, Committed validity Unspent) (txOutRefs tx)
         statusMap = Map.fromList $ foldMap txWithTxOutStatus txns
     hks <- mapMaybe (traverse (preview E._AwaitTxOutStatusChangeReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txOutRef} =
@@ -534,5 +531,5 @@ indexBlock = foldMap indexTx where
   indexTx otx =
     IndexedBlock
       { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ map txInRef $ view citxInputs otx
-      , ibUtxoProduced = Map.fromListWith (<>) $ view (citxOutputs . _ValidTx) otx >>= (\ChainIndexTxOut{citoAddress} -> [(citoAddress, otx :| [])])
+      , ibUtxoProduced = Map.fromListWith (<>) $ txOuts otx >>= (\ChainIndexTxOut{citoAddress} -> [(citoAddress, otx :| [])])
       }

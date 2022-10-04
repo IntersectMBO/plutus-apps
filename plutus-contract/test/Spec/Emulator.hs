@@ -13,7 +13,7 @@
 module Spec.Emulator(tests) where
 
 
-import Control.Lens (element, (&), (.~), (^.))
+import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
 import Control.Monad.Freer.Error qualified as E
@@ -30,8 +30,7 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Language (PlutusV1), OnChainTx (Valid), Params (Params, pNetworkId), PaymentPubKeyHash,
                ScriptError (EvaluationError), Tx (txMint, txOutputs), TxInType (ScriptAddress), TxOut (TxOut),
-               Validator, Value, Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxFee, getCardanoTxOutRefs,
-               getCardanoTxOutputs, mkValidatorScript, onCardanoTx, outputs, scriptTxIn, txOutRefs, txOutValue,
+               Validator, Value, Versioned (Versioned, unversioned), mkValidatorScript, outputs, txOutRefs, txOutValue,
                unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -168,7 +167,8 @@ txnUpdateUtxo = property $ do
                 , Chain.TxnValidate _ _
                 , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _
                 , Chain.SlotAdd _
-                ] -> "BadInputsUTxO" `Text.isInfixOf` msg
+                ] -> "ApplyTxError [UtxowFailure (UtxoFailure (FromAlonzoUtxoFail (ValueNotConserved" `Text.isInfixOf` msg
+                     || "[CollectErrors [BadTranslation (TranslationLogicMissingInput" `Text.isInfixOf` msg
             _ -> False
     checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 

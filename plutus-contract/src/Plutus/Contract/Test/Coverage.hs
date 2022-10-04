@@ -18,10 +18,6 @@ import Data.Text qualified as Text
 
 import Control.Lens
 
-import Ledger qualified
-import Plutus.V1.Ledger.Scripts qualified as PV1
-
-
 import Plutus.Trace.Emulator.Types
 import PlutusTx.Coverage
 import Wallet.Emulator.Chain
@@ -68,4 +64,3 @@ readCoverageRef (CoverageRef ioref) = readIORef ioref
 -- | Write a coverage report to name.html for the given index.
 writeCoverageReport :: String -> CoverageReport -> IO ()
 writeCoverageReport = ReportCoverage.writeCoverageReport
-

@@ -24,7 +24,6 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api.Shelley (makeSignedTransaction, protocolParamCollateralPercent)
-import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
 import Control.Monad (foldM, (<=<))
@@ -50,8 +49,8 @@ import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..), PaymentPubKey,
-               PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut (..),
-               TxOutRef, UtxoIndex (..), Value)
+               PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash, Tx (txFee, txMint), TxOut (..), TxOutRef,
+               UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPrivateKey (..))
@@ -61,9 +60,6 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
-import Ledger.Index.Internal (UtxoIndex (UtxoIndex, getIndex))
-import Ledger.Params (Params (Params, pNetworkId, pProtocolParams, pSlotConfig))
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI.Internal (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatum)
 import Ledger.Validation (fromPlutusIndex, fromPlutusTx, getRequiredSigners)
@@ -74,18 +70,17 @@ import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Wallet (finalize)
-import Plutus.V1.Ledger.Api (PubKeyHash, TxOutRef, ValidatorHash, Value)
+import Plutus.V1.Ledger.Api (ValidatorHash)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.Effects qualified as WAPI (getClientParams)
+import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Error qualified as WAPI (WalletAPIError (InsufficientFunds, PaymentPrivateKeyNotFound, ToCardanoError, ValidationError),
                                                 throwOtherError)
-import Wallet.Error (WalletAPIError)
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
-import Ledger qualified
 import Plutus.V2.Ledger.Tx qualified as PV2
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
