@@ -158,7 +158,7 @@ instance ContractModel PrismModel where
     instanceContract _ UserH{} _ = C.subscribeSTO
 
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
-    precondition s (Call _)  = (s ^. contractState . numberOfCalls < 11)
+    precondition s (Call _)  = (s ^. contractState . numberOfCalls < 11) -- We have to limit the number of calls otherwise fails with non-ada collateral error.
     precondition _ _         = True
 
     nextState cmd = do
