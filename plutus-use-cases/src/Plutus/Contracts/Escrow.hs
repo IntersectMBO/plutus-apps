@@ -152,7 +152,7 @@ PlutusTx.makeLift ''EscrowParams
 -- | The total 'Value' that must be paid into the escrow contract
 --   before it can be unlocked
 targetTotal :: EscrowParams d -> Value
-targetTotal = foldl (\vl tgt -> vl + targetValue tgt) mempty . escrowTargets
+targetTotal = Haskell.foldl (\vl tgt -> vl + targetValue tgt) mempty . escrowTargets
 
 -- | The 'Value' specified by an 'EscrowTarget'
 targetValue :: EscrowTarget d -> Value
@@ -295,7 +295,8 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     current <- currentTime
     unspentOutputs <- utxosAt addr
     let
-        valRange = Interval.to (Haskell.pred $ escrowDeadline escrow)
+        -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
+        valRange = Interval.to (Haskell.pred $ Haskell.pred $ escrowDeadline escrow)
         tx = Constraints.collectFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
                 <> Constraints.mustValidateIn valRange
@@ -334,6 +335,7 @@ refund inst escrow = do
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
+                <> Constraints.mustBeSignedBy pk
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do

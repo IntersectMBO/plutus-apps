@@ -40,3 +40,15 @@ These two steps depend on each other because the transaction fee is a
 function of the size of the transaction including its
 inputs.
 -}
+
+{- Note [Validity Interval's upper bound]
+
+During the transition from plutus validation rules to cardano-ledger validation rules
+we have found that the cardan-ledger has a problem with validity interval's upper bound.
+
+They don't convert it properly. By definition the top should be open but they convert it as
+a closed bound. Because of that we have to do double 'pred' or '-2' operation to make
+'to' function behaviour as expected.
+
+https://github.com/input-output-hk/cardano-ledger/issues/3043
+-}

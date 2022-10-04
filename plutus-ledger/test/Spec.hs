@@ -336,10 +336,10 @@ txInOrdInstanceEquivalenceTest = property $ do
     txIns <- sort <$> forAll (Gen.list (Range.singleton 10) genTxIn)
     let toPlutus = map ((`Tx.TxIn` Nothing) . CardanoAPI.fromCardanoTxIn)
     let plutusTxIns = sort $ toPlutus txIns
-    Hedgehog.assert $ (toPlutus txIns) == plutusTxIns
+    Hedgehog.assert $ toPlutus txIns == plutusTxIns
 
 genTxIn :: Hedgehog.MonadGen m => m Api.TxIn
 genTxIn = do
-    txId <- (\t -> Api.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> (Gen.utf8 (Range.singleton 5) Gen.unicode)
-    txIx <- Api.TxIx <$> (Gen.integral (Range.linear 0 maxBound))
+    txId <- (\t -> Api.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> Gen.utf8 (Range.singleton 5) Gen.unicode
+    txIx <- Api.TxIx <$> Gen.integral (Range.linear 0 maxBound)
     return $ Api.TxIn txId txIx

@@ -125,8 +125,9 @@ validate params action ScriptContext{scriptContextTxInfo=txInfo} =
 -- requirement that the transaction validates before the 'deadline'.
 lockEp :: Promise () EscrowSchema EscrowError ()
 lockEp = endpoint @"lock" $ \params -> do
-  let valRange = Interval.to (Haskell.pred $ deadline params)
-      tx = Constraints.mustPayToTheScriptWithDatumInTx params (paying params)
+  -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
+  let valRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)
+      tx = Constraints.mustPayToTheScript params (paying params)
             <> Constraints.mustValidateIn valRange
   void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
          >>= adjustUnbalancedTx >>= submitUnbalancedTx
@@ -143,7 +144,8 @@ redeemEp = endpoint @"redeem" redeem
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
           tx = Constraints.collectFromTheScript unspentOutputs Redeem
-                      <> Constraints.mustValidateIn (Interval.to (Haskell.pred $ deadline params))
+                      -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
+                      <> Constraints.mustValidateIn (Interval.to (Haskell.pred $ Haskell.pred $ deadline params))
                       -- Pay me the output of this script
                       <> Constraints.mustPayToPubKey pk value
                       -- Pay the payee their due
@@ -166,6 +168,7 @@ refundEp = endpoint @"refund" refund
 
       let tx = Constraints.collectFromTheScript unspentOutputs Refund
                   <> Constraints.mustValidateIn (Interval.from (deadline params))
+                  <> Constraints.mustBeSignedBy (payee params)
 
       if Constraints.modifiesUtxoSet tx
       then do

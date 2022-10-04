@@ -365,7 +365,7 @@ phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum submitTxFromConstraints 
 
     in checkPredicateOptions defaultCheckOptions
     "Phase-1 failure when mustPayToOtherScript in a V1 script use inline datum"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
     (void $ trace contract)
 
 
@@ -385,7 +385,7 @@ phase2ErrorWhenExpectingMoreThanValue submitTxFromConstraints lc =
 
     in checkPredicateOptions defaultCheckOptions
     "Phase-2 validation failure when when token amount sent to other script is lower than actual value"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Lb":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("Lb":_) _) -> True; _ -> False }))
     (void $ trace contract)
 
 

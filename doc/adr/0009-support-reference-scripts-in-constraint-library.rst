@@ -13,7 +13,7 @@ koslambrou <konstantinos.lambrou@iohk.io>
 Status
 ------
 
-Proposed
+Accepted
 
 Context
 -------
@@ -40,3 +40,5 @@ Similarly to :ref:`support_inline_datums_in_constraint_library`, the decision to
 
 Notes
 -----
+
+This ADR has been addressed in PR `#662 <https://github.com/input-output-hk/plutus-apps/pull/662>`_, `#666 <https://github.com/input-output-hk/plutus-apps/pull/666>`_ and `#678 <https://github.com/input-output-hk/plutus-apps/pull/678>`_

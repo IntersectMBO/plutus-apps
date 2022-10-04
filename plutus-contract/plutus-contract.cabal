@@ -129,13 +129,14 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api          >=1.35
+    , cardano-api            >=1.35
     , cardano-crypto
+    , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-wallet-core
-    , plutus-core          >=1.0.0
-    , plutus-ledger-api    >=1.0.0
-    , plutus-tx            >=1.0.0
+    , plutus-core            >=1.0.0
+    , plutus-ledger-api      >=1.0.0
+    , plutus-tx              >=1.0.0
     , quickcheck-dynamic
 
   if !(impl(ghcjs) || os(ghcjs))
@@ -247,7 +248,9 @@ test-suite plutus-contract-test
     Spec.TxConstraints.MustMint
     Spec.TxConstraints.MustPayToOtherScript
     Spec.TxConstraints.MustPayToPubKeyAddress
+    Spec.TxConstraints.MustProduceAtLeast
     Spec.TxConstraints.MustSpendAtLeast
+    Spec.TxConstraints.MustSpendPubKeyOutput
     Spec.TxConstraints.MustSpendScriptOutput
     Spec.TxConstraints.RequiredSigner
     Spec.TxConstraints.TimeValidity

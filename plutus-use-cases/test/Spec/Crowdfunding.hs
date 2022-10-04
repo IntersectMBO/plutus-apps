@@ -26,6 +26,7 @@ import Data.Default (Default (..))
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as T
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
@@ -89,7 +90,12 @@ tests = testGroup "crowdfunding"
 
     , checkPredicate "cannot collect money too late"
         (walletFundsChange w1 PlutusTx.zero
-        .&&. assertNoFailedTransactions)
+        .&&. assertFailedTransaction (\_ err ->
+            case err of
+                Ledger.CardanoLedgerValidationError msg ->
+                    "OutsideValidityIntervalUTxO" `Text.isInfixOf` msg
+                _ -> False
+            ))
         $ do
             ContractHandle{chInstanceId} <- startCampaign
             makeContribution w2 (Ada.adaValueOf 10)

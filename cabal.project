@@ -3,21 +3,23 @@ index-state: 2022-05-18T00:00:00Z
 
 packages: doc
           freer-extras
+          marconi
           playground-common
+          pab-blockfrost
           plutus-chain-index
           plutus-chain-index-core
           plutus-contract
-          plutus-example
           plutus-contract-certification
+          plutus-example
           plutus-ledger
           plutus-ledger-constraints
           plutus-pab
           plutus-pab-executables
           plutus-playground-server
           plutus-script-utils
+          plutus-streaming
           plutus-tx-constraints
           plutus-use-cases
-          plutus-streaming
           rewindable-index
           web-ghc
 

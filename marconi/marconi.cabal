@@ -1,0 +1,147 @@
+cabal-version: 3.0
+name:          marconi
+version:       0.1.0.0
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+author:        Markus Läll
+maintainer:    markus.lall@iohk.io
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
+description:
+  Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
+
+build-type:    Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  ghc-options:
+    -Wall -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wmissing-import-lists
+    -Wnoncanonical-monad-instances -Wredundant-constraints
+    -Wunused-packages
+
+library
+  import:          lang
+  hs-source-dirs:  src
+  exposed-modules:
+    Marconi.Index.Datum
+    Marconi.Index.ScriptTx
+    Marconi.Index.Utxo
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , plutus-ledger
+    , rewindable-index
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-ledger-alonzo
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , plutus-ledger-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base
+    , bytestring
+    , containers
+    , lens
+    , mwc-random
+    , serialise
+    , sqlite-simple
+
+executable marconi
+  import:         lang
+  hs-source-dirs: app
+  main-is:        Main.hs
+  other-modules:
+    Marconi.Logging
+    Marconi.Orphans
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , marconi
+    , plutus-ledger
+    , plutus-streaming
+    , rewindable-index
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
+    , plutus-ledger-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base                  >=4.9 && <5
+    , bytestring
+    , containers
+    , lens
+    , optparse-applicative
+    , prettyprinter
+    , stm
+    , streaming
+    , text
+    , time
+
+test-suite marconi-test
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:  marconi
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}
+    , plutus-core
+    , plutus-ledger-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base            >=4.9 && <5
+    , containers
+    , hedgehog
+    , tasty
+    , tasty-hedgehog

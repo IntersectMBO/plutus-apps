@@ -1,11 +1,8 @@
 {-# LANGUAGE ConstraintKinds     #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingVia         #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -13,96 +10,43 @@
 --   transactions using the index.
 module Ledger.Index(
     -- * Types for transaction validation based on UTXO index
-    ValidationMonad,
-    ValidationCtx(..),
     UtxoIndex(..),
     insert,
     insertCollateral,
     insertBlock,
     initialise,
-    Validation(..),
-    runValidation,
     lookup,
-    lkpValue,
-    lkpTxOut,
-    lkpOutputs,
     ValidationError(..),
     ValidationErrorInPhase,
     ValidationPhase(..),
-    InOutMatch(..),
     minFee,
     maxFee,
     minAdaTxOut,
-    minLovelaceTxOut,
-    mkPV1TxInfo,
-    mkPV2TxInfo,
+    maxMinAdaTxOut,
     pubKeyTxIns,
     scriptTxIns,
-    maxMinAdaTxOut,
-    -- * Actual validation
-    validateTransaction,
-    validateTransactionOffChain,
-    checkValidInputs,
     -- * Script validation events
-    ScriptType(..),
-    ScriptValidationEvent(..),
     PV1.ExBudget(..),
     PV1.ExCPU(..),
     PV1.ExMemory(..),
     PV1.SatInt,
-    ValidatorMode(..),
-    getScript
     ) where
 
 import Prelude hiding (lookup)
 
-import Cardano.Api (Lovelace (..))
-import Control.Lens (Fold, folding, toListOf, view, (&), (^.))
-import Control.Monad
-import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
-import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
-import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
-import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.Foldable (asum, fold, foldl', for_, traverse_)
+import Control.Lens (Fold, folding)
+import Control.Monad.Except (MonadError (..))
+import Data.Foldable (foldl')
 import Data.Map qualified as Map
-import Data.Text (Text)
-import GHC.Generics (Generic)
 import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
-import Ledger.Crypto
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Params (Params (pSlotConfig))
-import Ledger.Scripts (mintingPolicyHash, validatorHash)
-import Ledger.Slot qualified as Slot
-import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx
-import Ledger.Tx.CardanoAPI (fromCardanoTxOutToPV1TxInfoTxOut, fromCardanoTxOutToPV2TxInfoTxOut)
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
-import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
+import Ledger.Tx (CardanoTx (..), Tx, TxIn (TxIn, txInType), TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut,
+                  TxOutRef, updateUtxoCollateral)
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Credential (Credential (..))
-import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value qualified as V
-import Plutus.V2.Ledger.Api qualified as PV2
-import PlutusPrelude (first)
-import PlutusTx (toBuiltinData)
-import PlutusTx.AssocMap qualified as AMap
-import PlutusTx.Prelude qualified as P
-
--- | Context for validating transactions. We need access to the unspent
---   transaction outputs of the blockchain, and we can throw 'ValidationError's.
-type ValidationMonad m = (MonadReader ValidationCtx m, MonadError ValidationError m, MonadWriter [ScriptValidationEvent] m)
-
-data ValidationCtx = ValidationCtx { vctxIndex :: UtxoIndex, vctxParams :: Params }
-
--- | Create an index of all UTxOs on the chain.
-initialise :: Blockchain -> UtxoIndex
-initialise = UtxoIndex . unspentOutputs
 
 -- | Update the index for the addition of a transaction.
 insert :: CardanoTx -> UtxoIndex -> UtxoIndex
@@ -122,24 +66,6 @@ lookup i index = case Map.lookup i $ getIndex index of
     Just t  -> pure t
     Nothing -> throwError $ TxOutRefNotFound i
 
--- | A monad for running transaction validation inside, which is an instance of 'ValidationMonad'.
-newtype Validation a = Validation { _runValidation :: (ReaderT ValidationCtx (ExceptT ValidationError (Writer [ScriptValidationEvent]))) a }
-    deriving newtype (Functor, Applicative, Monad, MonadReader ValidationCtx, MonadError ValidationError, MonadWriter [ScriptValidationEvent])
-
--- | Run a 'Validation' on a 'UtxoIndex'.
-runValidation :: Validation (Maybe ValidationErrorInPhase) -> ValidationCtx -> (Maybe ValidationErrorInPhase, [ScriptValidationEvent])
-runValidation l ctx = runWriter $ fmap (either (\e -> Just (Phase1, e)) id) $ runExceptT $ runReaderT (_runValidation l) ctx
-
--- | Determine the unspent value that a ''TxOutRef' refers to.
-lkpValue :: ValidationMonad m => TxOutRef -> m V.Value
-lkpValue = fmap txOutValue . lkpTxOut
-
--- | Find an unspent transaction output by its reference. Assumes that the
---   output for this reference exists. If you want to handle the lookup error
---   you can use 'runLookup'.
-lkpTxOut :: ValidationMonad m => TxOutRef -> m TxOut
-lkpTxOut t = lookup t . vctxIndex =<< ask
-
 -- | Filter to get only the script inputs.
 scriptTxIns :: Fold [TxIn] TxIn
 scriptTxIns = (\x -> folding x) . filter $ \case
@@ -149,68 +75,6 @@ scriptTxIns = (\x -> folding x) . filter $ \case
 -- | Filter to get only the pubkey inputs.
 pubKeyTxIns :: Fold [TxIn] TxIn
 pubKeyTxIns = folding (filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
-
-
--- | Validate a transaction in a 'ValidationMonad' context.
-validateTransaction :: ValidationMonad m
-    => Slot.Slot
-    -> Tx
-    -> m (Maybe ValidationErrorInPhase)
-validateTransaction h t = do
-    -- Phase 1 validation
-    checkSlotRange h t
-    _ <- lkpOutputs $ toListOf (inputs . scriptTxInputs) t
-
-    -- see note [Minting of Ada]
-    emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
-    unless emptyUtxoSet (checkTransactionFee t)
-
-    validateTransactionOffChain t
-
-validateTransactionOffChain :: ValidationMonad m
-    => Tx
-    -> m (Maybe ValidationErrorInPhase)
-validateTransactionOffChain t = do
-    checkValuePreserved t
-    checkPositiveValues t
-    checkMinAdaInTxOutputs t
-    checkFeeIsAda t
-
-    -- see note [Minting of Ada]
-    emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
-    unless emptyUtxoSet (checkMintingAuthorised t)
-
-    checkValidInputs (toListOf (inputs . pubKeyTxInputs)) t
-    checkValidInputs (view collateralInputs) t
-
-    (do
-        -- Phase 2 validation
-        checkValidInputs (toListOf (inputs . scriptTxInputs)) t
-        unless emptyUtxoSet (checkMintingScripts t)
-
-        pure Nothing
-        ) `catchError` (\e -> pure (Just (Phase2, e)))
-
--- | Check that a transaction can be validated in the given slot.
-checkSlotRange :: ValidationMonad m => Slot.Slot -> Tx -> m ()
-checkSlotRange sl tx =
-    if Interval.member sl (txValidRange tx)
-    then pure ()
-    else throwError $ CurrentSlotOutOfRange sl
-
--- | Check if the inputs of the transaction consume outputs that exist, and
---   can be unlocked by the signatures or validator scripts of the inputs.
-checkValidInputs :: ValidationMonad m => (Tx -> [TxInput]) -> Tx -> m ()
-checkValidInputs getInputs tx = do
-    let tid = txId tx
-        sigs = tx ^. signatures
-    outs <- map (first $ fillTxInputWitnesses tx) <$> lkpOutputs (getInputs tx)
-    matches <- traverse (uncurry (matchInputOutput tid sigs)) outs
-    traverse_ (checkMatch tx) matches
-
--- | Match each input of the transaction with the output that it spends.
-lkpOutputs :: ValidationMonad m => [TxInput] -> m [(TxInput, TxOut)]
-lkpOutputs = traverse (\t -> traverse (lkpTxOut . txInputRef) (t, t))
 
 {- note [Minting of Ada]
 
@@ -222,130 +86,6 @@ Therefore 'checkMintingAuthorised' should not be applied to the first transactio
 the blockchain.
 
 -}
-
--- | Check whether each currency minted by the transaction is matched by
---   a corresponding minting policy script (in the form of a pay-to-script
---   output of the currency's address).
---
-checkMintingAuthorised :: ValidationMonad m => Tx -> m ()
-checkMintingAuthorised tx =
-    let
-        -- See note [Mint and Fee fields must have ada symbol].
-        mintedCurrencies = filter ((/=) Ada.adaSymbol) $ V.symbols (txMint tx)
-
-        mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
-
-        lockingScripts = Map.keys $ txMintingScripts tx
-
-        mintedWithoutScript = filter (\c -> c `notElem` lockingScripts) mpsScriptHashes
-    in
-        traverse_ (throwError . MintWithoutScript) mintedWithoutScript
-
-checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
-checkMintingScripts tx = do
-    forM_ (Map.assocs $ txMintingScripts tx) $ \(mph, red) -> do
-        let cs :: V.CurrencySymbol
-            cs = V.mpsSymbol mph
-
-        Versioned mp lang <- case lookupMintingPolicy (txScripts tx) mph of
-            Just vl | mintingPolicyHash vl == mph -> pure vl
-            _                                     -> throwError $ MintWithoutScript mph
-
-        ctx <-
-            if lang == PlutusV1 then do
-                txInfo <- mkPV1TxInfo tx
-                pure $ Context $ toBuiltinData $ PV1.ScriptContext { PV1.scriptContextPurpose = PV1.Minting cs, PV1.scriptContextTxInfo = txInfo }
-            else do
-                txInfo <- mkPV2TxInfo tx
-                pure $ Context $ toBuiltinData $ PV2.ScriptContext { PV2.scriptContextPurpose = PV2.Minting cs, PV2.scriptContextTxInfo = txInfo }
-
-        case runExcept $ runMintingPolicyScript ctx mp red of
-            Left e  -> do
-                tell [mpsValidationEvent ctx mp red (Left e)]
-                throwError $ ScriptFailure e
-            res -> tell [mpsValidationEvent ctx mp red res]
-
--- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
-data InOutMatch =
-    ScriptMatch
-        TxOutRef
-        (Versioned Validator)
-        Redeemer
-        Datum
-    | PubKeyMatch TxId PubKey Signature
-    deriving (Eq, Ord, Show)
-
--- | Match a transaction input with the output that it consumes, ensuring that
---   both are of the same type (pubkey or pay-to-script).
-matchInputOutput :: ValidationMonad m
-    => TxId
-    -- ^ Hash of the transaction that is being verified
-    -> Map.Map PubKey Signature
-    -- ^ Signatures provided with the transaction
-    -> TxIn
-    -- ^ Input that allegedly spends the output
-    -> TxOut
-    -- ^ The unspent transaction output we are trying to unlock
-    -> m InOutMatch
-matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
-    (Just (ScriptAddress (Left v) r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
-        unless (PV2.datumHash d == dh) $ throwError $ InvalidDatumHash d dh
-        unless (validatorHash v == vh) $ throwError $ InvalidScriptHash (unversioned v) vh
-        pure $ ScriptMatch (txInRef txin) v r d
-    (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->
-        let sigMatches = flip fmap (Map.toList mp) $ \(pk,sig) ->
-                if pubKeyHash pk == pkh
-                then Just (PubKeyMatch txid pk sig)
-                else Nothing
-        in case asum sigMatches of
-            Just m  -> pure m
-            Nothing -> throwError $ SignatureMissing pkh
-    _ -> throwError $ InOutTypeMismatch txin txo
-
--- | Check that a matching pair of transaction input and transaction output is
---   valid. If this is a pay-to-script output then the script hash needs to be
---   correct and script evaluation has to terminate successfully. If this is a
---   pay-to-pubkey output then the signature needs to match the public key that
---   locks it.
-checkMatch :: ValidationMonad m => Tx -> InOutMatch -> m ()
-checkMatch tx = \case
-    ScriptMatch txOutRef (Versioned vl PlutusV1) r d -> do
-        txInfo <- mkPV1TxInfo tx
-        let
-            ptx' = PV1.ScriptContext { PV1.scriptContextTxInfo = txInfo, PV1.scriptContextPurpose = PV1.Spending txOutRef }
-            vd = Context (PV1.toBuiltinData ptx')
-        case runExcept $ runScript vd vl d r of
-            Left e -> do
-                tell [validatorScriptValidationEvent vd vl d r (Left e)]
-                throwError $ ScriptFailure e
-            res -> tell [validatorScriptValidationEvent vd vl d r res]
-    ScriptMatch txOutRef (Versioned vl PlutusV2) r d -> do
-        txInfo <- mkPV2TxInfo tx
-        let
-            ptx' = PV2.ScriptContext { PV2.scriptContextTxInfo = txInfo, PV2.scriptContextPurpose = PV2.Spending txOutRef }
-            vd = Context (PV2.toBuiltinData ptx')
-        case runExcept $ runScript vd vl d r of
-            Left e -> do
-                tell [validatorScriptValidationEvent vd vl d r (Left e)]
-                throwError $ ScriptFailure e
-            res -> tell [validatorScriptValidationEvent vd vl d r res]
-    PubKeyMatch msg pk sig -> unless (signedBy sig pk msg) $ throwError $ InvalidSignature pk sig
-
--- | Check if the value produced by a transaction equals the value consumed by it.
-checkValuePreserved :: ValidationMonad m => Tx -> m ()
-checkValuePreserved t = do
-    inVal <- (P.+) (txMint t) <$> fmap fold (traverse (lkpValue . txInputRef) (view inputs t))
-    let outVal = txFee t P.+ foldMap txOutValue (txOutputs t)
-    if outVal == inVal
-    then pure ()
-    else throwError $ ValueNotPreserved inVal outVal
-
--- | Check if all values produced and consumed by a transaction are non-negative.
-checkPositiveValues :: ValidationMonad m => Tx -> m ()
-checkPositiveValues t =
-    if validValuesTx t
-    then pure ()
-    else throwError $ NegativeValue t
 
 {-# INLINABLE minAdaTxOut #-}
 -- An estimate of the minimum required Ada for each tx output.
@@ -373,30 +113,6 @@ we want a constant to reduce code size.
 maxMinAdaTxOut :: Ada
 maxMinAdaTxOut = Ada.lovelaceOf 18_516_834
 
--- Minimum required Lovelace for each tx output.
---
-minLovelaceTxOut :: Lovelace
-minLovelaceTxOut = Lovelace minTxOut
-
--- | Check if each transaction outputs produced a minimum lovelace output.
-checkMinAdaInTxOutputs :: ValidationMonad m => Tx -> m ()
-checkMinAdaInTxOutputs t@Tx { txOutputs } = do
-    params <- vctxParams <$> ask
-    for_ txOutputs $ \txOut -> do
-        let
-            minAdaTxOut' =
-                fromPlutusTxOut txOut & \txOut' -> evaluateMinLovelaceOutput params txOut'
-        if Ada.fromValue (txOutValue txOut) >= minAdaTxOut'
-            then pure ()
-            else throwError $ ValueContainsLessThanMinAda t txOut (Ada.toValue minAdaTxOut')
-
--- | Check if the fees are paid exclusively in Ada.
-checkFeeIsAda :: ValidationMonad m => Tx -> m ()
-checkFeeIsAda t =
-    if (Ada.toValue $ Ada.fromValue $ txFee t) == txFee t
-    then pure ()
-    else throwError $ NonAdaFees t
-
 -- | Minimum transaction fee.
 minFee :: Tx -> V.Value
 minFee = const (Ada.lovelaceValueOf 10)
@@ -405,130 +121,3 @@ minFee = const (Ada.lovelaceValueOf 10)
 -- the Cardano blockchain.
 maxFee :: Ada
 maxFee = Ada.lovelaceOf 1_000_000
-
--- | Check that transaction fee is bigger than the minimum fee.
---   Skip the check on the first transaction (no inputs).
-checkTransactionFee :: ValidationMonad m => Tx -> m ()
-checkTransactionFee tx =
-    if minFee tx `V.leq` txFee tx
-    then pure ()
-    else throwError $ TransactionFeeTooLow (txFee tx) (minFee tx)
-
--- | Create the data about the transaction which will be passed to a PV1
--- validator script.
-mkPV1TxInfo :: ValidationMonad m => Tx -> m PV1.TxInfo
-mkPV1TxInfo tx = do
-    slotCfg <- pSlotConfig . vctxParams <$> ask
-    txins <- traverse mkPV1TxInInfo $ view inputs tx
-    let plutusTxOutputs = map (fromCardanoTxOutToPV1TxInfoTxOut . getTxOut) $ txOutputs tx
-    pure $ PV1.TxInfo
-            { PV1.txInfoInputs = txins
-            -- See note [Mint and Fee fields must have ada symbol]
-            , PV1.txInfoOutputs = plutusTxOutputs
-            , PV1.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
-            , PV1.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
-            , PV1.txInfoDCert = [] -- DCerts not supported in emulator
-            , PV1.txInfoWdrl = [] -- Withdrawals not supported in emulator
-            , PV1.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
-            , PV1.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
-            , PV1.txInfoData = Map.toList (tx ^. datumWitnesses)
-            , PV1.txInfoId = txId tx
-            }
-
-
--- | Create the data about a transaction input which will be passed to a
--- PlutusV1 validator script.
-mkPV1TxInInfo :: ValidationMonad m => TxInput -> m PV1.TxInInfo
-mkPV1TxInInfo i = do
-    txOut <- fromCardanoTxOutToPV1TxInfoTxOut . getTxOut <$> lkpTxOut (txInputRef i)
-    pure $ PV1.TxInInfo{PV1.txInInfoOutRef = txInputRef i, PV1.txInInfoResolved=txOut}
-
--- | Create the data about the transaction which will be passed to a PV2
--- validator script.
-mkPV2TxInfo :: ValidationMonad m => Tx -> m PV2.TxInfo
-mkPV2TxInfo tx = do
-    slotCfg <- pSlotConfig . vctxParams <$> ask
-    txIns <- traverse mkPV2TxInInfo $ view inputs tx
-    txRefIns <- traverse mkPV2TxInInfo $ view referenceInputs tx
-    let plutusTxOutputs = map (fromCardanoTxOutToPV2TxInfoTxOut . getTxOut) $ txOutputs tx
-    pure $ PV2.TxInfo
-            { PV2.txInfoInputs = txIns
-            , PV2.txInfoReferenceInputs = txRefIns
-            -- See note [Mint and Fee fields must have ada symbol]
-            , PV2.txInfoOutputs = plutusTxOutputs
-            , PV2.txInfoMint = Ada.lovelaceValueOf 0 <> txMint tx
-            , PV2.txInfoFee = Ada.lovelaceValueOf 0 <> txFee tx
-            , PV2.txInfoDCert = [] -- DCerts not supported in emulator
-            , PV2.txInfoWdrl = AMap.empty -- Withdrawals not supported in emulator
-            , PV2.txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
-            , PV2.txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
-            , PV2.txInfoData = AMap.fromList . Map.toList $  tx ^. datumWitnesses
-            , PV2.txInfoRedeemers = AMap.fromList . Map.toList $ txRedeemers tx
-            , PV2.txInfoId = txId tx
-            }
-
--- | Create the data about a transaction input which will be passed to a
--- PlutusV2 validator script.
-mkPV2TxInInfo :: ValidationMonad m => TxInput -> m PV2.TxInInfo
-mkPV2TxInInfo TxInput{txInputRef} = do
-    txOut <- fromCardanoTxOutToPV2TxInfoTxOut . getTxOut <$> lkpTxOut txInputRef
-    pure $ PV2.TxInInfo txInputRef txOut
-
-data ScriptType = ValidatorScript Validator Datum | MintingPolicyScript MintingPolicy
-    deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-
--- | A script (MPS or validator) that was run during transaction validation
-data ScriptValidationEvent =
-    ScriptValidationEvent
-        { sveScript   :: Script -- ^ The script applied to all arguments
-        , sveResult   :: Either ScriptError (PV1.ExBudget, [Text]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
-        , sveRedeemer :: Redeemer
-        , sveType     :: ScriptType -- ^ What type of script it was
-        }
-    | ScriptValidationResultOnlyEvent
-        { sveResult   :: Either ScriptError (PV1.ExBudget, [Text])
-        }
-    deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-
-validatorScriptValidationEvent
-    :: Context
-    -> Validator
-    -> Datum
-    -> Redeemer
-    -> Either ScriptError (PV1.ExBudget, [Text])
-    -> ScriptValidationEvent
-validatorScriptValidationEvent ctx validator datum redeemer result =
-    ScriptValidationEvent
-        { sveScript = applyValidator ctx validator datum redeemer
-        , sveResult = result
-        , sveRedeemer = redeemer
-        , sveType = ValidatorScript validator datum
-        }
-
-mpsValidationEvent
-    :: Context
-    -> MintingPolicy
-    -> Redeemer
-    -> Either ScriptError (PV1.ExBudget, [Text])
-    -> ScriptValidationEvent
-mpsValidationEvent ctx mps red result =
-    ScriptValidationEvent
-        { sveScript = applyMintingPolicyScript ctx mps red
-        , sveResult = result
-        , sveRedeemer = red
-        , sveType = MintingPolicyScript mps
-        }
-
-data ValidatorMode = FullyAppliedValidators | UnappliedValidators
-    deriving (Eq, Ord, Show)
-
--- | Get the script from a @ScriptValidationEvent@ in either fully applied or unapplied form.
-getScript :: ValidatorMode -> ScriptValidationEvent -> Script
-getScript FullyAppliedValidators ScriptValidationEvent{sveScript} = sveScript
-getScript UnappliedValidators ScriptValidationEvent{sveType} =
-    case sveType of
-        ValidatorScript (Validator script) _    -> script
-        MintingPolicyScript (MintingPolicy mps) -> mps
-getScript _ ScriptValidationResultOnlyEvent{} = error "getScript: unexpected ScriptValidationResultOnlyEvent"

@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          plutus-chain-index-core
 version:       1.0.0.0
 license:       Apache-2.0
@@ -43,9 +43,6 @@ library
   exposed-modules:
     Cardano.Protocol.Socket.Client
     Cardano.Protocol.Socket.Type
-    Marconi.Index.Datum
-    Marconi.Index.TxConfirmationStatus
-    Marconi.Index.Utxo
     Plutus.ChainIndex
     Plutus.ChainIndex.Api
     Plutus.ChainIndex.ChainIndexError
@@ -86,6 +83,7 @@ library
   build-depends:
     , cardano-api                  >=1.35
     , cardano-ledger-byron
+    , cardano-ledger-core
     , io-classes
     , iohk-monitoring
     , ouroboros-consensus
@@ -121,7 +119,6 @@ library
     , lens
     , memory
     , mtl
-    , mwc-random
     , nothunks
     , openapi3
     , prettyprinter         >=1.1.0.1

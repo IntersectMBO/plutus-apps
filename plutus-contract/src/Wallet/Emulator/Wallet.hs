@@ -19,6 +19,7 @@
 {-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Remove once TotalFunds gets removed
 
 module Wallet.Emulator.Wallet where
 
@@ -48,9 +49,12 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
+import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..), PaymentPubKey,
+               PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut (..),
+               TxOutRef, UtxoIndex (..), Value)
+import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (addressCredential), PaymentPrivateKey (..), PaymentPubKey,
-                       PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Address (PaymentPrivateKey (..))
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
@@ -62,7 +66,7 @@ import Ledger.Params (Params (Params, pNetworkId, pProtocolParams, pSlotConfig))
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI.Internal (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatum)
-import Ledger.Validation (addSignature, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
+import Ledger.Validation (fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -342,7 +346,7 @@ handleBalance utx' = do
             theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
             cTx <- handleError (Right tx) $ fromPlutusTx params cUtxoIndex requiredSigners tx
-            pure $ Tx.Both tx (Tx.CardanoApiEmulatorEraTx cTx)
+            pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
         Left txBodyContent -> do
             ownAddr <- gets ownAddress
             cTx <- handleError eitherTx $ makeAutoBalancedTransaction params cUtxoIndex txBodyContent ownAddr
@@ -352,12 +356,9 @@ handleBalance utx' = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
                  $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction []) . makeTransactionBody mempty)
-                          (pure . Tx.EmulatorTx)
-                          tx
-            let sves = case ve of
-                    Ledger.ScriptFailure f -> [Ledger.ScriptValidationResultOnlyEvent (Left f)]
-                    _                      -> []
-            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve sves mempty
+                            (pure . Tx.EmulatorTx)
+                 $ tx
+            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v
@@ -373,21 +374,13 @@ handleAddSignature tx = do
     case msp of
         Nothing -> do
             PaymentPrivateKey privKey <- gets ownPaymentPrivateKey
-            pure $ addSignature' privKey tx
+            pure $ Tx.addCardanoTxSignature privKey tx
         Just (SigningProcess sp) -> do
             let ctx = case tx of
                     Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
-                    Tx.Both _ (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
                     _ -> error "handleAddSignature: Need a Cardano API Tx from the Alonzo era to get the required signers"
                 reqSigners = getRequiredSigners ctx
             sp reqSigners tx
-
-addSignature' :: Crypto.XPrv -> CardanoTx -> CardanoTx
-addSignature' privKey = Tx.cardanoTxMap (Ledger.addSignature' privKey) addSignatureCardano
-    where
-        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
-        addSignatureCardano (Tx.CardanoApiEmulatorEraTx ctx)
-            = Tx.CardanoApiEmulatorEraTx (addSignature privKey ctx)
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
@@ -645,14 +638,14 @@ signTxWithPrivateKey
 signTxWithPrivateKey (PaymentPrivateKey pk) tx pkh@(PaymentPubKeyHash pubK) = do
     let ownPaymentPubKey = Ledger.toPublicKey pk
     if Ledger.pubKeyHash ownPaymentPubKey == pubK
-    then pure (addSignature' pk tx)
+    then pure (Tx.addCardanoTxSignature pk tx)
     else throwError (WAPI.PaymentPrivateKeyNotFound pkh)
 
 -- | Sign the transaction with the given private keys,
 --   ignoring the list of public keys that the 'SigningProcess' is passed.
 signPrivateKeys :: [PaymentPrivateKey] -> SigningProcess
 signPrivateKeys signingKeys = SigningProcess $ \_ tx ->
-    pure (foldr (addSignature' . unPaymentPrivateKey) tx signingKeys)
+    pure (foldr (Tx.addCardanoTxSignature . unPaymentPrivateKey) tx signingKeys)
 
 data SigningProcessControlEffect r where
     SetSigningProcess :: Maybe SigningProcess -> SigningProcessControlEffect ()

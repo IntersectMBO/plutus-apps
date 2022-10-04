@@ -5,8 +5,8 @@ ADR 10: Rolling back on-disk data for Marconi indexers
 
 Date: 2022-08-05
 
-Authors
--------
+Author(s)
+---------
 
 Ometita Radu <radu.ometita@iohk.io>
 

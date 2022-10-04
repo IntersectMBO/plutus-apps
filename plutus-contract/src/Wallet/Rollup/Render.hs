@@ -33,14 +33,16 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, Tx (Tx), TxId, TxIn (TxIn), TxInType (..), TxOut,
-               TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txFee, txMint, txOutValue, txOutputs, txSignatures)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Ada qualified as Ada
+import Ledger.Address (Address, PaymentPubKey, PaymentPubKeyHash)
+import Ledger.Blockchain (Blockchain)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
                        Versioned (Versioned), unValidatorScript)
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
+import Ledger.Tx (TxId, TxIn (TxIn), TxInType (..), TxOut, TxOutRef (..), txOutValue)
+import Ledger.Tx qualified as Tx
+import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value)
 import Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -50,7 +52,7 @@ import Prettyprinter (Doc, Pretty, defaultLayoutOptions, fill, indent, layoutPre
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Folds (EmulatorEventFold)
 import Wallet.Emulator.Folds qualified as Folds
-import Wallet.Emulator.Types (Wallet (Wallet))
+import Wallet.Emulator.Wallet (Wallet (Wallet))
 import Wallet.Rollup (doAnnotateBlockchain)
 import Wallet.Rollup.Types (AnnotatedTx (AnnotatedTx), BeneficialOwner (OwnedByPaymentPubKey, OwnedByScript),
                             DereferencedInput (DereferencedInput, InputNotFound, originalInput, refersTo),
@@ -100,7 +102,7 @@ instance Render [[AnnotatedTx]] where
 
 instance Render AnnotatedTx where
     render AnnotatedTx { txId
-                       , tx = Tx {txOutputs, txMint, txFee, txSignatures}
+                       , tx
                        , dereferencedInputs
                        , balances
                        , valid = True
@@ -108,27 +110,26 @@ instance Render AnnotatedTx where
         vsep <$>
         sequence
             [ heading "TxId:" txId
-            , heading "Fee:" txFee
-            , heading "Mint:" txMint
-            , heading "Signatures" txSignatures
+            , heading "Fee:" (Tx.getCardanoTxFee tx)
+            , heading "Mint:" (Tx.getCardanoTxMint tx)
             , pure "Inputs:"
             , indent 2 <$> numbered "----" "Input" dereferencedInputs
             , pure line
             , pure "Outputs:"
-            , indent 2 <$> numbered "----" "Output" txOutputs
+            , indent 2 <$> numbered "----" "Output" (Tx.getCardanoTxOutputs tx)
             , pure line
             , pure "Balances Carried Forward:"
             , indented balances
             ]
     render AnnotatedTx { txId
-                       , tx = Tx { txFee }
+                       , tx
                        , valid = False
                        } =
         vsep <$>
         sequence
             [ pure "Invalid transaction"
             , heading "TxId:" txId
-            , heading "Fee:" txFee
+            , heading "Fee:" (Tx.getCardanoTxFee tx)
             ]
 
 heading :: Render a => Doc ann -> a -> ReaderT (Map PaymentPubKeyHash Wallet) (Either Text) (Doc ann)

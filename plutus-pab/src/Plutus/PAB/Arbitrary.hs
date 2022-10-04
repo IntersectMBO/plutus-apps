@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -8,6 +9,12 @@
 -- across to the test suite.
 module Plutus.PAB.Arbitrary where
 
+import Cardano.Ledger.Alonzo.Rules.Utxos qualified as C.Ledger
+import Cardano.Ledger.Alonzo.Scripts (Tag (Spend))
+import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
+import Cardano.Ledger.Alonzo.TxWitness qualified as C.Ledger
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson

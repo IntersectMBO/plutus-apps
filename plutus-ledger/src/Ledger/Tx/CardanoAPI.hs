@@ -8,6 +8,8 @@
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
 
+{-# OPTIONS_GHC -Wno-orphans        #-}
+
 {-|
 
 Interface to the transaction types from 'cardano-api'
@@ -31,6 +33,7 @@ module Ledger.Tx.CardanoAPI(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Bitraversable (bisequence)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger.Address qualified as P
@@ -149,11 +152,7 @@ toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . t
 toCardanoTxInWitness :: P.Tx -> P.TxInputType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
 toCardanoTxInWitness _ P.TxConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
 toCardanoTxInWitness _ P.TxConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
-toCardanoTxInWitness tx
-    (P.TxScriptAddress
-        (P.Redeemer redeemer)
-        valhOrRef
-        dh)
+toCardanoTxInWitness tx (P.TxScriptAddress (P.Redeemer redeemer) valhOrRef dh)
     = do
       (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (P.txData tx)
       mkWitness <- case valhOrRef of
@@ -190,8 +189,9 @@ toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
 toCardanoMintValue :: P.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue tx@P.Tx{..} =
     let indexedMps = Map.assocs txMintingScripts
-     in C.TxMintValue C.MultiAssetInBabbageEra
-        <$> toCardanoValue txMint
-        <*> (C.BuildTxWith . Map.fromList <$> traverse (\(mph, rd) ->
-          (,) <$> toCardanoPolicyId mph <*> toCardanoMintWitness rd (P.lookupMintingPolicy (P.txScripts tx) mph)) indexedMps)
-
+    in C.TxMintValue C.MultiAssetInBabbageEra
+       <$> toCardanoValue txMint
+       <*> fmap (C.BuildTxWith . Map.fromList)
+             (traverse (\(mph, rd) ->
+                bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd (P.lookupMintingPolicy (P.txScripts tx) mph)))
+                indexedMps)

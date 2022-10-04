@@ -222,7 +222,8 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
         | proposalAccepted params pkh ->
             let Payment{paymentAmount, paymentRecipient, paymentDeadline} = payment
                 constraints =
-                    Constraints.mustValidateIn (Interval.to $ paymentDeadline - 1)
+                    -- We have to subtract '2', see Note [Validity Interval's upper bound]
+                    Constraints.mustValidateIn (Interval.to $ paymentDeadline - 2)
                     <> Constraints.mustPayToPubKey paymentRecipient paymentAmount
                 newValue = currentValue - paymentAmount
             in Just ( constraints

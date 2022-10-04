@@ -5,7 +5,7 @@ import Clipboard (Action) as Clipboard
 import Data.BigInt.Argonaut (BigInt)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Lens (Fold', Iso', Lens', Prism', Traversal', anyOf, filtered, preview, prism', folded, traversed)
+import Data.Lens (Fold', Iso', Lens', Prism', Traversal', filtered, prism', traversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
@@ -16,10 +16,16 @@ import Plutus.V1.Ledger.Address (Address(..))
 import Plutus.V1.Ledger.Credential (Credential(..))
 import Ledger.Crypto (PubKey, Signature)
 import Plutus.V1.Ledger.Interval (Interval)
+<<<<<<< HEAD
 import Ledger.Slot (Slot)
 import Ledger.Tx.Internal (Tx, TxInput, TxIn, TxOut(..))
 import Plutus.V1.Ledger.Tx (TxOutRef(..), TxId)
 import Cardano.Api.TxBody as C
+=======
+import Plutus.V1.Ledger.Slot (Slot)
+import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut(..), TxOutRef)
+import Plutus.V1.Ledger.TxId (TxId)
+>>>>>>> main
 import Plutus.V1.Ledger.Value (Value)
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput, SequenceId, TxKey, _TxKey)
 
@@ -88,9 +94,6 @@ _txIdOf = _Newtype <<< prop (Proxy :: _ "txId")
 _balances :: Lens' AnnotatedTx (Map BeneficialOwner Value)
 _balances = _Newtype <<< prop (Proxy :: _ "balances")
 
-_tx :: Lens' AnnotatedTx Tx
-_tx = _Newtype <<< prop (Proxy :: _ "tx")
-
 _txFee :: Lens' Tx Value
 _txFee = _Newtype <<< prop (Proxy :: _ "txFee")
 
@@ -138,6 +141,7 @@ _findTx focussedTxId = (_AnnotatedBlocks <<< filtered isAnnotationOf)
   where
   isAnnotationOf :: AnnotatedTx -> Boolean
   isAnnotationOf (AnnotatedTx { txId }) = txId == focussedTxId
+<<<<<<< HEAD
 
 -- | Where is this output consumed?
 findConsumptionPoint :: BigInt -> TxId -> AnnotatedBlockchain -> Maybe AnnotatedTx
@@ -152,3 +156,5 @@ findConsumptionPoint outputIndex txId = preview (_AnnotatedBlocks <<< filtered i
       { txOutRefId: txId
       , txOutRefIdx: outputIndex
       }
+=======
+>>>>>>> main

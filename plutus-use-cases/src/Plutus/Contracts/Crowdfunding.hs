@@ -123,7 +123,8 @@ mkCampaign ddl collectionDdl ownerWallet =
 {-# INLINABLE collectionRange #-}
 collectionRange :: Campaign -> PV1.POSIXTimeRange
 collectionRange cmp =
-    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 1)
+    -- We have to subtract '2', see Note [Validity Interval's upper bound]
+    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 2)
 
 -- | The 'POSIXTimeRange' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
@@ -205,7 +206,8 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
-        tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
+        tx = Constraints.mustPayToTheScript contributor contribValue
+                -- We have to subtract '2', see Note [Validity Interval's upper bound]
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
@@ -244,6 +246,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
 
     let tx = Constraints.collectFromTheScript unspentOutputs Collect
+            <> Constraints.mustBeSignedBy (campaignOwner cmp)
             <> Constraints.mustValidateIn (collectionRange cmp)
 
     logInfo @Text "Collecting funds"

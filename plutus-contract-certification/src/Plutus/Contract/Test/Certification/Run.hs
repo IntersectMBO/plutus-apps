@@ -32,6 +32,7 @@ module Plutus.Contract.Test.Certification.Run
   , CertificationOptions(..)
   , CertificationEvent(..)
   , CertificationTask(..)
+  , certificationTasks
   , hasQuickCheckTests
   , defaultCertificationOptions
   , certify
@@ -44,7 +45,7 @@ import Control.Exception
 import Control.Lens
 import Control.Monad.Writer
 import Data.Aeson (FromJSON (..), ToJSON (..), encode)
-import Data.ByteString.Lazy.Char8
+import Data.ByteString.Lazy.Char8 (unpack)
 import Data.IntMap qualified as IntMap
 import Data.Maybe
 import GHC.Generics
@@ -109,8 +110,10 @@ certResJSON :: CertificationReport m -> String
 certResJSON = unpack . encode
 
 data CertificationEvent = QuickCheckTestEvent (Maybe Bool)  -- ^ Nothing if discarded, otherwise test result
+                        | QuickCheckNumTestsEvent Int
                         | StartCertificationTask CertificationTask
                         | FinishedTask Bool
+                        | CertificationDone
   deriving (Eq, Show)
 
 data CertificationTask = UnitTestsTask
@@ -121,10 +124,23 @@ data CertificationTask = UnitTestsTask
                        | CrashToleranceTask
                        | WhitelistTask
                        | DLTestsTask
-  deriving (Eq, Show, Enum, Bounded)
+  deriving (Eq, Show, Enum, Bounded, Ord)
 
 hasQuickCheckTests :: CertificationTask -> Bool
 hasQuickCheckTests t = t /= UnitTestsTask
+
+-- | The list of certification tasks that will be run for a given certification object.
+certificationTasks :: Certification m -> [CertificationTask]
+certificationTasks Certification{..} = filter run [minBound..maxBound]
+  where
+    run UnitTestsTask          = isJust certUnitTests
+    run StandardPropertyTask   = True
+    run DoubleSatisfactionTask = True
+    run NoLockedFundsTask      = isJust certNoLockedFunds
+    run NoLockedFundsLightTask = isJust certNoLockedFundsLight
+    run CrashToleranceTask     = isJust certCrashTolerance
+    run WhitelistTask          = isJust certWhitelist
+    run DLTestsTask            = not $ null certDLTests
 
 data CertificationOptions = CertificationOptions { certOptNumTests  :: Int
                                                  , certOptOutput    :: Bool
@@ -239,6 +255,7 @@ checkDLTests :: forall m. ContractModel m
             -> CertificationOptions
             -> CoverageIndex
             -> CertMonad [(String, QC.Result)]
+checkDLTests [] _ _ = pure []
 checkDLTests tests opts covIdx =
   wrapTask opts DLTestsTask (Prelude.all (QC.isSuccess . snd))
   $ sequence [(s,) <$> liftIORep (quickCheckWithCoverageAndResult
@@ -260,6 +277,10 @@ finishTaskEvent :: CertificationOptions -> Bool -> CertMonad ()
 finishTaskEvent opts res | Just ch <- certEventChannel opts = liftIO $ writeChan ch $ FinishedTask res
                          | otherwise                        = pure ()
 
+numTestsEvent :: CertificationOptions -> CertMonad ()
+numTestsEvent opts | Just ch <- certEventChannel opts = liftIO $ writeChan ch $ QuickCheckNumTestsEvent $ certOptNumTests opts
+                   | otherwise                        = pure ()
+
 certify :: forall m. ContractModel m => Certification m -> IO (CertificationReport m)
 certify = certifyWithOptions defaultCertificationOptions
 
@@ -278,7 +299,7 @@ wrapQCTask :: CertificationOptions
            -> CertificationTask
            -> CertMonad QC.Result
            -> CertMonad QC.Result
-wrapQCTask opts task = wrapTask opts task QC.isSuccess
+wrapQCTask opts task m = wrapTask opts task QC.isSuccess $ numTestsEvent opts >> m
 
 certifyWithOptions :: forall m. ContractModel m
                    => CertificationOptions
@@ -306,6 +327,9 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
   wlRes        <- checkWhitelist @m certWhitelist opts certCoverageIndex
   -- DL tests
   dlRes        <- checkDLTests @m certDLTests opts certCoverageIndex
+  case certEventChannel opts of
+    Just ch -> liftIO $ writeChan ch CertificationDone
+    Nothing -> pure ()
   -- Final results
   return $ CertificationReport
             { _certRes_standardPropertyResult       = qcRes

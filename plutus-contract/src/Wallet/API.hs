@@ -123,8 +123,10 @@ payToPaymentPublicKeyHash ::
     )
     => Params -> SlotRange -> Value -> PaymentPubKeyHash -> Eff effs CardanoTx
 payToPaymentPublicKeyHash params range v pk = do
+    pkh <- ownFirstPaymentPubKeyHash
     let constraints = Constraints.mustPayToPubKey pk v
                    <> Constraints.mustValidateIn (TimeSlot.slotRangeToPOSIXTimeRange (pSlotConfig params) range)
+                   <> Constraints.mustBeSignedBy pkh
     utx <- either (throwError . PaymentMkTxError)
                   pure
                   (Constraints.mkTx @Void mempty constraints)

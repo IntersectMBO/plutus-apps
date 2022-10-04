@@ -45,8 +45,10 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Ledger.AddressMap qualified as AM
 import Ledger.Blockchain (Block, OnChainTx (Valid))
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Slot (Slot)
-import Ledger.Tx (CardanoTx (..))
+import Ledger.Tx (Tx)
+import Ledger.Validation qualified as Validation
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexError)
 import Streaming (Stream)
@@ -141,11 +143,13 @@ data EmulatorConfig =
         , _params            :: Params -- ^ Set the protocol parameters, network ID and slot configuration for the emulator.
         } deriving (Eq, Show)
 
-type InitialChainState = Either InitialDistribution [CardanoTx]
+type InitialChainState = Either InitialDistribution [Tx]
 
 -- | The wallets' initial funds
-initialDist :: InitialChainState -> InitialDistribution
-initialDist = either id (walletFunds . map Valid) where
+initialDist :: EmulatorConfig -> InitialDistribution
+initialDist EmulatorConfig{..} = either id (walletFunds . map (Valid . signTx)) _initialChainState where
+    signTx t = Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
     walletFunds :: Block -> Map Wallet Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]
@@ -166,8 +170,11 @@ initialState EmulatorConfig{..} = let
           (error . ("Cannot build the initial state: " <>) . show)
           id
           . EM.emulatorStateInitialDist networkId . Map.mapKeys EM.mockWalletPaymentPubKeyHash)
-        EM.emulatorStatePool
+        (EM.emulatorStatePool . map signTx)
         _initialChainState
+    where
+        signTx t = Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
 
 data EmulatorErr =
     WalletErr WalletAPIError

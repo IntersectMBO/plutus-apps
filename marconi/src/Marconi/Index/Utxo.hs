@@ -38,6 +38,9 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
+-- TODO Remove the following dependencies from plutus-ledger, and
+-- then also the package dependency from this package's cabal
+-- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
 import Ledger (Address, TxId, TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
 import Ledger qualified as Ledger
 import System.Random.MWC (createSystemRandom, uniformR)
@@ -126,18 +129,18 @@ query ix addr updates = do
   storedUtxos <- SQL.query c "SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?" (Only addr)
   let memoryUtxos  = concatMap (filter (onlyAt addr) . toRows) updates
       spentOutputs = foldl' Set.union Set.empty $ map _inputs updates
-  pure . Just $ storedUtxos ++ memoryUtxos
+  buffered <- Ix.getBuffer $ ix ^. Ix.storage
+  let bufferedUtxos = concatMap (filter (onlyAt addr) . toRows) buffered
+  pure . Just $ storedUtxos ++ bufferedUtxos ++ memoryUtxos
               -- Remove utxos that have been spent (from memory db).
               & filter (\u -> not (_reference u `Set.member` spentOutputs))
               & map _reference
 
 store :: UtxoIndex -> IO ()
 store ix = do
-  events <- Ix.getEvents $ ix ^. Ix.storage
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let all'  = buffer ++ events
-      utxos = concatMap toRows all'
-      spent = concatMap (toList . _inputs) all'
+  let utxos = concatMap toRows buffer
+      spent = concatMap (toList . _inputs) buffer
       c     = ix ^. Ix.handle
 
   SQL.execute_ c "BEGIN"

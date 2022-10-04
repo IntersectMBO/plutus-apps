@@ -73,6 +73,7 @@ tests =
     --     increaseMarginTrace
 
     -- See Note [Oracle incorrect implementation]
+    -- TODO: should be uncommented after fix of Oracle
     -- , checkPredicateOptions options "can settle early"
     --     (assertAccountBalance (ftoShort testAccounts) (== Ada.lovelaceValueOf 0)
     --     .&&. assertAccountBalance (ftoLong testAccounts) (== Ada.lovelaceValueOf 6_246_000)) -- 2 * 2 * (penalty + forwardPrice)

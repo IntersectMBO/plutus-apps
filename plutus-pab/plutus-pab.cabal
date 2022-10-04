@@ -88,6 +88,7 @@ library
     Plutus.PAB.Core.ContractInstance.BlockchainEnv
     Plutus.PAB.Core.ContractInstance.RequestHandlers
     Plutus.PAB.Core.ContractInstance.STM
+    Plutus.PAB.Core.Indexer.TxConfirmationStatus
     Plutus.PAB.Db.Beam
     Plutus.PAB.Db.Beam.ContractStore
     Plutus.PAB.Db.Memory.ContractStore
@@ -126,6 +127,7 @@ library
   --------------------
   build-depends:
     , freer-extras               >=1.0.0
+    , pab-blockfrost
     , playground-common          >=1.0.0
     , plutus-chain-index         >=1.0.0
     , plutus-chain-index-core    >=1.0.0
@@ -141,7 +143,9 @@ library
   build-depends:
     , cardano-addresses
     , cardano-api                      >=1.35
+    , cardano-ledger-alonzo
     , cardano-ledger-core
+    , cardano-ledger-shelley
     , cardano-slotting
     , cardano-wallet
     , cardano-wallet-cli
@@ -177,7 +181,6 @@ library
     , either
     , exceptions
     , filepath
-    , fingertree
     , freer-simple
     , generic-arbitrary
     , http-client

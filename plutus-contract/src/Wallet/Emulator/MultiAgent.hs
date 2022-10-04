@@ -26,6 +26,7 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, handleObs
 import Control.Monad.Freer.Extras.Modify (handleZoomedState, raiseEnd, writeIntoState)
 import Control.Monad.Freer.State (State, get)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -38,8 +39,10 @@ import Cardano.Api (NetworkId)
 import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatum)
+import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
@@ -294,8 +297,7 @@ we create 10 Ada-only outputs per wallet here.
 emulatorStateInitialDist :: NetworkId -> Map PaymentPubKeyHash Value -> Either ToCardanoError EmulatorState
 emulatorStateInitialDist networkId mp = do
     outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatum) $ Map.toList mp >>= mkOutputs
-    pure $ emulatorStatePool $ pure $ EmulatorTx $
-         Tx
+    let tx = Tx
             { txInputs = mempty
             , txReferenceInputs = mempty
             , txCollateral = mempty
@@ -311,6 +313,9 @@ emulatorStateInitialDist networkId mp = do
             , txData = mempty
             , txMetadata = mempty
             }
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
+        cTx = Validation.fromPlutusTxSigned def cUtxoIndex tx CW.knownPaymentKeys
+    pure $ emulatorStatePool [cTx]
     where
         -- See [Creating wallets with multiple outputs]
         mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
