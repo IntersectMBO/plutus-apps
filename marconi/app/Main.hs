@@ -18,8 +18,8 @@ import Cardano.Api qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
-import Data.List.NonEmpty qualified as NonEmpty
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
+import Data.List.NonEmpty qualified as NonEmpty
 import Marconi.CLI (chainPointParser)
 import Marconi.Indexers (TargetAddresses, combinedIndexer)
 import Marconi.Logging (logging)
