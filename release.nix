@@ -21,6 +21,8 @@ let
   # first), but we mainly just need to get rid of some extra attributes.
   ciJobsets = stripAttrsForHydra (filterDerivations ci);
   # Don't filter anything out of required for now
-  requiredJobsets = ciJobsets;
+  # requiredJobsets = ciJobsets;
+  # Don't require darwin jobs to succeed for now, until the mac builders are fixed
+  requiredJobsets = builtins.removeAttrs ciJobsets [ "darwin" ];
 in
 traceNames "" (ciJobsets // { required = derivationAggregate "required-plutus-apps" requiredJobsets; })
