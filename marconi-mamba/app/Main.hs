@@ -54,5 +54,3 @@ main = do
   let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
 
   withChainSyncEventStream socket networkId chainPoint indexers
-
--- TODO: remove this line -- triggering a CI rerun.
