@@ -31,8 +31,8 @@ import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef), Value,
-               eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
-               txOutValue)
+               getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxTotalCollateral,
+               getCardanoTxValidityRange, txOutValue, unOnChain)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -166,8 +166,10 @@ validateBlock params slot@(Slot s) idx txns =
     in ValidatedBlock block events idx'
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
-getCollateral idx tx = fromRight (getCardanoTxFee tx) $
-    alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (getCardanoTxCollateralInputs tx)
+getCollateral idx tx = case getCardanoTxTotalCollateral tx of
+    Just v -> v
+    Nothing -> fromRight (getCardanoTxFee tx) $
+        alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (getCardanoTxCollateralInputs tx)
 
 -- | Check whether the given transaction can be validated in the given slot.
 canValidateNow :: Slot -> CardanoTx -> Bool
@@ -204,7 +206,7 @@ addBlock blk st =
   st & chainNewestFirst %~ (blk :)
      -- The block update may contain txs that are not in this client's
      -- `txPool` which will get ignored
-     & txPool %~ (\\ map (eitherTx id id) blk)
+     & txPool %~ (\\ map unOnChain blk)
 
 addTxToPool :: CardanoTx -> TxPool -> TxPool
 addTxToPool = (:)
