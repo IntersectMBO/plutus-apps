@@ -24,6 +24,7 @@ import Cardano.Api qualified as C
 -- TODO Remove the following dependencies from cardano-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Ledger (TxIn (TxIn), TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
@@ -33,7 +34,6 @@ import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import RewindableIndex.Index.VSplit qualified as Ix
 
 -- DatumIndexer

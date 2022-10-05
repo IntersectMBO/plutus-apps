@@ -1,6 +1,6 @@
-# Plutus Streaming
+# Cardano Streaming
 
-plutus-streaming is a simple library that wraps cardano-api giving a
+cardano-streaming is a simple library that wraps cardano-api giving a
 streaming interface to the chain-sync protocol. This means you can use this
 library to stream blocks from a locally running node.
 
@@ -32,11 +32,11 @@ a local node running and reachable through the provided socket.
 From Genesis
 
 ```
-$ cabal run -- plutus-streaming-example-1 --socket-path /tmp/node.socket --mainnet
+$ cabal run -- cardano-streaming-example-1 --socket-path /tmp/node.socket --mainnet
 ```
 
 Passing a starting point
 
 ```
-$ cabal run -- plutus-streaming-example-1 --socket-path /tmp/node.socket --slot-no 53427524 --block-hash 5e2bde4e504a9888a4f218dafc79a7619083f97d48684fcdba9dc78190df8f99
+$ cabal run -- cardano-streaming-example-1 --socket-path /tmp/node.socket --slot-no 53427524 --block-hash 5e2bde4e504a9888a4f218dafc79a7619083f97d48684fcdba9dc78190df8f99
 ```

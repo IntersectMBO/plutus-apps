@@ -41,9 +41,9 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Gen.Cardano.Api.Typed qualified as CGen
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
-import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Plutus.V1.Ledger.Scripts qualified as Plutus
 import PlutusTx qualified
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
@@ -370,3 +370,4 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   f ws
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
+

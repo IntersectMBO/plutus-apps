@@ -47,8 +47,9 @@ let
         ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
           packages = {
             # Things that need plutus-tx-plugin
-            pab-blockfrost.package.buildable = false;
+            cardano-streaming.package.buildable = false;
             marconi.package.buildable = false;
+            pab-blockfrost.package.buildable = false;
             playground-common.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
@@ -62,7 +63,6 @@ let
             plutus-pab-executables.package.buildable = false;
             plutus-playground-server.package.buildable = false; # Would also require libpq
             plutus-script-utils.package.buildable = false;
-            plutus-streaming.package.buildable = false;
             plutus-tx-constraints.package.buildable = false;
             plutus-tx-plugin.package.buildable = false;
             plutus-use-cases.package.buildable = false;
@@ -164,8 +164,9 @@ let
             iohk-monitoring.doHaddock = false;
 
             # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
-            pab-blockfrost.ghcOptions = [ "-Werror" ];
+            cardano-streaming.ghcOptions = [ "-Werror" ];
             marconi.ghcOptions = [ "-Werror" ];
+            pab-blockfrost.ghcOptions = [ "-Werror" ];
             playground-common.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
