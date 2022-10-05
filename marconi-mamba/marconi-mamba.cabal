@@ -58,8 +58,8 @@ executable marconi-mamba
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , marconi
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies
