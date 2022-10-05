@@ -2,10 +2,10 @@
 module Main where
 
 import Cardano.Api qualified as C
+import Cardano.Streaming (withChainSyncEventStream)
 import Marconi.CLI qualified as M
 import Marconi.Indexers qualified as I
 import Options.Applicative qualified as Opt
-import Plutus.Streaming (withChainSyncEventStream)
 
 data Args = Args
   { socket     :: FilePath
