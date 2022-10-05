@@ -7,8 +7,13 @@
 let
   inherit (pkgs) stdenv;
 
-  gitignore-nix = pkgs.callPackage sources.gitignore-nix { };
-
+  gitignore-nix =
+    if builtins ? currentSystem
+    then pkgs.callPackage sources.gitignore-nix { }
+    else {
+      gitignoreFilter = _: builtins.trace "not running gitignoreFilter in pure-eval mode" (_: _: true);
+      gitignoreSource = x: builtins.trace "not running gitignoreFilter in pure-eval mode" x;
+    };
   # { index-state, compiler-nix-name, project, projectPackages, packages, extraPackages }
   haskell = pkgs.callPackage ./haskell {
     inherit gitignore-nix sources;
