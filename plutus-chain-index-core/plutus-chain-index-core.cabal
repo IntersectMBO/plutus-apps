@@ -75,7 +75,6 @@ library
     , freer-extras         >=1.0.0
     , plutus-ledger        >=1.0.0
     , plutus-script-utils  >=1.0.0
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies

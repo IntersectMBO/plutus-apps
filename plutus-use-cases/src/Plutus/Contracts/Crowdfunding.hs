@@ -206,7 +206,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
-        tx = Constraints.mustPayToTheScript contributor contribValue
+        tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
                 -- We have to subtract '2', see Note [Validity Interval's upper bound]
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx

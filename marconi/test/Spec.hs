@@ -1,4 +1,6 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 
 import Control.Monad (replicateM)
@@ -17,13 +19,20 @@ import Gen.Cardano.Api.Typed qualified as CGen
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
 
+import Integration qualified
+
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip ]
+  [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
+  , Integration.tests
+  ]
 
+-- | Create @nScripts@ scripts, add them to a transaction body, then
+-- generate a transaction with @makeTransactionBody@ and check if the
+-- scripts put in are present in the generated transaction.
 getTxBodyScriptsRoundtrip :: Property
 getTxBodyScriptsRoundtrip = property $ do
   nScripts <- forAll $ Gen.integral (Range.linear 5 500)

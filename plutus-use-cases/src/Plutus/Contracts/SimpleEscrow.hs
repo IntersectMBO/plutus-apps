@@ -127,7 +127,7 @@ lockEp :: Promise () EscrowSchema EscrowError ()
 lockEp = endpoint @"lock" $ \params -> do
   -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
   let valRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)
-      tx = Constraints.mustPayToTheScript params (paying params)
+      tx = Constraints.mustPayToTheScriptWithDatumInTx params (paying params)
             <> Constraints.mustValidateIn valRange
   void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
          >>= adjustUnbalancedTx >>= submitUnbalancedTx
