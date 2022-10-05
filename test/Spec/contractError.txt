@@ -1,0 +1,4 @@
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
+          Contract instance started
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
+          Contract instance stopped with error: OtherContractError "something went wrong"

@@ -31,9 +31,7 @@ import Halogen.HTML (ClassName(..), HTML, IProp, br_, div, div_, h2_, hr_, p_, s
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes, colSpan, rowSpan)
 import PlutusTx.AssocMap as AssocMap
-import Ledger.Crypto (PubKey(..))
 import Plutus.V1.Ledger.Crypto (PubKeyHash(..))
-import Ledger.Extra (humaniseSlotInterval)
 import Ledger.Address (PaymentPubKeyHash(..))
 import Ledger.Tx.Internal (TxOut(..))
 import Plutus.V1.Ledger.Tx (TxId(..))

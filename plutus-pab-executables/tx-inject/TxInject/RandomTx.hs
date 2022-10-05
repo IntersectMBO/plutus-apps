@@ -26,7 +26,7 @@ import Ledger.Generators qualified as Generators
 import Ledger.Index (UtxoIndex (..))
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
+import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 import Ledger.Validation qualified as Validation
 
 -- $randomTx
@@ -86,7 +86,7 @@ generateTx gen slot (UtxoIndex utxo) = do
             inputs
         -- inputs of the transaction
         sourceTxIns = fmap ((`TxInputWitnessed` ConsumePublicKeyAddress) . fst) inputs
-    tx <- Gen.sample $
+    EmulatorTx tx <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig
     let

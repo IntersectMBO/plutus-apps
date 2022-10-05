@@ -28,10 +28,11 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Language (PlutusV1), OnChainTx (Valid), Params (Params, pNetworkId), PaymentPubKeyHash,
-               ScriptError (EvaluationError), Tx (txMint, txOutputs), TxInType (ScriptAddress), TxOut (TxOut),
-               Validator, Value, Versioned (Versioned, unversioned), mkValidatorScript, outputs, txOutRefs, txOutValue,
-               unitDatum, unitRedeemer, unspentOutputs)
+import Ledger (CardanoTx (EmulatorTx), Language (PlutusV1), OnChainTx (Valid), Params (Params, pNetworkId),
+               PaymentPubKeyHash, ScriptError (EvaluationError), Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut),
+               Validator, Value, Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxOutRefs,
+               getCardanoTxOutputs, mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer,
+               unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Generators (Mockchain (Mockchain))
@@ -126,11 +127,8 @@ pubKey3 = mockWalletPaymentPubKeyHash wallet3
 
 utxo :: Property
 utxo = property $ do
-    Mockchain txPool utxo params <- forAll Gen.genMockchain
-    let
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex utxo
-        signTx txn = Validation.fromPlutusTxSigned params cUtxoIndex txn CW.knownPaymentKeys
-    Hedgehog.assert (unspentOutputs [map (Valid . signTx) txPool] == utxo)
+    Mockchain txPool o params <- forAll Gen.genMockchain
+    Hedgehog.assert (unspentOutputs [map (Valid . Gen.signTx params o) txPool] == o)
 
 txnValid :: Property
 txnValid = property $ do
@@ -151,14 +149,13 @@ selectCoinProp = property $ do
 -- At the moment, it fails with a TranslationLogicMissingInput from (Cardano.Ledger.TxInfo.txInInfo (txInInfoV[12]))
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
-    (Mockchain m utxo params, txn) <- forAll genChainTxn
+    (Mockchain m utxos params, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex utxo
-        signedTx = Validation.fromPlutusTxSigned params cUtxoIndex txn CW.knownPaymentKeys
+        signedTx = Gen.signTx params utxos txn
 
         -- submit the same txn twice, so it should be accepted the first time
         -- and rejected the second time.
-        trace = do
+        trace =  do
             Trace.liftWallet wallet1 (submitTxn signedTx)
             Trace.liftWallet wallet1 (submitTxn signedTx)
         pred = \case
@@ -176,8 +173,7 @@ validTrace :: Property
 validTrace = property $ do
     (Mockchain m utxo params, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex utxo
-        signedTx = Validation.fromPlutusTxSigned params cUtxoIndex txn CW.knownPaymentKeys
+        signedTx = Gen.signTx params utxo txn
         trace = Trace.liftWallet wallet1 (submitTxn signedTx)
     checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
@@ -185,8 +181,7 @@ validTrace2 :: Property
 validTrace2 = property $ do
     (Mockchain m utxo params, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex utxo
-        signedTx = Validation.fromPlutusTxSigned params cUtxoIndex txn CW.knownPaymentKeys
+        signedTx = Gen.signTx params utxo txn
         trace = do
             Trace.liftWallet wallet1 (submitTxn signedTx)
             Trace.liftWallet wallet1 (submitTxn signedTx)
@@ -196,9 +191,8 @@ validTrace2 = property $ do
 invalidTrace :: Property
 invalidTrace = property $ do
     (Mockchain m utxo params, txn) <- forAll genChainTxn
-    let invalidTxn = txn { txMint = Ada.adaValueOf 1 }
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex utxo
-        signedTx = Validation.fromPlutusTxSigned params cUtxoIndex invalidTxn CW.knownPaymentKeys
+    let invalidTxn = cardanoTxMap (\tx -> tx { txMint = Ada.adaValueOf 1 }) (\_ -> error "Unexpected Cardano.Api.Tx") txn
+        signedTx = Gen.signTx params utxo invalidTxn
         options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn signedTx)
         pred = \case
@@ -215,18 +209,20 @@ invalidScript = property $ do
     (Mockchain _ _ params@Params{pNetworkId}, txn1) <- forAll genChainTxn
 
     -- modify one of the outputs to be a script output
-    index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) - 1))
+    index <- forAll $ Gen.int (Range.linear 0 ((length $ getCardanoTxOutputs txn1) - 1))
+    let emulatorTx = onCardanoTx id (\_ -> error "Unexpected Cardano.Api.Tx") txn1
     let setOutputs o = either (const Hedgehog.failure) (pure . TxOut) $
             toCardanoTxOut pNetworkId (\(PV2.OutputDatum d) -> Right $ toCardanoTxOutDatumInTx d) $ PV2.TxOut
                 (mkValidatorAddress $ unversioned failValidator)
                 (txOutValue o)
                 (PV2.OutputDatum unitDatum)
                 Nothing
-    outs <- traverse setOutputs $ txn1 ^. outputs
-    let scriptTxn = txn1
+    outs <- traverse setOutputs $ emulatorTx ^. outputs
+    let scriptTxn = EmulatorTx $
+            emulatorTx
           & outputs .~ outs
     Hedgehog.annotateShow scriptTxn
-    let outToSpend = txOutRefs scriptTxn !! index
+    let outToSpend = getCardanoTxOutRefs scriptTxn !! index
     let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
@@ -238,7 +234,10 @@ invalidScript = property $ do
     Hedgehog.annotateShow invalidTxn
 
     let cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex $ Map.fromList invalidTxnUtxo
-        signedInvalidTxn = Validation.fromPlutusTxSigned' params cUtxoIndex invalidTxn CW.knownPaymentKeys
+        signedInvalidTxn = onCardanoTx
+          (\t -> Validation.fromPlutusTxSigned' params cUtxoIndex t CW.knownPaymentKeys)
+          (const $ error "unexpected CardanoTx")
+          invalidTxn
 
     Hedgehog.annotateShow signedInvalidTxn
     Hedgehog.assert (signedInvalidTxn ==
@@ -315,7 +314,7 @@ pubKeyTransactions2 = do
     Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always (Ada.adaValueOf 20) pubKey2
     void Trace.nextSlot
 
-genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, Tx)
+genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, CardanoTx)
 
 genChainTxn = do
     m <- Gen.genMockchain

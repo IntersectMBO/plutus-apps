@@ -241,8 +241,8 @@ checkPredicateInner :: forall m.
     -> (Bool -> m ()) -- ^ assert
     -> (CoverageData -> m ())
     -> m ()
-checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action annot assert cover =
-    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action) annot assert cover
+checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action =
+    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action)
 
 checkPredicateInnerStream :: forall m.
     Monad m
@@ -265,7 +265,7 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePred
                 $ interpretM @(Writer (Doc Void)) @m (\case { Tell d -> annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
                 $ runReader dist
-                $ consumedStream
+                consumedStream
 
     unless (result == Right True) $ do
         annot "Test failed."
