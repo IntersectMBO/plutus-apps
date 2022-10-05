@@ -550,8 +550,8 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
-TxId:       8f74dd4e3b7abac2c45cc5674088d06e564fc2d48ff7fb6c822fa1c625a55e1f
-Fee:        Ada:      Lovelace:  176325
+TxId:       a67f656d33fdc4f1d818e744b343c33163d04deb2e5d08637590d03c2e79071b
+Fee:        Ada:      Lovelace:  178349
 Mint:       -
 Inputs:
   ---- Input 0 ----
@@ -572,7 +572,7 @@ Outputs:
   ---- Output 1 ----
   Destination:  PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
-    Ada:      Lovelace:  7323675
+    Ada:      Lovelace:  7321651
 
 
 Balances Carried Forward:
@@ -582,7 +582,7 @@ Balances Carried Forward:
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
-    Ada:      Lovelace:  97323675
+    Ada:      Lovelace:  97321651
 
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
@@ -621,8 +621,8 @@ Balances Carried Forward:
     Ada:      Lovelace:  2500000
 
 ==== Slot #1, Tx #1 ====
-TxId:       761a25f13ac5301de2ada0fe4a9a1670229733930949ecc28cd23a2be93022bd
-Fee:        Ada:      Lovelace:  182353
+TxId:       d1105c090a831de239c7e2be238e5839c941ca5b24f6cd2b6aa3c9e712e9f2c8
+Fee:        Ada:      Lovelace:  184377
 Mint:       -
 Inputs:
   ---- Input 0 ----
@@ -651,17 +651,17 @@ Outputs:
   ---- Output 1 ----
   Destination:  PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
-    Ada:      Lovelace:  9817647
+    Ada:      Lovelace:  9815623
 
 
 Balances Carried Forward:
   PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
-    Ada:      Lovelace:  89817647
+    Ada:      Lovelace:  89815623
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
-    Ada:      Lovelace:  97323675
+    Ada:      Lovelace:  97321651
 
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
@@ -700,8 +700,8 @@ Balances Carried Forward:
     Ada:      Lovelace:  12500000
 
 ==== Slot #1, Tx #2 ====
-TxId:       a9b4c06e62454dd37dffd753b159526298a3833608332a74b5f303bb8f273d76
-Fee:        Ada:      Lovelace:  182353
+TxId:       44ec5da42a6248423e49f52418911a38241a3dbc425e4eebfc9029655710e91d
+Fee:        Ada:      Lovelace:  184377
 Mint:       -
 Inputs:
   ---- Input 0 ----
@@ -730,21 +730,21 @@ Outputs:
   ---- Output 1 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
-    Ada:      Lovelace:  9817647
+    Ada:      Lovelace:  9815623
 
 
 Balances Carried Forward:
   PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
-    Ada:      Lovelace:  89817647
+    Ada:      Lovelace:  89815623
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
-    Ada:      Lovelace:  97323675
+    Ada:      Lovelace:  97321651
 
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
-    Ada:      Lovelace:  89817647
+    Ada:      Lovelace:  89815623
 
   PaymentPubKeyHash: 8952ed1aff55f5b7674b122804a3c0a96f4e2863... (Wallet 3a4778247ad35117d7c3150d194da389f3148f4a)
   Value:
@@ -779,8 +779,8 @@ Balances Carried Forward:
     Ada:      Lovelace:  22500000
 
 ==== Slot #2, Tx #0 ====
-TxId:       9536702bda86586c9c1f76a002e163bc3fc817de8c0bff492dc4dcb9f36905ea
-Fee:        Ada:      Lovelace:  468363
+TxId:       77275b36feb7e278b4d21350576b2ab4cff4a15f191b848ae8916e207397db77
+Fee:        Ada:      Lovelace:  470387
 Mint:       -
 Inputs:
   ---- Input 0 ----
@@ -788,7 +788,7 @@ Inputs:
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     761a25f13ac5301de2ada0fe4a9a1670229733930949ecc28cd23a2be93022bd
+    Tx:     44ec5da42a6248423e49f52418911a38241a3dbc425e4eebfc9029655710e91d
     Output #0
 
   ---- Input 1 ----
@@ -796,7 +796,7 @@ Inputs:
   Value:
     Ada:      Lovelace:  2500000
   Source:
-    Tx:     8f74dd4e3b7abac2c45cc5674088d06e564fc2d48ff7fb6c822fa1c625a55e1f
+    Tx:     a67f656d33fdc4f1d818e744b343c33163d04deb2e5d08637590d03c2e79071b
     Output #0
 
   ---- Input 2 ----
@@ -804,7 +804,7 @@ Inputs:
   Value:
     Ada:      Lovelace:  10000000
   Source:
-    Tx:     a9b4c06e62454dd37dffd753b159526298a3833608332a74b5f303bb8f273d76
+    Tx:     d1105c090a831de239c7e2be238e5839c941ca5b24f6cd2b6aa3c9e712e9f2c8
     Output #0
 
 
@@ -812,21 +812,21 @@ Outputs:
   ---- Output 0 ----
   Destination:  PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
-    Ada:      Lovelace:  22031637
+    Ada:      Lovelace:  22029613
 
 
 Balances Carried Forward:
   PaymentPubKeyHash: 2e0ad60c3207248cecd47dbde3d752e0aad141d6... (Wallet c30efb78b4e272685c1f9f0c93787fd4b6743154)
   Value:
-    Ada:      Lovelace:  89817647
+    Ada:      Lovelace:  89815623
 
   PaymentPubKeyHash: 557d23c0a533b4d295ac2dc14b783a7efc293bc2... (Wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8)
   Value:
-    Ada:      Lovelace:  97323675
+    Ada:      Lovelace:  97321651
 
   PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
   Value:
-    Ada:      Lovelace:  89817647
+    Ada:      Lovelace:  89815623
 
   PaymentPubKeyHash: 8952ed1aff55f5b7674b122804a3c0a96f4e2863... (Wallet 3a4778247ad35117d7c3150d194da389f3148f4a)
   Value:
@@ -838,7 +838,7 @@ Balances Carried Forward:
 
   PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
-    Ada:      Lovelace:  122031637
+    Ada:      Lovelace:  122029613
 
   PaymentPubKeyHash: a96a668ed7be83e332c872f51da7925b4472ca98... (Wallet bdf8dbca0cadeb365480c6ec29ec746a2b85274f)
   Value:

@@ -24,6 +24,7 @@ import Cardano.Binary qualified as C
 import Cardano.Ledger.Alonzo.Genesis ()
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
+import Control.Applicative (empty, (<|>))
 import Control.DeepSeq (NFData, rnf)
 import Control.Lens ((&), (.~), (?~))
 import Control.Lens qualified as L
@@ -228,48 +229,52 @@ instance OpenApi.ToSchema TxOut where
 
 instance Pretty TxOut where
   pretty (TxOut (C.TxOut addr v d rs)) =
-    hang 2 $ vsep
+    hang 2 $ vsep $
       ["-" <+> pretty (fromCardanoTxOutValue v) <+> "addressed to"
       , pretty (fromCardanoAddressInEra addr)
-      , "with" <+> case fromCardanoTxOutDatum d of
-          PV2.NoOutputDatum      -> "no datum"
-          PV2.OutputDatum dv     -> "inline datum" <+> viaShow dv
-          PV2.OutputDatumHash dh -> "datum hash" <+> pretty dh
-      , "and with" <+> case rs of
-          C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
-            "reference script hash" <+> viaShow (C.hashScript s)
-          C.ReferenceScriptNone -> "no reference script"
       ]
+      <> case fromCardanoTxOutDatum d of
+          PV2.NoOutputDatum      -> []
+          PV2.OutputDatum dv     -> ["with inline datum" <+> viaShow dv]
+          PV2.OutputDatumHash dh -> ["with datum hash" <+> pretty dh]
+      <> case rs of
+          C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
+            ["with reference script hash" <+> viaShow (C.hashScript s)]
+          C.ReferenceScriptNone -> []
 
 -- | A Babbage-era transaction, including witnesses for its inputs.
 data Tx = Tx {
-    txInputs          :: [TxInput],
+    txInputs           :: [TxInput],
     -- ^ The inputs to this transaction.
-    txReferenceInputs :: [TxInput],
+    txReferenceInputs  :: [TxInput],
     -- ^ The reference inputs to this transaction.
-    txCollateral      :: [TxInput],
+    txCollateralInputs :: [TxInput],
     -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
-    txOutputs         :: [TxOut],
+    txOutputs          :: [TxOut],
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
-    txMint            :: !Value,
+    txReturnCollateral :: Maybe TxOut,
+    -- ^ The output of the remaining collateral after covering fees in case validation of the transaction fails.
+    txTotalCollateral  :: Maybe Value,
+    -- ^ The total collateral to be paid in case validation of the transaction fails.
+    txMint             :: !Value,
     -- ^ The 'Value' minted by this transaction.
-    txFee             :: !Value,
+    txFee              :: !Value,
     -- ^ The fee for this transaction.
-    txValidRange      :: !SlotRange,
+    txValidRange       :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintingScripts  :: Map MintingPolicyHash Redeemer,
+    txMintingScripts   :: Map MintingPolicyHash Redeemer,
     -- ^ The scripts that must be run to check minting conditions matched with their redeemers.
-    txWithdrawals     :: [Withdrawal],
+    txWithdrawals      :: [Withdrawal],
     -- ^ Withdrawals, contains redeemers.
-    txCertificates    :: [Certificate],
+    txCertificates     :: [Certificate],
     -- ^ Certificates, contains redeemers.
-    txSignatures      :: Map PubKey Signature,
+    txSignatures       :: Map PubKey Signature,
     -- ^ Signatures of this transaction.
-    txScripts         :: Map.Map ScriptHash (Versioned Script),
+    txScripts          :: Map.Map ScriptHash (Versioned Script),
     -- ^ Scripts for all script credentials mentioned in this tx.
-    txData            :: Map DatumHash Datum,
+    txData             :: Map DatumHash Datum,
     -- ^ Datum objects recorded on this transaction.
-    txMetadata        :: Maybe BuiltinByteString
+    txMetadata         :: Maybe BuiltinByteString
     -- ^ Metadata
     } deriving stock (Show, Eq, Generic)
       deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
@@ -279,8 +284,10 @@ instance Semigroup Tx where
     tx1 <> tx2 = Tx {
         txInputs = txInputs tx1 <> txInputs tx2,
         txReferenceInputs = txReferenceInputs tx1 <> txReferenceInputs tx2,
-        txCollateral = txCollateral tx1 <> txCollateral tx2,
+        txCollateralInputs = txCollateralInputs tx1 <> txCollateralInputs tx2,
         txOutputs = txOutputs tx1 <> txOutputs tx2,
+        txReturnCollateral = txReturnCollateral tx1 <|> txReturnCollateral tx2,
+        txTotalCollateral = txTotalCollateral tx1 <> txTotalCollateral tx2,
         txMint = txMint tx1 <> txMint tx2,
         txFee = txFee tx1 <> txFee tx2,
         txValidRange = txValidRange tx1 /\ txValidRange tx2,
@@ -294,7 +301,7 @@ instance Semigroup Tx where
         }
 
 instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty mempty mempty mempty
+    mempty = Tx mempty mempty mempty mempty empty mempty mempty mempty top mempty mempty mempty mempty mempty mempty mempty
 
 instance BA.ByteArrayAccess Tx where
     length        = BA.length . Write.toStrictByteString . encode
@@ -315,14 +322,24 @@ referenceInputs = L.lens g s where
 -- | The collateral inputs of a transaction for paying fees when validating the transaction fails.
 collateralInputs :: L.Lens' Tx [TxInput]
 collateralInputs = L.lens g s where
-    g = txCollateral
-    s tx i = tx { txCollateral = i }
+    g = txCollateralInputs
+    s tx i = tx { txCollateralInputs = i }
 
 -- | The outputs of a transaction.
 outputs :: L.Lens' Tx [TxOut]
 outputs = L.lens g s where
     g = txOutputs
     s tx o = tx { txOutputs = o }
+
+returnCollateral :: L.Lens' Tx (Maybe TxOut)
+returnCollateral = L.lens g s where
+    g = txReturnCollateral
+    s tx o = tx { txReturnCollateral = o }
+
+totalCollateral :: L.Lens' Tx (Maybe Value)
+totalCollateral = L.lens g s where
+    g = txTotalCollateral
+    s tx o = tx { txTotalCollateral = o }
 
 -- | The validity range of a transaction.
 validRange :: L.Lens' Tx SlotRange

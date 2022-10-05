@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TupleSections      #-}
 
 {-|
 
@@ -41,6 +42,7 @@ import Ledger.Tx.CardanoAPI.Internal
 import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as PV1
 
+
 toCardanoTxBodyContent
     :: P.Params
     -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
@@ -50,8 +52,14 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
     -- TODO: translate all fields
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
-    txInsCollateral <- toCardanoTxInsCollateral txCollateral
+    txInsCollateral <- toCardanoTxInsCollateral txCollateralInputs
     let txOuts = P.getTxOut <$> txOutputs
+    -- Workaround for missing export https://github.com/input-output-hk/cardano-node/pull/4496
+    (returnCollateral, totalCollateral) <- case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+      Just txTotalAndReturnCollateralInBabbageEra ->
+        (maybe C.TxReturnCollateralNone (C.TxReturnCollateral txTotalAndReturnCollateralInBabbageEra . P.getTxOut) txReturnCollateral,)
+        <$> maybe (pure C.TxTotalCollateralNone) (fmap (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) . toCardanoLovelace) txTotalCollateral
+      Nothing -> pure (C.TxReturnCollateralNone, C.TxTotalCollateralNone)
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue tx
@@ -62,8 +70,8 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
         , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
         , txInsCollateral = txInsCollateral
         , txOuts = txOuts
-        , txTotalCollateral = C.TxTotalCollateralNone -- TODO Change when going to Babbage era txs
-        , txReturnCollateral = C.TxReturnCollateralNone -- TODO Change when going to Babbage era txs
+        , txTotalCollateral = totalCollateral
+        , txReturnCollateral = returnCollateral
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
