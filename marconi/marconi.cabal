@@ -54,8 +54,8 @@ library
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , plutus-ledger
-    , plutus-streaming
     , rewindable-index
 
   --------------------------
@@ -96,8 +96,8 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , marconi
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies
@@ -117,20 +117,19 @@ executable marconi
     , text
 
 test-suite marconi-test
-  import:             lang
-  ghc-options:        -Wno-unused-packages
-  type:               exitcode-stdio-1.0
-  main-is:            Spec.hs
-  hs-source-dirs:     test
-  other-modules:      Integration
-  extra-source-files: test/configuration.yaml
+  import:         lang
+  ghc-options:    -Wno-unused-packages
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+  other-modules:  Integration
 
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , marconi
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies

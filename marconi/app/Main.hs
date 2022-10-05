@@ -1,7 +1,6 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections       #-}
 module Main where
 
 import Control.Exception (catch)
@@ -23,9 +22,9 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Data.List.NonEmpty qualified as NonEmpty
 
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Marconi.Indexers (TargetAddresses, combinedIndexer)
 import Marconi.Logging (logging)
-import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
 --     against the mainnet (meant to be used for testing).

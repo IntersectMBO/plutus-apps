@@ -41,3 +41,4 @@ The general process for creating an ADR is:
    0009-support-reference-scripts-in-constraint-library
    0010-marconi-indexer-rollbacks
    0011-support-return-and-total-collateral-when-building-transactions
+   0012-commit-to-data-types-in-cardano-api
