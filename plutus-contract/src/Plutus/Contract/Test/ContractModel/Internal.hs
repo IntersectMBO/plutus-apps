@@ -993,7 +993,7 @@ toStateModelActions :: ContractModel state =>
                         Actions state -> StateModel.Actions (ModelState state)
 toStateModelActions (Actions_ rs (Smart k s)) =
   StateModel.Actions_ rs (Smart k $ map mkStep s)
-    where mkStep (ActWaitUntil v n) = v := (WaitUntil $ n + 1)
+    where mkStep (ActWaitUntil v n) = v := WaitUntil n
           mkStep act                = varOf act := ContractAction (isBind act) (actionOf act)
 
 fromStateModelActions :: StateModel.Actions (ModelState s) -> Actions s
