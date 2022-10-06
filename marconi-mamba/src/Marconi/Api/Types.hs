@@ -13,9 +13,7 @@
 -- This module provides support for writing handlers for JSON-RPC endpoints
 module Marconi.Api.Types where
 
-import Cardano.Api qualified
 import Control.Lens (makeClassy)
-import Ledger (TxOutRef)
 import Marconi.IndexersHotStore (IndexerHotStore)
 import Network.Wai.Handler.Warp (Settings)
 

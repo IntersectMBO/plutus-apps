@@ -6,8 +6,8 @@ This is an initial draft for the Marconi Mamba README file. Going forward, we wi
 ## Description
 marconi-mamba is a [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) HTTP server on top of the [marconi](../marconi/README.md)
 
-## Playing with the RPC
-There is an example client/server JSON-RPC to experiment with the marconi-mamba. Here are the steps to build and execute the examples:
+## Playing with the JSON-RPC
+There is an example client/server JSON-RPC to experiment with the JSON-RPC clien/server. Here are the steps to build and execute the examples:
 
 #### Build the project
 
@@ -29,7 +29,43 @@ $(cabal exec -- which examples-jsonrpc-server)
  $(cabal exec -- which examples-jsonrpc-client)
 ```
 
+## Experimenting with marconi-mamba
+
+Use the CLI to configure the runtime time environment. To get a list of available options:
+
+``` sh
+$(cabal exec -- which marconi-mamba) --help
+marconi-mamba - Cardano blockchain indexer
+
+Usage: marconi-mamba --socket-path FILE --utxo-db FILE [--http-port HTTP-PORT]
+                     (--mainnet | --testnet-magic NATURAL)
+                     --addresses-to-index Address
+
+Available options:
+  --socket-path FILE       Socket path to node
+  --utxo-db FILE           Path to the utxo database.
+  --http-port HTTP-PORT    JSON-RPC http port number, default is port 3000.
+  --mainnet                Use the mainnet magic id.
+  --testnet-magic NATURAL  Specify a testnet magic id.
+  --addresses-to-index Address
+                           White space separated list of addresses to index. i.e
+                           "address-1 address-2 address-3 ..."
+  -h,--help                Show this help text
+```
+
+
+Here is a sample invocation :
+
+``` sh
+$(cabal exec -- which marconi-mamba)
+    --socket "$CARDANO_NODE_SOCKET_PATH" \
+    --testnet-magic 2 \
+    --db "$CONFIG_DIR/.dbMarconi/utxo.sqlite3" \
+    --addresses-to-index  ``"bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"
+```
+
 #### Test with the rest-client
+
 To test with the [rest-client](https://github.com/pashky/restclient.el)
 - execute the JSON-RPC server example as outlined above
 - execute the invidual tests in [test-with-rest-client.http](./examples/test-with-rest-client.http)

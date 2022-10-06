@@ -6,34 +6,34 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 module Marconi.Api.HttpServer(
-    bootstrap -- ^ starts the http server
+    bootstrap
     ) where
 
 import Control.Lens ((^.))
-import Control.Monad.IO.Class
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
-import Ledger (TxId (TxId), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
-import Ledger.Tx.CardanoAPI (ToCardanoError (..), fromCardanoAddress)
+import Ledger.Tx (TxOutRef)
+import Ledger.Tx.CardanoAPI (ToCardanoError (..))
 import Marconi.Api.Routes (API)
 import Marconi.Api.Types (HasJsonRpcEnv (..), JsonRpcEnv)
-import Marconi.IndexersHotStore
+import Marconi.IndexersHotStore (IndexerHotStore, findByAddress)
 import Marconi.JsonRpc.Types (JsonRpcErr (..), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
 
+-- | bootstraps the he http server
 bootstrap :: JsonRpcEnv -> IO ()
 bootstrap env = runSettings
     (env ^. httpSettings)
     (serve (Proxy @API) (server (env ^. addressTxOutRefCache) ) )
 
 server :: IndexerHotStore -> Server API
-server store =  ( add  :<|> echo :<|> (findTxOutRef store) :<|> printMessage) :<|> (getTime :<|> printMessage)
+server store =  ( add  :<|> echo :<|> findTxOutRef store :<|> printMessage) :<|> (getTime :<|> printMessage)
 
 add :: (Int, Int) -> Handler (Either (JsonRpcErr String) Int)
 add  = pure . Right . uncurry (+)

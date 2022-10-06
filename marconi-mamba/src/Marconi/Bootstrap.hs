@@ -7,13 +7,9 @@ module Marconi.Bootstrap (
    , jsonRpcEnv
    ) where
 
-import Cardano.Api qualified
-import Data.List.NonEmpty (fromList)
-import Data.Proxy (Proxy (Proxy))
-import Data.Text (pack)
 import Marconi.Api.HttpServer (bootstrap)
 import Marconi.Api.Types (JsonRpcEnv (JsonRpcEnv), RpcPortNumber)
-import Marconi.IndexersHotStore (TargetAddresses, bootstrapHotStore, targetAddressParser)
+import Marconi.IndexersHotStore (bootstrapHotStore)
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache

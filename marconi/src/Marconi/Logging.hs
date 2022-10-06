@@ -12,13 +12,14 @@ import Control.Monad (when)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Text (Text)
 import Data.Time (NominalDiffTime, UTCTime, defaultTimeLocale, diffUTCTime, formatTime, getCurrentTime)
-import Marconi.Orphans ()
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 import Streaming (Of, Stream, effect)
 import Streaming.Prelude qualified as S
 import Text.Printf (printf)
+
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Marconi.Orphans ()
 
 data SyncStats = SyncStats
   { -- | Number of applied blocks since last message

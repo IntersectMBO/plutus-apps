@@ -5,12 +5,12 @@ module Orphans where
 
 import Cardano.Api (BlockHeader (BlockHeader), BlockNo, ChainPoint (ChainPoint, ChainPointAtGenesis),
                     HasTypeProxy (proxyToAsType), Hash, SerialiseAsRawBytes (deserialiseFromRawBytes), ToJSON)
+import Cardano.Streaming (ChainSyncEvent)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as C8
 import Data.Proxy (Proxy (Proxy))
 import Data.String (IsString (fromString))
 import GHC.Generics (Generic)
-import Plutus.Streaming (ChainSyncEvent)
 
 -- https://github.com/input-output-hk/cardano-node/pull/3608
 instance IsString (Hash BlockHeader) where

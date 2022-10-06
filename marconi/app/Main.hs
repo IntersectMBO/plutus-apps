@@ -1,30 +1,26 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections       #-}
+
 module Main where
 
 import Control.Exception (catch)
-import Data.ByteString.Char8 qualified as C8
-import Data.Proxy (Proxy (Proxy))
 import Data.String (IsString)
-import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
-                            metavar, option, readerError, strOption, (<**>), (<|>))
+import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, metavar,
+                            option, strOption, (<**>), (<|>))
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
-import Cardano.Api (BlockHeader, ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), deserialiseFromRawBytesHex, proxyToAsType)
+import Cardano.Api (ChainPoint, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic))
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
-
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Control.Applicative (optional)
+import Marconi.CLI (chainPointParser)
 import Marconi.Indexers (combinedIndexer)
 import Marconi.IndexersHotStore (TargetAddresses, targetAddressParser)
 import Marconi.Logging (logging)
-import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-
 
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -91,19 +87,6 @@ networkIdParser =
               <> metavar "NATURAL"
               <> help "Specify a testnet magic id."
           )
-
-chainPointParser :: Parser ChainPoint
-chainPointParser =
-  pure ChainPointAtGenesis
-    <|> ( ChainPoint
-            <$> option (SlotNo <$> auto) (long "slot-no" <> metavar "SLOT-NO")
-            <*> option
-              (maybeReader maybeParseHashBlockHeader <|> readerError "Malformed block hash")
-              (long "block-hash" <> metavar "BLOCK-HASH")
-        )
-  where
-    maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
-    maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
 
 main :: IO ()
 main = do

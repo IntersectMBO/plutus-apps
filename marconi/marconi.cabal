@@ -43,6 +43,7 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
+    Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
@@ -55,8 +56,8 @@ library
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , plutus-ledger
-    , plutus-streaming
     , rewindable-index
 
   --------------------------
@@ -80,6 +81,7 @@ library
     , containers
     , lens
     , mwc-random
+    , optparse-applicative
     , prettyprinter
     , serialise
     , sqlite-simple
@@ -87,7 +89,6 @@ library
     , streaming
     , text
     , time
-    , unordered-containers
 
 executable marconi
   import:         lang
@@ -98,8 +99,8 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , marconi
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies
@@ -113,12 +114,12 @@ executable marconi
   ------------------------
   build-depends:
     , base                  >=4.9 && <5
-    , bytestring
     , optparse-applicative
     , prettyprinter
 
 test-suite marconi-test
   import:         lang
+  ghc-options:    -Wno-unused-packages
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
@@ -128,9 +129,8 @@ test-suite marconi-test
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , marconi
-    , plutus-streaming
-    , plutus-tx-plugin
 
   --------------------------
   -- Other IOG dependencies
@@ -142,6 +142,7 @@ test-suite marconi-test
     , ouroboros-network
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
@@ -160,3 +161,4 @@ test-suite marconi-test
     , streaming
     , tasty
     , tasty-hedgehog
+    , temporary

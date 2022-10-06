@@ -10,9 +10,12 @@ module Marconi.IndexersHotStore(
     , findByAddress
     , bootstrapHotStore
     , IndexerHotStore
-    , TargetAddresses (..)
     , targetAddressParser
+    , TargetAddresses
+    , keys
     , isInTargetTxOut
+    , findAll
+    ,isTargetTxOut
     ) where
 
 import Cardano.Api qualified as CApi
@@ -55,7 +58,7 @@ put hotStore ( Utxo.UtxoRow address txOutRef)  =
 bootstrapHotStore :: IO(HotStore k v)
 bootstrapHotStore = newTVarIO m >>= pure . HotStore
     where
-        m = KeyValues  Map.empty -- $ Map.fromList [(x, Set.empty) | x <- (toList . nub )ks]
+        m = KeyValues  Map.empty
 
 -- | update hotstore
 -- TODO consider using unordered containers as there is no requirements for the values to be sorted
@@ -66,7 +69,7 @@ update :: (Ord k, Ord v)
     -> IO ()
 update hotStore k v =
     let
-        insertValues  = KeyValues . ( Map.adjust (Set.insert v) k ) . unKeyValues
+        insertValues  = KeyValues .  Map.adjust (Set.insert v) k  . unKeyValues
     in
          (atomically . modifyTVar (unHot hotStore)) insertValues
 
@@ -77,7 +80,7 @@ keys hotStore = pure . Map.keysSet . unKeyValues =<< (readTVarIO . unHot) hotSto
 findKey :: Ord k => HotStore k v -> k -> IO (Set v)
 findKey hotStore k =  do
     m <- readTVarIO . unHot $ hotStore
-    case (Map.lookup k . unKeyValues $ m)  of
+    case Map.lookup k . unKeyValues $ m  of
         Just vs -> pure vs
         _       -> pure Set.empty
 
@@ -115,15 +118,11 @@ findByAddress hotStore addressText =
             Right address -> findByCardanoAddress hotStore address
             Left _        -> pure . Left $ Tag (unpack  addressText) DeserialisationError
 
-
 findAll :: HotStore k v -> IO [(k,Set v)]
 findAll hotStore =
      (readTVarIO . unHot $ hotStore) >>= (pure . Map.toList . unKeyValues)
 
 type CardanoAddress = CApi.Address CApi.ShelleyAddr
-
--- | Typre represents map of cardano addresses to Ledger TxOutRef
-type IndexerStoreMap = (Map(CardanoAddress) TxOutRef)
 
 -- | Typre represents non empty list of Bech32 compatable addresses"
 type TargetAddresses = NonEmpty CardanoAddress

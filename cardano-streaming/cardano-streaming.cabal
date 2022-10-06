@@ -1,5 +1,5 @@
 cabal-version: 2.4
-name:          plutus-streaming
+name:          cardano-streaming
 version:       0.1.0.0
 author:        Andrea Bedini
 maintainer:    andrea.bedini@iohk.io
@@ -29,7 +29,7 @@ common lang
 library
   import:          lang
   hs-source-dirs:  src
-  exposed-modules: Plutus.Streaming
+  exposed-modules: Cardano.Streaming
 
   --------------------------
   -- Other IOG dependencies
@@ -46,7 +46,7 @@ library
     , base       >=4.9 && <5
     , streaming
 
-executable plutus-streaming-example-1
+executable cardano-streaming-example-1
   import:         lang
   hs-source-dirs: examples
   main-is:        Example1.hs
@@ -57,7 +57,7 @@ executable plutus-streaming-example-1
   --------------------
   -- Local components
   --------------------
-  build-depends:  plutus-streaming
+  build-depends:  cardano-streaming
 
   --------------------------
   -- Other IOG dependencies
@@ -76,7 +76,7 @@ executable plutus-streaming-example-1
     , streaming
     , text
 
-executable plutus-streaming-example-2
+executable cardano-streaming-example-2
   import:         lang
   hs-source-dirs: examples
   main-is:        Example2.hs
@@ -88,9 +88,8 @@ executable plutus-streaming-example-2
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , plutus-ledger
-    , plutus-script-utils
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies
@@ -108,7 +107,7 @@ executable plutus-streaming-example-2
     , optparse-applicative
     , streaming
 
-executable plutus-streaming-example-3
+executable cardano-streaming-example-3
   import:         lang
   hs-source-dirs: examples
   main-is:        Example3.hs
@@ -120,8 +119,8 @@ executable plutus-streaming-example-3
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , plutus-chain-index-core
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies

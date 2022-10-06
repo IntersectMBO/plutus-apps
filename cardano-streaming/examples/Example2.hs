@@ -3,13 +3,13 @@
 module Main where
 
 import Cardano.Api qualified
+import Cardano.Streaming (withChainSyncEventStream)
 import Common (Options (Options, optionsChainPoint, optionsNetworkId, optionsSocketPath), parseOptions, printJson,
                workaround)
 import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
 import Ledger.Tx.CardanoAPI qualified
 import Orphans qualified ()
-import Plutus.Streaming (withChainSyncEventStream)
 import Streaming.Prelude qualified as S
 
 --

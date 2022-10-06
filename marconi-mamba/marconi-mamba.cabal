@@ -56,13 +56,6 @@ library
     , marconi
     , plutus-ledger
 
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
-    , cardano-api
-    , iohk-monitoring
-
   ------------------------
   -- Non-IOG dependencies
   ------------------------
@@ -84,19 +77,6 @@ library json-rpc
     Marconi.JsonRpc.Types
     Marconi.Server.Types
 
-  --------------------
-  -- Local components
-  --------------------
-  build-depends:
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
-
-  ------------------------
-  -- Non-IOG dependencies
-  ------------------------
   build-depends:
     , aeson
     , base                 >=4.9 && <5
@@ -116,15 +96,15 @@ executable marconi-mamba
   -- Local components
   --------------------
   build-depends:
-    , json-rpc
     , marconi
     , marconi-mamba
-    , plutus-streaming
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api
+  build-depends:
+    , cardano-api
+    , cardano-streaming
 
   ------------------------
   -- Non-IOG dependencies
@@ -143,22 +123,11 @@ executable examples-json-rpc-server
   -- Local components
   --------------------
   build-depends:
-    , json-rpc
     , marconi
     , marconi-mamba
 
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:  cardano-api
-
-  ------------------------
-  -- Non-IOG dependencies
-  ------------------------
   build-depends:
-    , base        >=4.9 && <5
-    , containers
-    , stm
+    , base  >=4.9 && <5
     , warp
 
 executable examples-json-rpc-client
@@ -169,9 +138,7 @@ executable examples-json-rpc-client
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , json-rpc
-    , marconi-mamba
+  build-depends:  json-rpc
 
   --------------------------
   -- Other IOG dependencies

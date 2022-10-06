@@ -2,22 +2,19 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 
-
 -- | A sample servant json-rpc client
 
 module Main where
 
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
-import Data.Proxy (Proxy (..))
-import Ledger (TxOutRef)
+import Data.Proxy (Proxy (Proxy))
+import Ledger.Tx (TxOutRef)
 import Marconi.Client.Types (JsonRpcResponse)
 import Marconi.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
 import Network.HTTP.Client (defaultManagerSettings, newManager)
-import Servant.API (Get, NoContent, PlainText, Post, ReqBody, (:<|>) (..), (:>))
+import Servant.API (Get, NoContent, PlainText, Post, ReqBody, (:<|>) ((:<|>)), (:>))
 import Servant.Client (ClientM, client, mkClientEnv, parseBaseUrl, runClientM)
-
-
 
 -- | start json-rpc client
 -- Note, we use default port, 3000,  [defaultSettings](https://hackage.haskell.org/package/warp-3.3.23/docs/Network-Wai-Handler-Warp.html#v:defaultSettings)
@@ -29,7 +26,7 @@ main = do
     void . flip runClientM env $ do
         void . jsonRpcPrint $ "Starting RPC calls"
         liftIO . print =<< add (2, 10)
-        liftIO . print =<< findTxOutRef ("0654321")
+        liftIO . print =<< findTxOutRef "0654321"
 
         void . printMessage $ "Starting REST calls"
         liftIO . print =<< getTime

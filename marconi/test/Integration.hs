@@ -12,7 +12,7 @@ import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
 import Control.Concurrent.STM qualified as IO
 import Control.Exception (catch)
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
@@ -23,7 +23,10 @@ import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
 import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
+import System.Environment qualified as IO
 import System.FilePath ((</>))
+import System.IO.Temp qualified as IO
+import System.Info qualified as IO
 
 import Hedgehog (MonadTest, Property, assert, (===))
 import Hedgehog qualified as H
@@ -38,9 +41,9 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Gen.Cardano.Api.Typed qualified as CGen
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
-import Plutus.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Plutus.V1.Ledger.Scripts qualified as Plutus
 import PlutusTx qualified
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
@@ -73,22 +76,10 @@ tests = testGroup "Integration"
       the indexer to see if it was indexed properly
 -}
 testIndex :: Property
-testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
+testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBasePath' -> do
 
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
-
-  -- Start testnet
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
-    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
-      (tempAbsBasePath' <> "/")
-      Nothing
-  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
-        && tempAbsPath == (tempBaseAbsPath <> "/")
-  TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
-  let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
-  socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
-  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
+  (socketPathAbs, networkId, tempAbsPath) <- startTestnet base tempAbsBasePath'
 
   -- Create a channel that is passed into the indexer, such that it
   -- can write index updates to it and we can await for them (also
@@ -307,17 +298,31 @@ testIndex = H.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbs
     let
       queryLoop n = do
         H.threadDelay 250_000 -- wait 250ms before querying
-        liftIO $ putStrLn $ "query poll #" <> show (n :: Int)
         txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
         case txCbors of
           result : _ -> pure result
           _          -> queryLoop (n + 1)
-    ScriptTx.TxCbor txCbor <- queryLoop 0
+    ScriptTx.TxCbor txCbor <- queryLoop (0 :: Integer)
     H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
 
   tx2 === queriedTx2
 
 -- * Helpers
+
+startTestnet :: FilePath -> FilePath -> H.Integration (String, C.NetworkId, FilePath)
+startTestnet base tempAbsBasePath' = do
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@TC.Conf { TC.tempBaseAbsPath, TC.tempAbsPath } <- HE.noteShowM $
+    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
+      (tempAbsBasePath' <> "/")
+      Nothing
+  assert $ tempAbsPath == (tempAbsBasePath' <> "/")
+        && tempAbsPath == (tempBaseAbsPath <> "/")
+  TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
+  let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
+  socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
+  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
+  pure (socketPathAbs, networkId, tempAbsPath)
 
 deriving instance Real C.Lovelace
 deriving instance Integral C.Lovelace
@@ -350,3 +355,19 @@ submitTx localNodeConnectInfo tx = do
 headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
 headM (a:_) = return a
 headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
+
+workspace :: (MonadTest m, MonadIO m, GHC.HasCallStack) => FilePath -> (FilePath -> m ()) -> m ()
+workspace prefixPath f = GHC.withFrozenCallStack $ do
+  systemTemp <- case IO.os of
+    "darwin" -> pure "/tmp"
+    _        -> H.evalIO IO.getCanonicalTemporaryDirectory
+  maybeKeepWorkspace <- H.evalIO $ IO.lookupEnv "KEEP_WORKSPACE"
+  let systemPrefixPath = systemTemp <> "/" <> prefixPath
+  H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
+  ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
+  H.annotate $ "Workspace: " <> ws
+  -- liftIO $ IO.writeFile (ws <> "/module") callerModuleName
+  f ws
+  when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
+    H.evalIO $ IO.removeDirectoryRecursive ws
+
