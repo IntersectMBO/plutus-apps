@@ -50,6 +50,7 @@ let
             cardano-streaming.package.buildable = false;
             marconi.package.buildable = false;
             pab-blockfrost.package.buildable = false;
+            marconi-mamba.package.buildable = false;
             playground-common.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
@@ -126,6 +127,9 @@ let
               export CARDANO_NODE_SRC=${src}
             ";
 
+            marconi-mamba.doHaddock = deferPluginErrors;
+            marconi-mamba.flags.defer-plugin-errors = deferPluginErrors;
+
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
 
@@ -167,6 +171,7 @@ let
             cardano-streaming.ghcOptions = [ "-Werror" ];
             marconi.ghcOptions = [ "-Werror" ];
             pab-blockfrost.ghcOptions = [ "-Werror" ];
+            marconi-mamba.ghcOptions = [ "-Werror" ];
             playground-common.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
