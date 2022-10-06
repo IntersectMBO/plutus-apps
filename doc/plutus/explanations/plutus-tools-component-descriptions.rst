@@ -19,13 +19,15 @@ For each tool or logical component shown below, we have indicated its specific l
 
     Illustration of the Plutus Tools Ecosystem showing logical components and some indication of their dependencies and relationships. (`image source <https://www.plantuml.com/plantuml/uml/tLRDRYCt3BxxATXScW2nS-cffqsyQJT0iWqI1q5F0Jr3nq8qqa3a-0T5txsIHhRbHdRhGoy5vY3-y1C_YfJc2miwwHez-46PIdSrmLoavP-lhXmkH-zAvjsqOtALDK96HfLjhbgD9iGCMMgjfbVZduQFGVNoS7_L80ivhteRswQr9iIq0Vz7w8mFRhm2P4umirhRfJBle9KXG5F3dbavzYiB7HDeMw7MQu-npVBp1eFxwzz_UvcylTvDlhtTt_vw-_th-SLW84eqmLTgjLttwDPg7dYivpKBDM-tApclqDLex7TRqoMS9Mbel7ZcvQVEC22CUpK4zGYUnJfYcFhSFXYiWLhnHwI1WHW3jgrM5OgoXWCHhLZ8X5MCgUQe3D22Z31mLyq16PwirZFhbdwdooXCiVe84aVa9-AkeL-SRKPddjfd0cFhQ5iMzgblSWu6s5a2gxk-aWmvtSkjfAb-9tS9jdDsQftbeI5PMjTpR7Kd7PUJU4MjIVmEhpUtgNpnI3UvBACT0ZKoTSxandQcHhS-x-4drkf0uZ5A44MWodBqFhk0FmRWIHb1PSYbeEVAgLPUHEMXlHA2DdB_Xln1MeDMK-Vt2wfWKxBUg61c7Sn9jw53mm0mB9qIWeJ84P4zCHH0H_5SANZMOCqmdgwdLaZmFXPsbril7yXgD2g3Z0F-dQbfjGEAEeZA0sZNkvQC_5JmJGHddOOQ1M7cR9EVLzwkaQtYd6pKKapGOINmO0tMVq-wmN21A9_2Gx_whnBq7m9Ng76g2PQuFdO6NilYKFMZqbjItm-hdUr0hfEvOgXwO0Q4B68unL2QwyUxlc8LccsznC8x6N8ej6qKMA1MTQBTcIeiuiGNmwUTqdxXq30cr-aQMcSNgWwrmdZLW9tbAOtWLMaTO6fg7LKe_TdDS65Ty4tqPPLJBrTliYfMJbR_lweL-MzwFRQwvxJV-t2-aGELYqETdbyqyMe9IQH9pf-E4Tn9IfEuC6gWZ92ROKKvKdIqircgL8ikKiF23lj3tSErZeJgK20qG4sdKJos_n3Qpm3f9eVpn-kRY-CbkqrOdwksiHpi6zg8ksg4vCn2EMl2onxufsHJ1RARuNXQpu923rZDlIrFBUeX6S9n7iZkFYxtsscktkT3JGlIqDYQT7uyvOFe-p-U2Erl7M8Rr8gRupmcn07-8UoNyqXwY8OJdveNfZ4oPQ-frq1G0QsmQJNnYOYFE0rWrpTmdX3pU_-cxwQBqq6VLUgXXBwLJuJofNT20QKqBUGfez1HJ0_wHBhqHtBeHwrZubrWUY__hVl-ZqLXrw9_uH7C3GUY9gjJ8_9_bUFkfTlrCqQAEXvK9bZSiN0v5K7BiSKRvFJuV79FYC-ciyob69P6SEz_lLpNu7SgSZw76KhHEutQF-_nv-0BcRfhz5y0>`_)
 
-1. Marconi
-~~~~~~~~~~~~~
 .. Note that the table structures on this page are made of extra long line widths
    in order to be able to include links for the Location cell. The long line widths
    are needed to not break the table structure. They may look messed up in the code editor
    unless you have your window sized wide enough. May be awkward in the editor view but good 
    to have these as links. 
+
+1. Marconi
+~~~~~~~~~~~~~
+
 +-----------+--------------------------------------------------------------------------------------------+
 | Marconi                                                                                                |
 +===========+============================================================================================+
@@ -95,7 +97,7 @@ The component is highly dependent on the Contract API (Contract monad).
 
 5. Plutus contract model testing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. Note extra wide table structure to accommodate long link without breaking table. Use extra wide editor window size. 
+
 +--------------+-----------------------------------------------------------------------------------------------------------------------------------------------------+
 | Plutus contract model testing                                                                                                                                      |
 +==============+=====================================================================================================================================================+
@@ -113,7 +115,7 @@ Once you have defined a suitable model, then QuickCheck can generate and run man
 
 6. Plutus contract state machine
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. Note extra wide table structure to accommodate long link without breaking table. Use extra wide editor window size. 
+
 +--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 | Plutus contract state machine                                                                                                                                |
 +==============+===============================================================================================================================================+
@@ -153,7 +155,7 @@ The main design goal is to keep the size of the indexed information proportional
 
 9. Plutus ledger constraints
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. Note extra wide table structure to accommodate long link without breaking table. Use extra wide editor window size. 
+
 +--------------+-------------------------------------------------------------------------------------------------------------------------------+
 | Plutus ledger constraints                                                                                                                    |
 +==============+===============================================================================================================================+
