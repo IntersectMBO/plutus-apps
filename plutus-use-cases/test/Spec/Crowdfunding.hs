@@ -157,7 +157,7 @@ tests = testGroup "crowdfunding"
         "test/Spec/contractError.txt"
         (pure $ renderWalletLog (void $ Trace.activateContractWallet w1 con))
 
-    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Crowdfunding
+    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 100 prop_Crowdfunding
 
     ]
 
@@ -285,4 +285,8 @@ contributorWallets :: [Wallet]
 contributorWallets = [w2, w3, w4, w5, w6, w7, w8, w9, w10]
 
 prop_Crowdfunding :: Actions CrowdfundingModel -> Property
-prop_Crowdfunding = propRunActions_
+prop_Crowdfunding actions = propRunActionsWithOptions
+    (defaultCheckOptionsContractModel & increaseTransactionLimits)
+    defaultCoverageOptions
+    (\ _ -> pure True)
+    actions
