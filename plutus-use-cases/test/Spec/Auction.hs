@@ -363,8 +363,10 @@ tests =
             .&&. walletFundsChange w2 (inv (Ada.toValue trace2WinningBid) <> theToken)
             .&&. walletFundsChange w3 mempty)
             auctionTrace2
-        , testProperty "QuickCheck property" $
+        , testProperty "QuickCheck property FinishAuction" $
             withMaxSuccess 100 prop_FinishAuction
+        , testProperty "QuickCheck property Auction" $
+            withMaxSuccess 100 prop_Auction
         , testProperty "NLFP fails" $
             expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
