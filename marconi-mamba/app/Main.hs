@@ -8,7 +8,7 @@ import Marconi.Indexers qualified as I
 import Options.Applicative qualified as Opt
 
 data Args = Args
-  { socket     :: FilePath
+  { socketPath :: FilePath
   , dbPath     :: FilePath
   , networkId  :: C.NetworkId
   , chainPoint :: C.ChainPoint
@@ -16,7 +16,7 @@ data Args = Args
 
 args :: Opt.Parser Args
 args = Args
-  <$> Opt.strOption (Opt.long "socket" <> Opt.metavar "FILE" <> Opt.help "Socket path to node")
+  <$> Opt.strOption (Opt.long "socket-path" <> Opt.metavar "FILE" <> Opt.help "Socket path to node")
   <*> Opt.strOption (Opt.long "db" <> Opt.metavar "FILE" <> Opt.help "Path to the utxo database.")
   <*> pNetworkId
   <*> M.chainPointParser
@@ -50,7 +50,7 @@ opts = Opt.info (args Opt.<**> Opt.helper)
 
 main :: IO ()
 main = do
-  Args {socket, dbPath, networkId, chainPoint} <- Opt.execParser opts
+  Args {socketPath, dbPath, networkId, chainPoint} <- Opt.execParser opts
   let indexers = I.combineIndexers [(I.utxoWorker Nothing, dbPath)]
 
-  withChainSyncEventStream socket networkId chainPoint indexers
+  withChainSyncEventStream socketPath networkId chainPoint indexers
