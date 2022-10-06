@@ -1,9 +1,11 @@
 -- Bump this if you need newer packages.
 index-state: 2022-02-22T20:47:03Z
 
-packages: doc
+packages: cardano-streaming
+          doc
           freer-extras
           marconi
+          marconi-mamba
           playground-common
           pab-blockfrost
           plutus-chain-index
@@ -17,7 +19,6 @@ packages: doc
           plutus-pab-executables
           plutus-playground-server
           plutus-script-utils
-          plutus-streaming
           plutus-tx-constraints
           plutus-use-cases
           rewindable-index

@@ -1,13 +1,13 @@
 module Main where
 
 import Cardano.Api qualified
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward), withChainSyncEventStream)
 import Common (Options (Options, optionsChainPoint, optionsNetworkId, optionsSocketPath), parseOptions)
 import Plutus.ChainIndex (TxUtxoBalance)
 import Plutus.ChainIndex.Compatibility qualified as CI
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.UtxoState (UtxoIndex, UtxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), withChainSyncEventStream)
 import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
 

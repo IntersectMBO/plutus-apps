@@ -96,8 +96,8 @@ getTxBodyScripts body = let
 getTxScripts :: forall era . C.Tx era -> [ScriptAddress]
 getTxScripts (C.Tx txBody _ws) = getTxBodyScripts txBody
 
-open :: FilePath -> Depth -> IO ScriptTxIndex
-open dbPath (Depth k) = do
+open :: (ScriptTxIndex -> ScriptTxUpdate -> IO [()]) -> FilePath -> Depth -> IO ScriptTxIndex
+open onInsert dbPath (Depth k) = do
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL)"
@@ -105,9 +105,6 @@ open dbPath (Depth k) = do
   pure ix
 
   where
-    onInsert :: ScriptTxIndex -> ScriptTxUpdate -> IO [()]
-    onInsert _ix _update = pure []
-
     store :: ScriptTxIndex -> IO ()
     store ix = do
       buffered <- Ix.getBuffer $ ix ^. Ix.storage
@@ -116,27 +113,29 @@ open dbPath (Depth k) = do
             (txCbor', scriptAddrs) <- txScriptAddrs
             scriptAddr <- scriptAddrs
             pure $ ScriptTxRow scriptAddr txCbor'
+      SQL.execute_ (ix ^. Ix.handle) "BEGIN"
       forM_ rows $
         SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor) VALUES (?, ?)"
+      SQL.execute_ (ix ^. Ix.handle) "COMMIT"
 
-    query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
-    query ix scriptAddress' memory = let
-        filterByScriptAddress :: [ScriptTxUpdate] -> [TxCbor]
-        filterByScriptAddress updates' = do
-          ScriptTxUpdate update _slotNo <- updates'
-          map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) update
-      in do
-      persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
-        "SELECT txCbor FROM utxos WHERE scriptAddress = ?" (SQL.Only scriptAddress')
+query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
+query ix scriptAddress' memory = let
+    filterByScriptAddress :: [ScriptTxUpdate] -> [TxCbor]
+    filterByScriptAddress updates' = do
+      ScriptTxUpdate update _slotNo <- updates'
+      map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) update
+  in do
+  persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
+    "SELECT txCbor FROM script_transactions WHERE scriptAddress = ?" (SQL.Only scriptAddress')
 
-      buffered <- Ix.getBuffer $ ix ^. Ix.storage
-      let
-        both :: [TxCbor]
-        both = filterByScriptAddress memory
-          <> filterByScriptAddress buffered
-          <> map (\(SQL.Only txCbor') -> txCbor') persisted
+  buffered <- Ix.getBuffer $ ix ^. Ix.storage
+  let
+    both :: [TxCbor]
+    both = filterByScriptAddress memory
+      <> filterByScriptAddress buffered
+      <> map (\(SQL.Only txCbor') -> txCbor') persisted
 
-      return both
+  return both
 
 -- * Copy-paste
 --

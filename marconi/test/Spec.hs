@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections  #-}
 
 module Main (main) where
 
@@ -25,13 +24,20 @@ import Plutus.V1.Ledger.Api qualified as Plutus
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
 
+import Integration qualified
+
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [ testProperty "prop_script_hashes_in_tx_match" getTxBodyScriptsRoundtrip ]
+  [ testProperty "prop_script_hash_after_makeTransactionBody_match" getTxBodyScriptsRoundtrip
+  , Integration.tests
+  ]
 
+-- | Create @nScripts@ scripts, add them to a transaction body, then
+-- generate a transaction with @makeTransactionBody@ and check if the
+-- scripts put in are present in the generated transaction.
 getTxBodyScriptsRoundtrip :: Property
 getTxBodyScriptsRoundtrip = property $ do
   nScripts <- forAll $ Gen.integral (Range.linear 5 500)
