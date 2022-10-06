@@ -23,12 +23,10 @@ module Plutus.Contract.Wallet(
     , ExportTxInput(..)
     , ExportTxRedeemer(..)
     , export
-    , finalize
     ) where
 
 import Cardano.Api qualified as C
 import Control.Applicative ((<|>))
-import Control.Lens ((&), (.~))
 import Control.Monad ((>=>))
 import Control.Monad.Error.Lens (throwing)
 import Control.Monad.Freer (Eff, Member)
@@ -50,10 +48,8 @@ import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
-import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx, unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex, unBalancedTxValidityTimeRange),
-                                    mkTx, unBalancedTxTx)
-import Ledger.Constraints.OffChain qualified as U
-import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
+import Ledger.Constraints.OffChain (UnbalancedTx (unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex), mkTx,
+                                    unBalancedTxTx)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Ledger.Value (currencyMPSHash)
@@ -258,29 +254,18 @@ export
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
 export params utx =
-    let utxFinal = finalize (P.pSlotConfig params) utx
-        requiredSigners = Set.toList (unBalancedTxRequiredSignatories utxFinal)
+    let requiredSigners = Set.toList (unBalancedTxRequiredSignatories utx)
         fromCardanoTx ctx = do
-            utxo <- fromPlutusIndex $ P.UtxoIndex (unBalancedTxUtxoIndex utxFinal)
+            utxo <- fromPlutusIndex $ P.UtxoIndex (unBalancedTxUtxoIndex utx)
             makeTransactionBody params utxo ctx
      in ExportTx
         <$> fmap (C.makeSignedTransaction [])
                  (either
                      fromCardanoTx
                      (first Right . CardanoAPI.toCardanoTxBody params requiredSigners)
-                     (unBalancedTxTx utxFinal))
-        <*> first Right (mkInputs (P.pNetworkId params) (unBalancedTxUtxoIndex utxFinal))
+                     (unBalancedTxTx utx))
+        <*> first Right (mkInputs (P.pNetworkId params) (unBalancedTxUtxoIndex utx))
         <*> either (const $ Right []) (Right . mkRedeemers) (unBalancedTxTx utx)
-
--- | when we use UnbalancedEmulatorTx, finalize computes the final validityRange and set it into the Tx.
--- In the case of a UnbalancedCardanoTx, there's nothing to do here as the validityRange of the Tx is set when we process the
--- constraints.
-finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
-finalize slotConfig utx@UnbalancedEmulatorTx{unBalancedTxValidityTimeRange} =
-    utx & U.tx
-    . P.validRange
-    .~ posixTimeRangeToContainedSlotRange slotConfig unBalancedTxValidityTimeRange
-finalize _ utx@UnbalancedCardanoTx{} = utx
 
 mkInputs :: C.NetworkId -> Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList

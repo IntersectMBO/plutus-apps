@@ -34,14 +34,12 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                     fee: Value (Map [])
                     mps:
                     signatures:
-                    validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
+                    validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                     data:
                       ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                       , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )}
                 Requires signatures:
                 Utxo index:
-                Validity range:
-                  (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W[2]: Finished balancing:
                 Tx a461d756dcb403971b1cad49aa06db9ded2ae9913c3a4f4ab9693814ed8f5f42:
                   {inputs:
@@ -93,14 +91,12 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                     fee: Value (Map [])
                     mps:
                     signatures:
-                    validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
+                    validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                     data:
                       ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
                       , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )}
                 Requires signatures:
                 Utxo index:
-                Validity range:
-                  (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W[3]: Finished balancing:
                 Tx 4f3549b97ce27589661068a58674751f01484a0035f20c7704728dc591fc7a54:
                   {inputs:
@@ -148,14 +144,12 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                     fee: Value (Map [])
                     mps:
                     signatures:
-                    validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
+                    validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                     data:
                       ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
                       , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )}
                 Requires signatures:
                 Utxo index:
-                Validity range:
-                  (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W[4]: Finished balancing:
                 Tx 1392dd20a08de6c8f41ed6a1418bd6092c75f95ecbf5e3507e2039b601fc00ba:
                   {inputs:
@@ -208,7 +202,7 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                      fee: Value (Map [])
                      mps:
                      signatures:
-                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
+                     validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
                      data:
                        ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
                        , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
@@ -235,8 +229,6 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                        ScriptCredential: 8ff252c8c5423de7925e0c556871c90ed904ec3beb3dab519e9bfd9f (no staking credential)
                        with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                        and with no reference script )
-                 Validity range:
-                   [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W[1]: Finished balancing:
                  Tx 0ef047e168d9ca4da973ed6010146ebc2bf02498a8e51f3058c958f8b1367ec3:
                    {inputs:

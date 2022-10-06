@@ -43,7 +43,6 @@ module Ledger.Tx.Constraints.OffChain(
     , txOuts
     , P.requiredSignatories
     , P.utxoIndex
-    , P.validityTimeRange
     , emptyUnbalancedTx
     , P.adjustUnbalancedTx
     , MkTxError(..)
