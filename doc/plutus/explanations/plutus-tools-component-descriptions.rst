@@ -60,8 +60,7 @@ The primary examples are:
 For each Plutus application use case, we provide test scenarios (or test cases) with and without the :hsmod:`Plutus.Contract.Test.ContractModel`.
 
 The examples are for testing and educational purposes. 
-While they work in the `plutus-contract emulator`, they are not guaranteed to work on the actual Cardano network. 
-The main reason is that the size of the produced Plutus scripts are too big to fit in a transaction given current protocol parameters. 
+While they work in the `plutus-contract emulator`, they are not guaranteed to work on the actual Cardano network, primarily because the size of the produced Plutus scripts are too big to fit in a transaction given current protocol parameters. 
 
 3. PAB (Plutus application backend)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -182,7 +181,7 @@ For example:
 
 `Plutus-tx-constraints <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-tx-constraints>`_ contains a constraints-based API that can be used to generate on-chain validation functions and to build transactions by providing a list of constraints. 
 It is intended to support all the functionality from `Plutus ledger constraints <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-ledger-constraints>`_. 
-The main design is to be able to use the same constraints on-chain and off-chain in a Plutus application. 
+The main design goal is to be able to use the same constraints on-chain and off-chain in a Plutus application. 
 The off-chain part generates transactions based on types in `cardano-api <https://input-output-hk.github.io/cardano-node/cardano-api/lib/Cardano-Api.html>`_. 
 
 For example:
