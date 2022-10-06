@@ -131,7 +131,7 @@ However, we do not recommend using it in production as the scripts are too big t
 +--------------+-----------------------------------------------------------------------------------------------------------+
 | Contract API                                                                                                             |
 +==============+===========================================================================================================+
-| Location     | `plutus-apps/plutus-contract <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-contract>`_ |
+| Location     | plutus-apps/plutus-contract                                                                               |
 +--------------+-----------------------------------------------------------------------------------------------------------+
 
 `Contract API <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-contract>`_ is a logical component within the Plutus Contract package, providing an effect system for describing smart contracts that interact with wallets, DApps, a chain indexer and the blockchain. 
