@@ -5,9 +5,7 @@ module Main (main) where
 
 import Control.Monad (replicateM)
 import Data.Coerce (coerce)
-import Data.Map (Map)
 import Data.Set qualified as S
-import Numeric.Natural (Natural)
 
 import Hedgehog (Gen, Property, assert, forAll, property)
 import Hedgehog.Gen qualified as Gen
@@ -18,7 +16,6 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 import Gen.Cardano.Api.Typed qualified as CGen
-import PlutusCore qualified as Plutus
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
 
@@ -73,7 +70,7 @@ genTxBodyContentWithTxInsCollateral
   -> Gen (C.TxBodyContent C.BuildTx era)
 genTxBodyContentWithTxInsCollateral era txIns txInsCollateral = do
   txbody <- CGen.genTxBodyContent era
-  txProtocolParams <- C.BuildTxWith . Just <$> genProtocolParameters
+  txProtocolParams <- C.BuildTxWith . Just <$> CGen.genProtocolParameters
   pure $ txbody
     { C.txIns
     , C.txInsCollateral
@@ -98,71 +95,7 @@ genWitnessAndHashInEra era = do
       pure $ C.SimpleScriptWitness scriptLanguageInEra version (Shelley.SScript simpleScript)
   pure (witness, C.hashScript script)
 
--- * Copy-paste
-
--- | 'genProtocolParameters' is a fork from 'Gen.Cardano.Api.Typed.genProtocolParameters'
--- that always generate a rational for the decentralisation param, so that we can handle scripts
-
-genProtocolParameters :: Gen Shelley.ProtocolParameters
-genProtocolParameters =
-  Shelley.ProtocolParameters
-    <$> ((,) <$> genNat <*> genNat)
-    <*> (Just <$> CGen.genRational) -- protocolParamDecentralization
-    <*> CGen.genMaybePraosNonce
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> Gen.maybe CGen.genLovelace
-    <*> CGen.genLovelace
-    <*> CGen.genLovelace
-    <*> CGen.genLovelace
-    <*> genEpochNo
-    <*> genNat
-    <*> CGen.genRational
-    <*> CGen.genRational
-    <*> CGen.genRational
-    <*> (Just <$> CGen.genLovelace)
-    <*> genCostModels
-    <*> (Just <$> genExecutionUnitPrices)
-    <*> (Just <$> genExecutionUnits)
-    <*> (Just <$> genExecutionUnits)
-    <*> (Just <$> genNat)
-    <*> (Just <$> genNat)
-    <*> (Just <$> genNat)
-    <*> (Just <$> CGen.genLovelace)
-
+-- | TODO Copy-paste from cardano-node: cardano-api/gen/Gen/Cardano/Api/Typed.hs
 genExecutionUnits :: Gen C.ExecutionUnits
 genExecutionUnits = C.ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
                                    <*> Gen.integral (Range.constant 0 1000)
-
-panic :: String -> a
-panic = error
-
-genNat :: Gen Natural
-genNat = Gen.integral (Range.linear 0 10)
-
-genExecutionUnitPrices :: Gen C.ExecutionUnitPrices
-genExecutionUnitPrices = C.ExecutionUnitPrices <$> CGen.genRational <*> CGen.genRational
-
-genEpochNo :: Gen C.EpochNo
-genEpochNo = C.EpochNo <$> Gen.word64 (Range.linear 0 10)
-
-genCostModels :: Gen (Map C.AnyPlutusScriptVersion C.CostModel)
-genCostModels =
-    Gen.map (Range.linear 0 (length plutusScriptVersions))
-            ((,) <$> Gen.element plutusScriptVersions
-                 <*> genCostModel)
-  where
-    plutusScriptVersions :: [C.AnyPlutusScriptVersion]
-    plutusScriptVersions = [minBound..maxBound]
-
-genCostModel :: Gen C.CostModel
-genCostModel = case Plutus.defaultCostModelParams of
-  Nothing -> panic "Plutus defaultCostModelParams is broken."
-  Just dcm ->
-      C.CostModel
-    -- TODO This needs to be the cost model struct for whichever
-    -- Plutus version we're using, once we support multiple Plutus versions.
-    <$> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
