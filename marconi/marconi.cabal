@@ -1,19 +1,20 @@
-cabal-version: 3.0
-name:          marconi
-version:       0.1.0.0
-license:       Apache-2.0
+cabal-version:      3.0
+name:               marconi
+version:            0.1.0.0
+license:            Apache-2.0
 license-files:
   LICENSE
   NOTICE
 
-author:        Markus Läll
-maintainer:    markus.lall@iohk.io
-homepage:      https://github.com/input-output-hk/plutus-apps#readme
-bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
+author:             Markus Läll
+maintainer:         markus.lall@iohk.io
+homepage:           https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:        https://github.com/input-output-hk/plutus-apps/issues
 description:
   Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 
-build-type:    Simple
+build-type:         Simple
+extra-source-files: test/configuration.yaml
 
 source-repository head
   type:     git
@@ -117,13 +118,12 @@ executable marconi
     , text
 
 test-suite marconi-test
-  import:             lang
-  ghc-options:        -Wno-unused-packages
-  type:               exitcode-stdio-1.0
-  main-is:            Spec.hs
-  hs-source-dirs:     test
-  other-modules:      Integration
-  extra-source-files: test/configuration.yaml
+  import:         lang
+  ghc-options:    -Wno-unused-packages
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+  other-modules:  Integration
 
   --------------------
   -- Local components
