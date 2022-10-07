@@ -80,7 +80,6 @@ library
     , ouroboros-network
     , plutus-ledger-api
     , plutus-tx
-    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
@@ -89,11 +88,8 @@ library
     , aeson
     , bytestring
     , containers
-    , http-media
     , serialise
-    , servant
     , strict-containers
-    , text
     , transformers
     , transformers-except
 
