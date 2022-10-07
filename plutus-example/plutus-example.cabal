@@ -80,6 +80,7 @@ library
     , ouroboros-network
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
