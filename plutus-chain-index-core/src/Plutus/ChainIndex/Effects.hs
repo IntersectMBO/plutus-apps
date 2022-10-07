@@ -79,7 +79,7 @@ data ChainIndexQueryEffect r where
     UnspentTxOutSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [(TxOutRef, ChainIndexTxOut)])
 
     -- | get the datums located at addresses with the given credential.
-    DatumsAtAddress :: Credential -> ChainIndexQueryEffect [Datum]
+    DatumsAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [Datum])
 
     -- | Unspent outputs containing a specific currency ('AssetClass').
     --

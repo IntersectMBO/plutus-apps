@@ -42,7 +42,7 @@ import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, al
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
-                            update, (&&.), (<-.), (<.), (/=.), (==.), (>.))
+                            update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
@@ -65,6 +65,7 @@ import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..),
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V2.Ledger.Api (Credential (..))
+import PlutusTx.Builtins.Internal (emptyByteString)
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 
@@ -151,13 +152,13 @@ queryOne ::
     -> Eff effs (Maybe o)
 queryOne = fmap (fmap fromDbValue) . selectOne
 
+
 queryList ::
     ( Member BeamEffect effs
     , HasDbType o
     ) => SqlSelect Sqlite (DbType o)
     -> Eff effs [o]
 queryList = fmap (fmap fromDbValue) . selectList
-
 
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
@@ -589,17 +590,17 @@ insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRo
 
 fromTx :: ChainIndexTx -> Db InsertRows
 fromTx tx = mempty
-    { datumRows = fromMap citxData
+    { datumRows = InsertRows . fmap toDbValue $ (Map.toList $ updateMapWithInlineDatum (_citxData tx) (txOuts tx))
     , scriptRows = fromMap citxScripts
     , redeemerRows = fromPairs (Map.toList . txRedeemersWithHash)
     , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
-    , addressRows = fromPairs (fmap credential . txOutsWithRef)
+    , addressRows = InsertRows . fmap toDbValue . (fmap credential . txOutsWithRef) $ tx
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
     }
     where
-        credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef)
-        credential (ChainIndexTxOut{citoAddress=Address{addressCredential}}, ref) =
-          (addressCredential, ref)
+        credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
+        credential (ChainIndexTxOut{citoAddress=Address{addressCredential},citoDatum}, ref) =
+          (addressCredential, ref, getHashFromDatum citoDatum)
         assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
         assetClasses (ChainIndexTxOut{citoValue}, ref) =
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))
@@ -616,6 +617,18 @@ fromTx tx = mempty
             => (ChainIndexTx -> [(k, v)])
             -> InsertRows (TableEntity t)
         fromPairs l = InsertRows . fmap toDbValue . l $ tx
+
+        updateMapWithInlineDatum :: Map.Map DatumHash Datum -> [ChainIndex.ChainIndexTxOut] -> Map.Map DatumHash Datum
+        updateMapWithInlineDatum witness [] = witness
+        updateMapWithInlineDatum witness ((ChainIndexTxOut{citoDatum=OutputDatum d}) : tl) =
+          updateMapWithInlineDatum (Map.insert (datumHash d) d witness) tl
+        updateMapWithInlineDatum witness (_ : tl) = updateMapWithInlineDatum witness tl
+
+        getHashFromDatum :: OutputDatum -> Maybe DatumHash
+        getHashFromDatum NoOutputDatum        = Nothing
+        getHashFromDatum (OutputDatumHash dh) = Just dh
+        getHashFromDatum (OutputDatum d)      = Just (datumHash d)
+        -- note that the datum hash for inline datum is implicitly added in datumRows
 
 
 diagnostics ::
