@@ -750,7 +750,12 @@ mustSpendScriptOutputWithReference txOutref red refTxOutref =
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that there's at least one input
 -- that matches the requirements.
-mustSpendScriptOutputWithMatchingDatumAndValue :: forall i o. ValidatorHash -> (Datum -> Bool) -> (Value -> Bool) -> Redeemer -> TxConstraints i o
+mustSpendScriptOutputWithMatchingDatumAndValue
+    :: forall i o. ValidatorHash
+    -> (Datum -> Bool)
+    -> (Value -> Bool)
+    -> Redeemer
+    -> TxConstraints i o
 mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
     mempty {
         txConstraintFuns = TxConstraintFuns [MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red ]

@@ -32,7 +32,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as TC
 import Ledger.Constraints.OnChain.V1 qualified as TCV1
 import Ledger.Constraints.OnChain.V2 qualified as TCV2
-import Ledger.Scripts (ScriptHash (ScriptHash), ValidatorHash (ValidatorHash), unitRedeemer)
+import Ledger.Scripts (unitRedeemer)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Plutus.Contract as Con
@@ -278,17 +278,17 @@ mustSpendScriptOutputWithReferenceV2ConTest = do
     utxos <- ownUtxos
     myAddr <- Con.ownAddress
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
-        ValidatorHash vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = TC.unspentOutputs utxos
                <> TC.plutusV2OtherScript mustReferenceOutputV2Validator
         tx = TC.mustPayToOtherScriptWithDatumInTx
-                (ValidatorHash vh)
+                vh
                 (Datum $ PlutusTx.toBuiltinData utxoRef)
                 (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
-          <> TC.mustPayToAddressWithReferenceScript
+          <> TC.mustPayToAddressWithReferenceValidator
                 myAddr
-                (ScriptHash vh)
+                vh
                 Nothing
                 (Ada.adaValueOf 30)
     mkTxConstraints @Void lookups tx >>= submitTxConfirmed
@@ -312,18 +312,18 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
     utxos <- ownUtxos
     myAddr <- Con.ownAddress
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
-        ValidatorHash vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups = Tx.Constraints.unspentOutputs utxos
                <> Tx.Constraints.plutusV2OtherScript mustReferenceOutputV2Validator
         tx = Tx.Constraints.mustPayToOtherScriptWithDatumInTx
-                (ValidatorHash vh)
+                vh
                 (Datum $ PlutusTx.toBuiltinData utxoRef)
                 (Ada.adaValueOf 5)
           <> Tx.Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Tx.Constraints.mustUseOutputAsCollateral utxoRefForBalance1
-          <> Tx.Constraints.mustPayToAddressWithReferenceScript
+          <> Tx.Constraints.mustPayToAddressWithReferenceValidator
                 myAddr
-                (ScriptHash vh)
+                vh
                 Nothing
                 (Ada.adaValueOf 30)
     submitTxConfirmed $ mkTx lookups tx
