@@ -331,7 +331,7 @@ instance Pretty ChainIndexResponse where
             <+> "and utxo refs are"
             <+> hsep (fmap pretty $ pageItems txOutRefPage)
         UnspentTxOutsAtResponse (QueryResponse txouts _) ->
-          "Chain index datums from address response:" <+> hsep (fmap pretty txouts)
+          "Unspent utxos from address response:" <+> hsep (fmap pretty txouts)
         DatumsAtResponse (QueryResponse datums _) ->
           "Chain index datums from address response:" <+> hsep (fmap pretty datums)
         UtxoSetWithCurrencyResponse (UtxosResponse tip txOutRefPage) ->
