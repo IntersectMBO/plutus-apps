@@ -58,7 +58,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Index.Internal (UtxoIndex (UtxoIndex, getIndex))
-import Ledger.Params (Params (Params, pNetworkId, pProtocolParams, pSlotConfig))
+import Ledger.Params (Params (Params, pNetworkId, pProtocolParams))
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, SomeCardanoApiTx, Tx (txFee, txMint), TxOut (TxOut))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI.Internal (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatum)
@@ -69,7 +69,6 @@ import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
-import Plutus.Contract.Wallet (finalize)
 import Plutus.V1.Ledger.Api (PubKeyHash, TxOutRef, ValidatorHash, Value)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
@@ -317,11 +316,10 @@ handleBalance ::
     )
     => UnbalancedTx
     -> Eff effs CardanoTx
-handleBalance utx' = do
+handleBalance utx = do
     utxo <- get >>= ownOutputs
-    params@Params { pSlotConfig, pNetworkId } <- WAPI.getClientParams
-    let utx = finalize pSlotConfig utx'
-        requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+    params@Params { pNetworkId } <- WAPI.getClientParams
+    let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
         eitherTx = U.unBalancedTxTx utx
         plUtxo = traverse (Tx.toTxOut pNetworkId) utxo
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure plUtxo

@@ -43,7 +43,6 @@ module Ledger.Constraints.OffChain(
     , tx
     , requiredSignatories
     , utxoIndex
-    , validityTimeRange
     , emptyUnbalancedTx
     , adjustUnbalancedTx
     , adjustTxOut
@@ -105,7 +104,8 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
-import Ledger.Params (Params (pNetworkId))
+import Ledger.Params (Params (pNetworkId, pSlotConfig))
+import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), ReferenceScript,
                   TxOut (TxOut), TxOutRef, Versioned (Versioned), txOutValue)
 import Ledger.Tx qualified as Tx
@@ -115,14 +115,13 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, POSIXTimeRange, Validator (getValidator), Value,
-                             getMintingPolicy)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator (getValidator), Value, getMintingPolicy)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Tx qualified as PV2
 import PlutusTx (FromData, ToData (toBuiltinData))
-import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
+import PlutusTx.Lattice (JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
 import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
@@ -269,14 +268,6 @@ data UnbalancedTx
         , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
         -- ^ Utxo lookups that are used for adding inputs to the 'UnbalancedTx'.
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
-        , unBalancedTxValidityTimeRange   :: POSIXTimeRange
-        -- ^ The reason this is a separate field instead of setting the
-        -- 'Plutus.txValidRange' of 'Plutus.Tx' is because the 'Plutus.txValidRange' is
-        -- specified as a 'SlotRange', but the user must specify the validity
-        -- range in terms of 'POSIXTimeRange' instead. Thus, before submitting
-        -- this transaction to the blockchain, we must convert this
-        -- 'POSIXTimeRange' to 'SlotRange' using a 'SlotConfig'. See
-        -- 'Plutus.Contract.Wallet.finalize'.
         }
     | UnbalancedCardanoTx
         { unBalancedCardanoBuildTx        :: C.CardanoBuildTx
@@ -297,7 +288,6 @@ makeLensesFor
     , ("unBalancedCardanoBuildTx", "cardanoTx")
     , ("unBalancedTxRequiredSignatories", "requiredSignatories")
     , ("unBalancedTxUtxoIndex", "utxoIndex")
-    , ("unBalancedTxValidityTimeRange", "validityTimeRange")
     ] ''UnbalancedTx
 
 unBalancedTxTx :: UnbalancedTx -> Either C.CardanoBuildTx Tx.Tx
@@ -305,15 +295,14 @@ unBalancedTxTx UnbalancedEmulatorTx{unBalancedEmulatorTx}    = Right unBalancedE
 unBalancedTxTx UnbalancedCardanoTx{unBalancedCardanoBuildTx} = Left unBalancedCardanoBuildTx
 
 emptyUnbalancedTx :: UnbalancedTx
-emptyUnbalancedTx = UnbalancedEmulatorTx mempty mempty mempty top
+emptyUnbalancedTx = UnbalancedEmulatorTx mempty mempty mempty
 
 instance Pretty UnbalancedTx where
-    pretty (UnbalancedEmulatorTx utx rs utxo vr) =
+    pretty (UnbalancedEmulatorTx utx rs utxo) =
         vsep
         [ hang 2 $ vsep ["Tx:", pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
-        , hang 2 $ vsep ["Validity range:", pretty vr]
         ]
     pretty (UnbalancedCardanoTx utx rs utxo) =
         vsep
@@ -702,8 +691,13 @@ processConstraint = \case
         let dvHash = P.datumHash dv
         unless (dvHash `elem` Map.keys datums)
             (throwError $ DatumNotFoundInTx dvHash)
-    MustValidateIn timeRange ->
-        unbalancedTx . validityTimeRange %= (timeRange /\)
+    MustValidateIn timeRange -> do
+        slotRange <-
+            gets ( flip posixTimeRangeToContainedSlotRange timeRange
+                 . pSlotConfig
+                 . cpsParams
+                 )
+        unbalancedTx . tx . Tx.validRange %= (slotRange /\)
     MustBeSignedBy pk ->
         unbalancedTx . requiredSignatories <>= Set.singleton pk
     MustSpendAtLeast vl -> valueSpentInputs <>= required vl
