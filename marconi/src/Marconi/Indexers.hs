@@ -48,7 +48,7 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
        in map (slotNo,) hashes
 
 isTargetTxOut :: TargetAddresses -> C.TxOut C.CtxTx era -> Bool
-isTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
+isTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
