@@ -264,7 +264,7 @@ phase2FailureWhenDatumIsNotInWitnessSet =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain constraints checks for datum that is not in the witness set"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L2":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L2":_) _) -> True; _ -> False }))
     (void $ trace contract)
 
 -----

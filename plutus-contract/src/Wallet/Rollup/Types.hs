@@ -14,7 +14,7 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
 import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics
-import Ledger (PaymentPubKeyHash (PaymentPubKeyHash), Tx, TxIn, TxOut, txOutAddress)
+import Ledger (CardanoTx, PaymentPubKeyHash (PaymentPubKeyHash), TxIn, TxOut, txOutAddress)
 import Plutus.V1.Ledger.Api (Address (addressCredential), Credential (PubKeyCredential, ScriptCredential), TxId,
                              ValidatorHash, Value)
 import Prettyprinter (Pretty, pretty, viaShow)
@@ -73,7 +73,7 @@ data AnnotatedTx =
     AnnotatedTx
         { sequenceId         :: SequenceId
         , txId               :: TxId
-        , tx                 :: Tx
+        , tx                 :: CardanoTx
         , dereferencedInputs :: [DereferencedInput]
         , balances           :: Map BeneficialOwner Value
         , valid              :: Bool

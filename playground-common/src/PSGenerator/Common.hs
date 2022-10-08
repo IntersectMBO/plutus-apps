@@ -31,7 +31,7 @@ import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
 import Ledger.DCert (DCert)
-import Ledger.Index (ExCPU, ExMemory, ScriptType, ScriptValidationEvent, ValidationError)
+import Ledger.Index (ExCPU, ExMemory, ValidationError)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Scripts (ScriptError)
 import Ledger.Slot (Slot)
@@ -183,6 +183,42 @@ cardanoBuildTxBridge = do
     typeModule ^== "Ledger.Tx.CardanoAPI.Internal"
     pure psJson
 
+alonzoEraBridge :: BridgePart
+alonzoEraBridge = do
+    typeName ^== "AlonzoEra"
+    typeModule ^== "Cardano.Ledger.Alonzo"
+    pure psString
+
+standardCryptoBridge :: BridgePart
+standardCryptoBridge = do
+    typeName ^== "StandardCrypto"
+    typeModule ^== "Cardano.Ledger.Crypto"
+    pure psString
+
+applyTxErrorBridge :: BridgePart
+applyTxErrorBridge = do
+    typeName ^== "ApplyTxError"
+    typeModule ^== "Cardano.Ledger.Shelley.API.Mempool"
+    pure psString
+
+basicFailureBridge :: BridgePart
+basicFailureBridge = do
+    typeName ^== "BasicFailure"
+    typeModule ^== "Cardano.Ledger.Alonzo.Tools"
+    pure psString
+
+scriptFailureBridge :: BridgePart
+scriptFailureBridge = do
+    typeName ^== "ScriptFailure"
+    typeModule ^== "Cardano.Ledger.Alonzo.Tools"
+    pure psString
+
+utxosPredicateFailureBridge :: BridgePart
+utxosPredicateFailureBridge = do
+    typeName ^== "UtxosPredicateFailure"
+    typeModule ^== "Cardano.Ledger.Alonzo.Rules.Utxos"
+    pure psString
+
 exportTxBridge :: BridgePart
 exportTxBridge = do
     typeName ^== "ExportTx"
@@ -202,6 +238,12 @@ miscBridge =
     <|> exBudgetBridge
     <|> someCardanoApiTxBridge
     <|> cardanoBuildTxBridge
+    <|> alonzoEraBridge
+    <|> standardCryptoBridge
+    <|> applyTxErrorBridge
+    <|> basicFailureBridge
+    <|> scriptFailureBridge
+    <|> utxosPredicateFailureBridge
     <|> exportTxBridge
 
 ------------------------------------------------------------
@@ -442,10 +484,8 @@ ledgerTypes =
     , order . equal . genericShow . argonaut $ mkSumType @Priority
     , order . equal . genericShow . argonaut $ mkSumType @StopReason
     , order . genericShow . argonaut $ mkSumType @IterationID
-    , equal . genericShow . argonaut $ mkSumType @ScriptValidationEvent
     , equal . genericShow . argonaut $ mkSumType @ExCPU
     , equal . genericShow . argonaut $ mkSumType @ExMemory
-    , equal . genericShow . argonaut $ mkSumType @ScriptType
     , equal . genericShow . argonaut $ mkSumType @PABReq
     , equal . genericShow . argonaut $ mkSumType @PABResp
     , equal . genericShow . argonaut $ mkSumType @ChainIndexQuery

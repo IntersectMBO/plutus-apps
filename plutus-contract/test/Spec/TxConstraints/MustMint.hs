@@ -12,18 +12,22 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Lens ((&))
+import Data.Void (Void)
 import Ledger qualified
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), plutusV1MintingPolicy)
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), plutusV1MintingPolicy,
+                                                             typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (mustMintCurrency, mustMintCurrencyWithRedeemer,
-                                                                  mustMintValue, mustMintValueWithRedeemer)
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustMintCurrency,
+                                                                  mustMintCurrencyWithRedeemer, mustMintValue,
+                                                                  mustMintValueWithRedeemer, mustPayToTheScript)
 import Ledger.Test (asRedeemer, coinMintingPolicy, coinMintingPolicyCurrencySymbol, coinMintingPolicyHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, w1,
+                             changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions, w1,
                              walletFundsChange, (.&&.))
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
@@ -56,8 +60,8 @@ trace contract = do
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest
 
-aTokenName :: TokenName
-aTokenName = "A"
+tknName :: TokenName
+tknName = "A"
 
 tknAmount :: Integer
 tknAmount = 21_000_000
@@ -66,7 +70,7 @@ tknValue :: Value.Value
 tknValue = tknValue' tknAmount
 
 tknValue' :: Integer -> Value.Value
-tknValue' = Value.singleton coinMintingPolicyCurrencySymbol aTokenName
+tknValue' = Value.singleton coinMintingPolicyCurrencySymbol tknName
 
 -- | Valid Contract using a minting policy with mustMintCurrencyWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
 mustMintCurrencyWithRedeemerContract :: Integer -> TokenName -> Contract () Empty ContractError ()
@@ -74,19 +78,19 @@ mustMintCurrencyWithRedeemerContract mintAmount onChainTokenName = do
     let redeemer = asRedeemer $ MustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer onChainTokenName mintAmount
         lookups1 = Constraints.plutusV1MintingPolicy mustMintPolicy
                 <> Constraints.plutusV1MintingPolicy coinMintingPolicy
-        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer aTokenName 1
-           <> Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer aTokenName mintAmount
+        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
+           <> Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer tknName mintAmount
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintCurrency onchain constraint to check that tokens are correctly minted with the other policy
 mustMintCurrencyContract :: Contract () Empty ContractError ()
 mustMintCurrencyContract = do
-    let redeemer = asRedeemer $ MustMintCurrency coinMintingPolicyHash aTokenName tknAmount
+    let redeemer = asRedeemer $ MustMintCurrency coinMintingPolicyHash tknName tknAmount
         lookups1 = Constraints.plutusV1MintingPolicy mustMintPolicy
                 <> Constraints.plutusV1MintingPolicy coinMintingPolicy
-        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer aTokenName 1
-           <> Constraints.mustMintCurrency coinMintingPolicyHash aTokenName tknAmount
+        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
+           <> Constraints.mustMintCurrency coinMintingPolicyHash tknName tknAmount
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -96,7 +100,7 @@ mustMintValueWithRedeemerContract mintValue = do
     let redeemer = asRedeemer $ MustMintValueWithRedeemer unitRedeemer mintValue
         lookups1 = Constraints.plutusV1MintingPolicy mustMintPolicy
                 <> Constraints.plutusV1MintingPolicy coinMintingPolicy
-        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer aTokenName 1
+        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
            <> Constraints.mustMintValueWithRedeemer unitRedeemer mintValue
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -107,7 +111,7 @@ mustMintValueContract = do
     let redeemer = asRedeemer $ MustMintValue tknValue
         lookups1 = Constraints.plutusV1MintingPolicy mustMintPolicy
                  <> Constraints.plutusV1MintingPolicy coinMintingPolicy
-        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer aTokenName 1
+        tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
            <> Constraints.mustMintValue tknValue
     ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -119,7 +123,7 @@ mustMintCurrencyWithRedeemerSuccessfulMint =
     defaultCheckOptions
     "Successful spend of tokens using mustMintCurrencyWithRedeemer"
     (assertValidatedTransactionCount 1)
-    (void $ trace $ mustMintCurrencyWithRedeemerContract tknAmount aTokenName)
+    (void $ trace $ mustMintCurrencyWithRedeemerContract tknAmount tknName)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to burn tokens
 mustMintCurrencyWithRedeemerSuccessfulBurn :: TestTree
@@ -129,16 +133,16 @@ mustMintCurrencyWithRedeemerSuccessfulBurn =
     in checkPredicateOptions
        options
        "Successful token burn using mustMintCurrencyWithRedeemer"
-       (walletFundsChange w1 (tknValue' tknBurnAmount <> Value.singleton mustMintPolicyCurrencySymbol aTokenName 1) -- including mustMintPolicyCurrencySymbol is a workaround, test only cares about tknBurnAmount -- Fixed by PLT-909
+       (walletFundsChange w1 (tknValue' tknBurnAmount <> Value.singleton mustMintPolicyCurrencySymbol tknName 1) -- including mustMintPolicyCurrencySymbol is a workaround, test only cares about tknBurnAmount -- Fixed by PLT-909
        .&&. assertValidatedTransactionCount 1)
-       (void $ trace $ mustMintCurrencyWithRedeemerContract tknBurnAmount aTokenName)
+       (void $ trace $ mustMintCurrencyWithRedeemerContract tknBurnAmount tknName)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to burn more tokens than the wallet holds, asserts script evaluation error.
 mustMintCurrencyWithRedeemerBurnTooMuch :: TestTree
 mustMintCurrencyWithRedeemerBurnTooMuch =
     let tknBurnAmount = negate (tknAmount + 1)
         options = defaultCheckOptions & changeInitialWalletValue w1 (tknValue <>)
-        contract = mustMintCurrencyWithRedeemerContract tknBurnAmount aTokenName
+        contract = mustMintCurrencyWithRedeemerContract tknBurnAmount tknName
     in checkPredicateOptions
        options
        "Contract error when burning more than total amount of tokens in wallet balance"
@@ -150,7 +154,7 @@ mustMintCurrencyWithRedeemerBurnTooMuch =
 mustMintCurrencyWithRedeemerMissingPolicyLookup :: TestTree
 mustMintCurrencyWithRedeemerMissingPolicyLookup =
     let contract :: Contract () Empty ContractError () = do
-            let tx1 = Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer aTokenName tknAmount
+            let tx1 = Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer tknName tknAmount
             ledgerTx1 <- submitTx tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -170,11 +174,44 @@ mustMintCurrencyWithRedeemerMissingPolicyLookup =
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer but with a token name mismatch, asserts script evaluation error.
 mustMintCurrencyWithRedeemerPhase2Failure :: TestTree
 mustMintCurrencyWithRedeemerPhase2Failure =
-    checkPredicateOptions
-    defaultCheckOptions
+    checkPredicate
     "Phase 2 failure when policy mints with unexpected token name"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
-    (void $ trace $ mustMintCurrencyWithRedeemerContract tknAmount (TokenName "WrongToken"))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
+    (void $ trace $ mustMintCurrencyWithRedeemerContract tknAmount $ TokenName "WrongToken")
+
+-- | Contract without the required minting policy lookup. Uses mustMintCurrencyWithRedeemer constraint.
+mustMintCurrencyWithRedeemerMissingPolicyContract :: Contract () Empty ContractError ()
+mustMintCurrencyWithRedeemerMissingPolicyContract = do
+    let lookups1 = Constraints.typedValidatorLookups $ mustMintCurrencyWithRedeemerTypedValidator tknName
+        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
+    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash $ mustMintCurrencyWithRedeemerTypedValidator tknName)
+    let lookups2 =
+            Constraints.typedValidatorLookups (mustMintCurrencyWithRedeemerTypedValidator tknName) <>
+            Constraints.unspentOutputs utxos
+        tx2 =
+            Constraints.collectFromTheScript utxos () <>
+            Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer tknName tknAmount
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+
+{-# INLINEABLE mustMintCurrencyWithRedeemerValidator #-}
+mustMintCurrencyWithRedeemerValidator :: MintingPolicyHash -> Redeemer -> TokenName -> Integer -> () -> () -> Ledger.ScriptContext -> Bool
+mustMintCurrencyWithRedeemerValidator mph r tn amt _ _ =
+  Constraints.checkScriptContext @Void @Void (Constraints.mustMintCurrencyWithRedeemer mph r tn amt)
+
+mustMintCurrencyWithRedeemerTypedValidator :: TokenName -> Scripts.TypedValidator UnitTest
+mustMintCurrencyWithRedeemerTypedValidator tn = Scripts.mkTypedValidator @UnitTest
+    ($$(PlutusTx.compile [||mustMintCurrencyWithRedeemerValidator ||])
+        `PlutusTx.applyCode` PlutusTx.liftCode coinMintingPolicyHash
+        `PlutusTx.applyCode` PlutusTx.liftCode unitRedeemer
+        `PlutusTx.applyCode` PlutusTx.liftCode tn
+        `PlutusTx.applyCode` PlutusTx.liftCode tknAmount)
+    $$(PlutusTx.compile [|| wrap ||])
+    where
+        wrap = Scripts.mkUntypedValidator
 
 -- | Uses onchain and offchain constraint mustMintCurrency to mint tokens
 mustMintCurrencySuccessfulMint :: TestTree
@@ -202,7 +239,7 @@ mustMintValueWithRedeemerSuccessfulBurn =
     in checkPredicateOptions
        options
        "Successful token burn using mustMintValueWithRedeemer"
-       (walletFundsChange w1 (tknBurnValue <> Value.singleton mustMintPolicyCurrencySymbol aTokenName 1) -- including mustMintPolicyCurrencySymbol is a workaround, test only cares about tknBurnValue -- Fixed by PLT-909
+       (walletFundsChange w1 (tknBurnValue <> Value.singleton mustMintPolicyCurrencySymbol tknName 1) -- including mustMintPolicyCurrencySymbol is a workaround, test only cares about tknBurnValue -- Fixed by PLT-909
        .&&. assertValidatedTransactionCount 1)
        (void $ trace $ mustMintValueWithRedeemerContract tknBurnValue)
 

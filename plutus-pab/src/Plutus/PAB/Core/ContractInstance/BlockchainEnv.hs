@@ -13,40 +13,24 @@ import Cardano.Api (BlockInMode (..), ChainPoint (..), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Node.Params qualified as Params
+import Cardano.Node.Types (NodeMode (..),
+                           PABServerConfig (PABServerConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
-import Control.Lens.Operators
-import Data.IORef (newIORef)
-import Data.List (findIndex)
-import Data.Map qualified as Map
-import Data.Monoid (Last (..), Sum (..))
-import Data.Text (unpack)
-import Ledger (Block, Slot (..), TxId (..))
-import Marconi.Index.TxConfirmationStatus (TxInfo (..))
-import Marconi.Index.TxConfirmationStatus qualified as Ix
-import Plutus.ChainIndex.TxIdState qualified as TxIdState
-import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
-                                             OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
-                                             emptyBlockchainEnv)
-import Plutus.PAB.Core.ContractInstance.STM qualified as S
-import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
-import RewindableIndex.Index.VSqlite qualified as Ix
-
-import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
-                         DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
-                         WebserverConfig (WebserverConfig, enableMarconi), dbConfig, developmentOptions,
-                         nodeServerConfig, pabWebserverConfig)
-
-import Cardano.Node.Types (NodeMode (..),
-                           PABServerConfig (PABServerConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens
 import Control.Monad (forM_, void, when)
 import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
+import Data.IORef (newIORef)
+import Data.List (findIndex)
+import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, maybeToList)
+import Data.Monoid (Last (..), Sum (..))
+import Data.Text (unpack)
+import Ledger (Block, Slot (..), TxId (..))
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
                           InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..), RollbackFailed (..),
@@ -54,9 +38,22 @@ import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), Inser
                           TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx, insert,
                           reduceBlockCount, tipAsPoint, utxoState, validityFromChainIndex)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint, toCardanoPoint)
+import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.UtxoState (viewTip)
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
+                                             OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
+                                             emptyBlockchainEnv)
+import Plutus.PAB.Core.ContractInstance.STM qualified as S
+import Plutus.PAB.Core.Indexer.TxConfirmationStatus (TxInfo (..))
+import Plutus.PAB.Core.Indexer.TxConfirmationStatus qualified as Ix
+import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+                         DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
+                         WebserverConfig (WebserverConfig, enableMarconi), dbConfig, developmentOptions,
+                         nodeServerConfig, pabWebserverConfig)
+import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
+import RewindableIndex.Index.VSqlite qualified as Ix
 import System.Random
 
 -- | Connect to the node and write node updates to the blockchain

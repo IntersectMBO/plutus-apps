@@ -36,6 +36,7 @@ tests = testGroup "plutus-contract" [
     Spec.TxConstraints.MustIncludeDatum.tests,
     Spec.TxConstraints.MustMint.tests,
     Spec.TxConstraints.MustPayToOtherScript.tests,
+    -- Spec.TxConstraints.MustProduceAtLeast.tests, -- Not included: ConstraintResolutionContractError at the moment (UnxnownRef)
     Spec.TxConstraints.MustPayToPubKeyAddress.tests,
     Spec.TxConstraints.MustSpendAtLeast.tests,
     Spec.TxConstraints.MustSpendScriptOutput.tests,

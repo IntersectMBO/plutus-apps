@@ -9,6 +9,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+
 module Wallet.Effects(
     -- * Wallet effect
     WalletEffect(..)
@@ -30,6 +31,8 @@ import Data.List.NonEmpty (NonEmpty)
 import Ledger (Address, CardanoTx, Params, Slot, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Wallet.Error (WalletAPIError)
+
+{-# DEPRECATED TotalFunds "We won't use the wallet for querying blockchain information. See https://plutus-apps.readthedocs.io/en/latest/adr/0005-pab-indexing-solution-integration.html" #-}
 
 data WalletEffect r where
     SubmitTxn :: CardanoTx -> WalletEffect ()

@@ -67,7 +67,7 @@ module Plutus.Contract.Test(
     , checkPredicateInner
     , checkPredicateInnerStream
     , checkEmulatorFails
-    , CheckOptions
+    , CheckOptions(..)
     , defaultCheckOptions
     , minLogLevel
     , emulatorConfig
@@ -81,8 +81,8 @@ import Control.Applicative (liftA2)
 import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
-import Control.Lens (_Left, at, ix, makeLenses, over, preview, to, (&), (.~), (^.))
-import Control.Monad (unless)
+import Control.Lens (_Left, at, ix, makeLenses, over, preview, (&), (.~), (^.))
+import Control.Monad (guard, unless)
 import Control.Monad.Freer (Eff, interpretM, runM)
 import Control.Monad.Freer.Error (Error, runError)
 import Control.Monad.Freer.Extras.Log (LogLevel (..), LogMessage (..))
@@ -124,13 +124,13 @@ import Ledger qualified
 import Ledger.Address (Address)
 import Ledger.Generators (GeneratorModel, Mockchain (..))
 import Ledger.Generators qualified as Gen
-import Ledger.Index (ScriptValidationEvent, ValidationError)
+import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef
-import Ledger.Tx (txOutDatumHash)
+import Ledger.Tx (Tx, onCardanoTx)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
@@ -241,8 +241,8 @@ checkPredicateInner :: forall m.
     -> (Bool -> m ()) -- ^ assert
     -> (CoverageData -> m ())
     -> m ()
-checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action annot assert cover =
-    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action) annot assert cover
+checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action =
+    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action)
 
 checkPredicateInnerStream :: forall m.
     Monad m
@@ -254,7 +254,7 @@ checkPredicateInnerStream :: forall m.
     -> (CoverageData -> m ())
     -> m ()
 checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePredicate predicate) theStream annot assert cover = do
-    let dist = _emulatorConfig ^. initialChainState . to initialDist
+    let dist = initialDist _emulatorConfig
         consumedStream :: Eff (TestEffects :++: '[m]) Bool
         consumedStream = S.fst' <$> foldEmulatorStreamM (liftA2 (&&) predicate generateCoverage) theStream
 
@@ -265,7 +265,7 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePred
                 $ interpretM @(Writer (Doc Void)) @m (\case { Tell d -> annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
                 $ runReader dist
-                $ consumedStream
+                consumedStream
 
     unless (result == Right True) $ do
         annot "Test failed."
@@ -388,7 +388,7 @@ getTxOutDatum ::
   Ledger.CardanoTx ->
   Ledger.TxOut ->
   Maybe d
-getTxOutDatum tx' txOut = txOutDatumHash txOut >>= go
+getTxOutDatum tx' txOut = Ledger.txOutDatumHash txOut >>= go
     where
         go datumHash = Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
@@ -588,7 +588,7 @@ walletFundsChangeImpl exact w dlt' = TracePredicate $
             tell @(Doc Void) $ vsep $
                 [ "Expected funds of" <+> pretty w <+> "to change by"
                 , " " <+> viaShow dlt] ++
-                (if exact then [] else ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
+                (guard exact >> ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
                 if initialValue == finalValue
                 then ["but they did not change"]
                 else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
@@ -633,13 +633,13 @@ assertChainEvents' logMsg predicate = TracePredicate $
 
 -- | Assert that at least one transaction failed to validate, and that all
 --   transactions that failed meet the predicate.
-assertFailedTransaction :: (Ledger.CardanoTx -> ValidationError -> [ScriptValidationEvent] -> Bool) -> TracePredicate
+assertFailedTransaction :: (Tx -> ValidationError -> Bool) -> TracePredicate
 assertFailedTransaction predicate = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> do
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
-        xs -> pure (all (\(_, t, e, evts, _) -> predicate t e evts) xs)
+        xs -> pure (all (\(_, t, e, _) -> onCardanoTx (\t' -> predicate t' e) (const True) t) xs)
 
 -- | Assert that no transaction failed to validate.
 assertNoFailedTransactions :: TracePredicate
@@ -647,7 +647,7 @@ assertNoFailedTransactions = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> pure True
         xs -> do
-            let prettyTxFail (i, _, err, _, _) = pretty i <> colon <+> pretty err
+            let prettyTxFail (i, _, err, _) = pretty i <> colon <+> pretty err
             tell @(Doc Void) $ vsep ("Transactions failed to validate:" : fmap prettyTxFail xs)
             pure False
 

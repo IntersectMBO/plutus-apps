@@ -243,7 +243,7 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected PaymentPubkeyHash"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Datum"
@@ -259,7 +259,7 @@ phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected Datum"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Value"
@@ -275,7 +275,7 @@ phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected Value"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
 
 
@@ -309,7 +309,7 @@ phase1FailureWhenUsingInlineDatumWithV1 submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-1 failure when mustPayToPubKeyAddress in a V1 script use inline datum"
-    (assertFailedTransaction (\_ err _ -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
     (void $ trace contract)
 
 

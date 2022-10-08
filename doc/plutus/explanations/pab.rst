@@ -4,7 +4,7 @@ What is the PAB?
 ================
 
 PAB is short for *Plutus Application Backend*.
-The Plutus Application Backend is the client-side runtime for :term:`Plutus apps<contract application>` that are built with the :ref:`Plutus Platform<what_is_the_plutus_platform>`.
+The Plutus Application Backend is the client-side runtime for :term:`Plutus apps<contract application>` that are built with the `Plutus Platform <https://plutus.readthedocs.io/en/latest/explanations/platform.html>`_.
 It is the PAB's task to deal with requests from running ``Contract`` instances, to forward user input to them, and to notify them of ledger state change events.
 
 .. TODO: Ref. to `Contract` type

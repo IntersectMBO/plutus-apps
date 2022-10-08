@@ -4,6 +4,7 @@
 Extract validators and partial transactions from emulator traces
 -}
 module Plutus.Trace.Emulator.Extract(
+  ValidatorMode(..),
   writeScriptsTo,
   showStats,
   ScriptsConfig(..),
@@ -19,16 +20,13 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
-import Flat (flat)
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
-import Ledger.Index (ScriptValidationEvent (..), ValidatorMode (..), getScript)
 import Ledger.Params (Params (..))
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api (ExBudget (..))
-import Plutus.V1.Ledger.Scripts (Script (..))
 import Prettyprinter (Pretty (..))
 import Streaming.Prelude qualified as S
 import System.Directory (createDirectoryIfMissing)
@@ -43,6 +41,9 @@ data ScriptsConfig =
         { scPath    :: FilePath -- ^ Folder the extracted scripts should be written to
         , scCommand :: Command -- ^ Whether to write out complete transactions or just the validator scripts
         }
+
+data ValidatorMode = FullyAppliedValidators | UnappliedValidators
+    deriving (Eq, Ord, Show)
 
 -- | Command for 'writeScriptsTo'
 data Command =
@@ -71,8 +72,7 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
         getEvents theFold = S.fst' $ run $ foldEmulatorStreamM (L.generalize theFold) stream
     createDirectoryIfMissing True scPath
     case scCommand of
-        Scripts mode -> do
-            foldMap (uncurry $ writeScript scPath prefix mode) (zip [1::Int ..] $ getEvents Folds.scriptEvents)
+        Scripts _ -> pure mempty
         Transactions{networkId, protocolParamsJSON} -> do
             bs <- BSL.readFile protocolParamsJSON
             case Aeson.eitherDecode bs of
@@ -88,22 +88,6 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
                 (uncurry $ writeMkTxLog scPath prefix)
                 (zip [1::Int ..] $ getEvents Folds.mkTxLogs)
             pure mempty
-
-{- There's an instance of Codec.Serialise for
-    Script in Scripts.hs (see Note [Using Flat inside CBOR instance of Script]),
-    which wraps Flat-encoded bytestings in CBOR, but that's not used here: we
-    just use unwrapped Flat because that's more convenient for use with the
-    `plc` command, for example.
--}
-writeScript :: FilePath -> String -> ValidatorMode -> Int -> ScriptValidationEvent -> IO (Sum Int64, ExBudget)
-writeScript fp prefix mode idx event@ScriptValidationEvent{sveResult} = do
-    let filename = fp </> prefix <> "-" <> show idx <> filenameSuffix mode <> ".flat"
-        bytes = BSL.fromStrict . flat . unScript . getScript mode $ event
-        byteSize = BSL.length bytes
-    putStrLn $ "Writing script: " <> filename <> " (" <> either show (showStats byteSize . fst) sveResult <> ")"
-    BSL.writeFile filename bytes
-    pure (Sum byteSize, foldMap fst sveResult)
-writeScript _ _ _ _ _ = pure mempty
 
 showStats :: Int64 -> ExBudget -> String
 showStats byteSize (ExBudget exCPU exMemory) = "Size: " <> size <> "kB, Cost: " <> show exCPU <> ", " <> show exMemory
@@ -131,7 +115,3 @@ writeMkTxLog fp prefix idx event = do
     let filename1 = fp </> prefix <> "-" <> show idx <> "-mkTx.json"
     putStrLn $ "Writing mkTxLog transaction JSON: " <> filename1
     BSL.writeFile filename1 $ encodePretty event
-
-filenameSuffix :: ValidatorMode -> String
-filenameSuffix FullyAppliedValidators = ""
-filenameSuffix UnappliedValidators    = "-unapplied"

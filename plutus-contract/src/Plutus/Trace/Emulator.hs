@@ -245,7 +245,7 @@ runEmulatorTrace
 runEmulatorTrace cfg trace =
     (\(xs :> (y, z)) -> (xs, y, z))
     $ run
-    $ runReader ((initialDist . _initialChainState) cfg)
+    $ runReader (initialDist cfg)
     $ foldEmulatorStreamM (generalize list)
     $ runEmulatorStream cfg trace
 

@@ -103,7 +103,8 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-      plutus-ledger-api  >=1.0.0
+      cardano-api
+    , plutus-ledger-api  >=1.0.0
     , plutus-tx          >=1.0.0
     , plutus-tx-plugin   >=1.0.0
 
@@ -121,6 +122,7 @@ library
     , openapi3
     , prettyprinter
     , semigroups
+    , serialise
     , streaming
     , template-haskell
     , text

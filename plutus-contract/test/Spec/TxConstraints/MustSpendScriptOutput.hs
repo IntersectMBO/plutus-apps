@@ -209,7 +209,7 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different TxOutRef"
-        (assertFailedTransaction (\_ err _ -> case err of {L.ScriptFailure (EvaluationError ("L8":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (\_ err -> case err of {L.ScriptFailure (EvaluationError ("L8":_) _) -> True; _ -> False }))
         (void $ trace contract)
 
 -- | Phase-2 validation failure only when V2 script using onchain mustSpendScriptOutput constraint
@@ -228,7 +228,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputUsesWrongRedeemerWithV2Script =
     , checkPredicateOptions
       defaultCheckOptions
       "Phase-2 validation failure when V2 script using onchain mustSpendScriptOutput constraint expects a different redeemer"
-      (assertFailedTransaction (\_ err _ -> case err of {L.ScriptFailure (EvaluationError ("L8":_) _) -> True; _ -> False }))
+      (assertFailedTransaction (\_ err -> case err of {L.ScriptFailure (EvaluationError ("L8":_) _) -> True; _ -> False }))
       (void $ trace $ mustSpendScriptOutputsContract' PlutusV2 5 5 False)
     ]
 
@@ -284,7 +284,7 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different TxOutRef"
-        (assertFailedTransaction (\_ err _ -> case err of {L.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (\_ err -> case err of {L.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
         (void $ trace $ mustSpendScriptOutputWithMatchingDatumAndValueContract PlutusV1 nScriptOutputs (scriptOutputIdx, utxoValue) (wrongDatum, utxoValue))
 
 -- | Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue
@@ -297,7 +297,7 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different TxOutRef"
-        (assertFailedTransaction (\_ err _ -> case err of {L.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (\_ err -> case err of {L.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
         (void $ trace $ mustSpendScriptOutputWithMatchingDatumAndValueContract PlutusV1 nScriptOutputs (scriptOutputIdx, utxoValue) (scriptOutputIdx, wrongValue))
 
 -- | Phase-2 validation failure only when onchain mustSpendScriptOutputWithMatchingDatumAndValue
@@ -319,7 +319,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeem
         , checkPredicateOptions
           defaultCheckOptions
           "Phase-2 validation failure when V2 script using onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different redeemer"
-          (assertFailedTransaction (\_ err _ -> case err of {L.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
+          (assertFailedTransaction (\_ err -> case err of {L.ScriptFailure (EvaluationError ("Le":_) _) -> True; _ -> False }))
           (void $ trace $ mustSpendScriptOutputWithMatchingDatumAndValueContract' PlutusV2 nScriptOutputs (scriptOutputIdx, utxoValue) (scriptOutputIdx, utxoValue) False)
         ]
 
