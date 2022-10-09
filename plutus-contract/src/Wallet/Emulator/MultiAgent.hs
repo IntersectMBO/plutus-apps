@@ -308,7 +308,7 @@ emulatorStateInitialDist networkId mp = do
     where
         -- See [Creating wallets with multiple outputs]
         mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
-        splitInto10 vl = replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
+        splitInto10 vl = if count <= 1 then [vl] else replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
             where
                 ada = if Value.isAdaOnlyValue vl then Ada.fromValue vl else Ada.fromValue vl - minAdaTxOut
                 -- Make sure we don't make the outputs too small
