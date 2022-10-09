@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -9,7 +10,7 @@ import Control.Monad (void)
 import Data.Default (def)
 import Data.Map qualified as Map
 import Data.Void (Void)
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestName, TestTree, testGroup)
 
 import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
@@ -36,6 +37,8 @@ tests =
         [ balanceTxnMinAda
         , balanceTxnMinAda2
         , balanceTxnNoExtraOutput
+        , balanceTxnCollateral
+        , balanceTxnCollateralFail
         , balanceCardanoTx
         ]
 
@@ -164,6 +167,39 @@ balanceTxnNoExtraOutput =
         tracePred = assertAccumState mintingOperation "instance 1" (== [2]) "has 2 outputs"
 
     in checkPredicate "balancing doesn't create extra output" tracePred (void trace)
+
+balanceTxnCollateralTest :: TestName -> Int -> Integer -> TestTree
+balanceTxnCollateralTest name count outputLovelace =
+    let ee = someTokenValue "ee" 1
+        ff = someTokenValue "ff" 1
+        -- Make sure wallet 1 has only one utxo available.
+        options = defaultCheckOptions
+            & changeInitialWalletValue w1 (const $ Value.scale 1000 (ee <> ff) <> Ada.lovelaceValueOf 3_900_000)
+        vHash = Scripts.validatorHash someValidator
+
+        contract :: Contract () EmptySchema ContractError ()
+        contract = do
+            utxos <- Con.ownUtxos
+            let constraints1 =
+                    L.Constraints.mustPayToOtherScriptWithDatumInTx
+                        vHash
+                        unitDatum
+                        (Value.scale 100 ff <> Ada.lovelaceValueOf outputLovelace)
+                lookups = Tx.Constraints.unspentOutputs utxos
+                utx1 = either (error . show) id $ L.Constraints.mkTx @Void lookups constraints1
+            submitTxConfirmed utx1
+
+        trace = do
+            void $ Trace.activateContractWallet w1 contract
+            void $ Trace.waitNSlots 1
+
+    in checkPredicateOptions options name (assertValidatedTransactionCount count) trace
+
+balanceTxnCollateral :: TestTree
+balanceTxnCollateral = balanceTxnCollateralTest "can balance collateral with non-ada utxo" 1 1_200_000
+
+balanceTxnCollateralFail :: TestTree
+balanceTxnCollateralFail = balanceTxnCollateralTest "won't create return collateral with too little ada (utxoCostPerWord)" 0 2_000_000
 
 balanceCardanoTx :: TestTree
 balanceCardanoTx =
