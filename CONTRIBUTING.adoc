@@ -387,7 +387,7 @@ Rebasing and force pushing can be used to your advantage, for example:
 * If you have already had a PR review, don't rebase away the old commits until the PR is ready to merge, so that the reviewer only has to look at the "new" commits.
 * Rewrite the commits to make the story clearer where possible.
 
-It is advisable to always prefer `git push --force-with-lease` to just `git push --force` to ensure that no work gets accidentally deleted.
+It is advisable to always prefer `git push --force-with-lease` instead of `git push --force` to ensure that no work gets accidentally deleted.
 
 === Code review
 
@@ -433,7 +433,7 @@ Use the one you deem appropriate.
 As said before, sometimes people use a single PR with multiple commits for their work; other times they create multiple small PRs.
 The best merge method is different for different cases.
 
-The "squash and merge" method should be used with caution.
+The "rebase and merge" method should be used with caution.
 If you use this method, your PR must have a clean commit history: every commit should have a meaningful message, and should be buildable.
 You don't want to have commits like "fix a typo", "this may work" or "wip, done for the day" in `main` with a linear history.
 And if some of these commits are non-buildable, it can create problems for "git bisect".
