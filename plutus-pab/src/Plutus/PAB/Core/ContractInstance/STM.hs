@@ -58,7 +58,6 @@ import Data.Aeson (Value)
 import Data.Foldable (fold)
 import Data.IORef (IORef)
 import Data.IORef qualified as IORef
->>>>>>> 82cc94946 (DJED-164: Change 'InstancesState' to 'IORef')
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -169,7 +168,7 @@ updateTxChangesR
 updateTxChangesR env f =
     case env of
       Left  _     -> pure ()
-      Right ixRef -> readIORef ixRef >>= f >>= writeIORef ixRef
+      Right ixRef -> IORef.readIORef ixRef >>= f >>= IORef.writeIORef ixRef
 
 -- | Initialise an empty 'BlockchainEnv' value
 emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv

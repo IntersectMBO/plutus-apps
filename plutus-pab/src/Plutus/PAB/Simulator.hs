@@ -462,9 +462,9 @@ handleChainControl eff = do
               currentTip <- getTip
               appendNewTipBlock currentTip txns slot
 
-        void $ liftIO (BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot >>= STM.atomically)
+            void $ liftIO (BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot >>= STM.atomically)
 
-        pure txns
+            pure txns
         Chain.ModifySlot f -> runChainEffects @t @_ params (Chain.modifySlot f)
 
 runChainEffects ::

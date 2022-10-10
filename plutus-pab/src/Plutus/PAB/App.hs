@@ -122,12 +122,8 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
     EffectHandlers
         { initialiseEnvironment = do
             env <- liftIO $ mkEnv trace config
-
-            instancesState <- liftIO $ STM.atomically Instances.emptyInstancesState
-            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient config instancesState
             instancesState <- liftIO Instances.emptyInstancesState
             blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient config instancesState
->>>>>>> 82cc94946 (DJED-164: Change 'InstancesState' to 'IORef')
             pure (instancesState, blockchainEnv, env)
 
         , handleLogMessages =
