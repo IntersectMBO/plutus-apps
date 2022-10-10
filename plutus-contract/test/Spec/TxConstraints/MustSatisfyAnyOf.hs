@@ -9,6 +9,10 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
+-- disabled these options to simplify applyNowToTimeValidity
+{-# OPTIONS_GHC -fno-warn-incomplete-record-updates
+                -fno-warn-incomplete-uni-patterns
+                #-}
 module Spec.TxConstraints.MustSatisfyAnyOf(tests) where
 
 import Control.Lens ((??), (^.))
@@ -23,7 +27,10 @@ import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, plutusV1Min
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustBeSignedBy, mustIncludeDatum,
-                                                           mustMintValueWithRedeemer, mustSatisfyAnyOf, mustValidateIn)
+                                                           mustMintValue, mustMintValueWithRedeemer,
+                                                           mustPayToOtherScript, mustPayToPubKey, mustPayToTheScript,
+                                                           mustProduceAtLeast, mustSatisfyAnyOf, mustSpendAtLeast,
+                                                           mustSpendPubKeyOutput, mustValidateIn)
 import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
@@ -40,7 +47,8 @@ import Plutus.V1.Ledger.Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 
--- Constraint's functions should soon be changed to use Address instead of PaymentPubKeyHash and StakeKeyHash
+-- Constraint's functions should soon be changed to use
+-- Address instead of PaymentPubKeyHash and StakeKeyHash
 tests :: TestTree
 tests =
     testGroup "MustSatisfyAnyOf"
@@ -92,10 +100,14 @@ trace contract = do
     void $ Trace.activateContractWallet w1 contract
     void $ Trace.waitNSlots 1
 
-mustSatisfyAnyOfSignerOrTimeContract :: SubmitTx -> LanguageContext -> ConstraintParams -> ConstraintParams -> Contract () Empty ContractError ()
-mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints lc offChainConstraints onChainConstraints = do
+mustSatisfyAnyOfSignerOrTimeContract :: SubmitTx -> LanguageContext -> ConstraintParams
+                                     -> ConstraintParams -> Contract () Empty ContractError ()
+mustSatisfyAnyOfSignerOrTimeContract
+    submitTxFromConstraints lc offChainConstraints onChainConstraints =
+        do
     now <- Con.currentTime
-    let offChainConstraintsWithNow = buildConstraints (applyNowToTimeValidity offChainConstraints now)
+    let offChainConstraintsWithNow =
+            buildConstraints (applyNowToTimeValidity offChainConstraints now)
         onChainConstraintsWithNow  = applyNowToTimeValidity onChainConstraints now
         lookups1 = mintingPolicy lc $ mustSatisfyAnyOfPolicy lc
         policyRedeemer = asRedeemer onChainConstraintsWithNow
@@ -108,10 +120,11 @@ mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints lc offChainConstrai
             applyNowToTimeValidity cps@ConstraintParams{mustValidateIn = maybeMvi} now =
                 cps{mustValidateIn =
                     (\mvi@MustValidateIn{timeTo = offset} ->
-                        Just mvi{timeTo = now + offset}) =<< maybeMvi}
+                        Just mvi{timeTo = now + offset})
+                            =<< maybeMvi}
 
--- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with the same constraints
--- | onchain and offchain
+-- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with the same
+-- | constraints onchain and offchain
 mustSatisfyAnyOfMatchingAllConstraints :: SubmitTx -> LanguageContext -> TestTree
 mustSatisfyAnyOfMatchingAllConstraints submitTxFromConstraints lc =
     let pkh = mockWalletPaymentPubKeyHash w1
@@ -119,7 +132,8 @@ mustSatisfyAnyOfMatchingAllConstraints submitTxFromConstraints lc =
                    mustBeSignedBy = Just $ MustBeSignedBy pkh}
         contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints lc cps cps
     in checkPredicateOptions defaultCheckOptions
-    "Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with the same constraints onchain and offchain"
+    ("Valid scenario using offchain and onchain constraint" ++
+    "mustSatisfyAnyOf with the same constraints onchain and offchain")
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
@@ -185,9 +199,27 @@ mustSatisfyAnyOfPolicyCurrencySymbol = mpsSymbol . mustSatisfyAnyOfPolicyHash
 buildConstraints :: ConstraintParams -> [Cons.TxConstraints () ()]
 buildConstraints cps = do
     let maybeConstraints :: [Maybe (Cons.TxConstraints () ())] = [
-            P.maybe Nothing (\cp -> Just $ Cons.mustValidateIn $ to (timeTo cp)) (mustValidateIn cps),
-            P.maybe Nothing (\cp -> Just $ Cons.mustBeSignedBy $ ppkh cp) (mustBeSignedBy cps),
-            P.maybe Nothing (\cp -> Just $ Cons.mustIncludeDatum $ datum cp) (mustIncludeDatum cps)
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustValidateIn $ to (timeTo cp)) (mustValidateIn cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustBeSignedBy $ ppkh cp) (mustBeSignedBy cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustIncludeDatum $ datum cp) (mustIncludeDatum cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustPayToTheScript () (value cp)) (mustPayToTheScript cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustPayToPubKey (ppkh cp) (value cp)) (mustPayToPubKey cps),
+            P.maybe Nothing (\cp ->
+                Just $
+                Cons.mustPayToOtherScript (vh cp) (datum cp) (value cp)) (mustPayToOtherScript cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustMintValue (value cp)) (mustMintValue cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustSpendAtLeast (value cp)) (mustSpendAtLeast cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustProduceAtLeast (value cp)) (mustProduceAtLeast cps),
+            P.maybe Nothing (\cp ->
+                Just $ Cons.mustSpendPubKeyOutput (txOutRef cp)) (mustSpendPubKeyOutput cps)
             ]
     catMaybes maybeConstraints
     where
@@ -197,7 +229,7 @@ buildConstraints cps = do
 data ConstraintParam = MustValidateIn        {timeTo :: L.POSIXTime}
                      | MustBeSignedBy        {ppkh :: L.PaymentPubKeyHash}
                      | MustIncludeDatum      {datum :: L.Datum}
-                     | MustPayToTheScript    {value :: Value}
+                     | MustPayToTheScript    {value :: Value} -- datum is ()
                      | MustPayToPubKey       {ppkh  :: L.PaymentPubKeyHash,
                                               value :: Value}
                      | MustPayToOtherScript  {vh    :: L.ValidatorHash,
