@@ -66,6 +66,8 @@ rec {
 
   marconi = plutus-apps.haskell.packages.marconi.components.exes.marconi;
 
+  marconi-mamba = plutus-apps.haskell.packages.marconi-mamba.components.exes.marconi-mamba;
+
   create-script-context = plutus-apps.haskell.packages.plutus-example.components.exes.create-script-context;
 
   tests = import ./nix/tests/default.nix {

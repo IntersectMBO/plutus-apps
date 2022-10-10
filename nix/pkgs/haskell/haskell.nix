@@ -47,8 +47,10 @@ let
         ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
           packages = {
             # Things that need plutus-tx-plugin
-            pab-blockfrost.package.buildable = false;
+            cardano-streaming.package.buildable = false;
             marconi.package.buildable = false;
+            pab-blockfrost.package.buildable = false;
+            marconi-mamba.package.buildable = false;
             playground-common.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
@@ -62,7 +64,6 @@ let
             plutus-pab-executables.package.buildable = false;
             plutus-playground-server.package.buildable = false; # Would also require libpq
             plutus-script-utils.package.buildable = false;
-            plutus-streaming.package.buildable = false;
             plutus-tx-constraints.package.buildable = false;
             plutus-tx-plugin.package.buildable = false;
             plutus-use-cases.package.buildable = false;
@@ -106,6 +107,29 @@ let
         )
         ({ pkgs, config, ... }: {
           packages = {
+            marconi.doHaddock = deferPluginErrors;
+            marconi.flags.defer-plugin-errors = deferPluginErrors;
+
+            # The lines `export CARDANO_NODE=...` and `export CARDANO_CLI=...`
+            # is necessary to prevent the error
+            # `../dist-newstyle/cache/plan.json: openBinaryFile: does not exist (No such file or directory)`.
+            # See https://github.com/input-output-hk/cardano-node/issues/4194
+            #
+            # The line 'export CARDANO_NODE_SRC=...' is used to specify the
+            # root folder used to fetch the `configuration.yaml` file (in
+            # plutus-apps, it's currently in the
+            # `configuration/defaults/byron-mainnet` directory.
+            # Else, we'll get the error
+            # `/nix/store/ls0ky8x6zi3fkxrv7n4vs4x9czcqh1pb-plutus-apps/marconi/test/configuration.yaml: openFile: does not exist (No such file or directory)`
+            marconi.preCheck = "
+              export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+              export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
+              export CARDANO_NODE_SRC=${src}
+            ";
+
+            marconi-mamba.doHaddock = deferPluginErrors;
+            marconi-mamba.flags.defer-plugin-errors = deferPluginErrors;
+
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
 
@@ -144,8 +168,10 @@ let
             iohk-monitoring.doHaddock = false;
 
             # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
-            pab-blockfrost.ghcOptions = [ "-Werror" ];
+            cardano-streaming.ghcOptions = [ "-Werror" ];
             marconi.ghcOptions = [ "-Werror" ];
+            pab-blockfrost.ghcOptions = [ "-Werror" ];
+            marconi-mamba.ghcOptions = [ "-Werror" ];
             playground-common.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];

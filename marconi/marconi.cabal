@@ -43,14 +43,19 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
+    Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
+    Marconi.Indexers
+    Marconi.Logging
+    Marconi.Orphans
 
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , plutus-ledger
     , rewindable-index
 
@@ -63,6 +68,7 @@ library
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
+    , iohk-monitoring
     , plutus-ledger-api
 
   ------------------------
@@ -74,25 +80,26 @@ library
     , containers
     , lens
     , mwc-random
+    , optparse-applicative
+    , prettyprinter
     , serialise
     , sqlite-simple
+    , stm
+    , streaming
+    , text
+    , time
 
 executable marconi
   import:         lang
   hs-source-dirs: app
   main-is:        Main.hs
-  other-modules:
-    Marconi.Logging
-    Marconi.Orphans
 
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , marconi
-    , plutus-ledger
-    , plutus-streaming
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -100,47 +107,58 @@ executable marconi
   build-depends:
     , cardano-api
     , iohk-monitoring
-    , plutus-ledger-api
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
     , base                  >=4.9 && <5
-    , bytestring
-    , containers
-    , lens
     , optparse-applicative
     , prettyprinter
-    , stm
-    , streaming
     , text
-    , time
 
 test-suite marconi-test
   import:         lang
+  ghc-options:    -Wno-unused-packages
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
+  other-modules:  Integration
 
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi
+  build-depends:
+    , cardano-streaming
+    , marconi
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}
+    , cardano-testnet
+    , iohk-monitoring
+    , ouroboros-network
     , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base            >=4.9 && <5
+    , base             >=4.9 && <5
+    , bytestring
     , containers
+    , directory
+    , filepath
     , hedgehog
+    , hedgehog-extras
+    , prettyprinter
+    , serialise
+    , stm
+    , streaming
     , tasty
     , tasty-hedgehog
+    , temporary
