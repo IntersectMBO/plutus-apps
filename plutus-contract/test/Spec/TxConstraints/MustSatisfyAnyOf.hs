@@ -21,23 +21,26 @@ import Test.Tasty (TestTree, testGroup)
 
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
+import Ledger (ScriptError (EvaluationError), unitDatum)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, plutusV1MintingPolicy, plutusV2MintingPolicy)
+import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, mintingPolicy, plutusV1MintingPolicy,
+                                                      plutusV2MintingPolicy)
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustBeSignedBy, mustIncludeDatum,
                                                            mustMintValue, mustMintValueWithRedeemer,
                                                            mustPayToOtherScript, mustPayToPubKey, mustPayToTheScript,
                                                            mustProduceAtLeast, mustSatisfyAnyOf, mustSpendAtLeast,
-                                                           mustSpendPubKeyOutput, mustValidateIn)
-import Ledger.Test (asDatum, asRedeemer)
+                                                           mustValidateIn)
+import Ledger.Test (asDatum, asRedeemer, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertValidatedTransactionCount, checkPredicateOptions, defaultCheckOptions,
-                             emulatorConfig, mockWalletPaymentPubKeyHash, w1)
+import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
+                             defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
@@ -68,7 +71,9 @@ v2Tests sub = testGroup "Plutus V2" $
 
 v1FeaturesTests :: SubmitTx -> LanguageContext -> TestTree
 v1FeaturesTests sub t = testGroup "Plutus V1 features" $
-    [ mustSatisfyAnyOfMatchingAllConstraints
+    [ mustSatisfyAnyOfUsingAllOfTheSameConstraintsOnAndOffChain,
+      mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain,
+      phase2ErrorWhenUsingMustSatisfyAnyOf
     ] ?? sub ?? t
 
 someDatum :: L.Datum
@@ -89,11 +94,27 @@ adaValue = Ada.lovelaceValueOf adaAmount
 tknValue :: LanguageContext -> Value
 tknValue tc = singleton (mustSatisfyAnyOfPolicyCurrencySymbol tc) "mint-me" 1
 
--- adaAndTokenValue :: LanguageContext -> Value.Value
--- adaAndTokenValue = (adaValue <>) . tknValue
+otherTokenValue :: Value
+otherTokenValue = someTokenValue "someToken" 1
 
---otherTokenValue :: Value.Value
---otherTokenValue = someTokenValue "someToken" 1
+w1Pkh :: L.PaymentPubKeyHash
+w1Pkh = mockWalletPaymentPubKeyHash w1
+
+w2Pkh :: L.PaymentPubKeyHash
+w2Pkh = mockWalletPaymentPubKeyHash w2
+
+allConstraintsValid :: ConstraintParams
+allConstraintsValid = ConstraintParams
+    { mustValidateIn = Just $ MustValidateIn 1000,
+      mustBeSignedBy = Just $ MustBeSignedBy w1Pkh,
+      mustIncludeDatum = Just MustIncludeDatum,
+      mustPayToTheScript = Just $ MustPayToTheScript adaValue,
+      mustPayToPubKey = Just $ MustPayToPubKey w2Pkh adaValue,
+      mustPayToOtherScript = Just $ MustPayToOtherScript someValidatorHash adaValue,
+      mustMintValue = Just $ MustMintValue otherTokenValue,
+      mustSpendAtLeast = Just $ MustSpendAtLeast adaValue,
+      mustProduceAtLeast = Just $ MustProduceAtLeast adaValue
+    }
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -109,7 +130,8 @@ mustSatisfyAnyOfSignerOrTimeContract
     let offChainConstraintsWithNow =
             buildConstraints (applyNowToTimeValidity offChainConstraints now)
         onChainConstraintsWithNow  = applyNowToTimeValidity onChainConstraints now
-        lookups1 = mintingPolicy lc $ mustSatisfyAnyOfPolicy lc
+        lookups1 = mintingPolicy lc (mustSatisfyAnyOfPolicy lc)
+                <> Cons.mintingPolicy alwaysSucceedPolicyVersioned
         policyRedeemer = asRedeemer onChainConstraintsWithNow
     let tx1 = Cons.mustMintValueWithRedeemer policyRedeemer (tknValue lc)
            <> Cons.mustSatisfyAnyOf offChainConstraintsWithNow
@@ -123,19 +145,131 @@ mustSatisfyAnyOfSignerOrTimeContract
                         Just mvi{timeTo = now + offset})
                             =<< maybeMvi}
 
--- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with the same
+-- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with all of the same
 -- | constraints onchain and offchain
-mustSatisfyAnyOfMatchingAllConstraints :: SubmitTx -> LanguageContext -> TestTree
-mustSatisfyAnyOfMatchingAllConstraints submitTxFromConstraints lc =
-    let pkh = mockWalletPaymentPubKeyHash w1
-        cps = def {mustValidateIn = Just $ MustValidateIn 1000,
-                   mustBeSignedBy = Just $ MustBeSignedBy pkh}
-        contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints lc cps cps
-    in checkPredicateOptions defaultCheckOptions
-    ("Valid scenario using offchain and onchain constraint" ++
-    "mustSatisfyAnyOf with the same constraints onchain and offchain")
-    (assertValidatedTransactionCount 1)
-    (void $ trace contract)
+mustSatisfyAnyOfUsingAllOfTheSameConstraintsOnAndOffChain :: SubmitTx -> LanguageContext -> TestTree
+mustSatisfyAnyOfUsingAllOfTheSameConstraintsOnAndOffChain submitTxFromConstraints lc =
+    testGroup "all of the same constraints on and off chain"
+    [
+        let constraints = allConstraintsValid
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc constraints constraints
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf with all constraints onchain and offchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+
+        ,
+
+        let constraints = def
+                { mustPayToPubKey = Just $ MustPayToPubKey w2Pkh adaValue,
+                  mustSpendAtLeast = Just $ MustSpendAtLeast adaValue }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc constraints constraints
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf with mustPayToPubKey and mustSpendAtLeast constraints" ++
+            "onchain and offchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+
+        ,
+
+        let constraints = def
+                { mustProduceAtLeast = Just $ MustProduceAtLeast adaValue,
+                  mustValidateIn = Just $ MustValidateIn 1000 }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc constraints constraints
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf with mustProduceAtLeast and mustValidateIn constraints" ++
+            "onchain and offchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+
+        ,
+
+        let constraints = def { mustMintValue = Just $ MustMintValue otherTokenValue}
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc constraints constraints
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf with only mustMintValue constraint" ++
+            "onchain and offchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+    ]
+
+-- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with some of same
+-- | constraints onchain and offchain
+mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain :: SubmitTx -> LanguageContext -> TestTree
+mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain submitTxFromConstraints lc =
+    testGroup "some of the same constraints on and off chain"
+    [
+        let offChainConstraints = def { mustIncludeDatum = Just MustIncludeDatum }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc offChainConstraints allConstraintsValid
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf where only mustIncludeDatum is satisfied onchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+
+        ,
+
+        let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc offChainConstraints allConstraintsValid
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf where only mustMintValue is satisfied onchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+
+        ,
+
+        let offChainConstraints = def { mustValidateIn = Just $ MustValidateIn 2000,
+                                        mustPayToPubKey = Just $ MustPayToPubKey w2Pkh adaValue }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                       lc offChainConstraints allConstraintsValid
+        in checkPredicateOptions defaultCheckOptions
+           ("Valid scenario using offchain and onchain constraint" ++
+            "mustSatisfyAnyOf where only mustPayToPubKey is satisfied onchain")
+           (assertValidatedTransactionCount 1)
+           (void $ trace contract)
+    ]
+
+-- | Phase-2 validation failure when  scenario using offchain and onchain constraint
+-- | mustSatisfyAnyOf with the same constraints onchain and offchain
+phase2ErrorWhenUsingMustSatisfyAnyOf :: SubmitTx -> LanguageContext -> TestTree
+phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
+    testGroup "phase-2 failures"
+    [
+        let offChainConstraints = def { mustValidateIn = Just $ MustValidateIn 1001 }
+            onChainConstraints  = def { mustValidateIn = Just $ MustValidateIn 1000 }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                        lc offChainConstraints onChainConstraints
+        in checkPredicateOptions defaultCheckOptions
+            ("Phase 2 failure when onchain mustSatisfyAnyOf expects a validity interval " ++
+            "with a closer end boundary")
+            (assertFailedTransaction (\_ err _ -> case err of
+                {L.ScriptFailure (EvaluationError (_:_) _) -> True; _ -> False }))
+            (void $ trace contract)
+    ,
+        let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue,
+                                        mustPayToTheScript = Just $ MustPayToTheScript adaValue }
+            onChainConstraints  = def { mustValidateIn = Just $ MustValidateIn 1000 }
+            contract = mustSatisfyAnyOfSignerOrTimeContract submitTxFromConstraints
+                        lc offChainConstraints onChainConstraints
+        in checkPredicateOptions defaultCheckOptions
+            ("Phase 2 failure when onchain mustSatisfyAnyOf uses mustValidateIn but offchain" ++
+            "constraint does not")
+            (assertFailedTransaction (\_ err _ -> case err of
+                {L.ScriptFailure (EvaluationError (_:_) _) -> True; _ -> False }))
+            (void $ trace contract)
+    ]
+
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest
@@ -203,23 +337,21 @@ buildConstraints cps = do
                 Just $ Cons.mustValidateIn $ to (timeTo cp)) (mustValidateIn cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustBeSignedBy $ ppkh cp) (mustBeSignedBy cps),
-            P.maybe Nothing (\cp ->
-                Just $ Cons.mustIncludeDatum $ datum cp) (mustIncludeDatum cps),
+            P.maybe Nothing (\_ ->
+                Just $ Cons.mustIncludeDatum unitDatum) (mustIncludeDatum cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustPayToTheScript () (value cp)) (mustPayToTheScript cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustPayToPubKey (ppkh cp) (value cp)) (mustPayToPubKey cps),
             P.maybe Nothing (\cp ->
                 Just $
-                Cons.mustPayToOtherScript (vh cp) (datum cp) (value cp)) (mustPayToOtherScript cps),
+                Cons.mustPayToOtherScript (vh cp) unitDatum (value cp)) (mustPayToOtherScript cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustMintValue (value cp)) (mustMintValue cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustSpendAtLeast (value cp)) (mustSpendAtLeast cps),
             P.maybe Nothing (\cp ->
-                Just $ Cons.mustProduceAtLeast (value cp)) (mustProduceAtLeast cps),
-            P.maybe Nothing (\cp ->
-                Just $ Cons.mustSpendPubKeyOutput (txOutRef cp)) (mustSpendPubKeyOutput cps)
+                Just $ Cons.mustProduceAtLeast (value cp)) (mustProduceAtLeast cps)
             ]
     catMaybes maybeConstraints
     where
@@ -228,17 +360,15 @@ buildConstraints cps = do
 
 data ConstraintParam = MustValidateIn        {timeTo :: L.POSIXTime}
                      | MustBeSignedBy        {ppkh :: L.PaymentPubKeyHash}
-                     | MustIncludeDatum      {datum :: L.Datum}
-                     | MustPayToTheScript    {value :: Value} -- datum is ()
+                     | MustIncludeDatum
+                     | MustPayToTheScript    {value :: Value}
                      | MustPayToPubKey       {ppkh  :: L.PaymentPubKeyHash,
                                               value :: Value}
                      | MustPayToOtherScript  {vh    :: L.ValidatorHash,
-                                              datum :: L.Datum,
                                               value :: Value}
                      | MustMintValue         {value :: Value}
                      | MustSpendAtLeast      {value :: Value}
                      | MustProduceAtLeast    {value :: Value}
-                     | MustSpendPubKeyOutput {txOutRef :: L.TxOutRef}
 
 data ConstraintParams
     = ConstraintParams
@@ -251,8 +381,7 @@ data ConstraintParams
     mustPayToOtherScript,
     mustMintValue,
     mustSpendAtLeast,
-    mustProduceAtLeast,
-    mustSpendPubKeyOutput :: Maybe ConstraintParam
+    mustProduceAtLeast :: Maybe ConstraintParam
     } deriving (Default, Generic)
 
 PlutusTx.unstableMakeIsData ''ConstraintParam
