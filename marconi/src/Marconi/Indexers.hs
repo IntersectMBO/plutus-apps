@@ -21,14 +21,14 @@ import Streaming.Prelude qualified as S
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
                     chainPointToSlotNo)
 import Cardano.Api qualified as C
-import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 -- TODO Remove the following dependencies from cardano-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Ledger (TxIn (TxIn), TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
-import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromTxScriptValidity, scriptDataFromCardanoTxBody,
-                             withIsCardanoEra)
+import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
+                             scriptDataFromCardanoTxBody, withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
@@ -48,7 +48,7 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
        in map (slotNo,) hashes
 
 isTargetTxOut :: TargetAddresses -> C.TxOut C.CtxTx era -> Bool
-isTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
+isTargetTxOut targetAddresses (C.TxOut address _ _) = case  address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
@@ -56,17 +56,15 @@ isTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
 type TargetAddresses = NonEmpty.NonEmpty (C.Address C.ShelleyAddr )
 
 getOutputs
-  :: C.IsCardanoEra era
-  => Maybe TargetAddresses
+  :: Maybe TargetAddresses
   -> C.Tx era
   -> Maybe [(TxOut, TxOutRef)]
 getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-    outs <-
-      either (const Nothing) (Just . map TxOut)
-      . traverse (C.eraCast C.BabbageEra)
-      $ case maybeTargetAddresses of
-             Just targetAddresses -> filter (isTargetTxOut targetAddresses) txOuts
-             Nothing              -> txOuts
+    outs <- case maybeTargetAddresses of
+        Just targetAddresses ->
+            either (const Nothing) Just $ traverse fromCardanoTxOut . filter (isTargetTxOut targetAddresses) $ txOuts
+        Nothing ->
+            either (const Nothing) Just $ traverse fromCardanoTxOut  txOuts
     pure $ outs &  zip ([0..] :: [Integer])
         <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
                                           , txOutRefIdx = ix
@@ -85,8 +83,7 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
   in Set.fromList $ fmap (txInRef . (`TxIn` Nothing) . fromCardanoTxIn) inputs
 
 getUtxoUpdate
-  :: C.IsCardanoEra era
-  => SlotNo
+  :: SlotNo
   -> [C.Tx era]
   -> Maybe TargetAddresses
   -> UtxoUpdate

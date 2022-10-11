@@ -24,7 +24,6 @@ module Plutus.Trace.Effects.RunContractPlayground(
     , handleRunContractPlayground
     ) where
 
-import Cardano.Api (NetworkId)
 import Control.Lens
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, Member, type (~>))
@@ -83,13 +82,12 @@ handleRunContractPlayground ::
     , Member (State (Map Wallet ContractInstanceId)) effs2
     , Member (State (Map Wallet ContractInstanceId)) effs
     )
-    => NetworkId
-    -> Contract w s e ()
+    => Contract w s e ()
     -> RunContractPlayground
     ~> Eff effs
-handleRunContractPlayground networkId contract = \case
+handleRunContractPlayground contract = \case
     CallEndpoint wallet ep vl -> handleCallEndpoint @effs @effs2 wallet ep vl
-    LaunchContract wllt       -> handleLaunchContract @w @s @e @effs @effs2 networkId contract wllt
+    LaunchContract wllt       -> handleLaunchContract @w @s @e @effs @effs2 contract wllt
 
 handleLaunchContract ::
     forall w s e effs effs2.
@@ -106,13 +104,12 @@ handleLaunchContract ::
     , Member MultiAgentEffect effs2
     , Member (State (Map Wallet ContractInstanceId)) effs
     )
-    => NetworkId
-    -> Contract w s e ()
+    => Contract w s e ()
     -> Wallet
     -> Eff effs ()
-handleLaunchContract networkId contract wllt = do
+handleLaunchContract contract wllt = do
     i <- nextId
-    let handle = ContractHandle{chContract=contract, chInstanceId = i, chInstanceTag = walletInstanceTag wllt, chNetworkId = networkId}
+    let handle = ContractHandle{chContract=contract, chInstanceId = i, chInstanceTag = walletInstanceTag wllt}
     void $ startContractThread @w @s @e @effs @effs2 wllt handle
     modify @(Map Wallet ContractInstanceId) (set (at wllt) (Just i))
 

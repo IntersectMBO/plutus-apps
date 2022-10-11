@@ -24,7 +24,7 @@ import Plutus.Monitoring.Util (runLogEffects)
 import Cardano.ChainIndex.ChainIndex (processChainIndexEffects, syncState)
 import Control.Monad.IO.Class (MonadIO (..))
 import Ledger.Blockchain (Block)
-import Ledger.Params (Params (..))
+import Ledger.TimeSlot (SlotConfig)
 
 import Cardano.ChainIndex.Types
 import Cardano.Protocol.Socket.Mock.Client (runChainSync)
@@ -35,12 +35,12 @@ import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, serveChainIndexQuery
 -- The PAB chain index that keeps track of transaction data (UTXO set enriched
 -- with datums)
 
-main :: ChainIndexTrace -> ChainIndexConfig -> FilePath -> Params -> Availability -> IO ()
-main trace ChainIndexConfig{ciBaseUrl} socketPath Params{pSlotConfig} ccaAvailability = runLogEffects trace $ do
+main :: ChainIndexTrace -> ChainIndexConfig -> FilePath -> SlotConfig -> Availability -> IO ()
+main trace ChainIndexConfig{ciBaseUrl} socketPath slotConfig ccaAvailability = runLogEffects trace $ do
     tVarState <- liftIO $ STM.atomically $ STM.newTVar mempty
 
     logInfo StartingNodeClientThread
-    _ <- liftIO $ runChainSync socketPath pSlotConfig $ updateChainState tVarState
+    _ <- liftIO $ runChainSync socketPath slotConfig $ updateChainState tVarState
 
     logInfo $ StartingChainIndex servicePort
     available ccaAvailability

@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia   #-}
-{-# LANGUAGE Rank2Types    #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE Rank2Types         #-}
+{-# LANGUAGE TupleSections      #-}
+{-# LANGUAGE TypeFamilies       #-}
 -- | 'AddressMap's and functions for working on them.
 --
 -- 'AddressMap's are used to represent the limited knowledge about the state of the ledger that
@@ -42,9 +43,9 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
 import Ledger.Blockchain
-import Ledger.Tx (CardanoTx, TxIn (..), TxOut (..), TxOutRef (..), getCardanoTxId, getCardanoTxOutputs,
-                  getCardanoTxUnspentOutputsTx, txOutAddress, txOutValue)
+import Ledger.Tx (CardanoTx, getCardanoTxId, getCardanoTxOutputs, getCardanoTxUnspentOutputsTx)
 import Plutus.V1.Ledger.Address (Address (..))
+import Plutus.V1.Ledger.Tx (TxIn (..), TxOut (..), TxOutRef (..))
 import Plutus.V1.Ledger.Value (Value)
 
 type UtxoMap = Map TxOutRef (CardanoTx, TxOut)
@@ -183,6 +184,7 @@ inputs ::
 inputs addrs = Map.fromListWith Set.union
     . fmap (fmap Set.singleton . swap)
     . mapMaybe ((\a -> sequence (a, Map.lookup a addrs)) . txInRef)
+    . Set.toList
     . consumableInputs
 
 -- | Restrict an 'AddressMap' to a set of addresses.

@@ -34,7 +34,7 @@ import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
@@ -178,7 +178,7 @@ vestingContract vesting = selectList [vest, retrieve]
             Dead  -> pure ()
 
 payIntoContract :: Value -> TxConstraints () ()
-payIntoContract = mustPayToTheScriptWithDatumInTx ()
+payIntoContract = mustPayToTheScript ()
 
 vestFundsC
     :: ( AsVestingError e
@@ -187,7 +187,7 @@ vestFundsC
     -> Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups $ typedValidator vesting) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -234,7 +234,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
     void $ waitNSlots 1 -- see [slots and POSIX time]
-    mkTxConstraints (Constraints.typedValidatorLookups inst
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

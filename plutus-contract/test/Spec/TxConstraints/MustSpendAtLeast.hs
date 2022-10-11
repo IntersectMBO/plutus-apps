@@ -13,16 +13,18 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints.OffChain qualified as Constraints
-import Ledger.Constraints.OnChain.V1 qualified as Constraints
-import Ledger.Constraints.TxConstraints qualified as Constraints
+import Ledger.Constraints.OffChain qualified as Constraints (ownPaymentPubKeyHash, plutusV1TypedValidatorLookups,
+                                                             unspentOutputs)
+import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
+                                                                  mustPayToTheScript, mustSpendAtLeast)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, w1)
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, ValidatorHash)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -43,20 +45,18 @@ scriptBalance = 25_000_000
 
 mustSpendAtLeastContract :: Integer -> Integer -> Ledger.PaymentPubKeyHash-> Contract () Empty ContractError ()
 mustSpendAtLeastContract offAmt onAmt pkh = do
-    let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScriptWithDatumInTx
-                onAmt
-                (Ada.lovelaceValueOf scriptBalance)
+    let lookups1 = Constraints.plutusV1TypedValidatorLookups typedValidator
+        tx1 = Constraints.mustPayToTheScript onAmt (Ada.lovelaceValueOf scriptBalance)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt scrAddress
-    let lookups2 = Constraints.typedValidatorLookups typedValidator
+    let lookups2 = Constraints.plutusV1TypedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
             Constraints.collectFromTheScript utxos ()
-            <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
+            <> Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData onAmt)
             <> Constraints.mustSpendAtLeast (Ada.lovelaceValueOf offAmt)
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -138,6 +138,9 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
+
+validatorScript :: Validator
+validatorScript = Scripts.validatorScript typedValidator
 
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash typedValidator

@@ -1,5 +1,4 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Plutus.PAB.ArbitrarySpec where
 
@@ -12,11 +11,11 @@ import Plutus.PAB.Arbitrary ()
 import PlutusTx (Data (..))
 import PlutusTx qualified
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
+import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests = testGroup "Plutus.PAB.ArbitrarySpec"
-  [ testPropertyNamed "arbitrary data is bounded by size parameter" "dataBoundedBySizeProp" dataBoundedBySizeProp ]
+  [ testProperty "arbitrary data is bounded by size parameter" dataBoundedBySizeProp ]
 
 dataBoundedBySizeProp :: Property
 dataBoundedBySizeProp = property $ do

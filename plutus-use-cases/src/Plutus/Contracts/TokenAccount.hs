@@ -59,9 +59,9 @@ import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contracts.Currency qualified as Currency
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api (Address, ValidatorHash)
-import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V1.Ledger.Contexts qualified as V
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
 
@@ -124,8 +124,8 @@ accountToken :: Account -> Value
 accountToken (Account currency) = Value.assetClassValue currency 1
 
 {-# INLINEABLE validate #-}
-validate :: Account -> () -> () -> PV1.ScriptContext -> Bool
-validate account _ _ ptx = PV1.valueSpent (PV1.scriptContextTxInfo ptx) `Value.geq` accountToken account
+validate :: Account -> () -> () -> V.ScriptContext -> Bool
+validate account _ _ ptx = V.valueSpent (V.scriptContextTxInfo ptx) `Value.geq` accountToken account
 
 typedValidator :: Account -> Scripts.TypedValidator TokenAccount
 typedValidator = Scripts.mkTypedValidatorParam @TokenAccount
@@ -138,14 +138,14 @@ address :: Account -> Address
 address = Scripts.validatorAddress . typedValidator
 
 validatorHash :: Account -> ValidatorHash
-validatorHash = PV1.validatorHash . Scripts.validatorScript . typedValidator
+validatorHash = Scripts.validatorHash . Scripts.validatorScript . typedValidator
 
 -- | A transaction that pays the given value to the account
 payTx
     ::
     Value
     -> TxConstraints (Scripts.RedeemerType TokenAccount) (Scripts.DatumType TokenAccount)
-payTx = Constraints.mustPayToTheScriptWithDatumInTx ()
+payTx = Constraints.mustPayToTheScript ()
 
 -- | Pay some money to the given token account
 pay
@@ -162,7 +162,7 @@ pay account vl = do
         <> " into "
         <> show account
     mapError (review _TAContractError) $
-          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
+          mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) (payTx vl)
       >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
@@ -184,7 +184,7 @@ redeemTx account pk = mapError (review _TAContractError) $ do
             <> show totalVal
     let constraints = Constraints.collectFromTheScript utxos ()
                 <> Constraints.mustPayToPubKey pk (accountToken account)
-        lookups = Constraints.typedValidatorLookups inst
+        lookups = Constraints.plutusV1TypedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos
     -- TODO. Replace 'PubKey' with a more general 'Address' type of output?
     --       Or perhaps add a field 'requiredTokens' to 'LedgerTxConstraints' and let the

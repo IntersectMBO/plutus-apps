@@ -5,7 +5,7 @@
 A 'Simulator' for the test contracts
 
 -}
-module Plutus.PAB.Simulator.Test(runSimulation, runSimulationWithParams) where
+module Plutus.PAB.Simulator.Test(runSimulation) where
 
 import Control.Monad.Freer (interpret)
 import Data.Default (Default (def))
@@ -20,20 +20,15 @@ import Plutus.PAB.Types (PABError)
 
 -- | Run the PAB simulator with the test contracts
 runSimulation :: Simulation (Builtin TestContracts) a -> IO (Either PABError a)
-runSimulation = runSimulationWithParams params
- where
-    params :: Params
-    params = increaseTransactionLimits . increaseTransactionLimits
-           $ def { pSlotConfig = def { scSlotLength = 1 } }
-
--- | Run the PAB simulator with the test contracts with provided params
-runSimulationWithParams :: Params -> Simulation (Builtin TestContracts) a -> IO (Either PABError a)
-runSimulationWithParams params = runSimulationWith (simulatorHandlers params)
+runSimulation = runSimulationWith simulatorHandlers
 
 -- | 'EffectHandlers' for running the PAB as a simulator (no connectivity to
 --   out-of-process services such as wallet backend, node, etc.)
-simulatorHandlers :: Params -> EffectHandlers (Builtin TestContracts) (SimulatorState (Builtin TestContracts))
-simulatorHandlers params = mkSimulatorHandlers params handler
+simulatorHandlers :: EffectHandlers (Builtin TestContracts) (SimulatorState (Builtin TestContracts))
+simulatorHandlers = mkSimulatorHandlers params handler
   where
+    params :: Params
+    params = increaseTransactionLimits . increaseTransactionLimits $ def { pSlotConfig = def { scSlotLength = 1 } }
+
     handler :: SimulatorContractHandler (Builtin TestContracts)
     handler = interpret (contractHandler handleBuiltin)

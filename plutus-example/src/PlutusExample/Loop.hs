@@ -1,13 +1,15 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
 
-module PlutusExample.PlutusVersion1.AlwaysSucceeds
-  ( alwaysSucceedsScript
-  , alwaysSucceedsScriptShortBs
+module PlutusExample.Loop
+  ( loopScript
+  , loopScriptShortBs
   ) where
 
-import Prelude hiding (($))
+import Prelude hiding (pred, ($), (&&), (<), (==))
 
 import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 
@@ -16,12 +18,19 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
 import Plutus.V1.Ledger.Scripts qualified as Plutus
-import PlutusTx qualified
+import PlutusTx
+import PlutusTx.Builtins (unsafeDataAsI)
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator _ _ _ = ()
+mkValidator _datum redeemer _txContext
+  = if n < 1000000
+       then traceError "redeemer is < 1000000"
+       else loop n
+  where
+    n = unsafeDataAsI redeemer
+    loop i = if i == 1000000 then () else loop $ pred i
 
 validator :: Plutus.Validator
 validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
@@ -29,9 +38,8 @@ validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
 script :: Plutus.Script
 script = Plutus.unValidatorScript validator
 
-alwaysSucceedsScriptShortBs :: SBS.ShortByteString
-alwaysSucceedsScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+loopScriptShortBs :: SBS.ShortByteString
+loopScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
 
-alwaysSucceedsScript :: PlutusScript PlutusScriptV1
-alwaysSucceedsScript = PlutusScriptSerialised alwaysSucceedsScriptShortBs
-
+loopScript :: PlutusScript PlutusScriptV1
+loopScript = PlutusScriptSerialised loopScriptShortBs

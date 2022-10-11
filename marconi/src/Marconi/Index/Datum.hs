@@ -26,7 +26,7 @@ import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (Con
 import Database.SQLite.Simple.ToField (ToField (toField))
 
 import Cardano.Api (SlotNo (SlotNo))
-import Ledger.Scripts (Datum, DatumHash)
+import Plutus.V1.Ledger.Api (Datum, DatumHash)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 

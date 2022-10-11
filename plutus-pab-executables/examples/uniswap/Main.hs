@@ -23,7 +23,6 @@ import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup qualified as Semigroup
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger.Ada (adaSymbol, adaToken)
 import Plutus.Contract
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap qualified as Uniswap
@@ -33,6 +32,7 @@ import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Simulator (SimulatorEffectHandlers, logString)
 import Plutus.PAB.Simulator qualified as Simulator
 import Plutus.PAB.Webserver.Server qualified as PAB.Server
+import Plutus.V1.Ledger.Ada (adaSymbol, adaToken)
 import Prelude hiding (init)
 import Prettyprinter (Pretty (..), viaShow)
 import Wallet.Emulator.Types (knownWallet)

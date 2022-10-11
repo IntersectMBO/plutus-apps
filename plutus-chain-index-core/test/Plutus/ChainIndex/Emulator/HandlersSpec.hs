@@ -20,6 +20,7 @@ import Data.Maybe (isJust)
 import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
+import Ledger (outValue)
 import Plutus.ChainIndex (ChainIndexLog, ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
                           TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks, citxTxId, txFromTxId,
                           unspentTxOutFromRef, utxoSetMembership, utxoSetWithCurrency)
@@ -27,32 +28,32 @@ import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
-import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), txOuts)
+import Plutus.ChainIndex.Tx (_ValidTx, citxOutputs)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 import Hedgehog (Property, assert, forAll, property, (===))
 import Test.Tasty
-import Test.Tasty.Hedgehog (testPropertyNamed)
+import Test.Tasty.Hedgehog (testProperty)
 import Util (utxoSetFromBlockAddrs)
 
 tests :: TestTree
 tests = do
   testGroup "chain index emulator handlers"
     [ testGroup "txFromTxId"
-      [ testPropertyNamed "get tx from tx id" "txFromTxIdSpec" txFromTxIdSpec
+      [ testProperty "get tx from tx id" txFromTxIdSpec
       ]
     , testGroup "utxoSetAtAddress"
-      [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefAtAddressShouldBeUnspentSpec" eachTxOutRefAtAddressShouldBeUnspentSpec
+      [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
       ]
     , testGroup "unspentTxOutFromRef"
-      [ testPropertyNamed "get unspent tx out from ref" "eachTxOutRefAtAddressShouldHaveTxOutSpec" eachTxOutRefAtAddressShouldHaveTxOutSpec
+      [ testProperty "get unspent tx out from ref" eachTxOutRefAtAddressShouldHaveTxOutSpec
       ]
     , testGroup "utxoSetWithCurrency"
-      [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefWithCurrencyShouldBeUnspentSpec" eachTxOutRefWithCurrencyShouldBeUnspentSpec
-      , testPropertyNamed "should restrict to non-ADA currencies" "cantRequestForTxOutRefsWithAdaSpec" cantRequestForTxOutRefsWithAdaSpec
+      [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
+      , testProperty "should restrict to non-ADA currencies" cantRequestForTxOutRefsWithAdaSpec
       ]
     , testGroup "BlockProcessOption"
-      [ testPropertyNamed "do not store txs" "doNotStoreTxs" doNotStoreTxs
+      [ testProperty "do not store txs" doNotStoreTxs
       ]
 
     ]
@@ -116,7 +117,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
   let assetClasses =
         fmap (\(c, t, _) -> AssetClass (c, t))
              $ flattenValue
-             $ view (traverse . to txOuts . traverse . to citoValue) block
+             $ view (traverse . citxOutputs . _ValidTx . traverse . outValue) block
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index

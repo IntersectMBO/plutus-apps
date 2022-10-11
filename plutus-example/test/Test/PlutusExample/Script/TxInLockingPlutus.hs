@@ -31,7 +31,6 @@ import System.Directory qualified as IO
 import System.Environment qualified as IO
 import Test.Base qualified as H
 import Test.Process qualified as H
-import Test.Runtime qualified as H
 import Testnet.Cardano qualified as H
 import Testnet.Conf qualified as H
 
@@ -44,7 +43,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   resultFile <- H.noteTempFile tempAbsPath "result.out"
 
-  tr@H.TestnetRuntime { H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
+  H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 
   cardanoCli <- H.binFlex "cardano-cli" "CARDANO_CLI"
 
@@ -57,7 +56,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
           , ("WORK", tempAbsPath)
           , ("UTXO_VKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey")
           , ("UTXO_SKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.skey")
-          , ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ H.bftSprockets tr)
+          , ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           , ("TESTNET_MAGIC", show @Int testnetMagic)
           , ("PATH", path)
           , ("RESULT_FILE", resultFile)

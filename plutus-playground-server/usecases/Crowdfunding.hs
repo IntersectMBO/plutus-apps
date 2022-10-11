@@ -35,8 +35,9 @@ import Ledger.Value (Value)
 import Playground.Contract
 import Plutus.Contract
 import Plutus.Contract.Constraints qualified as Constraints
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Api (Validator)
+import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..))
 import Prelude (Semigroup (..))
@@ -114,14 +115,14 @@ validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
     (refundRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the contributor
-    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash contributor)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
 
 validCollection :: Campaign -> TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
     (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 -- | The validator script is of type 'CrowdfundingValidator', and is
 -- additionally parameterized by a 'Campaign' definition. This argument is
@@ -138,12 +139,12 @@ mkValidator c con act p = case act of
 -- | The validator script that determines whether the campaign owner can
 --   retrieve the funds or the contributors can claim a refund.
 --
-contributionScript :: Campaign -> PV1.Validator
+contributionScript :: Campaign -> Validator
 contributionScript = Scripts.validatorScript . typedValidator
 
 -- | The address of a [[Campaign]]
-campaignAddress :: Campaign -> Ledger.ValidatorHash
-campaignAddress = PV1.validatorHash . contributionScript
+campaignAddress :: Campaign -> ValidatorHash
+campaignAddress = Scripts.validatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
 crowdfunding :: AsContractError e => Campaign -> Contract () CrowdfundingSchema e ()
@@ -165,9 +166,9 @@ contribute :: AsContractError e => Campaign -> Promise () CrowdfundingSchema e (
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
-        tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
+        tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
@@ -183,7 +184,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+        void $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
             >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()

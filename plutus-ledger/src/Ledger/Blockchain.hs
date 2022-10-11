@@ -42,18 +42,20 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
 import Data.Proxy (Proxy (..))
+import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxOutputs, spentOutputs, txOutDatumHash, txOutPubKey, txOutValue,
-                  unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
+import Ledger.Tx (CardanoTx, getCardanoTxCollateralInputs, getCardanoTxId, getCardanoTxInputs, getCardanoTxOutputs,
+                  spentOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
+import Plutus.V1.Ledger.Tx (TxIn, TxOut, TxOutRef (..), txOutDatum, txOutPubKey, txOutValue, validValuesTx)
+import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value (Value)
 
 -- | Block identifier (usually a hash)
@@ -98,7 +100,7 @@ eitherTx :: (CardanoTx -> r) -> (CardanoTx -> r) -> OnChainTx -> r
 eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
-consumableInputs :: OnChainTx -> [TxIn]
+consumableInputs :: OnChainTx -> Set.Set TxIn
 consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
@@ -125,7 +127,7 @@ value bc o = txOutValue <$> out bc o
 
 -- | Determine the data script that a transaction output refers to.
 datumTxo :: Blockchain -> TxOutRef -> Maybe DatumHash
-datumTxo bc o = txOutDatumHash =<< out bc o
+datumTxo bc o = txOutDatum =<< out bc o
 
 -- | Determine the public key that locks a transaction output, if there is one.
 pubKeyTxo :: Blockchain -> TxOutRef -> Maybe PubKeyHash

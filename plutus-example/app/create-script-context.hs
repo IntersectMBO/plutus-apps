@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 import Prelude
 
 import Cardano.Api
@@ -28,8 +27,7 @@ parseScriptContextCmd = parseGenerateDummy <|> parseGenerateTxBody
   parseGenerateDummy :: Parser ScriptContextCmd
   parseGenerateDummy =
     GenerateDummyScriptContextRedeemer
-      <$> pPlutusScriptLanguage
-      <*> strOption
+      <$> strOption
             ( long "out-file"
             <> metavar "FILE"
             <> help "Create a dummy script context redeemer. Redeeemer output filepath."
@@ -45,7 +43,6 @@ parseScriptContextCmd = parseGenerateDummy <|> parseGenerateTxBody
                     <> help "Create a script context from a tx body."
                     <> Opt.completer (Opt.bashCompleter "file")
                     )
-      <*> pPlutusScriptLanguage
       <*> pConsensusModeParams
       <*> pNetworkId
       <*> strOption ( long "out-file"
@@ -56,44 +53,23 @@ parseScriptContextCmd = parseGenerateDummy <|> parseGenerateTxBody
 
 data ScriptContextCmd
   = GenerateDummyScriptContextRedeemer
-      AnyScriptLanguage --TODO: Replace type with LedgerPlutusVersion when it becomes available
       FilePath
   | GenerateScriptContextRedeemerTxBody
       FilePath
-      AnyScriptLanguage --TODO: Replace type with LedgerPlutusVersion when it becomes available
       AnyConsensusModeParams
       NetworkId
       FilePath
 
 runScriptContextCmd :: ScriptContextCmd -> IO ()
-runScriptContextCmd (GenerateDummyScriptContextRedeemer (AnyScriptLanguage sVer) outFp) =
-  case sVer of
-    PlutusScriptLanguage PlutusScriptV1 -> LB.writeFile outFp sampleTestV1ScriptContextDataJSON
-    PlutusScriptLanguage PlutusScriptV2 -> LB.writeFile outFp sampleTestV2ScriptContextDataJSON
-    err -> error $ "GenerateDummyScriptContextRedeemer: cannot create a redeemer for a non-Plutus script." <>
-                   " Script type: " <> show err
-runScriptContextCmd (GenerateScriptContextRedeemerTxBody txbodyfile (AnyScriptLanguage sVer) cModeParams nid outFp) = do
-    case sVer of
-      SimpleScriptLanguage _ -> error "runScriptContextCmd: Not possible to specify a simple script"
-      PlutusScriptLanguage pScriptVer -> do
+runScriptContextCmd (GenerateDummyScriptContextRedeemer outFp) =
+  LB.writeFile outFp sampleTestScriptContextDataJSON
+runScriptContextCmd (GenerateScriptContextRedeemerTxBody txbodyfile cModeParams nid outFp) = do
+      eTxBodyRedeemer <- runExceptT $ txToRedeemer txbodyfile cModeParams nid
+      case eTxBodyRedeemer of
+        Left err -> error $ "Error creating redeemer from: " <> txbodyfile <>
+                            " Error: " <> show err
+        Right redeemer -> liftIO $ LB.writeFile outFp redeemer
 
-        eTxBodyRedeemer <- runExceptT $ createAnyCustomRedeemerBsFromTxFp pScriptVer txbodyfile cModeParams nid
-        case eTxBodyRedeemer of
-          Left err -> error $ "Error creating redeemer from: " <> txbodyfile <>
-                              " Error: " <> show err
-          Right redeemer -> liftIO $ LB.writeFile outFp redeemer
-
-
-pPlutusScriptLanguage :: Parser AnyScriptLanguage
-pPlutusScriptLanguage =
-  Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV1)
-    (  Opt.long "plutus-v1"
-    <> Opt.help "Specify the version of the script context you are trying to recreate."
-    ) <|>
-  Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV2)
-    (  Opt.long "plutus-v2"
-    <> Opt.help "Specify the version of the script context you are trying to recreate."
-    )
 
 pConsensusModeParams :: Parser AnyConsensusModeParams
 pConsensusModeParams = asum

@@ -168,22 +168,10 @@ fromShelleyBasedScript era script =
           Shelley.ScriptInEra Shelley.PlutusScriptV1InAlonzo $
           Shelley.PlutusScript Shelley.PlutusScriptV1 $
           Shelley.PlutusScriptSerialised s
-        Alonzo.PlutusScript Alonzo.PlutusV2 _ ->
-          error "fromShelleyBasedScript: PlutusV2 not supported in Alonzo era"
-    Shelley.ShelleyBasedEraBabbage ->
-      case script of
-        Alonzo.TimelockScript s ->
-          Shelley.ScriptInEra Shelley.SimpleScriptV2InBabbage $
-          Shelley.SimpleScript Shelley.SimpleScriptV2 $
-          fromAllegraTimelock Shelley.TimeLocksInSimpleScriptV2 s
-        Alonzo.PlutusScript Alonzo.PlutusV1 s ->
-          Shelley.ScriptInEra Shelley.PlutusScriptV1InBabbage $
-          Shelley.PlutusScript Shelley.PlutusScriptV1 $
-          Shelley.PlutusScriptSerialised s
         Alonzo.PlutusScript Alonzo.PlutusV2 s ->
-          Shelley.ScriptInEra Shelley.PlutusScriptV2InBabbage $
+          Shelley.ScriptInEra Shelley.PlutusScriptV2InAlonzo $
           Shelley.PlutusScript Shelley.PlutusScriptV2 $
-          Shelley.PlutusScriptSerialised s
+          Shelley.PlutusScriptSerialised  s
 
   where
   fromAllegraTimelock :: Shelley.TimeLocksSupported lang

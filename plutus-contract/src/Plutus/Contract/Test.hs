@@ -36,7 +36,6 @@ module Plutus.Contract.Test(
     , assertInstanceLog
     , assertNoFailedTransactions
     , assertValidatedTransactionCount
-    , assertValidatedTransactionCountOfTotal
     , assertFailedTransaction
     , assertHooks
     , assertResponses
@@ -82,7 +81,7 @@ import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
 import Control.Lens (_Left, at, ix, makeLenses, over, preview, (&), (.~), (^.))
-import Control.Monad (guard, unless)
+import Control.Monad (unless)
 import Control.Monad.Freer (Eff, interpretM, runM)
 import Control.Monad.Freer.Error (Error, runError)
 import Control.Monad.Freer.Extras.Log (LogLevel (..), LogMessage (..))
@@ -112,6 +111,7 @@ import Test.Tasty.Providers (TestTree)
 
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx, onCardanoTx)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
@@ -127,10 +127,10 @@ import Ledger.Generators qualified as Gen
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
-import Plutus.V1.Ledger.Scripts qualified as PV1
+import Plutus.V1.Ledger.Scripts (Validator)
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 
 import Data.IORef
-import Ledger.Tx (Tx, onCardanoTx)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
@@ -241,8 +241,8 @@ checkPredicateInner :: forall m.
     -> (Bool -> m ()) -- ^ assert
     -> (CoverageData -> m ())
     -> m ()
-checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action =
-    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action)
+checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action annot assert cover =
+    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action) annot assert cover
 
 checkPredicateInnerStream :: forall m.
     Monad m
@@ -265,7 +265,7 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePred
                 $ interpretM @(Writer (Doc Void)) @m (\case { Tell d -> annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
                 $ runReader dist
-                consumedStream
+                $ consumedStream
 
     unless (result == Right True) $ do
         annot "Test failed."
@@ -388,9 +388,9 @@ getTxOutDatum ::
   Ledger.CardanoTx ->
   Ledger.TxOut ->
   Maybe d
-getTxOutDatum tx' txOut = Ledger.txOutDatumHash txOut >>= go
-    where
-        go datumHash = Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
+getTxOutDatum _ (Ledger.TxOut _ _ Nothing) = Nothing
+getTxOutDatum tx' (Ledger.TxOut _ _ (Just datumHash)) =
+    Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
 dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $
@@ -588,7 +588,7 @@ walletFundsChangeImpl exact w dlt' = TracePredicate $
             tell @(Doc Void) $ vsep $
                 [ "Expected funds of" <+> pretty w <+> "to change by"
                 , " " <+> viaShow dlt] ++
-                (guard exact >> ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
+                (if exact then [] else ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
                 if initialValue == finalValue
                 then ["but they did not change"]
                 else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
@@ -653,21 +653,13 @@ assertNoFailedTransactions = TracePredicate $
 
 -- | Assert that n transactions validated, and no transaction failed to validate.
 assertValidatedTransactionCount :: Int -> TracePredicate
-assertValidatedTransactionCount expected = assertValidatedTransactionCountOfTotal expected expected
-
--- | Assert that n transactions validated, and the rest failed.
-assertValidatedTransactionCountOfTotal :: Int -> Int -> TracePredicate
-assertValidatedTransactionCountOfTotal expectedValid expectedTotal =
+assertValidatedTransactionCount expected =
+    assertNoFailedTransactions
+    .&&.
     TracePredicate (flip postMapM (L.generalize Folds.validatedTransactions) $ \xs ->
         let actual = length xs - 1 in -- ignore the initial wallet distribution transaction
-        if actual == expectedValid then pure True else do
+        if actual == expected then pure True else do
             tell @(Doc Void) $ "Unexpected number of validated transactions:" <+> pretty actual
-            pure False
-    ) .&&.
-    TracePredicate (flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \xs ->
-        let actual = length xs in
-        if actual == expectedTotal - expectedValid then pure True else do
-            tell @(Doc Void) $ "Unexpected number of invalid transactions:" <+> pretty actual
             pure False
     )
 
@@ -706,7 +698,7 @@ assertAccumState contract inst p nm = TracePredicate $
         let result = p w
         unless result $ do
             tell @(Doc Void) $ vsep
-                [ "Accumulated state of" <+> pretty inst <> colon
+                [ "Accumulated state of of" <+> pretty inst <> colon
                 , indent 2 (viaShow w)
                 , "Failed" <+> squotes (fromString nm)
                 ]
@@ -714,10 +706,10 @@ assertAccumState contract inst p nm = TracePredicate $
 
 -- | Assert that the size of a 'Validator' is below
 --   the maximum.
-reasonable :: PV1.Validator -> Integer -> HUnit.Assertion
+reasonable :: Validator -> Integer -> HUnit.Assertion
 reasonable = reasonable' putStrLn
 
-reasonable' :: (String -> IO ()) -> PV1.Validator -> Integer -> HUnit.Assertion
+reasonable' :: (String -> IO ()) -> Validator -> Integer -> HUnit.Assertion
 reasonable' logger (Ledger.unValidatorScript -> s) maxSize = do
     let sz = Ledger.scriptSize s
         msg = "Script too big! Max. size: " <> show maxSize <> ". Actual size: " <> show sz

@@ -6,7 +6,6 @@
 , gitignore-nix
 , z3
 , libsodium-vrf
-, libsecp256k1
 , compiler-nix-name
 , enableHaskellProfiling
   # Whether to set the `defer-plugin-errors` flag on those packages that need
@@ -167,7 +166,6 @@ let
 
             # Broken due to warnings, unclear why the setting that fixes this for the build doesn't work here.
             iohk-monitoring.doHaddock = false;
-            cardano-wallet.doHaddock = false;
 
             # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
             cardano-streaming.ghcOptions = [ "-Werror" ];
@@ -196,7 +194,7 @@ let
 
             # See https://github.com/input-output-hk/iohk-nix/pull/488
             cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
-            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf libsecp256k1 ] ];
+            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
           };
         })
       ] ++ lib.optional enableHaskellProfiling {

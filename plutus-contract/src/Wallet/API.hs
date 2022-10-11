@@ -64,6 +64,7 @@ import Control.Monad (unless, void)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logWarn)
+import Data.Default (Default (def))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
@@ -125,8 +126,8 @@ payToPaymentPublicKeyHash ::
 payToPaymentPublicKeyHash params range v pk = do
     pkh <- ownFirstPaymentPubKeyHash
     let constraints = Constraints.mustPayToPubKey pk v
-                   <> Constraints.mustValidateIn (TimeSlot.slotRangeToPOSIXTimeRange (pSlotConfig params) range)
                    <> Constraints.mustBeSignedBy pkh
+                   <> Constraints.mustValidateIn (TimeSlot.slotRangeToPOSIXTimeRange def range)
     utx <- either (throwError . PaymentMkTxError)
                   pure
                   (Constraints.mkTx @Void mempty constraints)

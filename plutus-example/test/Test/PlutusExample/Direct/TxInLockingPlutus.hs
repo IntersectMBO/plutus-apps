@@ -42,7 +42,6 @@ import System.Directory qualified as IO
 import System.Environment qualified as IO
 import Test.Base qualified as H
 import Test.Process qualified as H
-import Test.Runtime qualified as H
 import Testnet.Cardano qualified as H
 import Testnet.Conf qualified as H
 
@@ -67,13 +66,13 @@ prop_spending_plutus_script = H.integration . H.runFinallies . H.workspace "chai
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  tr@H.TestnetRuntime { H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
+  H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 
   env <- H.evalIO IO.getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ H.bftSprockets tr)
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           ]
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.

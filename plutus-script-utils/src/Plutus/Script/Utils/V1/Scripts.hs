@@ -2,9 +2,6 @@
 This module contains functions related to the computation of script hashes for
 PlutusV1.
 -}
-
-{-# OPTIONS_GHC -Wno-missing-import-lists #-}
-
 module Plutus.Script.Utils.V1.Scripts
     ( -- * Script hashes
       PV1.Validator

@@ -34,7 +34,7 @@ import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
+import Test.Tasty.Hedgehog (testProperty)
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
@@ -59,8 +59,7 @@ import Marconi.Logging ()
 
 tests :: TestTree
 tests = testGroup "Integration"
-  [ testPropertyNamed "prop_script_hash_in_local_testnet_tx_match" "testIndex" testIndex
-  ]
+  [ testProperty "prop_script_hash_in_local_testnet_tx_match" testIndex ]
 
 {- | We test the script transaction indexer by setting up a testnet,
    adding a script to it and then spending it, and then see if the
@@ -158,7 +157,7 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
           , C.localNodeSocketPath = socketPathAbs
           }
 
-  (tx1in, C.TxOut _ v _ _) <- do
+  (tx1in, C.TxOut _ v _) <- do
     utxo <- findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
     headM $ Map.toList $ C.unUTxO utxo
   let totalLovelace = C.txOutValueToLovelace v
@@ -182,23 +181,18 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
           (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) plutusScriptAddr)
           (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountPaid)
           (C.TxOutDatumHash C.ScriptDataInAlonzoEra scriptDatumHash)
-          C.ReferenceScriptNone
       txOut2 :: C.TxOut ctx C.AlonzoEra
       txOut2 =
         C.TxOut
           (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
           (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountReturned)
           C.TxOutDatumNone
-          C.ReferenceScriptNone
       txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
       txBodyContent =
         C.TxBodyContent {
           C.txIns              = [(tx1in, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)],
           C.txInsCollateral    = C.TxInsCollateralNone,
-          C.txInsReference     = C.TxInsReferenceNone,
           C.txOuts             = [txOut1, txOut2],
-          C.txTotalCollateral  = C.TxTotalCollateralNone,
-          C.txReturnCollateral = C.TxReturnCollateralNone,
           C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx1fee,
           C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
           C.txMetadata         = C.TxMetadataNone,
@@ -225,7 +219,7 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
 
   tx2collateralTxIn <- headM . Map.keys . C.unUTxO =<< findUTxOByAddress localNodeConnectInfo (C.toAddressAny address)
 
-  (scriptTxIn, C.TxOut _ valueAtScript _ _) <- do
+  (scriptTxIn, C.TxOut _ valueAtScript _) <- do
     scriptUtxo <- findUTxOByAddress localNodeConnectInfo $ C.toAddressAny plutusScriptAddr
     headM $ Map.toList $ C.unUTxO scriptUtxo
 
@@ -244,7 +238,7 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
 
       scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
       scriptWitness = C.ScriptWitness C.ScriptWitnessForSpending $
-        C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 (C.PScript plutusScript)
+        C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 plutusScript
         (C.ScriptDatumForTxIn scriptDatum) redeemer executionUnits
 
       collateral = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
@@ -256,17 +250,13 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
              -- send ADA back to the original genesis address               ^
             (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue $ lovelaceAtScript - tx2fee)
             C.TxOutDatumNone
-            C.ReferenceScriptNone
 
       tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
       tx2bodyContent =
         C.TxBodyContent {
           C.txIns              = [(scriptTxIn, C.BuildTxWith scriptWitness)],
           C.txInsCollateral    = collateral,
-          C.txInsReference     = C.TxInsReferenceNone,
           C.txOuts             = [tx2out],
-          C.txTotalCollateral  = C.TxTotalCollateralNone,
-          C.txReturnCollateral = C.TxReturnCollateralNone,
           C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx2fee,
           C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra),
           C.txMetadata         = C.TxMetadataNone,
@@ -328,11 +318,14 @@ startTestnet base tempAbsBasePath' = do
       Nothing
   assert $ tempAbsPath == (tempAbsBasePath' <> "/")
         && tempAbsPath == (tempBaseAbsPath <> "/")
-  tn <- TN.testnet TN.defaultTestnetOptions conf
-  let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral (TN.testnetMagic tn)
-  socketPath <- IO.sprocketArgumentName <$> headM (TN.nodeSprocket <$> TN.bftNodes tn)
+  TN.TestnetRuntime { TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
+  let networkId = C.Testnet $ C.NetworkMagic $ fromIntegral testnetMagic
+  socketPath <- IO.sprocketArgumentName <$> headM bftSprockets
   socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
   pure (socketPathAbs, networkId, tempAbsPath)
+
+deriving instance Real C.Lovelace
+deriving instance Integral C.Lovelace
 
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = H.leftFailM . liftIO $ C.readFileTextEnvelope as path

@@ -26,7 +26,6 @@ module Plutus.Contracts.Governance (
     , typedValidator
     , mkValidator
     , GovState(..)
-    , Law(..)
     , Voting(..)
     , GovError
     ) where
@@ -34,6 +33,7 @@ module Plutus.Contracts.Governance (
 import Control.Lens (makeClassyPrisms, review)
 import Control.Monad
 import Data.Aeson (FromJSON, ToJSON)
+import Data.ByteString (ByteString)
 import Data.Semigroup (Sum (..))
 import Data.String (fromString)
 import Data.Text (Text)
@@ -59,13 +59,9 @@ import Prelude qualified as Haskell
 -- * Holders of those tokens can propose changes to the state of the contract and vote on them.
 -- * After a certain period of time the voting ends and the proposal is rejected or accepted.
 
-newtype Law = Law { unLaw :: BuiltinByteString }
-    deriving stock (Haskell.Eq, Haskell.Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-
 -- | The parameters for the proposal contract.
 data Proposal = Proposal
-    { newLaw         :: Law
+    { newLaw         :: BuiltinByteString
     -- ^ The new contents of the law
     , tokenName      :: TokenName
     -- ^ The name of the voting tokens. Only voting token owners are allowed to propose changes.
@@ -83,7 +79,7 @@ data Voting = Voting
     deriving anyclass (ToJSON, FromJSON)
 
 data GovState = GovState
-    { law    :: Law
+    { law    :: BuiltinByteString
     , mph    :: MintingPolicyHash
     , voting :: Maybe Voting
     }
@@ -103,7 +99,7 @@ data GovInput
 -- * @new-law@ to create a new law and distribute voting tokens
 -- * @add-vote@ to vote on a proposal with the name of the voting token and a boolean to vote in favor or against.
 type Schema =
-    Endpoint "new-law" Law
+    Endpoint "new-law" ByteString
         .\/ Endpoint "add-vote" (TokenName, Bool)
 
 -- | The governace contract parameters.
@@ -204,9 +200,9 @@ contract params = forever $ mapError (review _GovError) endpoints where
     addVote = endpoint @"add-vote" $ \(tokenName, vote) ->
         void $ SM.runStep theClient (AddVote tokenName vote)
 
-    initLaw = endpoint @"new-law" $ \law -> do
+    initLaw = endpoint @"new-law" $ \bsLaw -> do
         let mph = Scripts.forwardingMintingPolicyHash (typedValidator params)
-        void $ SM.runInitialise theClient (GovState law mph Nothing) (Ada.lovelaceValueOf 1)
+        void $ SM.runInitialise theClient (GovState (toBuiltin bsLaw) mph Nothing) (Ada.lovelaceValueOf 1)
         let tokens = Haskell.zipWith (const (mkTokenName (baseTokenName params))) (initialHolders params) [1..]
         void $ SM.runStep theClient $ MintTokens tokens
 
@@ -228,8 +224,6 @@ proposalContract params proposal = mapError (review _GovError) propose where
         void $ SM.runStep theClient FinishVoting
 
 PlutusTx.makeLift ''Params
-PlutusTx.unstableMakeIsData ''Law
-PlutusTx.makeLift ''Law
 PlutusTx.unstableMakeIsData ''Proposal
 PlutusTx.makeLift ''Proposal
 PlutusTx.unstableMakeIsData ''Voting

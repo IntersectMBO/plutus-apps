@@ -16,7 +16,4 @@ chainPointParser =
         )
   where
     maybeParseHashBlockHeader :: String -> Maybe (C.Hash C.BlockHeader)
-    maybeParseHashBlockHeader =
-      either (const Nothing) Just
-      . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
-      . C8.pack
+    maybeParseHashBlockHeader = C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy) . C8.pack

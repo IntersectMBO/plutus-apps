@@ -17,9 +17,12 @@ import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet as CW
-import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSignatories)
+import Ledger.Constraints.OffChain qualified as Constraints (paymentPubKey, plutusV1TypedValidatorLookups,
+                                                             unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
-import Ledger.Constraints.TxConstraints qualified as Constraints
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
+                                                                  mustIncludeDatum, mustPayToTheScript,
+                                                                  requiredSignatories)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
@@ -44,21 +47,19 @@ tests =
 
 mustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustBeSignedByContract pk pkh = do
-    let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
-        tx1 = Constraints.mustPayToTheScriptWithDatumInTx
-                ()
-                (Ada.lovelaceValueOf 25_000_000)
+    let lookups1 = Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
+        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
     let lookups2 =
-            Constraints.typedValidatorLookups mustBeSignedByTypedValidator
+            Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.paymentPubKey pk
         tx2 =
             Constraints.collectFromTheScript utxos pkh
-            <> Constraints.mustIncludeDatumInTx unitDatum
+            <> Constraints.mustIncludeDatum unitDatum
             <> Constraints.mustBeSignedBy pkh
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
@@ -66,21 +67,19 @@ mustBeSignedByContract pk pkh = do
 
 withoutOffChainMustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 withoutOffChainMustBeSignedByContract pk pkh = do
-    let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
-        tx1 = Constraints.mustPayToTheScriptWithDatumInTx
-                ()
-                (Ada.lovelaceValueOf 25_000_000)
+    let lookups1 = Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
+        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
     let lookups2 =
-            Constraints.typedValidatorLookups mustBeSignedByTypedValidator
+            Constraints.plutusV1TypedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
             <> Constraints.paymentPubKey pk
         tx2 =
             Constraints.collectFromTheScript utxos pkh
-            <> Constraints.mustIncludeDatumInTx unitDatum
+            <> Constraints.mustIncludeDatum unitDatum
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -148,7 +147,7 @@ instance Scripts.ValidatorTypes UnitTest  where
 
 {-# INLINEABLE mustBeSignedByValidator #-}
 mustBeSignedByValidator :: () -> Ledger.PaymentPubKeyHash -> Ledger.ScriptContext -> Bool
-mustBeSignedByValidator _ pkh = Constraints.checkScriptContext @Void @Void (Constraints.mustBeSignedBy pkh)
+mustBeSignedByValidator _ pkh ctx = Constraints.checkScriptContext @Void @Void (Constraints.mustBeSignedBy pkh) ctx
 
 mustBeSignedByTypedValidator :: Scripts.TypedValidator UnitTest
 mustBeSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
