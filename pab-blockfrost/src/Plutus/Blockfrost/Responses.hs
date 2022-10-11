@@ -31,8 +31,7 @@ import Blockfrost.Client
 import Cardano.Api hiding (Block, Script, ScriptDatum, ScriptHash, TxIn, TxOut)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
-import Ledger.Tx (ChainIndexTxOut (..), Language (PlutusV1), RedeemerPtr (..), TxIn (..), TxOutRef (..),
-                  Versioned (Versioned, unversioned), pubKeyTxIn, scriptTxIn)
+import Ledger.Tx (ChainIndexTxOut (..), RedeemerPtr (..), TxIn (..), TxOut (..), TxOutRef (..), pubKeyTxIn, scriptTxIn)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
@@ -45,11 +44,8 @@ import Plutus.V1.Ledger.Value qualified as Ledger
 
 import PlutusTx qualified
 
-import Control.Monad ((<=<))
 import Plutus.Blockfrost.Types
 import Plutus.Blockfrost.Utils
-import Plutus.ChainIndex.Types qualified as CI
-import Plutus.V2.Ledger.Api qualified as PV2
 
 
 class FromJSON a => PlutusValidator a where
@@ -95,16 +91,17 @@ processTip Block{..} = return $ Tip { tipSlot = slotNumber
     blockId :: BlockId
     blockId =  BlockId $ fromJust $ decodeHex $ unBlockHash _blockHash
 
-processGetValidator :: PlutusValidator a => Maybe ScriptCBOR -> IO (Maybe (Versioned a))
-processGetValidator val = pure $ val >>= buildResponse
+processGetValidator :: PlutusValidator a => Maybe ScriptCBOR -> IO (Maybe a)
+processGetValidator Nothing = pure Nothing
+processGetValidator (Just val) = buildResponse val
   where
-    buildResponse :: PlutusValidator a => ScriptCBOR -> Maybe (Versioned a)
-    buildResponse = retFromCbor <=< _scriptCborCbor
+    buildResponse :: PlutusValidator a => ScriptCBOR -> IO (Maybe a)
+    buildResponse = maybe (pure Nothing) retFromCbor . _scriptCborCbor
 
-    retFromCbor :: PlutusValidator a => Text -> Maybe (Versioned a)
+    retFromCbor :: PlutusValidator a => Text -> IO (Maybe a)
     retFromCbor txt = case fromCBOR $ Text.drop 6 txt of
-              JSON.Success a -> Just (Versioned a PlutusV1)
-              JSON.Error _   -> Nothing
+              JSON.Success a -> return $ Just a
+              JSON.Error _   -> return Nothing
 
 processUnspentTxOut :: Maybe UtxoOutput -> IO (Maybe ChainIndexTxOut)
 processUnspentTxOut Nothing = pure Nothing
@@ -121,16 +118,13 @@ processUnspentTxOut (Just utxo) = buildResponse utxo
     buildScriptTxOut addr utxoOut val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
                                                               , _ciTxOutValue=utxoValue utxoOut
                                                               , _ciTxOutScriptDatum=(utxoDatumHash utxoOut, Nothing)
-                                                              , _ciTxOutReferenceScript=Nothing
                                                               , _ciTxOutValidator=(val, Nothing)
                                                               }
 
     buildPublicKeyTxOut :: Ledger.Address -> UtxoOutput -> ChainIndexTxOut
     buildPublicKeyTxOut addr utxoOut = PublicKeyChainIndexTxOut { _ciTxOutAddress=addr
                                                                 , _ciTxOutValue=utxoValue utxoOut
-                                                                , _ciTxOutPublicKeyDatum=Nothing
-                                                                , _ciTxOutReferenceScript=Nothing
-                                                                }
+                                                                , _ciTxOutPublicKeyDatum=Nothing}
 
     utxoValue :: UtxoOutput -> Ledger.Value
     utxoValue = amountsToValue . _utxoOutputAmount
@@ -198,14 +192,12 @@ processUnspentTxOutSetAtAddress _ cred xs =
                                                            , _ciTxOutValue=utxoValue utxo
                                                            , _ciTxOutScriptDatum=(utxoDatumHash utxo, Nothing)
                                                            , _ciTxOutValidator=(val, Nothing)
-                                                           , _ciTxOutReferenceScript=Nothing
                                                            }
 
     buildPublicKeyTxOut :: Ledger.Address -> AddressUtxo -> ChainIndexTxOut
     buildPublicKeyTxOut addr utxo = PublicKeyChainIndexTxOut { _ciTxOutAddress=addr
                                                              , _ciTxOutValue=utxoValue utxo
                                                              , _ciTxOutPublicKeyDatum=Nothing
-                                                             , _ciTxOutReferenceScript=Nothing
                                                              }
 
     utxoValue :: AddressUtxo -> Ledger.Value
@@ -222,7 +214,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
     scripts <- getAllScriptsMap _scriptsMap
     txouts <- processTxOuts _utxosOutpus
     return $ Just ChainIndexTx { _citxTxId       = txHashToTxId _txHash
-                               , _citxInputs     = processTxIn (fmap unversioned scripts) redeemers datums _utxosInputs
+                               , _citxInputs     = processTxIn scripts redeemers datums _utxosInputs
                                , _citxOutputs    = txouts
                                , _citxValidRange = toPlutusSlotRange _invalidBefore _invalidAfter
                                , _citxData       = datums
@@ -232,18 +224,16 @@ processGetTxFromTxId (Just TxResponse{..}) = do
                                }
   where
     processTxOuts :: [UtxoOutput] -> IO ChainIndexTxOutputs
-    processTxOuts [] = pure $ InvalidTx Nothing
+    processTxOuts [] = return InvalidTx
     processTxOuts xs = ValidTx <$> mapM utxoOutputToTxOut xs
 
-    utxoOutputToTxOut :: UtxoOutput -> IO CI.ChainIndexTxOut
+    utxoOutputToTxOut :: UtxoOutput -> IO TxOut
     utxoOutputToTxOut utxo = do
         addr <- either (ioError . userError) return (toPlutusAddress $ _utxoOutputAddress utxo)
-        pure $ CI.ChainIndexTxOut
-          { CI.citoAddress = addr
-          , CI.citoValue     = amountsToValue $ _utxoOutputAmount utxo
-          , CI.citoDatum = maybe PV2.NoOutputDatum PV2.OutputDatumHash (textToDatumHash . unDatumHash <$> _utxoOutputDataHash utxo)
-          , CI.citoRefScript = CI.ReferenceScriptNone
-          }
+        return $ TxOut { txOutAddress = addr
+                       , txOutValue     = amountsToValue $ _utxoOutputAmount utxo
+                       , txOutDatumHash = textToDatumHash . unDatumHash <$> _utxoOutputDataHash utxo
+                       }
 
     getAllDatumsMap :: Map Text ScriptDatum -> IO (Map Ledger.DatumHash Datum)
     getAllDatumsMap datumMap = do
@@ -261,7 +251,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
         redElems <- sequence newElems
         return $ fromList $ zip redPtr redElems
 
-    getAllScriptsMap :: Map Text ScriptCBOR -> IO (Map Ledger.ScriptHash (Versioned Ledger.Script))
+    getAllScriptsMap :: Map Text ScriptCBOR -> IO (Map Ledger.ScriptHash Ledger.Script)
     getAllScriptsMap scriptsMap = do
         let newKeys = map textToScriptHash $ keys scriptsMap
             newElems = map ((<$>) fromJust . processGetValidator . Just) $ elems scriptsMap
@@ -278,7 +268,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
       where
         toPlutusTxIn :: UtxoInput -> Integer -> TxIn
         toPlutusTxIn utxoIn idx = case addr utxoIn  of
-                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (Versioned (val bbs) PlutusV1) (red idx) (dat utxoIn)
+                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (val bbs) (red idx) (dat utxoIn)
                             PubKeyCredential _                    -> pubKeyTxIn $ txoToRef utxoIn
 
         addr :: UtxoInput -> Credential

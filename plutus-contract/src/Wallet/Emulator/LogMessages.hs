@@ -17,11 +17,11 @@ import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (Address, CardanoTx, TxId, getCardanoTxId)
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError, ValidationPhase)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
+import Plutus.V1.Ledger.Ada qualified as Ada
 import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 import Wallet.Emulator.Error (WalletAPIError)
 

@@ -30,9 +30,8 @@ import Auth.Types (Token, TokenProvider (Github))
 import Data.Aeson (FromJSON, GFromJSON, ToJSON, Value, Zero, genericParseJSON, object, parseJSON, toJSON, withObject,
                    (.!=), (.:), (.:?), (.=))
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
-import Data.Aeson.Key qualified as Key
 import Data.Aeson.Types (Parser)
-import Data.Bifunctor (Bifunctor (first), bimap)
+import Data.Bifunctor (bimap)
 import Data.Map (Map)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
@@ -98,7 +97,7 @@ instance ToJSON NewGist where
         object
             [ "description" .= _newGistDescription
             , "public" .= _newGistPublic
-            , "files" .= object (first Key.fromText . toPair <$> _newGistFiles)
+            , "files" .= object (toPair <$> _newGistFiles)
             ]
       where
         toPair NewGistFile {..} =

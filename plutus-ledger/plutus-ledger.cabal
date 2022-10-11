@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            plutus-ledger
-version:         1.0.0
+version:         0.1.0.0
 license:         Apache-2.0
 license-files:
   LICENSE
@@ -54,81 +54,65 @@ library
   hs-source-dirs:     src
   default-language:   Haskell2010
   exposed-modules:
-    Data.Aeson.Extras
     Data.Time.Units.Extra
     Ledger
-    Ledger.Ada
     Ledger.Address
-    Ledger.Address.Orphans
     Ledger.AddressMap
     Ledger.Blockchain
-    Ledger.Builtins.Orphans
     Ledger.CardanoWallet
-    Ledger.Contexts.Orphans
-    Ledger.Credential.Orphans
     Ledger.Crypto
-    Ledger.Crypto.Orphans
-    Ledger.DCert.Orphans
     Ledger.Fee
     Ledger.Generators
+    Ledger.Generators.Internal
     Ledger.Index
     Ledger.Index.Internal
     Ledger.Orphans
     Ledger.Params
-    Ledger.Scripts
-    Ledger.Scripts.Orphans
-    Ledger.Slot
     Ledger.Test
     Ledger.TimeSlot
     Ledger.Tokens
     Ledger.Tx
     Ledger.Tx.CardanoAPI
-    Ledger.Tx.CardanoAPI.Internal
-    Ledger.Tx.Internal
-    Ledger.Tx.Orphans
-    Ledger.Tx.Orphans.V1
-    Ledger.Tx.Orphans.V2
     Ledger.Typed.Scripts
-    Ledger.Typed.Scripts.Orphans
     Ledger.Typed.Scripts.Validators
     Ledger.Typed.Tx
     Ledger.Typed.TypeUtils
     Ledger.Validation
     Ledger.Value
-    Ledger.Value.Orphans
-    Prettyprinter.Extras
 
   reexported-modules:
+    Data.Aeson.Extras,
+    Data.Either.Extras,
+    Plutus.V1.Ledger.Ada as Ledger.Ada,
     Plutus.V1.Ledger.Bytes as Ledger.Bytes,
     Plutus.V1.Ledger.Credential as Ledger.Credential,
     Plutus.V1.Ledger.DCert as Ledger.DCert,
     Plutus.V1.Ledger.Interval as Ledger.Interval,
+    Plutus.V1.Ledger.Slot as Ledger.Slot,
+    Plutus.V1.Ledger.Scripts as Ledger.Scripts,
+    Plutus.V1.Ledger.TxId as Ledger.TxId,
     Plutus.V1.Ledger.Time as Ledger.Time,
 
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.
   -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
-  other-modules:
-    Codec.CBOR.Extras
-    Ledger.Tx.CardanoAPITemp
+  other-modules:      Ledger.Tx.CardanoAPITemp
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , freer-extras         >=1.0.0
-    , plutus-script-utils  >=1.0.0
+    , freer-extras
+    , plutus-script-utils
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
-    , cardano-binary
+    , cardano-api:{cardano-api, gen}
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
-    , cardano-ledger-babbage
     , cardano-ledger-byron
     , cardano-ledger-core
     , cardano-ledger-shelley
@@ -137,9 +121,9 @@ library
     , iohk-monitoring
     , ouroboros-consensus
     , ouroboros-consensus-shelley
-    , plutus-core                     >=1.0.0
-    , plutus-ledger-api               >=1.0.0
-    , plutus-tx                       >=1.0.0
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
 
   ------------------------
   -- Non-IOG dependencies
@@ -148,28 +132,24 @@ library
     , aeson
     , array
     , base               >=4.9  && <5
-    , base16-bytestring
     , bytestring
     , cborg
     , containers
     , cryptonite         >=0.25
     , data-default
     , deepseq
-    , flat
     , hashable
     , hedgehog
     , http-api-data
     , lens
     , memory
     , mtl
-    , newtype-generics
     , openapi3
     , prettyprinter
     , scientific
     , serialise
     , servant
     , strict-containers
-    , tagged
     , template-haskell
     , text
     , time
@@ -179,7 +159,7 @@ library
   ghc-options:        -fprint-potential-instances
 
   if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin >=1.0.0
+    build-depends: plutus-tx-plugin
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -197,17 +177,16 @@ test-suite plutus-ledger-test
   -- Local components
   --------------------
   build-depends:
-    , plutus-ledger        >=1.0.0
-    , plutus-script-utils  >=1.0.0
+    , plutus-ledger
+    , plutus-script-utils
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
-    , cardano-crypto-class            >=2.0.0
-    , plutus-ledger-api               >=1.0.0
-    , plutus-tx                       >=1.0.0
+    , cardano-api:{cardano-api, gen}
+    , plutus-ledger-api
+    , plutus-tx
 
   ------------------------
   -- Non-IOG dependencies
@@ -216,6 +195,7 @@ test-suite plutus-ledger-test
     , aeson
     , base            >=4.9 && <5
     , bytestring
+    , containers
     , data-default
     , hedgehog
     , tasty

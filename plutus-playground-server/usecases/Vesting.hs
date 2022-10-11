@@ -22,7 +22,7 @@ import Data.Text qualified as T
 
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot qualified as TimeSlot
@@ -157,14 +157,14 @@ vestingContract vesting = selectList [vest, retrieve]
             Dead  -> pure ()
 
 payIntoContract :: Value -> TxConstraints () ()
-payIntoContract = mustPayToTheScriptWithDatumInTx ()
+payIntoContract = mustPayToTheScript ()
 
 vestFundsC
     :: VestingParams
     -> Contract () s T.Text ()
 vestFundsC vesting = do
     let txn = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) txn
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups $ typedValidator vesting) txn
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -208,7 +208,7 @@ retrieveFundsC vesting payment = do
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
     void $ waitNSlots 1 -- wait until we reach a slot in the validity range
-    mkTxConstraints (Constraints.typedValidatorLookups inst
+    mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) txn
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-example
-version:            1.0.0
+version:            1.33.0
 description:
   End to end examples of creating and executing Plutus scripts.
 
@@ -44,7 +44,6 @@ common maybe-Win32
 
 library
   import:          common-definitions
-  hs-source-dirs:  src
 
   if os(windows)
     build-depends: Win32
@@ -52,42 +51,36 @@ library
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
+  hs-source-dirs:  src
   exposed-modules:
-    PlutusExample.PlutusVersion1.AlwaysFails
-    PlutusExample.PlutusVersion1.AlwaysSucceeds
-    PlutusExample.PlutusVersion1.CustomDatumRedeemerGuess
-    PlutusExample.PlutusVersion1.DatumRedeemerGuess
-    PlutusExample.PlutusVersion1.Loop
-    PlutusExample.PlutusVersion1.MintingScript
-    PlutusExample.PlutusVersion1.RedeemerContextScripts
-    PlutusExample.PlutusVersion1.Sum
-    PlutusExample.PlutusVersion2.MintingScript
-    PlutusExample.PlutusVersion2.RedeemerContextEquivalence
-    PlutusExample.PlutusVersion2.RequireRedeemer
-    PlutusExample.PlutusVersion2.StakeScript
+    PlutusExample.AlwaysFails
+    PlutusExample.AlwaysSucceeds
+    PlutusExample.CustomDatumRedeemerGuess
+    PlutusExample.DatumRedeemerGuess
+    PlutusExample.Loop
+    PlutusExample.MintingScript
     PlutusExample.ScriptContextChecker
+    PlutusExample.Sum
 
   --------------------
   -- Local components
   --------------------
-  build-depends:   plutus-script-utils >=1.0.0
+  build-depends:   plutus-script-utils
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api             >=1.35
-    , cardano-cli             >=1.35
+    , cardano-api
+    , cardano-cli
     , cardano-ledger-alonzo
-    , cardano-ledger-babbage
     , cardano-ledger-core
-    , cardano-ledger-shelley
     , cardano-slotting
     , ouroboros-consensus
     , ouroboros-network
-    , plutus-ledger-api       >=1.0.0
-    , plutus-tx               >=1.0.0
-    , plutus-tx-plugin        >=1.0.0
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
@@ -98,7 +91,6 @@ library
     , containers
     , serialise
     , strict-containers
-    , text
     , transformers
     , transformers-except
 
@@ -116,7 +108,7 @@ executable plutus-example
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api >=1.35
+  build-depends:  cardano-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -135,7 +127,7 @@ executable create-script-context
   -- Local components
   --------------------
   build-depends:
-    , cardano-api     >=1.35
+    , cardano-api
     , plutus-example
 
   --------------------------
@@ -158,23 +150,21 @@ test-suite plutus-example-test
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , plutus-example
-    , plutus-ledger   >=1.0.0
+  build-depends:      plutus-example
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
-    , cardano-cli                     >=1.35
+    , cardano-api:{cardano-api, gen}
+    , cardano-cli
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-prelude
     , cardano-testnet
     , hedgehog-extras
-    , plutus-ledger-api               >=1.0.0
+    , plutus-ledger-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -188,7 +178,7 @@ test-suite plutus-example-test
     , filepath
     , hedgehog
     , tasty
-    , tasty-hedgehog        >=1.2.0.0
+    , tasty-hedgehog
     , text
     , unordered-containers
 
@@ -205,7 +195,7 @@ test-suite plutus-example-test
 
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
   build-tool-depends:
-    , cardano-cli:cardano-cli                >=1.35
-    , cardano-node:cardano-node              >=1.35
-    , cardano-submit-api:cardano-submit-api  >=1.35
+    , cardano-cli:cardano-cli
+    , cardano-node:cardano-node
+    , cardano-submit-api:cardano-submit-api
     , plutus-example:create-script-context

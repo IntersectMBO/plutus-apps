@@ -25,10 +25,11 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Ledger (Address, PaymentPubKeyHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Tx (getCardanoTxId, txOutDatumHash)
+import Ledger.Tx (getCardanoTxId)
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
@@ -39,14 +40,15 @@ import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, a
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
                                     ContractInstanceState (ContractInstanceState, instContractState),
                                     UserThreadMsg (UserLog))
-import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, Validator)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator)
+import Plutus.V1.Ledger.Scripts qualified as Ledger
+import Plutus.V1.Ledger.Tx (TxOut (txOutDatumHash))
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -192,7 +194,7 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError Ledger.PaymentPubKeyHash = ownFirstPaymentPubKeyHash
+        , let theContract :: Contract () Schema ContractError PaymentPubKeyHash = ownFirstPaymentPubKeyHash
           in run "own public key"
                 (assertDone theContract tag (== mockWalletPaymentPubKeyHash w2) "should return the wallet's public key")
                 (void $ activateContract w2 (void theContract) tag)
@@ -408,7 +410,7 @@ errorContract = do
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address
-someAddress = mkValidatorAddress someValidator
+someAddress = Ledger.scriptAddress someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])

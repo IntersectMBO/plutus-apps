@@ -77,8 +77,8 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSig
 lock :: AsContractError e => Promise () MultiSigSchema e ()
 lock = endpoint @"lock" $ \(ms, vl) -> do
     let inst = typedValidator ms
-    let tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
-        lookups = Constraints.typedValidatorLookups inst
+    let tx = Constraints.mustPayToTheScript () vl
+        lookups = Constraints.plutusV1TypedValidatorLookups inst
     mkTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
@@ -90,7 +90,7 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
     utx <- utxosAt (Scripts.validatorAddress inst)
     let tx = Constraints.collectFromTheScript utx ()
                 <> foldMap Constraints.mustBeSignedBy pks
-        lookups = Constraints.typedValidatorLookups inst
+        lookups = Constraints.plutusV1TypedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
     mkTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx

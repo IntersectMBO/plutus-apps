@@ -160,35 +160,21 @@
                   (termbind
                     (strict)
                     (vardecl thunk (con unit))
-                    (let
-                      (nonrec)
-                      (termbind
-                        (strict)
-                        (vardecl wild Unit)
-                        [ [ { (builtin trace) Unit } (con string "Lg") ] Unit ]
-                      )
+                    [
+                      {
+                        [
+                          Unit_match
+                          [
+                            [ { (builtin trace) Unit } (con string "Lg") ] Unit
+                          ]
+                        ]
+                        (con unit)
+                      }
                       unitval
-                    )
+                    ]
                   )
                   (error [ [ Tuple2 (con bytestring) ] (con bytestring) ])
                 )
-              )
-            )
-            (termbind
-              (strict)
-              (vardecl
-                fToDataGovInput_ctoBuiltinData (fun (con bytestring) (con data))
-              )
-              (lam
-                ds
-                (con bytestring)
-                [
-                  [ (builtin constrData) (con integer 0) ]
-                  [
-                    [ { (builtin mkCons) (con data) } [ (builtin bData) ds ] ]
-                    [ (builtin mkNilData) unitval ]
-                  ]
-                ]
               )
             )
             (termbind
@@ -16472,32 +16458,32 @@
                                                                                                                                                       unit
                                                                                                                                                     )
                                                                                                                                                   )
-                                                                                                                                                  (let
-                                                                                                                                                    (nonrec)
-                                                                                                                                                    (termbind
-                                                                                                                                                      (strict)
-                                                                                                                                                      (vardecl
-                                                                                                                                                        wild
-                                                                                                                                                        Unit
-                                                                                                                                                      )
+                                                                                                                                                  [
+                                                                                                                                                    {
                                                                                                                                                       [
+                                                                                                                                                        Unit_match
                                                                                                                                                         [
-                                                                                                                                                          {
-                                                                                                                                                            (builtin
-                                                                                                                                                              trace
+                                                                                                                                                          [
+                                                                                                                                                            {
+                                                                                                                                                              (builtin
+                                                                                                                                                                trace
+                                                                                                                                                              )
+                                                                                                                                                              Unit
+                                                                                                                                                            }
+                                                                                                                                                            (con
+                                                                                                                                                              string
+                                                                                                                                                              "Lf"
                                                                                                                                                             )
-                                                                                                                                                            Unit
-                                                                                                                                                          }
-                                                                                                                                                          (con
-                                                                                                                                                            string
-                                                                                                                                                            "Lf"
-                                                                                                                                                          )
+                                                                                                                                                          ]
+                                                                                                                                                          Unit
                                                                                                                                                         ]
-                                                                                                                                                        Unit
                                                                                                                                                       ]
-                                                                                                                                                    )
+                                                                                                                                                      (con
+                                                                                                                                                        unit
+                                                                                                                                                      )
+                                                                                                                                                    }
                                                                                                                                                     unitval
-                                                                                                                                                  )
+                                                                                                                                                  ]
                                                                                                                                                 )
                                                                                                                                                 (error
                                                                                                                                                   [
@@ -26440,32 +26426,32 @@
                                                                                           unit
                                                                                         )
                                                                                       )
-                                                                                      (let
-                                                                                        (nonrec)
-                                                                                        (termbind
-                                                                                          (strict)
-                                                                                          (vardecl
-                                                                                            wild
-                                                                                            Unit
-                                                                                          )
+                                                                                      [
+                                                                                        {
                                                                                           [
+                                                                                            Unit_match
                                                                                             [
-                                                                                              {
-                                                                                                (builtin
-                                                                                                  trace
+                                                                                              [
+                                                                                                {
+                                                                                                  (builtin
+                                                                                                    trace
+                                                                                                  )
+                                                                                                  Unit
+                                                                                                }
+                                                                                                (con
+                                                                                                  string
+                                                                                                  "S0"
                                                                                                 )
-                                                                                                Unit
-                                                                                              }
-                                                                                              (con
-                                                                                                string
-                                                                                                "S0"
-                                                                                              )
+                                                                                              ]
+                                                                                              Unit
                                                                                             ]
-                                                                                            Unit
                                                                                           ]
-                                                                                        )
+                                                                                          (con
+                                                                                            unit
+                                                                                          )
+                                                                                        }
                                                                                         unitval
-                                                                                      )
+                                                                                      ]
                                                                                     )
                                                                                     (error
                                                                                       [
@@ -27468,7 +27454,9 @@
                                                                                                                                             )
                                                                                                                                           }
                                                                                                                                           [
-                                                                                                                                            fToDataGovInput_ctoBuiltinData
+                                                                                                                                            (builtin
+                                                                                                                                              bData
+                                                                                                                                            )
                                                                                                                                             ww
                                                                                                                                           ]
                                                                                                                                         ]
@@ -27651,7 +27639,9 @@
                                                                                                                                                                                           )
                                                                                                                                                                                         }
                                                                                                                                                                                         [
-                                                                                                                                                                                          fToDataGovInput_ctoBuiltinData
+                                                                                                                                                                                          (builtin
+                                                                                                                                                                                            bData
+                                                                                                                                                                                          )
                                                                                                                                                                                           ww
                                                                                                                                                                                         ]
                                                                                                                                                                                       ]

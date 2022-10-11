@@ -26,7 +26,7 @@ import GHC.Generics (Generic)
 import Ledger hiding (initialise, to)
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Contexts qualified as V
+import Plutus.V1.Ledger.Contexts as V
 import PlutusTx qualified
 
 import Ledger.Constraints qualified as Constraints
@@ -73,9 +73,9 @@ pubKeyContract
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     let inst = typedValidator pk
         address = Scripts.validatorAddress inst
-        tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
+        tx = Constraints.mustPayToTheScript () vl
 
-    ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    ledgerTx <- mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     _ <- awaitTxConfirmed (getCardanoTxId ledgerTx)

@@ -9,7 +9,6 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
@@ -36,7 +35,6 @@ module Plutus.Trace.Effects.RunContract(
     , startContractThread
     ) where
 
-import Cardano.Api (NetworkId)
 import Control.Lens (preview)
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, Member, interpret, send, type (~>))
@@ -147,11 +145,10 @@ handleStartContract :: forall effs effs2.
     , Member ContractInstanceIdEff effs
     , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     )
-    => NetworkId
-    -> StartContract
+    => StartContract
     ~> Eff effs
-handleStartContract networkId = \case
-    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 networkId w t (void (toContract c))
+handleStartContract = \case
+    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 w t (void (toContract c))
 
 handleGetContractState ::
     forall w s e effs effs2.
@@ -194,14 +191,13 @@ handleActivate :: forall w s e effs effs2.
     , JSON.ToJSON w
     , Monoid w
     )
-    => NetworkId
-    -> Wallet
+    => Wallet
     -> ContractInstanceTag
     -> Contract w s e ()
     -> Eff effs (ContractHandle w s e)
-handleActivate networkId wllt tag con = do
+handleActivate wllt tag con = do
     i <- nextId
-    let handle = ContractHandle{chContract=con, chInstanceId = i, chInstanceTag = tag, chNetworkId = networkId}
+    let handle = ContractHandle{chContract=con, chInstanceId = i, chInstanceTag = tag}
     void $ startContractThread @w @s @e @effs @effs2 wllt handle
     pure handle
 

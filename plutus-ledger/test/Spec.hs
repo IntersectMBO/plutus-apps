@@ -5,13 +5,14 @@
 {-# LANGUAGE NumericUnderscores #-}
 module Main(main) where
 
-import Cardano.Api qualified as Api
-import Cardano.Crypto.Hash qualified as Crypto
+import Control.Monad (forM_)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Internal qualified as Aeson
 import Data.ByteString.Lazy qualified as BSL
 import Data.List (sort)
+import Data.Map qualified as Map
+import Data.Maybe (fromJust)
 import Data.String (IsString (fromString))
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
@@ -27,14 +28,13 @@ import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
 import Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Test.Tasty.HUnit qualified as HUnit
-import Test.Tasty.Hedgehog (testPropertyNamed)
+import Test.Tasty.Hedgehog (testProperty)
 
 main :: IO ()
 main = defaultMain tests
@@ -42,34 +42,34 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "all tests" [
     testGroup "UTXO model" [
-        testPropertyNamed "initial transaction is valid" "initialTxnValid" initialTxnValid
+        testProperty "initial transaction is valid" initialTxnValid
         ],
     testGroup "intervals" [
-        testPropertyNamed "member" "intvlMember," intvlMember,
-        testPropertyNamed "contains" "intvlContains" intvlContains
+        testProperty "member" intvlMember,
+        testProperty "contains" intvlContains
         ],
     testGroup "values" [
-        testPropertyNamed "additive identity" "valueAddIdentity," valueAddIdentity,
-        testPropertyNamed "additive inverse" "valueAddInverse," valueAddInverse,
-        testPropertyNamed "scalar identity" "valueScalarIdentity," valueScalarIdentity,
-        testPropertyNamed "scalar distributivity" "valueScalarDistrib" valueScalarDistrib
+        testProperty "additive identity" valueAddIdentity,
+        testProperty "additive inverse" valueAddInverse,
+        testProperty "scalar identity" valueScalarIdentity,
+        testProperty "scalar distributivity" valueScalarDistrib
         ],
     testGroup "Etc." [
-        testPropertyNamed "splitVal" "splitVal," splitVal,
-        testPropertyNamed "splitVal should respect min Ada per tx output" "splitValMinAda," splitValMinAda,
-        testPropertyNamed "encodeByteString" "encodeByteStringTest," encodeByteStringTest,
-        testPropertyNamed "encodeSerialise" "encodeSerialiseTest" encodeSerialiseTest
+        testProperty "splitVal" splitVal,
+        testProperty "splitVal should respect min Ada per tx output" splitValMinAda,
+        testProperty "encodeByteString" encodeByteStringTest,
+        testProperty "encodeSerialise" encodeSerialiseTest
         ],
     testGroup "LedgerBytes" [
-        testPropertyNamed "show-fromHex" "ledgerBytesShowFromHexProp," ledgerBytesShowFromHexProp,
-        testPropertyNamed "toJSON-fromJSON" "ledgerBytesToJSONProp" ledgerBytesToJSONProp
+        testProperty "show-fromHex" ledgerBytesShowFromHexProp,
+        testProperty "toJSON-fromJSON" ledgerBytesToJSONProp
         ],
     testGroup "Value" ([
-        testPropertyNamed "Value ToJSON/FromJSON" "value_json_roundtrip" (jsonRoundTrip Gen.genValue),
-        testPropertyNamed "CurrencySymbol ToJSON/FromJSON" "currency_symbol_json_roundtrip" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
-        testPropertyNamed "TokenName ToJSON/FromJSON" "tokenname_json_roundtrip" (jsonRoundTrip Gen.genTokenName),
-        testPropertyNamed "TokenName looks like escaped bytestring ToJSON/FromJSON" "tokenname_escaped_roundtrip" (jsonRoundTrip . pure $ ("\NUL0xc0ffee" :: Value.TokenName)),
-        testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow
+        testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genValue),
+        testProperty "CurrencySymbol ToJSON/FromJSON" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
+        testProperty "TokenName ToJSON/FromJSON" (jsonRoundTrip Gen.genTokenName),
+        testProperty "TokenName looks like escaped bytestring ToJSON/FromJSON" (jsonRoundTrip . pure $ ("\NUL0xc0ffee" :: Value.TokenName)),
+        testProperty "CurrencySymbol IsString/Show" currencySymbolIsStringShow
         ] ++ (let   vlJson :: BSL.ByteString
                     vlJson = "{\"getValue\":[[{\"unCurrencySymbol\":\"ab01ff\"},[[{\"unTokenName\":\"myToken\"},50]]]]}"
                     vlValue = Value.singleton "ab01ff" "myToken" 50
@@ -78,29 +78,27 @@ tests = testGroup "all tests" [
                     vlJson = "{\"getValue\":[[{\"unCurrencySymbol\":\"\"},[[{\"unTokenName\":\"\"},50]]]]}"
                     vlValue = Ada.lovelaceValueOf 50
                 in byteStringJson vlJson vlValue)),
-    testGroup "TxIn" [
-        testPropertyNamed "Check that Ord instances of TxIn match" "txInOrdInstanceEquivalenceTest" txInOrdInstanceEquivalenceTest
-    ],
-    testGroup "TimeSlot" [
-        testPropertyNamed "time range of starting slot" "initialSlotToTimeProp," initialSlotToTimeProp,
-        testPropertyNamed "slot of starting time range" "initialTimeToSlotProp," initialTimeToSlotProp,
-        testPropertyNamed "slot number >=0 when converting from time" "slotIsPositiveProp," slotIsPositiveProp,
-        testPropertyNamed "slotRange to timeRange inverse property" "slotToTimeInverseProp," slotToTimeInverseProp,
-        testPropertyNamed "timeRange to slotRange inverse property" "timeToSlotInverseProp," timeToSlotInverseProp,
-        testPropertyNamed "slot to time range inverse to slot range" "slotToTimeRangeBoundsInverseProp"
-            slotToTimeRangeBoundsInverseProp,
-        testPropertyNamed "slot to time range has lower bound <= upper bound" "slotToTimeRangeHasLowerAndUpperBoundsProp"
-            slotToTimeRangeHasLowerAndUpperBoundsProp,
-        testPropertyNamed "POSIX time to UTC time inverse property" "posixTimeToUTCTimeInverseProp" posixTimeToUTCTimeInverseProp
+    testGroup "Tx" [
+        testProperty "TxOut fromTxOut/toTxOut" ciTxOutRoundTrip
         ],
-    -- TODO: Reenable once we update `cardano-node` with the following PR merged:
-    -- https://github.com/input-output-hk/cardano-node/pull/3837
-    -- testGroup "SomeCardanoApiTx" [
-    --     testPropertyNamed "Value ToJSON/FromJSON" "genSomeCardanoApiTx" (jsonRoundTrip Gen.genSomeCardanoApiTx)
-    --     ],
+    testGroup "TimeSlot" [
+        testProperty "time range of starting slot" initialSlotToTimeProp,
+        testProperty "slot of starting time range" initialTimeToSlotProp,
+        testProperty "slot number >=0 when converting from time" slotIsPositiveProp,
+        testProperty "slotRange to timeRange inverse property" slotToTimeInverseProp,
+        testProperty "timeRange to slotRange inverse property" timeToSlotInverseProp,
+        testProperty "slot to time range inverse to slot range"
+            slotToTimeRangeBoundsInverseProp,
+        testProperty "slot to time range has lower bound <= upper bound"
+            slotToTimeRangeHasLowerAndUpperBoundsProp,
+        testProperty "POSIX time to UTC time inverse property" posixTimeToUTCTimeInverseProp
+        ],
+    testGroup "SomeCardanoApiTx" [
+        testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
+        ],
     Ledger.Tx.CardanoAPISpec.tests,
     testGroup "Signing" [
-        testPropertyNamed "signed payload verifies with public key" "signAndVerifyTest" signAndVerifyTest
+        testProperty "signed payload verifies with public key" signAndVerifyTest
         ]
     ]
 
@@ -224,6 +222,13 @@ byteStringJson jsonString value =
     , testCase "encoding" $ HUnit.assertEqual "Simple Encode" jsonString (JSON.encode value)
     ]
 
+-- | Validate inverse property between 'fromTxOut' and 'toTxOut given a 'TxOut'.
+ciTxOutRoundTrip :: Property
+ciTxOutRoundTrip = property $ do
+  txOuts <- Map.elems . Gen.mockchainUtxo <$> forAll Gen.genMockchain
+  forM_ txOuts $ \txOut -> do
+    Hedgehog.assert $ Tx.toTxOut (fromJust $ Tx.fromTxOut txOut) == txOut
+
 -- | Asserting that time range of 'scSlotZeroTime' to 'scSlotZeroTime + scSlotLength'
 -- is 'Slot 0' and the time after that is 'Slot 1'.
 initialSlotToTimeProp :: Property
@@ -315,17 +320,3 @@ signAndVerifyTest = property $ do
     pubKey = Ledger.toPublicKey privKey
   payload <- forAll $ Gen.bytes $ Range.singleton 128
   Hedgehog.assert $ (\x -> Ledger.signedBy x pubKey payload) $ Ledger.sign payload privKey pass
-
--- | Check that Ord instances of cardano-api's 'TxIn' and plutus-ledger-api's 'TxIn' match.
-txInOrdInstanceEquivalenceTest :: Property
-txInOrdInstanceEquivalenceTest = property $ do
-    txIns <- sort <$> forAll (Gen.list (Range.singleton 10) genTxIn)
-    let toPlutus = map ((`Tx.TxIn` Nothing) . CardanoAPI.fromCardanoTxIn)
-    let plutusTxIns = sort $ toPlutus txIns
-    Hedgehog.assert $ toPlutus txIns == plutusTxIns
-
-genTxIn :: Hedgehog.MonadGen m => m Api.TxIn
-genTxIn = do
-    txId <- (\t -> Api.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> Gen.utf8 (Range.singleton 5) Gen.unicode
-    txIx <- Api.TxIx <$> Gen.integral (Range.linear 0 maxBound)
-    return $ Api.TxIn txId txIx

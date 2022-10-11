@@ -11,15 +11,15 @@ import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Newtype (class Newtype)
 import Type.Proxy (Proxy(..))
+import Data.Set (Set)
 import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Address (Address(..))
 import Plutus.V1.Ledger.Credential (Credential(..))
-import Ledger.Crypto (PubKey, Signature)
+import Plutus.V1.Ledger.Crypto (PubKey, Signature)
 import Plutus.V1.Ledger.Interval (Interval)
-import Ledger.Slot (Slot)
-import Ledger.Tx.Internal (Tx, TxInput, TxIn, TxOut(..))
-import Plutus.V1.Ledger.Tx (TxId, TxOutRef)
-import Cardano.Api.TxBody as C
+import Plutus.V1.Ledger.Slot (Slot)
+import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut(..), TxOutRef)
+import Plutus.V1.Ledger.TxId (TxId)
 import Plutus.V1.Ledger.Value (Value)
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput, SequenceId, TxKey, _TxKey)
 
@@ -100,7 +100,7 @@ _txValidRange = _Newtype <<< prop (Proxy :: _ "txValidRange")
 _txSignatures :: Lens' Tx (Map PubKey Signature)
 _txSignatures = _Newtype <<< prop (Proxy :: _ "txSignatures")
 
-_txInputs :: Lens' Tx (Array TxInput)
+_txInputs :: Lens' Tx (Set TxIn)
 _txInputs = _Newtype <<< prop (Proxy :: _ "txInputs")
 
 _txOutputs :: Lens' Tx (Array TxOut)
@@ -108,9 +108,6 @@ _txOutputs = _Newtype <<< prop (Proxy :: _ "txOutputs")
 
 _txInRef :: Lens' TxIn TxOutRef
 _txInRef = _Newtype <<< prop (Proxy :: _ "txInRef")
-
-_txInputRef :: Lens' TxInput TxOutRef
-_txInputRef = _Newtype <<< prop (Proxy :: _ "txInputRef")
 
 _txOutRefId :: Lens' TxOutRef TxId
 _txOutRefId = _Newtype <<< prop (Proxy :: _ "txOutRefId")
@@ -122,7 +119,7 @@ _txKeyTxOutRefIdx :: Lens' TxKey BigInt
 _txKeyTxOutRefIdx = _TxKey <<< prop (Proxy :: _ "_txKeyTxOutRefIdx")
 
 toBeneficialOwner :: TxOut -> BeneficialOwner
-toBeneficialOwner (TxOut { getTxOut: C.TxOut { txOutAddress } }) =
+toBeneficialOwner (TxOut { txOutAddress }) =
   let
     Address { addressCredential } = txOutAddress
   in

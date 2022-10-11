@@ -8,7 +8,7 @@
 module Plutus.ChainIndex.HandlersSpec (tests) where
 
 import Control.Concurrent.STM (newTVarIO)
-import Control.Lens (to, view)
+import Control.Lens (view)
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Extras.Beam (BeamEffect)
@@ -24,37 +24,39 @@ import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
-import Ledger.Ada qualified as Ada
-import Plutus.ChainIndex (ChainIndexTxOut (citoValue), ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
+import Ledger (outValue)
+import Plutus.ChainIndex (ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
                           RunRequirements (RunRequirements), TxProcessOption (TxProcessOption, tpoStoreTx),
-                          appendBlocks, citxTxId, runChainIndexEffects, txFromTxId, txOuts, unspentTxOutFromRef,
+                          appendBlocks, citxOutputs, citxTxId, runChainIndexEffects, txFromTxId, unspentTxOutFromRef,
                           utxoSetMembership, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Tx (_ValidTx)
+import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
+import Test.Tasty.Hedgehog (testProperty)
 import Util (utxoSetFromBlockAddrs)
 
 tests :: TestTree
 tests = do
   testGroup "chain-index handlers"
     [ testGroup "txFromTxId"
-      [ testPropertyNamed "get tx from tx id" "txFromTxIdSpec" txFromTxIdSpec
+      [ testProperty "get tx from tx id" txFromTxIdSpec
       ]
     , testGroup "utxoSetAtAddress"
-      [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefAtAddressShouldBeUnspentSpec" eachTxOutRefAtAddressShouldBeUnspentSpec
+      [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
       ]
     , testGroup "unspentTxOutFromRef"
-      [ testPropertyNamed "get unspent tx out from ref" "eachTxOutRefAtAddressShouldHaveTxOutSpec" eachTxOutRefAtAddressShouldHaveTxOutSpec
+      [ testProperty "get unspent tx out from ref" eachTxOutRefAtAddressShouldHaveTxOutSpec
       ]
     , testGroup "utxoSetWithCurrency"
-      [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefWithCurrencyShouldBeUnspentSpec" eachTxOutRefWithCurrencyShouldBeUnspentSpec
-      , testPropertyNamed "should restrict to non-ADA currencies" "cantRequestForTxOutRefsWithAdaSpec" cantRequestForTxOutRefsWithAdaSpec
+      [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
+      , testProperty "should restrict to non-ADA currencies" cantRequestForTxOutRefsWithAdaSpec
       ]
     , testGroup "BlockProcessOption"
-      [ testPropertyNamed "do not store txs" "doNotStoreTxs" doNotStoreTxs
+      [ testProperty "do not store txs" doNotStoreTxs
       ]
     ]
 
@@ -114,7 +116,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
         fmap (\(c, t, _) -> AssetClass (c, t))
              $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
              $ flattenValue
-             $ view (traverse . to txOuts . traverse . to citoValue) block
+             $ view (traverse . citxOutputs . _ValidTx . traverse . outValue) block
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index

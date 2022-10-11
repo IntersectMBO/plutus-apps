@@ -45,7 +45,7 @@ import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract as Contract
 import Plutus.Contract.Wallet (getUnspentOutput)
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import Schema (ToSchema)
 
 import Prelude (Semigroup (..))
@@ -127,7 +127,7 @@ mintedValue :: OneShotCurrency -> Value
 mintedValue cur = currencyValue (currencySymbol cur) cur
 
 currencySymbol :: OneShotCurrency -> CurrencySymbol
-currencySymbol = PV1.scriptCurrencySymbol . curPolicy
+currencySymbol = scriptCurrencySymbol . curPolicy
 
 newtype CurrencyError =
     CurContractError ContractError

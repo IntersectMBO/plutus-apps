@@ -2,9 +2,9 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module PlutusExample.PlutusVersion1.AlwaysFails
-  ( alwaysFailsScript
-  , alwaysFailsScriptShortBs
+module PlutusExample.AlwaysSucceeds
+  ( alwaysSucceedsScript
+  , alwaysSucceedsScriptShortBs
   ) where
 
 import Prelude hiding (($))
@@ -21,7 +21,7 @@ import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator _ _ _ = PlutusTx.Prelude.error ()
+mkValidator _ _ _ = ()
 
 validator :: Plutus.Validator
 validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
@@ -29,9 +29,9 @@ validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
 script :: Plutus.Script
 script = Plutus.unValidatorScript validator
 
-alwaysFailsScriptShortBs :: SBS.ShortByteString
-alwaysFailsScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+alwaysSucceedsScriptShortBs :: SBS.ShortByteString
+alwaysSucceedsScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
 
-alwaysFailsScript :: PlutusScript PlutusScriptV1
-alwaysFailsScript = PlutusScriptSerialised alwaysFailsScriptShortBs
+alwaysSucceedsScript :: PlutusScript PlutusScriptV1
+alwaysSucceedsScript = PlutusScriptSerialised alwaysSucceedsScriptShortBs
 

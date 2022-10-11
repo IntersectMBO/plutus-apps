@@ -77,7 +77,7 @@ contract = selectList [publish, redeem]
 -- | The "publish" contract endpoint.
 publish :: AsContractError e => Promise () Schema e ()
 publish = endpoint @"publish" $ \(i, lockedFunds) -> do
-    let tx = Constraints.mustPayToTheScriptWithDatumInTx (MyDatum i) lockedFunds
+    let tx = Constraints.mustPayToTheScript (MyDatum i) lockedFunds
     void $ submitTxConstraints starterInstance tx
 
 -- | The "redeem" contract endpoint.

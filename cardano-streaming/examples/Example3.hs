@@ -19,14 +19,16 @@ utxoState =
   S.scanned step initial projection
   where
     step index (RollForward block _) =
-      let txs = CI.fromCardanoBlock block
-          tip = CI.tipFromCardanoBlock block
-          balance = TxUtxoBalance.fromBlock tip txs
-      in case UtxoState.insert balance index of
-            Left err ->
-              error (show err)
-            Right (UtxoState.InsertUtxoSuccess newIndex _insertPosition) ->
-              newIndex
+      case CI.fromCardanoBlock block of
+        Left err -> error ("FromCardanoError: " <> show err)
+        Right txs ->
+          let tip = CI.tipFromCardanoBlock block
+              balance = TxUtxoBalance.fromBlock tip txs
+           in case UtxoState.insert balance index of
+                Left err ->
+                  error (show err)
+                Right (UtxoState.InsertUtxoSuccess newIndex _insertPosition) ->
+                  newIndex
     step index (RollBackward cardanoPoint _) =
       let point = CI.fromCardanoPoint cardanoPoint
        in case TxUtxoBalance.rollback point index of

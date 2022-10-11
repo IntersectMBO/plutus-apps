@@ -34,7 +34,6 @@ module Plutus.Trace.Emulator.ContractInstance(
     , addResponse
     ) where
 
-import Cardano.Api (NetworkId)
 import Control.Lens (at, preview, view, (?~))
 import Control.Monad (guard, join, unless, void, when)
 import Control.Monad.Freer (Eff, Member, Members, interpret, send, subsume)
@@ -53,11 +52,11 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
-import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
-import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
-                          ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
-                          TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), citxInputs, fromOnChainTx,
-                          txOutRefs, txOuts, validityFromChainIndex)
+import Ledger.Tx (Address, TxIn (txInRef), TxOut (TxOut, txOutAddress), TxOutRef, getCardanoTxId)
+import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _citxOutputs, _citxTxId),
+                          ChainIndexTxOutputs (InvalidTx, ValidTx), RollbackState (Committed),
+                          TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), _ValidTx, citxInputs,
+                          citxOutputs, fromOnChainTx, txOutRefs)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp (AwaitTxStatusChangeResp), matches)
 import Plutus.Contract.Effects qualified as E
@@ -68,7 +67,9 @@ import Plutus.Contract.Trace qualified as RequestHandler
 import Plutus.Contract.Trace.RequestHandler (RequestHandler (RequestHandler), RequestHandlerLogMsg, tryHandler,
                                              wrapHandler)
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), lastLogs, requests, resumableResult)
-import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), ContractInstanceLog (ContractInstanceLog),
+import Plutus.Trace.Emulator.Types (ContractConstraints,
+                                    ContractHandle (ContractHandle, chContract, chInstanceId, chInstanceTag),
+                                    ContractInstanceLog (ContractInstanceLog),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, Freezing, HandledRequest, InstErr, NoRequestsHandled, ReceiveEndpointCall, SendingContractState, Started, StoppedNoError, StoppedWithError),
                                     ContractInstanceState (ContractInstanceState, instContractState, instEvents, instHandlersHistory),
                                     ContractInstanceStateInternal (cisiSuspState), EmulatedWalletEffects,
@@ -78,7 +79,6 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), Co
                                     addEventInstanceState, emptyInstanceState, instanceIdThreads, toInstanceState)
 import Plutus.Trace.Scheduler (MessageCall (Message, WaitForMessage), Priority (Frozen, Normal, Sleeping), ThreadId,
                                mkAgentSysCall)
-import Plutus.V1.Ledger.Address (Address)
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
@@ -105,7 +105,7 @@ contractThread :: forall w s e effs.
     )
     => ContractHandle w s e
     -> Eff (EmulatorAgentThreadEffs effs) ()
-contractThread ContractHandle{chInstanceId, chContract, chInstanceTag, chNetworkId} = do
+contractThread ContractHandle{chInstanceId, chContract, chInstanceTag} = do
     ask @ThreadId >>= registerInstance chInstanceId
     interpret (mapLog (\m -> ContractInstanceLog m chInstanceId chInstanceTag))
         $ runReader chInstanceId
@@ -115,7 +115,7 @@ contractThread ContractHandle{chInstanceId, chContract, chInstanceTag, chNetwork
             logNewMessages @w @s @e
             logCurrentRequests @w @s @e
             msg <- mkAgentSysCall @_ @EmulatorMessage Normal WaitForMessage
-            runInstance chNetworkId chContract msg
+            runInstance chContract msg
             runInstanceObservableState chContract msg
 
 registerInstance :: forall effs.
@@ -155,11 +155,10 @@ runInstance :: forall w s e effs.
     , JSON.ToJSON w
     , Monoid w
     )
-    => NetworkId
-    -> Contract w s e ()
+    => Contract w s e ()
     -> Maybe EmulatorMessage
     -> Eff (ContractInstanceThreadEffs w s e effs) ()
-runInstance networkId contract event = do
+runInstance contract event = do
     hks <- getHooks @w @s @e
     when (null hks) $
         gets @(ContractInstanceStateInternal w s e ()) (view resumableResult . cisiSuspState) >>= logStopped
@@ -168,19 +167,19 @@ runInstance networkId contract event = do
             Just Freeze -> do
                 logInfo Freezing
                 -- freeze ourselves, see note [Freeze and Thaw]
-                mkAgentSysCall Frozen WaitForMessage >>= runInstance networkId contract
+                mkAgentSysCall Frozen WaitForMessage >>= runInstance contract
             Just (EndpointCall _ desc vl) -> do
                 logInfo $ ReceiveEndpointCall desc vl
                 e <- decodeEvent vl
                 _ <- respondToEvent @w @s @e e
-                mkAgentSysCall Normal WaitForMessage >>= runInstance networkId contract
+                mkAgentSysCall Normal WaitForMessage >>= runInstance contract
             Just (ContractInstanceStateRequest sender) -> do
                 handleObservableStateRequest sender
-                mkAgentSysCall Normal WaitForMessage >>= runInstance networkId contract
+                mkAgentSysCall Normal WaitForMessage >>= runInstance contract
             Just (NewSlot block _) -> do
                 processNewTransactions @w @s @e (join block)
-                runInstance networkId contract Nothing
-            _ -> waitForNextMessage True >>= runInstance networkId contract
+                runInstance contract Nothing
+            _ -> waitForNextMessage True >>= runInstance contract
 
 -- | Run an instance to only answer to observable state requests even when the
 -- contract has stopped.
@@ -344,9 +343,12 @@ updateTxOutStatus txns = do
     -- transaction output of any of the new transactions. If that is the case,
     -- call 'addResponse' to sent the response.
     let getSpentOutputs = map txInRef . view citxInputs
-        txWithTxOutStatus tx = let validity = validityFromChainIndex tx in
-             fmap (, Committed validity (Spent (_citxTxId tx))) (getSpentOutputs tx)
-          <> fmap (, Committed validity Unspent) (txOutRefs tx)
+        -- If the tx is invalid, there is not outputs
+        txWithTxOutStatus tx@ChainIndexTx {_citxTxId, _citxOutputs = InvalidTx} =
+          fmap (, Committed TxInvalid (Spent _citxTxId)) $ getSpentOutputs tx
+        txWithTxOutStatus tx@ChainIndexTx {_citxTxId, _citxOutputs = ValidTx {}} =
+             fmap (, Committed TxValid (Spent _citxTxId)) (getSpentOutputs tx)
+          <> fmap (, Committed TxValid Unspent) (txOutRefs tx)
         statusMap = Map.fromList $ foldMap txWithTxOutStatus txns
     hks <- mapMaybe (traverse (preview E._AwaitTxOutStatusChangeReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txOutRef} =
@@ -531,5 +533,5 @@ indexBlock = foldMap indexTx where
   indexTx otx =
     IndexedBlock
       { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ map txInRef $ view citxInputs otx
-      , ibUtxoProduced = Map.fromListWith (<>) $ txOuts otx >>= (\ChainIndexTxOut{citoAddress} -> [(citoAddress, otx :| [])])
+      , ibUtxoProduced = Map.fromListWith (<>) $ view (citxOutputs . _ValidTx) otx >>= (\TxOut{txOutAddress} -> [(txOutAddress, otx :| [])])
       }

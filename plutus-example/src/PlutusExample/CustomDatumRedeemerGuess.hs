@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module PlutusExample.PlutusVersion1.CustomDatumRedeemerGuess
+module PlutusExample.CustomDatumRedeemerGuess
   ( MyCustomDatum(..)
   , MyCustomRedeemer(..)
   , customGuessScript
@@ -50,3 +50,4 @@ customDatumRedeemerGuessScriptAsShortBs = SBS.toShort . LBS.toStrict $ serialise
 
 customGuessScript :: PlutusScript PlutusScriptV1
 customGuessScript = PlutusScriptSerialised customDatumRedeemerGuessScriptAsShortBs
+

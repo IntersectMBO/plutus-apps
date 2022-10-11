@@ -21,14 +21,13 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Blockchain
 import Ledger.Orphans ()
-import Ledger.Tx.Internal (TxOut)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Tx qualified as PV1
+import Plutus.V1.Ledger.Tx
 import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))
 
 -- | The UTxOs of a blockchain indexed by their references.
-newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef TxOut }
+newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
     deriving stock (Show, Generic)
     deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON, NFData)
@@ -39,7 +38,7 @@ initialise = UtxoIndex . unspentOutputs
 
 -- | A reason why a transaction is invalid.
 data ValidationError =
-    TxOutRefNotFound PV1.TxOutRef
+    TxOutRefNotFound TxOutRef
     -- ^ The transaction output consumed by a transaction input could not be found (either because it was already spent, or because
     -- there was no transaction with the given hash on the blockchain).
     | ScriptFailure Scripts.ScriptError

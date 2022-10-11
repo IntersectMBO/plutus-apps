@@ -113,8 +113,7 @@ runChainSync socketPath trace slotConfig networkId resumePoints onChainSyncEvent
           LocalChainSyncClient $
             chainSyncClient trace slotConfig resumePoints chainSyncEventHandler,
         localTxSubmissionClient = Nothing,
-        localStateQueryClient = Nothing,
-        localTxMonitoringClient = Nothing }
+        localStateQueryClient = Nothing }
 
 -- | The client updates the application state when the protocol state changes.
 chainSyncClient

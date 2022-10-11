@@ -52,6 +52,7 @@ import PlutusTx qualified
 import PlutusTx.Prelude
 
 import Ledger (Address, POSIXTime, PaymentPubKey, PaymentPubKeyHash)
+import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
@@ -63,7 +64,6 @@ import Plutus.Contract
 import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Contract.Util (loopM)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Scripts (validatorHash)
 import Plutus.V1.Ledger.Api (Datum (Datum), Validator, ValidatorHash)
 
@@ -376,12 +376,9 @@ transition future@Future{ftDeliveryDate, ftPriceOracle} owners State{stateData=s
                 let
                     total = totalMargin accounts
                     FutureAccounts{ftoLongAccount, ftoShortAccount} = owners
-                    payment =
-                        case vRole of
-                          Short -> Constraints.mustPayToOtherScriptWithDatumInTx ftoLongAccount unitDatum total
-                                <> Constraints.mustIncludeDatumInTx unitDatum
-                          Long  -> Constraints.mustPayToOtherScriptWithDatumInTx ftoShortAccount unitDatum total
-                                <> Constraints.mustIncludeDatumInTx unitDatum
+                    payment = case vRole of
+                                Short -> Constraints.mustPayToOtherScript ftoLongAccount unitDatum total
+                                Long  -> Constraints.mustPayToOtherScript ftoShortAccount unitDatum total
                     constraints = payment <> oracleConstraints
                 in Just ( constraints
                         , State
@@ -405,9 +402,8 @@ payoutsTx
 payoutsTx
     Payouts{payoutsShort, payoutsLong}
     FutureAccounts{ftoLongAccount, ftoShortAccount} =
-        Constraints.mustPayToOtherScriptWithDatumInTx ftoLongAccount unitDatum payoutsLong
-        <> Constraints.mustPayToOtherScriptWithDatumInTx ftoShortAccount unitDatum payoutsShort
-        <> Constraints.mustIncludeDatumInTx unitDatum
+        Constraints.mustPayToOtherScript ftoLongAccount unitDatum payoutsLong
+        <> Constraints.mustPayToOtherScript ftoShortAccount unitDatum payoutsShort
 
 {-# INLINABLE payouts #-}
 -- | Compute the payouts for each role given the future data,
@@ -443,7 +439,7 @@ initialState ft =
     Running (Margins{ftsShortMargin=im, ftsLongMargin=im})
 
 futureAddress :: Future -> FutureAccounts -> Address
-futureAddress ft fo = mkValidatorAddress (validator ft fo)
+futureAddress ft fo = Ledger.scriptAddress (validator ft fo)
 
 {-# INLINABLE violatingRole #-}
 -- | The role that violated its margin requirements
