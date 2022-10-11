@@ -263,7 +263,7 @@ genValidTransactionSpending' g ins totalVal = do
                         , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
                         , txScripts = Map.fromList (map ((\s -> (scriptHash s, s)) . fmap getValidator) scripts)
                         }
-                    & addMintingPolicy (Versioned ScriptGen.alwaysSucceedPolicy PlutusV1) Script.unitRedeemer
+                    & addMintingPolicy (Versioned ScriptGen.alwaysSucceedPolicy PlutusV1) (Script.unitRedeemer, Nothing)
                     & EmulatorTx
 
                 -- sign the transaction with all known wallets

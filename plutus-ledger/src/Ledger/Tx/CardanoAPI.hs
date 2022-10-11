@@ -34,7 +34,6 @@ module Ledger.Tx.CardanoAPI(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.Bitraversable (bisequence)
-import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger.Address qualified as P
 import Ledger.Params qualified as P
@@ -87,7 +86,7 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
         , txUpdateProposal = C.TxUpdateProposalNone
         }
 
-toWithdrawals :: Map P.ScriptHash (P.Versioned P.Script)
+toWithdrawals :: P.ScriptsMap
   -> C.NetworkId
   -> [P.Withdrawal]
   -> Either ToCardanoError (C.TxWithdrawals C.BuildTx C.BabbageEra)
@@ -104,29 +103,39 @@ toWithdrawals txScripts networkId = \case
     toStakeWitness withdrawalRedeemer cred = case cred of
       PV1.PubKeyCredential _pkh -> pure $ C.BuildTxWith $ C.KeyWitness C.KeyWitnessForStakeAddr
       PV1.ScriptCredential _vh -> case (,) <$> withdrawalRedeemer <*> P.lookupValidator txScripts _vh of
-        Just (redeemer, script) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoScriptWitness C.NoScriptDatumForStake redeemer (fmap P.getValidator script)
+        Just (redeemer, script) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoScriptWitness C.NoScriptDatumForStake redeemer (Left $ fmap P.getValidator script)
         Nothing                    -> Left MissingStakeValidator
 
-toCardanoMintWitness :: PV1.Redeemer -> Maybe (P.Versioned PV1.MintingPolicy) -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
-toCardanoMintWitness _ Nothing = Left MissingMintingPolicy
-toCardanoMintWitness redeemer (Just script) =
-  toCardanoScriptWitness C.NoScriptDatumForMint redeemer (fmap P.getMintingPolicy script)
+toCardanoMintWitness :: PV1.Redeemer -> Maybe (P.Versioned PV1.TxOutRef) -> Maybe (P.Versioned PV1.MintingPolicy) -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
+toCardanoMintWitness _ Nothing Nothing = Left MissingMintingPolicy
+toCardanoMintWitness redeemer (Just ref) _ =
+  toCardanoScriptWitness C.NoScriptDatumForMint redeemer (Right ref)
+toCardanoMintWitness redeemer _ (Just script) =
+  toCardanoScriptWitness C.NoScriptDatumForMint redeemer (Left (fmap P.getMintingPolicy script))
 
 toCardanoScriptWitness :: PV1.ToData a =>
   C.ScriptDatum witctx
   -> a
-  -> P.Versioned PV1.Script
+  -> Either (P.Versioned PV1.Script) (P.Versioned PV1.TxOutRef)
   -> Either ToCardanoError (C.ScriptWitness witctx C.BabbageEra)
-toCardanoScriptWitness datum redeemer (P.Versioned script lang) = (case lang of
+toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
     P.PlutusV1 ->
       C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-          <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
+          <$> (case scriptOrRef of
+            Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
+            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> (toCardanoTxIn ref)
+          )
     P.PlutusV2 ->
       C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-          <$> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
+          <$> (case scriptOrRef of
+            Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
+            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> (toCardanoTxIn ref)
+          )
   ) <*> pure datum
     <*> pure (C.fromPlutusData $ PV1.toData redeemer)
     <*> pure zeroExecutionUnits
+  where
+    lang = either P.version P.version scriptOrRef
 
 toCardanoStakeAddress :: C.NetworkId -> PV1.Credential -> Either ToCardanoError C.StakeAddress
 toCardanoStakeAddress networkId credential =
@@ -203,10 +212,10 @@ toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
 
 toCardanoMintValue :: P.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue tx@P.Tx{..} =
-    let indexedMps = Map.assocs txMintingScripts
+    let indexedMps = Map.assocs txMintingWitnesses
     in C.TxMintValue C.MultiAssetInBabbageEra
        <$> toCardanoValue txMint
        <*> fmap (C.BuildTxWith . Map.fromList)
-             (traverse (\(mph, rd) ->
-                bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd (P.lookupMintingPolicy (P.txScripts tx) mph)))
+             (traverse (\(mph, (rd, mTxOutRef)) ->
+                bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd mTxOutRef (P.lookupMintingPolicy (P.txScripts tx) mph)))
                 indexedMps)
