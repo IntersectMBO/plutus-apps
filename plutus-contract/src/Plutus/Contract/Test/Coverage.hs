@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Plutus.Contract.Test.Coverage
@@ -41,10 +40,10 @@ getInvokedEndpoints es =
 getCoverageData :: [EmulatorEvent] -> CoverageData
 getCoverageData es =
   let extractLog e = case e of
-        ChainEvent (TxnValidate _ _)             -> []
+        ChainEvent TxnValidate{}       -> []
         -- TODO: collect executed scripts during validation
-        ChainEvent (TxnValidationFail _ _ _ _ _) -> []
-        _                                        -> []
+        ChainEvent TxnValidationFail{} -> []
+        _                              -> []
 
   in fold $ do
     event <- es
@@ -64,4 +63,3 @@ readCoverageRef (CoverageRef ioref) = readIORef ioref
 -- | Write a coverage report to name.html for the given index.
 writeCoverageReport :: String -> CoverageReport -> IO ()
 writeCoverageReport = ReportCoverage.writeCoverageReport
-

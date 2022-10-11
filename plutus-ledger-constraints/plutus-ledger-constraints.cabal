@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            plutus-ledger-constraints
-version:         0.1.0.0
+version:         1.0.0.0
 license:         Apache-2.0
 license-files:
   LICENSE
@@ -51,21 +51,23 @@ library
     Ledger.Constraints
     Ledger.Constraints.OffChain
     Ledger.Constraints.OnChain.V1
+    Ledger.Constraints.OnChain.V2
     Ledger.Constraints.TxConstraints
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , plutus-ledger
-    , plutus-script-utils
+    , plutus-ledger        >=1.0.0
+    , plutus-script-utils  >=1.0.0
 
   ---------------------------
   -- Other IOG dependencies
   ---------------------------
   build-depends:
-    , plutus-ledger-api
-    , plutus-tx
+    , cardano-api        >=1.35.3
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -92,17 +94,17 @@ test-suite plutus-ledger-constraints-test
   -- Local components
   --------------------
   build-depends:
-    , plutus-ledger
-    , plutus-ledger-constraints
-    , plutus-script-utils
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , plutus-ledger-api
-    , plutus-tx
-    , plutus-tx-plugin
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+    , plutus-tx-plugin   >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies

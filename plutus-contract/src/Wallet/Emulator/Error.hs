@@ -14,9 +14,9 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
 import Ledger (PaymentPubKeyHash, ValidationError, Value)
+import Ledger.Ada (Ada)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx.CardanoAPI (ToCardanoError)
-import Plutus.V1.Ledger.Ada (Ada)
 
 -- | An error thrown by wallet interactions.
 data WalletAPIError =

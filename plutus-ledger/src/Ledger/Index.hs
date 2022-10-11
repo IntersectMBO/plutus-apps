@@ -1,11 +1,8 @@
 {-# LANGUAGE ConstraintKinds     #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingVia         #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -28,11 +25,10 @@ module Ledger.Index(
     maxMinAdaTxOut,
     pubKeyTxIns,
     scriptTxIns,
-    -- * Script validation events
-    Api.ExBudget(..),
-    Api.ExCPU(..),
-    Api.ExMemory(..),
-    Api.SatInt,
+    PV1.ExBudget(..),
+    PV1.ExCPU(..),
+    PV1.ExMemory(..),
+    PV1.SatInt,
     ) where
 
 import Prelude hiding (lookup)
@@ -41,14 +37,14 @@ import Control.Lens (Fold, folding)
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
+import Ledger.Ada (Ada)
+import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), updateUtxoCollateral)
-import Plutus.V1.Ledger.Ada (Ada)
-import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Api qualified as Api
-import Plutus.V1.Ledger.Tx hiding (pubKeyTxIns, scriptTxIns, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx (..), Tx, TxIn (TxIn, txInType), TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut,
+                  TxOutRef, updateUtxoCollateral)
+import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
 
 -- | Update the index for the addition of a transaction.
@@ -72,8 +68,8 @@ lookup i index = case Map.lookup i $ getIndex index of
 -- | Filter to get only the script inputs.
 scriptTxIns :: Fold [TxIn] TxIn
 scriptTxIns = (\x -> folding x) . filter $ \case
-    TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
-    _                                              -> False
+    TxIn{ txInType = Just ScriptAddress{} } -> True
+    _                                       -> False
 
 -- | Filter to get only the pubkey inputs.
 pubKeyTxIns :: Fold [TxIn] TxIn

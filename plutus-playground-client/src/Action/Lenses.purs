@@ -10,7 +10,7 @@ import Data.Lens (Iso', Lens', iso)
 import Data.Lens.Record (prop)
 import Data.Newtype (unwrap, wrap)
 import Type.Proxy (Proxy(..))
-import Plutus.V1.Ledger.Slot (Slot)
+import Ledger.Slot (Slot)
 import Prelude ((<<<))
 
 _caller :: forall r a. Lens' { caller :: a | r } a

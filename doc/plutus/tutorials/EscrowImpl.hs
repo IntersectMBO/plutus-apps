@@ -270,7 +270,7 @@ pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    utx <- mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx >>= adjustUnbalancedTx
+    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
     getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RedeemSuccess = RedeemSuccess TxId
@@ -311,7 +311,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
          then throwing _RedeemFailed NotEnoughFundsAtAddress
          else do
-           utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
+           utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                                  <> Constraints.unspentOutputs unspentOutputs
                                   ) tx >>= adjustUnbalancedTx
            RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
@@ -343,7 +343,7 @@ refund inst escrow = do
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do
-        utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
+        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx' >>= adjustUnbalancedTx
         RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx

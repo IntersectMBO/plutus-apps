@@ -40,6 +40,7 @@ import Hedgehog.Extras.Test.Process qualified as H
 import System.Info qualified as SYS
 import Test.Base qualified as H
 import Test.Process qualified as H
+import Test.Runtime qualified as H
 import Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions, testnet)
 import Testnet.Cardano qualified as TC
 import Testnet.Conf qualified as H
@@ -71,13 +72,13 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
                              , slotLength = 0.01
                              , activeSlotsCoeff = 0.1
                              }
-  TC.TestnetRuntime { bftSprockets, testnetMagic } <- testnet fastTestnetOptions conf
+  tr@TC.TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
 
   env <- H.evalIO getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ H.bftSprockets tr)
           ]
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.
@@ -712,7 +713,7 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
   UTxO utxoPlutus2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxoPlutusPaymentAddrJson2
   -- Get total lovelace at plutus script address
 
-  let lovelaceAtPlutusAddr = mconcat . map (\(TxOut _ v _) -> txOutValueToLovelace v) $ Map.elems utxoPlutus2
+  let lovelaceAtPlutusAddr = mconcat . map (\(TxOut _ v _ _) -> txOutValueToLovelace v) $ Map.elems utxoPlutus2
 
   H.note_ "Check that the withdrawal from the Plutus staking address was successful"
   lovelaceAtPlutusAddr === pr + 5000000 + 5000000 + 5000000 + 5000000 + Lovelace minrequtxo

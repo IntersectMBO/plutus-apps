@@ -14,17 +14,16 @@ module Wallet.Rollup
     , getAnnotatedTransactions
     ) where
 
+import Cardano.Api qualified as C
 import Control.Lens (assign, ifoldr, over, set, use, view, (&), (^.))
 import Control.Lens.Combinators (itraverse)
 import Control.Monad.State (StateT, evalStateT, runState)
 import Data.List (groupBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
-import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut (TxOut), ValidationPhase (..), Value,
-               consumableInputs, eitherTx, outValue, txInRef, txOutRefId, txOutRefIdx, txOutValue)
+import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut, ValidationPhase (..), Value, consumableInputs,
+               eitherTx, txInRef, txOutRefId, txOutRefIdx, txOutValue)
 import Ledger.Tx qualified as Tx
-import PlutusTx.Monoid (inv)
 import Wallet.Emulator.Chain (ChainEvent (..))
 import Wallet.Rollup.Types
 
@@ -48,7 +47,7 @@ annotateTransaction sequenceId tx = do
                   in case Map.lookup key cPreviousOutputs of
                          Just txOut -> pure $ DereferencedInput txIn txOut
                          Nothing    -> pure $ InputNotFound key)
-            (Set.toList $ consumableInputs tx)
+            (consumableInputs tx)
     let txId = eitherTx Tx.getCardanoTxId Tx.getCardanoTxId tx
         txOuts = eitherTx (const []) Tx.getCardanoTxOutputs tx
         newOutputs =
@@ -65,16 +64,20 @@ annotateTransaction sequenceId tx = do
             foldr
                 sumAccounts
                 cRollingBalances
-                ((over outValue inv . refersTo <$> filter isFound dereferencedInputs) <>
+                ((over Tx.outValue' negateValue . refersTo <$> filter isFound dereferencedInputs) <>
                  txOuts)
+          where
+            negateValue :: C.TxOutValue era -> C.TxOutValue era
+            negateValue  (C.TxOutAdaOnly wit l) = C.TxOutAdaOnly wit (negate l)
+            negateValue  (C.TxOutValue wit v)   = C.TxOutValue wit (C.negateValue v)
         sumAccounts ::
                TxOut -> Map BeneficialOwner Value -> Map BeneficialOwner Value
-        sumAccounts txOut@TxOut {txOutValue} =
+        sumAccounts txOut =
             Map.alter sumBalances (toBeneficialOwner txOut)
           where
             sumBalances :: Maybe Value -> Maybe Value
-            sumBalances Nothing         = Just txOutValue
-            sumBalances (Just oldValue) = Just (oldValue <> txOutValue)
+            sumBalances Nothing         = Just (txOutValue txOut)
+            sumBalances (Just oldValue) = Just (oldValue <> txOutValue txOut)
     assign previousOutputs newOutputs
     assign rollingBalances newBalances
     pure $
