@@ -31,7 +31,6 @@ import Plutus.Script.Utils.V1.Typed.Scripts.Validators hiding (validatorHash)
 import Plutus.Trace.Emulator as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import PlutusTx qualified
-import PlutusTx.ErrorCodes
 import PlutusTx.IsData.Class
 import PlutusTx.Prelude hiding ((<$))
 
@@ -45,12 +44,13 @@ import Test.Tasty.QuickCheck hiding (Success)
 
 tests :: TestTree
 tests = testGroup "error checking"
-  [ testProperty "Normal failures allowed" $ withMaxSuccess 1 prop_FailFalse
+  [
+   testProperty "Normal failures allowed" $ withMaxSuccess 1 prop_FailFalse
   , testProperty "Failure due to head [] not allowed" $ withMaxSuccess 1 $ expectFailure prop_FailHeadNil
   , testProperty "Division by zero not allowed" $ withMaxSuccess 1 $ expectFailure prop_DivZero
-  , testProperty "Can't trick division by zero check using trace" $ withMaxSuccess 1 $ expectFailure prop_DivZero_t
   , testProperty "Normal success allowed" $ withMaxSuccess 1 prop_Success
-  , testCase "Check defaultWhitelist is ok" $ assertBool "whitelistOk defaultWhitelist" $ whitelistOk defaultWhitelist ]
+  , testCase "Check defaultWhitelist is ok" $ assertBool "whitelistOk defaultWhitelist" $ whitelistOk defaultWhitelist
+  ]
 
 -- | Normal failures should be allowed
 prop_FailFalse :: Property
@@ -63,10 +63,6 @@ prop_FailHeadNil = checkErrorWhitelistWithOptions checkOptions defaultCoverageOp
 -- | Division by zero failure should not be allowed
 prop_DivZero :: Property
 prop_DivZero = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [DivZero])
-
--- | Division by zero failure should not be allowed (tracing before the failure).
-prop_DivZero_t :: Property
-prop_DivZero_t = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [DivZero_t])
 
 -- | Successful validation should be allowed
 prop_Success :: Property
@@ -89,7 +85,6 @@ instance ContractModel DummyModel where
   data Action DummyModel = FailFalse
                          | FailHeadNil
                          | DivZero
-                         | DivZero_t    -- Trace before dividing by zero
                          | Success
                          deriving (Haskell.Eq, Haskell.Show, Data)
 
@@ -102,9 +97,6 @@ instance ContractModel DummyModel where
       Trace.waitNSlots 2
     DivZero -> do
       callEndpoint @"divZero" (handle $ WalletKey w1) ()
-      Trace.waitNSlots 2
-    DivZero_t -> do
-      callEndpoint @"divZero_t" (handle $ WalletKey w1) ()
       Trace.waitNSlots 2
     Success -> do
       callEndpoint @"success" (handle $ WalletKey w1) ()
@@ -120,7 +112,7 @@ instance ContractModel DummyModel where
 
   nextState _ = wait 2
 
-  arbitraryAction _ = elements [FailFalse, FailHeadNil, DivZero, DivZero_t, Success]
+  arbitraryAction _ = elements [FailFalse, FailHeadNil, DivZero, Success]
 
 data Validators
 instance Scripts.ValidatorTypes Validators where
@@ -130,13 +122,12 @@ instance Scripts.ValidatorTypes Validators where
 type Schema = Endpoint "failFalse" ()
             .\/ Endpoint "failHeadNil" ()
             .\/ Endpoint "divZero" ()
-            .\/ Endpoint "divZero_t" ()
             .\/ Endpoint "success" ()
 
 -- | For each endpoint in the schema: pay to the corresponding validator
 -- and then spend that UTxO
 contract :: Contract () Schema ContractError ()
-contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, successC]
+contract = selectList [failFalseC, failHeadNilC, divZeroC, successC]
   where
     run validator = void $ do
       let addr = mkValidatorAddress (validatorScript validator)
@@ -158,9 +149,6 @@ contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, succes
 
     divZeroC = endpoint @"divZero" $ \ _ -> do
       run v_divZero
-
-    divZeroTraceC = endpoint @"divZero_t" $ \ _ -> do
-      run v_divZero_t
 
     successC = endpoint @"success" $ \ _ -> do
       run v_success
@@ -197,19 +185,6 @@ divZero _ _ _ = (10 `divide` 0) > 5
 v_divZero :: Scripts.TypedValidator Validators
 v_divZero = Scripts.mkTypedValidator @Validators
     $$(PlutusTx.compile [|| divZero ||])
-    $$(PlutusTx.compile [|| wrap ||])
-    where
-        wrap = Scripts.mkUntypedValidator
-
-{-# INLINEABLE divZero_t #-}
-divZero_t :: () -> Integer -> ScriptContext -> Bool
-divZero_t _ _ _ = trace checkHasFailedError False || (10 `divide` 0) > 5
-                  -- Trying to cheat by tracing a whitelisted error before failing.
-                  -- Currently this tricks the whitelist check.
-
-v_divZero_t :: Scripts.TypedValidator Validators
-v_divZero_t = Scripts.mkTypedValidator @Validators
-    $$(PlutusTx.compile [|| divZero_t ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator

@@ -86,12 +86,9 @@ tests = testGroup "contract tx constraints"
     , checkPredicateOptions
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
         "mustSpendScriptOutputWithReference can be used on-chain to unlock funds in a PlutusV2 script"
-        -- TODO: 2nd tx fails because the emulator validation doesn't understand reference scripts,
-        -- Reenable following lines when the emulator validation has been removed
-        -- (walletFundsChange w1 (Ada.adaValueOf 0)
-        -- .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
-        -- .&&. assertValidatedTransactionCount 2
-        (assertValidatedTransactionCountOfTotal 1 2
+        (walletFundsChange w1 (Ada.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
+        .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ activateContract w1 mustSpendScriptOutputWithReferenceV2ConTest tag
             void $ Trace.waitNSlots 3

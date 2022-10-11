@@ -145,11 +145,11 @@ emulatorEventPane (ClientEvent _ (TxSubmit (TxId txId) _)) =
   div_
     [ text $ "Submitting transaction: " <> txId.getTxId ]
 
-emulatorEventPane (ChainEvent (TxnValidate (TxId txId) _ _)) =
+emulatorEventPane (ChainEvent (TxnValidate (TxId txId) _)) =
   div_
     [ text $ "Validating transaction: " <> txId.getTxId ]
 
-emulatorEventPane (ChainEvent (TxnValidationFail _ (TxId txId) _ error _ _)) =
+emulatorEventPane (ChainEvent (TxnValidationFail _ (TxId txId) _ error _)) =
   div [ class_ $ ClassName "error" ]
     [ text $ "Validation failed: " <> txId.getTxId
     , br_

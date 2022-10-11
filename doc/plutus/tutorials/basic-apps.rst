@@ -68,7 +68,9 @@ The validator looks at the ``ValidatorCtx`` value to see if the conditions for m
 
 The validator checks that the transaction, represented by ``scriptContextTxInfo``, pays half the specified amount to each recipient.
 
-You then need some boilerplate to compile the validator to a Plutus script (see :ref:`basic_validators_tutorial`).
+You then need some boilerplate to compile the validator to a Plutus script 
+(see `Writing basic validator scripts <https://plutus.readthedocs.io/en/latest/tutorials/basic-validators.html>`_ 
+in the Plutus Core and Plutus Tx User Guide). 
 
 .. literalinclude:: BasicApps.hs
    :start-after: BLOCK3

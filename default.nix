@@ -64,7 +64,9 @@ rec {
 
   plutus-chain-index = plutus-apps.haskell.packages.plutus-chain-index.components.exes.plutus-chain-index;
 
-  marconi = plutus-apps.haskell.packages.plutus-chain-index.components.exes.marconi;
+  marconi = plutus-apps.haskell.packages.marconi.components.exes.marconi;
+
+  marconi-mamba = plutus-apps.haskell.packages.marconi-mamba.components.exes.marconi-mamba;
 
   create-script-context = plutus-apps.haskell.packages.plutus-example.components.exes.create-script-context;
 

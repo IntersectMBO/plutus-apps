@@ -84,13 +84,11 @@ annotateTransaction sequenceId tx = do
         AnnotatedTx
             { sequenceId
             , txId
-            , tx = eitherTx getEmulatorTx getEmulatorTx tx
+            , tx = eitherTx id id tx
             , dereferencedInputs
             , balances = newBalances
             , valid = eitherTx (const False) (const True) tx
             }
-    where
-        getEmulatorTx = Tx.onCardanoTx id (error "Wallet.Rollup.annotateTransaction: Expecting a mock tx, not a cardano-api tx.")
 
 annotateChainSlot :: Monad m => Int -> Block -> StateT Rollup m [AnnotatedTx]
 annotateChainSlot slotIndex =
@@ -116,10 +114,10 @@ getAnnotatedTransactions = groupBy (equating (slotIndex . sequenceId)) . reverse
 
 handleChainEvent :: RollupState -> ChainEvent -> RollupState
 handleChainEvent s = \case
-    SlotAdd _                           -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
-    TxnValidate _ tx _                  -> addTx s (Valid tx)
-    TxnValidationFail Phase2 _ tx _ _ _ -> addTx s (Invalid tx)
-    _                                   -> s
+    SlotAdd _                         -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
+    TxnValidate _ tx                  -> addTx s (Valid tx)
+    TxnValidationFail Phase2 _ tx _ _ -> addTx s (Invalid tx)
+    _                                 -> s
 
 addTx :: RollupState -> OnChainTx -> RollupState
 addTx s tx =

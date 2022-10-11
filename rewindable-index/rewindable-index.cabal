@@ -1,15 +1,17 @@
 cabal-version: 2.2
 name:          rewindable-index
 version:       0.1.0.0
-synopsis:      Exercises in Algebra Driven Design
+synopsis:      Indexers that can rewind the state to a previous version.
 description:
-  Please see the README on GitHub at <https://github.com/githubuser/hysterical-screams#readme>
+  Please see the README on GitHub at <https://github.com/input-output-hk/rewindable-index#README.md>
 
 category:      Testing
-homepage:      https://github.com/input-output-hk/plutus-apps#readme
+homepage:
+  https://github.com/input-output-hk/plutus-apps/rewindable-index/README.md
+
 bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 author:        Radu Ometita
-maintainer:    radu.ometita@eiohk.io
+maintainer:    radu.ometita@iohk.io
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -47,20 +49,14 @@ common lang
 library
   import:          lang
   exposed-modules:
-    RewindableIndex.Index
-    RewindableIndex.Index.Split
-    RewindableIndex.Index.Sqlite
     RewindableIndex.Index.VSplit
     RewindableIndex.Index.VSqlite
 
   hs-source-dirs:  src
   build-depends:
     , base           >=4.7 && <5
-    , containers
-    , data-default
     , lens
     , primitive
-    , QuickCheck
     , sqlite-simple
     , vector
 
@@ -69,21 +65,17 @@ test-suite rewindable-index-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
-    RewindableIndex.Spec.Index
-    RewindableIndex.Spec.Split
-    RewindableIndex.Spec.Sqlite
+    RewindableIndex.Model
     RewindableIndex.Spec.VSplit
     RewindableIndex.Spec.VSqlite
 
   hs-source-dirs: test
   build-depends:
     , base              >=4.7 && <5
-    , containers
     , data-default
     , lens
     , primitive
     , QuickCheck
-    , quickspec
     , rewindable-index
     , sqlite-simple
     , tasty

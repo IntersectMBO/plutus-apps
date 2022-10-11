@@ -45,8 +45,9 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Ledger.AddressMap qualified as AM
 import Ledger.Blockchain (Block, OnChainTx (Valid))
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Slot (Slot)
-import Ledger.Tx (CardanoTx (..))
+import Ledger.Tx (CardanoTx (CardanoApiTx), onCardanoTx)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexError)
 import Streaming (Stream)
@@ -61,6 +62,7 @@ import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTim
                                    MultiAgentEffect, chainEvent, eteEvent)
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
+import Ledger.Validation qualified as Validation
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 
@@ -144,8 +146,12 @@ data EmulatorConfig =
 type InitialChainState = Either InitialDistribution [CardanoTx]
 
 -- | The wallets' initial funds
-initialDist :: InitialChainState -> InitialDistribution
-initialDist = either id (walletFunds . map Valid) where
+initialDist :: EmulatorConfig -> InitialDistribution
+initialDist EmulatorConfig{..} = either id (walletFunds . map (Valid . signTx)) _initialChainState where
+    signTx = onCardanoTx
+      (\t -> Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys)
+      CardanoApiTx
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
     walletFunds :: Block -> Map Wallet Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]
@@ -166,8 +172,14 @@ initialState EmulatorConfig{..} = let
           (error . ("Cannot build the initial state: " <>) . show)
           id
           . EM.emulatorStateInitialDist networkId . Map.mapKeys EM.mockWalletPaymentPubKeyHash)
-        EM.emulatorStatePool
+        (EM.emulatorStatePool . map signTx)
         _initialChainState
+    where
+        signTx = onCardanoTx
+              (\t -> Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys)
+              CardanoApiTx
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
+
 
 data EmulatorErr =
     WalletErr WalletAPIError

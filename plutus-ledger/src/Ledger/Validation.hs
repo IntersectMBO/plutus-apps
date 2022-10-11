@@ -18,9 +18,9 @@ module Ledger.Validation(
   initialState,
   evaluateMinLovelaceOutput,
   getRequiredSigners,
-  addSignature,
   hasValidationErrors,
   makeTransactionBody,
+  validateCardanoTx,
   -- * Modifying the state
   makeBlock,
   setSlot,
@@ -29,6 +29,8 @@ module Ledger.Validation(
   setUtxo,
   -- * Conversion from Plutus types
   fromPlutusTx,
+  fromPlutusTxSigned,
+  fromPlutusTxSigned',
   fromPlutusIndex,
   fromPlutusTxOut,
   fromPlutusTxOutRef,
@@ -41,19 +43,20 @@ module Ledger.Validation(
   emulatorGlobals,
   ) where
 
+import Cardano.Api qualified as C
 import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraBabbage), makeSignedTransaction, toShelleyTxId)
 import Cardano.Api.Shelley qualified as C.Api
-import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (CollectErrors))
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (ExUnits), Script, unCostModels)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Script, unCostModels)
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), ScriptResult (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr)
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Cardano.Ledger.Babbage (TxBody, TxOut)
+import Cardano.Ledger.Babbage (TxOut)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Tx (IsValid (..), ValidatedTx (..))
+import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, epochInfo, mkTxIxPartial)
 import Cardano.Ledger.Core (Tx)
@@ -70,27 +73,32 @@ import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Lens (makeLenses, over, (&), (.~), (^.))
+import Control.Monad (guard)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bitraverse)
 import Data.Default (def)
+import Data.Foldable (foldl')
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import Data.Set qualified as Set
+import Data.Text qualified as Text
 import GHC.Records (HasField (..))
 import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
+import Ledger.Crypto qualified as Crypto
 import Ledger.Index.Internal qualified as P
 import Ledger.Params (EmulatorEra, emulatorGlobals, emulatorPParams)
 import Ledger.Params qualified as P
+import Ledger.Slot (Slot)
+import Ledger.Tx (CardanoTx (CardanoApiTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), addCardanoTxSignature,
+                  onCardanoTx)
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as V1 hiding (TxOut (..))
 import Plutus.V1.Ledger.Scripts qualified as P
-import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.ErrorCodes (checkHasFailedError)
 
 type CardanoLedgerError = Either P.ValidationErrorInPhase P.ToCardanoError
 
@@ -180,7 +188,7 @@ initialState params = EmulatedLedgerState
   { _ledgerEnv = C.Ledger.LedgerEnv
       { C.Ledger.ledgerSlotNo = 0
       , C.Ledger.ledgerIx = minBound
-      , C.Ledger.ledgerPp = C.Api.toLedgerPParams ShelleyBasedEraBabbage $ P.pProtocolParams params
+      , C.Ledger.ledgerPp = C.Api.toLedgerPParams C.Api.ShelleyBasedEraBabbage $ P.pProtocolParams params
       , C.Ledger.ledgerAccount = C.Ledger.AccountState (Coin 0) (Coin 0)
       }
   , _memPoolState = LedgerState
@@ -201,19 +209,21 @@ applyTx ::
   Tx EmulatorEra ->
   Either P.ValidationError (EmulatedLedgerState, Validated (Tx EmulatorEra))
 applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  (newMempool, vtx) <- first (P.CardanoLedgerValidationError . show) (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
+  (newMempool, vtx) <- first (P.CardanoLedgerValidationError . Text.pack . show) (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Maybe P.ValidationErrorInPhase
-hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
+hasValidationErrors params slotNo utxo tx'@(C.Api.ShelleyTx _ tx) =
   case res of
     Left e  -> Just (P.Phase1, e)
-    Right _ -> Nothing
+    Right _ -> case getTxExUnits params utxo tx' of
+      Left (Left e) -> Just e
+      _             -> Nothing
   where
     state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
-      vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (lsUTxOState (_memPoolState state)) tx)
+      vtx <- first (P.CardanoLedgerValidationError . Text.pack . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (lsUTxOState (_memPoolState state)) tx)
       applyTx params state vtx
 
 -- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValid`
@@ -263,28 +273,34 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
     lift (Passes _)  = True
     lift (Fails _ _) = False
 
+validateCardanoTx
+  :: P.Params
+  -> Slot
+  -> UTxO EmulatorEra
+  -> CardanoTx
+  -> Maybe P.ValidationErrorInPhase
+validateCardanoTx params slot utxo =
+  onCardanoTx
+      (\_ -> error "validateCardanoTx: EmulatorTx is not supported")
+      (\(CardanoApiEmulatorEraTx tx) -> do
+        guard (utxo /= UTxO Map.empty)
+        hasValidationErrors params (fromIntegral slot) utxo tx)
+
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
   case C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
-    Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . show $ e
+    Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . Text.pack . show $ e
     Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
   where
     eg = emulatorGlobals params
     ss = systemStart eg
     ei = epochInfo eg
     costmdls = array (minBound, maxBound) . Map.toList $ unCostModels $ getField @"_costmdls" $ emulatorPParams params
-    -- Failing transactions throw a checkHasFailedError error, but we don't want to deal with those yet.
-    -- We might be able to do that in the future.
-    -- But for now just return a zero execution cost so it will run later where we do handle failing transactions.
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (V1.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
-      Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (V1.CekError ce) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
-    toCardanoLedgerError (C.Ledger.ValidationFailedV2 (V1.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
-      Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV2 (V1.CekError ce) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
-    toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
+    toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError $ Text.pack $ show e)
 
 makeTransactionBody
   :: P.Params
@@ -303,6 +319,34 @@ evaluateMinLovelaceOutput params = toPlutusValue . C.Ledger.evaluateMinLovelaceO
     toPlutusValue :: Coin -> P.Ada
     toPlutusValue (Coin c) = P.lovelaceOf c
 
+fromPlutusTxSigned'
+  :: P.Params
+  -> UTxO EmulatorEra
+  -> P.Tx
+  -> Map.Map P.PaymentPubKey P.PaymentPrivateKey
+  -> Either CardanoLedgerError CardanoTx
+fromPlutusTxSigned' params utxo tx knownPaymentKeys =
+  let
+    getPrivateKey = fmap P.unPaymentPrivateKey . flip Map.lookup knownPaymentKeys . P.PaymentPubKey
+    getPublicKeys = Map.keys . P.txSignatures
+    privateKeys = mapMaybe getPrivateKey $ getPublicKeys tx
+    signTx txn = foldl' (flip addCardanoTxSignature) txn privateKeys
+    convertTx t =
+        flip SomeTx C.BabbageEraInCardanoMode
+        <$> fromPlutusTx params utxo (P.PaymentPubKeyHash . Crypto.pubKeyHash <$> getPublicKeys t) t
+  in
+    signTx . CardanoApiTx <$> convertTx tx
+
+fromPlutusTxSigned
+  :: P.Params
+  -> UTxO EmulatorEra
+  -> P.Tx
+  -> Map.Map P.PaymentPubKey P.PaymentPrivateKey
+  -> CardanoTx
+fromPlutusTxSigned params utxo tx knownPaymentKeys = case fromPlutusTxSigned' params utxo tx knownPaymentKeys of
+  Left e  -> error ("fromPlutusTxSigned: failed to convert " ++ show e)
+  Right t -> t
+
 fromPlutusTx
   :: P.Params
   -> UTxO EmulatorEra
@@ -317,18 +361,6 @@ getRequiredSigners :: C.Api.Tx C.Api.BabbageEra -> [P.PaymentPubKeyHash]
 getRequiredSigners (C.Api.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
   foldMap (pure . P.PaymentPubKeyHash . P.fromCardanoPaymentKeyHash . C.Api.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
 
-addSignature
-  :: Crypto.XPrv
-  -> C.Api.Tx C.Api.BabbageEra
-  -> C.Api.Tx C.Api.BabbageEra
-addSignature privKey (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isValid aux))
-    = C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits' isValid aux)
-  where
-    wits' = wits <> mempty { txwitsVKey = newWits }
-    newWits = case fromPaymentPrivateKey privKey body of
-      C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
-      _                             -> Set.empty
-
 fromPlutusIndex :: P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
 fromPlutusIndex (P.UtxoIndex m) =
   first Right $ UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (pure . fromPlutusTxOut)) (Map.toList m)
@@ -341,11 +373,3 @@ fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 
 fromPlutusTxOut :: P.TxOut -> TxOut EmulatorEra
 fromPlutusTxOut = C.Api.toShelleyTxOut ShelleyBasedEraBabbage . C.Api.toCtxUTxOTxOut . P.getTxOut
-
-fromPaymentPrivateKey :: Crypto.XPrv -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.BabbageEra
-fromPaymentPrivateKey xprv txBody
-  = C.Api.makeShelleyKeyWitness
-      (C.Api.ShelleyTxBody C.Api.ShelleyBasedEraBabbage txBody notUsed notUsed notUsed notUsed)
-      (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
-  where
-    notUsed = undefined -- hack so we can reuse code from cardano-api

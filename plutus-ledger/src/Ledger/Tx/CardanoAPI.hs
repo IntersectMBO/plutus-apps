@@ -31,6 +31,7 @@ module Ledger.Tx.CardanoAPI(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Bitraversable (bisequence)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger.Address qualified as P
@@ -190,8 +191,9 @@ toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
 toCardanoMintValue :: P.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue tx@P.Tx{..} =
     let indexedMps = Map.assocs txMintingScripts
-     in C.TxMintValue C.MultiAssetInBabbageEra
-        <$> toCardanoValue txMint
-        <*> (C.BuildTxWith . Map.fromList <$> traverse (\(mph, rd) ->
-          (,) <$> toCardanoPolicyId mph <*> toCardanoMintWitness rd (P.lookupMintingPolicy (P.txScripts tx) mph)) indexedMps)
-
+    in C.TxMintValue C.MultiAssetInBabbageEra
+       <$> toCardanoValue txMint
+       <*> fmap (C.BuildTxWith . Map.fromList)
+             (traverse (\(mph, rd) ->
+                bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd (P.lookupMintingPolicy (P.txScripts tx) mph)))
+                indexedMps)

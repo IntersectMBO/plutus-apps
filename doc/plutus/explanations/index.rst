@@ -5,9 +5,7 @@ Explanations
    :maxdepth: 2
    :titlesonly:
 
-   platform
-   ledger
-   plutus-foundation
+   plutus-tools-component-descriptions
    rollback
    pab
    order-book-pattern
