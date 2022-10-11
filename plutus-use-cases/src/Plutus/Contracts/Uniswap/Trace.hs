@@ -22,7 +22,7 @@ import Data.Void (Void)
 import Ledger
 import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Constraints hiding (adjustUnbalancedTx)
-import Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OffChain as OffChain

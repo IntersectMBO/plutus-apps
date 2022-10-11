@@ -124,8 +124,7 @@ import Streaming.Prelude (Of ((:>)))
 
 import Data.Aeson qualified as A
 import Ledger.Params (Params (..))
-import Ledger.TimeSlot (SlotConfig)
-import Plutus.V1.Ledger.Slot (getSlot)
+import Ledger.Slot (getSlot)
 import Plutus.V1.Ledger.Value (Value, flattenValue)
 
 -- | A very simple effect for interpreting the output printing done by the
@@ -160,19 +159,19 @@ handleEmulatorTrace ::
     , Member (LogMsg EmulatorEvent') effs
     , Member ContractInstanceIdEff effs
     )
-    => SlotConfig
+    => Params
     -> EmulatorTrace a
     -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
-handleEmulatorTrace slotCfg action = do
+handleEmulatorTrace Params{pNetworkId, pSlotConfig} action = do
     _ <- subsume @(Error EmulatorRuntimeError)
             . interpret (mapLog (UserThreadEvent . UserLog))
             . flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleEmulatorControl @_ @effs slotCfg)
-            . interpret (handleWaiting @_ @effs slotCfg)
+            . interpret (handleEmulatorControl @_ @effs pSlotConfig)
+            . interpret (handleWaiting @_ @effs pSlotConfig)
             . interpret (handleAssert @_ @effs)
             . interpret (handleRunContract @_ @effs)
-            . interpret (handleStartContract @_ @effs)
+            . interpret (handleStartContract @_ @effs pNetworkId)
             $ raiseEnd action
     void $ exit @effs @EmulatorMessage
 
@@ -209,7 +208,7 @@ interpretEmulatorTrace conf action =
         $ runThreads
         $ do
             raise $ launchSystemThreads wallets
-            handleEmulatorTrace (pSlotConfig $ _params conf) action'
+            handleEmulatorTrace (_params conf) action'
 
 -- | Options for how to set up and print the trace.
 data TraceConfig = TraceConfig

@@ -51,7 +51,7 @@ badRefund inst pk = do
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateIn (from (current - 1))
-    utx <- mkTxConstraints ( Constraints.plutusV1TypedValidatorLookups inst
+    utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                           <> Constraints.unspentOutputs unspentOutputs
                            ) tx'
     handleError (\err -> logError $ "Caught error: " ++ unpack err) $

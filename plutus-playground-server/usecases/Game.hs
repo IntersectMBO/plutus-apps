@@ -29,13 +29,13 @@ import Data.ByteString.Char8 qualified as C
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
-import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (ChainIndexTxOut (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.V1.Ledger.Api (Address, Datum (Datum), ScriptContext, Validator, Value)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (pure, (<$>))
@@ -89,7 +89,7 @@ gameValidator = Scripts.validatorScript gameInstance
 
 -- | The address of the game (the hash of its validator script)
 gameAddress :: Address
-gameAddress = Ledger.scriptAddress gameValidator
+gameAddress = mkValidatorAddress gameValidator
 
 -- | Parameters for the "lock" endpoint
 data LockParams = LockParams
@@ -110,7 +110,7 @@ newtype GuessParams = GuessParams
 lock :: AsContractError e => Promise () GameSchema e ()
 lock = endpoint @"lock" @LockParams $ \(LockParams secret amt) -> do
     logInfo @Haskell.String $ "Pay " <> Haskell.show amt <> " to the script"
-    let tx         = Constraints.mustPayToTheScript (hashString secret) amt
+    let tx         = Constraints.mustPayToTheScriptWithDatumInTx (hashString secret) amt
     void (submitTxConstraints gameInstance tx)
 
 -- | The "guess" contract endpoint. See note [Contract endpoints]

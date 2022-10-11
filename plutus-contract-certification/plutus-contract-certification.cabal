@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          plutus-contract-certification
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -52,12 +52,12 @@ library
   --------------------
   -- Local components
   --------------------
-  build-depends:   plutus-contract
+  build-depends:   plutus-contract >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:   plutus-tx
+  build-depends:   plutus-tx >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies

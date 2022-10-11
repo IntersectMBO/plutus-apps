@@ -34,6 +34,8 @@ import Text.Pretty.Simple (pPrint)
 
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
+import Data.Either (fromRight)
+import Ledger (testnet)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
@@ -73,8 +75,8 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
-        view (chainState . txPool) $
-        emulatorStateInitialDist $
+        view (chainState . txPool) $ fromRight (error "cannot initialize chain state") $
+        emulatorStateInitialDist testnet $
         Map.mapKeys mockWalletPaymentPubKeyHash dist
   in insertBlock (map Valid initialTxs) (UtxoIndex Map.empty)
 

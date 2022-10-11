@@ -30,9 +30,9 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef),
-               TxOut (txOutValue), Value, eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId,
-               getCardanoTxValidityRange)
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef), Value,
+               eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
+               txOutValue)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -163,8 +163,6 @@ validateBlock params slot@(Slot s) idx txns =
         -- processed
         nextSlot = Slot (s + 1)
         events   = (uncurry (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
-
-
     in ValidatedBlock block events idx'
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
@@ -191,7 +189,7 @@ validateEm
 validateEm h txn = do
     ctx@(ValidationCtx idx params) <- S.get
     let
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
         e = Validation.validateCardanoTx params h cUtxoIndex txn
         idx' = case e of
             Just (Index.Phase1, _) -> idx

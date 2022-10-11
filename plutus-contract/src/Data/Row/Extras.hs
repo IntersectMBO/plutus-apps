@@ -18,13 +18,13 @@ module Data.Row.Extras(
 
 import Data.Aeson (FromJSON, ToJSON, (.:), (.=))
 import Data.Aeson qualified as Aeson
+import Data.Aeson.Key qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.Row hiding (type (.\\))
 import Data.Row.Internal hiding (type (.\\))
 import Data.Row.Records qualified as Records
 import Data.Row.Variants qualified as Variants
 import Data.Text (Text)
-import Data.Text qualified as Text
 import GHC.TypeLits hiding (Text)
 
 newtype JsonVar s = JsonVar { unJsonVar :: Var s }
@@ -50,10 +50,10 @@ namedBranchFromJSON nm vl =
   Variants.fromLabels @FromJSON @s @Aeson.Parser (\case { n | show n == nm -> Aeson.parseJSON vl; _ -> fail "Wrong label" })
 
 instance Forall s ToJSON => ToJSON (JsonRec s) where
-  toJSON = Aeson.object . Records.eraseWithLabels @ToJSON @s @Text @Aeson.Value Aeson.toJSON . unJsonRec
+  toJSON = Aeson.object . Records.eraseWithLabels @ToJSON @s @Aeson.Key @Aeson.Value Aeson.toJSON . unJsonRec
 
 instance (AllUniqueLabels s, Forall s FromJSON) => FromJSON (JsonRec s) where
-  parseJSON vl = JsonRec <$> Records.fromLabelsA @FromJSON @Aeson.Parser @s  (\lbl -> Aeson.withObject "Rec" (\obj -> obj .: (Text.pack $ show lbl) >>= Aeson.parseJSON) vl)
+  parseJSON vl = JsonRec <$> Records.fromLabelsA @FromJSON @Aeson.Parser @s  (\lbl -> Aeson.withObject "Rec" (\obj -> obj .: (Aeson.fromString $ show lbl) >>= Aeson.parseJSON) vl)
 
 -- | Fast diff. The implementation in row-types is exponential in time and memory in the number of
 --   overlapping rows, due to limitations in ghc's handling of type families. This version is much

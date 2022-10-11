@@ -63,12 +63,12 @@ import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract
-import Plutus.Script.Utils.V1.Scripts qualified as Ledger
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V1.Ledger.Api as V
-import Plutus.V1.Ledger.Contexts as V
+import Plutus.V1.Ledger.Api qualified as PV1
+import Plutus.V1.Ledger.Contexts qualified as PV1
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>), (>>=))
@@ -79,9 +79,9 @@ import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign
-    { campaignDeadline           :: POSIXTime
+    { campaignDeadline           :: PV1.POSIXTime
     -- ^ The date by which the campaign funds can be contributed.
-    , campaignCollectionDeadline :: POSIXTime
+    , campaignCollectionDeadline :: PV1.POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
     , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
@@ -104,14 +104,14 @@ type CrowdfundingSchema =
     .\/ Endpoint "contribute" Contribution
 
 newtype Contribution = Contribution
-        { contribValue :: Value
+        { contribValue :: PV1.Value
         -- ^ how much to contribute
         } deriving stock (Haskell.Eq, Haskell.Show, Generic)
           deriving anyclass (ToJSON, FromJSON, ToSchema, ToArgument)
 
 -- | Construct a 'Campaign' value from the campaign parameters,
 --   using the wallet's public key.
-mkCampaign :: POSIXTime -> POSIXTime -> Wallet -> Campaign
+mkCampaign :: PV1.POSIXTime -> PV1.POSIXTime -> Wallet -> Campaign
 mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
@@ -121,14 +121,14 @@ mkCampaign ddl collectionDdl ownerWallet =
 
 -- | The 'POSIXTimeRange' during which the funds can be collected
 {-# INLINABLE collectionRange #-}
-collectionRange :: Campaign -> POSIXTimeRange
+collectionRange :: Campaign -> PV1.POSIXTimeRange
 collectionRange cmp =
     -- We have to subtract '2', see Note [Validity Interval's upper bound]
     Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 2)
 
 -- | The 'POSIXTimeRange' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
-refundRange :: Campaign -> POSIXTimeRange
+refundRange :: Campaign -> PV1.POSIXTimeRange
 refundRange cmp =
     Interval.from (campaignCollectionDeadline cmp)
 
@@ -145,29 +145,31 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
         wrap = Scripts.mkUntypedValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> PV1.TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
-    refundRange campaign `Interval.contains` txInfoValidRange txinfo
+    refundRange campaign `Interval.contains` PV1.txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
-    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
+    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash contributor)
 
 {-# INLINABLE validCollection #-}
-validCollection :: Campaign -> TxInfo -> Bool
+validCollection :: Campaign -> PV1.TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
-    (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
+    (collectionRange campaign `Interval.contains` PV1.txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
 -- additionally parameterized by a 'Campaign' definition. This argument is
 -- provided by the Plutus client, using 'PlutusTx.applyCode'.
 -- As a result, the 'Campaign' definition is part of the script address,
--- and different campaigns have different addresses.
-mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> ScriptContext -> Bool
-mkValidator c con act ScriptContext{scriptContextTxInfo} = case act of
+-- and different campaigns have different addresses. The Campaign{..} syntax
+-- means that all fields of the 'Campaign' value are in scope
+-- (for example 'campaignDeadline' in l. 70).
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> PV1.ScriptContext -> Bool
+mkValidator c con act PV1.ScriptContext{PV1.scriptContextTxInfo} = case act of
     -- the "refund" branch
     Refund  -> validRefund c con scriptContextTxInfo
     -- the "collection" branch
@@ -176,19 +178,19 @@ mkValidator c con act ScriptContext{scriptContextTxInfo} = case act of
 -- | The validator script that determines whether the campaign owner can
 --   retrieve the funds or the contributors can claim a refund.
 --
-contributionScript :: Campaign -> Validator
+contributionScript :: Campaign -> PV1.Validator
 contributionScript = Scripts.validatorScript . typedValidator
 
 -- | The address of a [[Campaign]]
-campaignAddress :: Campaign -> Ledger.ValidatorHash
-campaignAddress = Ledger.validatorHash . contributionScript
+campaignAddress :: Campaign -> PV1.ValidatorHash
+campaignAddress = PV1.validatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
 crowdfunding :: Campaign -> Contract () CrowdfundingSchema ContractError ()
 crowdfunding c = selectList [contribute c, scheduleCollection c]
 
 -- | A sample campaign
-theCampaign :: POSIXTime -> Campaign
+theCampaign :: PV1.POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 20000
     , campaignCollectionDeadline = startTime + 30000
@@ -204,10 +206,10 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
-        tx = Constraints.mustPayToTheScript contributor contribValue
+        tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
                 -- We have to subtract '2', see Note [Validity Interval's upper bound]
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst) tx
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
@@ -223,7 +225,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
+        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
             >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()
@@ -248,7 +250,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
             <> Constraints.mustValidateIn (collectionRange cmp)
 
     logInfo @Text "Collecting funds"
-    void $ mkTxConstraints (Constraints.plutusV1TypedValidatorLookups inst
+    void $ mkTxConstraints (Constraints.typedValidatorLookups inst
                          <> Constraints.unspentOutputs unspentOutputs) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
@@ -262,7 +264,7 @@ startCampaign = do
     pure hdl
 
 -- | Call the "contribute" endpoint, contributing the amount from the wallet
-makeContribution :: Wallet -> Value -> EmulatorTrace ()
+makeContribution :: Wallet -> PV1.Value -> EmulatorTrace ()
 makeContribution w v = do
     startTime <- TimeSlot.scSlotZeroTime <$> getSlotConfig
     hdl <- Trace.activateContractWallet w (crowdfunding $ theCampaign startTime)

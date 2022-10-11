@@ -36,7 +36,7 @@ import Halogen.Monaco as Monaco
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult)
 import Network.RemoteData (RemoteData)
 import Playground.Types (CompilationResult, ContractCall, ContractDemo, EvaluationResult, PlaygroundError, Simulation)
-import Plutus.V1.Ledger.Tx (Tx)
+import Ledger.Tx.Internal (Tx)
 import Prelude (class Eq, class Show, Unit, show, ($))
 import Schema.Types (ActionEvent(..), FormArgument, SimulationAction(..))
 import Test.QuickCheck.Arbitrary (class Arbitrary)

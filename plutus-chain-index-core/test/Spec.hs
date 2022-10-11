@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds   #-}
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE MonoLocalBinds    #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Main(main) where
@@ -25,18 +26,18 @@ import Ledger (TxOutRef (TxOutRef, txOutRefId))
 import Plutus.ChainIndex.Emulator.DiskStateSpec qualified as DiskStateSpec
 import Plutus.ChainIndex.Emulator.HandlersSpec qualified as EmulatorHandlersSpec
 import Plutus.ChainIndex.HandlersSpec qualified as HandlersSpec
-import Plutus.ChainIndex.Tx (citxTxId)
+import Plutus.ChainIndex.Tx (citxTxId, validityFromChainIndex)
 import Plutus.ChainIndex.TxIdState (dropOlder, increaseDepth, transactionStatus)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TUB
 import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), RollbackState (..), Tip (..), TxConfirmedState (..),
                                 TxIdState (..), TxOutState (..), TxStatusFailure (..), TxUtxoBalance (..),
-                                TxValidity (..), liftTxOutStatus, tipAsPoint, txOutStatusTxOutState)
+                                liftTxOutStatus, tipAsPoint, txOutStatusTxOutState)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..))
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Test.Tasty
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
@@ -47,8 +48,8 @@ tests =
     [ testGroup "tx out balance" txOutBalanceTests
     , testGroup "utxo balance" utxoBalanceTests
     , testGroup "txidstate" txIdStateTests
-    , testProperty "lift tx output status to tx status" txOutStatusTxStatusProp
-    , testProperty "tx output status" txOutStatusSpentUnspentProp
+    , testPropertyNamed "lift tx output status to tx status" "txOutStatusTxStatusProp" txOutStatusTxStatusProp
+    , testPropertyNamed "tx output status" "txOutStatusSpentUnspentProp" txOutStatusSpentUnspentProp
     , DiskStateSpec.tests
     , EmulatorHandlersSpec.tests
     , HandlersSpec.tests
@@ -57,47 +58,47 @@ tests =
 utxoBalanceTests :: [TestTree]
 utxoBalanceTests =
   [ testGroup "monoid"
-      [ testProperty "associative" semigroupUtxobalanceAssociative
-      , testProperty "unit" monoidUtxobalanceUnit
+      [ testPropertyNamed "associative" "semigroupUtxobalanceAssociative" semigroupUtxobalanceAssociative
+      , testPropertyNamed "unit" "monoidUtxobalanceUnit" monoidUtxobalanceUnit
       ]
   , testGroup "generator"
-      [ testProperty "match all unspent outputs" matchUnspentOutputs
-      , testProperty "generate block with non-empty utxo set"
+      [ testPropertyNamed "match all unspent outputs" "matchUnspentOutputs" matchUnspentOutputs
+      , testPropertyNamed "generate block with non-empty utxo set" "generateBlockWithNonEmptyTxUtxoBalance"
                      generateBlockWithNonEmptyTxUtxoBalance
       ]
   , testGroup "operations"
-      [ testProperty "insert new blocks at end" insertAtEnd
-      , testProperty "rollback" rollback
-      , testProperty "block number ascending order" blockNumberAscending
-      , testProperty "reduce block count" reduceBlockCount
+      [ testPropertyNamed "insert new blocks at end" "insertAtEnd" insertAtEnd
+      , testPropertyNamed "rollback" "rollback" rollback
+      , testPropertyNamed "block number ascending order" "blockNumberAscending" blockNumberAscending
+      , testPropertyNamed "reduce block count" "reduceBlockCount" reduceBlockCount
       ]
   ]
 
 txOutBalanceTests :: [TestTree]
 txOutBalanceTests =
   [ testGroup "monoid"
-      [ testProperty "associative" semigroupTxOutbalanceAssociative
-      , testProperty "unit" monoidTxOutbalanceUnit
+      [ testPropertyNamed "associative" "semigroupTxOutbalanceAssociative" semigroupTxOutbalanceAssociative
+      , testPropertyNamed "unit" "monoidTxOutbalanceUnit" monoidTxOutbalanceUnit
       ]
   , testGroup "generator"
-      [ testProperty "generate non-empty blocks" generateBlocksWithNonEmptyTxOutBalance
+      [ testPropertyNamed "generate non-empty blocks" "generateBlocksWithNonEmptyTxOutBalance" generateBlocksWithNonEmptyTxOutBalance
       ]
   ]
 
 txIdStateTests :: [TestTree]
 txIdStateTests =
   [ testGroup "monoid"
-      [ testProperty "associative" semigroupTxIdStateAssociative
-      , testProperty "unit" monoidTxIdStateUnit
+      [ testPropertyNamed "associative" "semigroupTxIdStateAssociative" semigroupTxIdStateAssociative
+      , testPropertyNamed "unit" "monoidTxIdStateUnit" monoidTxIdStateUnit
       ]
   , testGroup "generator"
-      [ testProperty "unique transaction ids" uniqueTransactionIds
-      , testProperty "number of transactions = number of blocks" numOfTransactionsIsNumberOfBlocks
+      [ testPropertyNamed "unique transaction ids" "uniqueTransactionIds" uniqueTransactionIds
+      , testPropertyNamed "number of transactions = number of blocks" "numOfTransactionsIsNumberOfBlocks" numOfTransactionsIsNumberOfBlocks
       ]
   , testGroup "operations"
-      [ testProperty "transaction depth increases" transactionDepthIncreases
-      , testProperty "rollback changes tx state" rollbackTxIdState
-      , testProperty "dropOlder drops only older things." dropOlderDropsCorrectly
+      [ testPropertyNamed "transaction depth increases" "transactionDepthIncreases" transactionDepthIncreases
+      , testPropertyNamed "rollback changes tx state" "rollbackTxIdState" rollbackTxIdState
+      , testPropertyNamed "dropOlder drops only older things." "dropOlderDropsCorrectly" dropOlderDropsCorrectly
       ]
   ]
 
@@ -156,11 +157,13 @@ rollbackTxIdState = property $ do
       isInvalidRollback (Left InvalidRollbackAttempt {}) = True
       isInvalidRollback _                                = False
 
+      txBValidity = validityFromChainIndex txB
+
   -- It's inserted at f2, and is confirmed once and not deleted, resulting
   -- in a tentatively-confirmed status.
   confirmed txB f2 === Just 1
   deleted txB f2   === Nothing
-  status 1 txB f2  === (Right $ TentativelyConfirmed (Depth 0) TxValid ())
+  status 1 txB f2  === (Right $ TentativelyConfirmed (Depth 0) txBValidity ())
 
   -- At f3, it's deleted once, and confirmed once, resulting in an unknown
   -- status.
@@ -176,10 +179,10 @@ rollbackTxIdState = property $ do
   -- tentatively-confirmed status again.
   confirmed txB f4 === Just 2
   deleted txB f4   === Just 1
-  status 3 txB f4  === (Right $ TentativelyConfirmed (Depth 1) TxValid ())
+  status 3 txB f4  === (Right $ TentativelyConfirmed (Depth 1) txBValidity ())
 
   -- Much later, it should be committed.
-  status 100 txB f4 === Right (Committed TxValid ())
+  status 100 txB f4 === Right (Committed txBValidity ())
 
 transactionDepthIncreases :: Property
 transactionDepthIncreases = property $ do
@@ -198,7 +201,7 @@ transactionDepthIncreases = property $ do
       status3 = transactionStatus (BlockNumber (1 + fromIntegral d)) (UtxoState._usTxUtxoData (UtxoState.utxoState f2)) (txA ^. citxTxId)
 
   status2 === (increaseDepth <$> status1)
-  status3 === (Right $ Committed TxValid ())
+  status3 === (Right $ Committed (validityFromChainIndex txA) ())
 
 uniqueTransactionIds :: Property
 uniqueTransactionIds = property $ do
@@ -406,8 +409,8 @@ txOutStatusSpentUnspentProp = property $ do
                                                   txOutBalance
                                                   txOutRef
     case txOutStatus of
-      Right (TentativelyConfirmed _ TxValid Unspent) -> Hedgehog.assert True
-      _                                              -> Hedgehog.assert False
+      Right (TentativelyConfirmed _ _ Unspent) -> Hedgehog.assert True
+      _                                        -> Hedgehog.assert False
 
   -- We verify that every spent tx output has the status
   -- 'TxOutTentativelySpent'.
@@ -415,5 +418,5 @@ txOutStatusSpentUnspentProp = property $ do
     let txOutStatus =
           TxOutBalance.transactionOutputStatus blockNumber txIdState txOutBalance txOutRef
     case txOutStatus of
-      Right (TentativelyConfirmed _ TxValid (Spent txId)) | txId == txOutSpentTxId -> Hedgehog.assert True
-      _                                                                            -> Hedgehog.assert False
+      Right (TentativelyConfirmed _ _ (Spent txId)) | txId == txOutSpentTxId -> Hedgehog.assert True
+      _                                                                      -> Hedgehog.assert False

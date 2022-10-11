@@ -36,16 +36,16 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (BlockId (..), ChainIndexTxOut (..), Slot)
+import Ledger (BlockId (..), ChainIndexTxOut (..), Slot, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
+import Plutus.ChainIndex.Tx qualified as CI
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
-import Plutus.V1.Ledger.Api (Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer, RedeemerHash (..),
-                             Script, StakeValidator, StakeValidatorHash (..), TxId (..), TxOut, TxOutRef (..),
-                             Validator, ValidatorHash (..))
-import Plutus.V1.Ledger.Credential (Credential)
+import Plutus.V1.Ledger.Api (Credential, Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
+                             RedeemerHash (..), Script, StakeValidator, StakeValidatorHash (..), TxId (..),
+                             TxOutRef (..), Validator, ValidatorHash (..))
 import Plutus.V1.Ledger.Scripts (ScriptHash (..))
 import Plutus.V1.Ledger.Value (AssetClass)
-import PlutusTx.Builtins.Internal (BuiltinByteString (..))
+import PlutusTx.Builtins qualified as PlutusTx
 
 data DatumRowT f = DatumRow
     { _datumRowHash  :: Columnar f ByteString
@@ -232,14 +232,19 @@ instance HasDbType ByteString where
     toDbValue = id
     fromDbValue = id
 
-deriving via ByteString instance HasDbType DatumHash
-deriving via ByteString instance HasDbType ValidatorHash
-deriving via ByteString instance HasDbType MintingPolicyHash
-deriving via ByteString instance HasDbType RedeemerHash
-deriving via ByteString instance HasDbType StakeValidatorHash
-deriving via ByteString instance HasDbType TxId
+instance HasDbType PlutusTx.BuiltinByteString where
+    type DbType PlutusTx.BuiltinByteString = ByteString
+    toDbValue = PlutusTx.fromBuiltin
+    fromDbValue = PlutusTx.toBuiltin
+
+deriving via PlutusTx.BuiltinByteString instance HasDbType DatumHash
+deriving via PlutusTx.BuiltinByteString instance HasDbType ValidatorHash
+deriving via PlutusTx.BuiltinByteString instance HasDbType MintingPolicyHash
+deriving via PlutusTx.BuiltinByteString instance HasDbType RedeemerHash
+deriving via PlutusTx.BuiltinByteString instance HasDbType StakeValidatorHash
+deriving via PlutusTx.BuiltinByteString instance HasDbType TxId
 deriving via ByteString instance HasDbType BlockId
-deriving via ByteString instance HasDbType ScriptHash
+deriving via PlutusTx.BuiltinByteString instance HasDbType ScriptHash
 
 newtype Serialisable a = Serialisable { getSerialisable :: a }
 instance Serialise a => HasDbType (Serialisable a) where
@@ -252,17 +257,17 @@ instance Serialise a => HasDbType (Serialisable a) where
     toDbValue = BSL.toStrict . serialise . getSerialisable
 
 deriving via Serialisable Datum instance HasDbType Datum
-deriving via Serialisable MintingPolicy instance HasDbType MintingPolicy
 deriving via Serialisable Redeemer instance HasDbType Redeemer
-deriving via Serialisable StakeValidator instance HasDbType StakeValidator
-deriving via Serialisable Validator instance HasDbType Validator
+deriving via Serialisable (Versioned MintingPolicy) instance HasDbType (Versioned MintingPolicy)
+deriving via Serialisable (Versioned StakeValidator) instance HasDbType (Versioned StakeValidator)
+deriving via Serialisable (Versioned Validator) instance HasDbType (Versioned Validator)
+deriving via Serialisable (Versioned Script) instance HasDbType (Versioned Script)
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
 deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
-deriving via Serialisable TxOut instance HasDbType TxOut
+deriving via Serialisable CI.ChainIndexTxOut instance HasDbType CI.ChainIndexTxOut
 deriving via Serialisable Credential instance HasDbType Credential
 deriving via Serialisable AssetClass instance HasDbType AssetClass
-deriving via Serialisable Script instance HasDbType Script
 
 instance HasDbType Slot where
     type DbType Slot = Word64 -- In Plutus Slot is Integer, but in the Cardano API it is Word64, so this is safe
@@ -286,8 +291,8 @@ instance HasDbType (DatumHash, Datum) where
     toDbValue (hash, datum) = DatumRow (toDbValue hash) (toDbValue datum)
     fromDbValue (DatumRow hash datum) = (fromDbValue hash, fromDbValue datum)
 
-instance HasDbType (ScriptHash, Script) where
-    type DbType (ScriptHash, Script) = ScriptRow
+instance HasDbType (ScriptHash, Versioned Script) where
+    type DbType (ScriptHash, Versioned Script) = ScriptRow
     toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
     fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
 

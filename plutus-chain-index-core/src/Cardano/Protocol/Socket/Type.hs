@@ -15,7 +15,6 @@ import Control.Monad (forever)
 import Control.Monad.Class.MonadST (MonadST)
 import Control.Monad.Class.MonadTimer
 import Crypto.Hash (SHA256, hash)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Extras qualified as JSON
 import Data.ByteArray qualified as BA
 import Data.ByteString qualified as BS
@@ -26,7 +25,7 @@ import Data.Time.Units.Extra ()
 import Data.Void (Void)
 
 import GHC.Generics
-import NoThunks.Class (NoThunks)
+import NoThunks.Class (NoThunks (noThunks, showTypeOf, wNoThunks))
 
 import Cardano.Api (NetworkId (..))
 import Cardano.Chain.Slotting (EpochSlots (..))
@@ -49,6 +48,7 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Codec qualified as TxSubmiss
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as TxSubmission
 import Ouroboros.Network.Util.ShowProxy
 
+import PlutusTx.Builtins qualified as PlutusTx
 import Prettyprinter.Extras
 
 import Ledger (Block, OnChainTx (..), Tx (..), TxId (..))
@@ -59,7 +59,6 @@ type Tip = Block
 -- | The node protocols require a block header type.
 newtype BlockId = BlockId { getBlockId :: BS.ByteString }
   deriving (Eq, Ord, Generic)
-  deriving anyclass (ToJSON, FromJSON)
   deriving newtype (Serialise, NoThunks)
   deriving Pretty via (PrettyShow BlockId)
 
@@ -87,6 +86,12 @@ instance ShowProxy a => ShowProxy [a] where
   showProxy _ = "[" ++ showProxy (Proxy @a) ++ "]"
 
 deriving instance StandardHash Block
+
+instance NoThunks PlutusTx.BuiltinByteString where
+  noThunks ctx b = noThunks ctx (PlutusTx.fromBuiltin b)
+  wNoThunks ctx b = wNoThunks ctx (PlutusTx.fromBuiltin b)
+  showTypeOf _ = showTypeOf (Proxy @BS.ByteString)
+
 deriving newtype instance NoThunks TxId
 
 -- | Limits for the protocols we use.
@@ -98,7 +103,7 @@ maximumMiniProtocolLimits =
 
 -- | Protocol versions
 nodeToClientVersion :: NodeToClientVersion
-nodeToClientVersion = NodeToClientV_4
+nodeToClientVersion = NodeToClientV_13
 
 -- | A temporary definition of the protocol version. This will be moved as an
 -- argument to the client connection function in a future PR (the network magic
@@ -145,6 +150,7 @@ codecConfig :: CodecConfig (CardanoBlock StandardCrypto)
 codecConfig =
   CardanoCodecConfig
     (Byron.ByronCodecConfig epochSlots)
+    Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig

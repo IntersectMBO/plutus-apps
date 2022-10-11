@@ -63,11 +63,12 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger (Block, OnChainTx (Invalid, Valid), TxId)
+import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (Address, CardanoTx, TxOut (txOutValue), getCardanoTxFee)
+import Ledger.Tx (CardanoTx, getCardanoTxFee, txOutValue)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
@@ -79,7 +80,7 @@ import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventIn
                                                instContractState, instEvents, instHandlersHistory)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,
                                     UserThreadMsg, _HandledRequest, cilMessage, cilTag, toInstanceState)
-import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Address (Address)
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)

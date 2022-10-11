@@ -39,6 +39,7 @@ import Hedgehog.Extras.Test.Process qualified as H
 import System.Directory qualified as IO
 import Test.Base qualified as H
 import Test.Process qualified as H
+import Test.Runtime qualified as H
 import Testnet.Cardano (TestnetRuntime (..), defaultTestnetOptions, testnet)
 import Testnet.Conf qualified as H
 
@@ -63,13 +64,13 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  Testnet.Cardano.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
+  tr@Testnet.Cardano.TestnetRuntime { testnetMagic } <- testnet defaultTestnetOptions conf
 
   env <- H.evalIO getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ H.bftSprockets tr)
           ]
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.

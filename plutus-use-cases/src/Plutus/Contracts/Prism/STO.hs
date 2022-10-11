@@ -32,13 +32,13 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace), fromValue)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V1.Scripts (MintingPolicy, mintingPolicyHash)
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api (ScriptContext (..), ScriptPurpose (..))
 import Plutus.V1.Ledger.Contexts qualified as Validation
-import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
+import Plutus.V1.Ledger.Scripts qualified as Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
@@ -64,14 +64,14 @@ validateSTO STOData{stoIssuer,stoCredentialToken,stoTokenName} _ ScriptContext{s
     in tokenOK && mintOK
 validateSTO _ _ _ = error ()
 
-policy :: STOData -> MintingPolicy
-policy stoData = mkMintingPolicyScript $
+policy :: STOData -> Scripts.MintingPolicy
+policy stoData = Scripts.mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \c -> Scripts.mkUntypedMintingPolicy (validateSTO c) ||]) `PlutusTx.applyCode` PlutusTx.liftCode stoData
 
 -- | A 'Value' of a number of coins issued in the STO
 coins :: STOData -> Integer -> Value
 coins d@STOData{stoTokenName} n =
-    let sym = Value.mpsSymbol (mintingPolicyHash $ policy d)
+    let sym = Value.mpsSymbol (Scripts.mintingPolicyHash $ policy d)
     in Value.singleton sym stoTokenName n
 
 PlutusTx.makeLift ''STOData

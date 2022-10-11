@@ -41,21 +41,22 @@ import Control.Monad.Freer.State (State, evalState, execState, gets, modify, run
 import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (listToMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPubKey (PaymentPubKey), pubKeyAddress)
+import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx (Address, TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef))
-import Ledger.TxId (TxId (TxId))
+import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOutRef (TxOutRef))
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOutputs (ValidTx), txOutRefs)
+import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOut (..), ChainIndexTxOutputs (..),
+                             OutputDatum (NoOutputDatum), ReferenceScript (ReferenceScriptNone), txOutRefs)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
@@ -162,8 +163,9 @@ genTx ::
     => Eff effs ChainIndexTx
 genTx = do
     newOutputs <-
-        let outputGen = (,) <$> genAddress <*> genNonZeroAdaValue in
+        let outputGen = ChainIndexTxOut <$> genAddress <*> genNonZeroAdaValue <*> pure NoOutputDatum <*> pure ReferenceScriptNone in
         sendM (Gen.list (Range.linear 1 5) outputGen)
+    outputs <- sendM (Gen.element [ValidTx newOutputs, InvalidTx (listToMaybe newOutputs)])
     inputs <- availableInputs
 
     allInputs <-
@@ -181,19 +183,19 @@ genTx = do
 
     deleteInputs (Map.fromSet (const txId) $ Set.fromList allInputs)
 
-    tx <- pure (ChainIndexTx txId)
-        <*> pure (map (flip TxIn Nothing) allInputs)
-        <*> pure (ValidTx $ (\(addr, vl) -> TxOut addr vl Nothing) <$> newOutputs)
-        <*> pure Interval.always
+    let tx = ChainIndexTx txId
+            (map (flip TxIn Nothing) allInputs)
+            outputs
+            Interval.always
 
-        -- TODO: generate datums, scripts, etc.
-        <*> pure mempty
-        <*> pure mempty
-        <*> pure mempty
+            -- TODO: generate datums, scripts, etc.
+            mempty
+            mempty
+            mempty
 
-        -- TODO: We need a way to convert the generated 'ChainIndexTx' to a
-        -- 'SomeCardanoTx', or vis-versa. And then put it here.
-        <*> pure Nothing
+            -- TODO: We need a way to convert the generated 'ChainIndexTx' to a
+            -- 'SomeCardanoTx', or vis-versa. And then put it here.
+            Nothing
 
     modify (over txgsBlocks ((:) [txId]))
     modify (over txgsUtxoSet ((<>) (Set.fromList $ txOutRefs tx)))

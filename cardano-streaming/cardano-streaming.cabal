@@ -35,7 +35,7 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
+    , cardano-api        >=1.35
     , ouroboros-network
 
   ------------------------
@@ -62,7 +62,7 @@ executable cardano-streaming-example-1
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api
+  build-depends:  cardano-api >=1.35
 
   ------------------------
   -- Non-IOG dependencies
@@ -70,7 +70,6 @@ executable cardano-streaming-example-1
   build-depends:
     , aeson
     , base                  >=4.9 && <5
-    , base16-bytestring
     , bytestring
     , optparse-applicative
     , streaming
@@ -89,12 +88,12 @@ executable cardano-streaming-example-2
   --------------------
   build-depends:
     , cardano-streaming
-    , plutus-ledger
+    , plutus-ledger      >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api
+  build-depends:  cardano-api >=1.35
 
   ------------------------
   -- Non-IOG dependencies
@@ -102,7 +101,6 @@ executable cardano-streaming-example-2
   build-depends:
     , aeson
     , base                  >=4.9 && <5
-    , base16-bytestring
     , bytestring
     , optparse-applicative
     , streaming
@@ -120,12 +118,12 @@ executable cardano-streaming-example-3
   --------------------
   build-depends:
     , cardano-streaming
-    , plutus-chain-index-core
+    , plutus-chain-index-core  >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api
+  build-depends:  cardano-api >=1.35
 
   ------------------------
   -- Non-IOG dependencies
@@ -133,7 +131,6 @@ executable cardano-streaming-example-3
   build-depends:
     , aeson
     , base                  >=4.9 && <5
-    , base16-bytestring
     , bytestring
     , optparse-applicative
     , streaming

@@ -8,11 +8,12 @@ import Cardano.BM.Data.Tracer (ToObject (..))
 import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (TxId, TxOut, TxOutRef)
+import Ledger (TxId, TxOutRef)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.Tx (ChainIndexTxOut)
 import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.Contract.CardanoAPI (FromCardanoError (..))
-import Prettyprinter (Pretty (..), colon, (<+>))
+import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
 
 data ChainIndexLog =
     InsertionSuccess Tip InsertUtxoPosition
@@ -22,7 +23,7 @@ data ChainIndexLog =
     | TxNotFound TxId
     | TxOutNotFound TxOutRef
     | TipIsGenesis
-    | NoDatumScriptAddr TxOut
+    | NoDatumScriptAddr ChainIndexTxOut
     | BeamLogItem BeamLog
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
@@ -42,7 +43,7 @@ instance Pretty ChainIndexLog where
     TxNotFound txid -> "TxNotFound:" <+> pretty txid
     TxOutNotFound ref -> "TxOut not found with:" <+> pretty ref
     TipIsGenesis -> "TipIsGenesis"
-    NoDatumScriptAddr txout -> "The following transaction output from a script adress does not have a datum:" <+> pretty txout
+    NoDatumScriptAddr txout -> "The following transaction output from a script adress does not have a datum:" <+> viaShow txout
     BeamLogItem b -> "BeamLogItem:" <+> pretty b
 
 -- | Outcome of inserting a 'UtxoState' into the utxo index
