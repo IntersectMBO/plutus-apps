@@ -88,7 +88,7 @@ mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     where
-        mustSpendPubKeyOutputs = fmap Constraints.mustSpendPubKeyOutput offChainTxOutRefs
+        mustSpendPubKeyOutputs = Constraints.mustSpendPubKeyOutput <$> offChainTxOutRefs
 
 txoRefsFromWalletState :: WalletState -> Set TxOutRef
 txoRefsFromWalletState ws = head $ M.elems $ ws ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap
@@ -235,7 +235,7 @@ phase2FailureWhenTxoIsNotSpent =
 mkValidator :: [TxOutRef] -> () -> ScriptContext -> Bool
 mkValidator txOutRefs _ ctx = P.traceIfFalse "mustSpendPubKeyOutput not satisfied" (Constraints.checkScriptContext @() @() (P.mconcat mustSpendPubKeyOutputs) ctx)
     where
-        mustSpendPubKeyOutputs = P.fmap Constraints.mustSpendPubKeyOutput txOutRefs
+        mustSpendPubKeyOutputs = Constraints.mustSpendPubKeyOutput P.<$> txOutRefs
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest where

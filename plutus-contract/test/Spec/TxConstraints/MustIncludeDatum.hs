@@ -275,7 +275,7 @@ mkMustIncludeDatumValidator datum expectedDatums ctx = P.traceIfFalse "datum is 
                                        P.traceIfFalse "mustIncludeDatumInTx not satisfied" (Constraints.checkScriptContext @() @() (P.mconcat mustIncludeDatumInTxs) ctx) P.&&
                                        P.traceIfFalse "unexpected number of datums in witness set" checkDatumMapLength
     where
-        mustIncludeDatumInTxs   = P.fmap Constraints.mustIncludeDatumInTx expectedDatums
+        mustIncludeDatumInTxs = Constraints.mustIncludeDatumInTx P.<$> expectedDatums
         checkDatumMapLength = P.length (txInfoData P.$ scriptContextTxInfo ctx) P.== P.length expectedDatums
 
 data UnitTest
