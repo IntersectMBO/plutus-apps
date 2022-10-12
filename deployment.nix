@@ -14,16 +14,16 @@ let
   cardano-wallet = import
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-wallet";
-      rev = "f6d4db733c4e47ee11683c343b440552f59beff7";
-      sha256 = "0gb3zyv3q5v5sd8r29s02yc0brwq5a01is9c0n528391n2r8g1yy";
+      rev = "a73d8c9717dc4e174745f8568d6f3fe84f0f9d76";
+      sha256 = "19srmc3rg8db73mfqnpdacmlpbp2x5mb4pi82mv14innhdl01jlx";
     })
     { };
   cardano-node = import
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-node";
       # A standard release compatible with the cardano-wallet commit above is always preferred.
-      rev = "70372da0b4b1a6ca797f4699c91a271700580f6c";
-      sha256 = "102pj525ysvj27h9nb8gidxm1cmwp8vpdyfnpwm1ywz3zkpk2mjp";
+      rev = "1.35.0";
+      sha256 = "06arx9hv7dn3qxfy83f0b6018rxbsvh841nvfyg5w6qclm1hddj7";
     })
     { };
 

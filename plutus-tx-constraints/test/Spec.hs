@@ -1,8 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 
 module Main(main) where
@@ -29,7 +27,7 @@ import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredenti
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Generators qualified as Gen
-import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
+import Ledger.Tx (Tx (txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Tx.Constraints as Constraints
 import Ledger.Tx.Constraints.OffChain qualified as OC
@@ -44,16 +42,19 @@ import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
 import PlutusTx.Prelude qualified as Pl
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "all tests"
-    [ testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash"
-        mustPayToPubKeyAddressStakePubKeyNotNothingProp
-    -- , testProperty "mustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
+    [ testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash"
+                        "mustPayToPubKeyAddressStakePubKeyNotNothingProp"
+                        mustPayToPubKeyAddressStakePubKeyNotNothingProp
+    -- , testPropertyNamed "mustSpendScriptOutputWithMatchingDatumAndValue"
+    --                     "testMustSpendScriptOutputWithMatchingDatumAndValue"
+    --                     testMustSpendScriptOutputWithMatchingDatumAndValue
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.
@@ -96,9 +97,9 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             Hedgehog.assert $ not $ null stakingCreds
             forM_ stakingCreds ((===) skh)
     where
-        stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.AlonzoEra -> Maybe StakePubKeyHash
-        stakePaymentPubKeyHash (C.TxOut addr _ _) = do
-            txOutAddress <- either (const Nothing) Just $ C.fromCardanoAddressInEra addr
+        stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.BabbageEra -> Maybe StakePubKeyHash
+        stakePaymentPubKeyHash (C.TxOut addr _ _ _) = do
+            let txOutAddress = C.fromCardanoAddressInEra addr
             stakeCred <- addressStakingCredential txOutAddress
             case stakeCred of
                 StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh

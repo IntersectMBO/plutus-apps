@@ -8,13 +8,13 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.BaseTypes (Globals (systemStart))
 import Data.Bifunctor (bimap, first)
 import Data.Map qualified as Map
+import Ledger.Ada (lovelaceValueOf)
 import Ledger.Address (Address, PaymentPubKeyHash)
 import Ledger.Params (EmulatorEra, Params (pNetworkId, pProtocolParams), emulatorEraHistory, emulatorGlobals)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoTxBodyContent)
 import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
 import Ledger.Value (Value)
-import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 
 estimateTransactionFee
   :: Params
@@ -36,7 +36,7 @@ makeAutoBalancedTransaction
   -> UTxO EmulatorEra -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoBuildTx
   -> Address -- ^ Change address
-  -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
+  -> Either CardanoLedgerError (C.Api.Tx C.Api.BabbageEra)
 makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
   cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
   -- Compute the change.
@@ -47,8 +47,8 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
     -- Correct for a negative balance in cases where execution units, and hence fees, have increased.
     change' =
       case (change, trial) of
-        (C.Api.TxOut addr (C.Api.TxOutValue vtype value) datum, Left (C.Api.TxBodyErrorAdaBalanceNegative delta)) ->
-          C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> C.Api.lovelaceToValue delta) datum
+        (C.Api.TxOut addr (C.Api.TxOutValue vtype value) datum _referenceScript, Left (C.Api.TxBodyErrorAdaBalanceNegative delta)) ->
+          C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> C.Api.lovelaceToValue delta) datum _referenceScript
         _ -> change
   -- Construct the body with correct execution units and fees.
   C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr [change']
@@ -58,7 +58,7 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
     ss = systemStart $ emulatorGlobals params
     utxo' = fromLedgerUTxO utxo
     balance cChangeAddr extraOuts = C.Api.makeTransactionBodyAutoBalance
-      C.Api.AlonzoEraInCardanoMode
+      C.Api.BabbageEraInCardanoMode
       ss
       eh
       (pProtocolParams params)
@@ -70,10 +70,10 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
 
 
 fromLedgerUTxO :: UTxO EmulatorEra
-               -> C.Api.UTxO C.Api.AlonzoEra
+               -> C.Api.UTxO C.Api.BabbageEra
 fromLedgerUTxO (UTxO utxo) =
     C.Api.UTxO
   . Map.fromList
-  . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraAlonzo))
+  . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraBabbage))
   . Map.toList
   $ utxo

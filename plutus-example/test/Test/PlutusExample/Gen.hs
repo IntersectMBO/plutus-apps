@@ -15,45 +15,54 @@ import Cardano.Ledger.Era qualified as Ledger
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
 import Gen.Cardano.Api.Typed
-import Plutus.V1.Ledger.Api qualified as Plutus hiding (singleton)
-import Plutus.V1.Ledger.Interval qualified as Plutus
+import Ledger qualified as Plutus
+import Plutus.V1.Ledger.Tx qualified as PV1
+import PlutusExample.PlutusVersion1.RedeemerContextScripts
 import PlutusExample.ScriptContextChecker
 
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 
-genPlutusTxOut :: Gen Plutus.TxOut
+genPlutusTxOut :: Gen PV1.TxOut
 genPlutusTxOut = do
   alonzoTxOut <-
     TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
           <*> genTxOutValue AlonzoEra
-          <*> genTxOutDatumHash AlonzoEra
+          <*> genTxOutDatumHashTxContext AlonzoEra
+          <*> genReferenceScript AlonzoEra
   Gen.just . return . Alonzo.txInfoOut
     $ toShelleyTxOut ShelleyBasedEraAlonzo (toCtxUTxOTxOut alonzoTxOut)
 
-genMyCustomRedeemer :: Gen MyCustomRedeemer
+genMyCustomRedeemer :: Gen AnyCustomRedeemer
 genMyCustomRedeemer =
-  MyCustomRedeemer
-    <$> Gen.list (Range.singleton 1) genPlutusTxOut
-    <*> return mempty --TODO: Investigate why genTxInfoIn generates Nothing
-    <*> (Alonzo.transValue . toMaryValue <$> genValueForMinting)
-    <*> genPOSIXTimeRange
-    <*> (Alonzo.transValue . toMaryValue <$> genValueForTxOut)
-    <*> genDatumMap
-    <*> Gen.list (Range.constant 0 2) genPlutusCert
-    <*> Gen.list (Range.constant 0 2) genReqSigners
-    <*> return Nothing
+  AnyPV1CustomRedeemer
+    <$> ( PV1CustomRedeemer
+            <$> Gen.list (Range.singleton 1) genPlutusTxOut
+            <*> return mempty --TODO: Investigate why genTxInfoIn generates Nothing
+            <*> (Alonzo.transValue . toMaryValue <$> genValueForMinting)
+            <*> genPOSIXTimeRange
+            <*> (Alonzo.transValue . toMaryValue <$> genValueForTxOut)
+            <*> genDatumMap
+            <*> Gen.list (Range.constant 0 2) genPlutusCert
+            <*> Gen.list (Range.constant 0 2) genReqSigners
+            <*> return Nothing
+        )
 
 genTxInfoIn :: Gen Plutus.TxInInfo
 genTxInfoIn = do
   txinput <- genTxIn
-  txout <- genTxOut AlonzoEra
+  txout <- genTxOutTxContext AlonzoEra
   lUTxO <- genLedgerUTxO ShelleyBasedEraAlonzo (txinput, txout)
-  let mTxInfoIn = Alonzo.txInfoIn lUTxO (toShelleyTxIn txinput)
-  case mTxInfoIn of
+  let eTxInfoIn = getTxInInfoFromTxIn lUTxO (toShelleyTxIn txinput)
+  case eTxInfoIn of
+    Nothing   -> error $ "Error: Cannot find the TxIn in the UTxO\n"
+                      ++ "Utxo: "
+                      ++ show lUTxO
+                      ++ "\n"
+                      ++ "Txin: "
+                      ++ show txinput
     Just txin -> return txin
-    Nothing   -> error $ "Utxo: " ++ show lUTxO ++ "\n" ++ "Txin: " ++ show txinput
 
 genReqSigners :: Gen Plutus.PubKeyHash
 genReqSigners = do

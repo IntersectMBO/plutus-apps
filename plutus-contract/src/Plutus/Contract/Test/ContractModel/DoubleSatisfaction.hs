@@ -33,6 +33,8 @@ module Plutus.Contract.Test.ContractModel.DoubleSatisfaction
 import PlutusTx qualified
 import PlutusTx.Builtins hiding (error)
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Control.Lens
 import Control.Monad.Cont
 import Control.Monad.Freer (Eff, run)
@@ -40,10 +42,9 @@ import Control.Monad.Freer.Extras.Log (LogMessage, logMessageContent)
 import Control.Monad.State qualified as State
 import Data.Map qualified as Map
 import Data.Maybe
-import Data.Set qualified as Set
-import Ledger.Params (EmulatorEra, Params)
 
-import Ledger (unPaymentPrivateKey, unPaymentPubKeyHash)
+import Ledger qualified as P
+import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto
 import Ledger.Generators
@@ -51,29 +52,27 @@ import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (mint)
+import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut, toCardanoAddressInEra,
+                             toCardanoTxOutDatumInTx, toCardanoTxOutDatumInline)
 import Ledger.Validation qualified as Validation
-import Ledger.Value (adaOnlyValue)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
-import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.V1.Scripts (validatorHash)
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.TxId
 import Streaming qualified as S
-import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbitraryAction, initialState, monitoring,
-                                   nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
-import Test.QuickCheck.StateModel qualified as StateModel
 
 import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||.))
 import Test.QuickCheck.Monadic (monadic)
 import Test.QuickCheck.Monadic qualified as QC
+import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbitraryAction, initialState, monitoring,
+                                   nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
+import Test.QuickCheck.StateModel qualified as StateModel
 
 import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), eteEvent)
 import Wallet.Emulator.Stream (EmulatorConfig (_params), EmulatorErr)
 
-
+import Data.Either (fromRight)
 import Prettyprinter
 
 -- Double satisfaction magic
@@ -86,7 +85,7 @@ data WrappedTx = WrappedTx
   , _dsTx        :: Tx
   , _dsUtxoIndex :: UtxoIndex
   , _dsSlot      :: Slot
-  , _dsParams    :: Params
+  , _dsParams    :: P.Params
   } deriving Show
 makeLenses ''WrappedTx
 
@@ -184,18 +183,18 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
 --      potentially be stolen
 --    * the list of actual counterexamples, i.e. if this is non-empty a vulnerability has been
 --      discovered.
-getDSCounterexamples :: Params -> [ChainEvent] -> ( [WrappedTx]
+getDSCounterexamples :: P.Params -> [ChainEvent] -> ( [WrappedTx]
                                         , [DoubleSatisfactionCounterexample]
                                         , [DoubleSatisfactionCounterexample]
                                         )
-getDSCounterexamples params cs = go 0 mempty cs
+getDSCounterexamples params = go 0 mempty
   where
     go _ _ [] = ([], [], [])
     go slot idx (e:es) = case e of
       SlotAdd slot' -> go slot' idx es
       TxnValidate _ txn ->
           let
-              cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
+              cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
               e' = Validation.validateCardanoTx params slot cUtxoIndex txn
               idx' = case e' of
                   Just (Index.Phase1, _) -> idx
@@ -216,7 +215,7 @@ getDSCounterexamples params cs = go 0 mempty cs
 
 -- | Take a chain event and wrap it up as a `WrappedTx` if it was a transaction
 --   validation event.
-doubleSatisfactionCandidates :: Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
+doubleSatisfactionCandidates :: P.Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
   TxnValidate txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
   _                                -> []
@@ -226,7 +225,7 @@ doubleSatisfactionCandidates params slot idx event = case event of
 validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsParams _dsUtxoIndex
+    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsUtxoIndex
     signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
     e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
   in e'
@@ -236,7 +235,12 @@ validateWrappedTx :: WrappedTx -> Bool
 validateWrappedTx = isNothing . validateWrappedTx'
 
 -- | Actual counterexamples showing a double satisfaction vulnerability for the given chain event.
-checkForDoubleSatisfactionVulnerability :: Params -> Slot -> UtxoIndex -> ChainEvent -> [DoubleSatisfactionCounterexample]
+checkForDoubleSatisfactionVulnerability ::
+    P.Params ->
+    Slot ->
+    UtxoIndex ->
+    ChainEvent ->
+    [DoubleSatisfactionCounterexample]
 checkForDoubleSatisfactionVulnerability params slot idx = filter isVulnerable
                                                  . doubleSatisfactionCounterexamples
                                                  <=< doubleSatisfactionCandidates params slot idx
@@ -297,12 +301,12 @@ showPretty cand = show . vcat $
   | let tx0 = cand ^. to dsceTargetMattersProof . dsTx
         tx1 = cand ^. to dsceValueStolenProof . dsTx
         tx2 = cand ^. to dsceOriginalTransaction . dsTx
-  , ref <- Set.toList $  tx0 ^. inputs
-                      <> tx1 ^. inputs
-                      <> tx2 ^. inputs
-                      <> tx0 ^. collateralInputs
-                      <> tx1 ^. collateralInputs
-                      <> tx2 ^. collateralInputs
+  , ref <- tx0 ^. inputs
+          <> tx1 ^. inputs
+          <> tx2 ^. inputs
+          <> tx0 ^. collateralInputs
+          <> tx1 ^. collateralInputs
+          <> tx2 ^. collateralInputs
   ]
 
 isVulnerable :: DoubleSatisfactionCounterexample -> Bool
@@ -315,12 +319,61 @@ isVulnerable (DoubleSatisfactionCounterexample orig pre post _ _ _) =
 -- a specific datum attached. Even though this doesn't technically matter.
 --
 -- This is not super important, but we want to leave no room for misunderstanding...
-alwaysOkValidator :: Validator
-alwaysOkValidator = mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])
+alwaysOkValidator :: Versioned Validator
+alwaysOkValidator = Versioned (mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])) PlutusV1
 
 doubleSatisfactionCounterexamples :: WrappedTx -> [DoubleSatisfactionCounterexample]
-doubleSatisfactionCounterexamples dsc =
-  [ DoubleSatisfactionCounterexample
+doubleSatisfactionCounterexamples dsc = do
+   -- For each output in the candidate tx
+   (idx, out) <- zip [0..] (dsc ^. dsTx . outputs)
+   -- Is it a pubkeyout?
+   guard $ isPubKeyOut $ fromCardanoTxOutToPV1TxInfoTxOut $ P.getTxOut out
+   -- Whose key is not in the signatories?
+   key <- maybeToList . txOutPubKey $ out
+   let signatories = dsc ^. dsTx . signatures . to Map.keys
+   guard $ key `notElem` map pubKeyHash signatories
+   guard $ length signatories == 1
+   -- Then stealerKey can try to steal it
+   stealerKey <- signatories
+   (stealerWallet, stealerPrivKey) <-
+      filter (\(w, _) -> P.unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
+             (zip knownWallets (P.unPaymentPrivateKey <$> knownPaymentPrivateKeys))
+   let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
+       stealerCardanoAddress =  fromRight (error "invalid address") (toCardanoAddressInEra P.testnet stealerAddr)
+       scriptCardanoAddress = fromRight (error "invalid address")
+          (toCardanoAddressInEra P.testnet $ P.scriptValidatorHashAddress (validatorHash alwaysOkValidator) Nothing)
+   -- The output going to the original recipient but with a datum
+       datum         = Datum . mkB $ "<this is a unique string>"
+       datumEmpty    = Datum . mkB $ ""
+       redeemerEmpty = Redeemer . mkB $ ""
+       withDatumOut = out & outDatumHash .~ toCardanoTxOutDatumInTx datum
+       -- Creating TxOut is ugly at the moment because we don't use Cardano addresses, values and datum in the
+       -- emulator yet
+       newFakeTxScriptOut = TxOut $ C.TxOut
+                                  scriptCardanoAddress
+                                  (C.TxOutValue C.MultiAssetInBabbageEra $ adaToCardanoValue $ Ada.fromValue $ txOutValue out)
+                                  (toCardanoTxOutDatumInline datumEmpty)
+                                  C.ReferenceScriptNone
+       newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
+                                  , txOutRefIdx = 1
+                                  }
+       l = dsTx . outputs . ix idx
+   let targetMatters0 = dsc & l . outAddress .~ stealerCardanoAddress
+       tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
+       targetMatters1 = targetMatters0 & dsTxId .~ txId tx
+                                       & dsTx   .~ tx
+       valueStolen0 = dsc & l . outAddress .~ stealerCardanoAddress
+                          & dsTx . outputs %~ (withDatumOut:)
+                          & dsTx  %~ addScriptTxInput newFakeTxOutRef alwaysOkValidator redeemerEmpty datumEmpty
+                          & dsUtxoIndex %~
+                             (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
+                                                                        newFakeTxScriptOut m)
+                          & dsTx . datumWitnesses . at (datumHash datum) ?~ datum
+                          & dsTx . datumWitnesses . at (datumHash datumEmpty) ?~ datumEmpty
+   let tx           = addSignature' stealerPrivKey (valueStolen0 ^. dsTx & signatures .~ mempty)
+       valueStolen1 = valueStolen0 & dsTxId .~ txId tx
+                                   & dsTx   .~ tx
+   pure $ DoubleSatisfactionCounterexample
       { dsceOriginalTransaction = dsc
       , dsceTargetMattersProof  = targetMatters1
       , dsceValueStolenProof    = valueStolen1
@@ -328,57 +381,6 @@ doubleSatisfactionCounterexamples dsc =
       , dsceDatumUTxO           = withDatumOut
       , dsceStealerWallet       = stealerWallet
       }
-  -- For each output in the candidate tx
-  | (idx, out) <- zip [0..] (dsc ^. dsTx . outputs)
-  , let l = dsTx . outputs. ix idx
-  -- Is it a pubkeyout?
-  , isPubKeyOut out
-  -- Whose key is not in the signatories?
-  , key <- maybeToList . txOutPubKey $ out
-  , let signatories = dsc ^. dsTx . signatures . to Map.keys
-  , key `notElem` map pubKeyHash signatories
-  -- For now we only consider one stealer at the time
-  , length signatories == 1
-  -- Then stealerKey can try to steal it
-  , stealerKey <- signatories
-  , (stealerWallet, stealerPrivKey) <-
-      filter (\(w, _) -> unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
-             (zip knownWallets (unPaymentPrivateKey <$> knownPaymentPrivateKeys))
-  , let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
-  -- The output going to the original recipient but with a datum
-  , let datum         = Datum . mkB $ "<this is a unique string>"
-        datumEmpty    = Datum . mkB $ ""
-        redeemerEmpty = Redeemer . mkB $ ""
-        withDatumOut = out { txOutDatumHash = Just $ datumHash datum }
-        newFakeTxScriptOut = TxOut { txOutAddress   = scriptHashAddress $ validatorHash alwaysOkValidator
-                                   , txOutValue     = adaOnlyValue $ txOutValue out
-                                   , txOutDatumHash = Just $ datumHash datumEmpty
-                                   }
-        newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
-                                   , txOutRefIdx = 1
-                                   }
-        newFakeTxIn = TxIn { txInRef = newFakeTxOutRef
-                           , txInType = Just $ ConsumeScriptAddress alwaysOkValidator
-                                                                    redeemerEmpty
-                                                                    datumEmpty
-                           }
-  , let targetMatters0 = dsc & l . outAddress .~ stealerAddr
-        tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
-        targetMatters1 = targetMatters0 & dsTxId .~ txId tx
-                                        & dsTx   .~ tx
-  , let valueStolen0 = dsc & l . outAddress .~ stealerAddr
-                           & dsTx . outputs %~ (withDatumOut:)
-                           & dsTx . inputs %~ (Set.insert newFakeTxIn)
-                           & dsUtxoIndex %~
-                              (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
-                                                                         newFakeTxScriptOut m)
-                           & dsTx . datumWitnesses . at (datumHash datum) .~ Just datum
-                           & dsTx . datumWitnesses . at (datumHash datumEmpty) .~ Just datumEmpty
-        tx           = addSignature' stealerPrivKey (valueStolen0 ^. dsTx & signatures .~ mempty)
-        valueStolen1 = valueStolen0 & dsTxId .~ txId tx
-                                    & dsTx   .~ tx
-  ]
 
-toCardanoUtxoIndex :: Params -> UtxoIndex -> Validation.UTxO EmulatorEra
-toCardanoUtxoIndex params idx = either (error . show) id $ Validation.fromPlutusIndex params idx
-
+toCardanoUtxoIndex :: UtxoIndex -> Validation.UTxO P.EmulatorEra
+toCardanoUtxoIndex idx = either (error . show) id $ Validation.fromPlutusIndex idx

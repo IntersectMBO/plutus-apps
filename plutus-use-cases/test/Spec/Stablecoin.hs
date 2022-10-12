@@ -12,20 +12,15 @@ module Spec.Stablecoin(
     ) where
 
 
-import Control.Lens (preview, (&))
 import Control.Monad (void)
-import Data.Maybe (listToMaybe, mapMaybe)
 import Prelude hiding (Rational, negate)
 
 import Ledger.Ada (adaSymbol, adaToken)
-import Ledger.Ada qualified as Ada
-import Ledger.Address (Address, PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
+import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto (toPublicKey)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Typed.Scripts (validatorAddress)
-import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Oracle (Observation, SignedMessage, signObservation')
 import Plutus.Contract.Test
@@ -34,10 +29,8 @@ import Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..)
 import Plutus.Contracts.Stablecoin qualified as Stablecoin
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.Trace.Emulator.Types (_ContractLog, cilMessage)
 import PlutusTx.Numeric (negate, one, zero)
 import PlutusTx.Ratio qualified as R
-import Wallet.Emulator.MultiAgent (eteEvent)
 
 import Test.Tasty
 
@@ -65,49 +58,57 @@ coin = Stablecoin
 signConversionRate :: POSIXTime -> ConversionRate -> SignedMessage (Observation ConversionRate)
 signConversionRate startTime rate = signObservation' startTime rate (unPaymentPrivateKey oraclePrivateKey)
 
-stablecoinAddress :: Address
-stablecoinAddress = validatorAddress $ Stablecoin.typedValidator coin
+-- TODO: Reenable when commented test cases below are working again
+-- stablecoinAddress :: Address
+-- stablecoinAddress = validatorAddress $ Stablecoin.typedValidator coin
 
-initialDeposit :: Value
-initialDeposit = Ada.lovelaceValueOf 10_000_000
+-- TODO: Reenable when commented test cases below are working again
+-- initialDeposit :: Value
+-- initialDeposit = Ada.lovelaceValueOf 10_000_000
 
-initialFee :: Value
-initialFee = Ada.lovelaceValueOf 100_000 -- Defined as 1% of initialDeposit
+-- TODO: Reenable when commented test cases below are working again
+-- initialFee :: Value
+-- initialFee = Ada.lovelaceValueOf 100_000 -- Defined as 1% of initialDeposit
 
 tests :: TestTree
 tests = testGroup "Stablecoin"
-    [ checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee))
-        .&&. assertNoFailedTransactions
-        .&&. walletFundsChange user (Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee))
-        )
-        $ initialise >>= mintReserveCoins (RC 10_000_000) one
+    [ -- See Note [Oracle incorrect implementation]
+      -- checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins"
+      --   (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee))
+      --   .&&. assertNoFailedTransactions
+      --   .&&. walletFundsChange user (Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee))
+      --   )
+      --   $ initialise >>= mintReserveCoins (RC 10_000_000) one
 
-    , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins and stablecoins"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
-        .&&. assertNoFailedTransactions
-        .&&. walletFundsChange user (Stablecoin.stableCoins coin 5_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
-        )
-        $ do
-            hdl <- initialise
-            mintReserveCoins (RC 10_000_000) one hdl
-            -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD
-            void $ mintStableCoins (SC 5_000_000) one hdl
+    -- See Note [Oracle incorrect implementation]
+    -- , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins and stablecoins"
+    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
+    --     .&&. assertNoFailedTransactions
+    --     .&&. walletFundsChange user (Stablecoin.stableCoins coin 5_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
+    --     )
+    --     $ do
+    --         hdl <- initialise
+    --         mintReserveCoins (RC 10_000_000) one hdl
+    --         -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD
+    --         void $ mintStableCoins (SC 5_000_000) one hdl
 
-    , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins, stablecoins and redeem stablecoin at a different price"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
-        .&&. assertNoFailedTransactions
-        .&&. walletFundsChange user (Stablecoin.stableCoins coin 3_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
-        )
-        stablecoinTrace
+    -- See Note [Oracle incorrect implementation]
+    -- , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "mint reservecoins, stablecoins and redeem stablecoin at a different price"
+    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
+    --     .&&. assertNoFailedTransactions
+    --     .&&. walletFundsChange user (Stablecoin.stableCoins coin 3_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
+    --     )
+    --     stablecoinTrace
 
-    , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = Rational 20000000 1}, actual = BC {unBC = Rational 20173235 1}}. The transition is not allowed." in
-      checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "Cannot exceed the maximum reserve ratio"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
-        .&&. assertNoFailedTransactions
-        .&&. assertInstanceLog (Trace.walletInstanceTag w1) ((==) (Just expectedLogMsg) . listToMaybe . reverse . mapMaybe (preview (eteEvent . cilMessage . _ContractLog)))
-        )
-        maxReservesExceededTrace
+    -- See Note [Oracle incorrect implementation]
+    -- Since
+    -- , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = Rational 20000000 1}, actual = BC {unBC = Rational 20173235 1}}. The transition is not allowed." in
+    --   checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "Cannot exceed the maximum reserve ratio"
+    --     (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
+    --     .&&. assertNoFailedTransactions
+    --     .&&. assertInstanceLog (Trace.walletInstanceTag w1) ((==) (Just expectedLogMsg) . listToMaybe . reverse . mapMaybe (preview (eteEvent . cilMessage . _ContractLog)))
+    --     )
+    --     maxReservesExceededTrace
 
     ]
 

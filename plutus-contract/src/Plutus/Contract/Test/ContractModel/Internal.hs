@@ -210,9 +210,10 @@ import Data.Row.Records (labels')
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
-import Plutus.V1.Ledger.Ada qualified as Ada
 
+import Ledger.Ada qualified as Ada
 import Ledger.Index as Index
+import Ledger.Params ()
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Value (AssetClass)

@@ -16,12 +16,11 @@ module Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators
     , forwardToValidator
     ) where
 
-import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
+import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), StakeValidator,
+                             ValidatorHash, mkStakeValidatorScript)
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
                                   ScriptPurpose (Certifying, Rewarding), TxInfo (TxInfo, txInfoInputs))
 import Plutus.V1.Ledger.Contexts qualified as PV1
-import Plutus.V1.Ledger.Credential (Credential (ScriptCredential))
-import Plutus.V1.Ledger.Scripts (StakeValidator, ValidatorHash, mkStakeValidatorScript)
 import Plutus.V1.Ledger.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx (UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx qualified
@@ -40,6 +39,7 @@ type UntypedStakeValidator = BuiltinData -> BuiltinData -> ()
 -- @
 --   import PlutusTx qualified
 --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+--   import Plutus.Script.Utils.V1.Scripts (mkUntypedStakeValidator)
 --
 --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
 --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer

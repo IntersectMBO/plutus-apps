@@ -35,10 +35,11 @@ import Control.Monad.Freer.Extras.Log (LogMsg (..), LogObserve (..), Observation
 import Control.Monad.Freer.Extras.Log qualified as L
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (FromJSON, ToJSON (..))
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (for_)
 import Data.Functor.Contravariant (Contravariant (..))
-import Data.HashMap.Strict qualified as HM
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Class (ToText (..))
@@ -145,7 +146,7 @@ newtype PrettyObject t = PrettyObject { unPrettyObject :: t }
 instance (Pretty t) => ToObject (PrettyObject t) where
     toObject _ o =
         let str = toText o
-        in HM.singleton "string" (toJSON str)
+        in Aeson.singleton (Aeson.fromText "string") (toJSON str)
     textTransformer o _ = toText o
 
 instance (Pretty t) => ToText (PrettyObject t) where

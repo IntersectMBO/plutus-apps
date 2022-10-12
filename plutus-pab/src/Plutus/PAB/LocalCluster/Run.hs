@@ -33,7 +33,8 @@ import Cardano.Wallet.Api.Types (ApiMnemonicT (ApiMnemonicT), ApiT (ApiT), ApiWa
                                  postData)
 import Cardano.Wallet.Api.Types qualified as Wallet.Types
 import Cardano.Wallet.Logging (stdoutTextTracer, trMessageText)
-import Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (Mainnet), Passphrase (Passphrase))
+import Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (Mainnet))
+import Cardano.Wallet.Primitive.Passphrase.Types (Passphrase (Passphrase))
 import Cardano.Wallet.Primitive.SyncProgress (SyncTolerance (SyncTolerance))
 import Cardano.Wallet.Primitive.Types (GenesisParameters (GenesisParameters),
                                        NetworkParameters (NetworkParameters, slottingParameters),
@@ -47,8 +48,8 @@ import Cardano.Wallet.Shelley.BlockchainSource (BlockchainSource (NodeSource))
 import Cardano.Wallet.Shelley.Launch (withSystemTempDir)
 import Cardano.Wallet.Shelley.Launch.Cluster (ClusterLog, Credential (KeyCredential), RunningNode (RunningNode),
                                               localClusterConfigFromEnv, moveInstantaneousRewardsTo, oneMillionAda,
-                                              sendFaucetAssetsTo, sendFaucetFundsTo, testMinSeverityFromEnv,
-                                              tokenMetadataServerFromEnv, walletMinSeverityFromEnv, withCluster)
+                                              sendFaucetAssetsTo, testMinSeverityFromEnv, tokenMetadataServerFromEnv,
+                                              walletMinSeverityFromEnv, withCluster)
 import Cardano.Wallet.Types (WalletUrl (WalletUrl))
 import Cardano.Wallet.Types qualified as Wallet.Config
 import Control.Arrow (first)
@@ -70,6 +71,7 @@ import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Ledger.TimeSlot (SlotConfig (SlotConfig))
 import Ledger.TimeSlot qualified as TimeSlot
 import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Ouroboros.Network.Client.Wallet (tunedForMainnetPipeliningStrategy)
 import Plutus.ChainIndex.App qualified as ChainIndex
 import Plutus.ChainIndex.Config qualified as CI
 import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
@@ -146,25 +148,24 @@ runWith userContractHandler = withLocalClusterSetup $ \dir lo@LogOutputs{loClust
     withLoggingNamed "cluster" loCluster $ \(_, (_, trCluster)) -> do
         let tr' = contramap MsgCluster $ trMessageText trCluster
         clusterCfg <- localClusterConfigFromEnv
-        withCluster tr' dir clusterCfg
-            (setupFaucet dir (trMessageText trCluster))
+        let initialFunds = shelleyIntegrationTestFunds
+        withCluster tr' dir clusterCfg initialFunds
             (whenReady dir (trMessageText trCluster) lo)
   where
-    setupFaucet dir trCluster (RunningNode socketPath _ _) = do
+    setupFaucet dir trCluster (RunningNode socketPath _ _ _) = do
         traceWith trCluster MsgSettingUpFaucet
         let trCluster' = contramap MsgCluster trCluster
         let encodeAddresses = map (first (T.unpack . encodeAddress @'Mainnet))
         let accts = KeyCredential <$> concatMap genRewardAccounts mirMnemonics
         let rewards = (, Coin $ fromIntegral oneMillionAda) <$> accts
 
-        sendFaucetFundsTo trCluster' socketPath dir $
-            encodeAddresses shelleyIntegrationTestFunds
         sendFaucetAssetsTo trCluster' socketPath dir 20 $ encodeAddresses $
             maryIntegrationTestAssets (Coin 1_000_000_000)
         moveInstantaneousRewardsTo trCluster' socketPath dir rewards
 
-    whenReady dir trCluster LogOutputs{loWallet} rn@(RunningNode socketPath block0 (gp, vData)) = do
+    whenReady dir trCluster LogOutputs{loWallet} rn@(RunningNode socketPath block0 (gp, vData) poolCertificates) = do
         withLoggingNamed "cardano-wallet" loWallet $ \(sb, (cfg, tr)) -> do
+            setupFaucet dir trCluster rn
             let walletHost = "127.0.0.1"
                 walletPort = 46493
 
@@ -185,11 +186,12 @@ runWith userContractHandler = withLocalClusterSetup $ \dir lo@LogOutputs{loClust
                 <$> getEKGURL
 
             void $ serveWallet
-                (NodeSource socketPath vData)
+                (NodeSource socketPath vData (SyncTolerance 10))
                 gp
+                tunedForMainnetPipeliningStrategy
                 (SomeNetworkDiscriminant $ Proxy @'Mainnet)
+                poolCertificates
                 tracers
-                (SyncTolerance 10)
                 (Just db)
                 Nothing
                 (fromString walletHost)
@@ -223,7 +225,7 @@ setupPABServices userContractHandler walletHost walletPort dir rn = void $ async
 {-| Launch the chain index in a separate thread.
 -}
 launchChainIndex :: FilePath -> RunningNode -> IO ChainIndexPort
-launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData)) = do
+launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData) _) = do
     config <- ChainIndex.Logging.defaultConfig
     let dbPath = dir </> "chain-index.db"
         chainIndexConfig = CI.defaultConfig
@@ -257,7 +259,7 @@ launchPAB userContractHandler
     passPhrase
     _
     walletUrl
-    (RunningNode socketPath _block0 (networkParameters, _))
+    (RunningNode socketPath _block0 (networkParameters, _) _)
     (ChainIndexPort chainIndexPort) = do
 
     let opts = AppOpts { minLogLevel = Nothing

@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module PlutusExample.Sum
+module PlutusExample.PlutusVersion1.Sum
   where
 
 import Prelude hiding (($), (+), (-), (==))

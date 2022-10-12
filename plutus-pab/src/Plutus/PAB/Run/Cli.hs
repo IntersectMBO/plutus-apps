@@ -27,8 +27,8 @@ import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Server qualified as NodeServer
-import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
-                           PABServerConfig (pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath), _AlonzoNode)
+import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode), PABServerConfig (pscNetworkId, pscNodeMode, pscSocketPath),
+                           _AlonzoNode)
 import Cardano.Protocol.Socket.Type (epochSlots)
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
@@ -227,12 +227,13 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
       pure asyncId
 
 -- Run the chain-index service
-runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig }} ChainIndex =
+runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig}} ChainIndex = do
+    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
     ChainIndex.main
         (toChainIndexLog ccaTrace)
         ciConfig
         (pscSocketPath nodeServerConfig)
-        (pscSlotConfig nodeServerConfig)
+        params
         ccaAvailability
 
 -- Run the chain-index service

@@ -22,7 +22,6 @@ import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (DbConfig)
 import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (DbConfig)
 import Data.Aeson (FromJSON, ToJSON, Value (..), object, parseJSON, toJSON, (.:), (.:?), (.=))
 import Data.Default (Default, def)
-import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Pool (Pool)
@@ -203,7 +202,7 @@ instance ToJSON Config where
         `mergeObjects` toJSON dbConfig
 
 mergeObjects :: Value -> Value -> Value
-mergeObjects (Object o1) (Object o2) = Object $ HML.union o1 o2
+mergeObjects (Object o1) (Object o2) = Object $ o1 <> o2
 mergeObjects _ _                     = error "Value must be an object"
 
 defaultConfig :: Config

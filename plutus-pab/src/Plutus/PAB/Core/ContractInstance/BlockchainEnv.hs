@@ -27,20 +27,20 @@ import Data.Foldable (foldl')
 import Data.IORef (newIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.Monoid (Last (..), Sum (..))
 import Ledger (Block, Slot (..), TxId (..))
 import Ledger.TimeSlot qualified as TimeSlot
-import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
-                          InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
-                          RollbackFailed (..), RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..),
-                          TxOutBalance, TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx,
-                          insert, reduceBlockCount, tipAsPoint, utxoState)
+import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
+                          InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..), RollbackFailed (..),
+                          RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance,
+                          TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx, insert,
+                          reduceBlockCount, tipAsPoint, utxoState, validityFromChainIndex)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint, toCardanoPoint)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.UtxoState (viewTip)
-import Plutus.Contract.CardanoAPI (fromCardanoTx, withIsCardanoEra)
+import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
@@ -146,7 +146,7 @@ processChainSyncEvent instancesState env@BlockchainEnv{beTxChanges} event = do
   case event of
     Resume _ -> STM.atomically $ Right <$> blockAndSlot env
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
-      withIsCardanoEra era (processBlock instancesState header env transactions era)
+      processBlock instancesState header env transactions era
     RollBackward chainPoint _ -> do
       S.updateTxChangesR beTxChanges $
         \txChanges -> do
@@ -195,10 +195,7 @@ runRollback env@BlockchainEnv{beLastSyncedBlockSlot, beTxChanges, beTxOutChanges
 
 -- | Get transaction ID and validity from a transaction.
 txEvent :: ChainIndexTx -> (TxId, TxOutBalance, TxValidity)
-txEvent tx =
-  let validity = case tx of ChainIndexTx { _citxOutputs = ValidTx _ } -> TxValid
-                            ChainIndexTx { _citxOutputs = InvalidTx } -> TxInvalid
-   in (view citxTxId tx, TxOutBalance.fromTx tx, validity)
+txEvent tx = (view citxTxId tx, TxOutBalance.fromTx tx, validityFromChainIndex tx)
 
 -- | Update the blockchain env. with changes from a new block of cardano
 --   transactions in any era
@@ -212,9 +209,7 @@ processBlock :: forall era. C.IsCardanoEra era
 processBlock instancesState header env@BlockchainEnv{beTxChanges} transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
       tip = fromCardanoBlockHeader header
-      -- We ignore cardano transactions that we couldn't convert to
-      -- our 'ChainIndexTx'.
-      ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
+      ciTxs = fromCardanoTx era <$> transactions
 
   stmResult <- STM.atomically $ do
     STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
