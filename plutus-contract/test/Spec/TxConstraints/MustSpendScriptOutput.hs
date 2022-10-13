@@ -208,6 +208,8 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr =
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
     utxosAt scriptAddr
 
+-- | Contract to create multiple outputs at the given script address and then uses mustSpendScriptOutputs
+-- constraint to spend some of the outputs
 mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Int -> Contract () Empty ContractError ()
 mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs = do
     utxos <- ownUtxos
@@ -230,6 +232,8 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs = do
     ledgerTx2 <- submitTxConstraintsWith @Any lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
+-- | Contract to create multiple outputs at the given script address and then uses mustSpendScriptOutputs
+-- constraint to spend some of the outputs, me try to pass the reference script both in lookups and as references
 mustIgnoreLookupsIfReferencScriptIsGiven :: PSU.Language -> Contract () Empty ContractError ()
 mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
     utxos <- ownUtxos
@@ -281,6 +285,8 @@ validUseOfMustSpendScriptOutputUsingSomeScriptOutputs l =
     .&&. assertValidatedTransactionCount 2)
     (void $ trace $ mustSpendScriptOutputsContract l 5 3)
 
+-- | Uses onchain constraint mustSpendScriptOutputWithReference to spend some of the UtxOs locked
+-- by the script
 validUseOfReferenceScript :: PSU.Language -> TestTree
 validUseOfReferenceScript l = let
     contract = mustSpendScriptOutputWithReferenceContract l 1
@@ -303,7 +309,8 @@ validUseOfReferenceScript l = let
             )
     in check $ traceN 3 contract
 
-
+-- | Uses onchain constraint mustSpendScriptOutputWithReference several time on the same script to spend some of the
+-- UtxOs locked by the script
 validMultipleUseOfTheSameReferenceScript :: PSU.Language -> TestTree
 validMultipleUseOfTheSameReferenceScript l = let
     contract = mustSpendScriptOutputWithReferenceContract l 5
@@ -326,7 +333,8 @@ validMultipleUseOfTheSameReferenceScript l = let
             )
     in check $ traceN 3 contract
 
-
+-- | Uses onchain constraint mustSpendScriptOutputWithReference to spend some of the
+-- UtxOs locked by the script, check that we don't consider lookups if a reference script is provided
 validUseOfReferenceScriptDespiteLookup :: PSU.Language -> TestTree
 validUseOfReferenceScriptDespiteLookup l = let
     contract = mustIgnoreLookupsIfReferencScriptIsGiven l
