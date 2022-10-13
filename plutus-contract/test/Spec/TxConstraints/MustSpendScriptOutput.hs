@@ -88,6 +88,7 @@ featuresTests t =
     , phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemerWithV2Script
     , validUseOfReferenceScript
     , validUseOfReferenceScriptDespiteLookup
+    , validMultipleUseOfTheSameReferenceScript
     ] ?? t
 
 -- The value in each initial wallet UTxO
@@ -185,10 +186,11 @@ mustSpendScriptOutputWithMatchingDatumAndValueContract'
 
 mustPayToOtherScriptWithMultipleOutputs
     :: Int
+    -> Integer
     -> PSU.Versioned Validator
     -> PV2.Address
     -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.ChainIndexTxOut)
-mustPayToOtherScriptWithMultipleOutputs nScriptOutputs script scriptAddr = do
+mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr = do
     utxos <- ownUtxos
     payAddr <- ownAddress
     let vh = PSU.validatorHash script
@@ -198,31 +200,32 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs script scriptAddr = do
         lookups = Cons.unspentOutputs utxos
                <> Cons.otherScript script
         datum = PV2.Datum $ PlutusTx.toBuiltinData utxoRef
-        tx = mconcat (replicate nScriptOutputs $ Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5))
+        tx = mconcat ( replicate nScriptOutputs
+                     $ Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf $ fromIntegral value))
           <> Cons.mustSpendPubKeyOutput balanceUtxo
           <> Cons.mustPayToAddressWithReferenceValidator payAddr vh Nothing (Ada.adaValueOf 30)
     ledgerTx <- submitTxConstraintsWith @Void lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
     utxosAt scriptAddr
 
-mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Contract () Empty ContractError ()
-mustSpendScriptOutputWithReferenceContract policyVersion = do
+mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Int -> Contract () Empty ContractError ()
+mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs = do
     utxos <- ownUtxos
     let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
         mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
         get3 (a:_:c:_) = (fst a, snd a, fst c)
         get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
         (utxoRef, utxo, utxoRefForBalance2) = get3 $ M.toList utxos
-    scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs 1
+    scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs nScriptOutputs 5
                        mustReferenceOutputValidatorVersioned
                        mustReferenceOutputValidatorAddress
     -- Trying to unlock the Ada in the script address
     utxos' <- ownUtxos
-    let scriptUtxo = head . M.keys $ scriptUtxos
+    let scriptUtxos' = Prelude.take nScriptOutputs . M.keys $ scriptUtxos
         refScriptUtxo = head . M.keys . M.filter (isJust . Tx._ciTxOutReferenceScript) $ utxos'
         lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx2 = Cons.mustReferenceOutput utxoRef
-           <> Cons.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo
+           <> foldMap (\u -> Cons.mustSpendScriptOutputWithReference u unitRedeemer refScriptUtxo) scriptUtxos'
            <> Cons.mustSpendPubKeyOutput utxoRefForBalance2
     ledgerTx2 <- submitTxConstraintsWith @Any lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -235,7 +238,7 @@ mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
         get3 (a:_:c:_) = (fst a, snd a, fst c)
         get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
         (utxoRef, utxo, utxoRefForBalance2) = get3 $ M.toList utxos
-    scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs 1
+    scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs 1 5
                        mustReferenceOutputValidatorVersioned
                        mustReferenceOutputValidatorAddress
     -- Trying to unlock the Ada in the script address
@@ -280,7 +283,7 @@ validUseOfMustSpendScriptOutputUsingSomeScriptOutputs l =
 
 validUseOfReferenceScript :: PSU.Language -> TestTree
 validUseOfReferenceScript l = let
-    contract = mustSpendScriptOutputWithReferenceContract l
+    contract = mustSpendScriptOutputWithReferenceContract l 1
     check = case l of
         PlutusV1 ->
             checkPredicateOptions
@@ -294,6 +297,29 @@ validUseOfReferenceScript l = let
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
+            (walletFundsChange w1 (Ada.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
+            .&&. assertValidatedTransactionCount 2
+            )
+    in check $ traceN 3 contract
+
+
+validMultipleUseOfTheSameReferenceScript :: PSU.Language -> TestTree
+validMultipleUseOfTheSameReferenceScript l = let
+    contract = mustSpendScriptOutputWithReferenceContract l 5
+    check = case l of
+        PlutusV1 ->
+            checkPredicateOptions
+            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
+            ( assertFailedTransaction ( const $ has
+                $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
+            ) .&&. assertValidatedTransactionCountOfTotal 1 2
+            )
+        PlutusV2 ->
+            checkPredicateOptions
+            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+            "Successful use of several mustSpendScriptOutputWithReference with the same reference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (Ada.adaValueOf 0)
             .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
