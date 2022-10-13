@@ -66,3 +66,4 @@ handleBlockfrostClient event = do
             TxoSetAtAddress pq a          -> (runClientWithDef defaultGetList . getTxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a >>= processGetTxos pq
             GetTip                        -> runClient getTipBlockfrost >>= processTip
             UnspentTxOutSetAtAddress pq a -> (runClientWithDef defaultGetList . getUnspentAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processUnspentTxOutSetAtAddress pq a
+            DatumsAtAddress pq a          -> (runClientWithDef defaultGetList . getDatumsAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processDatumsAtAddress pq a

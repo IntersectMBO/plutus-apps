@@ -49,6 +49,7 @@ library
 
   hs-source-dirs:  src
   build-depends:
+    , extra
     , freer-extras
     , plutus-chain-index-core
     , plutus-ledger

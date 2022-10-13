@@ -13,10 +13,12 @@ module Plutus.Blockfrost.Responses (
     , processGetUtxos
     , processGetTxos
     , processUnspentTxOutSetAtAddress
+    , processDatumsAtAddress
     , processGetTxFromTxId
     , processGetTxsFromTxIds
     ) where
 
+import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
 import Data.Aeson qualified as JSON
 import Data.Aeson.QQ
@@ -46,6 +48,7 @@ import Plutus.V1.Ledger.Value qualified as Ledger
 import PlutusTx qualified
 
 import Control.Monad ((<=<))
+
 import Plutus.Blockfrost.Types
 import Plutus.Blockfrost.Utils
 import Plutus.ChainIndex.Types qualified as CI
@@ -213,6 +216,18 @@ processUnspentTxOutSetAtAddress _ cred xs =
 
     utxoDatumHash :: AddressUtxo -> Ledger.DatumHash
     utxoDatumHash = textToDatumHash . fromJust . _addressUtxoDataHash
+
+
+processDatumsAtAddress ::
+  PlutusTx.FromData a
+  => PageQuery TxOutRef
+  -> Credential
+  -> [JSON.Value]
+  -> IO (QueryResponse [a])
+processDatumsAtAddress _ _ xs = do
+  items <- mapMaybeM (\d -> processGetDatum (Just d)) xs
+  return $ QueryResponse {queryResult = items, nextQuery = Nothing}
+
 
 processGetTxFromTxId :: Maybe TxResponse -> IO (Maybe ChainIndexTx)
 processGetTxFromTxId Nothing = pure Nothing
