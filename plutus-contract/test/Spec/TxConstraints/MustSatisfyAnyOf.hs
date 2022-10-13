@@ -134,8 +134,8 @@ mustSatisfyAnyOfContract
                 <> Cons.mintingPolicy alwaysSucceedPolicyVersioned
         policyRedeemer = asRedeemer onChainConstraintsWithNow
         tx1 = Cons.mustMintValueWithRedeemer policyRedeemer (tknValue lc)
+           <> payToScript -- mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain will fail if this comes after mustSatisfyOf due to bug PLT-1018
            <> Cons.mustSatisfyAnyOf offChainConstraintsWithNow
-           <> payToScript -- mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain is FAILING due to this being after mustSatisfyAnyOf
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
         where
@@ -210,7 +210,7 @@ mustSatisfyAnyOfUsingAllOfTheSameConstraintsOnAndOffChain submitTxFromConstraint
 
 -- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with some of same
 -- | constraints onchain and offchain
-mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain :: SubmitTx -> LanguageContext -> TestTree -- FAILING due to ordering of constraints in contract
+mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain :: SubmitTx -> LanguageContext -> TestTree
 mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain submitTxFromConstraints lc =
     testGroup "some of the same constraints on and off chain"
     [
