@@ -47,6 +47,21 @@ module Ledger.Constraints.OffChain(
     , adjustUnbalancedTx
     , adjustTxOut
     , MkTxError(..)
+    , _TypeCheckFailed
+    , _ToCardanoError
+    , _TxOutRefNotFound
+    , _TxOutRefWrongType
+    , _TxOutRefNoReferenceScript
+    , _DatumNotFound
+    , _DatumNotFoundInTx
+    , _MintingPolicyNotFound
+    , _ScriptHashNotFound
+    , _OwnPubKeyMissing
+    , _TypedValidatorMissing
+    , _DatumWrongHash
+    , _CannotSatisfyAny
+    , _NoMatchingOutputFound
+    , _MultipleMatchingOutputsFound
     , mkTx
     , mkSomeTx
     -- * Internals exposed for testing
@@ -72,9 +87,9 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.~), (<>=), (?=), (^.), (^?))
+import Control.Lens (_2, _Just, alaf, at, makeClassyPrisms, makeLensesFor, view, (%=), (&), (.=), (.~), (<>=), (^?))
 import Control.Monad (forM_)
-import Control.Monad.Except (MonadError (catchError, throwError), catchError, runExcept, unless)
+import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
 import Control.Monad.State (MonadState (get, put), execStateT, gets)
 import Data.Aeson (FromJSON, ToJSON)
@@ -89,8 +104,6 @@ import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
-
 import Ledger (Redeemer (Redeemer), outValue)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
@@ -108,8 +121,8 @@ import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (ChainIndexTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
-                  Versioned (Versioned), ciTxOutReferenceScript, txOutValue)
+import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), ReferenceScript,
+                  TxOut (TxOut), TxOutRef, Versioned (Versioned), txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
@@ -125,6 +138,7 @@ import Plutus.V2.Ledger.Tx qualified as PV2
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
+import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
 data ScriptLookups a =
     ScriptLookups
@@ -409,8 +423,9 @@ mkSomeTx
     :: [SomeLookupsAndConstraints]
     -> Either MkTxError UnbalancedTx
 mkSomeTx xs =
-    let process (SomeLookupsAndConstraints lookups constraints) =
-          processLookupsAndConstraints lookups constraints
+    let process = \case
+            SomeLookupsAndConstraints lookups constraints ->
+                processLookupsAndConstraints lookups constraints
     in fmap cpsUnbalancedTx
         $ runExcept
         $ execStateT (traverse process xs) initialState
@@ -427,14 +442,7 @@ processLookupsAndConstraints
     => ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> m ()
-processLookupsAndConstraints
-    lookups
-    TxConstraints
-        { txConstraints
-        , txOwnInputs
-        , txOwnOutputs
-        , txConstraintFuns = TxConstraintFuns txCnsFuns
-        } =
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
     let
       -- This is done so that the 'MustIncludeDatumInTxWithHash' and
       -- 'MustIncludeDatumInTx' are not sensitive to the order of the
@@ -503,21 +511,22 @@ addMissingValueSpent
     => m ()
 addMissingValueSpent = do
     missing <- gets totalMissingValue
-    unless (Value.isZero missing)
-        $ do
-        -- add 'missing' to the transaction's outputs. This ensures that the
-        -- wallet will add a corresponding input when balancing the
-        -- transaction.
-        -- Step 4 of the process described in [Balance of value spent]
-        pkh <- asks slOwnPaymentPubKeyHash >>= maybe (throwError OwnPubKeyMissing) pure
-        skh <- asks slOwnStakePubKeyHash
-        let pv2TxOut = PV2.TxOut { PV2.txOutAddress = pubKeyHashAddress pkh skh
-                                 , PV2.txOutValue = missing
-                                 , PV2.txOutDatum = PV2.NoOutputDatum
-                                 , PV2.txOutReferenceScript = Nothing
-                                 }
-        txOut <- toCardanoTxOutWithOutputDatum pv2TxOut
-        unbalancedTx . tx . Tx.outputs %= (txOut:)
+    if Value.isZero missing
+        then pure ()
+        else do
+            -- add 'missing' to the transaction's outputs. This ensures that the
+            -- wallet will add a corresponding input when balancing the
+            -- transaction.
+            -- Step 4 of the process described in [Balance of value spent]
+            pkh <- asks slOwnPaymentPubKeyHash >>= maybe (throwError OwnPubKeyMissing) pure
+            skh <- asks slOwnStakePubKeyHash
+            let pv2TxOut = PV2.TxOut { PV2.txOutAddress = pubKeyHashAddress pkh skh
+                                     , PV2.txOutValue = missing
+                                     , PV2.txOutDatum = PV2.NoOutputDatum
+                                     , PV2.txOutReferenceScript = Nothing
+                                     }
+            txOut <- toCardanoTxOutWithOutputDatum pv2TxOut
+            unbalancedTx . tx . Tx.outputs %= (txOut:)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
@@ -560,7 +569,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     case typedOutRef of
         Typed.TypedScriptTxOutRef{Typed.tyTxOutRefRef, Typed.tyTxOutRefOut} -> do
             let datum = Datum $ toBuiltinData $ Typed.tyTxOutData tyTxOutRefOut
-            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) ?= datum
+            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) .= Just datum
             unbalancedTx . tx %= Tx.addScriptTxInput
                                       tyTxOutRefRef
                                       (Typed.vValidatorScript inst)
@@ -580,45 +589,6 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = fmap (Datum . toBuiltinData) ocDatum
     pure [ MustPayToOtherScript (tvValidatorHash inst) Nothing dsV ocReferenceScriptHash ocValue ]
-
-data MkTxError =
-    TypeCheckFailed Typed.ConnectionError
-    | ToCardanoError C.ToCardanoError
-    | TxOutRefNotFound TxOutRef
-    | TxOutRefWrongType TxOutRef
-    | TxOutRefNoReferenceScript TxOutRef
-    | DatumNotFound DatumHash
-    | DatumNotFoundInTx DatumHash
-    | ExtraneousScriptWitness ValidatorHash
-    | MintingPolicyNotFound MintingPolicyHash
-    | ScriptHashNotFound ScriptHash
-    | OwnPubKeyMissing
-    | TypedValidatorMissing
-    | DatumWrongHash DatumHash Datum
-    | CannotSatisfyAny
-    | NoMatchingOutputFound ValidatorHash
-    | MultipleMatchingOutputsFound ValidatorHash
-    deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-
-instance Pretty MkTxError where
-    pretty = \case
-        TypeCheckFailed e              -> "Type check failed:" <+> pretty e
-        ToCardanoError e               -> "Cardano conversion error:" <+> pretty e
-        TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
-        TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
-        TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
-        DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
-        DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
-        ExtraneousScriptWitness v      -> "Extraneous script witness:" <+> pretty v
-        MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
-        ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
-        OwnPubKeyMissing               -> "Own public key is missing"
-        TypedValidatorMissing          -> "Script instance is missing"
-        DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
-        CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
-        NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
-        MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
 
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m
@@ -724,26 +694,22 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
         (datum, value) <- maybe (throwError (TxOutRefWrongType txo)) pure mDatumAndValue
-        unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) ?= datum
+        unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) .= Just datum
         valueSpentInputs <>= provided value
         case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
-            case refTxOut ^. ciTxOutReferenceScript of
+            case _ciTxOutReferenceScript refTxOut of
                 Just val -> do
-                    -- When a referencScript is given, the txo should not contain a script witnell
-                    mscriptTXO <- catchError (resolveScriptTxOutValidator txout) $ \case
-                                      ScriptHashNotFound _ -> pure Nothing
-                                      err                  -> throwError err
-                    maybe (pure ()) (throwError . ExtraneousScriptWitness . fst) mscriptTXO
                     unbalancedTx . tx %= Tx.addReferenceTxInput txo (ref <$ val) red datum
                     unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
                 _        -> throwError (TxOutRefNoReferenceScript ref)
           Nothing -> do
-            mscriptTXO <- fmap snd <$> resolveScriptTxOutValidator txout
+            mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
-                Just val -> unbalancedTx . tx %= Tx.addScriptTxInput txo val red datum
-                _        -> throwError (TxOutRefWrongType txo)
+                Just val -> do
+                    unbalancedTx . tx %= Tx.addScriptTxInput txo val red datum
+                _             -> throwError (TxOutRefWrongType txo)
 
     MustUseOutputAsCollateral txo -> do
         unbalancedTx . tx . Tx.collateralInputs <>= [Tx.pubKeyTxInput txo]
@@ -770,7 +736,7 @@ processConstraint = \case
         forM_ mdv $ \case
             TxOutDatumInTx d -> do
                 let theHash = P.datumHash d
-                unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= d
+                unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just d
             _ -> pure ()
 
         let addr = pubKeyHashAddress pk skhM
@@ -784,7 +750,7 @@ processConstraint = \case
         case dv of
             TxOutDatumInTx d -> do
                 let theHash = P.datumHash d
-                unbalancedTx . tx . Tx.datumWitnesses . at theHash ?= d
+                unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just d
             _ -> pure ()
 
         let addr = Address.scriptValidatorHashAddress vlh svhM
@@ -815,15 +781,15 @@ processConstraintFun = \case
         -- TODO: Need to precalculate the validator hash or else this won't work
         -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
         -- include the hash.
-        let matches (Just (_, _, datum, value)) = datumPred datum && valuePred value
-            matches Nothing                     = False
+        let matches (Just (_, datum, value)) = datumPred datum && valuePred value
+            matches Nothing                  = False
         opts <- filter (matches . snd)
             <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
                 (filter ((== vh) . fst . Tx._ciTxOutValidator . snd) (Map.toList slTxOutputs))
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
-            [(ref, Just (_, validator, datum, value))] -> do
-                unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) ?= datum
+            [(ref, Just (validator, datum, value))] -> do
+                unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) .= Just datum
                 unbalancedTx . tx %= Tx.addScriptTxInput ref validator red datum
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
@@ -832,17 +798,17 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (ValidatorHash, Versioned Validator, Datum, Value))
+    => ChainIndexTxOut -> m (Maybe (Versioned Validator, Datum, Value))
 resolveScriptTxOut txo = do
     mv <- resolveScriptTxOutValidator txo
     mdv <- resolveScriptTxOutDatumAndValue txo
-    pure $ (\(vh, v) (d, value) -> (vh, v, d, value)) <$> mv <*> mdv
+    pure $ (\v (d, value) -> (v, d, value)) <$> mv <*> mdv
 
 resolveScriptTxOutValidator
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (ValidatorHash, Versioned Validator))
+    => ChainIndexTxOut -> m (Maybe (Versioned Validator))
 resolveScriptTxOutValidator
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutValidator = (vh, v)
@@ -850,7 +816,7 @@ resolveScriptTxOutValidator
     -- first check in the 'ChainIndexTxOut' for the validator, then
     -- look for it in the 'slOtherScripts' map.
     validator <- maybe (lookupValidator vh) pure v
-    pure $ Just (vh, validator)
+    pure $ Just validator
 resolveScriptTxOutValidator _ = pure Nothing
 
 resolveScriptTxOutDatumAndValue
@@ -912,3 +878,42 @@ toTxOutDatum = \case
     Just (TxOutDatumHash d)   -> C.toCardanoTxOutDatumHashFromDatum d
     Just (TxOutDatumInTx d)   -> C.toCardanoTxOutDatumInTx d
     Just (TxOutDatumInline d) -> C.toCardanoTxOutDatumInline d
+
+data MkTxError =
+    TypeCheckFailed Typed.ConnectionError
+    | ToCardanoError C.ToCardanoError
+    | TxOutRefNotFound TxOutRef
+    | TxOutRefWrongType TxOutRef
+    | TxOutRefNoReferenceScript TxOutRef
+    | DatumNotFound DatumHash
+    | DatumNotFoundInTx DatumHash
+    | MintingPolicyNotFound MintingPolicyHash
+    | ScriptHashNotFound ScriptHash
+    | OwnPubKeyMissing
+    | TypedValidatorMissing
+    | DatumWrongHash DatumHash Datum
+    | CannotSatisfyAny
+    | NoMatchingOutputFound ValidatorHash
+    | MultipleMatchingOutputsFound ValidatorHash
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+makeClassyPrisms ''MkTxError
+
+instance Pretty MkTxError where
+    pretty = \case
+        TypeCheckFailed e              -> "Type check failed:" <+> pretty e
+        ToCardanoError e               -> "Cardano conversion error:" <+> pretty e
+        TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
+        TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
+        TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
+        DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
+        DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
+        MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
+        ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
+        OwnPubKeyMissing               -> "Own public key is missing"
+        TypedValidatorMissing          -> "Script instance is missing"
+        DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
+        CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
+        NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
+        MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
+

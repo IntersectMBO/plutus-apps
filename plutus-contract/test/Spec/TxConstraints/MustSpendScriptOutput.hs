@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.TxConstraints.MustSpendScriptOutput(tests) where
 
-import Control.Lens ((??))
+import Control.Lens (filtered, has, (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -22,8 +22,8 @@ import Data.Void (Void)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints.OffChain qualified as Cons (MkTxError (NoMatchingOutputFound, TxOutRefWrongType),
-                                                      mintingPolicy, otherScript, typedValidatorLookups, unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Cons (_NoMatchingOutputFound, _TxOutRefWrongType, mintingPolicy,
+                                                      otherScript, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMintValueWithRedeemer,
@@ -36,7 +36,7 @@ import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMi
 import Ledger.Test (asDatum, asRedeemer, someAddress, someTypedValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Numeric.Natural (Natural)
-import Plutus.Contract as Cont (Contract, ContractError (ConstraintResolutionContractError), Empty, awaitTxConfirmed,
+import Plutus.Contract as Cont (Contract, ContractError, Empty, _ConstraintResolutionContractError, awaitTxConfirmed,
                                 ownAddress, ownUtxos, submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, changeInitialWalletValue, checkPredicate,
@@ -87,6 +87,7 @@ featuresTests t =
     , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue
     , phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemerWithV2Script
     , validUseOfReferenceScript
+    , validUseOfReferenceScriptDespiteLookup
     ] ?? t
 
 -- The value in each initial wallet UTxO
@@ -214,6 +215,39 @@ mustSpendScriptOutputWithReferenceContract policyVersion = do
     ledgerTx2 <- submitTxConstraintsWith @Any lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
+mustIgnoreLookupsIfReferencScriptIsGiven :: PSU.Language -> Contract () Empty ContractError ()
+mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
+    let mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
+        mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
+        get3 (a:b:c:_) = (fst a, snd a, fst b, fst c)
+        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+
+    utxos <- ownUtxos
+    myAddr <- ownAddress
+    let (utxoRef, utxo, utxoRefForBalance1, utxoRefForBalance2) = get3 $ M.toList utxos
+        vh = PSU.validatorHash mustReferenceOutputValidatorVersioned
+        lookups = Cons.unspentOutputs utxos
+               <> Cons.otherScript mustReferenceOutputValidatorVersioned
+        datum = PV2.Datum $ PlutusTx.toBuiltinData utxoRef
+        tx = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
+          <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
+          <> Cons.mustPayToAddressWithReferenceValidator myAddr vh Nothing (Ada.adaValueOf 30)
+    ledgerTx <- submitTxConstraintsWith @Void lookups tx
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+
+    -- Trying to unlock the Ada in the script address
+    scriptUtxos <- utxosAt mustReferenceOutputValidatorAddress
+    utxos' <- ownUtxos
+    let scriptUtxo = head . M.keys $ scriptUtxos
+        refScriptUtxo = head . M.keys . M.filter (isJust . Tx._ciTxOutReferenceScript) $ utxos'
+        lookups2 = Cons.otherScript mustReferenceOutputValidatorVersioned
+                <> Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
+        tx2 = Cons.mustReferenceOutput utxoRef
+           <> Cons.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo
+           <> Cons.mustSpendPubKeyOutput utxoRefForBalance2
+    ledgerTx2 <- submitTxConstraintsWith @Any lookups2 tx2
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace = traceN 2
 
@@ -249,18 +283,40 @@ validUseOfReferenceScript l = let
         PlutusV1 ->
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-            "mustReferenceOutput cannot be used on-chain to unlock funds in a PlutusV1 script"
-            ( assertFailedTransaction ( const $ \case
-                L.CardanoLedgerValidationError msg -> "ReferenceInputsNotSupported" `Text.isPrefixOf` msg
-                _                                  -> False
+            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
+            ( assertFailedTransaction ( const $ has
+                $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
             ) .&&. assertValidatedTransactionCountOfTotal 1 2
             )
         PlutusV2 ->
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-            "mustReferenceOutput can be used on-chain to unlock funds in a l script"
+            "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (Ada.adaValueOf 0)
-            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator PlutusV2 ) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
+            .&&. assertValidatedTransactionCount 2
+            )
+    in check $ traceN 3 contract
+
+
+validUseOfReferenceScriptDespiteLookup :: PSU.Language -> TestTree
+validUseOfReferenceScriptDespiteLookup l = let
+    contract = mustIgnoreLookupsIfReferencScriptIsGiven l
+    check = case l of
+        PlutusV1 ->
+            checkPredicateOptions
+            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
+            ( assertFailedTransaction ( const $
+                has $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
+            ) .&&. assertValidatedTransactionCountOfTotal 1 2
+            )
+        PlutusV2 ->
+            checkPredicateOptions
+            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+            "Successful use of mustSpendScriptOutputWithReference (ignore lookups) to unlock funds in a PlutusV2 script"
+            (walletFundsChange w1 (Ada.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     in check $ traceN 3 contract
@@ -285,10 +341,7 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
         (assertContractError
             contract
             (Trace.walletInstanceTag w1)
-            (\case
-                ConstraintResolutionContractError (Cons.TxOutRefWrongType _) -> True
-                _                                                            -> False
-            )
+            (has $ _ConstraintResolutionContractError . Cons._TxOutRefWrongType)
         "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         $ void $ trace contract
@@ -372,10 +425,7 @@ contractErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum l 
         (assertContractError
              contract
              (Trace.walletInstanceTag w1)
-             (\case
-                 ConstraintResolutionContractError (Cons.NoMatchingOutputFound _) -> True
-                 _                                                                -> False
-             )
+             (has $ _ConstraintResolutionContractError . Cons._NoMatchingOutputFound)
              "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         $ void $ trace contract
@@ -394,10 +444,7 @@ contractErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue l 
         (assertContractError
             contract
             (Trace.walletInstanceTag w1)
-            (\case
-                ConstraintResolutionContractError (Cons.NoMatchingOutputFound _) -> True
-                _                                                                -> False
-            )
+            (has $ _ConstraintResolutionContractError . Cons._NoMatchingOutputFound)
             "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         $ void $ trace contract
