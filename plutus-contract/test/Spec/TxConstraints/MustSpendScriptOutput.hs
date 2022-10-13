@@ -183,28 +183,40 @@ mustSpendScriptOutputWithMatchingDatumAndValueContract'
     ledgerTx <- submitTxConstraintsWith lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
-mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Contract () Empty ContractError ()
-mustSpendScriptOutputWithReferenceContract policyVersion = do
-    let mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
-        mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
-        get3 (a:b:c:_) = (fst a, snd a, fst b, fst c)
-        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
-
+mustPayToOtherScriptWithMultipleOutputs
+    :: Int
+    -> PSU.Versioned Validator
+    -> PV2.Address
+    -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.ChainIndexTxOut)
+mustPayToOtherScriptWithMultipleOutputs nScriptOutputs script scriptAddr = do
     utxos <- ownUtxos
-    myAddr <- ownAddress
-    let (utxoRef, utxo, utxoRefForBalance1, utxoRefForBalance2) = get3 $ M.toList utxos
-        vh = PSU.validatorHash mustReferenceOutputValidatorVersioned
+    payAddr <- ownAddress
+    let vh = PSU.validatorHash script
+        get2 (a:b:_) = (fst a, fst b)
+        get2 _       = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+        (utxoRef, balanceUtxo) = get2 $ M.toList utxos
         lookups = Cons.unspentOutputs utxos
-               <> Cons.otherScript mustReferenceOutputValidatorVersioned
+               <> Cons.otherScript script
         datum = PV2.Datum $ PlutusTx.toBuiltinData utxoRef
-        tx = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
-          <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
-          <> Cons.mustPayToAddressWithReferenceValidator myAddr vh Nothing (Ada.adaValueOf 30)
+        tx = mconcat (replicate nScriptOutputs $ Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5))
+          <> Cons.mustSpendPubKeyOutput balanceUtxo
+          <> Cons.mustPayToAddressWithReferenceValidator payAddr vh Nothing (Ada.adaValueOf 30)
     ledgerTx <- submitTxConstraintsWith @Void lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+    utxosAt scriptAddr
 
+mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Contract () Empty ContractError ()
+mustSpendScriptOutputWithReferenceContract policyVersion = do
+    utxos <- ownUtxos
+    let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
+        mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
+        get3 (a:_:c:_) = (fst a, snd a, fst c)
+        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+        (utxoRef, utxo, utxoRefForBalance2) = get3 $ M.toList utxos
+    scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs 1
+                       mustReferenceOutputValidatorVersioned
+                       mustReferenceOutputValidatorAddress
     -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt mustReferenceOutputValidatorAddress
     utxos' <- ownUtxos
     let scriptUtxo = head . M.keys $ scriptUtxos
         refScriptUtxo = head . M.keys . M.filter (isJust . Tx._ciTxOutReferenceScript) $ utxos'
@@ -217,26 +229,16 @@ mustSpendScriptOutputWithReferenceContract policyVersion = do
 
 mustIgnoreLookupsIfReferencScriptIsGiven :: PSU.Language -> Contract () Empty ContractError ()
 mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
-    let mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
-        mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
-        get3 (a:b:c:_) = (fst a, snd a, fst b, fst c)
-        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
-
     utxos <- ownUtxos
-    myAddr <- ownAddress
-    let (utxoRef, utxo, utxoRefForBalance1, utxoRefForBalance2) = get3 $ M.toList utxos
-        vh = PSU.validatorHash mustReferenceOutputValidatorVersioned
-        lookups = Cons.unspentOutputs utxos
-               <> Cons.otherScript mustReferenceOutputValidatorVersioned
-        datum = PV2.Datum $ PlutusTx.toBuiltinData utxoRef
-        tx = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
-          <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
-          <> Cons.mustPayToAddressWithReferenceValidator myAddr vh Nothing (Ada.adaValueOf 30)
-    ledgerTx <- submitTxConstraintsWith @Void lookups tx
-    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
-
+    let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
+        mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
+        get3 (a:_:c:_) = (fst a, snd a, fst c)
+        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+        (utxoRef, utxo, utxoRefForBalance2) = get3 $ M.toList utxos
+    scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs 1
+                       mustReferenceOutputValidatorVersioned
+                       mustReferenceOutputValidatorAddress
     -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt mustReferenceOutputValidatorAddress
     utxos' <- ownUtxos
     let scriptUtxo = head . M.keys $ scriptUtxos
         refScriptUtxo = head . M.keys . M.filter (isJust . Tx._ciTxOutReferenceScript) $ utxos'
