@@ -18,7 +18,7 @@ There are different kinds of node releases: a node release can be a non-hard for
 In the following, assume `nY` to be a next-era hard fork release, which is the most complex case.
 
 - `main` depends on node `nX`, and `next-node` tracks node master.
-* `next-node` should regularly updates its node commit. Ideally we want `next-node` to depend on the tip of node master, but we are constrained by cardano-wallet, which is a PAB dependency and depends on the node.
+* `next-node` should regularly update its node commit. Ideally we want `next-node` to depend on the tip of node master, but we are constrained by cardano-wallet, which is a PAB dependency and depends on the node.
 If cardano-wallet does not build with the tip of node master, we have to either use an older node commit, or temporarily live with a PAB that doesn't build.
 * A Plutus Tools PR can be opened against either `main` or `next-node`, determined by whether or not it depends on new upstream features or functionalities not available in `nX`.
 * In the `next-node` branch, we can start developing features and functionalities for the next ledger era, `ERA+1`.
