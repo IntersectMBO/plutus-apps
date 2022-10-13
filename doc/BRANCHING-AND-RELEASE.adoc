@@ -11,7 +11,8 @@ This repo uses two development branches: `main` and `next-node`.
 Using two development branches lets us not only publish new Plutus Tools versions for the current node version, but also quickly publish a new version compatible with a newly-published node version.
 
 The following outlines the sequence of events from one node release, version `nX`, to the next node release, version `nY`.
-Suppose the current version of Plutus Tools is `tX`, compatible with node `nX`.
+Suppose `nX` has been released and the release process for `nY` has not started.
+Let `tX` denote the current latest version of Plutus Tools, compatible with node `nX`.
 Let `PV` denote the current major protocol version, and `ERA` the current ledger era.
 
 There are different kinds of node releases: a node release can be a non-hard fork release, an intra-era hard fork release (i.e., `PV` will be incremented, but not `ERA`), or a next-era hard fork release.
@@ -36,9 +37,9 @@ See "Release Process" for how to make releases.
 ** This is optional because it is only useful if `main` has new features worth releasing for users still on node `nX`.
 Most users should start upgrading to node `nY` at this point.
 ** If we do so, `tX'` would be the last Plutus Tools release compatible with node version `nX`.
-- We merge `next-node` into `main`, and release a new Plutus Tools version `tY`.
-* `tY` is the first Plutus Tools version compatible with node version `nY`.
-* The hard fork hasn't happened at this point, and we are still on ledger era `ERA`.
+* We merge `next-node` into `main`, and release a new Plutus Tools version `tY`.
+** `tY` is the first Plutus Tools version compatible with node version `nY`.
+** The hard fork hasn't happened at this point, and we are still on ledger era `ERA`.
 Therefore `tY` must remain compatible with `ERA`.
 Specifically, `tY` may contain features and functionalities for `ERA+1` (such as the ability to build `ERA+1` transactions), but since they are not yet usable, it is helpful to make it clear which features and functionalities only work in `ERA+1`.
 Also, this is why the `next-node` branch should not remove any features for ledger era `ERA`, until we are in ledger era `ERA+1`.
@@ -64,7 +65,7 @@ The reason for this is that for packages in the same repo, CI always tests all o
 Unless we perform additional testing for more combinations, we have no way to know whether or not one component at one commit is compatible with another component at a different commit.
 We therefore cannot release some components but not the others (unless there's no change to the latter), and claim that they still work together.
 
-Currently, all components are in this repo.
+Currently, all Plutus Tools components are in this repo.
 In the future, some components such as Marconi may be split into separate repos, after which such components will be versioned and released independently, but the release process will be similar to the one described below.
 
 We follow https://pvp.haskell.org/[the PVP version scheme] for the components, where version numbers have up to 4 components: `major.major.minor.patch`.
