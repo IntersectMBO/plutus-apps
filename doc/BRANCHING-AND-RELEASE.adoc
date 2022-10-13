@@ -5,7 +5,7 @@
 == Branching Policy
 
 This repo uses two development branches: `main` and `next-node`.
-`main` tracks the latest Cardano node version.
+`main` tracks the latest released Cardano node version.
 `next-node` tracks either Cardano node master, or a Cardano node release branch.
 
 Using two development branches lets us not only publish new Plutus Tools versions for the current node version, but also quickly publish a new version compatible with a newly-published node version.
