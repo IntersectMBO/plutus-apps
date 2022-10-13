@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.TxConstraints.MustSpendScriptOutput(tests) where
 
-import Control.Lens (filtered, has, (??))
+import Control.Lens (_1, _head, filtered, has, makeClassyPrisms, only, (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -52,13 +52,15 @@ import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts as PSU.V2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitRedeemer)
+import Plutus.V1.Ledger.Scripts (ScriptError, unitRedeemer)
 import Plutus.V1.Ledger.Value qualified as V
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
 import Wallet.Emulator.Wallet (mockWalletAddress)
+
+makeClassyPrisms ''ScriptError
 
 tests :: TestTree
 tests = testGroup "MustSpendScriptOutput"
@@ -114,6 +116,10 @@ mustPayToTheScriptWithMultipleOutputsContract nScriptOutputs = do
         mustPayToTheScriptWithMultipleOutputs n = let
             go x = Cons.mustPayToTheScriptWithDatumInTx (PlutusTx.toBuiltinData x) utxoValue
             in foldMap go [0 .. n-1]
+
+
+evaluationError :: Text.Text -> L.ValidationError -> Bool
+evaluationError errCode = has $ L._ScriptFailure . _EvaluationError . _1 . _head . only errCode
 
 -- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputs
 -- constraint to spend some of the outputs each with unique datum
@@ -233,7 +239,7 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 -- | Contract to create multiple outputs at the given script address and then uses mustSpendScriptOutputs
--- constraint to spend some of the outputs, me try to pass the reference script both in lookups and as references
+-- constraint to spend some of the outputs, if we try to pass the reference script both in lookups and as references
 mustIgnoreLookupsIfReferencScriptIsGiven :: PSU.Language -> Contract () Empty ContractError ()
 mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
     utxos <- ownUtxos
@@ -402,10 +408,7 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef l =
 
     in checkPredicate
         "Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different TxOutRef"
-        (assertFailedTransaction $ const $ \case
-            L.ScriptFailure (EvaluationError ("L8":_) _) -> True
-            _                                            -> False
-        )
+        (assertFailedTransaction $ const $ evaluationError "L8")
         $ void $ trace contract
 
 -- | Phase-2 validation failure only when V2 script using onchain mustSpendScriptOutput constraint
@@ -424,11 +427,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputUsesWrongRedeemerWithV2Script l =
         PlutusV2 ->
              checkPredicate
                  "Phase-2 validation failure when V2 script using onchain mustSpendScriptOutput constraint expects a different redeemer"
-                 ( assertFailedTransaction $ const $
-                     \case
-                        L.ScriptFailure (EvaluationError ("L8":_) _) -> True
-                        _                                            -> False
-                 )
+                 (assertFailedTransaction $ const $ evaluationError "L8")
                  $ void $ trace $ mustSpendScriptOutputsContract' l 5 5 False
 
 -- | Uses onchain and offchain constraint mustSpendScriptOutputWithMatchingDatumAndValue to spend a
@@ -495,9 +494,7 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum l =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different TxOutRef"
-        (assertFailedTransaction $ const $ \case
-           L.ScriptFailure (EvaluationError ("Le":_) _) -> True
-           _                                            -> False)
+        (assertFailedTransaction $ const $ evaluationError "Le")
         $ void
         $ trace
         $ mustSpendScriptOutputWithMatchingDatumAndValueContract
@@ -515,10 +512,7 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue l =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different TxOutRef"
-        ( assertFailedTransaction $ const $ \case
-           L.ScriptFailure (EvaluationError ("Le":_) _) -> True
-           _                                            -> False
-        )
+        (assertFailedTransaction $ const $ evaluationError "Le")
         $ void $ trace
         $ mustSpendScriptOutputWithMatchingDatumAndValueContract
               l nScriptOutputs
@@ -538,9 +532,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeem
             PlutusV2 ->
                 checkPredicate
                 "Phase-2 validation failure when V2 script using onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different redeemer"
-                $ assertFailedTransaction $ const $ \case
-                     L.ScriptFailure (EvaluationError ("Le":_) _) -> True
-                     _                                            -> False
+                (assertFailedTransaction $ const $ evaluationError "Le")
         nScriptOutputs  = 5
         scriptOutputIdx = nScriptOutputs - 1
     in check
