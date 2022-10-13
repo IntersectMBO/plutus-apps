@@ -34,7 +34,7 @@ import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
-import Test.Tasty.QuickCheck hiding ((.&&.))
+-- import Test.Tasty.QuickCheck hiding ((.&&.))
 
 import Ledger (Value)
 import Ledger qualified
@@ -157,7 +157,9 @@ tests = testGroup "crowdfunding"
         "test/Spec/contractError.txt"
         (pure $ renderWalletLog (void $ Trace.activateContractWallet w1 con))
 
-    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 100 prop_Crowdfunding
+    -- TODO: Linked to https://github.com/input-output-hk/plutus-apps/issues/754
+    -- Re-activate once issue is resolved
+    -- , testProperty "QuickCheck ContractModel" $ withMaxSuccess 100 prop_Crowdfunding
 
     ]
 
