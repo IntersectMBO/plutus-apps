@@ -26,7 +26,8 @@ import Ledger.Constraints.OffChain qualified as Cons (_NoMatchingOutputFound, _T
                                                       otherScript, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMintValueWithRedeemer,
+import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, collectFromTheScript,
+                                                           mustMintValueWithRedeemer,
                                                            mustPayToAddressWithReferenceValidator,
                                                            mustPayToOtherScriptWithDatumInTx,
                                                            mustPayToTheScriptWithDatumInTx, mustReferenceOutput,
@@ -139,13 +140,13 @@ mustSpendScriptOutputsContract' policyVersion nScriptOutputs nScriptOutputsToSpe
         lookups = Cons.typedValidatorLookups someTypedValidator
                <> Cons.mintingPolicy versionedMintingPolicy
                <> Cons.unspentOutputs scriptUtxos
-        tx = mconcat (mustSpendScriptOutputs scriptUtxosToSpend)
+        tx = mustSpendScriptOutputs scriptUtxosToSpend
           <> Cons.mustMintValueWithRedeemer policyRedeemer (tokenValue versionedMintingPolicy)
     ledgerTx <- submitTxConstraintsWith lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
     where
-        mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints P.BuiltinData P.BuiltinData]
-        mustSpendScriptOutputs = fmap (\txOutRef -> Cons.mustSpendScriptOutput txOutRef (asRedeemer txOutRef))
+        mustSpendScriptOutputs :: [Tx.TxOutRef] -> TxConstraints P.BuiltinData P.BuiltinData
+        mustSpendScriptOutputs = foldMap (\txOutRef -> Cons.mustSpendScriptOutput txOutRef (asRedeemer txOutRef))
 
 -- | Contract to create multiple outputs at script address and then uses
 -- mustSpendScriptOutputWithMatchingDatumAndValue constraint to spend one of the outputs
@@ -548,9 +549,9 @@ mkMustSpendScriptOutputPolicy :: (Cons.TxConstraints () () -> sc -> Bool) -> [(T
 mkMustSpendScriptOutputPolicy checkScriptContext constraintParams ctx =
     P.traceIfFalse
         "mustSpendScriptOutput not satisfied"
-        (checkScriptContext (P.mconcat mustSpendScriptOutputs) ctx)
+        (checkScriptContext mustSpendScriptOutputs ctx)
     where
-        mustSpendScriptOutputs = P.map (uncurry Cons.mustSpendScriptOutput) constraintParams
+        mustSpendScriptOutputs = P.foldMap (uncurry Cons.mustSpendScriptOutput) constraintParams
 
 mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy
     :: (Cons.TxConstraints () () -> sc -> Bool)
@@ -558,9 +559,9 @@ mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy
 mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy checkScriptContext constraintParams ctx =
     P.traceIfFalse
         "mustSpendScriptOutputWithMatchingDatumAndValue not satisfied"
-        (checkScriptContext (P.mconcat mustSpendScriptOutputsWithMatchingDatumAndValue) ctx)
+        (checkScriptContext mustSpendScriptOutputsWithMatchingDatumAndValue ctx)
     where
-        mustSpendScriptOutputsWithMatchingDatumAndValue = P.map (\(vh, datum, value, redeemer) ->
+        mustSpendScriptOutputsWithMatchingDatumAndValue = P.foldMap (\(vh, datum, value, redeemer) ->
             Cons.mustSpendScriptOutputWithMatchingDatumAndValue vh (P.== datum) (P.==  value) redeemer) constraintParams
 
 mkMustReferenceOutputValidator
