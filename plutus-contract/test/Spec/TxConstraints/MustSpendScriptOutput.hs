@@ -576,6 +576,8 @@ phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript 
             (assertFailedTransaction $ const $ evaluationError "L8")
     in check $ traceN 3 contract
 
+
+
 mkMustSpendScriptOutputPolicy :: (Cons.TxConstraints () () -> sc -> Bool) -> [(Tx.TxOutRef, L.Redeemer)] -> sc -> Bool
 mkMustSpendScriptOutputPolicy checkScriptContext constraintParams ctx =
     P.traceIfFalse
