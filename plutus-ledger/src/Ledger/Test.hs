@@ -11,8 +11,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed as PSU
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
-import Plutus.V1.Ledger.Api (Address, CurrencySymbol (CurrencySymbol), ToData (toBuiltinData),
-                             UnsafeFromData (unsafeFromBuiltinData), Validator)
+import Plutus.V1.Ledger.Api (Address, Validator)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import Prelude hiding (not)
@@ -41,7 +40,7 @@ coinMintingPolicyHash :: Ledger.MintingPolicyHash
 coinMintingPolicyHash = PV1.mintingPolicyHash coinMintingPolicy
 
 coinMintingPolicyCurrencySymbol :: Ledger.CurrencySymbol
-coinMintingPolicyCurrencySymbol = CurrencySymbol $ unsafeFromBuiltinData $ toBuiltinData coinMintingPolicyHash
+coinMintingPolicyCurrencySymbol = Value.mpsSymbol coinMintingPolicyHash
 
 someToken :: Ledger.Value
 someToken = Value.singleton coinMintingPolicyCurrencySymbol "someToken" 1

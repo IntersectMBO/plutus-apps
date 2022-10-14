@@ -249,6 +249,7 @@ test-suite plutus-contract-test
     Spec.TxConstraints.MustPayToOtherScript
     Spec.TxConstraints.MustPayToPubKeyAddress
     Spec.TxConstraints.MustProduceAtLeast
+    Spec.TxConstraints.MustSatisfyAnyOf
     Spec.TxConstraints.MustSpendAtLeast
     Spec.TxConstraints.MustSpendPubKeyOutput
     Spec.TxConstraints.MustSpendScriptOutput
