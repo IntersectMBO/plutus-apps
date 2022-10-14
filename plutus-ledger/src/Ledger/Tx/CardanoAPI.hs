@@ -156,12 +156,12 @@ toCardanoTxInWitness tx
         valhOrRef
         dh)
     = do
-      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (P.txData tx)
+      mDatum <- traverse (maybe (Left MissingDatum) pure . (`Map.lookup` P.txData tx)) dh
       mkWitness <- case valhOrRef of
         Left valh -> maybe (Left MissingInputValidator) (toCardanoTxInScriptWitnessHeader . fmap PV1.getValidator) $ P.lookupValidator (P.txScripts tx) valh
         Right vref -> toCardanoTxInReferenceWitnessHeader vref
       pure $ C.ScriptWitness C.ScriptWitnessForSpending $ mkWitness
-            (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
+            (maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum) mDatum)
             (toCardanoScriptData redeemer)
             zeroExecutionUnits
 

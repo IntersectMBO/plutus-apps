@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -208,13 +209,13 @@ makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
   where
-    getDatumWithHash :: OutputDatum -> Eff effs (Maybe (DatumHash, Maybe Datum))
+    getDatumWithHash :: OutputDatum -> Eff effs (Maybe (DatumHash, L.DatumFromQuery))
     getDatumWithHash NoOutputDatum = pure Nothing
     getDatumWithHash (OutputDatumHash dh) = do
         d <- getDatumFromHash dh
-        pure $ Just (dh, d)
+        pure $ Just (dh, maybe L.DatumUnknown L.DatumInBody d)
     getDatumWithHash (OutputDatum d) = do
-        pure $ Just (datumHash d, Just d)
+        pure $ Just (datumHash d, L.DatumInline d)
 
     script = fromReferenceScript refScript
 

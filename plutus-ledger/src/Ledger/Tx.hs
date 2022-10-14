@@ -29,6 +29,10 @@ module Ledger.Tx
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
+    -- * DatumFromQuery
+    , DatumFromQuery(..)
+    , datumInDatumFromQuery
+    -- * Transactions
     , CardanoTx(..)
     , cardanoApiTx
     , emulatorTx
@@ -47,7 +51,6 @@ module Ledger.Tx
     , getCardanoTxData
     , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
     , ToCardanoError(..)
-    -- * Transactions
     , addSignature
     , addSignature'
     , addCardanoTxSignature
@@ -70,7 +73,7 @@ import Cardano.Ledger.Babbage.TxBody (TxBody)
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
 import Control.DeepSeq (NFData)
-import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
+import Control.Lens (At (at), Traversal', makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Proxy (Proxy))
 import Data.Default (def)
@@ -100,6 +103,19 @@ import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
                                       outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
 
+data DatumFromQuery
+    = DatumUnknown
+    | DatumInline V2.Datum
+    | DatumInBody V2.Datum
+    deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, NFData, OpenApi.ToSchema)
+
+makePrisms ''DatumFromQuery
+
+datumInDatumFromQuery :: Traversal' DatumFromQuery V2.Datum
+datumInDatumFromQuery _ DatumUnknown    = pure DatumUnknown
+datumInDatumFromQuery f (DatumInline d) = DatumInline <$> f d
+datumInDatumFromQuery f (DatumInBody d) = DatumInBody <$> f d
+
 -- | Transaction output that comes from a chain index query.
 --
 -- It is defined here instead of the plutus-chain-index because plutus-ledger
@@ -117,7 +133,7 @@ data ChainIndexTxOut =
       -- | Value of the transaction output.
       _ciTxOutValue           :: V2.Value,
       -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
-      _ciTxOutPublicKeyDatum  :: Maybe (V2.DatumHash, Maybe V2.Datum),
+      _ciTxOutPublicKeyDatum  :: Maybe (V2.DatumHash, DatumFromQuery),
       -- | Optional reference script attached to the transaction output.
       _ciTxOutReferenceScript :: Maybe (Versioned V1.Script)
     }
@@ -130,7 +146,7 @@ data ChainIndexTxOut =
       -- | Datum attached to the transaction output, either in full (inline datum or datum in transaction body) or as a
       -- hash reference. A transaction output protected by a Plutus script
       -- is guardateed to have an associated datum.
-      _ciTxOutScriptDatum     :: (V2.DatumHash, Maybe V2.Datum),
+      _ciTxOutScriptDatum     :: (V2.DatumHash, DatumFromQuery),
       -- | Optional reference script attached to the transaction output.
       -- The reference script is, in genereal, unrelated to the validator
       -- script althought it could also be the same.
@@ -149,14 +165,17 @@ toTxOut networkId (PublicKeyChainIndexTxOut addr v datum referenceScript) =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId addr
     <*> CardanoAPI.toCardanoTxOutValue v
-    <*> maybe (pure CardanoAPI.toCardanoTxOutNoDatum) (CardanoAPI.toCardanoTxOutDatumHash . fst) datum
+    <*> toTxOutDatum datum
     <*> CardanoAPI.toCardanoReferenceScript referenceScript)
-toTxOut networkId (ScriptChainIndexTxOut addr v (dh, _) referenceScript _validator) =
+toTxOut networkId (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId addr
     <*> CardanoAPI.toCardanoTxOutValue v
-    <*> CardanoAPI.toCardanoTxOutDatumHash dh
+    <*> toTxOutDatum (Just datum)
     <*> CardanoAPI.toCardanoReferenceScript referenceScript)
+
+toTxOutDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
+toTxOutDatum = CardanoAPI.toCardanoTxOutDatum . toPlutusOutputDatum
 
 -- | Converts a transaction output from the chain index to the plutus-ledger-api
 -- transaction output.
@@ -166,13 +185,14 @@ toTxOut networkId (ScriptChainIndexTxOut addr v (dh, _) referenceScript _validat
 -- 'ChainIndexTxOut' to 'TxOut' and back is therefore lossy.
 toTxInfoTxOut :: ChainIndexTxOut -> V2.Tx.TxOut
 toTxInfoTxOut (PublicKeyChainIndexTxOut addr v datum referenceScript) =
-    V2.Tx.TxOut addr v (toPlutusOutDatum datum) (scriptHash <$> referenceScript)
+    V2.Tx.TxOut addr v (toPlutusOutputDatum datum) (scriptHash <$> referenceScript)
 toTxInfoTxOut (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
-    V2.Tx.TxOut addr v (toPlutusOutDatum $ Just datum) (scriptHash <$> referenceScript)
+    V2.Tx.TxOut addr v (toPlutusOutputDatum $ Just datum) (scriptHash <$> referenceScript)
 
-toPlutusOutDatum :: Maybe (V2.DatumHash, Maybe V2.Datum) -> V2.Tx.OutputDatum
-toPlutusOutDatum Nothing       = V2.Tx.NoOutputDatum
-toPlutusOutDatum (Just (d, _)) = V2.Tx.OutputDatumHash d
+toPlutusOutputDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> V2.Tx.OutputDatum
+toPlutusOutputDatum Nothing                   = V2.Tx.NoOutputDatum
+toPlutusOutputDatum (Just (_, DatumInline d)) = V2.Tx.OutputDatum d
+toPlutusOutputDatum (Just (dh, _))            = V2.Tx.OutputDatumHash dh
 
 instance Pretty ChainIndexTxOut where
     pretty PublicKeyChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =

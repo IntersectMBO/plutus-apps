@@ -21,8 +21,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, scriptTxInputs, toTxOut,
-                         txInputRef, unitDatum, unitRedeemer)
+import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), DatumFromQuery (DatumInBody), inputs,
+                         paymentPubKeyHash, scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
@@ -173,7 +173,7 @@ txOut0 =
     Ledger.ScriptChainIndexTxOut
         (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
         mempty
-        (Ledger.datumHash Ledger.unitDatum, Just Ledger.unitDatum)
+        (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
         (alwaysSucceedValidatorHash, Nothing)
 
@@ -209,7 +209,7 @@ txOut1 =
     Ledger.ScriptChainIndexTxOut
         (Ledger.Address (ScriptCredential validatorHash1) Nothing)
         mempty
-        (Ledger.datumHash Ledger.unitDatum, Just Ledger.unitDatum)
+        (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
         (validatorHash1, Nothing)
 
