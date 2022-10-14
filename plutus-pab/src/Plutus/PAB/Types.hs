@@ -106,6 +106,14 @@ data DbConfig = SqliteDB Sqlite.DbConfig
               | PostgresDB Postgres.DbConfig
     deriving (Show, Eq, Generic)
 
+takeSqliteDB :: DbConfig -> Sqlite.DbConfig
+takeSqliteDB (SqliteDB dbConf) = dbConf
+takeSqliteDB (PostgresDB _)    = error "Not an SqliteDB configuration"
+
+takePostgresDB :: DbConfig -> Postgres.DbConfig
+takePostgresDB (PostgresDB dbConf) = dbConf
+takePostgresDB (SqliteDB _)        = error "Not a PostgresDB configuration"
+
 instance FromJSON DbConfig where
     parseJSON (Object obj) = do
         ci <- obj .:? "sqliteDB"

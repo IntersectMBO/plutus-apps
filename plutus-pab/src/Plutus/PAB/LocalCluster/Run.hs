@@ -57,6 +57,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async)
 import Control.Lens (contramap, set, (&), (.~), (^.))
 import Control.Monad (void, when)
+import Control.Monad.Freer.Extras.Beam.Sqlite (DbConfig (dbConfigFile))
 import Control.Tracer (traceWith)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
@@ -83,7 +84,7 @@ import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
-                         Config (chainQueryConfig, dbConfig, nodeServerConfig, walletServerConfig))
+                         Config (chainQueryConfig, dbConfig, nodeServerConfig, walletServerConfig), DbConfig (SqliteDB))
 import Plutus.PAB.Types qualified as PAB.Config
 import Prettyprinter (Pretty)
 import Servant qualified
@@ -257,7 +258,7 @@ launchPAB
     -> IO ()
 launchPAB userContractHandler
     passPhrase
-    _
+    dir
     walletUrl
     (RunningNode socketPath _block0 (networkParameters, _) _)
     (ChainIndexPort chainIndexPort) = do
