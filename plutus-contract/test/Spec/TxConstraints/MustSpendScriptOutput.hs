@@ -572,7 +572,7 @@ phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript 
         PlutusV2 ->
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-            "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
+            "Phase2 validation error when the reference script is not satisfied"
             (assertFailedTransaction $ const $ evaluationError "L8")
     in check $ traceN 3 contract
 
