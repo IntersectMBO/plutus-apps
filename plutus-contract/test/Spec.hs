@@ -16,6 +16,8 @@ import Spec.TxConstraints.MustIncludeDatum qualified
 import Spec.TxConstraints.MustMint qualified
 import Spec.TxConstraints.MustPayToOtherScript qualified
 import Spec.TxConstraints.MustPayToPubKeyAddress qualified
+import Spec.TxConstraints.MustReferenceOutput qualified
+import Spec.TxConstraints.MustSatisfyAnyOf qualified
 import Spec.TxConstraints.MustSpendAtLeast qualified
 import Spec.TxConstraints.MustSpendScriptOutput qualified
 import Spec.TxConstraints.RequiredSigner qualified
