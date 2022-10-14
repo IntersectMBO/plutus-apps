@@ -6,11 +6,12 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.TxConstraints.MustSpendScriptOutput(tests) where
 
-import Control.Lens (_1, _head, filtered, has, makeClassyPrisms, only, (??))
+import Control.Lens (_1, _head, filtered, has, makeClassyPrisms, only, (&), (.~), (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -26,8 +27,7 @@ import Ledger.Constraints.OffChain qualified as Cons (_NoMatchingOutputFound, _T
                                                       otherScript, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, collectFromTheScript,
-                                                           mustMintValueWithRedeemer,
+import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMintValueWithRedeemer,
                                                            mustPayToAddressWithReferenceValidator,
                                                            mustPayToOtherScriptWithDatumInTx,
                                                            mustPayToTheScriptWithDatumInTx, mustReferenceOutput,
@@ -89,6 +89,7 @@ featuresTests t =
     , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum
     , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue
     , phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemerWithV2Script
+    , phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript
     , validUseOfReferenceScript
     , validUseOfReferenceScriptDespiteLookup
     , validMultipleUseOfTheSameReferenceScript
@@ -217,8 +218,8 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr =
 
 -- | Contract to create multiple outputs at the given script address and then uses mustSpendScriptOutputs
 -- constraint to spend some of the outputs
-mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Int -> Contract () Empty ContractError ()
-mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs = do
+mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Int -> Bool -> Contract () Empty ContractError ()
+mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs validReference = do
     utxos <- ownUtxos
     let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
         mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
@@ -230,11 +231,18 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs = do
                        mustReferenceOutputValidatorAddress
     -- Trying to unlock the Ada in the script address
     utxos' <- ownUtxos
-    let scriptUtxos' = Prelude.take nScriptOutputs . M.keys $ scriptUtxos
+    let versionedMintingPolicy =
+            getVersionedScript MustSpendScriptOutputWithReferencePolicy policyVersion
+        scriptUtxos' = Prelude.take nScriptOutputs . M.keys $ scriptUtxos
         refScriptUtxo = head . M.keys . M.filter (isJust . Tx._ciTxOutReferenceScript) $ utxos'
+        policyRedeemer' = P.map (, unitRedeemer, refScriptUtxo) scriptUtxos'
+        policyRedeemer = asRedeemer $
+            if validReference then policyRedeemer' else policyRedeemer' & _head . _1 .~ utxoRef
         lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
+               <> Cons.mintingPolicy versionedMintingPolicy
         tx2 = Cons.mustReferenceOutput utxoRef
            <> foldMap (\u -> Cons.mustSpendScriptOutputWithReference u unitRedeemer refScriptUtxo) scriptUtxos'
+           <> Cons.mustMintValueWithRedeemer policyRedeemer (tokenValue versionedMintingPolicy)
            <> Cons.mustSpendPubKeyOutput utxoRefForBalance2
     ledgerTx2 <- submitTxConstraintsWith @Any lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -292,11 +300,12 @@ validUseOfMustSpendScriptOutputUsingSomeScriptOutputs l =
     .&&. assertValidatedTransactionCount 2)
     (void $ trace $ mustSpendScriptOutputsContract l 5 3)
 
--- | Uses onchain constraint mustSpendScriptOutputWithReference to spend some of the UtxOs locked
+-- | Uses onchain and offchain constraint mustSpendScriptOutputWithReference to spend some of the UtxOs locked
 -- by the script
 validUseOfReferenceScript :: PSU.Language -> TestTree
 validUseOfReferenceScript l = let
-    contract = mustSpendScriptOutputWithReferenceContract l 1
+    contract = mustSpendScriptOutputWithReferenceContract l 1 True
+    versionedMintingPolicy = getVersionedScript MustSpendScriptOutputWithReferencePolicy l
     check = case l of
         PlutusV1 ->
             checkPredicateOptions
@@ -310,17 +319,18 @@ validUseOfReferenceScript l = let
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
-            (walletFundsChange w1 (Ada.adaValueOf 0)
+            (walletFundsChange w1 (tokenValue versionedMintingPolicy)
             .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     in check $ traceN 3 contract
 
--- | Uses onchain constraint mustSpendScriptOutputWithReference several time on the same script to spend some of the
--- UtxOs locked by the script
+-- | Uses onchain and offchain constraint mustSpendScriptOutputWithReference several time on the same script to spend
+-- some of the UtxOs locked by the script
 validMultipleUseOfTheSameReferenceScript :: PSU.Language -> TestTree
 validMultipleUseOfTheSameReferenceScript l = let
-    contract = mustSpendScriptOutputWithReferenceContract l 5
+    contract = mustSpendScriptOutputWithReferenceContract l 2 True
+    versionedMintingPolicy = getVersionedScript MustSpendScriptOutputWithReferencePolicy l
     check = case l of
         PlutusV1 ->
             checkPredicateOptions
@@ -334,7 +344,7 @@ validMultipleUseOfTheSameReferenceScript l = let
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of several mustSpendScriptOutputWithReference with the same reference to unlock funds in a PlutusV2 script"
-            (walletFundsChange w1 (Ada.adaValueOf 0)
+            (walletFundsChange w1 (tokenValue versionedMintingPolicy)
             .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
@@ -545,6 +555,27 @@ phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeem
          (scriptOutputIdx, utxoValue)
          False
 
+-- | Phase-2 validation failure when onchain mustSpendScriptOutputWithReference constraint fails to validate the
+-- reference script
+phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript :: PSU.Language -> TestTree
+phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript l = let
+    contract = mustSpendScriptOutputWithReferenceContract l 1 False
+    check = case l of
+        PlutusV1 ->
+            checkPredicateOptions
+            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
+            ( assertFailedTransaction ( const $ has
+                $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
+            ) .&&. assertValidatedTransactionCountOfTotal 1 2
+            )
+        PlutusV2 ->
+            checkPredicateOptions
+            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+            "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
+            (assertFailedTransaction $ const $ evaluationError "L8")
+    in check $ traceN 3 contract
+
 mkMustSpendScriptOutputPolicy :: (Cons.TxConstraints () () -> sc -> Bool) -> [(Tx.TxOutRef, L.Redeemer)] -> sc -> Bool
 mkMustSpendScriptOutputPolicy checkScriptContext constraintParams ctx =
     P.traceIfFalse
@@ -552,7 +583,6 @@ mkMustSpendScriptOutputPolicy checkScriptContext constraintParams ctx =
         (checkScriptContext mustSpendScriptOutputs ctx)
     where
         mustSpendScriptOutputs = P.foldMap (uncurry Cons.mustSpendScriptOutput) constraintParams
-
 mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy
     :: (Cons.TxConstraints () () -> sc -> Bool)
     -> [(PV2.ValidatorHash, L.Datum, V.Value, L.Redeemer)] -> sc -> Bool
@@ -564,6 +594,17 @@ mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy checkScriptContext constr
         mustSpendScriptOutputsWithMatchingDatumAndValue = P.foldMap (\(vh, datum, value, redeemer) ->
             Cons.mustSpendScriptOutputWithMatchingDatumAndValue vh (P.== datum) (P.==  value) redeemer) constraintParams
 
+mkMustSpendScriptOutputWithReferencePolicy
+    :: (Cons.TxConstraints () () -> sc -> Bool)
+    -> [(Tx.TxOutRef, L.Redeemer, Tx.TxOutRef)] -> sc -> Bool
+mkMustSpendScriptOutputWithReferencePolicy checkScriptContext constraintParams ctx =
+    P.traceIfFalse
+        "mustSpendScriptOutput not satisfied"
+        (checkScriptContext mustSpendScriptOutputs ctx)
+    where
+        mustSpendScriptOutputs =
+            P.foldMap (\(outref, red, ref) -> Cons.mustSpendScriptOutputWithReference outref red ref) constraintParams
+
 mkMustReferenceOutputValidator
     :: (Cons.TxConstraints Void Void -> sc -> Bool)
     -> PV1.TxOutRef -> () -> sc -> Bool
@@ -574,6 +615,7 @@ mkMustReferenceOutputValidator checkScriptContext txOutRef _ = checkScriptContex
 data Script a where
    MustSpendScriptOutputPolicy :: Script MintingPolicy
    MustSpendScriptOutputWithMatchingDatumAndValuePolicy :: Script MintingPolicy
+   MustSpendScriptOutputWithReferencePolicy :: Script MintingPolicy
    MustReferenceOutputValidator :: Script Validator
 
 getScript :: Script a -> PSU.Language -> a
@@ -583,6 +625,10 @@ getScript MustSpendScriptOutputWithMatchingDatumAndValuePolicy PlutusV1 =
     mustSpendScriptOutputWithMatchingDatumAndValuePolicyV1
 getScript MustSpendScriptOutputWithMatchingDatumAndValuePolicy PlutusV2 =
     mustSpendScriptOutputWithMatchingDatumAndValuePolicyV2
+getScript MustSpendScriptOutputWithReferencePolicy PlutusV1 =
+    mustSpendScriptOutputWithReferencePolicyV1
+getScript MustSpendScriptOutputWithReferencePolicy PlutusV2 =
+    mustSpendScriptOutputWithReferencePolicyV2
 getScript MustReferenceOutputValidator PlutusV1 = mustReferenceOutputValidatorV1
 getScript MustReferenceOutputValidator PlutusV2 = mustReferenceOutputValidatorV2
 
@@ -621,6 +667,13 @@ mustSpendScriptOutputWithMatchingDatumAndValuePolicyV1 = PV1.mkMintingPolicyScri
             = mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy Cons.V1.checkScriptContext
         wrap = PSU.V1.mkUntypedMintingPolicy mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV1
 
+{-# INLINEABLE mustSpendScriptOutputWithReferencePolicyV1 #-}
+mustSpendScriptOutputWithReferencePolicyV1 :: PV1.MintingPolicy
+mustSpendScriptOutputWithReferencePolicyV1 = PV1.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+    where
+        mkMustSpendScriptOutputPolicyV1 = mkMustSpendScriptOutputWithReferencePolicy Cons.V1.checkScriptContext
+        wrap = PSU.V1.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV1
+
 {-# INLINABLE mustReferenceOutputValidatorV1 #-}
 mustReferenceOutputValidatorV1 :: PV1.Validator
 mustReferenceOutputValidatorV1 = PV2.mkValidatorScript
@@ -649,6 +702,14 @@ mustSpendScriptOutputWithMatchingDatumAndValuePolicyV2 = PV2.mkMintingPolicyScri
             mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy Cons.V2.checkScriptContext
         wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV2
 
+{-# INLINEABLE mustSpendScriptOutputWithReferencePolicyV2 #-}
+mustSpendScriptOutputWithReferencePolicyV2 :: PV2.MintingPolicy
+mustSpendScriptOutputWithReferencePolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+    where
+        mkMustSpendScriptOutputPolicyV2 = mkMustSpendScriptOutputWithReferencePolicy Cons.V2.checkScriptContext
+        wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV2
+
+
 {-# INLINABLE mustReferenceOutputValidatorV2 #-}
 mustReferenceOutputValidatorV2 :: PV2.Validator
 mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
@@ -656,3 +717,4 @@ mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
  where
      mkMustReferenceOutputV2Validator = mkMustReferenceOutputValidator Cons.V2.checkScriptContext
      wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
+
