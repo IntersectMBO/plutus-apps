@@ -26,6 +26,7 @@ module Game where
 -- If it isn't, the funds stay locked.
 import Control.Monad (void)
 import Data.ByteString.Char8 qualified as C
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
@@ -111,7 +112,7 @@ lock :: AsContractError e => Promise () GameSchema e ()
 lock = endpoint @"lock" @LockParams $ \(LockParams secret amt) -> do
     logInfo @Haskell.String $ "Pay " <> Haskell.show amt <> " to the script"
     let tx         = Constraints.mustPayToTheScriptWithDatumInTx (hashString secret) amt
-    void (submitTxConstraints gameInstance tx)
+    void (submitTxConstraints def gameInstance tx)
 
 -- | The "guess" contract endpoint. See note [Contract endpoints]
 guess :: AsContractError e => Promise () GameSchema e ()
@@ -134,7 +135,7 @@ guess = endpoint @"guess" @GuessParams $ \(GuessParams theGuess) -> do
     -- In a real use-case, we would not submit the transaction if the guess is
     -- wrong.
     logInfo @Haskell.String "Submitting transaction to guess the secret word"
-    void (submitTxConstraintsSpending gameInstance utxos tx)
+    void (submitTxConstraintsSpending def gameInstance utxos tx)
 
 -- | Find the secret word in the Datum of the UTxOs
 findSecretWordValue :: Map TxOutRef ChainIndexTxOut -> Maybe HashedString

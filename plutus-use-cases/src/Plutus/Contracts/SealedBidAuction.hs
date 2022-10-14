@@ -38,6 +38,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract
@@ -278,31 +279,31 @@ client auctionParams =
         inst    = typedValidator auctionParams
     in SM.mkStateMachineClient (SM.StateMachineInstance machine inst)
 
-startAuction :: Value -> POSIXTime -> POSIXTime -> Contract () SellerSchema AuctionError ()
-startAuction asset endTime payoutTime = do
+startAuction :: P.Params -> Value -> POSIXTime -> POSIXTime -> Contract () SellerSchema AuctionError ()
+startAuction cfg asset endTime payoutTime = do
     self <- ownFirstPaymentPubKeyHash
     let params = AuctionParams self asset endTime payoutTime
-    void $ SM.runInitialise (client params) (Ongoing []) (apAsset params)
+    void $ SM.runInitialise cfg (client params) (Ongoing []) (apAsset params)
 
-bid :: AuctionParams -> Promise () BidderSchema AuctionError ()
-bid params = endpoint @"bid" $ \ BidArgs{secretBid} -> do
+bid :: P.Params -> AuctionParams -> Promise () BidderSchema AuctionError ()
+bid cfg aparams = endpoint @"bid" $ \ BidArgs{secretBid} -> do
     self <- ownFirstPaymentPubKeyHash
     let sBid = extractSecret secretBid
-    void $ SM.runStep (client params) (PlaceBid $ SealedBid (hashSecretInteger sBid) self)
+    void $ SM.runStep cfg (client aparams) (PlaceBid $ SealedBid (hashSecretInteger sBid) self)
 
-reveal :: AuctionParams -> Promise () BidderSchema AuctionError ()
-reveal params = endpoint @"reveal" $ \ RevealArgs{publicBid} -> do
+reveal :: P.Params -> AuctionParams -> Promise () BidderSchema AuctionError ()
+reveal cfg aparams = endpoint @"reveal" $ \ RevealArgs{publicBid} -> do
     self <- ownFirstPaymentPubKeyHash
-    void $ SM.runStep (client params) (RevealBid $ RevealedBid publicBid self)
+    void $ SM.runStep cfg (client aparams) (RevealBid $ RevealedBid publicBid self)
 
-payout :: (HasEndpoint "payout" () s) => AuctionParams -> Promise () s AuctionError ()
-payout params = endpoint @"payout" $ \() -> do
-    void $ SM.runStep (client params) Payout
+payout :: (HasEndpoint "payout" () s) => P.Params -> AuctionParams -> Promise () s AuctionError ()
+payout cfg aparams = endpoint @"payout" $ \() -> do
+    void $ SM.runStep cfg (client aparams) Payout
 
 -- | Top-level contract for seller
-sellerContract :: AuctionParams -> Contract () SellerSchema AuctionError ()
-sellerContract params@AuctionParams{..} = startAuction apAsset apEndTime apPayoutTime >> awaitPromise (payout params)
+sellerContract :: P.Params -> AuctionParams -> Contract () SellerSchema AuctionError ()
+sellerContract cfg params@AuctionParams{..} = startAuction cfg apAsset apEndTime apPayoutTime >> awaitPromise (payout cfg params)
 
 -- | Top-level contract for buyer
-bidderContract :: AuctionParams -> Contract () BidderSchema AuctionError ()
-bidderContract params = selectList [bid params, reveal params, payout params] >> bidderContract params
+bidderContract :: P.Params -> AuctionParams -> Contract () BidderSchema AuctionError ()
+bidderContract cfg aparams = selectList [bid cfg aparams, reveal cfg aparams, payout cfg aparams] >> bidderContract cfg aparams

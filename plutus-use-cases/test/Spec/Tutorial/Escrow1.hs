@@ -18,6 +18,7 @@ module Spec.Tutorial.Escrow1(prop_Escrow, EscrowModel) where
 import Control.Lens hiding (both, elements)
 import Control.Monad (void)
 import Data.Data
+import Data.Default (def)
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -64,8 +65,8 @@ instance ContractModel EscrowModel where
 
   instanceContract _ WalletKey{} _ = testContract
     where
-      testContract = selectList [ void $ payEp escrowParams
-                                , void $ redeemEp escrowParams
+      testContract = selectList [ void $ payEp def escrowParams
+                                , void $ redeemEp def escrowParams
                                 ] >> testContract
 
   nextState a = case a of

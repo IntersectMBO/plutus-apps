@@ -8,6 +8,7 @@
 module Spec.TxConstraints.RequiredSigner(tests) where
 
 import Control.Monad (void)
+import Data.Default (def)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -48,7 +49,7 @@ mustBeSignedByContract pk pkh = do
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
                 (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
@@ -61,7 +62,7 @@ mustBeSignedByContract pk pkh = do
             <> Constraints.mustIncludeDatumInTx unitDatum
             <> Constraints.mustBeSignedBy pkh
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 withoutOffChainMustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
@@ -70,7 +71,7 @@ withoutOffChainMustBeSignedByContract pk pkh = do
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
                 (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
@@ -82,7 +83,7 @@ withoutOffChainMustBeSignedByContract pk pkh = do
             Constraints.collectFromTheScript utxos pkh
             <> Constraints.mustIncludeDatumInTx unitDatum
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 ownWallet :: TestTree

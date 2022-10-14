@@ -405,15 +405,16 @@ data SomeLookupsAndConstraints where
 -- | Given a list of 'SomeLookupsAndConstraints' describing the constraints
 --   for several scripts, build a single transaction that runs all the scripts.
 mkSomeTx
-    :: [SomeLookupsAndConstraints]
+    :: Params
+    -> [SomeLookupsAndConstraints]
     -> Either MkTxError UnbalancedTx
-mkSomeTx xs =
+mkSomeTx cfg xs =
     let process = \case
             SomeLookupsAndConstraints lookups constraints ->
                 processLookupsAndConstraints lookups constraints
     in fmap cpsUnbalancedTx
         $ runExcept
-        $ execStateT (traverse process xs) initialState
+        $ execStateT (traverse process xs) (initialState {cpsParams = cfg})
 
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
@@ -455,15 +456,17 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, t
 --   the constraints. To use this in a contract, see
 --   'Plutus.Contract.submitTxConstraints'
 --   and related functions.
+--  This function may be used to also consider a specific Ledger.Params configuration
 mkTx
     :: ( FromData (DatumType a)
        , ToData (DatumType a)
        , ToData (RedeemerType a)
        )
-    => ScriptLookups a
+    => Params
+    -> ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> Either MkTxError UnbalancedTx
-mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
+mkTx cfg lookups txc = mkSomeTx cfg [SomeLookupsAndConstraints lookups txc]
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).

@@ -19,6 +19,7 @@ module Spec.Tutorial.Escrow2(prop_Escrow, EscrowModel) where
 import Control.Lens hiding (both, elements)
 import Control.Monad (void)
 import Data.Data
+import Data.Default (def)
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -133,8 +134,8 @@ testWallets :: [Wallet]
 testWallets = [w1, w2, w3, w4, w5]
 
 testContract :: EscrowParams Datum -> Contract () EscrowSchema EscrowError ()
-testContract params = selectList [ void $ payEp params
-                                 , void $ redeemEp params
+testContract params = selectList [ void $ payEp def params
+                                 , void $ redeemEp def params
                                  ] >> testContract params
 
 

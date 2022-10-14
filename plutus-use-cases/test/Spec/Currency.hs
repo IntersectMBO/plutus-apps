@@ -3,6 +3,7 @@
 module Spec.Currency(tests, currencyTrace) where
 
 import Control.Monad (void)
+import Data.Default (def)
 import Plutus.Contract
 import Plutus.Contract.Test
 import Plutus.V1.Ledger.Scripts qualified as Ledger
@@ -37,4 +38,4 @@ tests = testGroup "currency"
 theContract :: Contract () EmptySchema Cur.CurrencyError OneShotCurrency
 theContract =
     let amounts = [("my currency", 1000), ("my token", 1)] in
-    Cur.mintContract (mockWalletPaymentPubKeyHash w1) amounts
+    Cur.mintContract def (mockWalletPaymentPubKeyHash w1) amounts

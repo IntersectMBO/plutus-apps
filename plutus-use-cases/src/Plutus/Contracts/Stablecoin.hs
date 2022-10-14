@@ -89,6 +89,7 @@ import Ledger.Address (PaymentPubKey)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Scripts (MintingPolicyHash)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (AssetClass, TokenName, Value)
@@ -399,13 +400,13 @@ instance AsSMContractError StablecoinError where
 
 -- | A 'Contract' that initialises the state machine and then accepts 'Input'
 --   transitions.
-contract :: Promise () StablecoinSchema StablecoinError ()
-contract = endpoint @"initialise" $ \sc -> do
+contract :: P.Params -> Promise () StablecoinSchema StablecoinError ()
+contract cfg = endpoint @"initialise" $ \sc -> do
     let theClient = machineClient (typedValidator sc) sc
-    _ <- SM.runInitialise theClient (initialState theClient) (Ada.lovelaceValueOf 1)
+    _ <- SM.runInitialise cfg theClient (initialState theClient) (Ada.lovelaceValueOf 1)
     forever $ awaitPromise $ endpoint @"run step" $ \i -> do
         checkTransition theClient sc i
-        SM.runStep theClient i
+        SM.runStep cfg theClient i
 
 -- | Apply 'checkValidState' to the states before and after a transition
 --   and log a warning if something isn't right.

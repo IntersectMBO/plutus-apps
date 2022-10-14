@@ -48,6 +48,7 @@ import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Tx (ChainIndexTxOut (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
@@ -156,16 +157,16 @@ data GuessArgs =
           deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 -- | The "lock" contract endpoint. See note [Contract endpoints]
-lock :: AsContractError e => Promise () GameSchema e ()
-lock = endpoint @"lock" $ \LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } -> do
+lock :: AsContractError e => P.Params -> Promise () GameSchema e ()
+lock cfg = endpoint @"lock" $ \LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } -> do
     logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
     let lookups = Constraints.typedValidatorLookups (gameInstance lockArgsGameParam)
         tx = Constraints.mustPayToTheScriptWithDatumInTx (hashString lockArgsSecret) lockArgsValue
-    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= yieldUnbalancedTx
+    mkTxConstraints cfg lookups tx >>= adjustUnbalancedTx >>= yieldUnbalancedTx
 
 -- | The "guess" contract endpoint. See note [Contract endpoints]
-guess :: AsContractError e => Promise () GameSchema e ()
-guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -> do
+guess :: AsContractError e => P.Params -> Promise () GameSchema e ()
+guess cfg = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -> do
     -- Wait for script to have a UTxO of a least 1 lovelace
     logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
     utxos <- fundsAtAddressGeq (gameAddress guessArgsGameParam) (Ada.lovelaceValueOf 1)
@@ -175,7 +176,7 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -
         redeemer = clearString guessArgsSecret
         tx       = Constraints.collectFromTheScript utxos redeemer
 
-    unbalancedTx <- mkTxConstraints lookups tx
+    unbalancedTx <- mkTxConstraints cfg lookups tx
     yieldUnbalancedTx unbalancedTx
 
 -- | Find the secret word in the Datum of the UTxOs
@@ -189,7 +190,7 @@ secretWordValue o = do
   Datum d <- snd (_ciTxOutScriptDatum o)
   PlutusTx.fromBuiltinData d
 
-contract :: AsContractError e => Contract () GameSchema e ()
-contract = do
+contract :: AsContractError e => P.Params -> Contract () GameSchema e ()
+contract cfg = do
     logInfo @Haskell.String "Waiting for lock or guess endpoint..."
-    selectList [lock, guess] >> contract
+    selectList [lock cfg, guess cfg] >> contract cfg

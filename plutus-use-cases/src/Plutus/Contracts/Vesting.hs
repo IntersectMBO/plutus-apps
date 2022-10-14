@@ -37,6 +37,7 @@ import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentP
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Typed.Scripts qualified as Scripts
@@ -167,12 +168,12 @@ makeClassyPrisms ''VestingError
 instance AsContractError VestingError where
     _ContractError = _VContractError
 
-vestingContract :: VestingParams -> Contract () VestingSchema VestingError ()
-vestingContract vesting = selectList [vest, retrieve]
+vestingContract :: P.Params -> VestingParams -> Contract () VestingSchema VestingError ()
+vestingContract cfg vesting = selectList [vest, retrieve]
   where
-    vest = endpoint @"vest funds" $ \() -> vestFundsC vesting
+    vest = endpoint @"vest funds" $ \() -> vestFundsC cfg vesting
     retrieve = endpoint @"retrieve funds" $ \payment -> do
-        liveness <- retrieveFundsC vesting payment
+        liveness <- retrieveFundsC cfg vesting payment
         case liveness of
             Alive -> awaitPromise retrieve
             Dead  -> pure ()
@@ -183,11 +184,12 @@ payIntoContract = mustPayToTheScriptWithDatumInTx ()
 vestFundsC
     :: ( AsVestingError e
        )
-    => VestingParams
+    => P.Params
+    -> VestingParams
     -> Contract w s e ()
-vestFundsC vesting = mapError (review _VestingError) $ do
+vestFundsC cfg vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
+    mkTxConstraints cfg (Constraints.typedValidatorLookups $ typedValidator vesting) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -204,10 +206,11 @@ data Liveness = Alive | Dead
 retrieveFundsC
     :: ( AsVestingError e
        )
-    => VestingParams
+    => P.Params
+    -> VestingParams
     -> Value
     -> Contract w s e Liveness
-retrieveFundsC vesting payment = mapError (review _VestingError) $ do
+retrieveFundsC cfg vesting payment = mapError (review _VestingError) $ do
     let inst = typedValidator vesting
         addr = Scripts.validatorAddress inst
     now <- currentTime
@@ -234,7 +237,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
     void $ waitNSlots 1 -- see [slots and POSIX time]
-    mkTxConstraints (Constraints.typedValidatorLookups inst
-                  <> Constraints.unspentOutputs unspentOutputs) tx
+    mkTxConstraints cfg ( Constraints.typedValidatorLookups inst
+                                 <> Constraints.unspentOutputs unspentOutputs ) tx
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

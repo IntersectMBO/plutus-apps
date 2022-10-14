@@ -64,6 +64,7 @@ import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (after, before, from)
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -219,17 +220,18 @@ typedValidator escrow = go (Haskell.fmap datumHash escrow) where
     wrap = Scripts.mkUntypedValidator
 
 escrowContract
-    :: EscrowParams Datum
+    :: P.Params
+    -> EscrowParams Datum
     -> Contract () EscrowSchema EscrowError ()
-escrowContract escrow =
+escrowContract cfg escrow =
     let inst = typedValidator escrow
         payAndRefund = endpoint @"pay-escrow" $ \vl -> do
-            _ <- pay inst escrow vl
+            _ <- pay cfg inst escrow vl
             _ <- awaitTime $ escrowDeadline escrow
-            refund inst escrow
+            refund cfg inst escrow
     in selectList
         [ void payAndRefund
-        , void $ redeemEp escrow
+        , void $ redeemEp cfg escrow
         ]
 
 -- | 'pay' with an endpoint that gets the owner's public key and the
@@ -239,29 +241,32 @@ payEp ::
     ( HasEndpoint "pay-escrow" Value s
     , AsEscrowError e
     )
-    => EscrowParams Datum
+    => P.Params
+    -> EscrowParams Datum
     -> Promise w s e TxId
-payEp escrow = promiseMap
+payEp cfg escrow = promiseMap
     (mapError (review _EContractError))
-    (endpoint @"pay-escrow" $ pay (typedValidator escrow) escrow)
+    (endpoint @"pay-escrow" $ pay cfg (typedValidator escrow) escrow)
 
 -- | Pay some money into the escrow contract.
 pay ::
     forall w s e.
     ( AsContractError e
     )
-    => TypedValidator Escrow
+    => P.Params
+    -- ^ Ledger Params configuration
+    -> TypedValidator Escrow
     -- ^ The instance
     -> EscrowParams Datum
     -- ^ The escrow contract
     -> Value
     -- ^ How much money to pay in
     -> Contract w s e TxId
-pay inst escrow vl = do
+pay cfg inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    mkTxConstraints cfg (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx
         >>= submitUnbalancedTx
         >>= return . getCardanoTxId
@@ -275,11 +280,12 @@ redeemEp ::
     ( HasEndpoint "redeem-escrow" () s
     , AsEscrowError e
     )
-    => EscrowParams Datum
+    => P.Params
+    -> EscrowParams Datum
     -> Promise w s e RedeemSuccess
-redeemEp escrow = promiseMap
+redeemEp cfg escrow = promiseMap
     (mapError (review _EscrowError))
-    (endpoint @"redeem-escrow" $ \() -> redeem (typedValidator escrow) escrow)
+    (endpoint @"redeem-escrow" $ \() -> redeem cfg (typedValidator escrow) escrow)
 
 -- | Redeem all outputs at the contract address using a transaction that
 --   has all the outputs defined in the contract's list of targets.
@@ -287,10 +293,11 @@ redeem ::
     forall w s e.
     ( AsEscrowError e
     )
-    => TypedValidator Escrow
+    => P.Params
+    -> TypedValidator Escrow
     -> EscrowParams Datum
     -> Contract w s e RedeemSuccess
-redeem inst escrow = mapError (review _EscrowError) $ do
+redeem cfg inst escrow = mapError (review _EscrowError) $ do
     let addr = Scripts.validatorAddress inst
     current <- currentTime
     unspentOutputs <- utxosAt addr
@@ -301,13 +308,13 @@ redeem inst escrow = mapError (review _EscrowError) $ do
                 <> foldMap mkTx (escrowTargets escrow)
                 <> Constraints.mustValidateIn valRange
     if current >= escrowDeadline escrow
-    then throwing _RedeemFailed DeadlinePassed
-    else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
-         then throwing _RedeemFailed NotEnoughFundsAtAddress
-         else do
-           utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                                 <> Constraints.unspentOutputs unspentOutputs
-                                  ) tx
+      then throwing _RedeemFailed DeadlinePassed
+      else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
+           then throwing _RedeemFailed NotEnoughFundsAtAddress
+           else do
+           utx <- mkTxConstraints cfg ( Constraints.typedValidatorLookups inst
+                                               <> Constraints.unspentOutputs unspentOutputs
+                                             ) tx
            adjusted <- adjustUnbalancedTx utx
            RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
 
@@ -320,17 +327,19 @@ refundEp ::
     forall w s.
     ( HasEndpoint "refund-escrow" () s
     )
-    => EscrowParams Datum
+    => P.Params
+    -> EscrowParams Datum
     -> Promise w s EscrowError RefundSuccess
-refundEp escrow = endpoint @"refund-escrow" $ \() -> refund (typedValidator escrow) escrow
+refundEp cfg escrow = endpoint @"refund-escrow" $ \() -> refund cfg (typedValidator escrow) escrow
 
 -- | Claim a refund of the contribution.
 refund ::
     forall w s.
-    TypedValidator Escrow
+    P.Params
+    -> TypedValidator Escrow
     -> EscrowParams Datum
     -> Contract w s EscrowError RefundSuccess
-refund inst escrow = do
+refund cfg inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
@@ -339,11 +348,11 @@ refund inst escrow = do
                 <> Constraints.mustValidateIn (from (escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                              <> Constraints.unspentOutputs unspentOutputs
-                               ) tx'
-        adjusted <- adjustUnbalancedTx utx
-        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
+      utx <- mkTxConstraints cfg ( Constraints.typedValidatorLookups inst
+                                          <> Constraints.unspentOutputs unspentOutputs
+                                        ) tx'
+      adjusted <- adjustUnbalancedTx utx
+      RefundSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
     else throwing _RefundFailed ()
 
 -- | Pay some money into the escrow contract. Then release all funds to their
@@ -351,23 +360,24 @@ refund inst escrow = do
 --   or reclaim the contribution if the goal has not been met.
 payRedeemRefund ::
     forall w s.
-    EscrowParams Datum
+    P.Params
+    -> EscrowParams Datum
     -> Value
     -> Contract w s EscrowError (Either RefundSuccess RedeemSuccess)
-payRedeemRefund params vl = do
+payRedeemRefund cfg params vl = do
     let inst = typedValidator params
         go = do
             cur <- utxosAt (Scripts.validatorAddress inst)
             let presentVal = foldMap (view Tx.ciTxOutValue) cur
             if presentVal `geq` targetTotal params
-                then Right <$> redeem inst params
+                then Right <$> redeem cfg inst params
                 else do
                     time <- currentTime
                     if time >= escrowDeadline params
-                        then Left <$> refund inst params
+                        then Left <$> refund cfg inst params
                         else waitNSlots 1 >> go
     -- Pay the value 'vl' into the contract
-    _ <- pay inst params vl
+    _ <- pay cfg inst params vl
     go
 
 covIdx :: CoverageIndex

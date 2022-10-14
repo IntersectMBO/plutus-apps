@@ -32,6 +32,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Tx (getCardanoTxId)
 import Ledger.Value (TokenName)
 import Plutus.Contract
@@ -65,8 +66,8 @@ type STOSubscriberSchema = Endpoint "sto" STOSubscriber
 subscribeSTO :: forall w s.
     ( HasEndpoint "sto" STOSubscriber s
     )
-    => Contract w s UnlockError ()
-subscribeSTO = forever $ handleError (const $ return ()) $ awaitPromise $
+    => P.Params -> Contract w s UnlockError ()
+subscribeSTO cfg = forever $ handleError (const $ return ()) $ awaitPromise $
     endpoint @"sto" $ \STOSubscriber{wCredential, wSTOIssuer, wSTOTokenName, wSTOAmount} -> do
         (credConstraints, credLookups) <- obtainCredentialTokenData wCredential
         let stoData =
@@ -84,7 +85,7 @@ subscribeSTO = forever $ handleError (const $ return ()) $ awaitPromise $
                 Constraints.plutusV1MintingPolicy (STO.policy stoData)
                 <> credLookups
         mapError WithdrawTxError
-            $ submitTxConstraintsWith lookups constraints >>= awaitTxConfirmed . getCardanoTxId
+            $ submitTxConstraintsWith cfg lookups constraints >>= awaitTxConfirmed . getCardanoTxId
 
 type UnlockExchangeSchema = Endpoint "unlock from exchange" Credential
 
@@ -93,14 +94,14 @@ type UnlockExchangeSchema = Endpoint "unlock from exchange" Credential
 unlockExchange :: forall w s.
     ( HasEndpoint "unlock from exchange" Credential s
     )
-    => Contract w s UnlockError ()
-unlockExchange = awaitPromise $ endpoint @"unlock from exchange" $ \credential -> do
+    => P.Params -> Contract w s UnlockError ()
+unlockExchange cfg = awaitPromise $ endpoint @"unlock from exchange" $ \credential -> do
     ownPK <- mapError WithdrawPkError ownFirstPaymentPubKeyHash
     (credConstraints, credLookups) <- obtainCredentialTokenData credential
     (accConstraints, accLookups) <-
         mapError UnlockExchangeTokenAccError
         $ TokenAccount.redeemTx (Credential.tokenAccount credential) ownPK
-    case Constraints.mkSomeTx [SomeLookupsAndConstraints credLookups credConstraints, SomeLookupsAndConstraints accLookups accConstraints] of
+    case Constraints.mkSomeTx cfg [SomeLookupsAndConstraints credLookups credConstraints, SomeLookupsAndConstraints accLookups accConstraints] of
         Left mkTxErr -> throwError (UnlockMkTxError mkTxErr)
         Right utx -> mapError WithdrawTxError $ do
             tx <- submitUnbalancedTx utx

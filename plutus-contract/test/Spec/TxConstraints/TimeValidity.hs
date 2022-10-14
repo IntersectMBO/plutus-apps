@@ -10,6 +10,7 @@ module Spec.TxConstraints.TimeValidity(tests) where
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
+import Data.Default (def)
 import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Data.Void (Void)
@@ -62,7 +63,7 @@ contract = do
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
                 (Ada.lovelaceValueOf 25000000)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
@@ -74,7 +75,7 @@ contract = do
             <> Constraints.mustIncludeDatumInTx unitDatum
             <> Constraints.mustValidateIn (from $ now + 1000)
     void $ waitNSlots 2
-    ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @Void def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
     cSlot <- Con.currentPABSlot
     logInfo @String $ "Current slot: " ++ show cSlot

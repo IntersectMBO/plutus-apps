@@ -164,7 +164,7 @@ vestFundsC
     -> Contract () s T.Text ()
 vestFundsC vesting = do
     let txn = payIntoContract (totalAmount vesting)
-    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) txn
+    mkTxConstraints def (Constraints.typedValidatorLookups $ typedValidator vesting) txn
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
@@ -208,7 +208,7 @@ retrieveFundsC vesting payment = do
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
     void $ waitNSlots 1 -- wait until we reach a slot in the validity range
-    mkTxConstraints (Constraints.typedValidatorLookups inst
+    mkTxConstraints def (Constraints.typedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) txn
       >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

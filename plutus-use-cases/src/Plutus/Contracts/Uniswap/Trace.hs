@@ -15,6 +15,7 @@ module Plutus.Contracts.Uniswap.Trace(
 
 import Control.Monad (forM_, when)
 import Control.Monad.Freer.Error (throwError)
+import Data.Default (def)
 import Data.Map qualified as Map
 import Data.Monoid qualified as Monoid
 import Data.Semigroup qualified as Semigroup
@@ -42,13 +43,13 @@ uniswapTrace = do
     let coins = Map.fromList [(tn, Types.mkCoin cs tn) | tn <- tokenNames]
         ada   = Types.mkCoin adaSymbol adaToken
 
-    cidStart <- Emulator.activateContract (knownWallet 1) ownerEndpoint "start"
+    cidStart <- Emulator.activateContract (knownWallet 1) (ownerEndpoint def) "start"
     _ <- Emulator.waitNSlots 5
     us <- Emulator.observableState cidStart >>= \case
                 Monoid.Last (Just (Right v)) -> pure v
                 _                            -> throwError $ GenericError "initialisation failed"
-    cid1 <- Emulator.activateContractWallet (knownWallet 2) (awaitPromise $ userEndpoints us)
-    cid2 <- Emulator.activateContractWallet (knownWallet 3) (awaitPromise $ userEndpoints us)
+    cid1 <- Emulator.activateContractWallet (knownWallet 2) (awaitPromise $ userEndpoints def us)
+    cid2 <- Emulator.activateContractWallet (knownWallet 3) (awaitPromise $ userEndpoints def us)
     _ <- Emulator.waitNSlots 5
 
     let cp = OffChain.CreateParams ada (coins Map.! "A") 20_000_000 500000
@@ -66,14 +67,14 @@ uniswapTrace = do
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 setupTokens = do
     ownPK <- Contract.ownFirstPaymentPubKeyHash
-    cur   <- Currency.mintContract ownPK [(tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
+    cur   <- Currency.mintContract def ownPK [(tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs tn amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
         let pkh = mockWalletPaymentPubKeyHash w
         when (pkh /= ownPK) $ do
-            mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+            mkTxConstraints @Void def mempty (mustPayToPubKey pkh v)
               >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur

@@ -8,7 +8,7 @@ module Spec.SimpleEscrow(tests) where
 
 import Control.Lens
 import Control.Monad (void)
-
+import Data.Default (def)
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -31,7 +31,7 @@ tests = testGroup "simple-escrow"
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
             let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
-            hdl <- Trace.activateContractWallet w1 lockEp
+            hdl <- Trace.activateContractWallet w1 $ lockEp def
             Trace.callEndpoint @"lock" hdl params
     , checkPredicateOptions options "can lock and redeem"
         ( walletFundsChange w1 (token1 (-10) <> token2 5)
@@ -41,11 +41,11 @@ tests = testGroup "simple-escrow"
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
             let params = mkEscrowParams startTime (token1 10) (token2 5)
 
-            hdl1 <- Trace.activateContractWallet w1 lockEp
+            hdl1 <- Trace.activateContractWallet w1 $ lockEp def
             Trace.callEndpoint @"lock" hdl1 params
             void $ Trace.waitNSlots 1
 
-            hdl2 <- Trace.activateContractWallet w2 (void redeemEp)
+            hdl2 <- Trace.activateContractWallet w2 (void $ redeemEp def)
             void $ Trace.callEndpoint @"redeem" hdl2 params
     , checkPredicate "can lock and refund"
         ( walletFundsChange w1 mempty
@@ -55,7 +55,7 @@ tests = testGroup "simple-escrow"
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
             let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
-            hdl <- Trace.activateContractWallet w1 (lockEp <> void refundEp)
+            hdl <- Trace.activateContractWallet w1 (lockEp def <> (void $ refundEp def))
             Trace.callEndpoint @"lock" hdl params
 
             void $ Trace.waitNSlots 100
@@ -68,10 +68,10 @@ tests = testGroup "simple-escrow"
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
             let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
-            hdl1 <- Trace.activateContractWallet w1 lockEp
+            hdl1 <- Trace.activateContractWallet w1 $ lockEp def
             Trace.callEndpoint @"lock" hdl1 params
 
-            hdl2 <- Trace.activateContractWallet w2 (void refundEp)
+            hdl2 <- Trace.activateContractWallet w2 (void $ refundEp def)
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl2 params
     , checkPredicateOptions options "can't redeem if you can't pay"
@@ -84,11 +84,11 @@ tests = testGroup "simple-escrow"
             -- allocate only 500 ).
             let params = mkEscrowParams startTime (token1 10) (token2 501)
 
-            hdl1 <- Trace.activateContractWallet w1 lockEp
+            hdl1 <- Trace.activateContractWallet w1 $ lockEp def
             Trace.callEndpoint @"lock" hdl1 params
             void $ Trace.waitNSlots 1
 
-            hdl2 <- Trace.activateContractWallet w2 (void redeemEp)
+            hdl2 <- Trace.activateContractWallet w2 (void $ redeemEp def)
             void $ Trace.callEndpoint @"redeem" hdl2 params
     ]
 

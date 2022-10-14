@@ -9,6 +9,7 @@
 module Spec.TxConstraints.MustSpendAtLeast(tests) where
 
 import Control.Monad (void)
+import Data.Default (def)
 import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
@@ -47,7 +48,7 @@ mustSpendAtLeastContract offAmt onAmt pkh = do
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 onAmt
                 (Ada.lovelaceValueOf scriptBalance)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt scrAddress
@@ -58,7 +59,7 @@ mustSpendAtLeastContract offAmt onAmt pkh = do
             Constraints.collectFromTheScript utxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
             <> Constraints.mustSpendAtLeast (Ada.lovelaceValueOf offAmt)
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()

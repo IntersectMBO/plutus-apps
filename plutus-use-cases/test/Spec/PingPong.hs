@@ -3,6 +3,7 @@
 module Spec.PingPong(tests, pingPongTrace, twoPartiesTrace) where
 
 import Control.Monad (void)
+import Data.Default (def)
 import Data.Maybe (isNothing)
 import Plutus.Contract
 import Plutus.Contract.Test
@@ -16,10 +17,10 @@ import Test.Tasty
 
 theContract :: Contract () PingPongSchema PingPongError ()
 theContract = do
-    _ <- awaitPromise PingPong.initialise
-    PingPong.runPong
-    PingPong.runPing
-    PingPong.runPong
+    _ <- awaitPromise (PingPong.initialise def)
+    PingPong.runPong def
+    PingPong.runPing def
+    PingPong.runPong def
 
 twoParties :: Contract () PingPongSchema PingPongError (Maybe (OnChainState PingPongState Input))
 twoParties =
@@ -27,8 +28,8 @@ twoParties =
     -- the other party calls "stop"
     -- then the first party will learn that the instance has
     -- terminated when 'runWaitForUpdate' returns 'Nothing'.
-    let p1 = PingPong.initialise `promiseBind` \_ -> PingPong.runWaitForUpdate
-        p2 = PingPong.runStop
+    let p1 = PingPong.initialise def `promiseBind` \_ -> PingPong.runWaitForUpdate
+        p2 = PingPong.runStop def
     in awaitPromise (p1 `select` fmap (const Nothing) p2)
 
 tests :: TestTree
@@ -47,7 +48,7 @@ tests = testGroup "pingpong"
 -- | Initialse, then call the ping and pong endpoints.
 pingPongTrace :: Trace.EmulatorTrace ()
 pingPongTrace = do
-    hdl <- Trace.activateContractWallet w1 theContract
+    hdl <- Trace.activateContractWallet w1 $ theContract
     Trace.callEndpoint @"initialise" hdl ()
     _ <- Trace.waitNSlots 2
     Trace.callEndpoint @"pong" hdl ()

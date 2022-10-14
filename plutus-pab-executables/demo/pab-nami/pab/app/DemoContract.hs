@@ -16,6 +16,7 @@ module DemoContract(
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.OpenApi qualified as OpenApi
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -71,7 +72,7 @@ type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 
 payToWallet :: Promise () PayToWalletSchema ContractError ()
 payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh, skh} -> do
-    utx <- mkTxConstraints @Void mempty (mustPayToPubKeyAddress pkh skh amount)
+    utx <- mkTxConstraints @Void def mempty (mustPayToPubKeyAddress pkh skh amount)
     logInfo @String $ show utx
     adjustUnbalancedTx utx >>= yieldUnbalancedTx
 

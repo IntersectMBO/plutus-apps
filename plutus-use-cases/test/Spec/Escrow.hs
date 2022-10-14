@@ -93,9 +93,9 @@ instance ContractModel EscrowModel where
   instanceContract _ WalletKey{} _ = testContract
     where
       -- TODO: Lazy test contract for now
-      testContract = selectList [ void $ payEp modelParams
-                                , void $ redeemEp modelParams
-                                , void $ refundEp modelParams
+      testContract = selectList [ void $ payEp def modelParams
+                                , void $ redeemEp def modelParams
+                                , void $ refundEp def modelParams
                                 , void $ badRefundEp modelParams
                                 ] >> testContract
 
@@ -197,7 +197,7 @@ prop_NoLockedFunds = checkNoLockedFundsProofWithOptions options noLockProof
 
 tests :: TestTree
 tests = testGroup "escrow"
-    [ let con = void $ payEp @() @EscrowSchema @EscrowError (escrowParams startTime) in
+    [ let con = void $ payEp @() @EscrowSchema @EscrowError def (escrowParams startTime) in
       checkPredicateOptions options "can pay"
         ( assertDone con (Trace.walletInstanceTag w1) (const True) "escrow pay not done"
         .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
@@ -210,8 +210,9 @@ tests = testGroup "escrow"
     , let con = void $ selectEither (payEp @()
                                            @EscrowSchema
                                            @EscrowError
+                                           def
                                            (escrowParams startTime))
-                                    (redeemEp (escrowParams startTime)) in
+                                    (redeemEp def (escrowParams startTime)) in
       checkPredicateOptions options "can redeem"
         ( assertDone con (Trace.walletInstanceTag w3) (const True) "escrow redeem not done"
           .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
@@ -248,8 +249,9 @@ tests = testGroup "escrow"
     , let con = void (payEp @()
                             @EscrowSchema
                             @EscrowError
+                            def
                             (escrowParams startTime))
-             <> void (refundEp (escrowParams startTime)) in
+             <> void (refundEp def (escrowParams startTime)) in
       checkPredicateOptions options "can refund"
         ( walletFundsChange w1 mempty
           .&&. assertDone con (Trace.walletInstanceTag w1) (const True) "refund should succeed")
@@ -288,8 +290,9 @@ redeemTrace = do
     let con = void $ selectEither (payEp @()
                                          @EscrowSchema
                                          @EscrowError
+                                         def
                                          (escrowParams startTime))
-                                  (redeemEp (escrowParams startTime))
+                                  (redeemEp def (escrowParams startTime))
     hdl1 <- Trace.activateContractWallet w1 con
     hdl2 <- Trace.activateContractWallet w2 con
     hdl3 <- Trace.activateContractWallet w3 con
@@ -307,9 +310,10 @@ redeem2Trace = do
     let con = void $ both (payEp @()
                                  @EscrowSchema
                                  @EscrowError
+                                 def
                                  (escrowParams startTime)
                           )
-                          (redeemEp (escrowParams startTime))
+                          (redeemEp def (escrowParams startTime))
     hdl1 <- Trace.activateContractWallet w1 con
     hdl2 <- Trace.activateContractWallet w2 con
     hdl3 <- Trace.activateContractWallet w3 con
@@ -328,8 +332,9 @@ refundTrace = do
     let con = void (payEp @()
                           @EscrowSchema
                           @EscrowError
+                          def
                           (escrowParams startTime))
-           <> void (refundEp (escrowParams startTime))
+           <> void (refundEp def (escrowParams startTime))
     hdl1 <- Trace.activateContractWallet w1 con
     Trace.callEndpoint @"pay-escrow" hdl1 (Ada.adaValueOf 20)
     _ <- Trace.waitNSlots 100

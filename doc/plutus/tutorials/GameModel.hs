@@ -114,7 +114,7 @@ instance CM.ContractModel GameModel where
 -- START initialHandleSpecs
     initialInstances = (`CM.StartContract` ()) . WalletKey <$> wallets
 
-    instanceContract _ WalletKey{} _ = G.contract
+    instanceContract _ WalletKey{} _ = G.contract def
 
     instanceWallet (WalletKey w) = w
 -- END initialHandleSpecs

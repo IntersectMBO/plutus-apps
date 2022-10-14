@@ -113,7 +113,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     [x,y] <- Hedgehog.forAllWith (const "A known key") $ take 2 <$> Gen.shuffle Gen.knownXPrvs
     let pkh = xprvToPaymentPubKeyHash x
         skh = xprvToStakePubKeyHash y
-        txE = Constraints.mkTx @Void mempty (Constraints.mustPayToPubKeyAddress pkh skh (Ada.toValue Ledger.minAdaTxOut))
+        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToPubKeyAddress pkh skh (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
@@ -136,7 +136,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
     let svh = Ledger.StakeValidatorHash $ examplePlutusScriptAlwaysSucceedsHash WitCtxStake
-        txE = Constraints.mkTx @Void mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
@@ -158,7 +158,7 @@ mustUseOutputAsCollateralProp :: Property
 mustUseOutputAsCollateralProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
     let txOutRef = Ledger.TxOutRef (Ledger.TxId "123") 0
-        txE = Constraints.mkTx @Void mempty (Constraints.mustUseOutputAsCollateral txOutRef)
+        txE = Constraints.mkTx @Void def mempty (Constraints.mustUseOutputAsCollateral txOutRef)
     case txE of
         Left e -> do
             Hedgehog.annotateShow e

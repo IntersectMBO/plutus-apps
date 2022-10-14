@@ -88,7 +88,7 @@ data TestingContracts = PingPong
 instance HasDefinitions TestingContracts where
   getDefinitions = [ PingPong ]
   getSchema _    = Builtin.endpointsToSchemas @PingPong.PingPongSchema
-  getContract _  = SomeBuiltin PingPong.simplePingPong
+  getContract _  = SomeBuiltin $ PingPong.simplePingPong def
 
 instance HasPSTypes TestingContracts where
   psTypes = undefined

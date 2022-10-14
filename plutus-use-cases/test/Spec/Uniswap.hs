@@ -17,6 +17,7 @@ import Control.Arrow
 import Control.Exception hiding (assert)
 import Control.Lens hiding (elements)
 import Control.Monad
+import Data.Default (def)
 import Plutus.Contract
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contract.Test hiding (not)
@@ -142,14 +143,14 @@ getBToken = max
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 setupTokens = do
     ownPK <- Contract.ownFirstPaymentPubKeyHash
-    cur   <- Currency.mintContract ownPK [(fromString tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
+    cur   <- Currency.mintContract def ownPK [(fromString tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs (fromString tn) amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
         let pkh = mockWalletPaymentPubKeyHash w
         when (pkh /= ownPK) $ do
-            cs <- mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+            cs <- mkTxConstraints @Void def mempty (mustPayToPubKey pkh v)
             Contract.adjustUnbalancedTx cs >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur
@@ -198,9 +199,9 @@ instance ContractModel UniswapModel where
   instanceWallet (BadReqKey w) = w
 
   instanceContract tokenSem key token = case key of
-    OwnerKey    -> ownerEndpoint
+    OwnerKey    -> ownerEndpoint def
     SetupKey    -> setupTokens
-    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem  $ token
+    WalletKey _ -> toContract . (userEndpoints def) . Uniswap . Coin . tokenSem  $ token
     BadReqKey _ -> toContract . badEndpoints  . Uniswap . Coin . tokenSem  $ token
 
   initialState = UniswapModel Nothing mempty mempty mempty

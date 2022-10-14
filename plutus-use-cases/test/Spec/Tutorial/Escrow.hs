@@ -17,6 +17,7 @@ module Spec.Tutorial.Escrow(tests, prop_Escrow,
 import Control.Lens hiding (both, elements)
 import Control.Monad (void, when)
 import Data.Data
+import Data.Default (def)
 import Data.Foldable
 import Data.Function
 import Data.List (sortBy)
@@ -84,9 +85,9 @@ instance ContractModel EscrowModel where
 
   instanceContract _ WalletKey{} params = testContract
     where
-      testContract = selectList [ void $ payEp params
-                                , void $ redeemEp params
-                                , void $ refundEp params
+      testContract = selectList [ void $ payEp def params
+                                , void $ redeemEp def params
+                                , void $ refundEp def params
                                 ] >> testContract
 
   nextState a = case a of

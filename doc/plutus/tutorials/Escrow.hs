@@ -16,6 +16,7 @@ module Escrow
 import Control.Lens (makeLenses, to, (%=), (.=), (^.))
 import Control.Monad (void)
 import Data.Data (Data)
+import Data.Default (def)
 import Data.Foldable (Foldable (fold))
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -97,8 +98,8 @@ testContract = selectList [ void $ payEp escrowParams
 
   instanceContract _ WalletKey{} _ = testContract
     where
-      testContract = selectList [ void $ payEp escrowParams
-                                , void $ redeemEp escrowParams
+      testContract = selectList [ void $ payEp def escrowParams
+                                , void $ redeemEp def escrowParams
                                 -- , void $ refundEp escrowParams
                                 ] >> testContract
 {- START initialInstances -}

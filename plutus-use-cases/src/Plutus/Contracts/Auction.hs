@@ -39,6 +39,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
+import Ledger.Params as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract
@@ -214,23 +215,23 @@ instance SM.AsSMContractError AuctionError where
     _SMContractError = _StateMachineContractError . SM._SMContractError
 
 -- | Client code for the seller
-auctionSeller :: Value -> POSIXTime -> Contract AuctionOutput SellerSchema AuctionError ()
-auctionSeller value time = do
-    threadToken <- SM.getThreadToken
+auctionSeller :: P.Params -> AuctionParams -> Value -> POSIXTime -> Contract AuctionOutput SellerSchema AuctionError ()
+auctionSeller cfg aparams value time = do
+    threadToken <- SM.getThreadToken cfg
     tell $ threadTokenOut threadToken
     self <- ownFirstPaymentPubKeyHash
     let params       = AuctionParams{apOwner = self, apAsset = value, apEndTime = time }
-        inst         = typedValidator (threadToken, params)
-        client       = machineClient inst threadToken params
+        inst         = typedValidator (threadToken, aparams)
+        client       = machineClient inst threadToken aparams
 
     _ <- handleError
             (\e -> do { logError (AuctionFailed e); throwError (StateMachineContractError e) })
-            (SM.runInitialise client (initialState self) value)
+            (SM.runInitialise cfg client (initialState self) value)
 
     logInfo $ AuctionStarted params
     _ <- awaitTime time
 
-    r <- SM.runStep client Payout
+    r <- SM.runStep cfg client Payout
     case r of
         SM.TransitionFailure i            -> logError (TransitionFailed i) -- TODO: Add an endpoint "retry" to the seller?
         SM.TransitionSuccess (Finished h) -> logInfo $ AuctionEnded h
@@ -319,11 +320,12 @@ waitForChange AuctionParams{apEndTime} client lastHighestBid = do
     selectList [auctionOver, submitOwnBid, otherBid]
 
 handleEvent
-    :: StateMachineClient AuctionState AuctionInput
+    :: P.Params
+    -> StateMachineClient AuctionState AuctionInput
     -> HighestBid
     -> BuyerEvent
     -> Contract AuctionOutput BuyerSchema AuctionError (Either HighestBid ())
-handleEvent client lastHighestBid change =
+handleEvent cfg client lastHighestBid change =
     let continue = pure . Left
         stop     = pure (Right ())
     -- see note [Buyer client]
@@ -333,7 +335,7 @@ handleEvent client lastHighestBid change =
             logInfo @Haskell.String "Submitting bid"
             self <- ownFirstPaymentPubKeyHash
             logInfo @Haskell.String "Received pubkey"
-            r <- SM.runStep client Bid{newBid = ada, newBidder = self}
+            r <- SM.runStep cfg client Bid{newBid = ada, newBidder = self}
             logInfo @Haskell.String "SM: runStep done"
             case r of
                 SM.TransitionFailure i -> logError (TransitionFailed i) >> continue lastHighestBid
@@ -347,13 +349,13 @@ handleEvent client lastHighestBid change =
             continue s
         NoChange s -> continue s
 
-auctionBuyer :: ThreadToken -> AuctionParams -> Contract AuctionOutput BuyerSchema AuctionError ()
-auctionBuyer currency params = do
-    let inst   = typedValidator (currency, params)
-        client = machineClient inst currency params
+auctionBuyer :: P.Params -> ThreadToken -> AuctionParams -> Contract AuctionOutput BuyerSchema AuctionError ()
+auctionBuyer cfg currency aparams = do
+    let inst   = typedValidator (currency, aparams)
+        client = machineClient inst currency aparams
 
         -- the actual loop, see note [Buyer client]
-        loop   = loopM (\h -> waitForChange params client h >>= handleEvent client h)
+        loop   = loopM (\h -> waitForChange aparams client h >>= handleEvent cfg client h)
 
     tell $ threadTokenOut currency
     initial <- currentState client
@@ -361,7 +363,7 @@ auctionBuyer currency params = do
         Just s -> loop s
 
         -- If the state can't be found we wait for it to appear.
-        Nothing -> SM.waitForUpdateUntilTime client (apEndTime params) >>= \case
+        Nothing -> SM.waitForUpdateUntilTime client (apEndTime aparams) >>= \case
             Transition _ (Ongoing s) -> loop s
             InitialState (Ongoing s) -> loop s
             _                        -> logWarn CurrentStateNotFound

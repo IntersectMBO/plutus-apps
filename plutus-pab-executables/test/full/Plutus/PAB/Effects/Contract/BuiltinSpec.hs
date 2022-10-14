@@ -12,6 +12,7 @@ module Plutus.PAB.Effects.Contract.BuiltinSpec
 
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
+import Data.Default (def)
 import Data.UUID.V4 (nextRandom)
 import Plutus.Contracts.PingPong qualified as Contracts.PingPong
 import Plutus.PAB.CoreSpec (assertEqual, runScenario)
@@ -32,7 +33,7 @@ stateTests =
     [ testCase "getResponse/fromResponse round trip empty state"
         $ runScenario
         $ do
-          let c = Contracts.PingPong.combined
+          let c = Contracts.PingPong.combined def
               s = emptyInstanceState c
               b = SomeBuiltin c
 

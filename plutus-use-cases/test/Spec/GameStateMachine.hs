@@ -104,7 +104,7 @@ instance ContractModel GameModel where
 
     instanceWallet (WalletKey w) = w
 
-    instanceContract _ WalletKey{} _ = G.contract
+    instanceContract _ WalletKey{} _ = G.contract def
 
     -- 'perform' gets a state, which includes the GameModel state, but also contract handles for the
     -- wallets and what the model thinks the current balances are.
@@ -396,7 +396,7 @@ runTestsWithCoverage = do
 --   funds with a new secret
 successTrace :: EmulatorTrace ()
 successTrace = do
-    hdl <- Trace.activateContractWallet w1 G.contract
+    hdl <- Trace.activateContractWallet w1 $ G.contract def
     Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
                                             , lockArgsSecret = secretArg "hello"
                                             , lockArgsValue = Ada.adaValueOf 8
@@ -406,7 +406,7 @@ successTrace = do
     _ <- Trace.waitNSlots 2
     _ <- Trace.payToWallet w1 w2 guessTokenVal
     _ <- Trace.waitNSlots 1
-    hdl2 <- Trace.activateContractWallet w2 G.contract
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract def
     Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                , guessArgsOldSecret = "hello"
                                                , guessArgsNewSecret = secretArg "new secret"
@@ -421,7 +421,7 @@ successTrace2 = do
     successTrace
     _ <- Trace.payToWallet w2 w3 guessTokenVal
     _ <- Trace.waitNSlots 1
-    hdl3 <- Trace.activateContractWallet w3 G.contract
+    hdl3 <- Trace.activateContractWallet w3 $ G.contract def
     Trace.callEndpoint @"guess" hdl3 GuessArgs { guessArgsGameParam = gameParam
                                                , guessArgsOldSecret = "new secret"
                                                , guessArgsNewSecret = secretArg "hello"
@@ -433,7 +433,7 @@ successTrace2 = do
 -- than 3 Ada in the script address after guessing.
 traceLeaveTwoAdaInScript :: EmulatorTrace ()
 traceLeaveTwoAdaInScript = do
-    hdl <- Trace.activateContractWallet w1 G.contract
+    hdl <- Trace.activateContractWallet w1 $ G.contract def
     Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
                                             , lockArgsSecret = secretArg "hello"
                                             , lockArgsValue = Ada.adaValueOf 9
@@ -450,7 +450,7 @@ traceLeaveTwoAdaInScript = do
 --   which then makes a wrong guess
 failTrace :: EmulatorTrace ()
 failTrace = do
-    hdl <- Trace.activateContractWallet w1 G.contract
+    hdl <- Trace.activateContractWallet w1 $ G.contract def
     Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
                                             , lockArgsSecret = secretArg "hello"
                                             , lockArgsValue = Ada.adaValueOf 8
@@ -458,7 +458,7 @@ failTrace = do
     _ <- Trace.waitNSlots 2
     _ <- Trace.payToWallet w1 w2 (Ada.toValue 2_000_000 <> guessTokenVal)
     _ <- Trace.waitNSlots 1
-    hdl2 <- Trace.activateContractWallet w2 G.contract
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract def
     _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                     , guessArgsOldSecret = "hola"
                                                     , guessArgsNewSecret = secretArg "new secret"

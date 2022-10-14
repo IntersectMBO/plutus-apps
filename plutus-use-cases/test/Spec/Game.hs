@@ -69,14 +69,14 @@ initialVal = Ada.adaValueOf 10
 -- | Wallet 1 locks some funds, and w2 then makes a correct guess.
 successTrace :: EmulatorTrace ()
 successTrace = do
-    hdl <- Trace.activateContractWallet w1 $ G.contract @Text
+    hdl <- Trace.activateContractWallet w1 $ G.contract @Text def
     Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
                                             , lockArgsSecret = "hello"
                                             , lockArgsValue = Ada.adaValueOf 8
                                             }
     -- One slot for sending the Ada to the script.
     _ <- Trace.waitNSlots 1
-    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text def
     Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                , guessArgsSecret = "hello"
                                                }
@@ -85,13 +85,13 @@ successTrace = do
 -- | Wallet 1 locks some funds, and Wallet 2 makes a wrong guess.
 failTrace :: EmulatorTrace ()
 failTrace = do
-    hdl <- Trace.activateContractWallet w1 $ G.contract @Text
+    hdl <- Trace.activateContractWallet w1 $ G.contract @Text def
     Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
                                             , lockArgsSecret = "hello"
                                             , lockArgsValue = Ada.adaValueOf 8
                                             }
     _ <- Trace.waitNSlots 1
-    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text def
     _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                     , guessArgsSecret = "hola"
                                                     }

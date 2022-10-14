@@ -29,6 +29,7 @@ import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (after, before)
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq)
@@ -123,19 +124,19 @@ validate params action ScriptContext{scriptContextTxInfo=txInfo} =
 
 -- | Lock the 'paying' 'Value' in the output of this script, with the
 -- requirement that the transaction validates before the 'deadline'.
-lockEp :: Promise () EscrowSchema EscrowError ()
-lockEp = endpoint @"lock" $ \params -> do
+lockEp :: P.Params -> Promise () EscrowSchema EscrowError ()
+lockEp cfg = endpoint @"lock" $ \params -> do
   -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
   let valRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)
       tx = Constraints.mustPayToTheScriptWithDatumInTx params (paying params)
             <> Constraints.mustValidateIn valRange
-  void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
+  void $ mkTxConstraints cfg (Constraints.typedValidatorLookups escrowInstance) tx
          >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Attempts to redeem the 'Value' locked into this script by paying in from
 -- the callers address to the payee.
-redeemEp :: Promise () EscrowSchema EscrowError RedeemSuccess
-redeemEp = endpoint @"redeem" redeem
+redeemEp :: P.Params -> Promise () EscrowSchema EscrowError RedeemSuccess
+redeemEp cfg = endpoint @"redeem" redeem
   where
     redeem params = do
       time <- currentTime
@@ -154,14 +155,14 @@ redeemEp = endpoint @"redeem" redeem
       if time >= deadline params
       then throwing _RedeemFailed DeadlinePassed
       else do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
-                              <> Constraints.unspentOutputs unspentOutputs
-                               ) tx >>= adjustUnbalancedTx
+        utx <- mkTxConstraints cfg ( Constraints.typedValidatorLookups escrowInstance
+                                            <> Constraints.unspentOutputs unspentOutputs
+                                          ) tx >>= adjustUnbalancedTx
         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 -- | Refunds the locked amount back to the 'payee'.
-refundEp :: Promise () EscrowSchema EscrowError RefundSuccess
-refundEp = endpoint @"refund" refund
+refundEp :: P.Params -> Promise () EscrowSchema EscrowError RefundSuccess
+refundEp cfg = endpoint @"refund" refund
   where
     refund params = do
       unspentOutputs <- utxosAt escrowAddress
@@ -172,9 +173,9 @@ refundEp = endpoint @"refund" refund
 
       if Constraints.modifiesUtxoSet tx
       then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
-                              <> Constraints.unspentOutputs unspentOutputs
-                               ) tx >>= adjustUnbalancedTx
+        utx <- mkTxConstraints cfg ( Constraints.typedValidatorLookups escrowInstance
+                                            <> Constraints.unspentOutputs unspentOutputs
+                                          ) tx >>= adjustUnbalancedTx
         RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
       else throwing _RefundFailed ()
 

@@ -58,11 +58,11 @@ tokenName :: TokenName
 tokenName = "test token"
 
 contract :: Contract () TokenAccountSchema TokenAccountError ()
-contract = tokenAccountContract
+contract = tokenAccountContract def
 
 account :: Account
 account =
-    let con = Accounts.newAccount @() @TokenAccountSchema @TokenAccountError tokenName (mockWalletPaymentPubKeyHash w1)
+    let con = Accounts.newAccount @() @TokenAccountSchema @TokenAccountError def tokenName (mockWalletPaymentPubKeyHash w1)
         fld = Folds.instanceOutcome @() con (Trace.walletInstanceTag w1)
         trace = Trace.activateContractWallet @_ @() w1 (void con) >> Trace.waitNSlots 2
         getOutcome (Done a) = a

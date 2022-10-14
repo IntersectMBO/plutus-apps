@@ -28,6 +28,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.V1.Ledger.Contexts as V
@@ -52,8 +53,8 @@ data MultiSig =
 
 PlutusTx.makeLift ''MultiSig
 
-contract :: AsContractError e => Contract () MultiSigSchema e ()
-contract = selectList [lock, unlock] >> contract
+contract :: AsContractError e => P.Params -> Contract () MultiSigSchema e ()
+contract cfg = selectList [lock cfg, unlock cfg] >> contract cfg
 
 {-# INLINABLE validate #-}
 validate :: MultiSig -> () -> () -> ScriptContext -> Bool
@@ -74,23 +75,23 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSig
 
 
 -- | Lock some funds in a 'MultiSig' contract.
-lock :: AsContractError e => Promise () MultiSigSchema e ()
-lock = endpoint @"lock" $ \(ms, vl) -> do
+lock :: AsContractError e => P.Params -> Promise () MultiSigSchema e ()
+lock cfg = endpoint @"lock" $ \(ms, vl) -> do
     let inst = typedValidator ms
     let tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
         lookups = Constraints.typedValidatorLookups inst
-    mkTxConstraints lookups tx
+    mkTxConstraints cfg lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 -- | The @"unlock"@ endpoint, unlocking some funds with a list
 --   of signatures.
-unlock :: AsContractError e => Promise () MultiSigSchema e ()
-unlock = endpoint @"unlock" $ \(ms, pks) -> do
+unlock :: AsContractError e => P.Params -> Promise () MultiSigSchema e ()
+unlock cfg = endpoint @"unlock" $ \(ms, pks) -> do
     let inst = typedValidator ms
     utx <- utxosAt (Scripts.validatorAddress inst)
     let tx = Constraints.collectFromTheScript utx ()
                 <> foldMap Constraints.mustBeSignedBy pks
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
-    mkTxConstraints lookups tx
+    mkTxConstraints cfg lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx

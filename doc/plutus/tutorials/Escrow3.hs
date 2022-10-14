@@ -19,6 +19,7 @@ module Escrow3(prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) 
 import Control.Lens (At (at), makeLenses, to, (%=), (.=), (^.))
 import Control.Monad (void, when)
 import Data.Data (Data)
+import Data.Default (def)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -184,9 +185,9 @@ testWallets = [w1, w2, w3, w4, w5]
 
 {- START testContract -}
 testContract :: EscrowParams Datum -> Contract () EscrowSchema EscrowError ()
-testContract params = selectList [ void $ payEp params
-                                 , void $ redeemEp params
-                                 , void $ refundEp params     -- NEW!
+testContract params = selectList [ void $ payEp def params
+                                 , void $ redeemEp def params
+                                 , void $ refundEp def params     -- NEW!
                                  ] >> testContract params
 {- END testContract -}
 

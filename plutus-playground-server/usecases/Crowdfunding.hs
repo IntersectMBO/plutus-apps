@@ -167,7 +167,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    txid <- fmap getCardanoTxId $ mkTxConstraints def (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
@@ -183,7 +183,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+        void $ mkTxConstraints def (Constraints.typedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
             >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()
@@ -205,7 +205,7 @@ scheduleCollection cmp =
         let tx = Constraints.collectFromTheScript unspentOutputs Collect
                 <> Constraints.mustBeSignedBy (campaignOwner cmp)
                 <> Constraints.mustValidateIn (collectionRange cmp)
-        void $ submitTxConstraintsSpending inst unspentOutputs tx
+        void $ submitTxConstraintsSpending def inst unspentOutputs tx
 
 {- note [Transactions in the crowdfunding campaign]
 

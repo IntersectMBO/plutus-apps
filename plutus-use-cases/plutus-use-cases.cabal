@@ -115,6 +115,7 @@ library
       aeson
     , base
     , bytestring
+    , data-default
     , containers
     , freer-simple
     , hashable

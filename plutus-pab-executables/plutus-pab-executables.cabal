@@ -508,6 +508,7 @@ executable plutus-pab-nami-demo
   -- Local components
   --------------------
   build-depends:
+    , data-default
     , playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
@@ -536,6 +537,7 @@ executable plutus-pab-nami-demo-generator
   -- Local components
   --------------------
   build-depends:
+    , data-default
     , playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0

@@ -12,6 +12,7 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Lens ((&))
+import Data.Default (def)
 import Data.Void (Void)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -80,7 +81,7 @@ mustMintCurrencyWithRedeemerContract mintAmount onChainTokenName = do
                 <> Constraints.plutusV1MintingPolicy coinMintingPolicy
         tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
            <> Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer tknName mintAmount
-    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintCurrency onchain constraint to check that tokens are correctly minted with the other policy
@@ -91,7 +92,7 @@ mustMintCurrencyContract = do
                 <> Constraints.plutusV1MintingPolicy coinMintingPolicy
         tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
            <> Constraints.mustMintCurrency coinMintingPolicyHash tknName tknAmount
-    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintValueWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
@@ -102,7 +103,7 @@ mustMintValueWithRedeemerContract mintValue = do
                 <> Constraints.plutusV1MintingPolicy coinMintingPolicy
         tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
            <> Constraints.mustMintValueWithRedeemer unitRedeemer mintValue
-    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintValue onchain constraint to check that tokens are correctly minted with the other policy
@@ -113,7 +114,7 @@ mustMintValueContract = do
                  <> Constraints.plutusV1MintingPolicy coinMintingPolicy
         tx1 = Constraints.mustMintCurrencyWithRedeemer mustMintPolicyHash redeemer tknName 1
            <> Constraints.mustMintValue tknValue
-    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to mint tokens
@@ -155,7 +156,7 @@ mustMintCurrencyWithRedeemerMissingPolicyLookup :: TestTree
 mustMintCurrencyWithRedeemerMissingPolicyLookup =
     let contract :: Contract () Empty ContractError () = do
             let tx1 = Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer tknName tknAmount
-            ledgerTx1 <- submitTx tx1
+            ledgerTx1 <- submitTx def tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicateOptions
@@ -184,7 +185,7 @@ mustMintCurrencyWithRedeemerMissingPolicyContract :: Contract () Empty ContractE
 mustMintCurrencyWithRedeemerMissingPolicyContract = do
     let lookups1 = Constraints.typedValidatorLookups $ mustMintCurrencyWithRedeemerTypedValidator tknName
         tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash $ mustMintCurrencyWithRedeemerTypedValidator tknName)
@@ -194,7 +195,7 @@ mustMintCurrencyWithRedeemerMissingPolicyContract = do
         tx2 =
             Constraints.collectFromTheScript utxos () <>
             Constraints.mustMintCurrencyWithRedeemer coinMintingPolicyHash unitRedeemer tknName tknAmount
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 {-# INLINEABLE mustMintCurrencyWithRedeemerValidator #-}

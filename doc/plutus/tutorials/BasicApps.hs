@@ -18,6 +18,7 @@ module BasicApps where
 
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Ledger (Ada, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
@@ -107,7 +108,7 @@ lockFunds :: SplitData -> Contract () SplitSchema T.Text ()
 lockFunds s@SplitData{amount} = do
     logInfo $ "Locking " <> Haskell.show amount
     let constraints = Constraints.mustPayToTheScript s (Ada.toValue amount)
-    void $ submitTxConstraints splitValidator constraints
+    void $ submitTxConstraints def splitValidator constraints
 
 -- BLOCK8
 
@@ -120,7 +121,7 @@ unlockFunds SplitData{recipient1, recipient2, amount} = do
             Constraints.collectFromTheScript utxos ()
             <> Constraints.mustPayToPubKey recipient1 (Ada.toValue half)
             <> Constraints.mustPayToPubKey recipient2 (Ada.toValue $ amount - half)
-    void $ submitTxConstraintsSpending splitValidator utxos tx
+    void $ submitTxConstraintsSpending def splitValidator utxos tx
 
 -- BLOCK9
 

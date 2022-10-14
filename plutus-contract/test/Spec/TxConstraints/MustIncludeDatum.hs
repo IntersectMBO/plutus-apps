@@ -11,6 +11,7 @@ module Spec.TxConstraints.MustIncludeDatum(tests) where
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Monad (void)
+import Data.Default (def)
 import Data.Text qualified as T
 import Data.Void (Void)
 import Ledger qualified
@@ -81,7 +82,7 @@ mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 validatorDatumBs
                 (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash typedValidator)
@@ -91,7 +92,7 @@ mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
         tx2 =
             Constraints.collectFromTheScript utxos onChainDatums
             <> mustPayToTheScriptAndIncludeDatumsIfUsingOffChainConstraint
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     where
@@ -132,7 +133,7 @@ mustIncludeDatumInTxCalledBeforeOtherConstraints =
             tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                     validatorDatumBs
                     (Ada.lovelaceValueOf 25_000_000)
-        ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+        ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
         awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
         utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash typedValidator)
@@ -146,7 +147,7 @@ mustIncludeDatumInTxCalledBeforeOtherConstraints =
                      otherDatumBs
                      (Ada.lovelaceValueOf 2_000_000)
                 <> Constraints.mustIncludeDatumInTx otherDatumBs
-        ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+        ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
         awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 -- | Uses onchain and offchain constraint mustIncludeDatumInTx to include and
@@ -188,7 +189,7 @@ withoutOffChainConstraintDatumIsNotIncludedInTxBodyByDefault =
                         (Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData validatorDatumBs)
                         (Ada.lovelaceValueOf 25_000_000)
                  <> Constraints.mustMintValueWithRedeemer onChainConstraintDatumsAsRedeemer tknValue
-            mkTxConstraints @Void lookups1 tx1 >>= submitTxConfirmed
+            mkTxConstraints @Void def lookups1 tx1 >>= submitTxConfirmed
 
     in checkPredicate
     "Successful use of onchain mustIncludeDatumInTx (no offchain constraint) to assert that datum is not redundantly included in txbody when sending funds to script but not to witness spending from script"
@@ -206,7 +207,7 @@ mustIncludeDatumInTxForOptionalDatumWithoutOutputDoesNotIncludeDatum =
                 tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                         validatorDatumBs
                         (Ada.lovelaceValueOf 25_000_000)
-            ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+            ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
             utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash typedValidator)
@@ -218,7 +219,7 @@ mustIncludeDatumInTxForOptionalDatumWithoutOutputDoesNotIncludeDatum =
                     <> Constraints.mustIncludeDatumInTx offChainConstraintDatum -- without producing any outputs with datum hash
             handleError (\err -> logError $ "Caught error: " ++ T.unpack err) $ do
                 -- Should fail with error 'DatumNotFoundInTx'
-                ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+                ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
                 awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     in checkPredicate
@@ -237,7 +238,7 @@ mustIncludeDatumInTxToPubKeyAddress =
                 tx1 = Constraints.mustPayWithDatumInTxToPubKey (mockWalletPaymentPubKeyHash w1) validatorDatum (Ada.lovelaceValueOf 25_000_000)
                    <> Constraints.mustIncludeDatumInTx validatorDatum
                    <> Constraints.mustMintValueWithRedeemer onChainConstraintDatumsAsRedeemer tknValue
-            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest def lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
@@ -259,7 +260,7 @@ phase2FailureWhenDatumIsNotInWitnessSet =
                         (Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData validatorDatumBs)
                         (Ada.lovelaceValueOf 25_000_000)
                  <> Constraints.mustMintValueWithRedeemer onChainConstraintDatumsAsRedeemer tknValue
-            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest def lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate

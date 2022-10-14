@@ -13,6 +13,7 @@
 module Spec.Uniswap.Endpoints where
 
 import Control.Monad hiding (fmap)
+import Data.Default (def)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Void (Void)
@@ -77,7 +78,7 @@ badRemove us BadRemoveParams{..} = do
                    Constraints.mustMintValue (negate lVal)         <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
-    mkTxConstraints lookups tx >>= Contract.adjustUnbalancedTx >>= submitTxConfirmed
+    mkTxConstraints def lookups tx >>= Contract.adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "removed liquidity from pool: " ++ show lp
 

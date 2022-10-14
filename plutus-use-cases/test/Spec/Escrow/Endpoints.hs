@@ -7,6 +7,7 @@
 
 module Spec.Escrow.Endpoints where
 
+import Data.Default (def)
 import Data.Text (unpack)
 
 import Control.Monad (void)
@@ -51,8 +52,8 @@ badRefund inst pk = do
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateIn (from (current - 1))
-    utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                          <> Constraints.unspentOutputs unspentOutputs
-                           ) tx'
+    utx <- mkTxConstraints def ( Constraints.typedValidatorLookups inst
+                                     <> Constraints.unspentOutputs unspentOutputs
+                                   ) tx'
     handleError (\err -> logError $ "Caught error: " ++ unpack err) $
       adjustUnbalancedTx utx >>= void . submitUnbalancedTx

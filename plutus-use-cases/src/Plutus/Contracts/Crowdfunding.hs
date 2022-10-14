@@ -51,6 +51,7 @@ module Plutus.Contracts.Crowdfunding (
 import Control.Applicative (Applicative (..))
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
@@ -60,6 +61,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract
@@ -186,8 +188,8 @@ campaignAddress :: Campaign -> PV1.ValidatorHash
 campaignAddress = PV1.validatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
-crowdfunding :: Campaign -> Contract () CrowdfundingSchema ContractError ()
-crowdfunding c = selectList [contribute c, scheduleCollection c]
+crowdfunding :: P.Params -> Campaign -> Contract () CrowdfundingSchema ContractError ()
+crowdfunding cfg c = selectList [contribute cfg c, scheduleCollection cfg c]
 
 -- | A sample campaign
 theCampaign :: PV1.POSIXTime -> Campaign
@@ -201,15 +203,15 @@ theCampaign startTime = Campaign
 --   an endpoint that allows the user to enter their public key and the
 --   contribution. Then waits until the campaign is over, and collects the
 --   refund if the funding was not collected.
-contribute :: Campaign -> Promise () CrowdfundingSchema ContractError ()
-contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
+contribute :: P.Params -> Campaign -> Promise () CrowdfundingSchema ContractError ()
+contribute cfg cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
                 -- We have to subtract '2', see Note [Validity Interval's upper bound]
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    txid <- fmap getCardanoTxId $ mkTxConstraints cfg (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
@@ -224,17 +226,17 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
                 <> Constraints.mustBeSignedBy contributor
     if Constraints.modifiesUtxoSet tx'
     then do
-        logInfo @Text "Claiming refund"
-        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
-                             <> Constraints.unspentOutputs utxo) tx'
-            >>= adjustUnbalancedTx >>= submitUnbalancedTx
+      logInfo @Text "Claiming refund"
+      void $ mkTxConstraints cfg (Constraints.typedValidatorLookups inst
+                                         <> Constraints.unspentOutputs utxo) tx'
+        >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It
 --   watches the campaign address for contributions and collects them if
 --   the funding goal was reached in time.
-scheduleCollection :: Campaign -> Promise () CrowdfundingSchema ContractError ()
-scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
+scheduleCollection :: P.Params -> Campaign -> Promise () CrowdfundingSchema ContractError ()
+scheduleCollection cfg cmp = endpoint @"schedule collection" $ \() -> do
     let inst = typedValidator cmp
 
     -- Expose an endpoint that lets the user fire the starting gun on the
@@ -250,8 +252,8 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
             <> Constraints.mustValidateIn (collectionRange cmp)
 
     logInfo @Text "Collecting funds"
-    void $ mkTxConstraints (Constraints.typedValidatorLookups inst
-                         <> Constraints.unspentOutputs unspentOutputs) tx
+    void $ mkTxConstraints cfg (Constraints.typedValidatorLookups inst
+                                       <> Constraints.unspentOutputs unspentOutputs) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Call the "schedule collection" endpoint and instruct the campaign owner's
@@ -259,7 +261,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
 startCampaign :: EmulatorTrace (ContractHandle () CrowdfundingSchema ContractError)
 startCampaign = do
     startTime <- TimeSlot.scSlotZeroTime <$> getSlotConfig
-    hdl <- Trace.activateContractWallet (knownWallet 1) (crowdfunding $ theCampaign startTime)
+    hdl <- Trace.activateContractWallet (knownWallet 1) (crowdfunding def $ theCampaign startTime)
     Trace.callEndpoint @"schedule collection" hdl ()
     pure hdl
 
@@ -267,7 +269,7 @@ startCampaign = do
 makeContribution :: Wallet -> PV1.Value -> EmulatorTrace ()
 makeContribution w v = do
     startTime <- TimeSlot.scSlotZeroTime <$> getSlotConfig
-    hdl <- Trace.activateContractWallet w (crowdfunding $ theCampaign startTime)
+    hdl <- Trace.activateContractWallet w (crowdfunding def $ theCampaign startTime)
     Trace.callEndpoint @"contribute" hdl Contribution{contribValue=v}
 
 -- | Run a successful campaign with contributions from wallets 2, 3 and 4.

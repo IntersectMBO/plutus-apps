@@ -23,6 +23,7 @@ import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Extras.Log (LogMsg)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (Bifunctor (..))
+import Data.Default (def)
 import Data.Row
 import GHC.Generics (Generic)
 import Prettyprinter
@@ -68,10 +69,10 @@ getTestContracts = \case
     Currency         -> SomeBuiltin $ awaitPromise currency
     AtomicSwap       -> SomeBuiltin $ awaitPromise swp
     PayToWallet      -> SomeBuiltin $ awaitPromise payToWallet
-    PingPong         -> SomeBuiltin pingPong
+    PingPong         -> SomeBuiltin $ pingPong
     where
-        game = Contracts.GameStateMachine.contract
-        currency = Contracts.Currency.mintCurrency
+        game = Contracts.GameStateMachine.contract def
+        currency = Contracts.Currency.mintCurrency def
         swp = first tshow Contracts.AtomicSwap.atomicSwap
         payToWallet = Contracts.PayToWallet.payToWallet
-        pingPong = Contracts.PingPong.combined
+        pingPong = Contracts.PingPong.combined def

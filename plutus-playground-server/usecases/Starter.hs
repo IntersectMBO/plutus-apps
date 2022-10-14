@@ -27,6 +27,7 @@ module Starter where
 --   * redeem
 
 import Control.Monad (void)
+import Data.Default (def)
 import Ledger (Address)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -78,7 +79,7 @@ contract = selectList [publish, redeem]
 publish :: AsContractError e => Promise () Schema e ()
 publish = endpoint @"publish" $ \(i, lockedFunds) -> do
     let tx = Constraints.mustPayToTheScriptWithDatumInTx (MyDatum i) lockedFunds
-    void $ submitTxConstraints starterInstance tx
+    void $ submitTxConstraints def starterInstance tx
 
 -- | The "redeem" contract endpoint.
 redeem :: AsContractError e => Promise () Schema e ()
@@ -86,7 +87,7 @@ redeem = endpoint @"redeem" $ \myRedeemerValue -> do
     unspentOutputs <- utxosAt contractAddress
     let redeemer = MyRedeemer myRedeemerValue
         tx       = Constraints.collectFromTheScript unspentOutputs redeemer
-    void $ submitTxConstraintsSpending starterInstance unspentOutputs tx
+    void $ submitTxConstraintsSpending def starterInstance unspentOutputs tx
 
 endpoints :: AsContractError e => Contract () Schema e ()
 endpoints = contract

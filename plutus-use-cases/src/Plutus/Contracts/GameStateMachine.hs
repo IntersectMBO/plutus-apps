@@ -48,6 +48,7 @@ import Ledger (POSIXTime, PaymentPubKeyHash, ScriptContext, TokenName, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as V
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, Promise, endpoint,
@@ -138,8 +139,8 @@ instance SM.AsSMContractError GameError where
     _SMContractError = _GameSMError . SM._SMContractError
 
 -- | Top-level contract, exposing both endpoints.
-contract :: Contract () GameStateMachineSchema GameError ()
-contract = selectList [lock, guess] >> contract
+contract :: P.Params -> Contract () GameStateMachineSchema GameError ()
+contract cfg = selectList [lock cfg, guess cfg] >> contract cfg
 
 -- | The token that represents the right to make a guess
 newtype GuessToken = GuessToken { unGuessToken :: Value }
@@ -240,22 +241,22 @@ client :: GameParam -> SM.StateMachineClient GameState GameInput
 client gp = SM.mkStateMachineClient $ SM.StateMachineInstance (machine gp) $ typedValidator gp
 
 -- | The @"lock"@ endpoint.
-lock :: Promise () GameStateMachineSchema GameError ()
-lock = endpoint @"lock" $ \LockArgs{lockArgsGameParam, lockArgsSecret, lockArgsValue} -> do
+lock :: P.Params -> Promise () GameStateMachineSchema GameError ()
+lock cfg = endpoint @"lock" $ \LockArgs{lockArgsGameParam, lockArgsSecret, lockArgsValue} -> do
     let secret = HashedString (escape_sha2_256 (toBuiltin . C.pack <$> extractSecret lockArgsSecret))
         sym = Scripts.forwardingMintingPolicyHash $ typedValidator lockArgsGameParam
-    _ <- SM.runInitialise (client lockArgsGameParam) (Initialised sym "guess" secret) lockArgsValue
-    void $ SM.runStep (client lockArgsGameParam) MintToken
+    _ <- SM.runInitialise cfg (client lockArgsGameParam) (Initialised sym "guess" secret) lockArgsValue
+    void $ SM.runStep cfg (client lockArgsGameParam) MintToken
 
 -- | The @"guess"@ endpoint.
-guess :: Promise () GameStateMachineSchema GameError ()
-guess = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessArgsOldSecret, guessArgsNewSecret, guessArgsValueTakenOut} -> do
+guess :: P.Params -> Promise () GameStateMachineSchema GameError ()
+guess cfg = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessArgsOldSecret, guessArgsNewSecret, guessArgsValueTakenOut} -> do
 
     let guessedSecret = ClearString (toBuiltin (C.pack guessArgsOldSecret))
         newSecret     = HashedString (escape_sha2_256 (toBuiltin . C.pack <$> extractSecret guessArgsNewSecret))
 
     void
-        $ SM.runStep (client guessArgsGameParam)
+        $ SM.runStep cfg (client guessArgsGameParam)
             (Guess guessedSecret newSecret guessArgsValueTakenOut)
 
 cc :: PlutusTx.CompiledCode (GameParam -> GameState -> GameInput -> ScriptContext -> ())

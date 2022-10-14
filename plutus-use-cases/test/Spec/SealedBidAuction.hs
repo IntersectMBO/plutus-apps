@@ -92,8 +92,8 @@ instance ContractModel AuctionModel where
     instanceWallet SellerH     = w1
     instanceWallet (BidderH w) = w
 
-    instanceContract _ SellerH   params = sellerContract params
-    instanceContract _ BidderH{} params = bidderContract params
+    instanceContract _ SellerH   params = sellerContract def params
+    instanceContract _ BidderH{} params = bidderContract def params
 
     arbitraryAction s
         | p /= NotStarted =

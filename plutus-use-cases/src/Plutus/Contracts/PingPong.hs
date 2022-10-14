@@ -39,6 +39,7 @@ import Data.Monoid (Last (..))
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), check)
@@ -114,8 +115,8 @@ machineInstance = SM.StateMachineInstance machine typedValidator
 client :: SM.StateMachineClient PingPongState Input
 client = SM.mkStateMachineClient machineInstance
 
-initialise :: forall w. Promise w PingPongSchema PingPongError ()
-initialise = endpoint @"initialise" $ \() -> void $ SM.runInitialise client Pinged (Ada.lovelaceValueOf 1)
+initialise :: forall w. P.Params -> Promise w PingPongSchema PingPongError ()
+initialise cfg = endpoint @"initialise" $ \() -> void $ SM.runInitialise cfg client Pinged (Ada.lovelaceValueOf 1)
 
 run ::
     forall w.
@@ -131,26 +132,26 @@ run expectedState action = do
     let datum = fmap fst maybeState
     go datum
 
-runPing :: forall w. Contract w PingPongSchema PingPongError ()
-runPing = run Ponged ping
+runPing :: forall w. P.Params -> Contract w PingPongSchema PingPongError ()
+runPing cfg = run Ponged (ping cfg)
 
-ping :: forall w. Promise w PingPongSchema PingPongError ()
-ping = endpoint @"ping" $ \() -> void (SM.runStep client Ping)
+ping :: forall w. P.Params -> Promise w PingPongSchema PingPongError ()
+ping cfg = endpoint @"ping" $ \() -> void (SM.runStep cfg client Ping)
 
-runPong :: forall w. Contract w PingPongSchema PingPongError ()
-runPong = run Pinged pong
+runPong :: forall w. P.Params -> Contract w PingPongSchema PingPongError ()
+runPong cfg = run Pinged (pong cfg)
 
-pong :: forall w. Promise w PingPongSchema PingPongError ()
-pong = endpoint @"pong" $ \() -> void (SM.runStep client Pong)
+pong :: forall w. P.Params -> Promise w PingPongSchema PingPongError ()
+pong cfg = endpoint @"pong" $ \() -> void (SM.runStep cfg client Pong)
 
-runStop :: forall w. Promise w PingPongSchema PingPongError ()
-runStop = endpoint @"stop" $ \() -> void (SM.runStep client Stop)
+runStop :: forall w. P.Params -> Promise w PingPongSchema PingPongError ()
+runStop cfg = endpoint @"stop" $ \() -> void (SM.runStep cfg client Stop)
 
 runWaitForUpdate :: forall w. Contract w PingPongSchema PingPongError (Maybe (OnChainState PingPongState Input))
 runWaitForUpdate = SM.waitForUpdate client
 
-combined :: Contract (Last PingPongState) PingPongSchema PingPongError ()
-combined = forever (selectList [initialise, ping, pong, runStop, wait]) where
+combined :: P.Params -> Contract (Last PingPongState) PingPongSchema PingPongError ()
+combined cfg = forever (selectList [initialise cfg, ping cfg, pong cfg, runStop cfg, wait]) where
     wait = endpoint @"wait" $ \() -> do
         logInfo @Haskell.String "runWaitForUpdate"
         newState <- runWaitForUpdate
@@ -160,23 +161,23 @@ combined = forever (selectList [initialise, ping, pong, runStop, wait]) where
                 logInfo $ "new state: " <> Haskell.show (SM.getStateData ocs)
                 tell (Last $ Just $ SM.getStateData ocs)
 
-simplePingPongAuto :: Contract (Last PingPongState) PingPongSchema PingPongError ()
-simplePingPongAuto = do
+simplePingPongAuto :: P.Params -> Contract (Last PingPongState) PingPongSchema PingPongError ()
+simplePingPongAuto cfg = do
   logInfo @Haskell.String "Initialising PingPongAuto"
-  void $ SM.runInitialise client Pinged (Ada.lovelaceValueOf 2)
+  void $ SM.runInitialise cfg client Pinged (Ada.lovelaceValueOf 2)
   logInfo @Haskell.String "Waiting for PONG"
-  awaitPromise pong
+  awaitPromise $ pong cfg
   logInfo @Haskell.String "Waiting for PING"
-  awaitPromise ping
+  awaitPromise $ ping cfg
   logInfo @Haskell.String "Waiting for PONG"
-  awaitPromise pong
+  awaitPromise $ pong cfg
 
-simplePingPong :: Contract (Last PingPongState) PingPongSchema PingPongError ()
-simplePingPong =
-  awaitPromise initialise
-  >> awaitPromise pong
-  >> awaitPromise ping
-  >> awaitPromise pong
+simplePingPong :: P.Params -> Contract (Last PingPongState) PingPongSchema PingPongError ()
+simplePingPong cfg =
+  awaitPromise (initialise cfg)
+  >> awaitPromise (pong cfg)
+  >> awaitPromise (ping cfg)
+  >> awaitPromise (pong cfg)
 
 PlutusTx.unstableMakeIsData ''PingPongState
 PlutusTx.makeLift ''PingPongState

@@ -11,6 +11,7 @@ module Spec.TxConstraints.MustPayToPubKeyAddress(tests) where
 
 import Control.Lens ((??), (^.))
 import Control.Monad (void)
+import Data.Default (def)
 import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
@@ -381,7 +382,7 @@ cardanoSubmitTx lookups tx = let
   in submitUnbalancedTx $ either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups tx
 
 ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith
+ledgerSubmitTx = submitTxConstraintsWith def
 
 data ConstraintParams = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
                       | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value

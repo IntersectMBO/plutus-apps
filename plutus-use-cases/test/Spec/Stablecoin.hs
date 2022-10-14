@@ -13,6 +13,7 @@ module Spec.Stablecoin(
 
 
 import Control.Monad (void)
+import Data.Default (def)
 import Prelude hiding (Rational, negate)
 
 import Ledger.Ada (adaSymbol, adaToken)
@@ -114,7 +115,7 @@ tests = testGroup "Stablecoin"
 
 initialise :: Trace.EmulatorTrace (ContractHandle () StablecoinSchema StablecoinError)
 initialise = do
-    hdl <- Trace.activateContractWallet user Stablecoin.contract
+    hdl <- Trace.activateContractWallet user $ Stablecoin.contract def
     Trace.callEndpoint @"initialise" hdl coin
     _ <- Trace.waitNSlots 2
     pure hdl

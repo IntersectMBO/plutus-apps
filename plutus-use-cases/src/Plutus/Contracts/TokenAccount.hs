@@ -53,6 +53,7 @@ import PlutusTx qualified
 import Ledger (PaymentPubKeyHash)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Tx (CardanoTx)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
@@ -107,17 +108,17 @@ tokenAccountContract
        ( HasTokenAccountSchema s
        , AsTokenAccountError e
        )
-    => Contract w s e ()
-tokenAccountContract = mapError (review _TokenAccountError) (selectList [redeem_, pay_, newAccount_]) where
+    => Ledger.Params -> Contract w s e ()
+tokenAccountContract cfg = mapError (review _TokenAccountError) (selectList [redeem_, pay_, newAccount_]) where
     redeem_ = endpoint @"redeem" @(Account, PaymentPubKeyHash) @w @s $ \(accountOwner, destination) -> do
-        void $ redeem destination accountOwner
-        tokenAccountContract
+        void $ redeem cfg destination accountOwner
+        tokenAccountContract cfg
     pay_ = endpoint @"pay" @_ @w @s $ \(accountOwner, value) -> do
-        void $ pay accountOwner value
-        tokenAccountContract
+        void $ pay cfg accountOwner value
+        tokenAccountContract cfg
     newAccount_ = endpoint @"new-account" @_ @w @s $ \(tokenName, initialOwner) -> do
-        void $ newAccount tokenName initialOwner
-        tokenAccountContract
+        void $ newAccount cfg tokenName initialOwner
+        tokenAccountContract cfg
 
 {-# INLINEABLE accountToken #-}
 accountToken :: Account -> Value
@@ -151,10 +152,11 @@ payTx = Constraints.mustPayToTheScriptWithDatumInTx ()
 pay
     :: ( AsTokenAccountError e
        )
-    => Account
+    => P.Params
+    -> Account
     -> Value
     -> Contract w s e CardanoTx
-pay account vl = do
+pay cfg account vl = do
     let inst = typedValidator account
     logInfo @String
         $ "TokenAccount.pay: Paying "
@@ -162,7 +164,7 @@ pay account vl = do
         <> " into "
         <> show account
     mapError (review _TAContractError) $
-          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
+          mkTxConstraints cfg (Constraints.typedValidatorLookups inst) (payTx vl)
       >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
@@ -195,14 +197,16 @@ redeemTx account pk = mapError (review _TAContractError) $ do
 redeem
   :: ( AsTokenAccountError e
      )
-  => PaymentPubKeyHash
+  => P.Params
+  -- ^ Ledger Params configuration
+  -> PaymentPubKeyHash
   -- ^ Where the token should go after the transaction
   -> Account
   -- ^ The token account
   -> Contract w s e CardanoTx
-redeem pk account = mapError (review _TokenAccountError) $ do
+redeem cfg pk account = mapError (review _TokenAccountError) $ do
     (constraints, lookups) <- redeemTx account pk
-    mkTxConstraints lookups constraints >>= adjustUnbalancedTx >>= submitUnbalancedTx
+    mkTxConstraints cfg lookups constraints >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | @balance account@ returns the value of all unspent outputs that can be
 --   unlocked with @accountToken account@
@@ -220,13 +224,14 @@ balance account = mapError (review _TAContractError) $ do
 newAccount
     :: forall w s e.
     (AsTokenAccountError e)
-    => TokenName
+    => Ledger.Params
+    -> TokenName
     -- ^ Name of the token
     -> PaymentPubKeyHash
     -- ^ Public key of the token's initial owner
     -> Contract w s e Account
-newAccount tokenName pk = mapError (review _TokenAccountError) $ do
-    cur <- Currency.mintContract pk [(tokenName, 1)]
+newAccount cfg tokenName pk = mapError (review _TokenAccountError) $ do
+    cur <- Currency.mintContract cfg pk [(tokenName, 1)]
     let sym = Currency.currencySymbol cur
     pure $ Account $ Value.assetClass sym tokenName
 

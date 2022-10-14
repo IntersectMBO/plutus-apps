@@ -15,6 +15,7 @@ import Control.Lens hiding (elements)
 import Control.Monad
 import Control.Monad.Freer.Extras.Log
 import Data.Data
+import Data.Default (def)
 import Data.Row
 import Test.Tasty
 
@@ -135,11 +136,11 @@ contract = selectList [failFalseC, failHeadNilC, divZeroC, successC]
           datum = Datum $ toBuiltinData ()
           tx = mustPayToOtherScriptWithDatumInTx hash datum (Ada.adaValueOf 10)
             <> mustIncludeDatumInTx datum
-      r <- submitTx tx
+      r <- submitTx def tx
       awaitTxConfirmed (getCardanoTxId r)
       utxos <- utxosAt addr
       let tx' = collectFromTheScript utxos 0
-      submitTxConstraintsSpending validator utxos tx'
+      submitTxConstraintsSpending def validator utxos tx'
 
     failFalseC = endpoint @"failFalse" $ \ _ -> do
       run v_failFalse

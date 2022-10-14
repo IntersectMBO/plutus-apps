@@ -12,6 +12,7 @@ import PlutusTx.Prelude hiding (Eq)
 import Prelude (Show, String, show)
 
 import Control.Monad (void)
+import Data.Default (def)
 import GHC.Generics (Generic)
 import Ledger.Typed.Scripts (TypedValidator, mkTypedValidator)
 import Plutus.Contract (Contract, EmptySchema, logError, mapError)
@@ -71,14 +72,14 @@ stateMachineClient threadToken =
 
 contract :: Contract () EmptySchema String ()
 contract = do
-  threadToken <- mapSMError SM.getThreadToken
+  threadToken <- mapSMError $ SM.getThreadToken def
   logError @String $ "Forged thread token: " <> show threadToken
 
   let client = stateMachineClient threadToken
-  void $ mapSMError $ SM.runInitialise client First mempty
+  void $ mapSMError $ SM.runInitialise def client First mempty
   logError @String $ "Initialized state machine"
 
-  res <- mapSMError $ SM.runStep client Step
+  res <- mapSMError $ SM.runStep def client Step
   case res of
     SM.TransitionFailure (SM.InvalidTransition os i) -> logError @String $ "Invalid transition: " <> show (os, i)
     SM.TransitionSuccess s                           -> logError @String $ "Transition success: " <> show s

@@ -11,6 +11,7 @@ module Spec.Governance(tests, doVoting) where
 
 import Control.Lens (view, (&))
 import Control.Monad (void)
+import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Maybe (listToMaybe)
 
@@ -77,7 +78,7 @@ doVoting :: Int -> Int -> Integer -> EmulatorTrace ()
 doVoting ayes nays rounds = do
     let activate w = (Gov.mkTokenName baseName w,)
                  <$> Trace.activateContractWallet (knownWallet w)
-                                                  (Gov.contract @Gov.GovError params)
+                                                  (Gov.contract @Gov.GovError def params)
     namesAndHandles <- traverse activate [1..numberOfHolders]
     let handle1 = snd (head namesAndHandles)
     let token2 = fst (namesAndHandles !! 1)
@@ -87,7 +88,7 @@ doVoting ayes nays rounds = do
     let votingRound (_, law) = do
             now <- view Trace.currentSlot <$> Trace.chainState
             void $ Trace.activateContractWallet w2
-                (Gov.proposalContract @Gov.GovError params
+                (Gov.proposalContract @Gov.GovError def params
                     Gov.Proposal { Gov.newLaw = law
                                  , Gov.votingDeadline = TimeSlot.slotToEndPOSIXTime slotCfg $ now + 20
                                  , Gov.tokenName = token2

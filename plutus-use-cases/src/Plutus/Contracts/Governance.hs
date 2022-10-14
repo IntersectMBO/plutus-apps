@@ -43,6 +43,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract
@@ -195,37 +196,39 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
 -- | The main contract for creating a new law and for voting on proposals.
 contract ::
     AsGovError e
-    => Params
+    => P.Params
+    -> Params
     -> Contract () Schema e ()
-contract params = forever $ mapError (review _GovError) endpoints where
+contract cfg params = forever $ mapError (review _GovError) endpoints where
     theClient = client params
     endpoints = selectList [initLaw, addVote]
 
     addVote = endpoint @"add-vote" $ \(tokenName, vote) ->
-        void $ SM.runStep theClient (AddVote tokenName vote)
+        void $ SM.runStep cfg theClient (AddVote tokenName vote)
 
     initLaw = endpoint @"new-law" $ \law -> do
         let mph = Scripts.forwardingMintingPolicyHash (typedValidator params)
-        void $ SM.runInitialise theClient (GovState law mph Nothing) (Ada.lovelaceValueOf 1)
+        void $ SM.runInitialise cfg theClient (GovState law mph Nothing) (Ada.lovelaceValueOf 1)
         let tokens = Haskell.zipWith (const (mkTokenName (baseTokenName params))) (initialHolders params) [1..]
-        void $ SM.runStep theClient $ MintTokens tokens
+        void $ SM.runStep cfg theClient $ MintTokens tokens
 
 -- | The contract for proposing changes to a law.
 proposalContract ::
     AsGovError e
-    => Params
+    => P.Params
+    -> Params
     -> Proposal
     -> Contract () EmptySchema e ()
-proposalContract params proposal = mapError (review _GovError) propose where
+proposalContract cfg params proposal = mapError (review _GovError) propose where
     theClient = client params
     propose = do
-        void $ SM.runStep theClient (ProposeChange proposal)
+        void $ SM.runStep cfg theClient (ProposeChange proposal)
 
         logInfo @Text "Voting started. Waiting for the voting deadline to count the votes."
         void $ awaitTime $ votingDeadline proposal
 
         logInfo @Text "Voting finished. Counting the votes."
-        void $ SM.runStep theClient FinishVoting
+        void $ SM.runStep cfg theClient FinishVoting
 
 PlutusTx.makeLift ''Params
 PlutusTx.unstableMakeIsData ''Law

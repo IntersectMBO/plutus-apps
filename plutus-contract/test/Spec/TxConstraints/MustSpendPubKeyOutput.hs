@@ -12,6 +12,7 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Lens ((^.))
+import Data.Default (def)
 import Data.Map qualified as M (elems)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)
@@ -70,7 +71,7 @@ mustSpendPubKeyOutputContract :: [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKe
 mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScript onChainTxOutRefs $ Ada.lovelaceValueOf baseLovelaceLockedByScript
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     pubKeyUtxos <- utxosAt $ Ledger.pubKeyHashAddress pkh Nothing
@@ -84,7 +85,7 @@ mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
             Constraints.collectFromTheScript scriptUtxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onChainTxOutRefs)
             <> mconcat mustSpendPubKeyOutputs
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     where

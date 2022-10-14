@@ -54,6 +54,7 @@ import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, tx
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -198,16 +199,17 @@ typedValidator escrow = go (Haskell.fmap Ledger.datumHash escrow) where
     wrap = Scripts.mkUntypedValidator
 
 escrowContract
-    :: EscrowParams Datum
+    :: P.Params
+    -> EscrowParams Datum
     -> Contract () EscrowSchema EscrowError ()
-escrowContract escrow =
+escrowContract cfg escrow =
     let inst = typedValidator escrow
         payAndRefund = endpoint @"pay-escrow" $ \vl -> do
-            _ <- pay inst escrow vl
-            refund inst escrow
+            _ <- pay cfg inst escrow vl
+            refund cfg inst escrow
     in selectList
         [ void payAndRefund
-        , void $ redeemEp escrow
+        , void $ redeemEp cfg escrow
         ]
 
 -- | 'pay' with an endpoint that gets the owner's public key and the
@@ -217,28 +219,31 @@ payEp ::
     ( HasEndpoint "pay-escrow" Value s
     , AsEscrowError e
     )
-    => EscrowParams Datum
+    => P.Params
+    -> EscrowParams Datum
     -> Promise w s e TxId
-payEp escrow = promiseMap
+payEp cfg escrow = promiseMap
     (mapError (review _EContractError))
-    (endpoint @"pay-escrow" $ pay (typedValidator escrow) escrow)
+    (endpoint @"pay-escrow" $ pay cfg (typedValidator escrow) escrow)
 
 -- | Pay some money into the escrow contract.
 pay ::
     forall w s e.
     ( AsContractError e
     )
-    => TypedValidator Escrow
+    => P.Params
+    -- ^ Ledger params configuration
+    -> TypedValidator Escrow
     -- ^ The instance
     -> EscrowParams Datum
     -- ^ The escrow contract
     -> Value
     -- ^ How much money to pay in
     -> Contract w s e TxId
-pay inst _escrow vl = do
+pay cfg inst _escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
-    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
+    utx <- mkTxConstraints cfg (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
     getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RedeemSuccess = RedeemSuccess TxId
@@ -250,11 +255,12 @@ redeemEp ::
     ( HasEndpoint "redeem-escrow" () s
     , AsEscrowError e
     )
-    => EscrowParams Datum
+    => P.Params
+    -> EscrowParams Datum
     -> Promise w s e RedeemSuccess
-redeemEp escrow = promiseMap
+redeemEp cfg escrow = promiseMap
     (mapError (review _EscrowError))
-    (endpoint @"redeem-escrow" $ \() -> redeem (typedValidator escrow) escrow)
+    (endpoint @"redeem-escrow" $ \() -> redeem cfg (typedValidator escrow) escrow)
 
 -- | Redeem all outputs at the contract address using a transaction that
 --   has all the outputs defined in the contract's list of targets.
@@ -262,22 +268,23 @@ redeem ::
     forall w s e.
     ( AsEscrowError e
     )
-    => TypedValidator Escrow
+    => P.Params
+    -> TypedValidator Escrow
     -> EscrowParams Datum
     -> Contract w s e RedeemSuccess
-redeem inst escrow = mapError (review _EscrowError) $ do
+redeem cfg inst escrow = mapError (review _EscrowError) $ do
     let addr = Scripts.validatorAddress inst
     unspentOutputs <- utxosAt addr
     let
         tx = Constraints.collectFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
     if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
-       then throwing _RedeemFailed NotEnoughFundsAtAddress
-       else do
-         utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                               <> Constraints.unspentOutputs unspentOutputs
-                                ) tx >>= adjustUnbalancedTx
-         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
+      then throwing _RedeemFailed NotEnoughFundsAtAddress
+      else do
+      utx <- mkTxConstraints cfg ( Constraints.typedValidatorLookups inst
+                                          <> Constraints.unspentOutputs unspentOutputs
+                                        ) tx >>= adjustUnbalancedTx
+      RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -288,27 +295,29 @@ refundEp ::
     forall w s.
     ( HasEndpoint "refund-escrow" () s
     )
-    => EscrowParams Datum
+    => P.Params
+    -> EscrowParams Datum
     -> Promise w s EscrowError RefundSuccess
-refundEp escrow = endpoint @"refund-escrow" $ \() -> refund (typedValidator escrow) escrow
+refundEp cfg escrow = endpoint @"refund-escrow" $ \() -> refund cfg (typedValidator escrow) escrow
 
 -- | Claim a refund of the contribution.
 refund ::
     forall w s.
-    TypedValidator Escrow
+    P.Params
+    -> TypedValidator Escrow
     -> EscrowParams Datum
     -> Contract w s EscrowError RefundSuccess
-refund inst _escrow = do
+refund cfg inst _escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
     if Constraints.modifiesUtxoSet tx'
     then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                              <> Constraints.unspentOutputs unspentOutputs
-                               ) tx' >>= adjustUnbalancedTx
-        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
+      utx <- mkTxConstraints cfg ( Constraints.typedValidatorLookups inst
+                                          <> Constraints.unspentOutputs unspentOutputs
+                                        ) tx' >>= adjustUnbalancedTx
+      RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
     else throwing _RefundFailed ()
 
 covIdx :: CoverageIndex

@@ -153,7 +153,7 @@ mustReferenceOutputV1ConTest = do
         tx = TC.mustIncludeDatumInTx datum
           <> TC.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
+    mkTxConstraints @Void def lookups tx >>= submitTxConfirmed
 
     -- Trying to unlock the Ada in the script address
     scriptUtxos <- utxosAt mustReferenceOutputV1ValidatorAddress
@@ -165,7 +165,7 @@ mustReferenceOutputV1ConTest = do
         tx = TC.mustReferenceOutput utxoRef
           <> TC.collectFromPlutusV1Script addressMap mustReferenceOutputV1Validator unitRedeemer
           <> TC.mustSpendPubKeyOutput utxoRefForBalance2
-    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
+    mkTxConstraints @Any def lookups tx >>= submitTxConfirmed
 
 mustReferenceOutputTxV1ConTest :: Contract () EmptySchema ContractError ()
 mustReferenceOutputTxV1ConTest = do
@@ -226,7 +226,7 @@ mustReferenceOutputV2ConTest = do
         tx = TC.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
           <> TC.mustIncludeDatumInTx datum
           <> TC.mustSpendPubKeyOutput utxoRefForBalance1
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
+    mkTxConstraints @Void def lookups tx >>= submitTxConfirmed
 
     -- Trying to unlock the Ada in the script address
     scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
@@ -238,7 +238,7 @@ mustReferenceOutputV2ConTest = do
         tx = TC.mustReferenceOutput utxoRef
           <> TC.collectFromPlutusV2Script addressMap mustReferenceOutputV2Validator unitRedeemer
           <> TC.mustSpendPubKeyOutput utxoRefForBalance2
-    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
+    mkTxConstraints @Any def lookups tx >>= submitTxConfirmed
 
 mustReferenceOutputTxV2ConTest :: Contract () EmptySchema ContractError ()
 mustReferenceOutputTxV2ConTest = do
@@ -291,7 +291,7 @@ mustSpendScriptOutputWithReferenceV2ConTest = do
                 (ScriptHash vh)
                 Nothing
                 (Ada.adaValueOf 30)
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
+    mkTxConstraints @Void def lookups tx >>= submitTxConfirmed
 
     -- Trying to unlock the Ada in the script address
     scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
@@ -303,7 +303,7 @@ mustSpendScriptOutputWithReferenceV2ConTest = do
         tx = TC.mustReferenceOutput utxoRef
           <> TC.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo
           <> TC.mustSpendPubKeyOutput utxoRefForBalance2
-    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
+    mkTxConstraints @Any def lookups tx >>= submitTxConfirmed
 
 mustSpendScriptOutputWithReferenceTxV2ConTest :: Contract () EmptySchema ContractError ()
 mustSpendScriptOutputWithReferenceTxV2ConTest = do

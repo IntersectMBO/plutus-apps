@@ -38,6 +38,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
@@ -262,16 +263,17 @@ contract ::
     ( AsContractError e
     , AsSMContractError e
     )
-    => Params
+    => P.Params
+    -> Params
     -> Contract () MultiSigSchema e ()
-contract params = forever endpoints where
+contract cfg params = forever endpoints where
     theClient = client params
     endpoints = selectList [lock, propose, cancel, addSignature, pay]
-    propose = endpoint @"propose-payment" $ void . SM.runStep theClient . ProposePayment
-    cancel  = endpoint @"cancel-payment" $ \() -> void $ SM.runStep theClient Cancel
-    addSignature = endpoint @"add-signature" $ \() -> ownFirstPaymentPubKeyHash >>= void . SM.runStep theClient . AddSignature
-    lock = endpoint @"lock" $ void . SM.runInitialise theClient Holding
-    pay = endpoint @"pay" $ \() -> void $ SM.runStep theClient Pay
+    propose = endpoint @"propose-payment" $ void . SM.runStep cfg theClient . ProposePayment
+    cancel  = endpoint @"cancel-payment" $ \() -> void $ SM.runStep cfg theClient Cancel
+    addSignature = endpoint @"add-signature" $ \() -> ownFirstPaymentPubKeyHash >>= void . SM.runStep cfg theClient . AddSignature
+    lock = endpoint @"lock" $ void . SM.runInitialise cfg theClient Holding
+    pay = endpoint @"pay" $ \() -> void $ SM.runStep cfg theClient Pay
 
 PlutusTx.unstableMakeIsData ''Payment
 PlutusTx.makeLift ''Payment

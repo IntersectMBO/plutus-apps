@@ -52,7 +52,7 @@ tests :: TestTree
 tests =
     testGroup "futures"
     [ checkPredicateOptions options "setup tokens"
-        (assertDone (F.setupTokens @() @FutureSchema @FutureError)
+        (assertDone (F.setupTokens @() @FutureSchema @FutureError def)
                     (Trace.walletInstanceTag w1) (const True) "setupTokens")
         $ void F.setupTokensTrace
 
@@ -141,7 +141,7 @@ payOutTrace = do
 initContract :: EmulatorTrace (ContractHandle () FutureSchema FutureError)
 initContract = do
     startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-    hdl1 <- Trace.activateContractWallet w1 (F.futureContract $ theFuture startTime)
+    hdl1 <- Trace.activateContractWallet w1 (F.futureContract def $ theFuture startTime)
     Trace.callEndpoint @"initialise-future" hdl1 (setup startTime, Short)
     _ <- Trace.waitNSlots 3
     pure hdl1
@@ -151,7 +151,7 @@ initContract = do
 joinFuture :: EmulatorTrace (ContractHandle () FutureSchema FutureError)
 joinFuture = do
     startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-    hdl2 <- Trace.activateContractWallet w2 (F.futureContract $ theFuture startTime)
+    hdl2 <- Trace.activateContractWallet w2 (F.futureContract def $ theFuture startTime)
     Trace.callEndpoint @"join-future" hdl2 (testAccounts, setup startTime)
     _ <- Trace.waitNSlots 2
     pure hdl2
@@ -204,7 +204,7 @@ mkSignedMessage time vl = Oracle.signObservation' time vl (Ledger.unPaymentPriva
 
 testAccounts :: FutureAccounts
 testAccounts =
-    let con = F.setupTokens @() @FutureSchema @FutureError
+    let con = F.setupTokens @() @FutureSchema @FutureError def
         fld = Folds.instanceOutcome con (Trace.walletInstanceTag (Wallet.knownWallet 1))
         getOutcome (Folds.Done a) = a
         getOutcome e              = error $ "not finished: " <> show e

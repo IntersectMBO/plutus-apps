@@ -39,6 +39,7 @@ import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
 import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params as P
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
@@ -148,11 +149,12 @@ mintContract
     :: forall w s e.
     ( AsCurrencyError e
     )
-    => PaymentPubKeyHash
+    => P.Params
+    -> PaymentPubKeyHash
     -> [(TokenName, Integer)]
     -> Contract w s e OneShotCurrency
-mintContract pk amounts = mapError (review _CurrencyError) $ do
-    txOutRef <- getUnspentOutput
+mintContract cfg pk amounts = mapError (review _CurrencyError) $ do
+    txOutRef <- getUnspentOutput cfg
     utxos <- utxosAt (pubKeyHashAddress pk Nothing)
     let theCurrency = mkCurrency txOutRef amounts
         curVali     = curPolicy theCurrency
@@ -160,7 +162,7 @@ mintContract pk amounts = mapError (review _CurrencyError) $ do
                         <> Constraints.unspentOutputs utxos
         mintTx      = Constraints.mustSpendPubKeyOutput txOutRef
                         <> Constraints.mustMintValue (mintedValue theCurrency)
-    tx <- submitTxConstraintsWith @Scripts.Any lookups mintTx
+    tx <- submitTxConstraintsWith @Scripts.Any cfg lookups mintTx
     _ <- awaitTxConfirmed (getCardanoTxId tx)
     pure theCurrency
 
@@ -179,9 +181,9 @@ type CurrencySchema =
 
 -- | Use 'mintContract' to create the currency specified by a 'SimpleMPS'
 mintCurrency
-    :: Promise (Maybe (Last OneShotCurrency)) CurrencySchema CurrencyError OneShotCurrency
-mintCurrency = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
+    :: P.Params -> Promise (Maybe (Last OneShotCurrency)) CurrencySchema CurrencyError OneShotCurrency
+mintCurrency cfg = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
     ownPK <- ownFirstPaymentPubKeyHash
-    cur <- mintContract ownPK [(tokenName, amount)]
+    cur <- mintContract cfg ownPK [(tokenName, amount)]
     tell (Just (Last cur))
     pure cur

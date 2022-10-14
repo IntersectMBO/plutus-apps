@@ -24,6 +24,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName)
 import Plutus.Contract
@@ -55,20 +56,21 @@ mirror ::
     ( HasEndpoint "revoke" CredentialOwnerReference s
     , HasEndpoint "issue" CredentialOwnerReference s
     )
-    => Contract w s MirrorError ()
-mirror = do
+    => P.Params -> Contract w s MirrorError ()
+mirror cfg = do
     logInfo @String "mirror started"
     authority <- mapError SetupError $ CredentialAuthority <$> ownFirstPaymentPubKeyHash
     forever $ do
         logInfo @String "waiting for 'issue' call"
-        selectList [createTokens authority, revokeToken authority]
+        selectList [createTokens cfg authority, revokeToken cfg authority]
 
 createTokens ::
     ( HasEndpoint "issue" CredentialOwnerReference s
     )
-    => CredentialAuthority
+    => P.Params
+    -> CredentialAuthority
     -> Promise w s MirrorError ()
-createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
+createTokens cfg authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
     logInfo @String "Endpoint 'issue' called"
     let pk      = Credential.unCredentialAuthority authority
         lookups = Constraints.plutusV1MintingPolicy (Credential.policy authority)
@@ -79,17 +81,18 @@ createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenNa
             <> Constraints.mustBeSignedBy pk
             <> Constraints.mustPayToPubKey pk (Ada.lovelaceValueOf 1)   -- Add self-spend to force an input
     _ <- mapError CreateTokenTxError $ do
-            mkTxConstraints @Scripts.Any lookups constraints
+            mkTxConstraints @Scripts.Any cfg lookups constraints
               >>= adjustUnbalancedTx >>= submitTxConfirmed
     let stateMachine = StateMachine.mkMachineClient authority (mockWalletPaymentPubKeyHash coOwner) coTokenName
-    void $ mapError StateMachineError $ SM.runInitialise stateMachine Active theToken
+    void $ mapError StateMachineError $ SM.runInitialise cfg stateMachine Active theToken
 
 revokeToken ::
     ( HasEndpoint "revoke" CredentialOwnerReference s
     )
-    => CredentialAuthority
+    => P.Params
+    -> CredentialAuthority
     -> Promise w s MirrorError ()
-revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
+revokeToken cfg authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
     let stateMachine = StateMachine.mkMachineClient authority (mockWalletPaymentPubKeyHash coOwner) coTokenName
         lookups = Constraints.plutusV1MintingPolicy (Credential.policy authority) <>
                   Constraints.ownPaymentPubKeyHash  (Credential.unCredentialAuthority authority)
@@ -97,7 +100,7 @@ revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenNa
     case t of
         Left{} -> return () -- Ignore invalid transitions
         Right StateMachineTransition{smtConstraints=constraints, smtLookups=lookups'} -> do
-            mkTxConstraints (lookups <> lookups') constraints
+            mkTxConstraints cfg (lookups <> lookups') constraints
               >>= adjustUnbalancedTx >>= submitTxConfirmed
 
 ---

@@ -11,6 +11,7 @@
 
 module Spec.MultiSigStateMachine(tests, lockProposeSignPay) where
 
+import Data.Default (def)
 import Data.Foldable (traverse_)
 
 import Ledger.Ada qualified as Ada
@@ -37,7 +38,7 @@ tests =
         (lockProposeSignPay 3 1)
 
     , checkPredicate "lock, propose, sign 2x, pay - FAILURE"
-        (assertNotDone (MS.contract  @MS.MultiSigError params) (Trace.walletInstanceTag w1) "contract should proceed after invalid transition"
+        (assertNotDone (MS.contract  @MS.MultiSigError def params) (Trace.walletInstanceTag w1) "contract should proceed after invalid transition"
         .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
         .&&. walletFundsChange w2 mempty)
         (lockProposeSignPay 2 1)
@@ -49,7 +50,7 @@ tests =
         (lockProposeSignPay 3 2)
 
     , checkPredicate "lock, propose, sign 3x, pay x3 - FAILURE"
-        (assertNotDone (MS.contract  @MS.MultiSigError params) (Trace.walletInstanceTag w2) "contract should proceed after invalid transition"
+        (assertNotDone (MS.contract  @MS.MultiSigError def params) (Trace.walletInstanceTag w2) "contract should proceed after invalid transition"
         .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
         .&&. walletFundsChange w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 3)
@@ -79,7 +80,7 @@ payment startTime =
 lockProposeSignPay :: Integer -> Integer -> EmulatorTrace ()
 lockProposeSignPay signatures rounds = do
     let wallets = knownWallet <$> [1..signatures]
-        activate w = Trace.activateContractWallet w (MS.contract @MS.MultiSigError params)
+        activate w = Trace.activateContractWallet w (MS.contract @MS.MultiSigError def params)
 
     -- the 'proposeSignPay' trace needs at least 2 signatures
     handle1 <- activate w1

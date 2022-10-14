@@ -2,6 +2,7 @@
 module Spec.PubKey(tests, pubKeyTrace) where
 
 import Control.Monad (void)
+import Data.Default (def)
 import Data.Map qualified as Map
 
 import Ledger.Ada qualified as Ada
@@ -19,10 +20,10 @@ import Test.Tasty
 theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do
   pk <- ownFirstPaymentPubKeyHash
-  (txOutRef, ciTxOut, pkInst) <- pubKeyContract (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
+  (txOutRef, ciTxOut, pkInst) <- pubKeyContract def (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
   let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ciTxOut
               <> Constraints.plutusV1OtherScript (Scripts.validatorScript pkInst)
-  void $ submitTxConstraintsWith @Scripts.Any lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer <> Constraints.mustBeSignedBy pk)
+  void $ submitTxConstraintsWith @Scripts.Any def lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer <> Constraints.mustBeSignedBy pk)
 
 tests :: TestTree
 tests = testGroup "pubkey"

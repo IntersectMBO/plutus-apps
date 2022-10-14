@@ -6,6 +6,7 @@
 module Spec.MultiSig(tests, failingTrace, succeedingTrace) where
 
 import Control.Monad (void)
+import Data.Default (def)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index (ValidationError (ScriptFailure))
@@ -57,7 +58,7 @@ succeedingTrace = do
     void $ Trace.waitNSlots 1
 
 theContract :: Contract () MultiSigSchema ContractError ()
-theContract = MS.contract
+theContract = MS.contract def
 
 -- a 'MultiSig' contract that requires three out of five signatures
 multiSig :: MultiSig

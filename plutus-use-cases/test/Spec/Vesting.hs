@@ -90,7 +90,7 @@ instance ContractModel VestingModel where
 
   instanceWallet (WalletKey w) = w
 
-  instanceContract _ WalletKey{} _ = vestingContract params
+  instanceContract _ WalletKey{} _ = vestingContract def params
 
   perform handle _ _ cmd = case cmd of
     Vest w -> do
@@ -215,7 +215,7 @@ prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
 
 tests :: TestTree
 tests =
-    let con = vestingContract (vesting startTime) in
+    let con = vestingContract def (vesting startTime) in
     testGroup "vesting"
     [ checkPredicate "secure some funds with the vesting script"
         (walletFundsChange w2 (Numeric.negate $ totalAmount $ vesting startTime))
@@ -269,7 +269,7 @@ prop_doubleSatisfaction = checkDoubleSatisfaction
 retrieveFundsTrace :: EmulatorTrace ()
 retrieveFundsTrace = do
     startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-    let con = vestingContract (vesting startTime)
+    let con = vestingContract def (vesting startTime)
     hdl1 <- Trace.activateContractWallet w1 con
     hdl2 <- Trace.activateContractWallet w2 con
     Trace.callEndpoint @"vest funds" hdl2 ()

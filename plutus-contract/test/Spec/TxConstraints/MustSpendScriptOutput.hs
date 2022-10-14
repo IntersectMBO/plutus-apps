@@ -11,6 +11,7 @@ module Spec.TxConstraints.MustSpendScriptOutput(tests) where
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.Default (def)
 import Data.List as L
 import Data.Map as M
 import Ledger qualified as L
@@ -88,7 +89,7 @@ mustSpendScriptOutputsContract' policyVersion nScriptOutputs nScriptOutputsToSpe
     let versionedMintingPolicy = versionedMustSpendScriptOutputPolicy policyVersion
         lookups1 = Cons.typedValidatorLookups someTypedValidator
         tx1 = mustPayToTheScriptWithMultipleOutputs nScriptOutputs []
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     scriptUtxos <- utxosAt someAddress
@@ -100,7 +101,7 @@ mustSpendScriptOutputsContract' policyVersion nScriptOutputs nScriptOutputsToSpe
                 <> Cons.unspentOutputs scriptUtxos
         tx2 = mconcat (mustSpendScriptOutputs scriptUtxosToSpend)
            <> Cons.mustMintValueWithRedeemer policyRedeemer (tokenValue versionedMintingPolicy)
-    ledgerTx4 <- submitTxConstraintsWith lookups2 tx2
+    ledgerTx4 <- submitTxConstraintsWith def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
     where
         mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints P.BuiltinData P.BuiltinData]
@@ -116,7 +117,7 @@ mustSpendScriptOutputWithMatchingDatumAndValueContract' policyVersion nScriptOut
     let versionedMintingPolicy = versionedMustSpendScriptOutputWithMatchingDatumAndValuePolicy policyVersion
         lookups1 = Cons.typedValidatorLookups someTypedValidator
         tx1 = mustPayToTheScriptWithMultipleOutputs nScriptOutputs []
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     scriptUtxos <- utxosAt someAddress
@@ -127,7 +128,7 @@ mustSpendScriptOutputWithMatchingDatumAndValueContract' policyVersion nScriptOut
                 <> Cons.unspentOutputs scriptUtxos
         tx2 = Cons.mustSpendScriptOutputWithMatchingDatumAndValue someValidatorHash (\d -> d == asDatum offChainMatchingDatum) (\v -> v == offChainMatchingValue) (asRedeemer spendingRedeemer)
            <> Cons.mustMintValueWithRedeemer policyRedeemer (tokenValue versionedMintingPolicy)
-    ledgerTx4 <- submitTxConstraintsWith lookups2 tx2
+    ledgerTx4 <- submitTxConstraintsWith def lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
@@ -164,7 +165,7 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
     let contract :: Contract () Empty ContractError () = do
             let lookups1 = Cons.typedValidatorLookups someTypedValidator
                 tx1 = mustPayToTheScriptWithMultipleOutputs 3 []
-            ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+            ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
             scriptUtxos <- utxosAt someAddress
@@ -173,7 +174,7 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
                 lookups2 = Cons.typedValidatorLookups someTypedValidator <>
                     Cons.unspentOutputs (scriptUtxos <> w1Utxos)
                 tx2 = Cons.mustSpendScriptOutput w1Utxo unitRedeemer
-            ledgerTx4 <- submitTxConstraintsWith lookups2 tx2
+            ledgerTx4 <- submitTxConstraintsWith def lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
 
     in checkPredicateOptions
@@ -191,7 +192,7 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
         contract = do
             let lookups1 = Cons.typedValidatorLookups someTypedValidator
                 tx1 = mustPayToTheScriptWithMultipleOutputs 3 []
-            ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+            ledgerTx1 <- submitTxConstraintsWith def lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
             scriptUtxos <- utxosAt someAddress
@@ -203,7 +204,7 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
                         <> Cons.unspentOutputs scriptUtxos
                 tx2 = Cons.mustSpendScriptOutput scriptUtxo1 unitRedeemer
                    <> Cons.mustMintValueWithRedeemer policyRedeemer (tokenValue vMintingPolicy)
-            ledgerTx4 <- submitTxConstraintsWith lookups2 tx2
+            ledgerTx4 <- submitTxConstraintsWith def lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
 
     in checkPredicateOptions

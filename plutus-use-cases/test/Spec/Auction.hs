@@ -81,10 +81,10 @@ options = defaultCheckOptionsContractModel
     & (increaseTransactionLimits . increaseTransactionLimits)
 
 seller :: Contract AuctionOutput SellerSchema AuctionError ()
-seller = auctionSeller (apAsset params) (apEndTime params)
+seller = auctionSeller def params (apAsset params) (apEndTime params)
 
 buyer :: ThreadToken -> Contract AuctionOutput BuyerSchema AuctionError ()
-buyer cur = auctionBuyer cur params
+buyer cur = auctionBuyer def cur params
 
 trace1WinningBid :: Ada
 trace1WinningBid = Ada.adaOf 50
@@ -148,7 +148,7 @@ trace2FinalState =
 
 threadToken :: ThreadToken
 threadToken =
-    let con = getThreadToken :: Contract AuctionOutput SellerSchema AuctionError ThreadToken
+    let con = getThreadToken def :: Contract AuctionOutput SellerSchema AuctionError ThreadToken
         fld = Folds.instanceOutcome con (Trace.walletInstanceTag w1)
         getOutcome (Folds.Done a) = a
         getOutcome e              = error $ "not finished: " <> show e

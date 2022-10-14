@@ -67,7 +67,7 @@ makeLenses ''CrowdfundingModel
 
 
 theContract :: POSIXTime -> Contract () CrowdfundingSchema ContractError ()
-theContract startTime = crowdfunding $ theCampaign startTime
+theContract startTime = crowdfunding def $ theCampaign startTime
 
 tests :: TestTree
 tests = testGroup "crowdfunding"
@@ -211,8 +211,8 @@ instance ContractModel CrowdfundingModel where
   instanceWallet (OwnerKey w)       = w
   instanceWallet (ContributorKey w) = w
 
-  instanceContract _ OwnerKey{}       _ = crowdfunding params
-  instanceContract _ ContributorKey{} _ = crowdfunding params
+  instanceContract _ OwnerKey{}       _ = crowdfunding def params
+  instanceContract _ ContributorKey{} _ = crowdfunding def params
 
   perform h _ s a = case a of
     CContribute w v -> Trace.callEndpoint @"contribute" (h $ ContributorKey w) Contribution{contribValue=v}

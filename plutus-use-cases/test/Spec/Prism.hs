@@ -20,6 +20,7 @@ module Spec.Prism (tests, prismTrace, prop_Prism, prop_NoLock) where
 import Control.Lens
 import Control.Monad
 import Data.Data
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger.Ada qualified as Ada
@@ -80,8 +81,8 @@ stoData =
 -- | 'mirror' issues a KYC token to 'user', who then uses it in an STO transaction
 prismTrace :: Trace.EmulatorTrace ()
 prismTrace = do
-    uhandle <- Trace.activateContractWallet user contract
-    mhandle <- Trace.activateContractWallet mirror contract
+    uhandle <- Trace.activateContractWallet user $ contract def
+    mhandle <- Trace.activateContractWallet mirror $ contract def
 
     Trace.callEndpoint @"role" uhandle UnlockSTO
     Trace.callEndpoint @"role" mhandle Mirror
@@ -154,8 +155,8 @@ instance ContractModel PrismModel where
     instanceWallet MirrorH   = mirror
     instanceWallet (UserH w) = w
 
-    instanceContract _ MirrorH _ = C.mirror
-    instanceContract _ UserH{} _ = C.subscribeSTO
+    instanceContract _ MirrorH _ = C.mirror def
+    instanceContract _ UserH{} _ = C.subscribeSTO def
 
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
     precondition s (Call _)  = (s ^. contractState . numberOfCalls < 11) -- We have to limit the number of calls otherwise fails with non-ada collateral error.
@@ -192,8 +193,8 @@ instance ContractModel PrismModel where
 
 finalPredicate :: ModelState PrismModel -> TracePredicate
 finalPredicate _ =
-    assertNotDone @_ @() @C.STOSubscriberSchema     C.subscribeSTO      (Trace.walletInstanceTag user)              "User stopped"               .&&.
-    assertNotDone @_ @() @C.MirrorSchema            C.mirror            (Trace.walletInstanceTag mirror)            "Mirror stopped"
+    assertNotDone @_ @() @C.STOSubscriberSchema (C.subscribeSTO def) (Trace.walletInstanceTag user)              "User stopped"               .&&.
+    assertNotDone @_ @() @C.MirrorSchema        (C.mirror def)       (Trace.walletInstanceTag mirror)            "Mirror stopped"
 
 
 
@@ -210,7 +211,7 @@ prop_NoLock = checkNoLockedFundsProof noLockProof
 tests :: TestTree
 tests = testGroup "PRISM"
     [ checkPredicate "withdraw"
-        (assertNotDone contract (Trace.walletInstanceTag user) "User stopped"
+        (assertNotDone (contract def) (Trace.walletInstanceTag user) "User stopped"
         .&&. walletFundsChange issuer (Ada.lovelaceValueOf numTokens)
         .&&. walletFundsChange user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
         )

@@ -109,11 +109,11 @@ handleTx ::
 handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 
 -- | Get an unspent output belonging to the wallet.
-getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
-getUnspentOutput = do
+getUnspentOutput :: AsContractError e => P.Params -> Contract w s e TxOutRef
+getUnspentOutput cfg = do
     ownPkh <- Contract.ownFirstPaymentPubKeyHash
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
-    utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
+    utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void cfg mempty constraints)
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of
         inp : _ -> pure $ txInRef inp
@@ -253,18 +253,18 @@ export
     :: P.Params
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
-export params utx =
+export cfg utx =
     let requiredSigners = Set.toList (unBalancedTxRequiredSignatories utx)
         fromCardanoTx ctx = do
             utxo <- fromPlutusIndex $ P.UtxoIndex (unBalancedTxUtxoIndex utx)
-            makeTransactionBody params utxo ctx
+            makeTransactionBody cfg utxo ctx
      in ExportTx
         <$> fmap (C.makeSignedTransaction [])
                  (either
                      fromCardanoTx
-                     (first Right . CardanoAPI.toCardanoTxBody params requiredSigners)
+                     (first Right . CardanoAPI.toCardanoTxBody cfg requiredSigners)
                      (unBalancedTxTx utx))
-        <*> first Right (mkInputs (P.pNetworkId params) (unBalancedTxUtxoIndex utx))
+        <*> first Right (mkInputs (P.pNetworkId cfg) (unBalancedTxUtxoIndex utx))
         <*> either (const $ Right []) (Right . mkRedeemers) (unBalancedTxTx utx)
 
 mkInputs :: C.NetworkId -> Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]

@@ -51,6 +51,7 @@ import Control.Lens (makeClassyPrisms, review, view)
 import Control.Monad (Monad ((>>)), void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import GHC.Generics (Generic)
 
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
@@ -270,7 +271,7 @@ pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
+    utx <- mkTxConstraints def (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
     getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RedeemSuccess = RedeemSuccess TxId
@@ -307,14 +308,14 @@ redeem inst escrow = mapError (review _EscrowError) $ do
                 <> foldMap mkTx (escrowTargets escrow)
                 <> Constraints.mustValidateIn valRange
     if current >= escrowDeadline escrow
-    then throwing _RedeemFailed DeadlinePassed
-    else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
-         then throwing _RedeemFailed NotEnoughFundsAtAddress
-         else do
-           utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                                 <> Constraints.unspentOutputs unspentOutputs
-                                  ) tx >>= adjustUnbalancedTx
-           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
+      then throwing _RedeemFailed DeadlinePassed
+      else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
+           then throwing _RedeemFailed NotEnoughFundsAtAddress
+           else do
+            utx <- mkTxConstraints def ( Constraints.typedValidatorLookups inst
+                                         <> Constraints.unspentOutputs unspentOutputs
+                                       ) tx >>= adjustUnbalancedTx
+            RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -342,10 +343,10 @@ refund inst escrow = do
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
-    then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                              <> Constraints.unspentOutputs unspentOutputs
-                               ) tx' >>= adjustUnbalancedTx
+      then do
+        utx <- mkTxConstraints def ( Constraints.typedValidatorLookups inst
+                                     <> Constraints.unspentOutputs unspentOutputs
+                                   ) tx' >>= adjustUnbalancedTx
         RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
     else throwing _RefundFailed ()
 

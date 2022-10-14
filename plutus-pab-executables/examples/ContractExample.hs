@@ -117,18 +117,18 @@ getContractExampleSchema = \case
 getContractExample :: ContractExample -> SomeBuiltin
 getContractExample = \case
     UniswapInit         -> SomeBuiltin Contracts.Uniswap.setupTokens
-    UniswapUser us      -> SomeBuiltin $ Contracts.Uniswap.userEndpoints us
-    UniswapOwner        -> SomeBuiltin Contracts.Uniswap.ownerEndpoint
-    Game                -> SomeBuiltin (Contracts.Game.contract @Text)
-    GameStateMachine    -> SomeBuiltin Contracts.GameStateMachine.contract
+    UniswapUser us      -> SomeBuiltin $ Contracts.Uniswap.userEndpoints def us
+    UniswapOwner        -> SomeBuiltin $ Contracts.Uniswap.ownerEndpoint def
+    Game                -> SomeBuiltin (Contracts.Game.contract @Text def)
+    GameStateMachine    -> SomeBuiltin $ Contracts.GameStateMachine.contract def
     PayToWallet         -> SomeBuiltin Contracts.PayToWallet.payToWallet
     AtomicSwap          -> SomeBuiltin Contracts.AtomicSwap.atomicSwap
-    Currency            -> SomeBuiltin Contracts.Currency.mintCurrency
-    PrismMirror         -> SomeBuiltin (Contracts.Prism.mirror @Contracts.Prism.MirrorSchema @())
-    PrismUnlockExchange -> SomeBuiltin (Contracts.Prism.unlockExchange @() @Contracts.Prism.UnlockExchangeSchema)
-    PrismUnlockSto      -> SomeBuiltin (Contracts.Prism.subscribeSTO @() @Contracts.Prism.STOSubscriberSchema)
-    PingPong            -> SomeBuiltin Contracts.PingPong.simplePingPong
-    PingPongAuto        -> SomeBuiltin Contracts.PingPong.simplePingPongAuto
+    Currency            -> SomeBuiltin $ Contracts.Currency.mintCurrency def
+    PrismMirror         -> SomeBuiltin (Contracts.Prism.mirror @Contracts.Prism.MirrorSchema @() def)
+    PrismUnlockExchange -> SomeBuiltin (Contracts.Prism.unlockExchange @() @Contracts.Prism.UnlockExchangeSchema def)
+    PrismUnlockSto      -> SomeBuiltin (Contracts.Prism.subscribeSTO @() @Contracts.Prism.STOSubscriberSchema def)
+    PingPong            -> SomeBuiltin $ Contracts.PingPong.simplePingPong def
+    PingPongAuto        -> SomeBuiltin $ Contracts.PingPong.simplePingPongAuto def
     WaitForTx txi       -> SomeBuiltin (Contracts.WaitForTx.waitForTx txi)
     IntegrationTest     -> SomeBuiltin Contracts.IntegrationTest.run
 

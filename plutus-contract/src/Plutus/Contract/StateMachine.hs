@@ -73,6 +73,7 @@ import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          txOwnInputs, txOwnOutputs)
+import Ledger.Params as P
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
@@ -356,11 +357,12 @@ runGuardedStep ::
     , PlutusTx.ToData state
     , PlutusTx.ToData input
     )
-    => StateMachineClient state input              -- ^ The state machine
+    => P.Params                                    -- ^ Current Ledger.Params configuration
+    -> StateMachineClient state input              -- ^ The state machine
     -> input                                       -- ^ The input to apply to the state machine
     -> (UnbalancedTx -> state -> state -> Maybe a) -- ^ The guard to check before running the step
     -> Contract w schema e (Either a (TransitionResult state input))
-runGuardedStep = runGuardedStepWith mempty mempty
+runGuardedStep cfg sm i guard = runGuardedStepWith cfg mempty mempty sm i guard
 
 -- | Run one step of a state machine, returning the new state.
 runStep ::
@@ -370,19 +372,21 @@ runStep ::
     , PlutusTx.ToData state
     , PlutusTx.ToData input
     )
-    => StateMachineClient state input
+    => P.Params
+    -- ^ Current Ledger.Params configuration
+    -> StateMachineClient state input
     -- ^ The state machine
     -> input
     -- ^ The input to apply to the state machine
     -> Contract w schema e (TransitionResult state input)
-runStep = runStepWith mempty mempty
+runStep cfg sm i = runStepWith cfg mempty mempty sm i
 
 -- | Create a thread token. The thread token contains a reference to an unspent output of the wallet,
 -- so it needs to used with 'mkStateMachine' immediately, and the machine must be initialised,
 -- to prevent the output from getting spent in the mean time.
-getThreadToken :: AsSMContractError e => Contract w schema e ThreadToken
-getThreadToken = mapError (review _SMContractError) $ do
-    txOutRef <- getUnspentOutput
+getThreadToken :: AsSMContractError e => P.Params -> Contract w schema e ThreadToken
+getThreadToken cfg = mapError (review _SMContractError) $ do
+    txOutRef <- getUnspentOutput cfg
     pure $ ThreadToken txOutRef (scriptCurrencySymbol (curPolicy txOutRef))
 
 -- | Initialise a state machine
@@ -393,14 +397,16 @@ runInitialise ::
     , PlutusTx.ToData input
     , AsSMContractError e
     )
-    => StateMachineClient state input
+    => P.Params
+    -- ^ Ledger Params configuration
+    -> StateMachineClient state input
     -- ^ The state machine
     -> state
     -- ^ The initial state
     -> Value
     -- ^ The value locked by the contract at the beginning
     -> Contract w schema e state
-runInitialise = runInitialiseWith mempty mempty
+runInitialise params smc st v = runInitialiseWith params mempty mempty smc st v
 
 -- | Constraints & lookups needed to transition a state machine instance
 data StateMachineTransition state input =
@@ -419,7 +425,9 @@ runInitialiseWith ::
     , PlutusTx.ToData input
     , AsSMContractError e
     )
-    => ScriptLookups (StateMachine state input)
+    => P.Params
+    -- ^ Ledger Params configuration
+    -> ScriptLookups (StateMachine state input)
     -- ^ Additional lookups
     -> TxConstraints input state
     -- ^ Additional constraints
@@ -430,7 +438,7 @@ runInitialiseWith ::
     -> Value
     -- ^ The value locked by the contract at the beginning
     -> Contract w schema e state
-runInitialiseWith customLookups customConstraints StateMachineClient{scInstance} initialState initialValue =
+runInitialiseWith cfg customLookups customConstraints StateMachineClient{scInstance} initialState initialValue =
     mapError (review _SMContractError) $ do
       utxo <- ownUtxos
       let StateMachineInstance{stateMachine, typedValidator} = scInstance
@@ -448,7 +456,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
               <> foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
               <> Constraints.unspentOutputs utxo
               <> customLookups
-      utx <- mapError (review _ConstraintResolutionContractError) (mkTxContract lookups constraints)
+      utx <- mapError (review _ConstraintResolutionContractError) (mkTxContract cfg lookups constraints)
       adjustedUtx <- adjustUnbalancedTx utx
       unless (utx == adjustedUtx) $
         logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "
@@ -464,7 +472,9 @@ runStepWith ::
     , PlutusTx.ToData state
     , PlutusTx.ToData input
     )
-    => ScriptLookups (StateMachine state input)
+    => P.Params
+    -- ^ Current Ledger.Params configuration
+    -> ScriptLookups (StateMachine state input)
     -- ^ Additional lookups
     -> TxConstraints input state
     -- ^ Additional constraints
@@ -473,8 +483,8 @@ runStepWith ::
     -> input
     -- ^ The input to apply to the state machine
     -> Contract w schema e (TransitionResult state input)
-runStepWith lookups constraints smc input =
-    runGuardedStepWith lookups constraints smc input (\_ _ _ -> Nothing) >>= pure . \case
+runStepWith cfg lookups constraints smc input =
+    runGuardedStepWith cfg lookups constraints smc input (\_ _ _ -> Nothing) >>= pure . \case
         Left a  -> absurd a
         Right a -> a
 
@@ -486,20 +496,21 @@ runGuardedStepWith ::
     , PlutusTx.ToData state
     , PlutusTx.ToData input
     )
-    => ScriptLookups (StateMachine state input)    -- ^ Additional lookups
+    => P.Params
+    -> ScriptLookups (StateMachine state input)    -- ^ Additional lookups
     -> TxConstraints input state                   -- ^ Additional constraints
     -> StateMachineClient state input              -- ^ The state machine
     -> input                                       -- ^ The input to apply to the state machine
     -> (UnbalancedTx -> state -> state -> Maybe a) -- ^ The guard to check before running the step
     -> Contract w schema e (Either a (TransitionResult state input))
-runGuardedStepWith userLookups userConstraints smc input guard =
+runGuardedStepWith cfg userLookups userConstraints smc input guard =
   mapError (review _SMContractError) $ mkStep smc input >>= \case
     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
         pk <- ownFirstPaymentPubKeyHash
         let lookups = smtLookups { Constraints.slOwnPaymentPubKeyHash = Just pk }
         utx <- either (throwing _ConstraintResolutionContractError)
                       pure
-                      (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))
+                      (Constraints.mkTx cfg (lookups <> userLookups) (smtConstraints <> userConstraints))
         adjustedUtx <- adjustUnbalancedTx utx
         unless (utx == adjustedUtx) $
           logWarn @Text $ "Plutus.Contract.StateMachine.runStep: "

@@ -20,6 +20,7 @@ module ContractExample.AtomicSwap(
 import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import GHC.Generics (Generic)
 
 import Ledger (CurrencySymbol, POSIXTime, PaymentPubKeyHash, TokenName, Value)
@@ -95,9 +96,9 @@ atomicSwap = endpoint @"Atomic swap" $ \p -> do
                 -- TODO: Change 'payRedeemRefund' to check before paying into the
                 -- address, so that the last paying transaction can also be the
                 -- redeeming transaction.
-                void $ mapError EscrowError (Escrow.payRedeemRefund params value2)
+                void $ mapError EscrowError (Escrow.payRedeemRefund def params value2)
             | pkh == mockWalletPaymentPubKeyHash (party2 p) =
-                void $ mapError EscrowError (Escrow.pay (Escrow.typedValidator params) params value1) >>= awaitTxConfirmed
+                void $ mapError EscrowError (Escrow.pay def (Escrow.typedValidator params) params value1) >>= awaitTxConfirmed
             | otherwise = throwError (NotInvolvedError pkh p)
 
     ownFirstPaymentPubKeyHash >>= go

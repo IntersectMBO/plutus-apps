@@ -66,6 +66,7 @@ module Plutus.Contracts.Prism(
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
+import Ledger.Params qualified as P
 import Plutus.Contracts.Prism.Credential
 import Plutus.Contracts.Prism.Mirror
 import Plutus.Contracts.Prism.StateMachine
@@ -104,9 +105,9 @@ instance AsContractError PrismError where
 --   for the emulator, where we can only ever run a single 'Contract'. In
 --   the PAB we could simply start all four contracts (credentialManager,
 --   mirror, subscribeSTO, subscribeExchange) separately.
-contract :: Contract () PrismSchema PrismError ()
-contract = awaitPromise $ endpoint @"role" $ \r -> do
+contract :: P.Params -> Contract () PrismSchema PrismError ()
+contract cfg = awaitPromise $ endpoint @"role" $ \r -> do
     case r of
-        Mirror         -> mapError MirrorErr mirror
-        UnlockSTO      -> mapError UnlockSTOErr subscribeSTO
-        UnlockExchange -> mapError UnlockExchangeErr unlockExchange
+        Mirror         -> mapError MirrorErr (mirror cfg)
+        UnlockSTO      -> mapError UnlockSTOErr (subscribeSTO cfg)
+        UnlockExchange -> mapError UnlockExchangeErr (unlockExchange cfg)

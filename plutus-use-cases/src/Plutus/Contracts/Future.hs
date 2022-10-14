@@ -46,6 +46,7 @@ import Control.Lens (makeClassyPrisms, prism', review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import GHC.Generics (Generic)
 
 import PlutusTx qualified
@@ -55,6 +56,7 @@ import Ledger (Address, POSIXTime, PaymentPubKey, PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
+import Ledger.Params qualified as P
 import Ledger.Scripts (unitDatum)
 import Ledger.Tokens
 import Ledger.Typed.Scripts qualified as Scripts
@@ -204,10 +206,10 @@ type FutureSchema =
 instance AsEscrowError FutureError where
     _EscrowError = prism' EscrowFailed (\case { EscrowFailed e -> Just e; _ -> Nothing})
 
-futureContract :: Future -> Contract () FutureSchema FutureError ()
-futureContract ft = do
-    client <- awaitPromise (joinFuture ft `select` initialiseFuture ft)
-    void $ loopM (const . awaitPromise $ selectEither (increaseMargin client) (settleFuture client `select` settleEarly client)) ()
+futureContract :: P.Params -> Future -> Contract () FutureSchema FutureError ()
+futureContract cfg ft = do
+    client <- awaitPromise (joinFuture cfg ft `select` initialiseFuture cfg ft)
+    void $ loopM (const . awaitPromise $ selectEither (increaseMargin cfg client) (settleFuture cfg client `select` settleEarly cfg client)) ()
 
 -- | The data needed to initialise the futures contract.
 data FutureSetup =
@@ -465,11 +467,12 @@ initialiseFuture
     :: ( HasEndpoint "initialise-future" (FutureSetup, Role) s
        , AsFutureError e
        )
-    => Future
+    => P.Params
+    -> Future
     -> Promise w s e (SM.StateMachineClient FutureState FutureAction)
-initialiseFuture future = promiseMap (mapError (review _FutureError)) $ endpoint @"initialise-future" @(FutureSetup, Role) $ \(s, ownRole) -> do
+initialiseFuture cfg future = promiseMap (mapError (review _FutureError)) $ endpoint @"initialise-future" @(FutureSetup, Role) $ \(s, ownRole) -> do
     -- Start by setting up the two tokens for the short and long positions.
-    ftos <- setupTokens
+    ftos <- setupTokens cfg
 
     -- Now we have a 'FutureAccountsValue' with the data of two new and unique
     -- tokens that we will use for the future contract. Now we use an escrow
@@ -497,7 +500,7 @@ initialiseFuture future = promiseMap (mapError (review _FutureError)) $ endpoint
         -- the other party to make theirs. If they fail to do so within the
         -- agreed timeframe, our own initial margin is refunded and the future
         -- contract never starts.
-        escrowPayment = Escrow.payRedeemRefund escr payment
+        escrowPayment = Escrow.payRedeemRefund cfg escr payment
 
     -- Run 'escrowPayment', wrapping any errors in 'EscrowFailed'. If the escrow
     -- contract ended with a refund (ie., 'escrowPayment' returns a 'Left') we
@@ -515,10 +518,11 @@ settleFuture
     :: ( HasEndpoint "settle-future" (SignedMessage (Observation Value)) s
        , AsFutureError e
        )
-    => SM.StateMachineClient FutureState FutureAction
+    => P.Params
+    -> SM.StateMachineClient FutureState FutureAction
     -> Promise w s e ()
-settleFuture client = promiseMap (mapError (review _FutureError)) $ endpoint @"settle-future" $ \ov -> do
-    void $ SM.runStep client (Settle ov)
+settleFuture cfg client = promiseMap (mapError (review _FutureError)) $ endpoint @"settle-future" $ \ov -> do
+    void $ SM.runStep cfg client (Settle ov)
 
 -- | The @"settle-early"@ endpoint. Given an oracle value with the current spot
 --   price, this endpoint creates the final transaction that distributes the
@@ -530,10 +534,11 @@ settleEarly
        , AsSMContractError e
        , AsContractError e
        )
-    => SM.StateMachineClient FutureState FutureAction
+    => P.Params
+    -> SM.StateMachineClient FutureState FutureAction
     -> Promise w s e ()
-settleEarly client = endpoint @"settle-early" $ \ov -> do
-    void $ SM.runStep client (SettleEarly ov)
+settleEarly cfg client = endpoint @"settle-early" $ \ov -> do
+    void $ SM.runStep cfg client (SettleEarly ov)
 
 -- | The @"increase-margin"@ endpoint. Increses the margin of one of
 --   the roles by an amount.
@@ -542,10 +547,11 @@ increaseMargin
        , AsSMContractError e
        , AsContractError e
        )
-    => SM.StateMachineClient FutureState FutureAction
+    => P.Params
+    -> SM.StateMachineClient FutureState FutureAction
     -> Promise w s e ()
-increaseMargin client = endpoint @"increase-margin" $ \(value, role) -> do
-    void $ SM.runStep client (AdjustMargin role value)
+increaseMargin cfg client = endpoint @"increase-margin" $ \(value, role) -> do
+    void $ SM.runStep cfg client (AdjustMargin role value)
 
 -- | The @"join-future"@ endpoint. Join a future contract by paying the initial
 --   margin to the escrow that initialises the contract.
@@ -553,13 +559,14 @@ joinFuture
     :: ( HasEndpoint "join-future" (FutureAccounts, FutureSetup) s
        , AsFutureError e
        )
-    => Future
+    => P.Params
+    -> Future
     -> Promise w s e (SM.StateMachineClient FutureState FutureAction)
-joinFuture ft = promiseMap (mapError (review _FutureError)) $ endpoint @"join-future" @(FutureAccounts, FutureSetup) $ \(owners, stp) -> do
+joinFuture cfg ft = promiseMap (mapError (review _FutureError)) $ endpoint @"join-future" @(FutureAccounts, FutureSetup) $ \(owners, stp) -> do
     inst <- checkpoint $ pure (typedValidator ft owners)
     let client = machineClient inst ft owners
         escr = escrowParams client ft owners stp
-        payment = Escrow.pay (Escrow.typedValidator escr) escr (initialMargin ft)
+        payment = Escrow.pay cfg (Escrow.typedValidator escr) escr (initialMargin ft)
     void $ mapError EscrowFailed payment
     pure client
 
@@ -569,16 +576,16 @@ joinFuture ft = promiseMap (mapError (review _FutureError)) $ endpoint @"join-fu
 --   Note that after 'setupTokens' is complete, both tokens will be locked by a
 --   public key output belonging to the wallet that ran 'setupTokens'.
 setupTokens
-    :: forall w s e.
-    ( AsFutureError e
-    )
-    => Contract w s e FutureAccounts
-setupTokens = mapError (review _FutureError) $ do
+  :: forall w s e.
+  ( AsFutureError e
+  )
+  => P.Params -> Contract w s e FutureAccounts
+setupTokens cfg = mapError (review _FutureError) $ do
     pk <- ownFirstPaymentPubKeyHash
 
     -- Create the tokens using the currency contract, wrapping any errors in
     -- 'TokenSetupFailed'
-    cur <- mapError TokenSetupFailed $ Currency.mintContract pk [("long", 1), ("short", 1)]
+    cur <- mapError TokenSetupFailed $ Currency.mintContract cfg pk [("long", 1), ("short", 1)]
     let acc = Account . Value.assetClass (Currency.currencySymbol cur)
     pure $ mkAccounts (acc "long") (acc "short")
 
@@ -609,7 +616,7 @@ escrowParams client future ftos FutureSetup{longPK, shortPK, contractStart} =
 setupTokensTrace :: Trace.EmulatorTrace ()
 setupTokensTrace = do
     _ <- Trace.waitNSlots 1
-    _ <- Trace.activateContractWallet (Wallet.knownWallet 1) (void $ setupTokens @() @FutureSchema @FutureError)
+    _ <- Trace.activateContractWallet (Wallet.knownWallet 1) (void $ setupTokens @() @FutureSchema @FutureError def)
     void $ Trace.waitNSlots 2
 
 PlutusTx.makeLift ''Future

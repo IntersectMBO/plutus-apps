@@ -14,6 +14,7 @@ module ContractExample.PayToWallet(
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Schema (ToSchema)
@@ -36,7 +37,7 @@ type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 payToWallet :: Promise () PayToWalletSchema ContractError ()
 payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh} -> do
     logInfo @String "Calling PayToWallet endpoint"
-    utx <- mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
+    utx <- mkTxConstraints @Void def mempty (mustPayToPubKey pkh amount)
     logInfo @String $ "Yielding the unbalanced transaction " <> show utx
     adjustUnbalancedTx utx >>= yieldUnbalancedTx
 

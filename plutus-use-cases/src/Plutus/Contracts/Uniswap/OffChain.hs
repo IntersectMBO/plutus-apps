@@ -45,6 +45,7 @@ import Data.Void (Void, absurd)
 import Ledger (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut, _ciTxOutScriptDatum), ciTxOutValue,
                pubKeyHashAddress)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
+import Ledger.Params qualified as P
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract as Contract
@@ -197,18 +198,18 @@ data AddParams = AddParams
 
 -- | Creates a Uniswap "factory". This factory will keep track of the existing liquidity pools and enforce that there will be at most one liquidity pool
 -- for any pair of tokens at any given time.
-start :: forall w s. Contract w s Text Uniswap
-start = do
+start :: forall w s. P.Params -> Contract w s Text Uniswap
+start cfg = do
     pkh <- Contract.ownFirstPaymentPubKeyHash
     cs  <- fmap Currency.currencySymbol $
            mapError (pack . show @Currency.CurrencyError) $
-           Currency.mintContract pkh [(uniswapTokenName, 1)]
+           Currency.mintContract cfg pkh [(uniswapTokenName, 1)]
     let c    = mkCoin cs uniswapTokenName
         us   = uniswap cs
         inst = uniswapInstance us
         tx   = mustPayToTheScriptWithDatumInTx (Factory []) $ unitValue c
 
-    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    mkTxConstraints cfg (Constraints.typedValidatorLookups inst) tx
       >>= adjustUnbalancedTx >>= submitTxConfirmed
     void $ waitNSlots 1
 
@@ -216,8 +217,8 @@ start = do
     return us
 
 -- | Creates a liquidity pool for a pair of coins. The creator provides liquidity for both coins and gets liquidity tokens in return.
-create :: forall w s. Uniswap -> CreateParams -> Contract w s Text ()
-create us CreateParams{..} = do
+create :: forall w s. P.Params -> Uniswap -> CreateParams -> Contract w s Text ()
+create cfg us CreateParams{..} = do
     when (unCoin cpCoinA == unCoin cpCoinB) $ throwError "coins must be different"
     when (cpAmountA <= 0 || cpAmountB <= 0) $ throwError "amounts must be positive"
     (oref, o, lps) <- findUniswapFactory us
@@ -242,13 +243,13 @@ create us CreateParams{..} = do
                    Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)              <>
                    Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData $ Create lp)
 
-    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
+    mkTxConstraints cfg lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "created liquidity pool: " ++ show lp
 
 -- | Closes a liquidity pool by burning all remaining liquidity tokens in exchange for all liquidity remaining in the pool.
-close :: forall w s. Uniswap -> CloseParams -> Contract w s Text ()
-close us CloseParams{..} = do
+close :: forall w s. P.Params -> Uniswap -> CloseParams -> Contract w s Text ()
+close cfg us CloseParams{..} = do
     ((oref1, o1, lps), (oref2, o2, lp, liquidity)) <- findUniswapFactoryAndPool us clpCoinA clpCoinB
     pkh                                            <- Contract.ownFirstPaymentPubKeyHash
     let usInst   = uniswapInstance us
@@ -274,13 +275,13 @@ close us CloseParams{..} = do
                    Constraints.mustSpendScriptOutput oref2 redeemer <>
                    Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
 
-    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
+    mkTxConstraints cfg lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "closed liquidity pool: " ++ show lp
 
 -- | Removes some liquidity from a liquidity pool in exchange for liquidity tokens.
-remove :: forall w s. Uniswap -> RemoveParams -> Contract w s Text ()
-remove us RemoveParams{..} = do
+remove :: forall w s. P.Params -> Uniswap -> RemoveParams -> Contract w s Text ()
+remove cfg us RemoveParams{..} = do
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us rpCoinA rpCoinB
     pkh                           <- Contract.ownFirstPaymentPubKeyHash
     when (rpDiff < 1 || rpDiff >= liquidity) $ throwError "removed liquidity must be positive and less than total liquidity"
@@ -308,13 +309,13 @@ remove us RemoveParams{..} = do
                    Constraints.mustMintValue (negate lVal)        <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
-    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
+    mkTxConstraints cfg lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "removed liquidity from pool: " ++ show lp
 
 -- | Adds some liquidity to an existing liquidity pool in exchange for newly minted liquidity tokens.
-add :: forall w s. Uniswap -> AddParams -> Contract w s Text ()
-add us AddParams{..} = do
+add :: forall w s. P.Params -> Uniswap -> AddParams -> Contract w s Text ()
+add cfg us AddParams{..} = do
     pkh                           <- Contract.ownFirstPaymentPubKeyHash
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us apCoinA apCoinB
     when (apAmountA < 0 || apAmountB < 0) $ throwError "amounts must not be negative"
@@ -352,13 +353,13 @@ add us AddParams{..} = do
     logInfo $ show lookups
     logInfo $ show tx
 
-    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
+    mkTxConstraints cfg lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "added liquidity to pool: " ++ show lp
 
 -- | Uses a liquidity pool two swap one sort of coins in the pool against the other.
-swap :: forall w s. Uniswap -> SwapParams -> Contract w s Text ()
-swap us SwapParams{..} = do
+swap :: forall w s. P.Params -> Uniswap -> SwapParams -> Contract w s Text ()
+swap cfg us SwapParams{..} = do
     unless (spAmountA > 0 && spAmountB == 0 || spAmountA == 0 && spAmountB > 0) $ throwError "exactly one amount must be positive"
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us spCoinA spCoinB
     let outVal = view ciTxOutValue o
@@ -387,7 +388,7 @@ swap us SwapParams{..} = do
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
                   Constraints.mustPayToTheScriptWithDatumInTx (Pool lp liquidity) val
 
-    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
+    mkTxConstraints cfg lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "swapped with: " ++ show lp
 
@@ -521,9 +522,9 @@ findSwapB oldA oldB inB = findSwapA (switch oldB) (switch oldA) (switch inB)
   where
     switch = Amount . unAmount
 
-ownerEndpoint :: Contract (Last (Either Text Uniswap)) EmptySchema ContractError ()
-ownerEndpoint = do
-    e <- mapError absurd $ runError start
+ownerEndpoint :: P.Params -> Contract (Last (Either Text Uniswap)) EmptySchema ContractError ()
+ownerEndpoint cfg = do
+    e <- mapError absurd $ runError $ start cfg
     void $ waitNSlots 1
     tell $ Last $ Just e
 
@@ -537,18 +538,18 @@ ownerEndpoint = do
 --      [@pools@]: Finds all liquidity pools and their liquidity belonging to the Uniswap instance. This merely inspects the blockchain and does not issue any transactions.
 --      [@funds@]: Gets the caller's funds. This merely inspects the blockchain and does not issue any transactions.
 --      [@stop@]: Stops the contract.
-userEndpoints :: Uniswap -> Promise (Last (Either Text UserContractState)) UniswapUserSchema Void ()
-userEndpoints us =
+userEndpoints :: P.Params -> Uniswap -> Promise (Last (Either Text UserContractState)) UniswapUserSchema Void ()
+userEndpoints cfg us =
     stop
         `select`
-    (void (f (Proxy @"create") (const Created) create                 `select`
-           f (Proxy @"swap")   (const Swapped) swap                   `select`
-           f (Proxy @"close")  (const Closed)  close                  `select`
-           f (Proxy @"remove") (const Removed) remove                 `select`
-           f (Proxy @"add")    (const Added)   add                    `select`
+    (void (f (Proxy @"create") (const Created) (create cfg)          `select`
+           f (Proxy @"swap")   (const Swapped) (swap cfg)            `select`
+           f (Proxy @"close")  (const Closed)  (close cfg)           `select`
+           f (Proxy @"remove") (const Removed) (remove cfg)          `select`
+           f (Proxy @"add")    (const Added)   (add cfg)              `select`
            f (Proxy @"pools")  Pools           (\us' () -> pools us') `select`
            f (Proxy @"funds")  Funds           (\_us () -> funds))
-     <> userEndpoints us)
+     <> userEndpoints cfg us)
   where
     f :: forall l a p.
          (HasEndpoint l p UniswapUserSchema, FromJSON p)

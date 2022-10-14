@@ -176,9 +176,9 @@ testWallets :: [Wallet]
 testWallets = [w1, w2, w3, w4, w5]
 
 testContract :: EscrowParams Datum -> Contract () EscrowSchema EscrowError ()
-testContract params = selectList [ void $ payEp params
-                                 , void $ redeemEp params
-                                 , void $ refundEp params
+testContract params = selectList [ void $ payEp def params
+                                 , void $ redeemEp def params
+                                 , void $ refundEp def params
                                  ] >> testContract params
 
 

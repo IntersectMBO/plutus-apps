@@ -10,6 +10,7 @@ module ContractExample.IntegrationTest(run) where
 
 import Control.Lens (makeClassyPrisms)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
@@ -41,7 +42,7 @@ run' :: Contract () EmptySchema IError ()
 run' = do
     logInfo @Haskell.String "Starting integration test"
     pkh <- ownFirstPaymentPubKeyHash
-    (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))
+    (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract def pkh (Ada.adaValueOf 10))
     logInfo @Haskell.String "pubKey contract complete:"
     let lookups =
             Constraints.otherData (Datum $ getRedeemer unitRedeemer)
@@ -50,7 +51,7 @@ run' = do
         constraints =
             Constraints.mustSpendScriptOutput txOutRef unitRedeemer
             <> Constraints.mustBeSignedBy pkh
-    result <- runError @_ @_ @ContractError $ submitTxConstraintsWith @Scripts.Any lookups constraints
+    result <- runError @_ @_ @ContractError $ submitTxConstraintsWith @Scripts.Any def lookups constraints
     case result of
         Left err -> do
             logWarn @Haskell.String "An error occurred. Integration test failed."
