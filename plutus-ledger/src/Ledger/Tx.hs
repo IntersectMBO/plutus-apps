@@ -73,7 +73,6 @@ import Control.DeepSeq (NFData)
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Proxy (Proxy))
-import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (isJust, mapMaybe)
@@ -382,9 +381,9 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
     f (idx, o) = (V1.Tx.TxOutRef (txId t) idx, o)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
-pubKeyTxOut :: V1.Value -> PaymentPubKey -> Maybe StakePubKey -> Either ToCardanoError TxOut
-pubKeyTxOut v pk sk = do
-  aie <- CardanoAPI.toCardanoAddressInEra (pNetworkId def) $ pubKeyAddress pk sk
+pubKeyTxOut :: Params -> V1.Value -> PaymentPubKey -> Maybe StakePubKey -> Either ToCardanoError TxOut
+pubKeyTxOut cfg v pk sk = do
+  aie <- CardanoAPI.toCardanoAddressInEra (pNetworkId cfg) $ pubKeyAddress pk sk
   txov <- CardanoAPI.toCardanoValue v
   pure $ TxOut $ C.TxOut aie (C.TxOutValue C.MultiAssetInBabbageEra txov) C.TxOutDatumNone C.Api.ReferenceScriptNone
 

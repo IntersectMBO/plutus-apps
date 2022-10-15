@@ -180,7 +180,7 @@ genInitialTransaction ::
     -> (CardanoTx, [TxOut])
 genInitialTransaction GeneratorModel{..} =
     let o = either (error . ("Cannot create outputs: " <>) . show) id
-          $ traverse (\(ppk, v) -> pubKeyTxOut v ppk Nothing) $ Map.toList gmInitialBalance
+          $ traverse (\(ppk, v) -> pubKeyTxOut def v ppk Nothing) $ Map.toList gmInitialBalance
         t = fold gmInitialBalance
     in (EmulatorTx $ mempty {
         txOutputs = o,
@@ -252,7 +252,7 @@ genValidTransactionSpending' g ins totalVal = do
                                           $ List.sort splitOutVals
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
                 txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
-                          $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
+                          $ traverse (\(v, ppk) -> pubKeyTxOut def v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
                 (ins', witnesses) = unzip $ map txInToTxInput ins
                 (scripts, datums) = bimap catMaybes catMaybes $ unzip witnesses
                 tx = mempty
