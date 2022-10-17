@@ -66,19 +66,21 @@ makeClassyPrisms ''ScriptError
 tests :: TestTree
 tests = testGroup "MustSpendScriptOutput"
       [ testGroup "ledger constraints" [v1Tests, v2Tests]
-      , testGroup "version agnostic tests"
-          [ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef
-          ]
       ]
-
 v1Tests :: TestTree
-v1Tests = testGroup "Plutus V1" $ featuresTests PlutusV1
+v1Tests = testGroup "Plutus V1" $
+   [ v1FeaturesTests
+   , v2FeaturesNotAvailableTests
+   ] ?? PlutusV1
 
 v2Tests :: TestTree
-v2Tests = testGroup "Plutus V2" $ featuresTests PlutusV2
+v2Tests = testGroup "Plutus V2" $
+  [ v1FeaturesTests
+  , v2FeaturesTests
+  ] ?? PlutusV2
 
-featuresTests :: PSU.Language -> [TestTree]
-featuresTests t =
+v1FeaturesTests :: PSU.Language -> TestTree
+v1FeaturesTests t = testGroup "Plutus V1 features" $
     [ validUseOfMustSpendScriptOutputUsingAllScriptOutputs
     , validUseOfMustSpendScriptOutputUsingSomeScriptOutputs
     , phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef
@@ -90,9 +92,18 @@ featuresTests t =
     , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue
     , phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemerWithV2Script
     , phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript
-    , validUseOfReferenceScript
+    ] ?? t
+
+v2FeaturesTests :: PSU.Language -> TestTree
+v2FeaturesTests t = testGroup "Plutus V2 features" $
+    [ validUseOfReferenceScript
     , validUseOfReferenceScriptDespiteLookup
     , validMultipleUseOfTheSameReferenceScript
+    ] ?? t
+
+v2FeaturesNotAvailableTests :: PSU.Language -> TestTree
+v2FeaturesNotAvailableTests t = testGroup "Plutus V2 features" $
+    [ phase1FailureWhenMustSpendScriptOutputUseReferenceScript
     ] ?? t
 
 -- The value in each initial wallet UTxO
@@ -203,7 +214,7 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr =
     payAddr <- ownAddress
     let vh = PSU.validatorHash script
         get2 (a:b:_) = (fst a, fst b)
-        get2 _       = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+        get2 _       = error "Spec.TxConstraints.MustSpendScriptOutput.get2: not enough inputs"
         (utxoRef, balanceUtxo) = get2 $ M.toList utxos
         lookups = Cons.unspentOutputs utxos
                <> Cons.otherScript script
@@ -223,9 +234,9 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs validRef
     utxos <- ownUtxos
     let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
         mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
-        get3 (a:_:c:_) = (fst a, snd a, fst c)
-        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
-        (utxoRef, utxo, utxoRefForBalance2) = get3 $ M.toList utxos
+        get2 (a:_:c:_) = (fst a, snd a, fst c)
+        get2 _         = error "Spec.TxConstraints.MustSpendScriptOutput.get2: not enough inputs"
+        (utxoRef, utxo, utxoRefForBalance2) = get2 $ M.toList utxos
     scriptUtxos <- mustPayToOtherScriptWithMultipleOutputs nScriptOutputs 5
                        mustReferenceOutputValidatorVersioned
                        mustReferenceOutputValidatorAddress
@@ -306,24 +317,14 @@ validUseOfReferenceScript :: PSU.Language -> TestTree
 validUseOfReferenceScript l = let
     contract = mustSpendScriptOutputWithReferenceContract l 1 True
     versionedMintingPolicy = getVersionedScript MustSpendScriptOutputWithReferencePolicy l
-    check = case l of
-        PlutusV1 ->
-            checkPredicateOptions
-            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
-            ( assertFailedTransaction ( const $ has
-                $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
-            ) .&&. assertValidatedTransactionCountOfTotal 1 2
-            )
-        PlutusV2 ->
-            checkPredicateOptions
+    in checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
             .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
-    in check $ traceN 3 contract
+    $ traceN 3 contract
 
 -- | Uses onchain and offchain constraint mustSpendScriptOutputWithReference several time on the same script to spend
 -- some of the UtxOs locked by the script
@@ -331,48 +332,28 @@ validMultipleUseOfTheSameReferenceScript :: PSU.Language -> TestTree
 validMultipleUseOfTheSameReferenceScript l = let
     contract = mustSpendScriptOutputWithReferenceContract l 2 True
     versionedMintingPolicy = getVersionedScript MustSpendScriptOutputWithReferencePolicy l
-    check = case l of
-        PlutusV1 ->
-            checkPredicateOptions
-            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
-            ( assertFailedTransaction ( const $ has
-                $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
-            ) .&&. assertValidatedTransactionCountOfTotal 1 2
-            )
-        PlutusV2 ->
-            checkPredicateOptions
+    in checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of several mustSpendScriptOutputWithReference with the same reference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
             .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
-    in check $ traceN 3 contract
+    $ traceN 3 contract
 
 -- | Uses onchain constraint mustSpendScriptOutputWithReference to spend some of the
 -- UtxOs locked by the script, check that we don't consider lookups if a reference script is provided
 validUseOfReferenceScriptDespiteLookup :: PSU.Language -> TestTree
 validUseOfReferenceScriptDespiteLookup l = let
     contract = mustIgnoreLookupsIfReferencScriptIsGiven l
-    check = case l of
-        PlutusV1 ->
-            checkPredicateOptions
-            (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-            "Phase 1 validation error when we used Reference script in a PlutusV1 script"
-            ( assertFailedTransaction ( const $
-                has $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
-            ) .&&. assertValidatedTransactionCountOfTotal 1 2
-            )
-        PlutusV2 ->
-            checkPredicateOptions
+    in checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference (ignore lookups) to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (Ada.adaValueOf 0)
             .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
-    in check $ traceN 3 contract
+    $ traceN 3 contract
 
 
 -- | Contract error occurs when offchain mustSpendScriptOutput constraint is used with a UTxO
@@ -399,6 +380,19 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
         .&&. assertValidatedTransactionCount 1)
         $ void $ trace contract
 
+-- | Phase-1 validation error when a plutus V1 script attempt to use reference script
+phase1FailureWhenMustSpendScriptOutputUseReferenceScript :: PSU.Language  -> TestTree
+phase1FailureWhenMustSpendScriptOutputUseReferenceScript l = let
+    contract = mustSpendScriptOutputWithReferenceContract l 1 True
+    in checkPredicateOptions
+        (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+        "Phase 1 validation error when we used Reference script in a PlutusV1 script"
+        ( assertFailedTransaction ( const $ has
+            $ L._CardanoLedgerValidationError . filtered (Text.isPrefixOf "ReferenceInputsNotSupported")
+        ) .&&. assertValidatedTransactionCountOfTotal 1 2)
+        $ traceN 3 contract
+
+
 -- | Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different
 -- TxOutRef belonging to the script
 phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef :: PSU.Language -> TestTree
@@ -424,7 +418,6 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef l =
 
 -- | Phase-2 validation failure only when V2 script using onchain mustSpendScriptOutput constraint
 -- expects a different redeeemer with V2+ script
--- | Phase-2 validation failure only when V2 script using onchain mustSpendScriptOutput constraint expects a different redeeemer with V2+ script
 phase2ErrorOnlyWhenMustSpendScriptOutputUsesWrongRedeemerWithV2Script :: PSU.Language -> TestTree
 phase2ErrorOnlyWhenMustSpendScriptOutputUsesWrongRedeemerWithV2Script l =
     case l of
