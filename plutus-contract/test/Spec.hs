@@ -16,6 +16,7 @@ import Spec.TxConstraints.MustIncludeDatum qualified
 import Spec.TxConstraints.MustMint qualified
 import Spec.TxConstraints.MustPayToOtherScript qualified
 import Spec.TxConstraints.MustPayToPubKeyAddress qualified
+import Spec.TxConstraints.MustSatisfyAnyOf qualified
 import Spec.TxConstraints.MustSpendAtLeast qualified
 import Spec.TxConstraints.MustSpendScriptOutput qualified
 import Spec.TxConstraints.RequiredSigner qualified
@@ -38,7 +39,9 @@ tests = testGroup "plutus-contract" [
     Spec.TxConstraints.MustPayToOtherScript.tests,
     -- Spec.TxConstraints.MustProduceAtLeast.tests, -- Not included: ConstraintResolutionContractError at the moment (UnxnownRef)
     Spec.TxConstraints.MustPayToPubKeyAddress.tests,
+    Spec.TxConstraints.MustSatisfyAnyOf.tests,
     Spec.TxConstraints.MustSpendAtLeast.tests,
+    -- Spec.TxConstraints.MustSpendPubKeyOutput.tests, -- Not included: ConstraintResolutionContractError at the moment (UnxnownRef)
     Spec.TxConstraints.MustSpendScriptOutput.tests,
     Spec.TxConstraints.RequiredSigner.tests,
     Spec.TxConstraints.TimeValidity.tests,

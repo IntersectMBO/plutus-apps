@@ -610,7 +610,7 @@ mustMintValue :: forall i o. Value -> TxConstraints i o
 mustMintValue = mustMintValueWithRedeemer unitRedeemer
 
 {-# INLINABLE mustMintValueWithRedeemer #-}
--- | Same as 'mustMintCurrentWithRedeemer', but uses the minting policy hash,
+-- | Same as 'mustMintCurrencyWithRedeemer', but uses the minting policy hash,
 -- token name and amount provided by 'Value'.
 --
 -- Note that we can derive the 'MintingPolicyHash' from the 'Value'\'s currency
@@ -625,7 +625,7 @@ mustMintValueWithRedeemer red =
                     (AssocMap.toList mp)
 
 {-# INLINABLE mustMintCurrency #-}
--- | Same as 'mustMintCurrentWithRedeemer', but sets the redeemer to the unit
+-- | Same as 'mustMintCurrencyWithRedeemer', but sets the redeemer to the unit
 -- redeemer.
 mustMintCurrency
     :: forall i o
@@ -750,7 +750,12 @@ mustSpendScriptOutputWithReference txOutref red refTxOutref =
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that there's at least one input
 -- that matches the requirements.
-mustSpendScriptOutputWithMatchingDatumAndValue :: forall i o. ValidatorHash -> (Datum -> Bool) -> (Value -> Bool) -> Redeemer -> TxConstraints i o
+mustSpendScriptOutputWithMatchingDatumAndValue
+    :: forall i o. ValidatorHash
+    -> (Datum -> Bool)
+    -> (Value -> Bool)
+    -> Redeemer
+    -> TxConstraints i o
 mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
     mempty {
         txConstraintFuns = TxConstraintFuns [MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red ]
