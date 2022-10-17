@@ -47,6 +47,21 @@ module Ledger.Constraints.OffChain(
     , adjustUnbalancedTx
     , adjustTxOut
     , MkTxError(..)
+    , _TypeCheckFailed
+    , _ToCardanoError
+    , _TxOutRefNotFound
+    , _TxOutRefWrongType
+    , _TxOutRefNoReferenceScript
+    , _DatumNotFound
+    , _DatumNotFoundInTx
+    , _MintingPolicyNotFound
+    , _ScriptHashNotFound
+    , _OwnPubKeyMissing
+    , _TypedValidatorMissing
+    , _DatumWrongHash
+    , _CannotSatisfyAny
+    , _NoMatchingOutputFound
+    , _MultipleMatchingOutputsFound
     , mkTx
     , mkSomeTx
     -- * Internals exposed for testing
@@ -72,7 +87,7 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, _Just, alaf, at, makeLensesFor, view, (%=), (&), (.=), (.~), (<>=), (^?))
+import Control.Lens (_2, _Just, alaf, at, makeClassyPrisms, makeLensesFor, view, (%=), (&), (.=), (.~), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -575,43 +590,6 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
     let dsV = fmap (Datum . toBuiltinData) ocDatum
     pure [ MustPayToOtherScript (tvValidatorHash inst) Nothing dsV ocReferenceScriptHash ocValue ]
 
-data MkTxError =
-    TypeCheckFailed Typed.ConnectionError
-    | ToCardanoError C.ToCardanoError
-    | TxOutRefNotFound TxOutRef
-    | TxOutRefWrongType TxOutRef
-    | TxOutRefNoReferenceScript TxOutRef
-    | DatumNotFound DatumHash
-    | DatumNotFoundInTx DatumHash
-    | MintingPolicyNotFound MintingPolicyHash
-    | ScriptHashNotFound ScriptHash
-    | OwnPubKeyMissing
-    | TypedValidatorMissing
-    | DatumWrongHash DatumHash Datum
-    | CannotSatisfyAny
-    | NoMatchingOutputFound ValidatorHash
-    | MultipleMatchingOutputsFound ValidatorHash
-    deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-
-instance Pretty MkTxError where
-    pretty = \case
-        TypeCheckFailed e              -> "Type check failed:" <+> pretty e
-        ToCardanoError e               -> "Cardano conversion error:" <+> pretty e
-        TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
-        TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
-        TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
-        DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
-        DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
-        MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
-        ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
-        OwnPubKeyMissing               -> "Own public key is missing"
-        TypedValidatorMissing          -> "Script instance is missing"
-        DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
-        CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
-        NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
-        MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
-
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
@@ -900,3 +878,42 @@ toTxOutDatum = \case
     Just (TxOutDatumHash d)   -> C.toCardanoTxOutDatumHashFromDatum d
     Just (TxOutDatumInTx d)   -> C.toCardanoTxOutDatumInTx d
     Just (TxOutDatumInline d) -> C.toCardanoTxOutDatumInline d
+
+data MkTxError =
+    TypeCheckFailed Typed.ConnectionError
+    | ToCardanoError C.ToCardanoError
+    | TxOutRefNotFound TxOutRef
+    | TxOutRefWrongType TxOutRef
+    | TxOutRefNoReferenceScript TxOutRef
+    | DatumNotFound DatumHash
+    | DatumNotFoundInTx DatumHash
+    | MintingPolicyNotFound MintingPolicyHash
+    | ScriptHashNotFound ScriptHash
+    | OwnPubKeyMissing
+    | TypedValidatorMissing
+    | DatumWrongHash DatumHash Datum
+    | CannotSatisfyAny
+    | NoMatchingOutputFound ValidatorHash
+    | MultipleMatchingOutputsFound ValidatorHash
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+makeClassyPrisms ''MkTxError
+
+instance Pretty MkTxError where
+    pretty = \case
+        TypeCheckFailed e              -> "Type check failed:" <+> pretty e
+        ToCardanoError e               -> "Cardano conversion error:" <+> pretty e
+        TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
+        TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
+        TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
+        DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
+        DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
+        MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
+        ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
+        OwnPubKeyMissing               -> "Own public key is missing"
+        TypedValidatorMissing          -> "Script instance is missing"
+        DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
+        CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
+        NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
+        MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
+
