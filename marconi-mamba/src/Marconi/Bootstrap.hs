@@ -2,30 +2,74 @@
 -- This module bootstraps the mamba JSON RPC server, it acts as a glue conntecting the
 -- JSON-RPC, HttpServer, marconiIndexer, and marconi cache
 --
-module Marconi.Bootstrap (
-   bootstrapJsonRpc
-   , jsonRpcEnv
-   ) where
+module Marconi.Bootstrap  where
 
-import Marconi.Api.HttpServer (bootstrap)
-import Marconi.Api.Types (JsonRpcEnv (JsonRpcEnv), RpcPortNumber)
-import Marconi.IndexersHotStore (bootstrapHotStore)
+import Cardano.Api (ChainPoint (ChainPointAtGenesis), deserialiseFromBech32, proxyToAsType)
+import Cardano.Streaming (withChainSyncEventStream)
+import Control.Lens ((^.))
+import Data.List.NonEmpty (fromList, nub)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (pack)
+import Marconi.Api.HttpServer qualified as Http
+import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryTMVar), HasJsonRpcEnv (queryEnv), JsonRpcEnv (..),
+                          RpcPortNumber, TargetAddresses)
+import Marconi.Api.UtxoIndexersQuery qualified as QIUtxo
+import Marconi.Indexers qualified as I
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
+
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache
 -- this is just a wrapper for the bootstrapHttp in json-rpc package
 bootstrapJsonRpc
-    :: JsonRpcEnv -- ^ JSON-RPC run environment
-    -> IO ()
-bootstrapJsonRpc = bootstrap
+    :: FilePath
+    -> Maybe RpcPortNumber
+    -> TargetAddresses
+    -> IO JsonRpcEnv
+bootstrapJsonRpc dbPath maybePort targetAddresses = do
+    queryenv <- QIUtxo.bootstrap dbPath targetAddresses
+    let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
+    pure $ JsonRpcEnv
+        { _httpSettings = httpsettings
+        , _queryEnv = queryenv
+        }
 
--- | configure json-rpc env.
--- Note if no tcp/ip port number is provided, we default to servant default port of 3000
--- @see (warp defaultSettings)[https://hackage.haskell.org/package/warp-3.3.23/docs/Network-Wai-Handler-Warp.html#v:defaultSettings] for details
-jsonRpcEnv
-    :: Maybe RpcPortNumber -- ^ http port
-    ->  IO JsonRpcEnv -- ^
-jsonRpcEnv maybePort = do
-    hotStore <- bootstrapHotStore
-    let httpSetting =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
-    pure  (JsonRpcEnv httpSetting hotStore)
+bootstrapHttp
+    :: JsonRpcEnv
+    -> IO ()
+bootstrapHttp  = Http.bootstrap
+
+-- |  marconi cardano blockchain indexer
+bootstrapUtxoIndexers
+    :: CliArgs
+    -> JsonRpcEnv
+    -> IO ()
+bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
+    let
+      qtmvar = env ^. queryEnv . queryTMVar
+      indexers = I.combineIndexers [( I.utxoHotStoreWorker qtmvar targetAddresses , dbPath)]
+      chainPoint = ChainPointAtGenesis
+    in
+        withChainSyncEventStream socket networkId chainPoint indexers
+
+-- | parses a white space separated address list
+-- Note, duplicate addresses are rmoved
+targetAddressParser
+    :: String           -- ^ contains white spece delimeted lis of addresses
+    -> TargetAddresses  -- ^ a non empty list of valid addresses
+targetAddressParser =
+    nub
+    . fromList
+    . fromJustWithError
+    . traverse (deserializeToCardano . pack)
+    . words
+    where
+        deserializeToCardano = deserialiseFromBech32 (proxyToAsType Proxy)
+
+-- | Exit program with error
+-- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
+-- In such case we should fail fast
+fromJustWithError :: (Show e) => Either e a -> a
+fromJustWithError v = case v of
+    Left e ->
+        error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
+    Right accounts -> accounts

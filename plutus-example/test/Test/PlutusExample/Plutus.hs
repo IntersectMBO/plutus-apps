@@ -43,4 +43,3 @@ prop_TxId_Api_Ledger_Roundtrip =
         ledgerTxId = toShelleyTxId apiTxId
         roundTripped = fromShelleyTxId ledgerTxId
     apiTxId === roundTripped
-

@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections  #-}
+
 module Marconi.Indexers where
 
 import Control.Concurrent (forkIO)
@@ -15,26 +16,34 @@ import Data.Map (assocs)
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Marconi.IndexersHotStore (IndexerHotStore, TargetAddresses, isInTargetTxOut, puts)
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
                     chainPointToSlotNo)
 import Cardano.Api qualified as C
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 -- TODO Remove the following dependencies from cardano-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Ledger (TxIn (TxIn), TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
+import Control.Concurrent.STM.TMVar (TMVar, takeTMVar)
+import Control.Monad.STM (atomically)
+import Data.List.NonEmpty (NonEmpty)
+import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
-import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
-                             scriptDataFromCardanoTxBody, withIsCardanoEra)
+import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromTxScriptValidity, scriptDataFromCardanoTxBody,
+                             withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
 import RewindableIndex.Index.VSplit qualified as Ix
+
+type CardanoAddress = C.Address C.ShelleyAddr
+
+-- | Typre represents non empty list of Bech32 compatable addresses"
+type TargetAddresses = NonEmpty CardanoAddress
+
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
@@ -49,26 +58,25 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
 
 -- UtxoIndexer
 getOutputs
-  :: Maybe TargetAddresses
+  :: C.IsCardanoEra era
+  => Maybe TargetAddresses
   -> C.Tx era
   -> Maybe [ (TxOut, TxOutRef) ]
-getOutputs (Just targetAddresses) (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-    (outs :: [TxOut]) <- either (const Nothing) Just $
-        traverse fromCardanoTxOut . filter
-           (isInTargetTxOut targetAddresses) $ txOuts
-    pure . txOutTxRefMap outs $ txBody
-
-getOutputs _ (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-    (outs :: [TxOut]) <- either (const Nothing) Just $ traverse fromCardanoTxOut txOuts
-    pure . txOutTxRefMap outs $ txBody
-
-txOutTxRefMap ::[TxOut] -> C.TxBody era -> [(TxOut, TxOutRef)]
-txOutTxRefMap  outs txBody= outs &  zip ([0..] :: [Integer])
-    <&> (\(ix, out) -> (out
-                       , TxOutRef {
-                               txOutRefId  = fromCardanoTxId (C.getTxId txBody)
-                               , txOutRefIdx = ix
-                               }))
+getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
+    do
+        let indexersFilter = case maybeTargetAddresses of
+                Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
+                _                    -> id -- no filtering is applied
+        outs  <- either (const Nothing) (
+            Just . map TxOut)
+            . traverse (C.eraCast C.BabbageEra)
+            . indexersFilter
+            $ txOuts
+        pure $ outs & zip ([0..] :: [Integer])
+            <&> (\(ix, out) -> (out, TxOutRef
+                                   { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
+                                   , txOutRefIdx = ix
+                                   }))
 getInputs
   :: C.Tx era
   -> Set TxOutRef
@@ -82,7 +90,8 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
   in Set.fromList $ fmap (txInRef . (`TxIn` Nothing) . fromCardanoTxIn) inputs
 
 getUtxoUpdate
-  :: SlotNo
+  :: C.IsCardanoEra era
+  => SlotNo
   -> [C.Tx era]
   -> Maybe TargetAddresses
   -> UtxoUpdate
@@ -136,20 +145,37 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               slot   <- chainPointToSlotNo cp
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
+-- | does the transaction contain a targetAddress
+isInTargetTxOut
+    :: TargetAddresses              -- ^ non empty list of target address
+    -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
+    -> Bool
+isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
+    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
+    _                                                -> False
 
-utxoHotStoreWorker :: IndexerHotStore -> TargetAddresses -> Worker
-utxoHotStoreWorker hotStore  targetAddresses Coordinator{_barrier} ch path =
+-- | does the transaction contain a targetAddress
+isTargetTxOut
+    :: CardanoAddress               -- ^  a cardano shelley era adddress
+    -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
+    -> Bool
+isTargetTxOut targetaddress (C.TxOut address _ _ _) = case  address of
+    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr == targetaddress
+    _                                                -> False
+
+utxoHotStoreWorker :: TMVar () -> TargetAddresses -> Worker
+utxoHotStoreWorker qtmvar targetAddresses Coordinator{_barrier} ch path =
    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
+      atomically $ takeTMVar qtmvar -- block if there is query
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
           let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
           Ix.insert utxoRow index >>= innerLoop
-          puts hotStore (Utxo.toRows utxoRow)
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
@@ -157,7 +183,6 @@ utxoHotStoreWorker hotStore  targetAddresses Coordinator{_barrier} ch path =
               slot   <- chainPointToSlotNo cp
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
-
 
 
 utxoWorker :: Maybe TargetAddresses -> Worker

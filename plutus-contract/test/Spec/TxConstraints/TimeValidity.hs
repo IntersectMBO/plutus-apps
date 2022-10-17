@@ -58,18 +58,20 @@ contract :: Contract () Empty ContractError ()
 contract = do
     now <- Con.currentTime
     logInfo @String $ "now: " ++ show now
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups $ typedValidator deadline
-        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25000000)
+    let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx
+                ()
+                (Ada.lovelaceValueOf 25000000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
         lookups2 =
-            Constraints.plutusV1OtherScript (validatorScript deadline)
+            Constraints.otherScript (validatorScript deadline)
             <> Constraints.unspentOutputs utxos
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
-            <> Constraints.mustIncludeDatum unitDatum
+            <> Constraints.mustIncludeDatumInTx unitDatum
             <> Constraints.mustValidateIn (from $ now + 1000)
     void $ waitNSlots 2
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
@@ -203,8 +205,8 @@ typedValidator = Scripts.mkTypedValidatorParam @UnitTest
     where
         wrap = Scripts.mkUntypedValidator
 
-validatorScript :: P.POSIXTime -> Validator
-validatorScript = Scripts.validatorScript . typedValidator
+validatorScript :: P.POSIXTime -> Tx.Versioned Validator
+validatorScript = Scripts.vValidatorScript . typedValidator
 
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash $ typedValidator deadline

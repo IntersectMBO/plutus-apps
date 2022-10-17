@@ -30,7 +30,7 @@ import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Ledger (AssetClass, TxId)
 import Ledger.Credential (Credential)
-import Ledger.Tx (ChainIndexTxOut, TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
@@ -186,9 +186,9 @@ type API
 
 type FromHashAPI =
     "datum" :> Description "Get a datum from its hash." :> ReqBody '[JSON] DatumHash :> Post '[JSON] Datum
-    :<|> "validator" :> Description "Get a validator script from its hash." :> ReqBody '[JSON] ValidatorHash :> Post '[JSON] Validator
-    :<|> "minting-policy" :> Description "Get a minting policy from its hash." :> ReqBody '[JSON] MintingPolicyHash :> Post '[JSON] MintingPolicy
-    :<|> "stake-validator" :> Description "Get a stake validator from its hash." :> ReqBody '[JSON] StakeValidatorHash :> Post '[JSON] StakeValidator
+    :<|> "validator" :> Description "Get a validator script from its hash." :> ReqBody '[JSON] ValidatorHash :> Post '[JSON] (Versioned Validator)
+    :<|> "minting-policy" :> Description "Get a minting policy from its hash." :> ReqBody '[JSON] MintingPolicyHash :> Post '[JSON] (Versioned MintingPolicy)
+    :<|> "stake-validator" :> Description "Get a stake validator from its hash." :> ReqBody '[JSON] StakeValidatorHash :> Post '[JSON] (Versioned StakeValidator)
     :<|> "redeemer" :> Description "Get a redeemer from its hash." :> ReqBody '[JSON] RedeemerHash :> Post '[JSON] Redeemer
 
 type SwaggerAPI = "swagger" :> SwaggerSchemaUI "swagger-ui" "swagger.json"

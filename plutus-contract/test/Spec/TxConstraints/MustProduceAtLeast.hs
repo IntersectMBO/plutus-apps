@@ -16,9 +16,9 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (OwnPubKeyMissing), ownPaymentPubKeyHash,
-                                                             plutusV1TypedValidatorLookups, unspentOutputs)
+                                                             typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
                                                                   mustPayToTheScript, mustProduceAtLeast)
 import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
@@ -39,6 +39,7 @@ import Prelude hiding (not)
 import Wallet.Emulator.Error (WalletAPIError (InsufficientFunds))
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet')
 
+-- TODO include these tests to the main suite in the test-suite when we'll be able to validate the contract
 tests :: TestTree
 tests =
     testGroup "MustProduceAtLeast"
@@ -68,20 +69,20 @@ baseAdaAndTokenValueLockedByScript = baseAdaValueLockedByScript <> someTokens 1
 -- | Valid contract containing all required lookups. Uses mustProduceAtLeast constraint with provided on-chain and off-chain values.
 mustProduceAtLeastContract :: Value.Value -> Value.Value -> Value.Value -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustProduceAtLeastContract offAmt onAmt baseScriptValue pkh = do
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScript onAmt baseScriptValue
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     pubKeyUtxos <- utxosAt $ Ledger.pubKeyHashAddress pkh Nothing
     scriptUtxos <- utxosAt scrAddress
-    let lookups2 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
             <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
             Constraints.collectFromTheScript scriptUtxos ()
-            <> Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData onAmt)
+            <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
             <> Constraints.mustProduceAtLeast offAmt
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -176,17 +177,17 @@ contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing :: TestTree
 contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing =
     let withoutOwnPubkeyHashLookupContract:: Value.Value -> Value.Value -> Contract () Empty ContractError ()
         withoutOwnPubkeyHashLookupContract offAmt onAmt = do
-            let lookups1 = Constraints.plutusV1TypedValidatorLookups typedValidator
+            let lookups1 = Constraints.typedValidatorLookups typedValidator
                 tx1 = Constraints.mustPayToTheScript onAmt baseAdaValueLockedByScript
             ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
             utxos <- utxosAt scrAddress
-            let lookups2 = Constraints.plutusV1TypedValidatorLookups typedValidator
+            let lookups2 = Constraints.typedValidatorLookups typedValidator
                     <> Constraints.unspentOutputs utxos
                 tx2 =
                     Constraints.collectFromTheScript utxos ()
-                    <> Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData onAmt)
+                    <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
                     <> Constraints.mustProduceAtLeast offAmt
             ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2

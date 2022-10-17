@@ -1,15 +1,23 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE Strict            #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {-| Misc. types used in this package
 -}
 module Plutus.ChainIndex.Types(
     ChainIndexTx(..)
     , ChainIndexTxOutputs(..)
+    , ChainIndexTxOut(..)
+    , ReferenceScript(..)
     , BlockId(..)
     , blockId
     , Tip(..)
@@ -50,14 +58,21 @@ module Plutus.ChainIndex.Types(
     , citxCardanoTx
     , _InvalidTx
     , _ValidTx
+    , fromReferenceScript
     ) where
 
+import Cardano.Api qualified as C
 import Codec.Serialise (Serialise)
 import Codec.Serialise qualified as CBOR
+import Codec.Serialise.Class (Serialise (decode, encode))
+import Codec.Serialise.Decoding (decodeListLen, decodeWord)
+import Codec.Serialise.Encoding (encodeListLen, encodeWord)
 import Control.Lens (makeLenses, makePrisms)
 import Control.Monad (void)
 import Crypto.Hash (SHA256, hash)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.!=), (.:), (.:?), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson
 import Data.ByteArray qualified as BA
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
@@ -70,22 +85,100 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (SlotRange, SomeCardanoApiTx, TxIn, TxOut, TxOutRef (..))
+import Ledger (Address, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..), Versioned)
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
-import Ledger.TxId (TxId)
+import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Script, ScriptHash)
-import Plutus.V1.Ledger.Tx (Redeemers)
+import Plutus.V1.Ledger.Tx (Redeemers, TxId)
+import Plutus.V2.Ledger.Api (OutputDatum (..), Value (..))
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter
 import Prettyprinter.Extras (PrettyShow (..))
 
--- | List of outputs of a transaction. There are no outputs if the transaction
--- is invalid.
+data ReferenceScript = ReferenceScriptNone | ReferenceScriptInAnyLang C.ScriptInAnyLang
+  deriving (Eq, Show, Generic, Serialise, OpenApi.ToSchema)
+
+instance ToJSON ReferenceScript where
+  toJSON (ReferenceScriptInAnyLang s) = object ["referenceScript" .= s]
+  toJSON ReferenceScriptNone          = Aeson.Null
+
+instance FromJSON ReferenceScript where
+  parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
+    case Aeson.lookup "referenceScript" o of
+      Nothing        -> pure ReferenceScriptNone
+      Just refScript -> ReferenceScriptInAnyLang <$> parseJSON refScript
+
+instance Serialise C.ScriptInAnyLang where
+    encode (C.ScriptInAnyLang lang script) =
+        let
+            -- Since lang is a GADT we have to encode the script in all branches
+            other = case lang of
+                C.SimpleScriptLanguage C.SimpleScriptV1 -> encodeWord 0 <> encode (C.serialiseToCBOR script)
+                C.SimpleScriptLanguage C.SimpleScriptV2 -> encodeWord 1 <> encode (C.serialiseToCBOR script)
+                C.PlutusScriptLanguage C.PlutusScriptV1 -> encodeWord 2 <> encode (C.serialiseToCBOR script)
+                C.PlutusScriptLanguage C.PlutusScriptV2 -> encodeWord 3 <> encode (C.serialiseToCBOR script)
+        in encodeListLen 2 <> other
+    decode = do
+        len <- decodeListLen
+        langWord <- decodeWord
+        script <- decode
+        case (len, langWord) of
+            (2, 0) -> do
+                let decoded = either (error "Failed to deserialise AsSimpleScriptV1 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsSimpleScriptV1) script)
+                pure $ C.ScriptInAnyLang (C.SimpleScriptLanguage C.SimpleScriptV1) decoded
+            (2, 1) -> do
+                let decoded = either (error "Failed to deserialise AsSimpleScriptV2 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsSimpleScriptV2) script)
+                pure $ C.ScriptInAnyLang (C.SimpleScriptLanguage C.SimpleScriptV2) decoded
+            (2, 2) -> do
+                let decoded = either (error "Failed to deserialise AsPlutusScriptV1 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsPlutusScriptV1) script)
+                pure $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) decoded
+            (2, 3) -> do
+                let decoded = either (error "Failed to deserialise AsPlutusScriptV2 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsPlutusScriptV2) script)
+                pure $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) decoded
+            _ -> fail "Invalid ScriptInAnyLang encoding"
+
+instance OpenApi.ToSchema C.ScriptInAnyLang where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptInAnyLang") mempty
+
+fromReferenceScript :: ReferenceScript -> Maybe (Versioned Script)
+fromReferenceScript ReferenceScriptNone             = Nothing
+fromReferenceScript (ReferenceScriptInAnyLang sial) = fromCardanoScriptInAnyLang sial
+
+data ChainIndexTxOut = ChainIndexTxOut
+  { citoAddress   :: Address -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era
+  , citoValue     :: Value
+  , citoDatum     :: OutputDatum
+  , citoRefScript :: ReferenceScript
+  } deriving (Eq, Show, Generic, Serialise, OpenApi.ToSchema)
+
+instance ToJSON ChainIndexTxOut where
+    toJSON ChainIndexTxOut{..} = object
+        [ "address" .= toJSON citoAddress
+        , "value" .= toJSON citoValue
+        , "datum" .= toJSON citoDatum
+        , "refScript" .= toJSON citoRefScript
+        ]
+
+instance FromJSON ChainIndexTxOut where
+    parseJSON =
+        Aeson.withObject "ChainIndexTxOut" $ \obj ->
+            ChainIndexTxOut
+                <$> obj .: "address"
+                <*> obj .: "value"
+                <*> obj .: "datum"
+                <*> obj .:? "refScript" .!= ReferenceScriptNone
+
+instance Pretty ChainIndexTxOut where
+    pretty ChainIndexTxOut {citoAddress, citoValue} =
+        hang 2 $ vsep ["-" <+> pretty citoValue <+> "addressed to", pretty citoAddress]
+
+-- | List of outputs of a transaction. There is only an optional collateral output
+-- if the transaction is invalid.
 data ChainIndexTxOutputs =
-    InvalidTx -- ^ The transaction is invalid so there is no outputs
-  | ValidTx [TxOut]
+    InvalidTx (Maybe ChainIndexTxOut) -- ^ The transaction is invalid so there is maybe a collateral output.
+  | ValidTx [ChainIndexTxOut]
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makePrisms ''ChainIndexTxOutputs
@@ -103,7 +196,7 @@ data ChainIndexTx = ChainIndexTx {
     -- ^ Datum objects recorded on this transaction.
     _citxRedeemers  :: Redeemers,
     -- ^ Redeemers of the minting scripts.
-    _citxScripts    :: Map ScriptHash Script,
+    _citxScripts    :: Map ScriptHash (Versioned Script),
     -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
     _citxCardanoTx  :: Maybe SomeCardanoApiTx
     -- ^ The full Cardano API tx which was used to populate the rest of the
@@ -125,10 +218,10 @@ instance Pretty ChainIndexTx where
                 , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList _citxRedeemers) ))
                 ]
         in nest 2 $ vsep ["Valid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
-    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
+    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx mOutput, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
         let lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty _citxInputs))
-                , hang 2 (vsep ["no outputs:"])
+                , hang 2 (vsep ["collateral output:", maybe "-" pretty mOutput])
                 , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
                 , "validity range:" <+> viaShow _citxValidRange
                 , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _citxData) ))
@@ -341,8 +434,9 @@ data Diagnostics =
         , numUnspentOutputs  :: Int
         , numUnmatchedInputs :: Int
         , someTransactions   :: [TxId]
+        , unspentTxOuts      :: [ChainIndexTxOut]
         }
-        deriving stock (Eq, Ord, Show, Generic)
+        deriving stock (Eq, Show, Generic)
         deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 -- | Datatype returned when we couldn't get the state of a tx or a tx output.

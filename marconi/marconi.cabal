@@ -48,7 +48,6 @@ library
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
     Marconi.Indexers
-    Marconi.IndexersHotStore
     Marconi.Logging
     Marconi.Orphans
 

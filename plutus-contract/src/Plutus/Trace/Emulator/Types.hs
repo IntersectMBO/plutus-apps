@@ -52,6 +52,7 @@ module Plutus.Trace.Emulator.Types(
     , UserThreadMsg(..)
     ) where
 
+import Cardano.Api (NetworkId)
 import Control.DeepSeq
 import Control.Lens
 import Control.Monad.Freer.Coroutine
@@ -150,6 +151,7 @@ data ContractHandle w s e =
         { chContract    :: Contract w s e ()
         , chInstanceId  :: ContractInstanceId
         , chInstanceTag :: ContractInstanceTag
+        , chNetworkId   :: NetworkId
         }
 
 data EmulatorRuntimeError =

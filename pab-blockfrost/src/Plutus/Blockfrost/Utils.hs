@@ -17,18 +17,17 @@ import Text.Read (readMaybe)
 import Blockfrost.Client as Blockfrost
 import Cardano.Api hiding (AssetId, Block, Value)
 import Cardano.Api.Shelley qualified as Api
+import Ledger.Slot qualified as Ledger (Slot (..), SlotRange)
 import Ledger.Tx (TxOutRef (..))
-import Ledger.Tx qualified as LT (ScriptTag (..))
+import Ledger.Tx qualified as LT (ScriptTag (..), TxId (TxId))
 import Ledger.Tx.CardanoAPI
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
 import Plutus.V1.Ledger.Address qualified as LA
-import Plutus.V1.Ledger.Api (Credential (..), adaSymbol, adaToken, fromBuiltin, toBuiltin)
+import Plutus.V1.Ledger.Api (Credential (..), fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
 import Plutus.V1.Ledger.Interval (always, from, interval, to)
 import Plutus.V1.Ledger.Scripts qualified as PS
-import Plutus.V1.Ledger.Slot qualified as Ledger (Slot (..), SlotRange)
-import Plutus.V1.Ledger.TxId qualified as Ledger
 import Plutus.V1.Ledger.Value hiding (Value)
 import Plutus.V1.Ledger.Value qualified as Ledger (Value)
 
@@ -48,10 +47,10 @@ class Show a => ToBlockfrostDatumHash a where
 instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.DatumHash
 instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.RedeemerHash
 
-toBlockfrostTxHash :: Ledger.TxId -> TxHash
+toBlockfrostTxHash :: LT.TxId -> TxHash
 toBlockfrostTxHash = TxHash . pack . show
 
-toBlockfrostTxHashes :: [Ledger.TxId] -> [TxHash]
+toBlockfrostTxHashes :: [LT.TxId] -> [TxHash]
 toBlockfrostTxHashes = map toBlockfrostTxHash
 
 toBlockfrostRef :: TxOutRef -> (TxHash, Integer)
@@ -86,10 +85,8 @@ toPlutusScriptTag = \case
 
 toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
 toPlutusAddress bAddr = case deserialized of
-    Nothing -> Left "Error deserializing the Address"
-    Just des -> case fromCardanoAddress des of
-        Left err   -> Left ("Error parsing address " ++ show err)
-        Right addr -> Right addr
+    Nothing  -> Left "Error deserializing the Address"
+    Just des -> Right $ fromCardanoAddress des
   where
     deserialized :: Maybe (Api.Address ShelleyAddr)
     deserialized = deserialiseAddress AsShelleyAddress (unAddress bAddr)
@@ -104,15 +101,15 @@ credentialToAddress netId c = case toCardanoAddressInEra netId pAddress of
       PubKeyCredential pkh     -> LA.pubKeyHashAddress pkh
       ScriptCredential valHash -> LA.scriptHashAddress valHash
 
-txHashToTxId :: TxHash -> Ledger.TxId
-txHashToTxId = Ledger.TxId .toBuiltin . fromJust . decodeHex . unTxHash
+txHashToTxId :: TxHash -> LT.TxId
+txHashToTxId = LT.TxId .toBuiltin . fromJust . decodeHex . unTxHash
 
 utxoToRef :: AddressUtxo -> TxOutRef
 utxoToRef utxo = TxOutRef { txOutRefId=utxoToTxId utxo
                           , txOutRefIdx=_addressUtxoOutputIndex utxo
                           }
 
-utxoToTxId :: AddressUtxo -> Ledger.TxId
+utxoToTxId :: AddressUtxo -> LT.TxId
 utxoToTxId = txHashToTxId . _addressUtxoTxHash
 
 txoToRef :: UtxoInput -> TxOutRef
@@ -122,8 +119,8 @@ txoToRef txo = TxOutRef { txOutRefId=txoToTxId txo
 
 -- We are forced to use blockfrost-client v0.3.1 by the cardano-wallet.
 -- In that version, _utxoInputTxHash returns a Text instead of a TxHash
-txoToTxId :: UtxoInput -> Ledger.TxId
-txoToTxId = txHashToTxId . TxHash . _utxoInputTxHash
+txoToTxId :: UtxoInput -> LT.TxId
+txoToTxId = txHashToTxId . _utxoInputTxHash
 
 amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
 amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)

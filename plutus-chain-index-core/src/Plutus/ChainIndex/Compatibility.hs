@@ -58,5 +58,5 @@ fromCardanoBlockNo (BlockNo blockNo) = BlockNumber blockNo
 
 fromCardanoBlock
     :: BlockInMode CardanoMode
-    -> Either C.FromCardanoError [ChainIndexTx]
+    -> [ChainIndexTx]
 fromCardanoBlock = C.fromCardanoBlock

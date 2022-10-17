@@ -33,7 +33,7 @@ import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Proxy (Proxy (..))
 import Ledger (TxId)
-import Ledger.Tx (ChainIndexTxOut, TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef, Versioned)
 import Network.HTTP.Types.Status (Status (..))
 import Plutus.ChainIndex.Api (API, IsUtxoResponse, QueryAtAddressRequest (QueryAtAddressRequest), QueryResponse,
                               TxoAtAddressRequest (TxoAtAddressRequest), TxosResponse,
@@ -53,9 +53,9 @@ collectGarbage :: ClientM NoContent
 
 -- TODO: Catch 404 error
 getDatum :: DatumHash -> ClientM Datum
-getValidator :: ValidatorHash -> ClientM Validator
-getMintingPolicy :: MintingPolicyHash -> ClientM MintingPolicy
-getStakeValidator :: StakeValidatorHash -> ClientM StakeValidator
+getValidator :: ValidatorHash -> ClientM (Versioned Validator)
+getMintingPolicy :: MintingPolicyHash -> ClientM (Versioned MintingPolicy)
+getStakeValidator :: StakeValidatorHash -> ClientM (Versioned StakeValidator)
 getRedeemer :: RedeemerHash -> ClientM Redeemer
 
 getTxOut :: TxOutRef -> ClientM ChainIndexTxOut

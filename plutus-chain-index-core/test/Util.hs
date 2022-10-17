@@ -1,24 +1,24 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds   #-}
 {-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE ViewPatterns     #-}
 
 module Util where
 
-import Control.Lens (view)
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff, Member)
-import Ledger (Address (Address, addressCredential), TxOut (TxOut, txOutAddress), TxOutRef)
+import Ledger (Address (Address, addressCredential), TxOutRef)
 import Ledger.Credential (Credential)
-import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), citxOutputs, utxoSetAtAddress)
+import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), utxoSetAtAddress)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect)
-import Plutus.ChainIndex.Tx (ChainIndexTx, _ValidTx)
+import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (ChainIndexTxOut, citoAddress), txOuts)
 
 -- | Get all address credentials from a block.
 addrCredsFromBlock :: [ChainIndexTx] -> [Credential]
 addrCredsFromBlock =
-  fmap (\TxOut { txOutAddress = Address { addressCredential }} -> addressCredential)
-  . view (traverse . citxOutputs . _ValidTx)
+  fmap (\ChainIndexTxOut{citoAddress=Address { addressCredential }} -> addressCredential)
+  . foldMap txOuts
 
 -- | Get the UTxO set from a block.
 utxoSetFromBlockAddrs :: Member ChainIndexQueryEffect effs => [ChainIndexTx] -> Eff effs [[TxOutRef]]

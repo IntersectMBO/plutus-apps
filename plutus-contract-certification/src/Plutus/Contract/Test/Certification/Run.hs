@@ -58,8 +58,8 @@ import System.Random.SplitMix
 import Test.QuickCheck as QC
 import Test.QuickCheck.Property
 import Test.QuickCheck.Random as QC
-import Test.Tasty as Tasty
-import Test.Tasty.Runners as Tasty
+import Test.Tasty qualified as Tasty
+import Test.Tasty.Runners qualified as Tasty
 import Text.Read hiding (lift)
 
 newtype JSONShowRead a = JSONShowRead a
@@ -90,7 +90,24 @@ instance FromJSON SomeException where
     str <- parseJSON v
     return $ SomeException (ErrorCall str)
 
-deriving via (JSONShowRead Tasty.Result) instance ToJSON Tasty.Result
+data TastyResult = Result
+  { resultOutcome          :: Tasty.Outcome
+  , resultDescription      :: String
+  , resultShortDescription :: String
+  , resultTime             :: Tasty.Time
+  }
+  deriving (Generic, ToJSON)
+
+deriving instance Generic Tasty.FailureReason
+deriving instance ToJSON Tasty.FailureReason
+deriving instance ToJSON Tasty.Outcome
+
+instance ToJSON Tasty.Result where
+  toJSON r = toJSON $ Result { resultOutcome          = Tasty.resultOutcome r
+                             , resultDescription      = Tasty.resultDescription r
+                             , resultShortDescription = Tasty.resultShortDescription r
+                             , resultTime             = Tasty.resultTime r
+                             }
 
 data CertificationReport m = CertificationReport {
     _certRes_standardPropertyResult       :: QC.Result,
@@ -208,10 +225,10 @@ checkNoLockedFundsLight opts prf =
 mkQCArgs :: CertificationOptions -> Args
 mkQCArgs CertificationOptions{..} = stdArgs { chatty = certOptOutput , maxSuccess = certOptNumTests }
 
-runUnitTests :: (CoverageRef -> TestTree) -> CertMonad [Tasty.Result]
+runUnitTests :: (CoverageRef -> Tasty.TestTree) -> CertMonad [Tasty.Result]
 runUnitTests t = liftIORep $ do
     ref <- newCoverageRef
-    res <- launchTestTree mempty (t ref) $ \ status -> do
+    res <- Tasty.launchTestTree mempty (t ref) $ \ status -> do
       rs <- atomically $ mapM waitForDone (IntMap.elems status)
       return $ \ _ -> return rs
     cov <- readCoverageRef ref
@@ -220,8 +237,8 @@ runUnitTests t = liftIORep $ do
     waitForDone tv = do
       s <- readTVar tv
       case s of
-        Done r -> return r
-        _      -> retry
+        Tasty.Done r -> return r
+        _            -> retry
 
 checkDerived :: forall d m c. (c m => ContractModel (d m))
              => Maybe (Instance c m)

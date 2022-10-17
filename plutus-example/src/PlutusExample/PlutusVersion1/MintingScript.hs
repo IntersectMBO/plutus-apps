@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeFamilies      #-}
 
 
-module PlutusExample.MintingScript
+module PlutusExample.PlutusVersion1.MintingScript
   ( apiExamplePlutusMintingScript
   , mintingScriptShortBs
   ) where
@@ -23,7 +23,6 @@ import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Scripts (Script, Validator (Validator), mkMintingPolicyScript, unMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
-
 
 {- HLINT ignore "Avoid lambda" -}
 
@@ -52,4 +51,3 @@ apiExamplePlutusMintingScript = PlutusScriptSerialised . SBS.toShort $ LB.toStri
 
 mintingScriptShortBs :: SBS.ShortByteString
 mintingScriptShortBs = SBS.toShort . LB.toStrict $ scriptAsCbor
-

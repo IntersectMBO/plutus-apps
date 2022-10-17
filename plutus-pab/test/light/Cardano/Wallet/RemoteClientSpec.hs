@@ -1,10 +1,11 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TupleSections    #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Cardano.Wallet.RemoteClientSpec
     ( tests
@@ -30,7 +31,7 @@ import Plutus.PAB.Core.ContractInstance.STM (InstancesState, emptyInstanceState,
                                              instanceState, yieldedExportTxs)
 import Test.QuickCheck.Arbitrary (Arbitrary, arbitrary)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import Wallet.Effects (NodeClientEffect (GetClientParams, GetClientSlot, PublishTx), WalletEffect (YieldUnbalancedTx))
 import Wallet.Emulator.Error (WalletAPIError (OtherError))
 import Wallet.Types (ContractInstanceId, randomID)
@@ -38,8 +39,8 @@ import Wallet.Types (ContractInstanceId, randomID)
 tests :: TestTree
 tests = testGroup "Cardano.Wallet.RemoteClient"
     [ testGroup "yieldUnbalancedTx"
-        [ testProperty "should put partial tx in contract instance state" yieldToInstanceState
-        , testProperty "should throw error when no contract instance id is provided" yieldNoCid
+        [ testPropertyNamed "should put partial tx in contract instance state" "yieldToInstanceState" yieldToInstanceState
+        , testPropertyNamed "should throw error when no contract instance id is provided" "yieldNoCid"yieldNoCid
         ]
     ]
 

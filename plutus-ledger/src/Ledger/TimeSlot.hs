@@ -33,9 +33,9 @@ import Data.Time.Clock qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import GHC.Generics (Generic)
 import Ledger.Orphans ()
+import Ledger.Slot (Slot (Slot), SlotRange)
 import Plutus.V1.Ledger.Interval (Extended (..), Interval (Interval), LowerBound (..), UpperBound (..), interval,
                                   member)
-import Plutus.V1.Ledger.Slot (Slot (Slot), SlotRange)
 import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange)
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (Eq, (<$>))

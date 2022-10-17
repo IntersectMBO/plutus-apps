@@ -33,15 +33,16 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxId, TxIn (TxIn), TxInType (..), TxOut (TxOut),
+import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxId, TxIn (TxIn), TxInType (..), TxOut,
                TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txOutValue)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Ada qualified as Ada
-import Ledger.Scripts (Datum (getDatum), Script, Validator, ValidatorHash (ValidatorHash), unValidatorScript)
+import Ledger.Crypto (PubKey, PubKeyHash, Signature)
+import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
+                       Versioned (Versioned), unValidatorScript)
 import Ledger.Tx qualified as Tx
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
@@ -81,6 +82,10 @@ newtype RenderPretty a =
 
 instance Pretty a => Render (RenderPretty a) where
     render (RenderPretty a) = pure $ pretty a
+
+instance (Render a, Render b) => Render (Either a b) where
+    render (Left a)  = render a
+    render (Right b) = render b
 
 instance Render [[AnnotatedTx]] where
     render blockchain =
@@ -283,9 +288,18 @@ instance Render TxIn where
     render (TxIn txInRef Nothing) = render txInRef
 
 instance Render TxInType where
-    render (ConsumeScriptAddress validator _ _) = render validator
-    render ConsumePublicKeyAddress              = pure mempty
-    render ConsumeSimpleScriptAddress           = pure mempty
+    render (ScriptAddress validator _ _) = render validator
+    render ConsumePublicKeyAddress       = pure mempty
+    render ConsumeSimpleScriptAddress    = pure mempty
+
+instance Render a => Render (Versioned a) where
+    render (Versioned a lang) = do
+        rlang <- render lang
+        ra <- render a
+        pure $ parens rlang <+> ra
+
+instance Render Language where
+    render = pure . viaShow
 
 instance Render TxOutRef where
     render TxOutRef {txOutRefId, txOutRefIdx} =
@@ -297,13 +311,13 @@ instance Render TxOutRef where
             pure $ fill 8 t <> r
 
 instance Render TxOut where
-    render txOut@TxOut {txOutValue} =
+    render txOut =
         vsep <$>
         sequence
             [ mappend "Destination:" . indent 2 <$>
               render (toBeneficialOwner txOut)
             , pure "Value:"
-            , indent 2 <$> render txOutValue
+            , indent 2 <$> render (txOutValue txOut)
             ]
 
 ------------------------------------------------------------

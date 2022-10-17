@@ -17,12 +17,11 @@ module Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
     , forwardToValidator
     ) where
 
-import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
+import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
+                             ValidatorHash, mkMintingPolicyScript)
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
                                   ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
 import Plutus.V1.Ledger.Contexts qualified as PV1
-import Plutus.V1.Ledger.Credential (Credential (ScriptCredential))
-import Plutus.V1.Ledger.Scripts (MintingPolicy, ValidatorHash, mkMintingPolicyScript)
 import Plutus.V1.Ledger.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx (UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx qualified
@@ -41,6 +40,7 @@ type UntypedMintingPolicy = BuiltinData -> BuiltinData -> ()
 -- @
 --   import PlutusTx qualified
 --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+--   import Plutus.Script.Utils.V1.Scripts (mkUntypedMintingPolicy)
 --
 --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
 --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
@@ -73,7 +73,7 @@ mkForwardingMintingPolicy vshsh =
        `PlutusTx.applyCode` PlutusTx.liftCode vshsh
 
 {-# INLINABLE forwardToValidator #-}
-forwardToValidator :: ValidatorHash -> () -> ScriptContext -> Bool
+forwardToValidator :: ValidatorHash -> () -> PV1.ScriptContext -> Bool
 forwardToValidator h _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Minting _} =
     let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential vh}} = vh == h
         checkHash _                                                                  = False

@@ -27,7 +27,8 @@ import Servant.API.ContentTypes (AllCTRender (handleAcceptH))
 import Servant.Server (DefaultErrorFormatters, ErrorFormatters, Handler, HasContextEntry,
                        HasServer (hoistServerWithContext, route, type ServerT), type (.++))
 
--- | We need a type that may or man not return content, since we collapsed the entire JSON RPC api to one endpoint.
+-- | The entire JSON RPC api is collapsed to a single endpoint.
+-- Therefore, we need a type that may or may not return content.
 data MaybeContent a
     = SomeContent a
     | EmptyContent

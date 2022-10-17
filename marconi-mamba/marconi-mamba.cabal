@@ -46,7 +46,15 @@ library
     Marconi.Api.HttpServer
     Marconi.Api.Routes
     Marconi.Api.Types
+    Marconi.Api.UtxoIndexersQuery
     Marconi.Bootstrap
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-streaming
 
   --------------------
   -- Local components
@@ -65,6 +73,8 @@ library
     , lens
     , servant
     , servant-server
+    , sqlite-simple
+    , stm
     , text
     , time
     , warp
@@ -92,6 +102,11 @@ executable marconi-mamba
   hs-source-dirs: app
   main-is:        Main.hs
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
   --------------------
   -- Local components
   --------------------
@@ -103,8 +118,6 @@ executable marconi-mamba
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
-    , cardano-streaming
 
   ------------------------
   -- Non-IOG dependencies
@@ -113,6 +126,7 @@ executable marconi-mamba
     , async
     , base                  >=4.9 && <5
     , optparse-applicative
+    , text
 
 executable examples-json-rpc-server
   import:         lang
@@ -122,13 +136,8 @@ executable examples-json-rpc-server
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , marconi
-    , marconi-mamba
-
-  build-depends:
-    , base  >=4.9 && <5
-    , warp
+  build-depends:  marconi-mamba
+  build-depends:  base >=4.9 && <5
 
 executable examples-json-rpc-client
   import:         lang
@@ -138,12 +147,14 @@ executable examples-json-rpc-client
   --------------------
   -- Local components
   --------------------
-  build-depends:  json-rpc
+  build-depends:
+    , json-rpc
+    , plutus-ledger
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  plutus-ledger
+  build-depends:
 
   ------------------------
   -- Non-IOG dependencies

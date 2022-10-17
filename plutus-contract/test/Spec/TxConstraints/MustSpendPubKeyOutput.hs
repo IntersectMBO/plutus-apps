@@ -19,9 +19,9 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), ownPaymentPubKeyHash,
-                                                             plutusV1TypedValidatorLookups, unspentOutputs)
+                                                             typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatum,
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
                                                                   mustPayToTheScript, mustSpendPubKeyOutput)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
@@ -68,7 +68,7 @@ baseLovelaceLockedByScript = lovelacePerInitialUtxo `div` 2
 
 mustSpendPubKeyOutputContract :: [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
-    let lookups1 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScript onChainTxOutRefs $ Ada.lovelaceValueOf baseLovelaceLockedByScript
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -76,13 +76,13 @@ mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
     pubKeyUtxos <- utxosAt $ Ledger.pubKeyHashAddress pkh Nothing
     logInfo @String $ "pubKeyUtxos:: " ++ show pubKeyUtxos -- remove
     scriptUtxos <- utxosAt scrAddress
-    let lookups2 = Constraints.plutusV1TypedValidatorLookups typedValidator
+    let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
             <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
             Constraints.collectFromTheScript scriptUtxos ()
-            <> Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData onChainTxOutRefs)
+            <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onChainTxOutRefs)
             <> mconcat mustSpendPubKeyOutputs
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2

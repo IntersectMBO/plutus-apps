@@ -9,37 +9,33 @@
 -- across to the test suite.
 module Plutus.PAB.Arbitrary where
 
-import Cardano.Ledger.Alonzo.Rules.Utxos qualified as C.Ledger
-import Cardano.Ledger.Alonzo.Scripts (Tag (Spend))
-import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
-import Cardano.Ledger.Alonzo.TxWitness qualified as C.Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
-import Data.Set qualified as Set
+import Data.Either.Combinators (rightToMaybe)
+import Ledger (TxOut (TxOut))
 import Ledger qualified
-import Ledger.Address (Address (..), PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
-import Ledger.Bytes (LedgerBytes)
-import Ledger.Bytes qualified as LedgerBytes
+import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
 import Ledger.Constraints (MkTxError)
-import Ledger.Crypto (PubKey, PubKeyHash, Signature)
+import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Params (testnet)
 import Ledger.Slot (Slot)
-import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
-import Ledger.Tx.CardanoAPI (ToCardanoError)
-import Ledger.TxId (TxId)
+import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
+                  Withdrawal)
+import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoTxOut, toCardanoTxOutDatum)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
-import Plutus.V1.Ledger.Api (ValidatorHash (ValidatorHash))
-import Plutus.V1.Ledger.Scripts qualified as Ledger
+import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
-import Test.QuickCheck (Gen, Positive (..), oneof, sized)
+import Test.QuickCheck (Gen, Positive (..), oneof, sized, suchThatMap)
 import Test.QuickCheck.Arbitrary.Generic (Arbitrary, arbitrary, genericArbitrary, genericShrink, shrink)
 import Test.QuickCheck.Instances ()
 import Wallet (WalletAPIError)
@@ -66,21 +62,15 @@ instance Arbitrary Ledger.MintingPolicyHash where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary (C.Ledger.ApplyTxError Ledger.EmulatorEra) where
-    arbitrary = pure $ C.Ledger.ApplyTxError []
-    shrink _ = []
+instance Arbitrary Ledger.Script where
+    arbitrary = oneof [
+          pure $ Ledger.unValidatorScript acceptingValidator
+        , pure $ Ledger.unMintingPolicyScript acceptingMintingPolicy
+        ]
 
-instance Arbitrary (C.Ledger.UtxosPredicateFailure Ledger.EmulatorEra) where
-    arbitrary = pure $ C.Ledger.CollectErrors []
-    shrink _ = []
-
-instance Arbitrary (C.Ledger.ScriptFailure StandardCrypto) where
-    arbitrary = pure $ C.Ledger.MissingScript (C.Ledger.RdmrPtr Spend 0)
-    shrink _ = []
-
-instance Arbitrary (C.Ledger.BasicFailure StandardCrypto) where
-    arbitrary = pure $ C.Ledger.UnknownTxIns Set.empty
-    shrink _ = []
+instance Arbitrary Ledger.ScriptHash where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary Ledger.ValidationError where
     arbitrary = genericArbitrary
@@ -118,15 +108,48 @@ instance Arbitrary TxIn where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary TxOut where
+instance Arbitrary TxInputType where
     arbitrary = genericArbitrary
     shrink = genericShrink
+
+instance Arbitrary TxInput where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary PV2.OutputDatum where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+
+instance Arbitrary TxOut where
+    arbitrary = fmap (fmap TxOut . toCardanoTxOut testnet toCardanoTxOutDatum) genericArbitrary `suchThatMap` rightToMaybe
+    shrink = pure
 
 instance Arbitrary TxOutRef where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
 instance Arbitrary TxInType where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Withdrawal where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Certificate where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Ledger.Credential where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Ledger.StakingCredential where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Ledger.DCert where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -247,6 +270,14 @@ instance Arbitrary PlutusTx.BuiltinData where
     arbitrary = PlutusTx.dataToBuiltinData <$> arbitrary
     shrink d = PlutusTx.dataToBuiltinData <$> shrink (PlutusTx.builtinDataToData d)
 
+instance Arbitrary Ledger.Language where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary script => Arbitrary (Ledger.Versioned script) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Ledger.Datum where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -296,7 +327,7 @@ instance Arbitrary PABReq where
             ]
 
 instance Arbitrary Address where
-    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, Ledger.scriptAddress <$> arbitrary]
+    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, mkValidatorAddress <$> arbitrary]
 
 instance Arbitrary ValidatorHash where
     arbitrary = ValidatorHash <$> arbitrary

@@ -61,7 +61,7 @@ handleNodeClientClient params e = do
               Just handle ->
                   liftIO $
                       onCardanoTx (MockClient.queueTx handle)
-                                  (const $ error "Cardano.Node.Client: Expecting a mock tx, not an Alonzo tx when publishing it.")
+                                  (const $ error "Cardano.Node.Client: Expecting a mock tx, not an cardano-api tx when publishing it.")
                                   tx
         GetClientSlot ->
             either (liftIO . MockClient.getCurrentSlot)

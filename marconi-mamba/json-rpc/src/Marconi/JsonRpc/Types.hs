@@ -51,7 +51,6 @@ import Network.HTTP.Media ((//))
 import Servant.API (Accept (contentTypes), JSON, MimeRender (mimeRender), MimeUnrender (mimeUnrender), NoContent, Post,
                     ReqBody, (:>))
 
-
 -- | Client messages
 data Request p
     = Request
@@ -68,7 +67,6 @@ instance ToJSON p => ToJSON (Request p) where
               , "method" .= m
               , "params" .= p
               ]
-
         where
         onValue n v = ((n .= v) :)
 

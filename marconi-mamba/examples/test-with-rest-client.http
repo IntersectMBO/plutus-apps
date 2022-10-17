@@ -1,7 +1,7 @@
 ## REST-Client script
 # If you don't know how to use this script, see:  https://github.com/pashky/restclient.el for instruction
 
-POST http://localhost:9000/json-rpc
+POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "echo", "params": "hello world", "id": 0}
 #
@@ -19,7 +19,12 @@ Content-Type: application/json-rpc
 #
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
-{"jsonrpc": "2.0", "method": "txOutRef", "params": "0123", "id": 10}
+{
+"jsonrpc": "2.0"
+, "method": "txOutRef"
+, "params": "addr1qywjwugxprn22w65zdmcqc6c9k3tse4rlft6tngvvg620vlwgcg9jv80wjq5hglp25u2axzntamczptdvqmj6qfvhm8q4d096z"
+, "id": 10
+}
 #
 #
 GET http://localhost:3000/rest/time

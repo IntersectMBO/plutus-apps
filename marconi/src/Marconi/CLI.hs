@@ -2,7 +2,9 @@ module Marconi.CLI where
 
 import Cardano.Api qualified as C
 import Data.ByteString.Char8 qualified as C8
+import Data.List.NonEmpty (NonEmpty, fromList, nub)
 import Data.Proxy (Proxy (Proxy))
+import Data.Text (pack)
 import Options.Applicative qualified as Opt
 
 chainPointParser :: Opt.Parser C.ChainPoint
@@ -16,4 +18,34 @@ chainPointParser =
         )
   where
     maybeParseHashBlockHeader :: String -> Maybe (C.Hash C.BlockHeader)
-    maybeParseHashBlockHeader = C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy) . C8.pack
+    maybeParseHashBlockHeader =
+      either (const Nothing) Just
+      . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
+      . C8.pack
+type CardanoAddress = C.Address C.ShelleyAddr
+
+-- | Typre represents non empty list of Bech32 compatable addresses"
+type TargetAddresses = NonEmpty CardanoAddress
+
+-- | parses a white space separated address list
+-- Note, duplicate addresses are rmoved
+targetAddressParser
+    :: String           -- ^ contains white spece delimeted lis of addresses
+    -> TargetAddresses  -- ^ a non empty list of valid addresses
+targetAddressParser =
+    nub
+    . fromList
+    . fromJustWithError
+    . traverse (deserializeToCardano . pack)
+    . words
+    where
+        deserializeToCardano = C.deserialiseFromBech32 (C.proxyToAsType Proxy)
+
+-- | Exit program with error
+-- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
+-- In such case we should fail fast
+fromJustWithError :: (Show e) => Either e a -> a
+fromJustWithError v = case v of
+    Left e ->
+        error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
+    Right accounts -> accounts

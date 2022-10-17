@@ -98,12 +98,13 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId,
-               TxOut (TxOut, txOutAddress, txOutValue), eitherTx, getCardanoTxFee, getCardanoTxId)
+import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, eitherTx, getCardanoTxFee,
+               getCardanoTxId, txOutAddress, txOutValue)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as UtxoIndex
+import Ledger.Slot (Slot)
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
@@ -122,7 +123,6 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (EmulatorMsg, UserLog, 
 import Plutus.PAB.Types (PABError (ContractInstanceNotFound, WalletError, WalletNotFound))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs)
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
-import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx (TxOutRef)
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text qualified as Render
@@ -238,8 +238,7 @@ mkSimulatorHandlers params handleContractEffect =
                 $ interpret (Core.handleBlockchainEnvReader @t @(SimulatorState t))
                 $ advanceClock @t
             Core.waitUntilSlot 1
-        , onShutdown = do
-            handleDelayEffect $ delayThread (500 :: Millisecond) -- need to wait a little to avoid garbled terminal output in GHCi.
+        , onShutdown = handleDelayEffect $ delayThread (500 :: Millisecond) -- need to wait a little to avoid garbled terminal output in GHCi.
         }
 
 handleLogSimulator ::
@@ -341,7 +340,7 @@ activateContract = Core.activateContract
 callEndpointOnInstance :: forall a t. (JSON.ToJSON a) => ContractInstanceId -> String -> a -> Simulation t (Maybe NotificationError)
 callEndpointOnInstance = Core.callEndpointOnInstance'
 
--- | Wait 1 second, then add a new block.
+-- | Wait 1 slot length, then add a new block.
 makeBlock ::
     forall t effs.
     ( LastMember IO effs
@@ -690,7 +689,7 @@ valueAtSTM address = do
     SimulatorState{_chainState} <- Core.askUserEnv @t @(SimulatorState t)
     pure $ do
         Chain.ChainState{Chain._index=UtxoIndex.UtxoIndex mp} <- STM.readTVar _chainState
-        pure $ foldMap txOutValue $ filter (\TxOut{txOutAddress} -> txOutAddress == address) $ fmap snd $ Map.toList mp
+        pure $ foldMap txOutValue $ filter (\txout -> txOutAddress txout == address) $ fmap snd $ Map.toList mp
 
 -- | The total value currently at an address
 valueAt :: forall t. Address -> Simulation t Value

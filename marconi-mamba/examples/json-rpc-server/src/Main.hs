@@ -1,17 +1,26 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
-
+{-
+-- Sample JSON-RPC server program
+--  uncomment TODO and provide adequte data
+-}
 module Main where
 
+import Marconi.Api.Types (TargetAddresses)
+import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc, targetAddressParser)
 
-import Marconi.Api.HttpServer (bootstrap)
-import Marconi.Api.Types (JsonRpcEnv (JsonRpcEnv))
-import Marconi.IndexersHotStore (bootstrapHotStore)
-import Network.Wai.Handler.Warp (defaultSettings)
+{-
+-- white space separated list of addresses
+-}
+bech32Addresses :: String
+bech32Addresses = undefined -- TODO valid address to keep track of
+
+dbpath :: FilePath
+dbpath = undefined -- valid SQLite marconi UTxo database path
+
+addresses :: TargetAddresses
+addresses = targetAddressParser bech32Addresses
 
 main :: IO ()
 main = do
     putStrLn "Starting the Example rpc http-server on port 3000 example"
-    cache <- bootstrapHotStore
-    let    env = JsonRpcEnv defaultSettings cache
-    bootstrap env
+    env <- bootstrapJsonRpc dbpath Nothing addresses
+    bootstrapHttp env

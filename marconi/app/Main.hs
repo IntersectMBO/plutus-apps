@@ -17,9 +17,8 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Control.Applicative (optional)
-import Marconi.CLI (chainPointParser)
+import Marconi.CLI (TargetAddresses, chainPointParser, targetAddressParser)
 import Marconi.Indexers (combinedIndexer)
-import Marconi.IndexersHotStore (TargetAddresses, targetAddressParser)
 import Marconi.Logging (logging)
 
 
@@ -56,37 +55,27 @@ optionsParser =
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
     <*> optStrParser (long "script-tx-db" <> help "Path to the script transactions' database.")
     <*> optAddressesParser
-    where
-        optAddressesParser =
-            optional $ builtinDataAddresses
-            <$> strOption (long "addresses-to-index"
-                           <> help ( "White space separated list of addresses to index."
-                                     <> " i.e \"address-1 address-2 address-3 ...\"" ) )
-        builtinDataAddresses :: String -> TargetAddresses
-        builtinDataAddresses = targetAddressParser
+optAddressesParser :: Parser (Maybe TargetAddresses)
+optAddressesParser = optional $ targetAddressParser
+    <$> strOption (long "addresses-to-index"
+                   <> help ( "White space separated list of addresses to index."
+                             <> " i.e \"address-1 address-2 address-3 ...\"" ) )
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
-optStrParser fields = Just <$> strOption fields <|> pure Nothing
+optStrParser  = optional . strOption
 
 networkIdParser :: Parser NetworkId
 networkIdParser =
   pMainnet <|> pTestnet
-  where
-    pMainnet =
-      flag'
-        Mainnet
-        ( long "mainnet"
-            <> help "Use the mainnet magic id."
-        )
+pMainnet :: Parser NetworkId
+pMainnet = flag' Mainnet ( long "mainnet" <> help "Use the mainnet magic id.")
 
-    pTestnet =
-      Testnet . NetworkMagic
-        <$> option
-          auto
-          ( long "testnet-magic"
-              <> metavar "NATURAL"
-              <> help "Specify a testnet magic id."
-          )
+pTestnet :: Parser NetworkId
+pTestnet = Testnet . NetworkMagic <$> option auto
+    ( long "testnet-magic"
+      <> metavar "NATURAL"
+      <> help "Specify a testnet magic id."
+    )
 
 main :: IO ()
 main = do
@@ -99,7 +88,6 @@ main = do
           , optionsTargetAddresses } <- parseOptions
 
   c <- defaultConfigStdout
-  -- maybehotStore <- initCache <$> optionTargeAddresses
 
   withTrace c "marconi" $ \trace ->
     withChainSyncEventStream
