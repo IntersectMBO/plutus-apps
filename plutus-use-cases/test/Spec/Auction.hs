@@ -367,8 +367,7 @@ tests =
             withMaxSuccess 100 prop_FinishAuction
         , testProperty "QuickCheck property Auction" $
             withMaxSuccess 100 prop_Auction
-        , testProperty "NLFP fails" $
-            expectFailure $ noShrinking prop_NoLockedFunds
+        , testProperty "NLFP fails" $ expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
             withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
         -- TODO: commented because the test fails after 'CardanoTx(Both)' was deleted.
