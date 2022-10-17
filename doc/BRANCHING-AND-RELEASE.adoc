@@ -69,7 +69,7 @@ Currently, all Plutus Tools components are in this repo.
 In the future, some components such as Marconi may be split into separate repos, after which such components will be versioned and released independently, but the release process will be similar to the one described below.
 
 We follow https://pvp.haskell.org/[the PVP version scheme] for the components, where version numbers have up to 4 components: `major.major.minor.patch`.
-For Plutus Tools, we will not be making patch releases, so version numbers only have 3 components: `major.major.minor`, with the following semantics:
+For Plutus Tools, we do not expect to make many patch releases, so version numbers usually only have 3 components: `major.major.minor`, with the following semantics:
 
 - A major release (e.g., 3.5.2 -> 3.6.0 or 4.0.0) may contain arbitrary changes to the API or UI.
 - A minor release (e.g., 3.5.2 -> 3.5.3) may contain changes such as new features, which technically can be breaking, but are unlikely to cause breakage in practice, and if it does, the fix should be straightforward (e.g., by renaming).
