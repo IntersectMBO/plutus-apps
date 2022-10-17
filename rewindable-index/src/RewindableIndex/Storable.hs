@@ -1,8 +1,8 @@
 module RewindableIndex.Storable
   ( -- * State
     Config
-  , bufferSize
-  , maxRewindLength
+  , memoryBufferSize
+  , diskBufferSize
   , State
   , handle
   , config
@@ -11,6 +11,12 @@ module RewindableIndex.Storable
   , storage
   , events
   , cursor
+  , getMemoryEvents
+  , getEvents
+  , StorableEvent
+  , StorablePoint
+  , StorableQuery
+  , StorableResult
     -- * API
   , QueryInterval(..)
   , Buffered(..)
@@ -22,6 +28,7 @@ module RewindableIndex.Storable
   , insertMany
   , rewind
   , resume
+  , query
   ) where
 
 import Control.Applicative ((<|>))
@@ -30,44 +37,61 @@ import Control.Lens.TH qualified as Lens
 import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.Foldable (foldlM)
 import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Mutable qualified as VM
+
+data family StorableEvent h
+
+data family StorablePoint h
+
+data family StorableQuery h
+
+data family StorableResult h
 
 data QueryInterval p =
     QEverything
   | QInterval p p
 
-class Buffered c m e where
-  persistToStorage :: Foldable f => f e -> c -> m c
+class Buffered h m where
+  persistToStorage :: Foldable f => f (StorableEvent h) -> h -> m h
+  getStoredEvents :: h -> m [StorableEvent h]
+  trimEventStore :: h -> Int -> m h
 
-class Queryable c p m q r where
-  queryStorage :: QueryInterval p -> c -> q -> m r
+class Queryable h m where
+  queryStorage
+    :: Foldable f
+    => QueryInterval (StorablePoint h)
+    -> f (StorableEvent h)
+    -> h
+    -> StorableQuery h
+    -> m (StorableResult h)
 
-class Rewindable c m p where
-  rewindStorage :: p -> c -> m (Maybe c)
+class Rewindable h m where
+  rewindStorage :: StorablePoint h -> h -> m (Maybe h)
 
-class Resumable c m p where
-  resumeFromStorage :: c -> m [p]
+class Resumable h m where
+  resumeFromStorage :: h -> m [StorablePoint h]
 
 class HasPoint e p where
   getPoint :: e -> p
 
 data Config = Config
-  { _bufferSize      :: Int
-  , _maxRewindLength :: Int
+  { _memoryBufferSize :: Int
+  , _diskBufferSize   :: Int
   } deriving (Show, Eq)
 $(Lens.makeLenses ''Config)
 
-data Storage p m e = Storage
-  { _events :: VM.MVector (PrimState m) e
+data Storage h m = Storage
+  { _events :: VM.MVector (PrimState m) (StorableEvent h)
   , _cursor :: Int
   }
 $(Lens.makeLenses ''Storage)
 
-data State h p m e = State
+data State h m = State
   { _config  :: Config
-  , _storage :: Storage p m e
+  , _storage :: Storage h m
   , _handle  :: h
   }
 $(Lens.makeLenses ''State)
@@ -77,11 +101,11 @@ emptyState
   => Int
   -> Int
   -> h
-  -> m (State h p m e)
-emptyState bufferSz rewindLen hdl = do
-  v <- VM.new bufferSz
-  pure $ State { _config = Config { _bufferSize = bufferSz
-                                  , _maxRewindLength = rewindLen
+  -> m (State h m)
+emptyState memBuf dskBuf hdl = do
+  v <- VM.new memBuf
+  pure $ State { _config = Config { _memoryBufferSize = memBuf
+                                  , _diskBufferSize   = dskBuf
                                   }
                , _storage = Storage { _events = v
                                     , _cursor = 0
@@ -89,17 +113,28 @@ emptyState bufferSz rewindLen hdl = do
                , _handle = hdl
                }
 
-getBufferedEvents
-  :: Storage p m e
-  -> V.MVector (PrimState m) e
-getBufferedEvents s = VM.slice 0 (s ^. cursor) (s ^. events)
+getMemoryEvents
+  :: Storage h m
+  -> V.MVector (PrimState m) (StorableEvent h)
+getMemoryEvents s = VM.slice 0 (s ^. cursor) (s ^. events)
+
+getEvents
+  :: Buffered h m
+  => PrimMonad m
+  => State h m
+  -> m [StorableEvent h]
+getEvents s = do
+  memoryEs <- getMemoryEvents (s ^. storage)
+              & V.freeze <&> V.toList
+  diskEs   <- getStoredEvents $ s ^. handle
+  pure $ memoryEs ++ diskEs
 
 insert
-  :: Buffered (State h p m e) m e
+  :: Buffered h m
   => PrimMonad m
-  => e
-  -> State h p m e
-  -> m (State h p m e)
+  => StorableEvent h
+  -> State h m
+  -> m (State h m)
 insert e s = do
   state'   <- flushBuffer s
   storage' <- appendEvent e (state' ^. storage)
@@ -107,54 +142,57 @@ insert e s = do
 
 appendEvent
   :: PrimMonad m
-  => e
-  -> Storage p m e
-  -> m (Storage p m e)
+  => StorableEvent h
+  -> Storage h m
+  -> m (Storage h m)
 appendEvent e s = do
   let cr = s ^. cursor
   VM.write (s ^. events) cr e
   pure $ s & cursor %~ (+1)
 
 flushBuffer
-  :: Buffered (State h p m e) m e
+  :: Buffered h m
   => PrimMonad m
-  => State h p m e
-  -> m (State h p m e)
+  => State h m
+  -> m (State h m)
 flushBuffer s = do
   let cr = s ^. storage . cursor
-      es = getBufferedEvents $ s ^. storage
+      es = getMemoryEvents $ s ^. storage
   if VM.length es == cr
   then do
     v  <- V.freeze es
-    s' <- persistToStorage v s
-    pure $ s' & storage . cursor .~ 0
+    h' <- persistToStorage v (s ^. handle)
+    let storeSize = s ^. config . diskBufferSize
+    trimEventStore (s ^. handle) storeSize
+    pure $ s & storage . cursor .~ 0
+             & handle .~ h'
   else pure s
 
 insertMany
   :: Foldable f
-  => Buffered (State h p m e) m e
+  => Buffered h m
   => PrimMonad m
-  => f e
-  -> State h p m e
-  -> m (State h p m e)
+  => f (StorableEvent h)
+  -> State h m
+  -> m (State h m)
 insertMany es s =
   foldlM (\s' e -> insert e s') s es
 
 rewind
-  :: forall h p m e.
-     Rewindable (State h p m e) m p
-  => HasPoint e p
+  :: forall h m.
+     Rewindable h m
+  => HasPoint (StorableEvent h) (StorablePoint h)
   => PrimMonad m
-  => Eq p
-  => p
-  -> State h p m e
-  -> m (Maybe (State h p m e))
+  => Eq (StorablePoint h)
+  => StorablePoint h
+  -> State h m
+  -> m (Maybe (State h m))
 rewind p s = do
   m' <- rewindMemory
-  s' <- rewindStorage p s
-  pure $ m' <|> s'
+  h' <- rewindStorage p (s ^. handle)
+  pure $ m' <|> (\h -> handle .~ h $ s) <$> h'
   where
-    rewindMemory :: m (Maybe (State h p m e))
+    rewindMemory :: m (Maybe (State h m))
     rewindMemory = do
       v <- V.freeze $ s ^. storage . events
       pure $ do
@@ -162,7 +200,38 @@ rewind p s = do
         pure $ s & storage . cursor .~ (ix + 1)
 
 resume
-  :: Resumable (State h p m e) m p
-  => State h p m e
-  -> m [p]
-resume = resumeFromStorage
+  :: Resumable h m
+  => State h m
+  -> m [StorablePoint h]
+resume s = resumeFromStorage (s ^. handle)
+
+-- TODO: This needs explaining.
+filterWithQueryInterval
+  :: forall h.
+     HasPoint (StorableEvent h) (StorablePoint h)
+  => Ord (StorablePoint h)
+  => QueryInterval (StorablePoint h)
+  -> [StorableEvent h]
+  -> [StorableEvent h]
+filterWithQueryInterval QEverything es = es
+filterWithQueryInterval (QInterval start end) es =
+  let es' = dropWhile (withPoint (\p -> p >= end)) es
+   in if not (null es') && withPoint (\p -> p > start) (head es')
+      then es'
+      else []
+  where
+    withPoint :: (StorablePoint h -> Bool) -> StorableEvent h -> Bool
+    withPoint f e = let p = getPoint e in f p
+
+query
+  :: HasPoint (StorableEvent h) (StorablePoint h)
+  => Ord (StorablePoint h)
+  => Queryable h m
+  => PrimMonad m
+  => QueryInterval (StorablePoint h)
+  -> State h m
+  -> StorableQuery h
+  -> m (StorableResult h)
+query qi s q = do
+  es  <- getMemoryEvents (s ^. storage) & V.freeze <&> V.toList
+  queryStorage qi (filterWithQueryInterval qi es) (s ^. handle) q

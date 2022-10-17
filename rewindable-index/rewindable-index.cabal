@@ -26,11 +26,14 @@ source-repository head
 common lang
   default-language:   Haskell2010
   default-extensions:
+    DeriveAnyClass
     DeriveGeneric
+    DerivingStrategies
     ExplicitForAll
     FlexibleContexts
     FlexibleInstances
     GADTs
+    GeneralizedNewtypeDeriving
     ImportQualifiedPost
     InstanceSigs
     MultiParamTypeClasses
@@ -38,8 +41,10 @@ common lang
     OverloadedStrings
     PatternSynonyms
     ScopedTypeVariables
+    StandaloneDeriving
     Strict
     TemplateHaskell
+    TupleSections
     TypeApplications
     TypeFamilies
 
@@ -76,13 +81,15 @@ test-suite rewindable-index-test
 
   hs-source-dirs: test
   build-depends:
-    , base              >=4.7 && <5
+    , base              >=4.7    && <5
     , data-default
     , lens
     , primitive
     , QuickCheck
     , rewindable-index
-    , sqlite-simple
+    , safe
+    , sqlite-simple     >=0.4.18
     , tasty
     , tasty-quickcheck
+    , transformers
     , vector

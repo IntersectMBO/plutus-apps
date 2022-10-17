@@ -40,6 +40,7 @@ import Test.Tasty.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Fun, G
                               arbitrarySizedIntegral, chooseInt, cover, forAll, frequency, resize, shrinkNothing, sized,
                               (==>))
 
+import Debug.Trace qualified as Debug
 
 {- | Laws
   Constructors: new, insert, rewind
