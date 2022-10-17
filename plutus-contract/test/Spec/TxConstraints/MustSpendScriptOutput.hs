@@ -20,6 +20,9 @@ import Data.Map as M
 import Data.Maybe (isJust)
 import Data.Text qualified as Text
 import Data.Void (Void)
+import Numeric.Natural (Natural)
+import Prelude hiding (not)
+
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
@@ -36,7 +39,7 @@ import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMi
                                                            mustSpendScriptOutputWithReference)
 import Ledger.Test (asDatum, asRedeemer, someAddress, someTypedValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
-import Numeric.Natural (Natural)
+
 import Plutus.Contract as Cont (Contract, ContractError, Empty, _ConstraintResolutionContractError, awaitTxConfirmed,
                                 ownAddress, ownUtxos, submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
@@ -58,7 +61,6 @@ import Plutus.V1.Ledger.Value qualified as V
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Prelude hiding (not)
 import Wallet.Emulator.Wallet (mockWalletAddress)
 
 makeClassyPrisms ''ScriptError
