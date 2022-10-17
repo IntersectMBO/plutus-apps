@@ -8,6 +8,7 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
+import Control.Exception (bracket_)
 import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (void)
 import Data.Foldable (foldl')
@@ -25,8 +26,6 @@ import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 -- TODO Remove the following dependencies from cardano-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Control.Concurrent.STM.TMVar (TMVar, takeTMVar)
-import Control.Monad.STM (atomically)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
@@ -154,35 +153,27 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
--- | does the transaction contain a targetAddress
-isTargetTxOut
-    :: CardanoAddress               -- ^  a cardano shelley era adddress
-    -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
-    -> Bool
-isTargetTxOut targetaddress (C.TxOut address _ _ _) = case  address of
-    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr == targetaddress
-    _                                                -> False
-
-utxoHotStoreWorker :: TMVar () -> TargetAddresses -> Worker
-utxoHotStoreWorker qtmvar targetAddresses Coordinator{_barrier} ch path =
+utxoHotStoreWorker :: QSemN -> TargetAddresses -> Worker
+utxoHotStoreWorker qsem targetAddresses Coordinator{_barrier} ch path =
    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
-    innerLoop index = do
-      atomically $ takeTMVar qtmvar -- block if there is query
-      signalQSemN _barrier 1
-      event <- atomically $ readTChan ch
-      case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-          let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
-          Ix.insert utxoRow index >>= innerLoop
-        RollBackward cp _ct -> do
-          events <- Ix.getEvents (index ^. Ix.storage)
-          innerLoop $
-            fromMaybe index $ do
-              slot   <- chainPointToSlotNo cp
-              offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
-              Ix.rewind offset index
+    innerLoop index = bracket_
+        (waitQSemN qsem 1) (signalQSemN qsem 1) $
+        do
+            signalQSemN _barrier 1
+            event <- atomically $ readTChan ch
+            case event of
+                RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+                    let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
+                    Ix.insert utxoRow index >>= innerLoop
+                RollBackward cp _ct -> do
+                    events <- Ix.getEvents (index ^. Ix.storage)
+                    innerLoop $
+                        fromMaybe index $ do
+                            slot   <- chainPointToSlotNo cp
+                            offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+                            Ix.rewind offset index
 
 
 utxoWorker :: Maybe TargetAddresses -> Worker

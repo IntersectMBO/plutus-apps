@@ -27,4 +27,34 @@ Content-Type: application/json
 }
 #
 #
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "txOutRef"
+, "params": "9bc1bea5295da5f046baa8057d06afe66e6ff549305cd0597abc2fd9"
+, "id": 12
+}
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "txOutRefs"
+, "params": 100
+, "id": 11
+}
+#
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxos"
+, "params": 100
+, "id": 14
+}
+#
+#
 GET http://localhost:3000/rest/time

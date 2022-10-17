@@ -22,6 +22,7 @@ chainPointParser =
       either (const Nothing) Just
       . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
       . C8.pack
+
 type CardanoAddress = C.Address C.ShelleyAddr
 
 -- | Typre represents non empty list of Bech32 compatable addresses"

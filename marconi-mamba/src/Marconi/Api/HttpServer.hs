@@ -14,18 +14,16 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
-import Ledger (Address)
 import Ledger.Tx (TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types
-import Marconi.Api.UtxoIndexersQuery (findAll, findByAddress)
+import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (..), HasJsonRpcEnv (..), JsonRpcEnv)
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (UtxoRow, findByAddress, findTxOutRefs, findUtxos)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
-
 
 -- | bootstraps the he http server
 bootstrap :: JsonRpcEnv -> IO ()
@@ -38,31 +36,61 @@ server env =
     (echo :<|>
       findTxOutRef env :<|>
       findTxOutRefs env :<|>
+      findUtxos env :<|>
       printMessage
     ) :<|> (getTime :<|> printMessage)
 
-printMessage :: String -> Handler NoContent
+-- | prints message to console
+--  Used for testing the server from console
+printMessage
+    :: String
+    -> Handler NoContent
 printMessage msg = NoContent <$ liftIO (putStrLn msg)
 
-echo :: String ->  Handler (Either (JsonRpcErr String) String)
+-- | echos message back as a jsonrpc response
+--  Used for testing the server
+echo
+    :: String
+    ->  Handler (Either (JsonRpcErr String) String)
 echo  = return . Right
 
+-- | echos current time as REST response
+--  Used for testing the http server outside of jsonrpc protocol
 getTime :: Handler String
 getTime = timeString <$> liftIO getCurrentTime
     where
     timeString = formatTime defaultTimeLocale "%T"
 
---
-findTxOutRef :: DBQueryEnv -> String -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
-findTxOutRef hotStore address =
-    liftIO $ cardanoErrToRpcErr <$> (findByAddress hotStore . pack ) address
+-- | Retrieves a set of TxOutRef
+findTxOutRef
+    :: DBQueryEnv               -- ^ database configuration
+    -> String                   -- ^ bech32 addressCredential
+    -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
+findTxOutRef env address =
+    liftIO $ cardanoErrToRpcErr <$> (Q.Utxo.findByAddress env . pack ) address
 
+-- | Retrieves a set of TxOutRef
 --
-findTxOutRefs :: DBQueryEnv -> String -> Handler (Either (JsonRpcErr String) [(Address, Set TxOutRef)])
-findTxOutRefs hotStore _ =
-    liftIO $ Right <$> findAll hotStore
+findTxOutRefs
+    :: DBQueryEnv                   -- ^ database configuration
+    -> Int                          -- ^ limit, for now we are ignoring this param and return 100
+    -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
+findTxOutRefs env _ =
+    liftIO $ Right <$> Q.Utxo.findTxOutRefs env
 
-cardanoErrToRpcErr :: Either ToCardanoError (Set TxOutRef)  -> Either (JsonRpcErr String) (Set TxOutRef)
+-- | Retrieves a set of TxOutRef
+--
+findUtxos
+    :: DBQueryEnv                   -- ^ database configuration
+    -> Int                          -- ^ limit, for now we are ignoring this param and return 100
+    -> Handler (Either (JsonRpcErr String) (Set Q.Utxo.UtxoRow))
+findUtxos env _ =
+    liftIO $ Right <$> Q.Utxo.findUtxos env
+
+-- | convert form cardano error, to jsonrpc protocal error
+cardanoErrToRpcErr
+    :: Either ToCardanoError (Set TxOutRef)
+    -> Either (JsonRpcErr String) (Set TxOutRef)
 cardanoErrToRpcErr = either (Left . f ) Right
    where
        f :: ToCardanoError -> JsonRpcErr String

@@ -68,9 +68,12 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , aeson
     , base            >=4.9 && <5
+    , bytestring
     , containers
     , lens
+    , serialise
     , servant
     , servant-server
     , sqlite-simple
