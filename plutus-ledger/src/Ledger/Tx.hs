@@ -76,7 +76,7 @@ import Data.Data (Proxy (Proxy))
 import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (isJust, mapMaybe)
+import Data.Maybe (isJust)
 import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -89,7 +89,7 @@ import Ledger.Params (EmulatorEra, Params (pNetworkId))
 import Ledger.Slot (SlotRange)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Plutus.Script.Utils.Scripts (datumHash, scriptHash)
+import Plutus.Script.Utils.Scripts (scriptHash)
 import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V1.Ledger.Tx qualified as V1.Tx hiding (TxIn (..), TxInType (..))
 import Plutus.V2.Ledger.Api qualified as V2
@@ -300,16 +300,7 @@ getCardanoTxValidityRange = onCardanoTx txValidRange
 
 getCardanoTxData :: CardanoTx -> Map V1.DatumHash V1.Datum
 getCardanoTxData = onCardanoTx txData
-    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
-        Map.fromList $ mapMaybe (\(C.TxOut _ _ d _) -> fromCardanoTxOutDatum d) txOuts)
-    where
-        fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe (V1.DatumHash, V1.Datum)
-        fromCardanoTxOutDatum C.TxOutDatumNone = Nothing
-        fromCardanoTxOutDatum (C.TxOutDatumHash _ _) = Nothing
-        fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) =
-            let d' = V1.Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
-        fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
-            let d' = V1.Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
+    (\(SomeTx (C.Tx txBody _) _) -> fst $ CardanoAPI.scriptDataFromCardanoTxBody txBody)
     -- TODO: add txMetaData
 
 
