@@ -714,4 +714,3 @@ mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
  where
      mkMustReferenceOutputV2Validator = mkMustReferenceOutputValidator Cons.V2.checkScriptContext
      wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
-
