@@ -1,0 +1,127 @@
+= Branching Policy and Release Process
+:toc: left
+:reproducible:
+
+== Branching Policy
+
+This repo uses two development branches: `main` and `next-node`.
+`main` tracks the latest released Cardano node version.
+`next-node` tracks either Cardano node master, or a Cardano node release branch.
+
+Using two development branches lets us not only publish new Plutus Tools versions for the current node version, but also quickly publish a new version compatible with a newly-published node version.
+
+The following outlines the sequence of events from one node release, version `nX`, to the next node release, version `nY`.
+Suppose `nX` has been released and the release process for `nY` has not started.
+Let `tX` denote the current latest version of Plutus Tools, compatible with node `nX`.
+Let `PV` denote the current major protocol version, and `ERA` the current ledger era.
+
+There are different kinds of node releases: a node release can be a non-hard fork release, an intra-era hard fork release (i.e., `PV` will be incremented, but not `ERA`), or a next-era hard fork release.
+In the following, assume `nY` to be a next-era hard fork release, which is the most complex case.
+
+- `main` depends on node `nX`, and `next-node` tracks node master.
+* `next-node` should regularly update its node commit. Ideally we want `next-node` to depend on the tip of node master, but we are constrained by cardano-wallet, which is a PAB dependency and depends on the node.
+If cardano-wallet does not build with the tip of node master, we have to either use an older node commit, or temporarily live with a PAB that doesn't build.
+* A Plutus Tools PR can be opened against either `main` or `next-node`, determined by whether or not it depends on new upstream features or functionalities not available in `nX`.
+* In the `next-node` branch, we can start developing features and functionalities for the next ledger era, `ERA+1`.
+But (1) we should make it clear in the API/UI which features and functionalities only work in `ERA+1`, i.e., not yet usable;
+(2) we should not remove any features for the current ledger era, `ERA`.
+The reasons for these will become apparent later.
+- New Plutus Tools releases can be done from `main` as scheduled or as needed.
+* A release at this point is compatible with `nX`, protocol version `PV` and ledger era `ERA`.
+See "Release Process" for how to make releases.
+- Cardano node starts the release process for version `nY` by creating a release branch for `nY`.
+* The `next-node` branch should now track the release branch for `nY`, instead of master.
+* Users testing the Cardano node release candidates, `nY-rc<x>`, on devnets and testnets, can build Plutus Tools from the `next-node` branch, which would be compatible with `nY-rc<x>`.
+- Cardano node version `nY` is published.
+* (Optional) we release a new Plutus Tools version `tX'` from `main`.
+** This is optional because it is only useful if `main` has new features worth releasing for users still on node `nX`.
+Most users should start upgrading to node `nY` at this point.
+** If we do so, `tX'` would be the last Plutus Tools release compatible with node version `nX`.
+* We merge `next-node` into `main`, and release a new Plutus Tools version `tY`.
+** `tY` is the first Plutus Tools version compatible with node version `nY`.
+** The hard fork hasn't happened at this point, and we are still on ledger era `ERA`.
+Therefore `tY` must remain compatible with `ERA`.
+Specifically, `tY` may contain features and functionalities for `ERA+1` (such as the ability to build `ERA+1` transactions), but since they are not yet usable, it is helpful to make it clear which features and functionalities only work in `ERA+1`.
+Also, this is why the `next-node` branch should not remove any features for ledger era `ERA`, until we are in ledger era `ERA+1`.
+- The hard fork happens, and we are now on protocol version `PV+1` and ledger era `ERA+1`.
+* We can now start removing ledger era `ERA` features from `main`.
+* A new `next-node` branch is created, and the above events restart.
+
+If node version `nY` is a non-hard fork release, or an intra-era hard fork release, the process would be almost identical, except the last step.
+
+The above is based on the assumption that there are usually more than a month or even several months between two node releases.
+Cardano node is planning to perform much more frequent and regular releases, and once it is implemented, we should revisit the above process, which can potentially be simplified.
+
+== Plutus Tools Components
+
+The components (including libraries and executables) listed in https://plutus-apps.readthedocs.io/en/latest/plutus/explanations/plutus-tools-component-descriptions.html#logical-components[this page] are versioned and released.
+
+== Version Scheme
+
+All packages in the same repo are versioned and released in sync.
+Whenever one component releases version X, so does every other component, unless it hasn't been changed since the previous release.
+
+The reason for this is that for packages in the same repo, CI always tests all of them at the same commit.
+Unless we perform additional testing for more combinations, we have no way to know whether or not one component at one commit is compatible with another component at a different commit.
+We therefore cannot release some components but not the others (unless there's no change to the latter), and claim that they still work together.
+
+Currently, all Plutus Tools components are in this repo.
+In the future, some components such as Marconi may be split into separate repos, after which such components will be versioned and released independently, but the release process will be similar to the one described below.
+
+We follow https://pvp.haskell.org/[the PVP version scheme] for the components, where version numbers have up to 4 components: `major.major.minor.patch`.
+For Plutus Tools, we do not expect to make many patch releases, so version numbers usually only have 3 components: `major.major.minor`, with the following semantics:
+
+- A major release (e.g., 3.5.2 -> 3.6.0 or 4.0.0) may contain arbitrary changes to the API or UI.
+- A minor release (e.g., 3.5.2 -> 3.5.3) may contain changes such as new features, which technically can be breaking, but are unlikely to cause breakage in practice, and if it does, the fix should be straightforward (e.g., by renaming).
++
+A minor release is also allowed to change the observable behaviors of functions that users should not rely on.
+For example, if a function returns a list of things and makes no promise on the order of elements in the returned list, then a minor release may change the order.
+
+=== Version Qualifiers
+
+Version qualifiers, also known as pre-release versions, usually refer to alpha, beta, and release candidate.
+Typically, alpha and beta are pre-feature complete, while release candidates are post-feature complete.
+
+We do not tag or publish alpha or beta versions for libraries.
+Depending on an alpha or beta version of a library requires `source-repository-package`, which is quite inconvenient.
+It is also uncommon for a library to publish pre-release versions (unless it is new or a complete rewrite).
+
+We do tag release candidates, e.g., 3.5.2-rc1.
+Tagging release candidates makes it easy to identify the correct commit to run additional tests and checks against in the release QA process.
+
+For executables, we may publish alpha, beta and release candidates if we deem it appropriate.
+
+== Release Frequency
+
+A Plutus Tools version will be released for each Cardano node version.
+We may also release additional Plutus Tools versions between two Cardano node releases.
+Currently we aim to make at least one Plutus Tools release every 4 weeks, and we will evaluate and adjust the frequency in the future.
+Ad-hoc releases can be made upon request.
+
+== Release Process
+
+The following process applies to both major and minor releases.
+Suppose we are releasing version `x.y.z`.
+
+1. Update version numbers in cabal files to `x.y.z` (if it is not already the case).
+- Version bounds for packages in the same repo should be set to `==x.y.z`.
+2. Make sure the change log is up-to-date.
+3. Tag `x.y.z-rc1` on `main`.
+- There's no need to create a release branch at this point.
+A release branch is only needed if bugs are found in `x.y.z-rc1` and we need to backport a fix from `main`.
+4. Run the release QA process, which includes any non-CI tests and checks that need to be carried out prior to the release.
+5. If no release blocking issue is found, tag `x.y.z` and upload the libraries to https://github.com/input-output-hk/cardano-haskell-packages[CHaP].
+- If issues are found, create a release branch `release/x.y.z`, fix the issues on `main`, backport the fixes to `release/x.y.z`, tag `x.y.z-rc2`, and go to step 4.
+- Why not just fix the issues on `main` and tag `x.y.z-rc2` from `main`?
+It is desirable to minimize the amount of change between `rc1` and `rc2`, because it may reduce the non-CI tests and checks that need to be performed against `rc2`.
+6. After the release, update version numbers in cabal files to `x.y.z+1`.
+- This may not be the actual version of the next release.
+We don't need to be precise here; we just need a version number higher than the latest release.
+
+The above process assumes there are additional non-CI tests that need to be run as part of the release QA process, before making a release.
+If this is not the case, we can omit tagging release candidates or creating release branches, and simply tag actual releases from `main`, as long as CI is green.
+
+=== Release QA Process
+
+The release QA process includes running all tests and checks on the release candidate.
+Each time we create new non-CI test cases, they should be listed and described here.
