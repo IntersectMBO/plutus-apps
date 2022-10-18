@@ -35,12 +35,13 @@ import GHC.Generics (Generic)
 
 data DbConfig =
     DbConfig
-    { dbConfigUser     :: Text.Text
-    , dbConfigPass     :: Text.Text
-    , dbConfigHost     :: Text.Text
-    , dbConfigPort     :: Word16
-    , dbConfigDatabase :: Text.Text
-    , dbConfigPoolSize :: Int
+    { dbConfigUser        :: Text.Text
+    , dbConfigPass        :: Text.Text
+    , dbConfigHost        :: Text.Text
+    , dbConfigPort        :: Word16
+    , dbConfigDatabase    :: Text.Text
+    , dbConfigPoolSize    :: Int
+    , dbConfigMarconiFile :: Text.Text
     }
     deriving (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -53,6 +54,7 @@ instance Default DbConfig where
         , dbConfigPort = 5432
         , dbConfigDatabase = "pab"
         , dbConfigPoolSize = 20
+        , dbConfigMarconiFile = "marconi.sqlite"
         }
 
 runBeam ::
