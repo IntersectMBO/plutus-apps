@@ -559,7 +559,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
       either (throwError . TypeCheckFailed) pure
       $ runExcept @Typed.ConnectionError
       $ do
-          (txOut, datum) <- maybe (throwError UnknownRef) pure $ do
+          (txOut, datum) <- maybe (throwError $ UnknownRef icTxOutRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
                                 datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
                                 pure (Tx.toTxInfoTxOut ciTxOut, datum)
