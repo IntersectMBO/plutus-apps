@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -14,6 +15,7 @@ import Prelude hiding (lookup)
 
 import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
+import Control.Lens (makeClassyPrisms)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
@@ -47,6 +49,7 @@ data ValidationError =
     | CardanoLedgerValidationError Text
     -- ^ An error from Cardano.Ledger validation
     deriving (Eq, Show, Generic)
+makeClassyPrisms ''ValidationError
 
 instance FromJSON ValidationError
 instance ToJSON ValidationError

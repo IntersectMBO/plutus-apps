@@ -14,18 +14,18 @@ import Cardano.Api qualified as CApi
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Exception (bracket_)
 import Control.Lens ((^.))
-import Data.Aeson (ToJSON (..), defaultOptions, genericToEncoding)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set, fromList)
 import Data.Text (Text, unpack)
-import Database.SQLite.Simple (NamedParam (..), open)
+import Database.SQLite.Simple (NamedParam ((:=)), open)
 import Database.SQLite.Simple qualified as SQL
-import Ledger (Address (..), TxOutRef)
-import Ledger.Tx.CardanoAPI (ToCardanoError (..), fromCardanoAddress)
-import Marconi.Api.Types (CardanoAddress, DBConfig (..), DBQueryEnv (..), HasDBConfig (..), HasDBQueryEnv (..),
-                          TargetAddresses)
-import Marconi.Index.Utxo (UtxoRow (..))
-import Marconi.Index.Utxo qualified as Utxo
+import Ledger (Address, TxOutRef)
+import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag), fromCardanoAddress)
+import Marconi.Api.Types (CardanoAddress, DBConfig (DBConfig),
+                          DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem), HasDBConfig (utxoConn),
+                          HasDBQueryEnv (dbConf, queryQSem, queryQSem), TargetAddresses,
+                          UtxoRowWrapper (UtxoRowWrapper))
+import Marconi.Index.Utxo (UtxoRow (UtxoRow, _reference))
 
 bootstrap
     ::  FilePath
@@ -75,14 +75,14 @@ findByAddress env addressText =
 
 findUtxos
     :: DBQueryEnv
-    -> IO (Set UtxoRow)
+    -> IO (Set UtxoRowWrapper)
 findUtxos env = withQueryAction (env ^. queryQSem) action
     where
         action =
                 (SQL.query_
                  (env ^. dbConf . utxoConn)
                  "SELECT address, txId, inputIx FROM utxos limit 100" :: IO [UtxoRow])
-            >>= pure . fromList
+            >>= pure . fmap UtxoRowWrapper >>= pure . fromList
 
 findTxOutRefs
     :: DBQueryEnv
@@ -98,11 +98,3 @@ findTxOutRefs env = withQueryAction (env ^. queryQSem) action
 withQueryAction :: QSemN -> IO a -> IO a
 withQueryAction qsem action = bracket_ (waitQSemN qsem 1) (signalQSemN qsem 1) action
 
-instance Ord UtxoRow where
-    compare (UtxoRow a _) (UtxoRow b _) =  compare a b
-
-instance Eq UtxoRow where
-    (UtxoRow a1 t1) == (UtxoRow a2 t2) = a1 == a2 &&  t1 == t2
-
-instance ToJSON UtxoRow where
-    toEncoding = genericToEncoding defaultOptions

@@ -9,15 +9,21 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 -- |
 -- This module provides support for writing handlers for JSON-RPC endpoints
 module Marconi.Api.Types where
 
 import Cardano.Api (Address, NetworkId, ShelleyAddr)
-import Control.Concurrent.QSemN
+import Control.Concurrent.QSemN (QSemN)
 import Control.Lens (makeClassy)
+import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
 import Data.List.NonEmpty (NonEmpty)
 import Database.SQLite.Simple (Connection)
+import GHC.Generics (Generic)
+import Marconi.Index.Utxo (UtxoRow (UtxoRow))
 import Network.Wai.Handler.Warp (Settings)
 
 type CardanoAddress = Address ShelleyAddr
@@ -54,3 +60,17 @@ data JsonRpcEnv = JsonRpcEnv {
     , _queryEnv   :: DBQueryEnv             -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
+
+newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving Generic
+
+instance Ord UtxoRowWrapper where
+    compare (UtxoRowWrapper (UtxoRow a _) ) ( UtxoRowWrapper (UtxoRow b _)) =  compare a b
+
+instance Eq UtxoRowWrapper where
+    (UtxoRowWrapper  (UtxoRow a1 t1) ) == ( UtxoRowWrapper (UtxoRow a2 t2) ) = a1 == a2 &&  t1 == t2
+
+instance ToJSON UtxoRowWrapper where
+    toEncoding = genericToEncoding defaultOptions
+
+instance ToJSON UtxoRow where
+    toEncoding = genericToEncoding defaultOptions

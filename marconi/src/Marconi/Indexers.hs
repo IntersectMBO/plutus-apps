@@ -153,12 +153,15 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
-utxoHotStoreWorker :: QSemN -> TargetAddresses -> Worker
-utxoHotStoreWorker qsem targetAddresses Coordinator{_barrier} ch path =
+queryAwareUtxoWorker
+    :: QSemN            -- ^ Semaphore indicating of inflight database queries
+    -> TargetAddresses  -- ^ Target addresses to filter for
+    -> Worker
+queryAwareUtxoWorker qsem targetAddresses Coordinator{_barrier} ch path =
    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
-    innerLoop index = bracket_
+    innerLoop index = bracket_   -- Note, Exceptions here will propegate to main thread and abend the application
         (waitQSemN qsem 1) (signalQSemN qsem 1) $
         do
             signalQSemN _barrier 1

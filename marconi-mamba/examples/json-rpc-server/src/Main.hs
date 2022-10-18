@@ -17,7 +17,7 @@ bech32Addresses = "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv
 
 -- TODO
 dbpath :: FilePath -- ^ valid SQLite marconi UTxo database path
-dbpath = "/home/kayvan/tmp/.db/main_utxoDB"
+dbpath = "./utxoDB"
 
 addresses :: TargetAddresses
 addresses = targetAddressParser bech32Addresses

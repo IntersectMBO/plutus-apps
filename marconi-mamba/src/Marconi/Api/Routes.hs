@@ -4,16 +4,15 @@
 module Marconi.Api.Routes where
 
 import Data.Set (Set)
-import Ledger (Address)
 import Ledger.Tx (TxOutRef)
-import Marconi.Api.UtxoIndexersQuery (UtxoRow)
+import Marconi.Api.Types (UtxoRowWrapper)
 import Marconi.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
 import Servant.API (Get, NoContent, PlainText, Post, ReqBody, (:<|>), (:>))
 
 type Echo           = JsonRpc "echo" String String String
 type FindTxOutRef   = JsonRpc "txOutRef" String String (Set TxOutRef)
 type FindTxOutRefs  = JsonRpc "txOutRefs" Int String (Set TxOutRef)
-type FindUtxos       = JsonRpc "utxos" Int String (Set UtxoRow)
+type FindUtxos       = JsonRpc "utxos" Int String (Set UtxoRowWrapper)
 
 type Print    = JsonRpcNotification "print" String
 

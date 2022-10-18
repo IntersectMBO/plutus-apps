@@ -17,8 +17,8 @@ import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger.Tx (TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (..), HasJsonRpcEnv (..), JsonRpcEnv)
-import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (UtxoRow, findByAddress, findTxOutRefs, findUtxos)
+import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper)
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findByAddress, findTxOutRefs, findUtxos)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
@@ -83,7 +83,7 @@ findTxOutRefs env _ =
 findUtxos
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) (Set Q.Utxo.UtxoRow))
+    -> Handler (Either (JsonRpcErr String) (Set UtxoRowWrapper))
 findUtxos env _ =
     liftIO $ Right <$> Q.Utxo.findUtxos env
 

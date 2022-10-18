@@ -19,7 +19,7 @@ import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (OwnPubKe
                                                              typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
-                                                                  mustPayToTheScript, mustProduceAtLeast)
+                                                                  mustPayToTheScriptWithDatumInTx, mustProduceAtLeast)
 import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
@@ -70,7 +70,7 @@ baseAdaAndTokenValueLockedByScript = baseAdaValueLockedByScript <> someTokens 1
 mustProduceAtLeastContract :: Value.Value -> Value.Value -> Value.Value -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustProduceAtLeastContract offAmt onAmt baseScriptValue pkh = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScript onAmt baseScriptValue
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onAmt baseScriptValue
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -178,7 +178,7 @@ contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing =
     let withoutOwnPubkeyHashLookupContract:: Value.Value -> Value.Value -> Contract () Empty ContractError ()
         withoutOwnPubkeyHashLookupContract offAmt onAmt = do
             let lookups1 = Constraints.typedValidatorLookups typedValidator
-                tx1 = Constraints.mustPayToTheScript onAmt baseAdaValueLockedByScript
+                tx1 = Constraints.mustPayToTheScriptWithDatumInTx onAmt baseAdaValueLockedByScript
             ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 

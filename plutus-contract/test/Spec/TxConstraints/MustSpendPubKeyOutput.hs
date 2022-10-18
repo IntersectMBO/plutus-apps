@@ -22,7 +22,8 @@ import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRef
                                                              typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
-                                                                  mustPayToTheScript, mustSpendPubKeyOutput)
+                                                                  mustPayToTheScriptWithDatumInTx,
+                                                                  mustSpendPubKeyOutput)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
@@ -69,7 +70,8 @@ baseLovelaceLockedByScript = lovelacePerInitialUtxo `div` 2
 mustSpendPubKeyOutputContract :: [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScript onChainTxOutRefs $ Ada.lovelaceValueOf baseLovelaceLockedByScript
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs
+            $ Ada.lovelaceValueOf baseLovelaceLockedByScript
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -88,7 +90,7 @@ mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     where
-        mustSpendPubKeyOutputs = fmap Constraints.mustSpendPubKeyOutput offChainTxOutRefs
+        mustSpendPubKeyOutputs = Constraints.mustSpendPubKeyOutput <$> offChainTxOutRefs
 
 txoRefsFromWalletState :: WalletState -> Set TxOutRef
 txoRefsFromWalletState ws = head $ M.elems $ ws ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap
@@ -235,7 +237,7 @@ phase2FailureWhenTxoIsNotSpent =
 mkValidator :: [TxOutRef] -> () -> ScriptContext -> Bool
 mkValidator txOutRefs _ ctx = P.traceIfFalse "mustSpendPubKeyOutput not satisfied" (Constraints.checkScriptContext @() @() (P.mconcat mustSpendPubKeyOutputs) ctx)
     where
-        mustSpendPubKeyOutputs = P.fmap Constraints.mustSpendPubKeyOutput txOutRefs
+        mustSpendPubKeyOutputs = Constraints.mustSpendPubKeyOutput P.<$> txOutRefs
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest where

@@ -70,14 +70,11 @@ library
   build-depends:
     , aeson
     , base            >=4.9 && <5
-    , bytestring
     , containers
     , lens
-    , serialise
     , servant
     , servant-server
     , sqlite-simple
-    , stm
     , text
     , time
     , warp
@@ -113,14 +110,7 @@ executable marconi-mamba
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , marconi
-    , marconi-mamba
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
+  build-depends:  marconi-mamba
 
   ------------------------
   -- Non-IOG dependencies
@@ -129,7 +119,6 @@ executable marconi-mamba
     , async
     , base                  >=4.9 && <5
     , optparse-applicative
-    , text
 
 executable examples-json-rpc-server
   import:         lang
@@ -153,11 +142,6 @@ executable examples-json-rpc-client
   build-depends:
     , json-rpc
     , plutus-ledger
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
 
   ------------------------
   -- Non-IOG dependencies

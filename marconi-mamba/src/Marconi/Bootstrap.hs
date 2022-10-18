@@ -11,10 +11,10 @@ import Data.List.NonEmpty (fromList, nub)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (pack)
 import Marconi.Api.HttpServer qualified as Http
-import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryQSem), HasJsonRpcEnv (queryEnv), JsonRpcEnv (..),
-                          RpcPortNumber, TargetAddresses)
+import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryQSem), HasJsonRpcEnv (queryEnv),
+                          JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber, TargetAddresses)
 import Marconi.Api.UtxoIndexersQuery qualified as QIUtxo
-import Marconi.Indexers qualified as I
+import Marconi.Indexers (combineIndexers, queryAwareUtxoWorker)
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
 
 
@@ -46,7 +46,7 @@ bootstrapUtxoIndexers
 bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
     let
       qsem = env ^. queryEnv . queryQSem
-      indexers = I.combineIndexers [( I.utxoHotStoreWorker qsem targetAddresses , dbPath)]
+      indexers = combineIndexers [( queryAwareUtxoWorker qsem targetAddresses , dbPath)]
       chainPoint = ChainPointAtGenesis
     in
         withChainSyncEventStream socket networkId chainPoint indexers

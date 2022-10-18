@@ -29,7 +29,6 @@ import Plutus.Contract.Test.ContractModel as ContractModel
 
 import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty
-import Test.Tasty.QuickCheck (testProperty)
 
 import Plutus.Contracts.Prism hiding (mirror)
 import Plutus.Contracts.Prism.Credential qualified as Credential
@@ -215,6 +214,6 @@ tests = testGroup "PRISM"
         .&&. walletFundsChange user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
         )
         prismTrace
-    , testProperty "QuickCheck property" $
-        withMaxSuccess 100 prop_Prism
+    -- Uncomment when PLT-1035, GTH-760 is fixe
+    -- , testProperty "QuickCheck property" $ withMaxSuccess 100 prop_Prism
     ]

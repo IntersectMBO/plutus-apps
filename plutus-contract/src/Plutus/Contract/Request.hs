@@ -922,11 +922,13 @@ mkTxContract ::
     -> Contract w s Constraints.MkTxError UnbalancedTx
 mkTxContract lookups txc = do
     let result = Constraints.mkTx lookups txc
-        logData = MkTxLog{mkTxLogLookups=Constraints.generalise lookups, mkTxLogTxConstraints=bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData txc, mkTxLogResult = result}
+        logData = MkTxLog
+          { mkTxLogLookups = Constraints.generalise lookups
+          , mkTxLogTxConstraints = bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData txc
+          , mkTxLogResult = result
+          }
     logDebug logData
-    case result of
-        Left err -> throwError err
-        Right r' -> return r'
+    either throwError pure result
 
 {-| Arguments and result of a call to 'mkTx'
 -}
