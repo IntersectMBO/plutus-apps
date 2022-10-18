@@ -176,7 +176,7 @@ data ConnectionError
   | WrongRedeemerType PV1.BuiltinData
   | WrongDatumType PV1.BuiltinData
   | NoDatum PV1.TxOutRef PV1.DatumHash
-  | UnknownRef
+  | UnknownRef PV1.TxOutRef
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Pretty ConnectionError where
@@ -186,7 +186,7 @@ instance Pretty ConnectionError where
   pretty (WrongRedeemerType d)         = "Wrong redeemer type" <+> pretty (PV1.builtinDataToData d)
   pretty (WrongDatumType d)            = "Wrong datum type" <+> pretty (PV1.builtinDataToData d)
   pretty (NoDatum t d)                 = "No datum with hash " <+> pretty d <+> "for tx output" <+> pretty t
-  pretty UnknownRef                    = "Unknown reference"
+  pretty (UnknownRef d)                = "Unknown reference" <+> pretty d
 
 -- | Checks that the given validator hash is consistent with the actual validator.
 checkValidatorAddress :: forall a m. (MonadError ConnectionError m) => TypedValidator a -> PV1.Address -> m ()
