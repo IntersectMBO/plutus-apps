@@ -177,11 +177,17 @@ inType = L.lens txInputType s where
 pubKeyTxInputs :: L.Fold [TxInput] TxInput
 pubKeyTxInputs = L.folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
 
--- | Filter to get only the script inputs.
+-- | Filter to get only the scripts that consume or reference a script address
 scriptTxInputs :: L.Fold [TxInput] TxInput
 scriptTxInputs = (\x -> L.folding x) . filter $ \case
     TxInput{ txInputType = TxScriptAddress{} } -> True
     _                                          -> False
+
+-- | Filter to get only the scripts that reference a script address
+referenceScriptTxInputs :: L.Fold [TxInput] TxInput
+referenceScriptTxInputs = (\x -> L.folding x) . filter $ \case
+    TxInput{ txInputType = TxScriptAddress _ (Right _) _ } -> True
+    _                                                      -> False
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
