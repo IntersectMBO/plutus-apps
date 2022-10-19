@@ -577,7 +577,7 @@ phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript 
 -- | Check that when spending an output with an inline datum, the transaction does not contain a witness for this datum.
 mustSpendScriptOutputsInlineDatumContract :: Bool -> Contract () Empty ContractError ()
 mustSpendScriptOutputsInlineDatumContract useInlineDatum = do
-    let versionedMintingPolicy = Versioned mustSpendScriptOutputWithDataLengthPolicyV2 PlutusV2
+    let versionedMintingPolicy = PSU.Versioned mustSpendScriptOutputWithDataLengthPolicyV2 PlutusV2
         lookups1 = Cons.typedValidatorLookups someTypedValidatorV2
         mkCons = if useInlineDatum then Cons.mustPayToTheScriptWithInlineDatum else Cons.mustPayToTheScriptWithDatumInTx
         tx1 = mkCons (PlutusTx.toBuiltinData (0::Integer)) utxoValue
@@ -740,7 +740,8 @@ mustSpendScriptOutputPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [|
 mustSpendScriptOutputWithDataLengthPolicyV2 :: PV2.MintingPolicy
 mustSpendScriptOutputWithDataLengthPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
-        mkMustSpendScriptOutputWithDataLengthPolicyV2 (constraintParams, len) ctx = mkMustSpendScriptOutputPolicyV2 constraintParams ctx
+        mkMustSpendScriptOutputWithDataLengthPolicyV2 (constraintParams, len) ctx =
+            mkMustSpendScriptOutputPolicy Cons.V2.checkScriptContext constraintParams ctx
             P.&& P.length (PV2.txInfoData (PV2.scriptContextTxInfo ctx)) P.== len
         wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputWithDataLengthPolicyV2
 
