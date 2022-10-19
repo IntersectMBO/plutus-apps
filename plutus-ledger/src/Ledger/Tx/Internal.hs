@@ -64,6 +64,7 @@ data TxInType =
       ScriptAddress !(Either (Versioned Validator) (Versioned TxOutRef)) !Redeemer !(Maybe Datum)
       -- ^ A transaction input that consumes (with a validator) or references (with a txOutRef)
       -- a script address with the given the redeemer and datum.
+      -- Datum is optional if the input refers to a script output which contains an inline datum
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
@@ -92,6 +93,7 @@ pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
+-- Datum is optional if the input refers to a script output which contains an inline datum
 scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> TxIn
 scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (Left v) r d
 
@@ -532,6 +534,7 @@ addMintingPolicy vvl rd tx@Tx{txMintingScripts, txScripts} = tx
         mph@(MintingPolicyHash b) = mintingPolicyHash vvl
 
 -- | Add validator together with the redeemer and datum into txInputs, txData and txScripts accordingly.
+-- Datum is optional if the input refers to a script output which contains an inline datum
 addScriptTxInput :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> Tx -> Tx
 addScriptTxInput outRef vl rd mdt tx@Tx{txInputs, txScripts, txData} = tx
     {txInputs = TxInput outRef (TxScriptAddress rd (Left vlHash) mdtHash) : txInputs,
@@ -542,6 +545,7 @@ addScriptTxInput outRef vl rd mdt tx@Tx{txInputs, txScripts, txData} = tx
         vlHash@(ValidatorHash b) = validatorHash vl
 
 -- | Add script reference together with the redeemer and datum into txInputs and txData accordingly.
+-- Datum is optional if the input refers to a script output which contains an inline datum
 addReferenceTxInput :: TxOutRef -> Versioned TxOutRef -> Redeemer -> Maybe Datum -> Tx -> Tx
 addReferenceTxInput outRef vref rd mdt tx@Tx{txInputs, txData} = tx
     {txInputs = TxInput outRef (TxScriptAddress rd (Right vref) mdtHash) : txInputs,

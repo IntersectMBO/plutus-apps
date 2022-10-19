@@ -103,6 +103,7 @@ import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
                                       outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
 
+-- | A datum in a transaction output that comes from a chain index query.
 data DatumFromQuery
     = DatumUnknown
     | DatumInline V2.Datum

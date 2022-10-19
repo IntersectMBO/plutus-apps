@@ -70,8 +70,9 @@ makeClassyPrisms ''ScriptError
 tests :: TestTree
 tests = testGroup "MustSpendScriptOutput"
       [ testGroup "ledger constraints" [v1Tests, v2Tests]
-    , mustSpendScriptOutputsInlineDatumHasNoDataInTx
+      , mustSpendScriptOutputsInlineDatumHasNoDataInTx
       ]
+
 v1Tests :: TestTree
 v1Tests = testGroup "Plutus V1" $
    [ v1FeaturesTests
@@ -602,7 +603,7 @@ mustSpendScriptOutputsInlineDatumContract useInlineDatum = do
 
 mustSpendScriptOutputsInlineDatumHasNoDataInTx :: TestTree
 mustSpendScriptOutputsInlineDatumHasNoDataInTx =
-    testGroup "mustSpendScriptOutput should not include datum in tx when spending a ref with inline datum"
+    testGroup "mustSpendScriptOutput spending a ref with ot without inline datum"
 
     [ checkPredicateOptions
           defaultCheckOptions

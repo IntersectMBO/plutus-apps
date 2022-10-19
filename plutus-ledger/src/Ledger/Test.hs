@@ -19,29 +19,32 @@ import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude hiding (not)
 
-someAddress :: Address
-someAddress = Ledger.scriptValidatorHashAddress someValidatorHash Nothing
-
-someValidatorHash :: PV1.ValidatorHash
-someValidatorHash = PV1.validatorHash someValidator
+someCode :: PlutusTx.CompiledCode (PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
+someCode = $$(PlutusTx.compile [|| \_ _ _ -> () ||])
 
 someValidator :: Validator
-someValidator = PV1.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
+someValidator = PV1.mkValidatorScript someCode
 
 someTypedValidator :: Scripts.TypedValidator Any
 someTypedValidator = Scripts.unsafeMkTypedValidator (Versioned someValidator PlutusV1)
 
-someAddressV2 :: Address
-someAddressV2 = Ledger.scriptValidatorHashAddress someValidatorHashV2 Nothing
+someValidatorHash :: PV1.ValidatorHash
+someValidatorHash = PV1.validatorHash someValidator
+
+someAddress :: Address
+someAddress = Ledger.scriptValidatorHashAddress someValidatorHash Nothing
+
+someValidatorV2 :: Validator
+someValidatorV2 = PV2.mkValidatorScript someCode
+
+someTypedValidatorV2 :: Scripts.TypedValidator Any
+someTypedValidatorV2 = Scripts.unsafeMkTypedValidator (Versioned someValidator PlutusV2)
 
 someValidatorHashV2 :: PV2.ValidatorHash
 someValidatorHashV2 = PV2.validatorHash someValidatorV2
 
-someValidatorV2 :: Validator
-someValidatorV2 = PV2.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
-
-someTypedValidatorV2 :: Scripts.TypedValidator Any
-someTypedValidatorV2 = Scripts.unsafeMkTypedValidator (Versioned someValidator PlutusV2)
+someAddressV2 :: Address
+someAddressV2 = Ledger.scriptValidatorHashAddress someValidatorHashV2 Nothing
 
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: () -> Ledger.ScriptContext -> Bool
