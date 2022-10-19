@@ -1,17 +1,18 @@
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections  #-}
+
 module Marconi.Indexers where
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
+import Control.Exception (bracket_)
 import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (assocs)
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set)
@@ -25,6 +26,7 @@ import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 -- TODO Remove the following dependencies from cardano-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
+import Data.List.NonEmpty (NonEmpty)
 import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromTxScriptValidity, scriptDataFromCardanoTxBody,
@@ -35,6 +37,12 @@ import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
 import RewindableIndex.Index.VSplit qualified as Ix
+
+type CardanoAddress = C.Address C.ShelleyAddr
+
+-- | Typre represents non empty list of Bech32 compatable addresses"
+type TargetAddresses = NonEmpty CardanoAddress
+
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
@@ -47,31 +55,27 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
       let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
 
-isTargetTxOut :: TargetAddresses -> C.TxOut C.CtxTx era -> Bool
-isTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
-    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
-    _                                                -> False
-
 -- UtxoIndexer
-type TargetAddresses = NonEmpty.NonEmpty (C.Address C.ShelleyAddr )
-
 getOutputs
   :: C.IsCardanoEra era
   => Maybe TargetAddresses
   -> C.Tx era
-  -> Maybe [(TxOut, TxOutRef)]
-getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
-    outs <-
-      either (const Nothing) (Just . map TxOut)
-      . traverse (C.eraCast C.BabbageEra)
-      $ case maybeTargetAddresses of
-             Just targetAddresses -> filter (isTargetTxOut targetAddresses) txOuts
-             Nothing              -> txOuts
-    pure $ outs &  zip ([0..] :: [Integer])
-        <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
-                                          , txOutRefIdx = ix
-                                     }))
-
+  -> Maybe [ (TxOut, TxOutRef) ]
+getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
+    do
+        let indexersFilter = case maybeTargetAddresses of
+                Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
+                _                    -> id -- no filtering is applied
+        outs  <- either (const Nothing) (
+            Just . map TxOut)
+            . traverse (C.eraCast C.BabbageEra)
+            . indexersFilter
+            $ txOuts
+        pure $ outs & zip ([0..] :: [Integer])
+            <&> (\(ix, out) -> (out, TxOutRef
+                                   { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
+                                   , txOutRefIdx = ix
+                                   }))
 getInputs
   :: C.Tx era
   -> Set TxOutRef
@@ -90,9 +94,9 @@ getUtxoUpdate
   -> [C.Tx era]
   -> Maybe TargetAddresses
   -> UtxoUpdate
-getUtxoUpdate slot txs addresses =
+getUtxoUpdate slot txs maybeAddresses =
   let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-      outs = concat . catMaybes $ getOutputs addresses <$> txs
+      outs = concat . catMaybes $ getOutputs maybeAddresses <$> txs
   in  UtxoUpdate { _inputs  = ins
                  , _outputs = outs
                  , _slotNo  = slot
@@ -140,17 +144,53 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               slot   <- chainPointToSlotNo cp
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
+-- | does the transaction contain a targetAddress
+isInTargetTxOut
+    :: TargetAddresses              -- ^ non empty list of target address
+    -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
+    -> Bool
+isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
+    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
+    _                                                -> False
+
+queryAwareUtxoWorker
+    :: QSemN            -- ^ Semaphore indicating of inflight database queries
+    -> TargetAddresses  -- ^ Target addresses to filter for
+    -> Worker
+queryAwareUtxoWorker qsem targetAddresses Coordinator{_barrier} ch path =
+   Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+  where
+    innerLoop :: UtxoIndex -> IO ()
+    innerLoop index = bracket_   -- Note, Exceptions here will propegate to main thread and abend the application
+        (waitQSemN qsem 1) (signalQSemN qsem 1) $
+        do
+            signalQSemN _barrier 1
+            event <- atomically $ readTChan ch
+            case event of
+                RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+                    let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
+                    Ix.insert utxoRow index >>= innerLoop
+                RollBackward cp _ct -> do
+                    events <- Ix.getEvents (index ^. Ix.storage)
+                    innerLoop $
+                        fromMaybe index $ do
+                            slot   <- chainPointToSlotNo cp
+                            offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+                            Ix.rewind offset index
+
 
 utxoWorker :: Maybe TargetAddresses -> Worker
-utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
+    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct ->
-          Ix.insert (getUtxoUpdate slotNo txs maybeTargetAddresses) index >>= innerLoop
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+          let utxoRow = getUtxoUpdate slotNo txs maybeTargetAddresses
+          Ix.insert utxoRow index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
@@ -201,7 +241,12 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIn
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
-    pairs = [(utxoWorker maybeTargetAddresses, utxoPath), (datumWorker, datumPath), (scriptTxWorker (\_ _ -> pure []), scriptTxPath)]
+    pairs =
+        [
+            (utxoWorker maybeTargetAddresses, utxoPath)
+            , (datumWorker, datumPath)
+            , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
+        ]
     remainingIndexers = mapMaybe liftMaybe pairs
 
 combineIndexers

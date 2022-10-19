@@ -115,7 +115,6 @@ executable marconi
     , base                  >=4.9 && <5
     , optparse-applicative
     , prettyprinter
-    , text
 
 test-suite marconi-test
   import:         lang

@@ -1,0 +1,60 @@
+## REST-Client script
+# If you don't know how to use this script, see:  https://github.com/pashky/restclient.el for instruction
+
+POST http://localhost:3000/json-rpc
+Content-Type: application/json-rpc
+{"jsonrpc": "2.0", "method": "echo", "params": "hello world", "id": 0}
+#
+#
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
+#
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json-rpc
+{"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
+#
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "txOutRef"
+, "params": "addr1qywjwugxprn22w65zdmcqc6c9k3tse4rlft6tngvvg620vlwgcg9jv80wjq5hglp25u2axzntamczptdvqmj6qfvhm8q4d096z"
+, "id": 10
+}
+#
+#
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "txOutRef"
+, "params": "9bc1bea5295da5f046baa8057d06afe66e6ff549305cd0597abc2fd9"
+, "id": 12
+}
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "txOutRefs"
+, "params": 100
+, "id": 11
+}
+#
+#
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxos"
+, "params": 100
+, "id": 14
+}
+#
+#
+GET http://localhost:3000/rest/time

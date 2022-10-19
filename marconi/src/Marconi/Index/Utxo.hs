@@ -13,6 +13,8 @@ module Marconi.Index.Utxo
   , Ix.insert
   , Ix.rewind
   , UtxoUpdate(..)
+  , UtxoRow(..)
+  , toRows
   , inputs
   , outputs
   , slotNo
