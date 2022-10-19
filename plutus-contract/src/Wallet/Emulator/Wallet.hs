@@ -208,8 +208,8 @@ makePrisms ''WalletEvent
 -- | The state used by the mock wallet environment.
 data WalletState = WalletState {
     _mockWallet              :: MockWallet, -- ^ Mock wallet with the user's private key.
-    _nodeClient              :: NodeClientState,
-    _chainIndexEmulatorState :: ChainIndexEmulatorState,
+    _nodeClient              :: NodeClientState, -- ^ The representation of the node, as known by the wallet
+    _chainIndexEmulatorState :: ChainIndexEmulatorState, -- ^ the chain index info known by the wallet
     _signingProcess          :: Maybe SigningProcess
                                 -- ^ Override the signing process.
                                 -- Used for testing multi-agent use cases.
