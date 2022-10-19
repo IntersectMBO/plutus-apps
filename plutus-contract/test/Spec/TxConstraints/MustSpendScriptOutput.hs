@@ -21,9 +21,10 @@ import Ledger.Constraints.OffChain qualified as Cons (MkTxError (NoMatchingOutpu
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Cons (mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx,
-                                                           mustSpendScriptOutput,
+                                                           mustPayToTheScriptWithInlineDatum, mustSpendScriptOutput,
                                                            mustSpendScriptOutputWithMatchingDatumAndValue)
-import Ledger.Test (asDatum, asRedeemer, someAddress, someTypedValidator, someValidatorHash)
+import Ledger.Test (asDatum, asRedeemer, someAddress, someAddressV2, someTypedValidator, someTypedValidatorV2,
+                    someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Plutus.Contract as Cont (Contract, ContractError (ConstraintResolutionContractError), Empty, awaitTxConfirmed,
                                 submitTxConstraintsWith, utxosAt)
@@ -58,6 +59,7 @@ tests =
         , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum
         , phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue
         , phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeemerWithV2Script
+        , mustSpendScriptOutputsInlineDatumHasNoDataInTx
         ]
 
 -- The value in each initial wallet UTxO
@@ -323,6 +325,48 @@ phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeem
           (void $ trace $ mustSpendScriptOutputWithMatchingDatumAndValueContract' PlutusV2 nScriptOutputs (scriptOutputIdx, utxoValue) (scriptOutputIdx, utxoValue) False)
         ]
 
+-- | Check that when spending an output with an inline datum, the transaction does not contain a witness for this datum.
+mustSpendScriptOutputsInlineDatumContract :: Bool -> Contract () Empty ContractError ()
+mustSpendScriptOutputsInlineDatumContract useInlineDatum = do
+    let versionedMintingPolicy = Versioned mustSpendScriptOutputWithDataLengthPolicyV2 PlutusV2
+        lookups1 = Cons.typedValidatorLookups someTypedValidatorV2
+        mkCons = if useInlineDatum then Cons.mustPayToTheScriptWithInlineDatum else Cons.mustPayToTheScriptWithDatumInTx
+        tx1 = mkCons (PlutusTx.toBuiltinData (0::Integer)) utxoValue
+    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    scriptUtxos <- utxosAt someAddressV2
+    let scriptUtxosToSpend = M.keys scriptUtxos
+        expectedRedeemers = L.map asRedeemer scriptUtxosToSpend
+        dataCount = if useInlineDatum then 0 else 1 :: Integer
+        policyRedeemer = asRedeemer (zip scriptUtxosToSpend expectedRedeemers, dataCount)
+        lookups2 = Cons.typedValidatorLookups someTypedValidatorV2
+                <> Cons.mintingPolicy versionedMintingPolicy
+                <> Cons.unspentOutputs scriptUtxos
+        tx2 = mconcat (mustSpendScriptOutputs scriptUtxosToSpend)
+           <> Cons.mustMintValueWithRedeemer policyRedeemer (tokenValue versionedMintingPolicy)
+    ledgerTx4 <- submitTxConstraintsWith lookups2 tx2
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
+    where
+        mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints P.BuiltinData P.BuiltinData]
+        mustSpendScriptOutputs scriptTxOutRefs = fmap (\txOutRef -> Cons.mustSpendScriptOutput txOutRef (asRedeemer txOutRef)) scriptTxOutRefs
+
+mustSpendScriptOutputsInlineDatumHasNoDataInTx :: TestTree
+mustSpendScriptOutputsInlineDatumHasNoDataInTx =
+    testGroup "mustSpendScriptOutput should not include datum in tx when spending a ref with inline datum"
+
+    [ checkPredicateOptions
+          defaultCheckOptions
+          "mustSpendScriptOutput does not include datum in tx when spending a ref with inline datum"
+          (assertValidatedTransactionCount 2)
+          (void $ trace $ mustSpendScriptOutputsInlineDatumContract True)
+    , checkPredicateOptions
+          defaultCheckOptions
+          "mustSpendScriptOutput does include datum in tx when spending a ref with datum hash"
+          (assertValidatedTransactionCount 2)
+          (void $ trace $ mustSpendScriptOutputsInlineDatumContract False)
+    ]
+
 {-
     Versioned Policies
 -}
@@ -399,6 +443,18 @@ mustSpendScriptOutputPolicyHashV2 = PSU.V2.mintingPolicyHash mustSpendScriptOutp
 
 mustSpendScriptOutputPolicyCurrencySymbolV2 :: V.CurrencySymbol
 mustSpendScriptOutputPolicyCurrencySymbolV2 = V.mpsSymbol mustSpendScriptOutputPolicyHashV2
+
+-----
+
+{-# INLINEABLE mkMustSpendScriptOutputWithDataLengthPolicyV2 #-}
+mkMustSpendScriptOutputWithDataLengthPolicyV2 :: ([(Tx.TxOutRef,  Redeemer)], Integer) -> PV2.ScriptContext -> Bool
+mkMustSpendScriptOutputWithDataLengthPolicyV2 (constraintParams, len) ctx = mkMustSpendScriptOutputPolicyV2 constraintParams ctx
+    P.&& P.length (PV2.txInfoData (PV2.scriptContextTxInfo ctx)) P.== len
+
+mustSpendScriptOutputWithDataLengthPolicyV2 :: PV2.MintingPolicy
+mustSpendScriptOutputWithDataLengthPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+    where
+        wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputWithDataLengthPolicyV2
 
 
 -----

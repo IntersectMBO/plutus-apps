@@ -1,45 +1,45 @@
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE GADTs                #-}
-{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Ledger.Typed.Scripts
   ( module Export
-  , TypedScriptTxIn (tyTxInTxIn, tyTxInOutRef)
-  , makeTypedScriptTxIn
+  , MintingPolicy
+  , Validator
+  , PV1.ConnectionError (..)
+  , mkForwardingMintingPolicy
+  , unsafeMkTypedValidator
+  -- TODO: Don't export Plutus V1 specific code from a module that doesn't mention a plutus version
+  , PV1.ValidatorType
+  , PV1.mkTypedValidator
+  , PV1.mkTypedValidatorParam
+  , PV1.mkUntypedMintingPolicy
+  , PV1.mkUntypedValidator
   ) where
 
-import Ledger.Tx.Internal (TxIn (TxIn), TxInType (ScriptAddress))
 import Ledger.Typed.Scripts.Orphans as Export ()
+import Plutus.Script.Utils.Scripts qualified as Untyped
 import Plutus.Script.Utils.Typed as Export
-import Plutus.Script.Utils.V1.Typed.Scripts as Export
-import Plutus.V1.Ledger.Api (Datum (Datum), Redeemer (Redeemer), ToData (..))
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
+import Plutus.V1.Ledger.Api (MintingPolicy, Validator)
 
--- | A 'TxIn' tagged by two phantom types: a list of the types of the data scripts in the transaction; and the connection type of the input.
-data TypedScriptTxIn a = TypedScriptTxIn
-  { tyTxInTxIn   :: TxIn,
-    tyTxInOutRef :: TypedScriptTxOutRef a
-  }
+mkForwardingMintingPolicy :: Versioned Validator -> Versioned MintingPolicy
+mkForwardingMintingPolicy vl@(Versioned _ PlutusV1) = Versioned (PV1.mkForwardingMintingPolicy (Untyped.validatorHash vl)) PlutusV1
+mkForwardingMintingPolicy vl@(Versioned _ PlutusV2) = Versioned (PV2.mkForwardingMintingPolicy (Untyped.validatorHash vl)) PlutusV2
 
-instance Eq (DatumType a) => Eq (TypedScriptTxIn a) where
-  l == r =
-    tyTxInTxIn l == tyTxInTxIn r
-      && tyTxInOutRef l == tyTxInOutRef r
+-- | Make a 'TypedValidator' (with no type constraints) from an untyped 'Validator' script.
+unsafeMkTypedValidator :: Versioned Validator -> TypedValidator Any
+unsafeMkTypedValidator vl =
+  TypedValidator
+    { tvValidator = vl
+    , tvValidatorHash = vh
+    , tvForwardingMPS = mps
+    , tvForwardingMPSHash = Untyped.mintingPolicyHash mps
+    }
+  where
+    vh = Untyped.validatorHash vl
+    mps = mkForwardingMintingPolicy vl
 
--- | Create a 'TypedScriptTxIn' from a correctly-typed validator, redeemer, and output ref.
-makeTypedScriptTxIn ::
-  forall inn.
-  (ToData (RedeemerType inn), ToData (DatumType inn)) =>
-  TypedValidator inn ->
-  RedeemerType inn ->
-  TypedScriptTxOutRef inn ->
-  TypedScriptTxIn inn
-makeTypedScriptTxIn si r tyRef =
-  let d = Export.tyTxOutData (Export.tyTxOutRefOut tyRef)
-      vs = vValidatorScript si
-      rs = Redeemer (toBuiltinData r)
-      ds = Datum (toBuiltinData d)
-      txInT = ScriptAddress (Left vs) rs (Just ds)
-   in TypedScriptTxIn @inn (TxIn (Export.tyTxOutRefRef tyRef) (Just txInT)) tyRef
