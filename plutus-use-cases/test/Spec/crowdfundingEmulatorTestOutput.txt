@@ -246,6 +246,12 @@ Slot 20: W[1]: Finished balancing:
                    fee: Value (Map [(,Map [("",468363)])])
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) False}
                    data:
+                     ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                     , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
+                     ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                     , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
+                     ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                     , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                    redeemers:}
 Slot 20: W[1]: Signing tx: 9536702bda86586c9c1f76a002e163bc3fc817de8c0bff492dc4dcb9f36905ea
 Slot 20: W[1]: Submitting tx: 9536702bda86586c9c1f76a002e163bc3fc817de8c0bff492dc4dcb9f36905ea
