@@ -295,12 +295,12 @@ processConstraint = \case
                 _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
         mscriptTXO <- mapLedgerMkTxError $ P.resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of
-            Just ((datum, isInline), _) -> do
+            Just (datum, _) -> do
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
                 let witness
                         = C.ScriptWitness C.ScriptWitnessForSpending $
                             mkWitness
-                            (if isInline then C.InlineScriptDatum else C.ScriptDatumForTxIn (C.toCardanoScriptData (getDatum datum)))
+                            (C.toCardanoDatumWitness $ P.datumWitness datum)
                             (C.toCardanoScriptData (getRedeemer redeemer))
                             C.zeroExecutionUnits
 
