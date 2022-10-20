@@ -81,9 +81,14 @@
       url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
       flake = false;
     };
+    tullia = {
+      url = "github:input-output-hk/tullia";
+      # Can't follow since nixpkgs is set to flake=false here
+      # inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, flake-utils, ... }@inputs:
+  outputs = { self, flake-utils, tullia, ... }@inputs:
     (flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
         topLevel = import ./. {
@@ -94,7 +99,19 @@
       {
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
-      }));
+
+        # Exported to generate tullia tasks from
+        ciJobs = import ./ci.nix {
+          supportedSystems = [ system ];
+          plutus-apps-commit = {
+            outPath = self;
+            rev = self.rev;
+          };
+          sources = inputs;
+        };
+      } //
+      tullia.fromSimple system (import ./nix/tullia.nix self system)
+    ));
 
   nixConfig = {
     extra-substituters = [

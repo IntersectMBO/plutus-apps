@@ -5,13 +5,15 @@
 , plutus-apps ? { outPath = ./.; rev = "abcdef"; }
 }:
 let
+  pkgs = import sources.nixpkgs { system = builtins.currentSystem; };
+
   traceNames = prefix: builtins.mapAttrs (n: v:
     if builtins.isAttrs v
     then if v ? type && v.type == "derivation"
     then __trace ("found job " + prefix + n) v
     else __trace ("looking in " + prefix + n) traceNames (prefix + n + ".") v
     else v);
-  inherit (import (sources.plutus-core + "/nix/lib/ci.nix")) stripAttrsForHydra filterDerivations derivationAggregate;
+  inherit (pkgs.callPackage ./nix/lib/ci.nix { }) stripAttrsForHydra filterDerivations derivationAggregate;
 
   ci = import ./ci.nix {
     inherit supportedSystems rootsOnly sourcesOverride sources;
@@ -25,4 +27,5 @@ let
   # Don't require darwin jobs to succeed for now, until the mac builders are fixed
   requiredJobsets = builtins.removeAttrs ciJobsets [ "darwin" ];
 in
-traceNames "" (ciJobsets // { required = derivationAggregate "required-plutus-apps" requiredJobsets; })
+traceNames ""
+  (ciJobsets // { required = derivationAggregate "required-plutus-apps" requiredJobsets; })
