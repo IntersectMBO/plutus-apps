@@ -221,9 +221,14 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
     (CollectingSignatures payment pkh, Pay)
         | proposalAccepted params pkh ->
             let Payment{paymentAmount, paymentRecipient, paymentDeadline} = payment
+                -- Correct validity interval should be:
+                -- @
+                --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound $ paymentDeadline p)
+                -- @
+                -- See Note [Validity Interval's upper bound]
+                validityTimeRange = Interval.to $ paymentDeadline - 2
                 constraints =
-                    -- We have to subtract '2', see Note [Validity Interval's upper bound]
-                    Constraints.mustValidateIn (Interval.to $ paymentDeadline - 2)
+                    Constraints.mustValidateIn validityTimeRange
                     <> Constraints.mustPayToPubKey paymentRecipient paymentAmount
                 newValue = currentValue - paymentAmount
             in Just ( constraints

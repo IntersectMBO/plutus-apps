@@ -59,6 +59,7 @@ import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Interval (Extended (NegInf), Interval (Interval), LowerBound (LowerBound))
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
@@ -123,8 +124,9 @@ mkCampaign ddl collectionDdl ownerWallet =
 {-# INLINABLE collectionRange #-}
 collectionRange :: Campaign -> PV1.POSIXTimeRange
 collectionRange cmp =
-    -- We have to subtract '2', see Note [Validity Interval's upper bound]
-    Interval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp - 2)
+    Interval
+        (Interval.lowerBound $ campaignDeadline cmp)
+        (Interval.strictUpperBound $ campaignCollectionDeadline cmp)
 
 -- | The 'POSIXTimeRange' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
@@ -206,9 +208,11 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
+        validityTimeRange =
+            Interval (LowerBound NegInf True)
+                     (Interval.strictUpperBound $ campaignDeadline cmp)
         tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
-                -- We have to subtract '2', see Note [Validity Interval's upper bound]
-                <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
+                <> Constraints.mustValidateIn validityTimeRange
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 

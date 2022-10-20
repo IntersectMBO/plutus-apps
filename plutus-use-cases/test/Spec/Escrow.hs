@@ -260,8 +260,8 @@ tests = testGroup "escrow"
                                (Scripts.validatorScript $ typedValidator (escrowParams startTime))
                                32000
 
-    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 100 prop_Escrow
-    , testProperty "QuickCheck NoLockedFunds" $ withMaxSuccess 100 prop_NoLockedFunds
+    , testProperty "QuickCheck ContractModel" prop_Escrow
+    , testProperty "QuickCheck NoLockedFunds" prop_NoLockedFunds
 
     -- TODO: commented because the test fails after 'CardanoTx(Both)' was deleted.
     -- The fix would be to start using CardanoTx instead of EmulatorTx in 'DoubleSatisfation.doubleSatisfactionCandidates'.
