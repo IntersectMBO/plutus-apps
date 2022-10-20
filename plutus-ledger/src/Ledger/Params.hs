@@ -81,7 +81,7 @@ instance Default Params where
 instance Default ProtocolParameters where
   -- The protocol parameters as they are in the Alonzo era.
   def = ProtocolParameters
-    { protocolParamProtocolVersion = (6,0)
+    { protocolParamProtocolVersion = (2,0)
     , protocolParamDecentralization = Just (3 % 5)
     , protocolParamExtraPraosEntropy = Nothing
     , protocolParamMaxBlockHeaderSize = 1100
@@ -89,7 +89,7 @@ instance Default ProtocolParameters where
     , protocolParamMaxTxSize = 16384
     , protocolParamTxFeeFixed = 155381
     , protocolParamTxFeePerByte = 44
-    , protocolParamMinUTxOValue = Nothing
+    , protocolParamMinUTxOValue = Just 1000000 --Nothing
     , protocolParamStakeAddressDeposit = Lovelace 2000000
     , protocolParamStakePoolDeposit = Lovelace 500000000
     , protocolParamMinPoolCost = Lovelace 340000000
