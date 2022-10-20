@@ -47,7 +47,6 @@ tests =
         , mustSpendAllUtxosFromOtherWallet
         , contractErrorWhenAttemptingToSpendNonExistentOutput
         , phase2FailureWhenTxoIsNotSpent
-        , bug695
         ]
 
 nonExistentTxoRef :: TxOutRef
@@ -98,20 +97,6 @@ txoRefsFromWalletState :: WalletState -> Set TxOutRef
 txoRefsFromWalletState w = let
   pkCred = addressCredential $ Wallet.ownAddress w
   in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
-
--- Example of bug https://github.com/input-output-hk/plutus-apps/issues/695: fails with TxOutRefNotFound because w1 does not have utxo with index of 5 from WalletState
-bug695 :: TestTree
-bug695 =
-    let trace = do
-            w1State <- Trace.agentState w1
-            let w1TxoRefs = txoRefsFromWalletState w1State
-                w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef w1MiddleTxoRef w1PaymentPubKeyHash
-            void Trace.nextSlot
-
-    in checkPredicate "Example of bug 695"
-        (assertValidatedTransactionCount 2 .&&. walletFundsChange w1 mempty)
-        (void trace)
 
 {-
 -- Example of bug https://github.com/input-output-hk/plutus-apps/issues/696
