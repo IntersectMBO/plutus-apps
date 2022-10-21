@@ -70,9 +70,9 @@ import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
 
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, Promise,
-                        adjustUnbalancedTx, awaitTime, currentTime, endpoint, mapError, mkTxConstraints,
-                        ownFirstPaymentPubKeyHash, promiseMap, selectList, submitUnbalancedTx, type (.\/), utxosAt,
-                        waitNSlots)
+                        adjustUnbalancedTx, awaitTime, currentNodeClientTimeRange, currentTime, endpoint, mapError,
+                        mkTxConstraints, ownFirstPaymentPubKeyHash, promiseMap, selectList, submitUnbalancedTx,
+                        type (.\/), utxosAt, waitNSlots)
 import PlutusTx qualified
 {- START imports -}
 import PlutusTx.Code qualified as PlutusTx
@@ -299,7 +299,7 @@ redeem ::
     -> Contract w s e RedeemSuccess
 redeem inst escrow = mapError (review _EscrowError) $ do
     let addr = Scripts.validatorAddress inst
-    current <- currentTime
+    current <- Haskell.snd <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let
         valRange = Interval.to (Haskell.pred $ escrowDeadline escrow)
@@ -365,7 +365,7 @@ payRedeemRefund params vl = do
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do
-                    time <- currentTime
+                    time <- Haskell.snd <$> currentNodeClientTimeRange
                     if time >= escrowDeadline params
                         then Left <$> refund inst params
                         else waitNSlots 1 >> go

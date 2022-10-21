@@ -27,11 +27,13 @@ module Plutus.Contract(
     , Request.isSlot
     , Request.currentSlot
     , Request.currentPABSlot
+    , Request.currentNodeClientSlot
     , Request.currentChainIndexSlot
     , Request.waitNSlots
     , Request.awaitTime
     , Request.isTime
     , Request.currentTime
+    , Request.currentNodeClientTimeRange
     , Request.waitNMilliSeconds
     -- * Endpoints
     , Request.HasEndpoint

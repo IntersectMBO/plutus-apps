@@ -127,7 +127,7 @@ lockEp :: Promise () EscrowSchema EscrowError ()
 lockEp = endpoint @"lock" $ \params -> do
   -- Correct validity interval should be:
   -- @
-  --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound $ deadline params)
+  --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ deadline params)
   -- @
   -- See Note [Validity Interval's upper bound]
   let valRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)
@@ -142,14 +142,14 @@ redeemEp :: Promise () EscrowSchema EscrowError RedeemSuccess
 redeemEp = endpoint @"redeem" redeem
   where
     redeem params = do
-      time <- currentTime
+      time <- snd <$> currentNodeClientTimeRange
       pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
           -- Correct validity interval should be:
           -- @
-          --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound $ deadline params)
+          --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ deadline params)
           -- @
           -- See Note [Validity Interval's upper bound]
           validityTimeRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)

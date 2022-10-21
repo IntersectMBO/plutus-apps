@@ -669,7 +669,7 @@ Balances Carried Forward:
     Ada:      Lovelace:  60000000
 
 ==== Slot #2, Tx #0 ====
-TxId:       0911f72cd7b8e36ccf5c9755c0b2776d7ee435a68c83d540513b6f0fbf448e5d
+TxId:       a52e05dce68b29cf53e650be5390cface0d434956e539f5fbcf38b6e2cb5b002
 Fee:        Ada:      Lovelace:  443713
 Mint:       -
 Inputs:

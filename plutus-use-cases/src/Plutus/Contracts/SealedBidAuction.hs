@@ -178,7 +178,7 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
       | sealedBidBidder bid `notElem` map sealedBidBidder bids ->
         -- Correct validity interval should be:
         -- @
-        --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound apEndTime)
+        --   Interval (LowerBound NegInf True) (Interval.strictUpperBound apEndTime)
         -- @
         -- See Note [Validity Interval's upper bound]
         let validityTimeRange = Interval.to $ apEndTime - 2
@@ -223,10 +223,10 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
         && sealBid bid `elem` sealedBids ->
         -- Correct validity interval should be:
         -- @
-        --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound apPayoutTime)
+        --   Interval (LowerBound NegInf True) (Interval.strictUpperBound apPayoutTime)
         -- @
         -- See Note [Validity Interval's upper bound]
-        let validityTimeRange = Interval.to $ apPayoutTime - 2
+        let validityTimeRange = Interval.to apPayoutTime
             constraints = Constraints.mustValidateIn validityTimeRange
                         <> Constraints.mustPayToPubKey (revealedBidBidder highestBid) (valueOfBid highestBid)
             newState =
