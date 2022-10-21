@@ -13,11 +13,10 @@ import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc, targetAddressParser)
 
 -- TODO
 bech32Addresses :: String   -- ^  valid address to keep track of
-bech32Addresses = "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"
-
+bech32Addresses = "addr1w9645geguy679dvy73mgt6rvc4xyhjpxj4s0wxjtd6swvdc5dxgc3"
 -- TODO
 dbpath :: FilePath -- ^ valid SQLite marconi UTxo database path
-dbpath = "./utxoDB"
+dbpath = "./.marconidb/utxodb"
 
 addresses :: TargetAddresses
 addresses = targetAddressParser bech32Addresses

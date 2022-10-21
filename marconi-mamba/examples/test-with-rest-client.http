@@ -1,42 +1,37 @@
 ## REST-Client script
 # If you don't know how to use this script, see:  https://github.com/pashky/restclient.el for instruction
 
+#
+# should echo
 POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "echo", "params": "hello world", "id": 0}
 #
-#
-#
+# should fail. `add` method is unknown
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
 #
-#
+# should print message on the console
+# TODO should we modify this to print the target addresses?
 POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
 #
-#
+# lookup fot txoutrefs
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
 , "method": "txOutRefReport"
-, "params": "addr1qywjwugxprn22w65zdmcqc6c9k3tse4rlft6tngvvg620vlwgcg9jv80wjq5hglp25u2axzntamczptdvqmj6qfvhm8q4d096z"
-, "id": 10
+, "params": "addr1qxwg25pmc0urp6t5f9em9uvdmecqz6a3j90jr0qk766ty9yxcu5pdxmk0762ejlc6ljjh7axsdqqsyn728lsyy3zdnmqf0ndvp"
+, "id": 9
 }
+#"addr1qywjwugxprn22w65zdmcqc6c9k3tse4rlft6tngvvg620vlwgcg9jv80wjq5hglp25u2axzntamczptdvqmj6qfvhm8q4d096z"
+#"addr1q8xcmtl4du23g4n8xv64hqdf9cyv3wlumw86ck952y46x46yae0lsnc50jrqqe8hn9w5tqsts2zmdfkx86tgyy5mvc4q86dapf"
+#"addr1q96vdhd8t5p3nsrm4rwtc5lak4htey3rgypm05hf4tjw4eksc0grxn4pmln66cvxjctas9fts7jzfsmvx3lq2ajdcv8qgyxv68"
 #
-#
-#
-POST http://localhost:3000/json-rpc
-Content-Type: application/json
-{
-"jsonrpc": "2.0"
-, "method": "txOutRefReport"
-, "params": "9bc1bea5295da5f046baa8057d06afe66e6ff549305cd0597abc2fd9"
-, "id": 12
-}
-#
+# fetch 100 rows from sqlite
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -46,7 +41,7 @@ Content-Type: application/json
 , "id": 11
 }
 #
-#
+# fetch plutus converted addresses the user had provided
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -57,14 +52,18 @@ Content-Type: application/json
 }
 #
 #
+# get the top 100 utxos, sorted by ledger.Address
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxos"
+, "method": "utxosReport"
 , "params": 100
 , "id": 14
 }
 #
-#
+# REST call. get the current time.  This may be used as health-check
 GET http://localhost:3000/rest/time
+#
+# REST call, get the user provided addresses
+GET http://localhost:3000/rest/addresses

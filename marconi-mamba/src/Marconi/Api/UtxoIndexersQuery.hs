@@ -9,6 +9,7 @@ module Marconi.Api.UtxoIndexersQuery
     , findTxOutRefs
     , reportQueryAddresses
     , UtxoRow(..)
+    , reportQueryCardanoAddresses
     ) where
 
 import Cardano.Api qualified as CApi
@@ -18,7 +19,7 @@ import Control.Lens ((^.))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set, fromList)
-import Data.Text (Text, unpack)
+import Data.Text (Text, intercalate, unpack)
 import Database.SQLite.Simple (NamedParam ((:=)), open)
 import Database.SQLite.Simple qualified as SQL
 import Ledger (Address, TxOutRef)
@@ -45,12 +46,12 @@ findByPlutusAddress
     :: DBQueryEnv
     -> Address              -- ^ Plutus address
     -> IO (Set TxOutRef)    -- ^ set of corresponding TxOutRefs
-findByPlutusAddress env address = withQueryAction (env ^. queryQSem) action
+findByPlutusAddress env address = withQueryAction action (env ^. queryQSem)
     where
-        action = (fromList <$> SQL.queryNamed
-                    (env ^. dbConf . utxoConn)
-                    "SELECT txId FROM utxos WHERE utxos.address=:address"
-                    [":address" := address])
+        action = fromList <$> SQL.queryNamed
+                  (env ^. dbConf . utxoConn)
+                  "SELECT txId FROM utxos WHERE utxos.address=:address"
+                  [":address" := address]
 
 -- | Retrieve a Set of TxOutRefs associated with the given Cardano Era address
 -- We return an empty Set if no address is found
@@ -78,7 +79,7 @@ findByAddress env addressText =
 findUtxos
     :: DBQueryEnv
     -> IO (Set UtxoRowWrapper)
-findUtxos env = withQueryAction (env ^. queryQSem) action
+findUtxos env = withQueryAction action (env ^. queryQSem)
     where
         action =
                 (SQL.query_
@@ -89,7 +90,7 @@ findUtxos env = withQueryAction (env ^. queryQSem) action
 findTxOutRefs
     :: DBQueryEnv
     -> IO (Set TxOutRef)
-findTxOutRefs env = withQueryAction (env ^. queryQSem) action
+findTxOutRefs env = withQueryAction action (env ^. queryQSem)
     where
         action =
                 (SQL.query_
@@ -97,8 +98,11 @@ findTxOutRefs env = withQueryAction (env ^. queryQSem) action
                     "SELECT address, txId, inputIx FROM utxos limit 100" :: IO [UtxoRow] )
                 >>= pure . fromList . fmap _reference
 
-withQueryAction :: QSemN -> IO a -> IO a
-withQueryAction qsem action = bracket_ (waitQSemN qsem 1) (signalQSemN qsem 1) action
+withQueryAction
+    :: IO a     -- ^ connection
+    -> QSemN    -- ^ database query
+    -> IO a
+withQueryAction action qsem = bracket_ (waitQSemN qsem 1) (signalQSemN qsem 1) action
 
 reportQueryAddresses
     :: DBQueryEnv
@@ -108,4 +112,14 @@ reportQueryAddresses env
     . fromList
     . NonEmpty.toList
     . fmap fromCardanoAddress
+    $ (env ^. queryAddresses )
+
+reportQueryCardanoAddresses
+    :: DBQueryEnv
+    -> IO Text
+reportQueryCardanoAddresses env
+    = pure
+    . intercalate ", "
+    . NonEmpty.toList
+    . fmap CApi.serialiseAddress
     $ (env ^. queryAddresses )

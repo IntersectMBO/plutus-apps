@@ -14,13 +14,14 @@ import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
-import Data.Text (pack)
+import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger.Tx (TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
 import Marconi.Api.Types (Address, DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper)
-import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findByAddress, findTxOutRefs, findUtxos, reportQueryAddresses)
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findByAddress, findTxOutRefs, findUtxos, reportQueryAddresses,
+                                                          reportQueryCardanoAddresses)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
@@ -34,14 +35,16 @@ bootstrap env =  runSettings
         (serve (Proxy @API) (server (env ^. queryEnv ) ) )
 
 server :: DBQueryEnv -> Server API
-server env =
-    (echo :<|>
-      txOutRefReport env :<|>
-      txOutRefsReport env :<|>
-      utxosReport env :<|>
-      targetAddressesReport env :<|>
-      printMessage
-    ) :<|> (getTime :<|> printMessage)
+server env
+    = ( echo
+        :<|> txOutRefReport env
+        :<|> txOutRefsReport env
+        :<|> utxosReport env
+        :<|> targetAddressesReport env
+        :<|> printMessage )
+      :<|> (getTime
+            :<|> getTargetAddresses env
+            :<|> printMessage)
 
 -- | prints message to console
 --  Used for testing the server from console
@@ -63,6 +66,11 @@ getTime :: Handler String
 getTime = timeString <$> liftIO getCurrentTime
     where
     timeString = formatTime defaultTimeLocale "%T"
+
+getTargetAddresses
+    :: DBQueryEnv               -- ^ database configuration
+    ->  Handler Text
+getTargetAddresses env =  liftIO $ Q.Utxo.reportQueryCardanoAddresses env
 
 -- | Retrieves a set of TxOutRef
 txOutRefReport

@@ -1,9 +1,11 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Marconi.Api.Routes where
 
 import Data.Set (Set)
+import Data.Text (Text)
 import Ledger.Address qualified as P
 import Ledger.Tx (TxOutRef)
 import Marconi.Api.Types (UtxoRowWrapper)
@@ -30,9 +32,15 @@ type JsonRpcAPI = "json-rpc" :> RawJsonRpc RpcAPI
 
 type GetTime = "time" :> Get '[PlainText] String
 
+type GetTargetAddresses = "addresses" :> Get '[PlainText] Text
+
 type PrintMessage = "print" :> ReqBody '[PlainText] String :> Post '[PlainText] NoContent
 
-type RestAPI = "rest" :> (GetTime :<|> PrintMessage)
+type RestAPI
+    = "rest"
+    :> (GetTime
+        :<|> GetTargetAddresses
+        :<|> PrintMessage)
 
 type API = JsonRpcAPI :<|> RestAPI
 
