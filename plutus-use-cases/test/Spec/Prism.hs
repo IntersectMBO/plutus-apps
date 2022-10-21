@@ -29,6 +29,7 @@ import Plutus.Contract.Test.ContractModel as ContractModel
 
 import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
 import Plutus.Contracts.Prism hiding (mirror)
 import Plutus.Contracts.Prism.Credential qualified as Credential
