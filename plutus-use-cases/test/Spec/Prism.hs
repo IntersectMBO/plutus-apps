@@ -192,8 +192,8 @@ instance ContractModel PrismModel where
 
 finalPredicate :: ModelState PrismModel -> TracePredicate
 finalPredicate _ =
-    assertNotDone @_ @() @C.STOSubscriberSchema     C.subscribeSTO      (Trace.walletInstanceTag user)              "User stopped"               .&&.
-    assertNotDone @_ @() @C.MirrorSchema            C.mirror            (Trace.walletInstanceTag mirror)            "Mirror stopped"
+       assertNotDone @_ @() @C.STOSubscriberSchema C.subscribeSTO (Trace.walletInstanceTag user) "User stopped"
+  .&&. assertNotDone @_ @() @C.MirrorSchema C.mirror (Trace.walletInstanceTag mirror) "Mirror stopped"
 
 
 
