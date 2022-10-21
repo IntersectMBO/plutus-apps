@@ -36,12 +36,13 @@ import Cardano.Node.Types (NodeMode (AlonzoNode),
                            PABServerConfig (pscBaseUrl, pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings),
                              WalletConfig (LocalWalletConfig, RemoteWalletConfig), WalletUrl (WalletUrl))
+import Control.Monad.Freer.Extras.Beam.Sqlite (DbConfig (dbConfigFile, dbConfigPoolSize))
 import Ledger (POSIXTime (POSIXTime))
 import Ledger.TimeSlot (SlotConfig (SlotConfig))
 import Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
                          Config (chainQueryConfig, dbConfig, developmentOptions, nodeServerConfig, pabWebserverConfig, walletServerConfig),
-                         DbConfig (dbConfigFile, dbConfigPoolSize),
+                         DbConfig (SqliteDB),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
                          WebserverConfig (baseUrl))
 
@@ -245,7 +246,7 @@ pabWebserverBaseConfig
         chainIndexUrl = ChainIndexUrl $ BaseUrl Http "localhost" (fromIntegral chainIndexPort) ""
         pabWebserverConfig =
             def { baseUrl = BaseUrl Http "localhost" (fromIntegral pabPort) "" }
-    def { dbConfig = def { dbConfigFile = Text.pack $ getPabDbFilePath pabDbConfigFile
+    def { dbConfig = SqliteDB def { dbConfigFile = Text.pack $ getPabDbFilePath pabDbConfigFile
                          , dbConfigPoolSize = pabOptsDbPoolSize
                          }
         , chainQueryConfig = ChainIndexConfig def { ciBaseUrl = chainIndexUrl }

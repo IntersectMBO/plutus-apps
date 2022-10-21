@@ -1,36 +1,40 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeOperators      #-}
 {-
 
 Interface to beam ecosystem used by the PAB to store contracts.
 
 -}
-module Plutus.PAB.Db.Beam
-  where
+module Plutus.PAB.Db.Beam (runBeamStoreAction) where
 
 import Cardano.BM.Trace (Trace)
-import Control.Monad.Freer (Eff, interpret, reinterpret, runM, subsume)
+import Control.Monad.Freer (Eff, interpret, reinterpret, runM, subsume, type (~>))
 import Control.Monad.Freer.Delay (DelayEffect, handleDelayEffect)
-import Control.Monad.Freer.Error (handleError, runError, throwError)
+import Control.Monad.Freer.Error (Error, handleError, runError, throwError)
 import Control.Monad.Freer.Extras (LogMsg, mapLog)
-import Control.Monad.Freer.Extras.Beam (handleBeam)
+import Control.Monad.Freer.Extras.Beam (BeamError)
+import Control.Monad.Freer.Extras.Beam.Effects (BeamEffect, handleBeam)
+import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (runBeam)
+import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (runBeam)
 import Control.Monad.Freer.Extras.Modify qualified as Modify
-import Control.Monad.Freer.Reader (runReader)
+import Control.Monad.Freer.Reader (Reader, runReader)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Pool (Pool)
 import Data.Typeable (Typeable)
-import Database.SQLite.Simple (Connection)
+import Database.Beam.Postgres (Postgres)
+import Database.Beam.Sqlite (Sqlite)
 import Plutus.PAB.Db.Beam.ContractStore (handleContractStore)
 import Plutus.PAB.Effects.Contract (ContractStore)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, HasDefinitions)
 import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
 import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (..), PABMultiAgentMsg (..))
-import Plutus.PAB.Types (PABError (..))
-
+import Plutus.PAB.Types (DBConnection (..), PABError (..))
 
 -- | Run the ContractStore and ContractDefinitionStore effects on the
---   SQLite database.
+--   configured database.
 runBeamStoreAction ::
     forall a b.
     ( ToJSON a
@@ -38,19 +42,43 @@ runBeamStoreAction ::
     , HasDefinitions a
     , Typeable a
     )
-    => Pool Connection
+    => DBConnection --Pool Postgres.Connection
     -> Trace IO (PABLogMsg (Builtin a))
     -> Eff '[ContractStore (Builtin a), LogMsg (PABMultiAgentMsg (Builtin a)), DelayEffect, IO] b
     -> IO (Either PABError b)
-runBeamStoreAction pool trace =
+runBeamStoreAction (PostgresPool pool) trace =
+    run pool trace
+        (handleBeam Postgres.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
+        (handleContractStore @Postgres)
+runBeamStoreAction (SqlitePool pool) trace =
+    run pool trace
+        (handleBeam Sqlite.runBeam (convertLog (SMultiAgent . BeamLogItem) trace))
+        (handleContractStore @Sqlite)
+
+run :: forall p dbt a b
+    .  Pool p
+    -> Trace IO (PABLogMsg (Builtin a))
+    -> BeamEffect dbt ~> Eff '[Reader (Pool p), Error BeamError, Error PABError, IO]
+    -> ContractStore (Builtin a) ~> Eff '[ LogMsg (PABMultiAgentMsg (Builtin a))
+                                          , DelayEffect
+                                          , IO
+                                          , BeamEffect dbt
+                                          , Reader (Pool p)
+                                          , Error BeamError
+                                          , Error PABError
+                                          , IO
+                                          ]
+    -> Eff '[ContractStore (Builtin a), LogMsg (PABMultiAgentMsg (Builtin a)), DelayEffect, IO] b
+    -> IO (Either PABError b)
+run pool trace hBeam hContractStore =
     runM
     . runError
-    . runReader pool
     . flip handleError (throwError . BeamEffectError)
-    . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
+    . runReader pool
+    . interpret hBeam
     . subsume @IO
     . handleDelayEffect
     . interpret (handleLogMsgTrace trace)
     . reinterpret (mapLog SMultiAgent)
-    . interpret handleContractStore
+    . interpret hContractStore
     . Modify.raiseEnd

@@ -22,6 +22,8 @@ import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens
 import Control.Monad (forM_, void, when)
+import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (DbConfig (dbConfigMarconiFile))
+import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (DbConfig (dbConfigFile))
 import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
 import Data.IORef (newIORef)
@@ -29,7 +31,7 @@ import Data.List (findIndex)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, maybeToList)
 import Data.Monoid (Last (..), Sum (..))
-import Data.Text (unpack)
+import Data.Text (Text, unpack)
 import Ledger (Block, Slot (..), TxId (..))
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
@@ -48,10 +50,10 @@ import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientE
 import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.PAB.Core.Indexer.TxConfirmationStatus (TxInfo (..))
 import Plutus.PAB.Core.Indexer.TxConfirmationStatus qualified as Ix
-import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+import Plutus.PAB.Types (Config (Config, dbConfig), DbConfig (..),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
-                         WebserverConfig (WebserverConfig, enableMarconi), dbConfig, developmentOptions,
-                         nodeServerConfig, pabWebserverConfig)
+                         WebserverConfig (WebserverConfig, enableMarconi), developmentOptions, nodeServerConfig,
+                         pabWebserverConfig)
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 import RewindableIndex.Index.VSqlite qualified as Ix
 import System.Random
@@ -73,16 +75,16 @@ startNodeClient config instancesState = do
                    DevelopmentOptions { pabRollbackHistory
                                       , pabResumeFrom = resumePoint
                                       }
-               , dbConfig = DbConfig { dbConfigFile = dbFile }
                , pabWebserverConfig =
                    WebserverConfig { enableMarconi = useDiskIndex }
+               , dbConfig = dbConf
                } = config
     params <- Params.fromPABServerConfig $ nodeServerConfig config
     env <- do
       env' <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
       if useDiskIndex && nodeStartsInAlonzoMode pscNodeMode
       then do
-        utxoIx <- Ix.open (unpack dbFile) (Ix.Depth 10) >>= newIORef
+        utxoIx <- Ix.open (unpack $ getDBFilePath dbConf) (Ix.Depth 10) >>= newIORef
         pure $ env' { beTxChanges = Right utxoIx }
       else do
         pure env'
@@ -105,6 +107,10 @@ startNodeClient config instancesState = do
             )
     pure env
     where
+      getDBFilePath :: DbConfig -> Text
+      getDBFilePath (SqliteDB c)   = Sqlite.dbConfigFile c
+      getDBFilePath (PostgresDB c) = Postgres.dbConfigMarconiFile c
+
       nodeStartsInAlonzoMode :: NodeMode -> Bool
       nodeStartsInAlonzoMode AlonzoNode = True
       nodeStartsInAlonzoMode _          = False
