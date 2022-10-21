@@ -8,6 +8,8 @@ module Marconi.Api.HttpServer(
     bootstrap
     ) where
 
+import Cardano.Api ()
+
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
@@ -17,8 +19,8 @@ import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger.Tx (TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper)
-import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findByAddress, findTxOutRefs, findUtxos)
+import Marconi.Api.Types (Address, DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper)
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findByAddress, findTxOutRefs, findUtxos, reportQueryAddresses)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
@@ -34,9 +36,10 @@ bootstrap env =  runSettings
 server :: DBQueryEnv -> Server API
 server env =
     (echo :<|>
-      findTxOutRef env :<|>
-      findTxOutRefs env :<|>
-      findUtxos env :<|>
+      txOutRefReport env :<|>
+      txOutRefsReport env :<|>
+      utxosReport env :<|>
+      targetAddressesReport env :<|>
       printMessage
     ) :<|> (getTime :<|> printMessage)
 
@@ -62,30 +65,36 @@ getTime = timeString <$> liftIO getCurrentTime
     timeString = formatTime defaultTimeLocale "%T"
 
 -- | Retrieves a set of TxOutRef
-findTxOutRef
+txOutRefReport
     :: DBQueryEnv               -- ^ database configuration
     -> String                   -- ^ bech32 addressCredential
     -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
-findTxOutRef env address =
+txOutRefReport env address =
     liftIO $ cardanoErrToRpcErr <$> (Q.Utxo.findByAddress env . pack ) address
 
 -- | Retrieves a set of TxOutRef
 --
-findTxOutRefs
+txOutRefsReport
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
     -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
-findTxOutRefs env _ =
+txOutRefsReport env _ =
     liftIO $ Right <$> Q.Utxo.findTxOutRefs env
 
 -- | Retrieves a set of TxOutRef
 --
-findUtxos
+utxosReport
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
     -> Handler (Either (JsonRpcErr String) (Set UtxoRowWrapper))
-findUtxos env _ =
+utxosReport env _ =
     liftIO $ Right <$> Q.Utxo.findUtxos env
+
+targetAddressesReport
+    :: DBQueryEnv                   -- ^ database configuration
+    -> Int                          -- ^ limit, for now we are ignoring this param and return 100
+    -> Handler (Either (JsonRpcErr String) (Set Address))
+targetAddressesReport env _ = liftIO $ Right <$> Q.Utxo.reportQueryAddresses env
 
 -- | convert form cardano error, to jsonrpc protocal error
 cardanoErrToRpcErr

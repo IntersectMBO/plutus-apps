@@ -14,19 +14,33 @@
 
 -- |
 -- This module provides support for writing handlers for JSON-RPC endpoints
-module Marconi.Api.Types where
+module Marconi.Api.Types
+    ( CardanoAddress
+    , TargetAddresses
+    , RpcPortNumber
+    , CliArgs (..)
+    , DBConfig (..)
+    , HasDBConfig (..)
+    , DBQueryEnv (..)
+    , HasDBQueryEnv (..)
+    , JsonRpcEnv (..)
+    , HasJsonRpcEnv (..)
+    , UtxoRowWrapper (..)
+    , Address
+                         )  where
 
-import Cardano.Api (Address, NetworkId, ShelleyAddr)
+import Cardano.Api qualified (Address, NetworkId, ShelleyAddr)
 import Control.Concurrent.QSemN (QSemN)
 import Control.Lens (makeClassy)
 import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
 import Data.List.NonEmpty (NonEmpty)
 import Database.SQLite.Simple (Connection)
 import GHC.Generics (Generic)
+import Ledger.Address (Address)
 import Marconi.Index.Utxo (UtxoRow (UtxoRow))
 import Network.Wai.Handler.Warp (Settings)
 
-type CardanoAddress = Address ShelleyAddr
+type CardanoAddress = Cardano.Api.Address Cardano.Api.ShelleyAddr
 
 -- | Typre represents non empty list of Bech32 compatable addresses"
 type TargetAddresses = NonEmpty CardanoAddress
@@ -35,11 +49,11 @@ type TargetAddresses = NonEmpty CardanoAddress
 type RpcPortNumber = Int
 
 data CliArgs = CliArgs
-  { socket          :: FilePath             -- ^ POSIX socket file to communicate with cardano node
-  , dbPath          :: FilePath             -- ^ filepath to local sqlite for utxo index table
-  , httpPort        :: Maybe Int            -- ^ optional tcp/ip port number for JSON-RPC http server
-  , networkId       :: NetworkId            -- ^ cardano network id
-  , targetAddresses :: TargetAddresses      -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
+  { socket          :: FilePath                 -- ^ POSIX socket file to communicate with cardano node
+  , dbPath          :: FilePath                 -- ^ filepath to local sqlite for utxo index table
+  , httpPort        :: Maybe Int                -- ^ optional tcp/ip port number for JSON-RPC http server
+  , networkId       :: Cardano.Api.NetworkId   -- ^ cardano network id
+  , targetAddresses :: TargetAddresses          -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
 
 newtype DBConfig = DBConfig {

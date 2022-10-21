@@ -7,6 +7,7 @@ module Marconi.Api.UtxoIndexersQuery
     , findByAddress
     , findUtxos
     , findTxOutRefs
+    , reportQueryAddresses
     , UtxoRow(..)
     ) where
 
@@ -14,6 +15,7 @@ import Cardano.Api qualified as CApi
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Exception (bracket_)
 import Control.Lens ((^.))
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set, fromList)
 import Data.Text (Text, unpack)
@@ -23,7 +25,7 @@ import Ledger (Address, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag), fromCardanoAddress)
 import Marconi.Api.Types (CardanoAddress, DBConfig (DBConfig),
                           DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem), HasDBConfig (utxoConn),
-                          HasDBQueryEnv (dbConf, queryQSem, queryQSem), TargetAddresses,
+                          HasDBQueryEnv (dbConf, queryAddresses, queryQSem, queryQSem), TargetAddresses,
                           UtxoRowWrapper (UtxoRowWrapper))
 import Marconi.Index.Utxo (UtxoRow (UtxoRow, _reference))
 
@@ -98,3 +100,12 @@ findTxOutRefs env = withQueryAction (env ^. queryQSem) action
 withQueryAction :: QSemN -> IO a -> IO a
 withQueryAction qsem action = bracket_ (waitQSemN qsem 1) (signalQSemN qsem 1) action
 
+reportQueryAddresses
+    :: DBQueryEnv
+    -> IO (Set Address)
+reportQueryAddresses env
+    = pure
+    . fromList
+    . NonEmpty.toList
+    . fmap fromCardanoAddress
+    $ (env ^. queryAddresses )
