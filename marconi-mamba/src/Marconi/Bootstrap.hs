@@ -4,7 +4,7 @@
 --
 module Marconi.Bootstrap  where
 
-import Cardano.Api (ChainPoint (ChainPointAtGenesis), deserialiseFromBech32, proxyToAsType)
+import Cardano.Api (ChainPoint (ChainPointAtGenesis), NetworkId, deserialiseFromBech32, proxyToAsType)
 import Cardano.Streaming (withChainSyncEventStream)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
@@ -24,9 +24,10 @@ bootstrapJsonRpc
     :: FilePath
     -> Maybe RpcPortNumber
     -> TargetAddresses
+    -> NetworkId
     -> IO JsonRpcEnv
-bootstrapJsonRpc dbPath maybePort targetAddresses = do
-    queryenv <- QIUtxo.bootstrap dbPath targetAddresses
+bootstrapJsonRpc dbPath maybePort targetAddresses nId = do
+    queryenv <- QIUtxo.bootstrap dbPath targetAddresses nId
     let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
     pure $ JsonRpcEnv
         { _httpSettings = httpsettings

@@ -25,22 +25,25 @@ import Database.SQLite.Simple qualified as SQL
 import Ledger (Address, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag), fromCardanoAddress)
 import Marconi.Api.Types (CardanoAddress, DBConfig (DBConfig),
-                          DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem), HasDBConfig (utxoConn),
-                          HasDBQueryEnv (dbConf, queryAddresses, queryQSem, queryQSem), TargetAddresses,
-                          UtxoRowWrapper (UtxoRowWrapper))
+                          DBQueryEnv (DBQueryEnv, _dbConf, _network, _queryAddresses, _queryQSem),
+                          HasDBConfig (utxoConn), HasDBQueryEnv (dbConf, queryAddresses, queryQSem, queryQSem),
+                          TargetAddresses, UtxoRowWrapper (UtxoRowWrapper))
 import Marconi.Index.Utxo (UtxoRow (UtxoRow, _reference))
 
 bootstrap
     ::  FilePath
     -> TargetAddresses
+    -> CApi.NetworkId
     -> IO DBQueryEnv
-bootstrap dbPath targetAddresses = do
+bootstrap dbPath targetAddresses nId = do
     dbconf <- DBConfig <$> open dbPath
     qsem <- newQSemN 1
     pure $ DBQueryEnv
         {_dbConf = dbconf
         , _queryQSem = qsem
-        , _queryAddresses = targetAddresses}
+        , _queryAddresses = targetAddresses
+        , _network = nId
+        }
 
 findByPlutusAddress
     :: DBQueryEnv
