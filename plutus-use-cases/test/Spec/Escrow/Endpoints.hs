@@ -47,7 +47,7 @@ badRefund ::
     -> Contract w s EscrowError ()
 badRefund inst pk = do
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    current <- currentTime
+    current <- snd <$> currentNodeClientTimeRange
     let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateIn (from (current - 1))
