@@ -106,7 +106,7 @@ runConfigCommand :: forall a.
 
 -- Run the database migration
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Migrate =
-    App.migrate (toPABMsg ccaTrace) dbConfig
+    App.migrate dbConfig (toPABMsg ccaTrace)
 
 -- Run mock wallet service
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
@@ -163,7 +163,7 @@ runConfigCommand
                 $ LM.SCoreMsg
                 $ LM.ConnectingToAlonzoNode nodeServerConfig slotNo
 
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
+    connection <- App.dbConnect dbConfig (LM.convertLog LM.PABMsg ccaTrace)
     -- Restore the running contracts by first collecting up enough details about the
     -- previous contracts to re-start them
     previousContracts <-
@@ -242,7 +242,7 @@ runConfigCommand _ ConfigCommandArgs{ccaPABConfig=Config {chainQueryConfig = Blo
 
 -- Get the state of a contract
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
+    connection <- App.dbConnect dbConfig (LM.convertLog LM.PABMsg ccaTrace)
     fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
         $ interpret (LM.handleLogMsgTrace ccaTrace)
@@ -267,7 +267,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
 
 -- Get all active contracts
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} ReportActiveContracts = do
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
+    connection <- App.dbConnect dbConfig (LM.convertLog LM.PABMsg ccaTrace)
     fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
         $ interpret (LM.handleLogMsgTrace ccaTrace)
@@ -280,7 +280,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Re
 
 -- Get history of a specific contract
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ReportContractHistory contractInstanceId) = do
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
+    connection <- App.dbConnect dbConfig (LM.convertLog LM.PABMsg ccaTrace)
     fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
         $ interpret (LM.handleLogMsgTrace ccaTrace)

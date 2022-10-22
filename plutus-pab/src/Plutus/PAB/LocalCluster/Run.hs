@@ -57,6 +57,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async)
 import Control.Lens (contramap, set, (&), (.~), (^.))
 import Control.Monad (void, when)
+import Control.Monad.Freer.Extras.Beam.Sqlite (DbConfig (dbConfigFile))
 import Control.Tracer (traceWith)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
@@ -76,15 +77,14 @@ import Plutus.ChainIndex.App qualified as ChainIndex
 import Plutus.ChainIndex.Config qualified as CI
 import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
 import Plutus.ChainIndex.Types (Point (..))
-import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
+import Plutus.PAB.App (StorageBackend (BeamBackend))
 import Plutus.PAB.Effects.Contract.Builtin (BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Run qualified as PAB.Run
 import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
-                         Config (chainQueryConfig, dbConfig, nodeServerConfig, walletServerConfig),
-                         DbConfig (dbConfigFile))
+                         Config (chainQueryConfig, dbConfig, nodeServerConfig, walletServerConfig), DbConfig (SqliteDB))
 import Plutus.PAB.Types qualified as PAB.Config
 import Prettyprinter (Pretty)
 import Servant qualified
@@ -263,7 +263,16 @@ launchPAB userContractHandler
     (RunningNode socketPath _block0 (networkParameters, _) _)
     (ChainIndexPort chainIndexPort) = do
 
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, resumeFrom = PointAtGenesis, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
+    let opts = AppOpts { minLogLevel = Nothing
+                       , logConfigPath = Nothing
+                       , configPath = Nothing
+                       , rollbackHistory = Nothing
+                       , resumeFrom = PointAtGenesis
+                       , runEkgServer = False
+                       , storageBackend = BeamBackend
+                       , cmd = PABWebserver
+                       , PAB.Command.passphrase = Just passPhrase
+                       }
         networkID = NetworkIdWrapper CAPI.Mainnet
         -- TODO: Remove when PAB queries local node for slot config
         slotConfig = slotConfigOfNetworkParameters networkParameters
@@ -281,7 +290,7 @@ launchPAB userContractHandler
                     , pscSlotConfig = slotConfig
                     , pscKeptBlocks = securityParam
                     }
-                , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
+                , dbConfig = SqliteDB def{ dbConfigFile = T.pack (dir </> "plutus-pab.db") }
                 , chainQueryConfig = ChainIndexConfig def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }

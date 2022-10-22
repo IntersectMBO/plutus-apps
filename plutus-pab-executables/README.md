@@ -107,7 +107,7 @@ Combines the execution of all services in the appropriate order:
 #### Dependencies
 
 - plutus-pab.yaml
-- sqlite database
+- sqlite or postgres database
 
 
 #### Source
@@ -131,7 +131,7 @@ Starts all services *except for* the node service:
 #### Dependencies
 
 - plutus-pab.yaml
-- sqlite database
+- sqlite or postgres database
 
 
 #### Source
@@ -183,7 +183,7 @@ Serves the PAB user interface
 #### Dependencies
 
 - plutus-pab.yaml
-- sqlite database
+- sqlite or postgres database
 - pab-client
 
 #### Source

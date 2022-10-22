@@ -13,9 +13,10 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTimeReq,
     _AwaitUtxoSpentReq,
     _AwaitUtxoProducedReq,
-    _CurrentPABSlotReq,
+    _CurrentNodeClientSlotReq,
     _CurrentChainIndexSlotReq,
     _CurrentTimeReq,
+    _CurrentNodeClientTimeRangeReq,
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
     _OwnContractInstanceIdReq,
@@ -47,9 +48,10 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTimeResp,
     _AwaitUtxoSpentResp,
     _AwaitUtxoProducedResp,
-    _CurrentPABSlotResp,
+    _CurrentNodeClientSlotResp,
     _CurrentChainIndexSlotResp,
     _CurrentTimeResp,
+    _CurrentNodeClientTimeRangeResp,
     _AwaitTxStatusChangeResp,
     _AwaitTxStatusChangeResp',
     _AwaitTxOutStatusChangeResp,
@@ -122,9 +124,10 @@ data PABReq =
     | AwaitUtxoProducedReq Address
     | AwaitTxStatusChangeReq TxId
     | AwaitTxOutStatusChangeReq TxOutRef
-    | CurrentPABSlotReq
+    | CurrentNodeClientSlotReq
     | CurrentChainIndexSlotReq
     | CurrentTimeReq
+    | CurrentNodeClientTimeRangeReq
     | OwnContractInstanceIdReq
     | OwnAddressesReq
     | ChainIndexQueryReq ChainIndexQuery
@@ -143,9 +146,10 @@ instance Pretty PABReq where
     AwaitTimeReq s                          -> "Await time:" <+> pretty s
     AwaitUtxoSpentReq utxo                  -> "Await utxo spent:" <+> pretty utxo
     AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty a
-    CurrentPABSlotReq                       -> "Current PAB slot"
+    CurrentNodeClientSlotReq                -> "Current node client slot"
     CurrentChainIndexSlotReq                -> "Current chain index slot"
     CurrentTimeReq                          -> "Current time"
+    CurrentNodeClientTimeRangeReq           -> "Current node client time range"
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
     OwnContractInstanceIdReq                -> "Own contract instance ID"
@@ -166,9 +170,10 @@ data PABResp =
     | AwaitUtxoProducedResp (NonEmpty ChainIndexTx)
     | AwaitTxStatusChangeResp TxId TxStatus
     | AwaitTxOutStatusChangeResp TxOutRef TxOutStatus
-    | CurrentPABSlotResp Slot
+    | CurrentNodeClientSlotResp Slot
     | CurrentChainIndexSlotResp Slot
     | CurrentTimeResp POSIXTime
+    | CurrentNodeClientTimeRangeResp (POSIXTime, POSIXTime)
     | OwnContractInstanceIdResp ContractInstanceId
     | OwnAddressesResp (NonEmpty Address)
     | ChainIndexQueryResp ChainIndexResponse
@@ -187,9 +192,10 @@ instance Pretty PABResp where
     AwaitTimeResp s                          -> "Time:" <+> pretty s
     AwaitUtxoSpentResp utxo                  -> "Utxo spent:" <+> pretty utxo
     AwaitUtxoProducedResp addr               -> "Utxo produced:" <+> pretty addr
-    CurrentPABSlotResp s                     -> "Current PAB slot:" <+> pretty s
+    CurrentNodeClientSlotResp s              -> "Current node client slot:" <+> pretty s
     CurrentChainIndexSlotResp s              -> "Current chain index slot:" <+> pretty s
     CurrentTimeResp s                        -> "Current time:" <+> pretty s
+    CurrentNodeClientTimeRangeResp s         -> "Current node client time range:" <+> pretty s
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
@@ -208,9 +214,10 @@ matches a b = case (a, b) of
   (AwaitTimeReq{}, AwaitTimeResp{})                        -> True
   (AwaitUtxoSpentReq{}, AwaitUtxoSpentResp{})              -> True
   (AwaitUtxoProducedReq{}, AwaitUtxoProducedResp{})        -> True
-  (CurrentPABSlotReq, CurrentPABSlotResp{})                -> True
-  (CurrentChainIndexSlotReq, CurrentChainIndexSlotResp{})              -> True
+  (CurrentNodeClientSlotReq, CurrentNodeClientSlotResp{})  -> True
+  (CurrentChainIndexSlotReq, CurrentChainIndexSlotResp{})  -> True
   (CurrentTimeReq, CurrentTimeResp{})                      -> True
+  (CurrentNodeClientTimeRangeReq, CurrentNodeClientTimeRangeResp{}) -> True
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'
   (OwnContractInstanceIdReq, OwnContractInstanceIdResp{})  -> True

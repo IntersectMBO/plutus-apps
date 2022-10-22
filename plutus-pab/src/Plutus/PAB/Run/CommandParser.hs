@@ -62,7 +62,7 @@ ekgFlag =
 inMemoryFlag :: Parser StorageBackend
 inMemoryFlag =
     flag
-        BeamSqliteBackend
+        BeamBackend
         InMemoryBackend
         (short 'm' <> long "memory" <> help "Use the memory-backed backend. If false, the beam backend is used.")
 

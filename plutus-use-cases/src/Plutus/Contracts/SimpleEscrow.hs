@@ -125,7 +125,11 @@ validate params action ScriptContext{scriptContextTxInfo=txInfo} =
 -- requirement that the transaction validates before the 'deadline'.
 lockEp :: Promise () EscrowSchema EscrowError ()
 lockEp = endpoint @"lock" $ \params -> do
-  -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
+  -- Correct validity interval should be:
+  -- @
+  --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ deadline params)
+  -- @
+  -- See Note [Validity Interval's upper bound]
   let valRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)
       tx = Constraints.mustPayToTheScriptWithDatumInTx params (paying params)
             <> Constraints.mustValidateIn valRange
@@ -138,14 +142,19 @@ redeemEp :: Promise () EscrowSchema EscrowError RedeemSuccess
 redeemEp = endpoint @"redeem" redeem
   where
     redeem params = do
-      time <- currentTime
+      time <- snd <$> currentNodeClientTimeRange
       pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
+          -- Correct validity interval should be:
+          -- @
+          --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ deadline params)
+          -- @
+          -- See Note [Validity Interval's upper bound]
+          validityTimeRange = Interval.to (Haskell.pred $ Haskell.pred $ deadline params)
           tx = Constraints.collectFromTheScript unspentOutputs Redeem
-                      -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
-                      <> Constraints.mustValidateIn (Interval.to (Haskell.pred $ Haskell.pred $ deadline params))
+                      <> Constraints.mustValidateIn validityTimeRange
                       -- Pay me the output of this script
                       <> Constraints.mustPayToPubKey pk value
                       -- Pay the payee their due

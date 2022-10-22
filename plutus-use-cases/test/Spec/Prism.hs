@@ -214,6 +214,7 @@ tests = testGroup "PRISM"
         .&&. walletFundsChange user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
         )
         prismTrace
-    -- Uncomment when PLT-1035, GTH-760 is fixe
-    -- , testProperty "QuickCheck property" $ withMaxSuccess 100 prop_Prism
+    -- TODO: Linked to https://github.com/input-output-hk/plutus-apps/issues/760
+    -- Re-activate once issue is resolved
+    -- , testProperty "QuickCheck property" prop_Prism
     ]

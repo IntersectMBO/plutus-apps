@@ -126,7 +126,7 @@ mustSatisfyAnyOfContract :: SubmitTx -> LanguageContext -> ConstraintParams
                             -> ConstraintParams -> Contract () Empty ContractError ()
 mustSatisfyAnyOfContract
     submitTxFromConstraints lc offChainConstraints onChainConstraints = do
-    now <- Con.currentTime
+    now <- snd <$> Con.currentNodeClientTimeRange
     let offChainConstraintsWithNow =
             buildConstraints (applyNowToTimeValidity offChainConstraints now)
         onChainConstraintsWithNow  = applyNowToTimeValidity onChainConstraints now

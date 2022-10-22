@@ -181,9 +181,14 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
 
     (GovState law mph (Just (Voting p oldMap)), AddVote tokenName vote) ->
         let newMap = AssocMap.insert tokenName vote oldMap
+            -- Correct validity interval should be:
+            -- @
+            --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ votingDeadline p)
+            -- @
+            -- See Note [Validity Interval's upper bound]
+            validityTimeRange = Interval.to (votingDeadline p - 2)
             constraints = ownsVotingToken mph tokenName
-                        -- We have to subtract '2', see Note [Validity Interval's upper bound]
-                        <> Constraints.mustValidateIn (Interval.to (votingDeadline p - 2))
+                        <> Constraints.mustValidateIn validityTimeRange
         in Just (constraints, State (GovState law mph (Just (Voting p newMap))) stateValue)
 
     (GovState oldLaw mph (Just (Voting p votes)), FinishVoting) ->

@@ -56,7 +56,7 @@ tests = testGroup "time validitity constraint"
 
 contract :: Contract () Empty ContractError ()
 contract = do
-    now <- Con.currentTime
+    now <- snd <$> Con.currentNodeClientTimeRange
     logInfo @String $ "now: " ++ show now
     let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
@@ -76,7 +76,7 @@ contract = do
     void $ waitNSlots 2
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
-    cSlot <- Con.currentPABSlot
+    cSlot <- Con.currentNodeClientSlot
     logInfo @String $ "Current slot: " ++ show cSlot
 
 trace :: Trace.EmulatorTrace ()
@@ -115,7 +115,7 @@ contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
-    now <- Con.currentTime
+    now <- snd <$> Con.currentNodeClientTimeRange
     logInfo @String $ "now: " ++ show now
     let utxoRef = fst $ head' $ Map.toList utxos
         lookups = Tx.Constraints.unspentOutputs utxos
@@ -126,7 +126,7 @@ contractCardano f p = do
     ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
-    cSlot <- Con.currentPABSlot
+    cSlot <- Con.currentNodeClientSlot
     logInfo @String $ "Current slot: " ++ show cSlot
     let txRange = Tx.getCardanoTxValidityRange ledgerTx
     logInfo @String $ show txRange

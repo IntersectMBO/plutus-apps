@@ -569,6 +569,7 @@ executable pab-cli
   -- Local components
   --------------------
   build-depends:
+    , freer-extras
     , plutus-chain-index-core  >=1.0.0
     , plutus-ledger            >=1.0.0
     , plutus-pab               >=1.0.0

@@ -29,6 +29,7 @@ module Plutus.PAB.Db.Schema where
 import Data.Text (Text)
 import Database.Beam
 import Database.Beam.Migrate
+import Database.Beam.Postgres (Postgres)
 import Database.Beam.Sqlite (Sqlite)
 
 data ContractInstanceT f
@@ -65,3 +66,6 @@ db = defaultDbSettings
 
 checkedSqliteDb :: CheckedDatabaseSettings Sqlite Db
 checkedSqliteDb = defaultMigratableDbSettings
+
+checkedPostgresDb :: CheckedDatabaseSettings Postgres Db
+checkedPostgresDb = defaultMigratableDbSettings

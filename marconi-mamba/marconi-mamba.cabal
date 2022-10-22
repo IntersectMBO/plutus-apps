@@ -42,33 +42,112 @@ common lang
 library
   import:          lang
   hs-source-dirs:  src
-  exposed-modules: Marconi.Mamba
+  exposed-modules:
+    Marconi.Api.HttpServer
+    Marconi.Api.Routes
+    Marconi.Api.Types
+    Marconi.Api.UtxoIndexersQuery
+    Marconi.Bootstrap
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-streaming
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , json-rpc
+    , marconi
+    , plutus-ledger
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
-  build-depends:   base
+  build-depends:
+    , aeson
+    , base            >=4.9 && <5
+    , containers
+    , lens
+    , servant
+    , servant-server
+    , sqlite-simple
+    , text
+    , time
+    , warp
+
+library json-rpc
+  import:          lang
+  hs-source-dirs:  json-rpc/src
+  exposed-modules:
+    Marconi.Client.Types
+    Marconi.JsonRpc.Types
+    Marconi.Server.Types
+
+  build-depends:
+    , aeson
+    , base                 >=4.9 && <5
+    , containers
+    , http-media
+    , servant
+    , servant-client-core
+    , servant-server
+    , text
 
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
   main-is:        Main.hs
 
-  --------------------
-  -- Local components
-  --------------------
-  build-depends:
-    , cardano-streaming
-    , marconi
-
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:  cardano-api
 
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:  marconi-mamba
+
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , async
     , base                  >=4.9 && <5
     , optparse-applicative
+
+executable examples-json-rpc-server
+  import:         lang
+  hs-source-dirs: examples/json-rpc-server/src
+  main-is:        Main.hs
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:  marconi-mamba
+  build-depends:  base >=4.9 && <5
+
+executable examples-json-rpc-client
+  import:         lang
+  hs-source-dirs: examples/json-rpc-client/src
+  main-is:        Main.hs
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , json-rpc
+    , plutus-ledger
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base            >=4.9 && <5
+    , http-client
+    , servant
+    , servant-client

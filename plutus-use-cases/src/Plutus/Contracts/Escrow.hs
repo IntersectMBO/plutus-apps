@@ -292,24 +292,28 @@ redeem ::
     -> Contract w s e RedeemSuccess
 redeem inst escrow = mapError (review _EscrowError) $ do
     let addr = Scripts.validatorAddress inst
-    current <- currentTime
     unspentOutputs <- utxosAt addr
-    let
-        -- We have to do 'pred' twice, see Note [Validity Interval's upper bound]
-        valRange = Interval.to (Haskell.pred $ Haskell.pred $ escrowDeadline escrow)
-        tx = Constraints.collectFromTheScript unspentOutputs Redeem
-                <> foldMap mkTx (escrowTargets escrow)
-                <> Constraints.mustValidateIn valRange
+    current <- snd <$> currentNodeClientTimeRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
     else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
-         then throwing _RedeemFailed NotEnoughFundsAtAddress
-         else do
-           utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
-                                 <> Constraints.unspentOutputs unspentOutputs
-                                  ) tx
-           adjusted <- adjustUnbalancedTx utx
-           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
+    then throwing _RedeemFailed NotEnoughFundsAtAddress
+    else do
+      let
+          -- Correct validity interval should be:
+          -- @
+          --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ escrowDeadline escrow)
+          -- @
+          -- See Note [Validity Interval's upper bound]
+          validityTimeRange = Interval.to (Haskell.pred $ Haskell.pred $ escrowDeadline escrow)
+          tx = Constraints.collectFromTheScript unspentOutputs Redeem
+                  <> foldMap mkTx (escrowTargets escrow)
+                  <> Constraints.mustValidateIn validityTimeRange
+      utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+                            <> Constraints.unspentOutputs unspentOutputs
+                             ) tx
+      adjusted <- adjustUnbalancedTx utx
+      RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -362,7 +366,7 @@ payRedeemRefund params vl = do
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do
-                    time <- currentTime
+                    time <- snd <$> currentNodeClientTimeRange
                     if time >= escrowDeadline params
                         then Left <$> refund inst params
                         else waitNSlots 1 >> go

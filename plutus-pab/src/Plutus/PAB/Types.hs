@@ -18,14 +18,19 @@ import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
+import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (DbConfig)
+import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (DbConfig)
 import Data.Aeson (FromJSON, ToJSON, Value (..), object, parseJSON, toJSON, (.:), (.:?), (.=))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Pool (Pool)
 import Data.Text (Text)
 import Data.Time.Units (Second)
 import Data.UUID (UUID)
 import Data.UUID.Extras qualified as UUID
+import Database.PostgreSQL.Simple qualified as Postgres
+import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx, TxId, eitherTx, getCardanoTxId)
 import Ledger.Index (UtxoIndex (UtxoIndex))
@@ -94,24 +99,45 @@ instance Pretty PABError where
         RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
         TxSenderNotAvailable         -> "Cannot send a transaction when connected to the real node."
 
-data DbConfig =
-    DbConfig
-        { dbConfigFile     :: Text
-        -- ^ The path to the sqlite database file. May be absolute or relative.
-        , dbConfigPoolSize :: Int
-        -- ^ Max number of concurrent sqlite database connections.
-        }
+data DBConnection = PostgresPool (Pool Postgres.Connection)
+                  | SqlitePool (Pool Sqlite.Connection)
+
+data DbConfig = SqliteDB Sqlite.DbConfig
+              | PostgresDB Postgres.DbConfig
     deriving (Show, Eq, Generic)
-    deriving anyclass (ToJSON, FromJSON)
+
+takeSqliteDB :: DbConfig -> Sqlite.DbConfig
+takeSqliteDB (SqliteDB dbConf) = dbConf
+takeSqliteDB (PostgresDB _)    = error "Not an SqliteDB configuration"
+
+takePostgresDB :: DbConfig -> Postgres.DbConfig
+takePostgresDB (PostgresDB dbConf) = dbConf
+takePostgresDB (SqliteDB _)        = error "Not a PostgresDB configuration"
+
+instance FromJSON DbConfig where
+    parseJSON (Object obj) = do
+        ci <- obj .:? "sqliteDB"
+        bf <- obj .:? "postgresDB"
+        case (ci, bf) of
+            (Just a, Nothing)  -> pure $ SqliteDB a
+            (Nothing, Just a)  -> pure $ PostgresDB a
+            (Nothing, Nothing) -> error $ unwords
+                                  [ "No configuration available, expecting"
+                                  , "sqliteDB or postgresDB. Note if you have"
+                                  , "updated to the newer plutus you should change"
+                                  , "the dbConfig section in your yaml config file."
+                                  ]
+            (Just _, Just _)   -> error "Can't have Sqlite and Postgres databases"
+    parseJSON _            = fail "Expecting object value"
+
+instance ToJSON DbConfig where
+    toJSON (SqliteDB cfg)   = object ["sqliteDB"   .= cfg]
+    toJSON (PostgresDB cfg) = object ["postgresDB" .= cfg]
 
 -- | Default database config uses an in-memory sqlite database that is shared
 -- between all threads in the process.
 defaultDbConfig :: DbConfig
-defaultDbConfig
-  = DbConfig
-      { dbConfigFile = "file::memory:?cache=shared"
-      , dbConfigPoolSize = 20
-      }
+defaultDbConfig = SqliteDB def
 
 instance Default DbConfig where
   def = defaultDbConfig
@@ -163,7 +189,7 @@ data Config =
     deriving (Show, Eq, Generic)
 
 instance FromJSON Config where
-    parseJSON val@(Object obj) = Config <$> obj .: "dbConfig"
+    parseJSON val@(Object obj) = Config <$> parseJSON val
                                     <*> obj .: "walletServerConfig"
                                     <*> obj .: "nodeServerConfig"
                                     <*> obj .: "pabWebserverConfig"
@@ -172,17 +198,16 @@ instance FromJSON Config where
                                     <*> obj .: "developmentOptions"
     parseJSON val = fail $ "Unexpected value: " ++ show val
 
-
 instance ToJSON Config where
     toJSON Config {..}=
         object
-        [ "dbConfig" .= dbConfig
-        , "walletServerConfig" .= walletServerConfig
+        [ "walletServerConfig" .= walletServerConfig
         , "nodeServerConfig" .= nodeServerConfig
         , "pabWebserverConfig" .= pabWebserverConfig
         , "requestProcessingConfig" .= requestProcessingConfig
         , "developmentOptions" .= developmentOptions
-        ] `mergeObjects` toJSON chainQueryConfig
+        ] `mergeObjects` (toJSON chainQueryConfig)
+        `mergeObjects` toJSON dbConfig
 
 mergeObjects :: Value -> Value -> Value
 mergeObjects (Object o1) (Object o2) = Object $ o1 <> o2
@@ -190,7 +215,7 @@ mergeObjects _ _                     = error "Value must be an object"
 
 defaultConfig :: Config
 defaultConfig =
-  Config
+    Config
     { dbConfig = def
     , walletServerConfig = def
     , nodeServerConfig = def
@@ -308,3 +333,4 @@ mkChainOverview = foldl reducer emptyChainOverview
             }
 
 makePrisms ''PABError
+makePrisms ''DBConnection

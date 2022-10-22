@@ -247,6 +247,5 @@ tests :: TestTree
 tests =
   testGroup "sealed bid auction"
     [ testProperty "packInteger is injective" $ \x y -> x /= y ==> packInteger x /= packInteger y
-    -- Uncomment this test once PLT-1034 (bug #759) is fixed
-    -- , testProperty "prop_AuctionModelCorrect" $ withMaxSuccess 20 prop_Auction
+    , testProperty "prop_AuctionModelCorrect" prop_Auction
     ]

@@ -1,28 +1,26 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
 import Control.Exception (catch)
-import Data.Proxy (Proxy (Proxy))
 import Data.String (IsString)
-import Data.Text (pack)
 import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, metavar,
                             option, strOption, (<**>), (<|>))
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
-import Cardano.Api (ChainPoint, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), deserialiseFromBech32,
-                    proxyToAsType)
-import Cardano.Api qualified as C
+import Cardano.Api (ChainPoint, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic))
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-import Data.List.NonEmpty qualified as NonEmpty
-import Marconi.CLI (chainPointParser)
-import Marconi.Indexers (TargetAddresses, combinedIndexer)
+import Control.Applicative (optional)
+import Marconi.CLI (TargetAddresses, chainPointParser, targetAddressParser)
+import Marconi.Indexers (combinedIndexer)
 import Marconi.Logging (logging)
+
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
 --     against the mainnet (meant to be used for testing).
@@ -57,42 +55,27 @@ optionsParser =
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
     <*> optStrParser (long "script-tx-db" <> help "Path to the script transactions' database.")
     <*> optAddressesParser
-    where
-        optAddressesParser =
-            builtinDataAddresses <$> optStrParser (long "addresses-to-index"
-                                          <> help ( "White space separated list of addresses to index."
-                                                    <>  " i.e \"address-1 address-2 address-3 ...\"" ) )
-        builtinDataAddresses :: Maybe String -> Maybe TargetAddresses
-        builtinDataAddresses x =  x >>= traverse maybeAddress . words >>= NonEmpty.nonEmpty
-
-        eitherAddress :: String -> Either C.Bech32DecodeError (C.Address  C.ShelleyAddr )
-        eitherAddress  =  deserialiseFromBech32 (proxyToAsType Proxy) . pack
-
-        maybeAddress  :: String -> Maybe (C.Address  C.ShelleyAddr )
-        maybeAddress = either (const Nothing) Just  . eitherAddress
+optAddressesParser :: Parser (Maybe TargetAddresses)
+optAddressesParser = optional $ targetAddressParser
+    <$> strOption (long "addresses-to-index"
+                   <> help ( "White space separated list of addresses to index."
+                             <> " i.e \"address-1 address-2 address-3 ...\"" ) )
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
-optStrParser fields = Just <$> strOption fields <|> pure Nothing
+optStrParser  = optional . strOption
 
 networkIdParser :: Parser NetworkId
 networkIdParser =
   pMainnet <|> pTestnet
-  where
-    pMainnet =
-      flag'
-        Mainnet
-        ( long "mainnet"
-            <> help "Use the mainnet magic id."
-        )
+pMainnet :: Parser NetworkId
+pMainnet = flag' Mainnet ( long "mainnet" <> help "Use the mainnet magic id.")
 
-    pTestnet =
-      Testnet . NetworkMagic
-        <$> option
-          auto
-          ( long "testnet-magic"
-              <> metavar "NATURAL"
-              <> help "Specify a testnet magic id."
-          )
+pTestnet :: Parser NetworkId
+pTestnet = Testnet . NetworkMagic <$> option auto
+    ( long "testnet-magic"
+      <> metavar "NATURAL"
+      <> help "Specify a testnet magic id."
+    )
 
 main :: IO ()
 main = do

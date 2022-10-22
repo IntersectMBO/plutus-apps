@@ -88,6 +88,18 @@ tests = testGroup "crowdfunding"
         (walletFundsChange w1 (Ada.adaValueOf 22.5))
         successfulCampaign
 
+    , checkPredicate "cannot make contribution after campaign dealine"
+        (walletFundsChange w1 PlutusTx.zero
+        .&&. assertFailedTransaction (\_ err ->
+            case err of
+                Ledger.CardanoLedgerValidationError msg ->
+                    "OutsideValidityIntervalUTxO" `Text.isInfixOf` msg
+                _ -> False
+            ))
+        $ do
+            void $ Trace.waitUntilSlot $ Slot 20
+            makeContribution w1 (Ada.adaValueOf 10)
+
     , checkPredicate "cannot collect money too late"
         (walletFundsChange w1 PlutusTx.zero
         .&&. assertFailedTransaction (\_ err ->
@@ -159,8 +171,7 @@ tests = testGroup "crowdfunding"
 
     -- TODO: Linked to https://github.com/input-output-hk/plutus-apps/issues/754
     -- Re-activate once issue is resolved
-    -- , testProperty "QuickCheck ContractModel" $ withMaxSuccess 100 prop_Crowdfunding
-
+    -- , testProperty "QuickCheck ContractModel" prop_Crowdfunding
     ]
 
     where
