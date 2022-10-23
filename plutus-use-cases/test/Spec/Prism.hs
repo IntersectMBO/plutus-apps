@@ -29,6 +29,7 @@ import Plutus.Contract.Test.ContractModel as ContractModel
 
 import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
 import Plutus.Contracts.Prism hiding (mirror)
 import Plutus.Contracts.Prism.Credential qualified as Credential
@@ -157,7 +158,7 @@ instance ContractModel PrismModel where
     instanceContract _ UserH{} _ = C.subscribeSTO
 
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
-    precondition s (Call _)  = (s ^. contractState . numberOfCalls < 11) -- We have to limit the number of calls otherwise fails with non-ada collateral error.
+    precondition s (Call _)  = s ^. contractState . numberOfCalls < 10 -- We have to limit the number of calls otherwise fails with non-ada collateral error.
     precondition _ _         = True
 
     nextState cmd = do
@@ -214,7 +215,5 @@ tests = testGroup "PRISM"
         .&&. walletFundsChange user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
         )
         prismTrace
-    -- TODO: Linked to https://github.com/input-output-hk/plutus-apps/issues/760
-    -- Re-activate once issue is resolved
-    -- , testProperty "QuickCheck property" prop_Prism
+    , testProperty "QuickCheck property" prop_Prism
     ]
