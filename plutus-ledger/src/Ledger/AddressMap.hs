@@ -41,9 +41,8 @@ import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
-import Ledger.Blockchain
-import Ledger.Tx (CardanoTx, TxIn (..), TxOut (..), TxOutRef (..), getCardanoTxId, getCardanoTxOutputs,
-                  getCardanoTxUnspentOutputsTx, txOutAddress, txOutValue)
+import Ledger.Blockchain (Blockchain, OnChainTx, consumableInputs, outputsProduced, unOnChain)
+import Ledger.Tx (CardanoTx, TxIn (..), TxOut (..), TxOutRef (..), txOutAddress, txOutValue)
 import Plutus.V1.Ledger.Address (Address (..))
 import Plutus.V1.Ledger.Value (Value)
 
@@ -121,19 +120,16 @@ traverseWithKey ::
 traverseWithKey f (AddressMap m) = AddressMap <$> Map.traverseWithKey f m
 
 outputsMapFromTxForAddress :: Address -> OnChainTx -> Map TxOutRef (CardanoTx, TxOut)
-outputsMapFromTxForAddress addr (Valid tx) =
-    fmap (tx ,)
+outputsMapFromTxForAddress addr tx =
+    fmap (unOnChain tx ,)
     $ Map.filter ((==) addr . txOutAddress)
-    $ getCardanoTxUnspentOutputsTx tx
-outputsMapFromTxForAddress _ (Invalid _) = mempty
+    $ outputsProduced tx
 
 -- | Create an 'AddressMap' with the unspent outputs of a single transaction.
 fromTxOutputs :: OnChainTx -> AddressMap
-fromTxOutputs (Valid tx) =
-    AddressMap . Map.fromListWith Map.union . fmap mkUtxo . zip [0..] . getCardanoTxOutputs $ tx where
-    mkUtxo (i, t) = (txOutAddress t, Map.singleton (TxOutRef h i) (tx, t))
-    h = getCardanoTxId tx
-fromTxOutputs (Invalid _) = mempty
+fromTxOutputs tx =
+    AddressMap . Map.fromListWith Map.union . fmap mkUtxo . Map.toList . outputsProduced $ tx where
+    mkUtxo (ref, txo) = (txOutAddress txo, Map.singleton ref (unOnChain tx, txo))
 
 -- | Create a map of unspent transaction outputs to their addresses (the
 -- "inverse" of an 'AddressMap', without the values)

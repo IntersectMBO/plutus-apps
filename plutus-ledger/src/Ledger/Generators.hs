@@ -83,7 +83,7 @@ import Ledger (Ada, AssetClass, CardanoTx (EmulatorTx), CurrencySymbol, Datum, I
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
                SomeCardanoApiTx (SomeTx), TokenName,
-               Tx (txCollateral, txFee, txInputs, txMint, txOutputs, txValidRange),
+               Tx (txCollateralInputs, txFee, txInputs, txMint, txOutputs, txValidRange),
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput (TxInput),
                TxInputType (TxConsumePublicKeyAddress, TxConsumeSimpleScriptAddress, TxScriptAddress), TxOut,
                TxOutRef (TxOutRef), ValidationErrorInPhase, Validator, Value, Versioned, addCardanoTxSignature,
@@ -257,7 +257,7 @@ genValidTransactionSpending' g ins totalVal = do
                 (scripts, datums) = bimap catMaybes catMaybes $ unzip witnesses
                 tx = mempty
                         { txInputs = ins'
-                        , txCollateral = maybe [] (flip take ins' . fromIntegral) (gmMaxCollateralInputs g)
+                        , txCollateralInputs = maybe [] (flip take ins' . fromIntegral) (gmMaxCollateralInputs g)
                         , txOutputs = txOutputs
                         , txMint = maybe mempty id mintValue
                         , txFee = Ada.toValue fee'

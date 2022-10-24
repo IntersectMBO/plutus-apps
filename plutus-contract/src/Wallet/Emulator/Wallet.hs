@@ -25,7 +25,7 @@ module Wallet.Emulator.Wallet where
 
 import Cardano.Api.Shelley (makeSignedTransaction, protocolParamCollateralPercent)
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
-import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
+import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (?~), (^.))
 import Control.Monad (foldM, (<=<))
 import Control.Monad.Freer (Eff, Member, Members, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
@@ -37,7 +37,7 @@ import Data.Aeson qualified as Aeson
 import Data.Bifunctor (bimap, first, second)
 import Data.Data (Data)
 import Data.Default (Default (def))
-import Data.Foldable (Foldable (fold), find, foldl')
+import Data.Foldable (Foldable (fold), find, foldl', toList)
 import Data.List (sort, sortOn, (\\))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
@@ -424,17 +424,14 @@ handleBalanceTx ::
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo utx = do
-    params@Params { pProtocolParams } <- WAPI.getClientParams
+    Params { pProtocolParams } <- WAPI.getClientParams
     let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
     let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownAddr <- gets ownAddress
     inputValues <- traverse lookupValue (Tx.txInputs filteredUnbalancedTxTx)
-    collateral  <- traverse lookupValue (Tx.txCollateral filteredUnbalancedTxTx)
     let fees = txFee filteredUnbalancedTxTx
         left = txMint filteredUnbalancedTxTx <> fold inputValues
         right = fees <> foldMap Tx.txOutValue (filteredUnbalancedTxTx ^. Tx.outputs)
-        collFees = Ada.toValue $ (Ada.fromValue fees * maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)) `Ada.divide` 100
-        remainingCollFees = collFees PlutusTx.- fold collateral
         balance = left PlutusTx.- right
         -- filter out inputs from utxo that are already in unBalancedTx
         inputsOutRefs = map Tx.txInputRef txInputs
@@ -442,47 +439,60 @@ handleBalanceTx utxo utx = do
             txOutRef `notElem` inputsOutRefs
         outRefsWithValue = second (view Ledger.ciTxOutValue) <$> Map.toList filteredUtxo
 
-    ((neg, newTxIns), (pos, newTxOuts)) <- calculateTxChanges params ownAddr outRefsWithValue $ Value.split balance
+    ((neg, newTxIns), (pos, mNewTxOut)) <- calculateTxChanges ownAddr outRefsWithValue $ Value.split balance
 
-    tx' <- if Value.isZero pos
-           then do
-               logDebug NoOutputsAdded
-               pure filteredUnbalancedTxTx
-           else do
-                logDebug $ AddingPublicKeyOutputFor pos
-                pure $ filteredUnbalancedTxTx & over Tx.outputs (++ newTxOuts)
+    txWithOutputsAdded <- if Value.isZero pos
+        then do
+            logDebug NoOutputsAdded
+            pure filteredUnbalancedTxTx
+        else do
+            logDebug $ AddingPublicKeyOutputFor pos
+            pure $ filteredUnbalancedTxTx & over Tx.outputs (++ toList mNewTxOut)
 
-    tx'' <- if Value.isZero neg
-            then do
-                logDebug NoInputsAdded
-                pure tx'
-            else do
-                logDebug $ AddingInputsFor neg
-                pure $ tx' & over Tx.inputs (sort . (++) (fmap Tx.pubKeyTxInput newTxIns))
+    txWithinputsAdded <- if Value.isZero neg
+        then do
+            logDebug NoInputsAdded
+            pure txWithOutputsAdded
+        else do
+            logDebug $ AddingInputsFor neg
+            pure $ txWithOutputsAdded & over Tx.inputs (sort . (++) (fmap Tx.pubKeyTxInput newTxIns))
 
-    if remainingCollFees `Value.leq` PlutusTx.zero
-    then do
-        logDebug NoCollateralInputsAdded
-        pure tx''
-    else do
-        logDebug $ AddingCollateralInputsFor remainingCollFees
-        addCollateral utxo remainingCollFees tx''
+    collateral <- traverse lookupValue (Tx.txCollateralInputs txWithinputsAdded)
+
+    let collAddr = maybe ownAddr Ledger.txOutAddress $ Tx.txReturnCollateral txWithinputsAdded
+        collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)
+        collFees = Ada.toValue $ (Ada.fromValue fees * collateralPercent + 99 {- make sure to round up -}) `Ada.divide` 100
+        collBalance = fold collateral PlutusTx.- collFees
+
+    ((negColl, newTxInsColl), (_, mNewTxOutColl)) <- calculateTxChanges collAddr outRefsWithValue $ Value.split collBalance
+
+    txWithCollateralInputs <- if Value.isZero negColl
+        then do
+            logDebug NoCollateralInputsAdded
+            pure txWithinputsAdded
+        else do
+            logDebug $ AddingCollateralInputsFor negColl
+            pure $ txWithinputsAdded & over Tx.collateralInputs (sort . (++) (fmap Tx.pubKeyTxInput newTxInsColl))
+
+    pure $ txWithCollateralInputs & Tx.totalCollateral ?~ collFees & Tx.returnCollateral .~ mNewTxOutColl
 
 type PubKeyTxIn = TxOutRef
 
-calculateTxChanges
-    :: ( Member (Error WAPI.WalletAPIError) effs
-       )
-    => Params
-    -> Address -- ^ The address for the change output
+calculateTxChanges ::
+    ( Member (Error WAPI.WalletAPIError) effs
+    , Member NodeClientEffect effs
+    , Member (State WalletState) effs
+    )
+    => Address -- ^ The address for the change output
     -> [(TxOutRef, Value)] -- ^ The current wallet's unspent transaction outputs.
     -> (Value, Value) -- ^ The unbalanced tx's negative and positive balance.
-    -> Eff effs ((Value, [PubKeyTxIn]), (Value, [TxOut]))
-calculateTxChanges params addr utxos (neg, pos) = do
+    -> Eff effs ((Value, [PubKeyTxIn]), (Value, Maybe TxOut))
+calculateTxChanges addr utxos (neg, pos) = do
     -- Calculate the change output with minimal ada
-    (newNeg, newPos, extraTxOuts) <- if Value.isZero pos
-        then pure (neg, pos, [])
+    (newNeg, newPos, mExtraTxOut) <- if Value.isZero pos
+        then pure (neg, pos, Nothing)
         else do
+            params <- WAPI.getClientParams
             txOut <- either
               (throwError . WAPI.ToCardanoError)
               (pure . TxOut)
@@ -492,7 +502,7 @@ calculateTxChanges params addr utxos (neg, pos) = do
                 $ U.adjustTxOut params txOut
             let missingValue = Ada.toValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
-            pure (neg <> missingValue, pos <> missingValue, [extraTxOut])
+            pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
 
     -- Calculate the extra inputs needed
     (spend, change) <- if Value.isZero newNeg
@@ -502,30 +512,16 @@ calculateTxChanges params addr utxos (neg, pos) = do
     if Value.isZero change
         then do
             -- No change, so the new inputs and outputs have balanced the transaction
-            pure ((newNeg, fst <$> spend), (newPos, extraTxOuts))
-        else if null extraTxOuts
+            pure ((newNeg, fst <$> spend), (newPos, mExtraTxOut))
+        else if null mExtraTxOut
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
             -- which then will calculate a more exact set of inputs
-            then calculateTxChanges params addr utxos (neg <> Ada.toValue Ledger.minAdaTxOut, Ada.toValue Ledger.minAdaTxOut)
+            then calculateTxChanges addr utxos (neg <> Ada.toValue Ledger.minAdaTxOut, Ada.toValue Ledger.minAdaTxOut)
             -- Else recalculate with the change added to both sides
             -- Ideally this creates the same inputs and outputs and then the change will be zero
             -- But possibly the minimal Ada increases and then we also want to compute a new set of inputs
-            else calculateTxChanges params addr utxos (newNeg <> change, newPos <> change)
-
-addCollateral
-    :: ( Member (Error WAPI.WalletAPIError) effs
-       )
-    => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
-    -> Value
-    -> Tx
-    -> Eff effs Tx
-addCollateral mp vl tx = do
-    (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
-    let addTxCollateral =
-            let ins = Tx.pubKeyTxInput . fst <$> spend
-            in over Tx.collateralInputs (sort . (++) ins)
-    pure $ tx & addTxCollateral
+            else calculateTxChanges addr utxos (newNeg <> change, newPos <> change)
 
 -- | Given a set of @a@s with coin values, and a target value, select a number
 -- of @a@ such that their total value is greater than or equal to the target.
