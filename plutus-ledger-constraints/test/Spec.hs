@@ -213,11 +213,11 @@ txOut1 =
         Nothing
         (validatorHash1, Nothing)
 
-txOutRef1 :: Ledger.TxOutRef
-txOutRef1 = Ledger.TxOutRef (Ledger.TxId "") 1
+txOutRef :: Integer -> Ledger.TxOutRef
+txOutRef = Ledger.TxOutRef (Ledger.TxId "")
 
 utxo1 :: Map.Map Ledger.TxOutRef Ledger.ChainIndexTxOut
-utxo1 = Map.fromList [(txOutRef0, txOut0), (txOutRef1, txOut1)]
+utxo1 = Map.fromList [(txOutRef0, txOut0), (txOutRef 1, txOut1)]
 
 {-# INLINABLE constraints1 #-}
 constraints1 :: Ledger.ValidatorHash -> Constraints.TxConstraints () ()
@@ -227,7 +227,7 @@ constraints1 vh =
         (Pl.== Ledger.unitDatum)
         (Pl.const True)
         Ledger.unitRedeemer
-    <> Constraints.mustSpendScriptOutput txOutRef1 Ledger.unitRedeemer
+    <> Constraints.mustSpendScriptOutput (txOutRef 1) Ledger.unitRedeemer
 
 lookups1 :: Constraints.ScriptLookups UnitTest
 lookups1
