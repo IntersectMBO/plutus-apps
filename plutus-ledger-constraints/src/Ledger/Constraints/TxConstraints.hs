@@ -697,6 +697,9 @@ mustProduceAtLeast = singleton . MustProduceAtLeast
 -- the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.unspentOutputs'.
 --
+-- If several calls to 'mustSpendPubKeyOutput' are performed for the same 'TxOutRef',
+-- only one instance of the constraint is kept when the transaction is created.
+--
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
 mustSpendPubKeyOutput :: forall i o. TxOutRef -> TxConstraints i o
@@ -714,6 +717,11 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
 -- 'Ledger.Constraints.OffChain.otherData'.
 --
+-- If several calls to 'mustSpendScriptOutput' are performed for the same 'TxOutRef',
+-- if the two constraints have different redeemers, an error will be thrown when the transaction will be submitted.
+-- Otherwise, only one instance of the constraint is kept.
+-- If combine with 'mustSpendScriptOutputWithReference' for the same 'TxOutRef', see 'mustSpendScriptOutputWithReference'.
+--
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
 mustSpendScriptOutput :: forall i o. TxOutRef -> Redeemer -> TxConstraints i o
@@ -730,6 +738,17 @@ mustSpendScriptOutput txOutref red = singleton $ MustSpendScriptOutput txOutref 
 -- 'Ledger.Constraints.OffChain.unspentOutputs'. The datum must be either provided by
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
 -- 'Ledger.Constraints.OffChain.otherData'.
+--
+-- If several calls to 'mustSpendScriptOutputWithReference' are performed for the same 'TxOutRef',
+-- if the two constraints have different redeemers,
+-- or if the two constraints use a different 'TxOutRef' as a TxOutRef, an error will be thrown when the transaction will
+-- be submitted.
+-- Otherwise, only one instance of the constraint is kept.
+--
+-- If combined with 'mustSpendScriptOutput' for the same 'TxOutRef', an error is throw if they have a different
+-- redeemer.
+-- Otherwise, only one instance of the 'mustSpendScriptOutputWithReference' constraint is kept, the
+-- 'mustSpendScriptOutput' constraints are ignored.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
