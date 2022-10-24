@@ -62,9 +62,10 @@ import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
 data TxInType =
-      ScriptAddress !(Either (Versioned Validator) (Versioned TxOutRef)) !Redeemer !Datum
+      ScriptAddress !(Either (Versioned Validator) (Versioned TxOutRef)) !Redeemer !(Maybe Datum)
       -- ^ A transaction input that consumes (with a validator) or references (with a txOutRef)
       -- a script address with the given the redeemer and datum.
+      -- Datum is optional if the input refers to a script output which contains an inline datum
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
@@ -93,12 +94,13 @@ pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 
 -- | A transaction input that spends a "pay to script" output, given witnesses.
-scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> TxIn
+-- Datum is optional if the input refers to a script output which contains an inline datum
+scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> TxIn
 scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (Left v) r d
 
 -- | The type of a transaction input with hashes.
 data TxInputType =
-      TxScriptAddress !Redeemer !(Either ValidatorHash (Versioned TxOutRef)) !DatumHash
+      TxScriptAddress !Redeemer !(Either ValidatorHash (Versioned TxOutRef)) !(Maybe DatumHash)
       -- ^ A transaction input that consumes (with a validator hash) or references (with a txOutRef)
       -- a script address with the given the redeemer and datum hash.
     | TxConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
@@ -159,7 +161,7 @@ instance Pretty Certificate where
 
 -- | Validator, redeemer, and data scripts of a transaction input that spends a
 --   "pay to script" output.
-inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Datum)
+inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Maybe Datum)
 inScripts TxIn{ txInType = t } = case t of
     Just (ScriptAddress (Left v) r d) -> Just (v, r, d)
     _                                 -> Nothing
@@ -530,11 +532,11 @@ fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
     TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
     TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
     TxScriptAddress redeemer (Left vlh) dh -> TxIn outRef $ do
-        datum <- Map.lookup dh (txData tx)
+        datum <- traverse (`Map.lookup` txData tx) dh
         validator <- lookupValidator (txScripts tx) vlh
         Just $ ScriptAddress (Left validator) redeemer datum
     TxScriptAddress redeemer (Right ref) dh -> TxIn outRef $ do
-        datum <- Map.lookup dh (txData tx)
+        datum <- traverse (`Map.lookup` txData tx) dh
         Just $ ScriptAddress (Right ref) redeemer datum
 
 pubKeyTxInput :: TxOutRef -> TxInput
@@ -549,22 +551,24 @@ addMintingPolicy vvl rd tx@Tx{txMintingScripts, txScripts} = tx
         mph@(MintingPolicyHash b) = mintingPolicyHash vvl
 
 -- | Add validator together with the redeemer and datum into txInputs, txData and txScripts accordingly.
-addScriptTxInput :: TxOutRef -> Versioned Validator -> Redeemer -> Datum -> Tx -> Tx
-addScriptTxInput outRef vl rd dt tx@Tx{txInputs, txScripts, txData} = tx
-    {txInputs = TxInput outRef (TxScriptAddress rd (Left vlHash) dtHash) : txInputs,
+-- Datum is optional if the input refers to a script output which contains an inline datum
+addScriptTxInput :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> Tx -> Tx
+addScriptTxInput outRef vl rd mdt tx@Tx{txInputs, txScripts, txData} = tx
+    {txInputs = TxInput outRef (TxScriptAddress rd (Left vlHash) mdtHash) : txInputs,
      txScripts = Map.insert (ScriptHash b) (fmap getValidator vl) txScripts,
-     txData = Map.insert dtHash dt txData}
+     txData = maybe txData (\dt -> Map.insert (datumHash dt) dt txData) mdt}
     where
-        dtHash = datumHash dt
+        mdtHash = fmap datumHash mdt
         vlHash@(ValidatorHash b) = validatorHash vl
 
 -- | Add script reference together with the redeemer and datum into txInputs and txData accordingly.
-addReferenceTxInput :: TxOutRef -> Versioned TxOutRef -> Redeemer -> Datum -> Tx -> Tx
-addReferenceTxInput outRef vref rd dt tx@Tx{txInputs, txData} = tx
-    {txInputs = TxInput outRef (TxScriptAddress rd (Right vref) dtHash) : txInputs,
-     txData = Map.insert dtHash dt txData}
+-- Datum is optional if the input refers to a script output which contains an inline datum
+addReferenceTxInput :: TxOutRef -> Versioned TxOutRef -> Redeemer -> Maybe Datum -> Tx -> Tx
+addReferenceTxInput outRef vref rd mdt tx@Tx{txInputs, txData} = tx
+    {txInputs = TxInput outRef (TxScriptAddress rd (Right vref) mdtHash) : txInputs,
+     txData = maybe txData (\dt -> Map.insert (datumHash dt) dt txData) mdt}
     where
-        dtHash = datumHash dt
+        mdtHash = fmap datumHash mdt
 
 txRedeemers :: Tx -> Map ScriptPurpose Redeemer
 txRedeemers = (Map.mapKeys Spending . txSpendingRedeemers)

@@ -39,6 +39,7 @@ module Plutus.Contracts.Game
     , covIdx
     ) where
 
+import Control.Lens ((^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import Data.Map (Map)
@@ -48,7 +49,7 @@ import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Tx (ChainIndexTxOut (..))
+import Ledger.Tx (ChainIndexTxOut (..), datumInDatumFromQuery)
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
@@ -186,7 +187,7 @@ findSecretWordValue =
 -- | Extract the secret word in the Datum of a given transaction output is possible
 secretWordValue :: ChainIndexTxOut -> Maybe HashedString
 secretWordValue o = do
-  Datum d <- snd (_ciTxOutScriptDatum o)
+  Datum d <- snd (_ciTxOutScriptDatum o) ^? datumInDatumFromQuery
   PlutusTx.fromBuiltinData d
 
 contract :: AsContractError e => Contract () GameSchema e ()

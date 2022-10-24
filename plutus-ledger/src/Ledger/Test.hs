@@ -11,22 +11,40 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed as PSU
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Address, Validator)
+import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude hiding (not)
 
-someAddress :: Address
-someAddress = Ledger.scriptValidatorHashAddress (PV1.validatorHash someValidator) Nothing
+someCode :: PlutusTx.CompiledCode (PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
+someCode = $$(PlutusTx.compile [|| \_ _ _ -> () ||])
+
+someValidator :: Validator
+someValidator = PV1.mkValidatorScript someCode
+
+someTypedValidator :: Scripts.TypedValidator Any
+someTypedValidator = Scripts.unsafeMkTypedValidator (Versioned someValidator PlutusV1)
 
 someValidatorHash :: PV1.ValidatorHash
 someValidatorHash = PV1.validatorHash someValidator
 
-someValidator :: Validator
-someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
+someAddress :: Address
+someAddress = Ledger.scriptValidatorHashAddress someValidatorHash Nothing
 
-someTypedValidator :: Scripts.TypedValidator Any
-someTypedValidator = Scripts.unsafeMkTypedValidator someValidator
+someValidatorV2 :: Validator
+someValidatorV2 = PV2.mkValidatorScript someCode
+
+someTypedValidatorV2 :: Scripts.TypedValidator Any
+someTypedValidatorV2 = Scripts.unsafeMkTypedValidator (Versioned someValidator PlutusV2)
+
+someValidatorHashV2 :: PV2.ValidatorHash
+someValidatorHashV2 = PV2.validatorHash someValidatorV2
+
+someAddressV2 :: Address
+someAddressV2 = Ledger.scriptValidatorHashAddress someValidatorHashV2 Nothing
 
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: () -> Ledger.ScriptContext -> Bool

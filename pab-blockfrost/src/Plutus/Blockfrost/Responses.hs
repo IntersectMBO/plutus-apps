@@ -31,8 +31,8 @@ import Blockfrost.Client
 import Cardano.Api hiding (Block, Script, ScriptDatum, ScriptHash, TxIn, TxOut)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
-import Ledger.Tx (ChainIndexTxOut (..), Language (PlutusV1), RedeemerPtr (..), TxIn (..), TxOutRef (..),
-                  Versioned (Versioned, unversioned), pubKeyTxIn, scriptTxIn)
+import Ledger.Tx (ChainIndexTxOut (..), DatumFromQuery (DatumUnknown), Language (PlutusV1), RedeemerPtr (..), TxIn (..),
+                  TxOutRef (..), Versioned (Versioned, unversioned), pubKeyTxIn, scriptTxIn)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
@@ -120,7 +120,7 @@ processUnspentTxOut (Just utxo) = buildResponse utxo
     buildScriptTxOut :: Ledger.Address -> UtxoOutput -> ValidatorHash -> ChainIndexTxOut
     buildScriptTxOut addr utxoOut val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
                                                               , _ciTxOutValue=utxoValue utxoOut
-                                                              , _ciTxOutScriptDatum=(utxoDatumHash utxoOut, Nothing)
+                                                              , _ciTxOutScriptDatum=(utxoDatumHash utxoOut, DatumUnknown)
                                                               , _ciTxOutReferenceScript=Nothing
                                                               , _ciTxOutValidator=(val, Nothing)
                                                               }
@@ -196,7 +196,7 @@ processUnspentTxOutSetAtAddress _ cred xs =
     buildScriptTxOut :: Ledger.Address -> AddressUtxo -> ValidatorHash -> ChainIndexTxOut
     buildScriptTxOut addr utxo val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
                                                            , _ciTxOutValue=utxoValue utxo
-                                                           , _ciTxOutScriptDatum=(utxoDatumHash utxo, Nothing)
+                                                           , _ciTxOutScriptDatum=(utxoDatumHash utxo, DatumUnknown)
                                                            , _ciTxOutValidator=(val, Nothing)
                                                            , _ciTxOutReferenceScript=Nothing
                                                            }
@@ -278,7 +278,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
       where
         toPlutusTxIn :: UtxoInput -> Integer -> TxIn
         toPlutusTxIn utxoIn idx = case addr utxoIn  of
-                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (Versioned (val bbs) PlutusV1) (red idx) (dat utxoIn)
+                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (Versioned (val bbs) PlutusV1) (red idx) (Just $ dat utxoIn)
                             PubKeyCredential _                    -> pubKeyTxIn $ txoToRef utxoIn
 
         addr :: UtxoInput -> Credential

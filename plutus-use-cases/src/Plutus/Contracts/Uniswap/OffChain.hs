@@ -35,7 +35,7 @@ module Plutus.Contracts.Uniswap.OffChain
     , calculateRemoval, funds
     ) where
 
-import Control.Lens (view)
+import Control.Lens (view, (^?))
 import Control.Monad hiding (fmap)
 import Data.Map qualified as Map
 import Data.Monoid (Last (..))
@@ -43,7 +43,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
 import Ledger (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut, _ciTxOutScriptDatum), ciTxOutValue,
-               pubKeyHashAddress)
+               datumInDatumFromQuery, pubKeyHashAddress)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
@@ -434,7 +434,7 @@ getUniswapDatum o =
       PublicKeyChainIndexTxOut {} ->
         throwError "no datum for a txout of a public key address"
       ScriptChainIndexTxOut { _ciTxOutScriptDatum = (dh, d) } -> do
-        (Datum e) <- maybe (getDatum dh) pure d
+        Datum e <- maybe (getDatum dh) pure (d ^? datumInDatumFromQuery)
         maybe (throwError "datum hash wrong type")
               pure
               (PlutusTx.fromBuiltinData e)

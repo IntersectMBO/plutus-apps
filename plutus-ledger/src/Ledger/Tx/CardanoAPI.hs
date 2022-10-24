@@ -23,6 +23,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxBodyContent
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
+  , toCardanoDatumWitness
   , toCardanoTxInReferenceWitnessHeader
   , toCardanoTxInScriptWitnessHeader
   , toCardanoMintValue
@@ -164,14 +165,17 @@ toCardanoTxInWitness tx
         valhOrRef
         dh)
     = do
-      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (P.txData tx)
+      mDatum <- traverse (maybe (Left MissingDatum) pure . (`Map.lookup` P.txData tx)) dh
       mkWitness <- case valhOrRef of
         Left valh -> maybe (Left MissingInputValidator) (toCardanoTxInScriptWitnessHeader . fmap PV1.getValidator) $ P.lookupValidator (P.txScripts tx) valh
         Right vref -> toCardanoTxInReferenceWitnessHeader vref
       pure $ C.ScriptWitness C.ScriptWitnessForSpending $ mkWitness
-            (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
+            (toCardanoDatumWitness mDatum)
             (toCardanoScriptData redeemer)
             zeroExecutionUnits
+
+toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
+toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)
 
 type WitnessHeader = C.ScriptDatum C.WitCtxTxIn -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness C.WitCtxTxIn C.BabbageEra
 
