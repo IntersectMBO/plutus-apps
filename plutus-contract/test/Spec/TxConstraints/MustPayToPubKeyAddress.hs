@@ -19,7 +19,6 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
-import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
@@ -35,7 +34,7 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 
-makeClassyPrisms ''ScriptError
+makeClassyPrisms ''Ledger.ScriptError
 
 -- Constraint's functions should soon be changed to use Address instead of PaymentPubKeyHash and StakeKeyHash
 tests :: TestTree
