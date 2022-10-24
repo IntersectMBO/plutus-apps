@@ -461,6 +461,34 @@ cleaningMustSpendConstraints (x@(MustSpendPubKeyOutput _):xs) =
 cleaningMustSpendConstraints [] = pure []
 cleaningMustSpendConstraints (x:xs) = (x :) <$> cleaningMustSpendConstraints xs
 
+
+prepareConstraints
+    :: ( FromData (DatumType a)
+       , ToData (DatumType a)
+       , ToData (RedeemerType a)
+       , MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => [ScriptOutputConstraint (DatumType a)]
+    -> [TxConstraint]
+    -> m ([TxConstraint], [TxConstraint])
+prepareConstraints ownOutputs constraints = do
+    let
+      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
+      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
+      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
+      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
+      -- must yield the same behavior.
+      isVerificationConstraints = \case
+        MustIncludeDatumInTxWithHash {} -> True
+        MustIncludeDatumInTx {}         -> True
+        _                               -> False
+      (verificationConstraints, otherConstraints) =
+          List.partition isVerificationConstraints constraints
+    ownOutputConstraints <- concat <$> traverse addOwnOutput ownOutputs
+    cleantConstraints <- cleaningMustSpendConstraints otherConstraints
+    pure (cleantConstraints <> ownOutputConstraints, verificationConstraints)
+
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
 processLookupsAndConstraints
@@ -474,29 +502,14 @@ processLookupsAndConstraints
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> m ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
-    let
-      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
-      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
-      -- must yield the same behavior.
-      isVerificationConstraints = \case
-        MustIncludeDatumInTxWithHash {} -> True
-        MustIncludeDatumInTx {}         -> True
-        _                               -> False
-      (verificationConstraints, otherConstraints) =
-          List.partition isVerificationConstraints txConstraints
-     in do
-        flip runReaderT lookups $ do
-            ownOutputConstraints <- concat <$> traverse addOwnOutput txOwnOutputs
-            cleantConstraints <- cleaningMustSpendConstraints otherConstraints
-            let constraints = cleantConstraints <> ownOutputConstraints
-            traverse_ processConstraint constraints
-            traverse_ processConstraintFun txCnsFuns
-            traverse_ addOwnInput txOwnInputs
-            traverse_ processConstraint verificationConstraints
-            addMissingValueSpent
-            updateUtxoIndex
+    flip runReaderT lookups $ do
+         (constraints, verificationConstraints) <- prepareConstraints txOwnOutputs txConstraints
+         traverse_ processConstraint constraints
+         traverse_ processConstraintFun txCnsFuns
+         traverse_ addOwnInput txOwnInputs
+         traverse_ processConstraint verificationConstraints
+         addMissingValueSpent
+         updateUtxoIndex
 
 -- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
 --   the constraints. To use this in a contract, see
