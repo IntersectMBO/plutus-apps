@@ -20,8 +20,8 @@ import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), ownPaymentPubKeyHash,
                                                              typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
-                                                                  mustPayToTheScriptWithDatumInTx,
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
+                                                                  mustIncludeDatumInTx, mustPayToTheScriptWithDatumInTx,
                                                                   mustSpendPubKeyOutput)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
@@ -69,10 +69,13 @@ baseLovelaceLockedByScript :: Integer
 baseLovelaceLockedByScript = lovelacePerInitialUtxo `div` 2
 
 mustSpendPubKeyOutputContract :: [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
-mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
+mustSpendPubKeyOutputContract = mustSpendPubKeyOutputContract' []
+
+mustSpendPubKeyOutputContract' :: [Ledger.PaymentPubKeyHash] -> [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
+mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs
-            $ Ada.lovelaceValueOf baseLovelaceLockedByScript
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs (Ada.lovelaceValueOf baseLovelaceLockedByScript)
+            <> foldMap Constraints.mustBeSignedBy keys
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -135,7 +138,7 @@ mustSpendSingleUtxoFromOtherWallet =
             let w2TxoRefs = txoRefsFromWalletState w2State
                 w2MiddleTxoRef = [S.elemAt (length w2TxoRefs `div` 2) w2TxoRefs]
             Trace.setSigningProcess w1 (Just $ signPrivateKeys [paymentPrivateKey $ walletToMockWallet' w1, paymentPrivateKey $ walletToMockWallet' w2])
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w2MiddleTxoRef w2MiddleTxoRef w2PaymentPubKeyHash
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract' [mockWalletPaymentPubKeyHash w2] w2MiddleTxoRef w2MiddleTxoRef w2PaymentPubKeyHash
             void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with a single txOutRef from other wallet"
@@ -150,7 +153,7 @@ mustSpendAllUtxosFromOtherWallet =
             let w2TxoRefs = txoRefsFromWalletState w2State
                 allW2TxoRefs = S.elems w2TxoRefs
             Trace.setSigningProcess w1 (Just $ signPrivateKeys [paymentPrivateKey $ walletToMockWallet' w1, paymentPrivateKey $ walletToMockWallet' w2])
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract allW2TxoRefs allW2TxoRefs w2PaymentPubKeyHash
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract' [mockWalletPaymentPubKeyHash w2] allW2TxoRefs allW2TxoRefs w2PaymentPubKeyHash
             void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with all initial txOutRefs from other wallet"

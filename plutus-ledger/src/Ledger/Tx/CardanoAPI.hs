@@ -154,7 +154,8 @@ fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
 fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (P.pubKeyTxIn . fromCardanoTxIn) txIns
 
 toCardanoTxInsCollateral :: [P.TxInput] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
-toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInBabbageEra) . traverse (toCardanoTxIn . P.txInputRef)
+toCardanoTxInsCollateral [] = pure C.TxInsCollateralNone
+toCardanoTxInsCollateral inputs = fmap (C.TxInsCollateral C.CollateralInBabbageEra) (traverse (toCardanoTxIn . P.txInputRef) inputs)
 
 toCardanoTxInWitness :: P.Tx -> P.TxInputType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
 toCardanoTxInWitness _ P.TxConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)

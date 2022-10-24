@@ -459,22 +459,29 @@ handleBalanceTx utxo utx = do
 
     collateral <- traverse lookupValue (Tx.txCollateralInputs txWithinputsAdded)
 
-    let collAddr = maybe ownAddr Ledger.txOutAddress $ Tx.txReturnCollateral txWithinputsAdded
-        collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)
-        collFees = Ada.toValue $ (Ada.fromValue fees * collateralPercent + 99 {- make sure to round up -}) `Ada.divide` 100
-        collBalance = fold collateral PlutusTx.- collFees
+    if Value.isZero (fold collateral)
+        && null (Tx.txRedeemers txWithinputsAdded) -- every script has a redeemer, no redeemers -> no scripts
+        && null (Tx.txReturnCollateral txWithinputsAdded) then
+        -- Don't add collateral if there are no plutus scripts that can fail
+        -- and there are no collateral inputs or outputs already
+        pure txWithinputsAdded
+    else do
+        let collAddr = maybe ownAddr Ledger.txOutAddress $ Tx.txReturnCollateral txWithinputsAdded
+            collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)
+            collFees = Ada.toValue $ (Ada.fromValue fees * collateralPercent + 99 {- make sure to round up -}) `Ada.divide` 100
+            collBalance = fold collateral PlutusTx.- collFees
 
-    ((negColl, newTxInsColl), (_, mNewTxOutColl)) <- calculateTxChanges collAddr outRefsWithValue $ Value.split collBalance
+        ((negColl, newTxInsColl), (_, mNewTxOutColl)) <- calculateTxChanges collAddr outRefsWithValue $ Value.split collBalance
 
-    txWithCollateralInputs <- if Value.isZero negColl
-        then do
-            logDebug NoCollateralInputsAdded
-            pure txWithinputsAdded
-        else do
-            logDebug $ AddingCollateralInputsFor negColl
-            pure $ txWithinputsAdded & over Tx.collateralInputs (sort . (++) (fmap Tx.pubKeyTxInput newTxInsColl))
+        txWithCollateralInputs <- if Value.isZero negColl
+            then do
+                logDebug NoCollateralInputsAdded
+                pure txWithinputsAdded
+            else do
+                logDebug $ AddingCollateralInputsFor negColl
+                pure $ txWithinputsAdded & over Tx.collateralInputs (sort . (++) (fmap Tx.pubKeyTxInput newTxInsColl))
 
-    pure $ txWithCollateralInputs & Tx.totalCollateral ?~ collFees & Tx.returnCollateral .~ mNewTxOutColl
+        pure $ txWithCollateralInputs & Tx.totalCollateral ?~ collFees & Tx.returnCollateral .~ mNewTxOutColl
 
 type PubKeyTxIn = TxOutRef
 
