@@ -45,7 +45,6 @@ tests =
         , mustSpendRemainingInitialUtxosFromOwnWallet
         , mustSpendSingleUtxoFromOtherWallet
         , mustSpendAllUtxosFromOtherWallet
-        , mustSpendTwiceTheSameUtxoIsOk
         , contractErrorWhenAttemptingToSpendNonExistentOutput
         , phase2FailureWhenTxoIsNotSpent
         ]
