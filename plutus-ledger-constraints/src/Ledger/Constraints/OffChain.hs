@@ -435,7 +435,14 @@ mkSomeTx xs =
         $ execStateT (traverse process xs) initialState
 
 -- | Filtering MustSpend constraints to ensure their consistency and check that we do not try to spend them
--- with different redeemer or reference scripts
+-- with different redeemer or reference scripts.
+--
+-- When:
+--     - 2 or more MustSpendPubkeyOutput are defined for the same output, we only keep the first one
+--     - 2 or more MustSpendScriptOutpt are defined for the same output:
+--          - if they have different redeemer, we throw an 'AmbiguousRedeemer' error;
+--          - if they provide more than one reference script we throw an 'AmbiguousReferenceScript' error;
+--          - if only one define a reference script, we use that reference script.
 cleaningMustSpendConstraints :: MonadError MkTxError m => [TxConstraint] -> m [TxConstraint]
 cleaningMustSpendConstraints (x@(MustSpendScriptOutput t _ _):xs) = do
     let
