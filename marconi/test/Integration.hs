@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans    #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Integration (tests) where
 
