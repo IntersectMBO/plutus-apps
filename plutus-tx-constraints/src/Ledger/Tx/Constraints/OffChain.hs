@@ -60,9 +60,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
-import Data.List qualified as List
-import Data.Maybe (mapMaybe)
-import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL)
 import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
@@ -185,36 +182,6 @@ data SortedConstraints
    , otherConstraints        :: [TxConstraint]
    }
 
--- | Filtering MustSpend constraints to ensure their consistency and check that we do not try to spend them
--- with different redeemer or reference scripts
-cleaningMustSpendConstraints
-    :: [TxConstraint]
-    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except P.MkTxError)) [TxConstraint]
-cleaningMustSpendConstraints (x@(P.MustSpendScriptOutput t _ _):xs) = do
-    let
-        spendSame (P.MustSpendScriptOutput t' _ _) = t == t'
-        spendSame _                                = False
-        getRedeemer (P.MustSpendScriptOutput _ r _) = Just r
-        getRedeemer _                               = Nothing
-        getReferenceScript (P.MustSpendScriptOutput _ _ rs) = rs
-        getReferenceScript _                                = Nothing
-        (mustSpendSame, otherConstraints) = List.partition spendSame xs
-        redeemers = Set.fromList $ mapMaybe getRedeemer (x:mustSpendSame)
-        referenceScripts = Set.fromList $ mapMaybe getReferenceScript (x:mustSpendSame)
-    red <- case Set.toList redeemers of
-                []    -> throwError $ P.AmbiguousRedeemer t [] -- Can't happen as x must have a redeemer
-                [red] -> pure red
-                rs    -> throwError $ P.AmbiguousRedeemer t rs
-    rs  <- case Set.toList referenceScripts of
-                []  -> pure Nothing
-                [r] -> pure $ Just r
-                rs  -> throwError $ P.AmbiguousReferenceScript t rs
-    (P.MustSpendScriptOutput t red rs:) <$> cleaningMustSpendConstraints otherConstraints
-cleaningMustSpendConstraints (x@(P.MustSpendPubKeyOutput _):xs) =
-    (x :) <$> cleaningMustSpendConstraints (filter (x /=) xs)
-cleaningMustSpendConstraints [] = pure []
-cleaningMustSpendConstraints (x:xs) = (x :) <$> cleaningMustSpendConstraints xs
-
 prepareConstraints
     :: ToData (DatumType a)
     => [ScriptOutputConstraint (DatumType a)]
@@ -226,20 +193,8 @@ prepareConstraints ownOutputs constraints = do
         P.MustValidateIn range -> Left range
         other                  -> Right other
       (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> constraints
-      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
-      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
-      -- must yield the same behavior.
-      isVerificationConstraints = \case
-        P.MustIncludeDatumInTxWithHash {} -> True
-        P.MustIncludeDatumInTx {}         -> True
-        _                                 -> False
-      (verificationConstraints, otherConstraints) =
-          List.partition isVerificationConstraints nonRangeConstraints
-    ownOutputConstraints <- concat <$> traverse addOwnOutput ownOutputs
-    cleantConstraints <- mapLedgerMkTxError $ cleaningMustSpendConstraints otherConstraints
-    pure $ MkSortedConstraints ranges verificationConstraints $ cleantConstraints <> ownOutputConstraints
+    (other, verification) <- mapLedgerMkTxError $ P.prepareConstraints ownOutputs nonRangeConstraints
+    pure $ MkSortedConstraints ranges verification other
 
 
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
@@ -398,12 +353,6 @@ lookupScriptAsReferenceScript
     :: Maybe ScriptHash
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
 lookupScriptAsReferenceScript msh = mapLedgerMkTxError $ P.lookupScriptAsReferenceScript msh
-
-addOwnOutput
-    :: ToData (DatumType a)
-    => ScriptOutputConstraint (DatumType a)
-    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) [TxConstraint]
-addOwnOutput soc = mapLedgerMkTxError $ P.addOwnOutput soc
 
 mapLedgerMkTxError
     :: ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except P.MkTxError)) b

@@ -81,6 +81,7 @@ module Ledger.Constraints.OffChain(
     , lookupTxOutRef
     , lookupScript
     , lookupScriptAsReferenceScript
+    , prepareConstraints
     , resolveScriptTxOut
     , resolveScriptTxOutValidator
     , resolveScriptTxOutDatumAndValue
@@ -463,9 +464,7 @@ cleaningMustSpendConstraints (x:xs) = (x :) <$> cleaningMustSpendConstraints xs
 
 
 prepareConstraints
-    :: ( FromData (DatumType a)
-       , ToData (DatumType a)
-       , ToData (RedeemerType a)
+    :: ( ToData (DatumType a)
        , MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
