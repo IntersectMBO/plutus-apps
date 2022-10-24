@@ -300,7 +300,7 @@ processConstraint = \case
                 let witness
                         = C.ScriptWitness C.ScriptWitnessForSpending $
                             mkWitness
-                            (C.ScriptDatumForTxIn (C.toCardanoScriptData (getDatum datum)))
+                            (C.toCardanoDatumWitness $ P.datumWitness datum)
                             (C.toCardanoScriptData (getRedeemer redeemer))
                             C.zeroExecutionUnits
 

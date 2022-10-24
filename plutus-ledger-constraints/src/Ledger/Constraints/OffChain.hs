@@ -84,10 +84,12 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOut
     , resolveScriptTxOutValidator
     , resolveScriptTxOutDatumAndValue
+    , DatumWithOrigin(..)
+    , datumWitness
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, _Just, alaf, at, makeClassyPrisms, makeLensesFor, view, (%=), (&), (.=), (.~), (<>=), (^?))
+import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, view, (%=), (&), (.=), (.~), (<>=), (^?))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -561,7 +563,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
       $ do
           (txOut, datum) <- maybe (throwError $ UnknownRef icTxOutRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
+                                datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . Tx.datumInDatumFromQuery
                                 pure (Tx.toTxInfoTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let vl = PV2.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
@@ -569,12 +571,11 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     case typedOutRef of
         Typed.TypedScriptTxOutRef{Typed.tyTxOutRefRef, Typed.tyTxOutRefOut} -> do
             let datum = Datum $ toBuiltinData $ Typed.tyTxOutData tyTxOutRefOut
-            unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) .= Just datum
             unbalancedTx . tx %= Tx.addScriptTxInput
                                       tyTxOutRefRef
                                       (Typed.vValidatorScript inst)
                                       (Redeemer $ toBuiltinData icRedeemer)
-                                      datum
+                                      (Just datum)
 
 -- | Convert a @ScriptOutputConstraint@ into a @TxConstraint@.
 addOwnOutput
@@ -694,21 +695,20 @@ processConstraint = \case
         txout <- lookupTxOutRef txo
         mDatumAndValue <- resolveScriptTxOutDatumAndValue txout
         (datum, value) <- maybe (throwError (TxOutRefWrongType txo)) pure mDatumAndValue
-        unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) .= Just datum
         valueSpentInputs <>= provided value
         case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
             case _ciTxOutReferenceScript refTxOut of
                 Just val -> do
-                    unbalancedTx . tx %= Tx.addReferenceTxInput txo (ref <$ val) red datum
+                    unbalancedTx . tx %= Tx.addReferenceTxInput txo (ref <$ val) red (datumWitness datum)
                     unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
                 _        -> throwError (TxOutRefNoReferenceScript ref)
           Nothing -> do
             mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
                 Just val -> do
-                    unbalancedTx . tx %= Tx.addScriptTxInput txo val red datum
+                    unbalancedTx . tx %= Tx.addScriptTxInput txo val red (datumWitness datum)
                 _             -> throwError (TxOutRefWrongType txo)
 
     MustUseOutputAsCollateral txo -> do
@@ -781,24 +781,31 @@ processConstraintFun = \case
         -- TODO: Need to precalculate the validator hash or else this won't work
         -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
         -- include the hash.
-        let matches (Just (_, datum, value)) = datumPred datum && valuePred value
-            matches Nothing                  = False
+        let matches (Just (_, d, value)) = datumPred (getDatum d) && valuePred value
+            matches Nothing              = False
         opts <- filter (matches . snd)
             <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
                 (filter ((== vh) . fst . Tx._ciTxOutValidator . snd) (Map.toList slTxOutputs))
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just (validator, datum, value))] -> do
-                unbalancedTx . tx . Tx.datumWitnesses . at (P.datumHash datum) .= Just datum
-                unbalancedTx . tx %= Tx.addScriptTxInput ref validator red datum
+                unbalancedTx . tx %= Tx.addScriptTxInput ref validator red (datumWitness datum)
                 valueSpentInputs <>= provided value
             _ -> throwError $ MultipleMatchingOutputsFound vh
+
+data DatumWithOrigin
+    = DatumInTx { getDatum :: Datum }
+    | DatumInline { getDatum :: Datum }
+
+datumWitness :: DatumWithOrigin -> Maybe Datum
+datumWitness (DatumInTx d)   = Just d
+datumWitness (DatumInline _) = Nothing
 
 resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Versioned Validator, Datum, Value))
+    => ChainIndexTxOut -> m (Maybe (Versioned Validator, DatumWithOrigin, Value))
 resolveScriptTxOut txo = do
     mv <- resolveScriptTxOutValidator txo
     mdv <- resolveScriptTxOutDatumAndValue txo
@@ -823,7 +830,7 @@ resolveScriptTxOutDatumAndValue
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Datum, Value))
+    => ChainIndexTxOut -> m (Maybe (DatumWithOrigin, Value))
 resolveScriptTxOutDatumAndValue
         Tx.ScriptChainIndexTxOut
             { Tx._ciTxOutScriptDatum = (dh, d)
@@ -832,8 +839,11 @@ resolveScriptTxOutDatumAndValue
 
     -- first check in the 'ChainIndexTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
-    dataValue <- maybe (lookupDatum dh) pure d
-    pure $ Just (dataValue, _ciTxOutValue)
+    datum <- case d of
+        Tx.DatumUnknown      -> DatumInTx <$> lookupDatum dh
+        Tx.DatumInBody datum -> pure (DatumInTx datum)
+        Tx.DatumInline datum -> pure (DatumInline datum)
+    pure $ Just (datum, _ciTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
 
 toCardanoTxOutWithOutputDatum ::

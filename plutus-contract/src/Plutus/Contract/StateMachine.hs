@@ -53,7 +53,7 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import Control.Lens (_2, _Just, makeClassyPrisms, review, (^?))
+import Control.Lens (_2, makeClassyPrisms, review, (^?))
 import Control.Monad (unless)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
@@ -141,7 +141,7 @@ getStates
 getStates (SM.StateMachineInstance _ si) refMap =
     flip mapMaybe (Map.toList refMap) $ \(txOutRef, ciTxOut) -> do
       let txOut = Tx.toTxInfoTxOut ciTxOut
-      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
+      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . Tx.datumInDatumFromQuery
       ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef txOut datum
       pure OnChainState{ocsTxOutRef}
 

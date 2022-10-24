@@ -21,8 +21,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, scriptTxInputs, toTxOut,
-                         txInputRef, unitDatum, unitRedeemer)
+import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), DatumFromQuery (DatumInBody), inputs,
+                         paymentPubKeyHash, scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
@@ -35,7 +35,7 @@ import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Ledger
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
-import Ledger.Tx (Tx (txCollateral, txOutputs), TxOut (TxOut), txOutAddress)
+import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
@@ -164,7 +164,7 @@ mustUseOutputAsCollateralProp = property $ do
             Hedgehog.annotateShow e
             Hedgehog.failure
         Right utx -> do
-            let coll = txCollateral (view OC.tx utx)
+            let coll = txCollateralInputs (view OC.tx utx)
             Hedgehog.assert $ length coll == 1
             Hedgehog.assert $ Ledger.txInputRef (head coll) == txOutRef
 
@@ -173,7 +173,7 @@ txOut0 =
     Ledger.ScriptChainIndexTxOut
         (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
         mempty
-        (Ledger.datumHash Ledger.unitDatum, Just Ledger.unitDatum)
+        (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
         (alwaysSucceedValidatorHash, Nothing)
 
@@ -209,7 +209,7 @@ txOut1 =
     Ledger.ScriptChainIndexTxOut
         (Ledger.Address (ScriptCredential validatorHash1) Nothing)
         mempty
-        (Ledger.datumHash Ledger.unitDatum, Just Ledger.unitDatum)
+        (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
         (validatorHash1, Nothing)
 

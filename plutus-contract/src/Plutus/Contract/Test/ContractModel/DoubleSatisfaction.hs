@@ -364,7 +364,7 @@ doubleSatisfactionCounterexamples dsc = do
                                        & dsTx   .~ tx
        valueStolen0 = dsc & l . outAddress .~ stealerCardanoAddress
                           & dsTx . outputs %~ (withDatumOut:)
-                          & dsTx  %~ addScriptTxInput newFakeTxOutRef alwaysOkValidator redeemerEmpty datumEmpty
+                          & dsTx  %~ addScriptTxInput newFakeTxOutRef alwaysOkValidator redeemerEmpty (Just datumEmpty)
                           & dsUtxoIndex %~
                              (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
                                                                         newFakeTxScriptOut m)

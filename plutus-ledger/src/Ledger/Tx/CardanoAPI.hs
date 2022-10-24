@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TupleSections      #-}
 
 {-|
 
@@ -22,6 +23,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxBodyContent
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
+  , toCardanoDatumWitness
   , toCardanoTxInReferenceWitnessHeader
   , toCardanoTxInScriptWitnessHeader
   , toCardanoMintValue
@@ -41,6 +43,7 @@ import Ledger.Tx.CardanoAPI.Internal
 import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as PV1
 
+
 toCardanoTxBodyContent
     :: P.Params
     -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
@@ -50,8 +53,14 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
     -- TODO: translate all fields
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
-    txInsCollateral <- toCardanoTxInsCollateral txCollateral
+    txInsCollateral <- toCardanoTxInsCollateral txCollateralInputs
     let txOuts = P.getTxOut <$> txOutputs
+    -- Workaround for missing export https://github.com/input-output-hk/cardano-node/pull/4496
+    (returnCollateral, totalCollateral) <- case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+      Just txTotalAndReturnCollateralInBabbageEra ->
+        (maybe C.TxReturnCollateralNone (C.TxReturnCollateral txTotalAndReturnCollateralInBabbageEra . P.getTxOut) txReturnCollateral,)
+        <$> maybe (pure C.TxTotalCollateralNone) (fmap (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) . toCardanoLovelace) txTotalCollateral
+      Nothing -> pure (C.TxReturnCollateralNone, C.TxTotalCollateralNone)
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue tx
@@ -62,8 +71,8 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
         , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
         , txInsCollateral = txInsCollateral
         , txOuts = txOuts
-        , txTotalCollateral = C.TxTotalCollateralNone -- TODO Change when going to Babbage era txs
-        , txReturnCollateral = C.TxReturnCollateralNone -- TODO Change when going to Babbage era txs
+        , txTotalCollateral = totalCollateral
+        , txReturnCollateral = returnCollateral
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
@@ -156,14 +165,17 @@ toCardanoTxInWitness tx
         valhOrRef
         dh)
     = do
-      (PV1.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup dh (P.txData tx)
+      mDatum <- traverse (maybe (Left MissingDatum) pure . (`Map.lookup` P.txData tx)) dh
       mkWitness <- case valhOrRef of
         Left valh -> maybe (Left MissingInputValidator) (toCardanoTxInScriptWitnessHeader . fmap PV1.getValidator) $ P.lookupValidator (P.txScripts tx) valh
         Right vref -> toCardanoTxInReferenceWitnessHeader vref
       pure $ C.ScriptWitness C.ScriptWitnessForSpending $ mkWitness
-            (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
+            (toCardanoDatumWitness mDatum)
             (toCardanoScriptData redeemer)
             zeroExecutionUnits
+
+toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
+toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)
 
 type WitnessHeader = C.ScriptDatum C.WitCtxTxIn -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness C.WitCtxTxIn C.BabbageEra
 

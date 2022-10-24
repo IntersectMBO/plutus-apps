@@ -38,7 +38,7 @@ import GHC.Generics (Generic)
 import Ledger.Address (Address (addressCredential))
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
-import Ledger.Tx qualified as L (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut))
+import Ledger.Tx qualified as L (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), DatumFromQuery (..))
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -154,13 +154,13 @@ makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
           logWarn $ NoDatumScriptAddr txout
           pure Nothing
  where
-    getDatumWithHash :: OutputDatum -> Eff effs (Maybe (DatumHash, Maybe Datum))
+    getDatumWithHash :: OutputDatum -> Eff effs (Maybe (DatumHash, L.DatumFromQuery))
     getDatumWithHash NoOutputDatum = pure Nothing
     getDatumWithHash (OutputDatumHash dh) = do
         d <- getDatumFromHash dh
-        pure $ Just (dh, d)
+        pure $ Just (dh, maybe L.DatumUnknown L.DatumInBody d)
     getDatumWithHash (OutputDatum d) = do
-        pure $ Just (datumHash d, Just d)
+        pure $ Just (datumHash d, L.DatumInline d)
 
     script = fromReferenceScript refScript
 

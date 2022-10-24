@@ -16,6 +16,8 @@ module Ledger.Blockchain (
     Blockchain,
     Context(..),
     eitherTx,
+    unOnChain,
+    onChainTxIsValid,
     consumableInputs,
     outputsProduced,
     transaction,
@@ -38,20 +40,21 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
 import Data.ByteString qualified as BS
+import Data.Either (fromRight)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
+import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxOutputs, spentOutputs, txOutDatumHash, txOutPubKey, txOutValue,
-                  unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
-import Data.Either (fromRight)
-import Data.OpenApi qualified as OpenApi
+import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
+                  getCardanoTxInputs, getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, spentOutputs,
+                  txOutDatumHash, txOutPubKey, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral,
+                  validValuesTx)
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Value (Value)
@@ -98,12 +101,19 @@ eitherTx :: (CardanoTx -> r) -> (CardanoTx -> r) -> OnChainTx -> r
 eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
+unOnChain :: OnChainTx -> CardanoTx
+unOnChain = eitherTx id id
+
+onChainTxIsValid :: OnChainTx -> Bool
+onChainTxIsValid = eitherTx (const False) (const True)
+
+-- | Outputs consumed from the UTXO set by the 'OnChainTx'
 consumableInputs :: OnChainTx -> [TxIn]
 consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
-outputsProduced :: OnChainTx -> [TxOut]
-outputsProduced = eitherTx (const []) getCardanoTxOutputs
+outputsProduced :: OnChainTx -> Map TxOutRef TxOut
+outputsProduced = eitherTx getCardanoTxProducedReturnCollateral getCardanoTxProducedOutputs
 
 -- | Lookup a transaction in a 'Blockchain' by its id.
 transaction :: Blockchain -> TxId -> Maybe OnChainTx
@@ -113,11 +123,8 @@ transaction bc tid = getFirst . foldMap (foldMap p) $ bc where
 -- | Determine the unspent output that an input refers to
 out :: Blockchain -> TxOutRef -> Maybe TxOut
 out bc o = do
-    Valid t <- transaction bc (txOutRefId o)
-    let i = txOutRefIdx o
-    if fromIntegral (length (getCardanoTxOutputs t)) <= i
-        then Nothing
-        else Just $ getCardanoTxOutputs t !! fromIntegral i
+    tx <- transaction bc (txOutRefId o)
+    Map.lookup o $ outputsProduced tx
 
 -- | Determine the unspent value that a transaction output refers to.
 value :: Blockchain -> TxOutRef -> Maybe Value
