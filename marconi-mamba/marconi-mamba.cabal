@@ -125,6 +125,11 @@ executable examples-json-rpc-server
   hs-source-dirs: examples/json-rpc-server/src
   main-is:        Main.hs
 
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
   --------------------
   -- Local components
   --------------------
@@ -151,3 +156,62 @@ executable examples-json-rpc-client
     , http-client
     , servant
     , servant-client
+
+library db-utils
+  import:          lang
+  hs-source-dirs:  db-utils/src
+  exposed-modules: Marconi.DB.SqlUtils
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-streaming
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , json-rpc
+    , marconi
+    , marconi-mamba
+    , plutus-ledger
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base            >=4.9 && <5
+    , containers
+    , lens
+    , servant
+    , servant-server
+    , sqlite-simple
+    , text
+    , time
+    , warp
+
+executable db-utils-exe
+  import:         lang
+  hs-source-dirs: db-utils/exe
+  main-is:        Main.hs
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-streaming
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:  marconi-mamba
+
+  ------------------------
+
+  build-depends:
+    , base      >=4.9 && <5
+    , db-utils
