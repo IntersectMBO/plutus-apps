@@ -45,6 +45,7 @@ tests =
         , mustSpendRemainingInitialUtxosFromOwnWallet
         , mustSpendSingleUtxoFromOtherWallet
         , mustSpendAllUtxosFromOtherWallet
+        , mustSpendTwiceTheSameUtxoIsOk
         , contractErrorWhenAttemptingToSpendNonExistentOutput
         , phase2FailureWhenTxoIsNotSpent
         ]
@@ -107,6 +108,8 @@ mustSpendSingleUtxoFromOwnWallet =
             let w1TxoRefs = txoRefsFromWalletState w1State
                 w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
             void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef w1MiddleTxoRef w1PaymentPubKeyHash
+                overridedW1TxoRefs = overrideW1TxOutRefs w1MiddleTxoRef -- need to override index due to bug 695
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract overridedW1TxoRefs overridedW1TxoRefs w1PaymentPubKeyHash
             void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with a single txOutRef from own wallet"

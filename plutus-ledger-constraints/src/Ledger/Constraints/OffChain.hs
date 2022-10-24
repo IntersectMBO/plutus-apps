@@ -972,5 +972,5 @@ instance Pretty MkTxError where
         NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
         MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
         AmbiguousRedeemer t rs         -> "Try to spend a script output" <+> pretty t <+> "with different redeemers:" <+> pretty rs
-        AmbiguousReferenceScript t rss  -> "Try to spend a script output" <+> pretty t <+> "with different referenceScript:" <+> pretty rss
+        AmbiguousReferenceScript t rss -> "Try to spend a script output" <+> pretty t <+> "with different referenceScript:" <+> pretty rss
 
