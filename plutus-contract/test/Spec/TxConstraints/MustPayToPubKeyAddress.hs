@@ -9,10 +9,11 @@
 {-# LANGUAGE TypeApplications    #-}
 module Spec.TxConstraints.MustPayToPubKeyAddress(tests) where
 
-import Control.Lens ((??), (^.))
+import Control.Lens (_1, _head, has, makeClassyPrisms, only, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
@@ -33,6 +34,8 @@ import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
+
+makeClassyPrisms ''ScriptError
 
 -- Constraint's functions should soon be changed to use Address instead of PaymentPubKeyHash and StakeKeyHash
 tests :: TestTree
@@ -77,6 +80,9 @@ v2FeaturesNotAvailableTests :: SubmitTx -> LanguageContext -> TestTree
 v2FeaturesNotAvailableTests sub t = testGroup "Plutus V2 features" $
     [ phase1FailureWhenUsingInlineDatumWithV1
     ] ?? sub ?? t
+
+evaluationError :: Text.Text -> Ledger.ValidationError -> Bool
+evaluationError errCode = has $ Ledger._ScriptFailure . _EvaluationError . _1 . _head . only errCode
 
 someDatum :: Ledger.Datum
 someDatum = asDatum @P.BuiltinByteString "datum"
@@ -215,8 +221,7 @@ successfulUseOfMustPayWithDatumInTxToPubKeyAddress submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 =
-                    Constraints.mustPayWithDatumInTxToPubKeyAddress
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress
                         w2PaymentPubKeyHash
                         w2StakePubKeyHash
                         someDatum
@@ -236,14 +241,18 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w1PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress
+                        w1PaymentPubKeyHash
+                        w2StakePubKeyHash
+                        someDatum
+                        adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected PaymentPubkeyHash"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction $ const $ evaluationError "La")
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Datum"
@@ -259,7 +268,7 @@ phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected Datum"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction $ const $ evaluationError "La")
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Value"
@@ -275,7 +284,7 @@ phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected Value"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction $ const $ evaluationError "La")
     (void $ trace contract)
 
 
@@ -309,7 +318,7 @@ phase1FailureWhenUsingInlineDatumWithV1 submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-1 failure when mustPayToPubKeyAddress in a V1 script use inline datum"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
+    (assertFailedTransaction (const $ has Ledger._CardanoLedgerValidationError))
     (void $ trace contract)
 
 

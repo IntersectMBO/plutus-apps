@@ -98,26 +98,6 @@ txoRefsFromWalletState w = let
   pkCred = addressCredential $ Wallet.ownAddress w
   in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
-{-
--- Example of bug https://github.com/input-output-hk/plutus-apps/issues/696
-bug696 :: TestTree
-bug696 =
-    let trace = do
-            thisChainState <- Trace.chainState
-            let traceBlockchain = thisChainState ^. chainNewestFirst
-                traceEmulatorState = emulatorState traceBlockchain
-                walletStateMap = traceEmulatorState ^. walletStates
-                w1State = fromJust $ M.lookup w1 walletStateMap -- Fails here: Maybe.fromJust: Nothing
-
-                w1TxoRefs = txoRefsFromWalletState w1State
-                w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef w1MiddleTxoRef w1PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
-
-    in checkPredicate "Example of bug 696"
-        (assertValidatedTransactionCount 2 .&&. walletFundsChange w1 mempty)
-        (void trace)
--}
 
 -- | Uses onchain and offchain constraint mustSpendPubKeyOutput to spend a single utxo from own wallet
 mustSpendSingleUtxoFromOwnWallet :: TestTree
