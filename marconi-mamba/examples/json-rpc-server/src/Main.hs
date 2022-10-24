@@ -4,6 +4,7 @@
 -}
 module Main where
 
+import Cardano.Api (NetworkId (Mainnet))
 import Marconi.Api.Types (TargetAddresses)
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc, targetAddressParser)
 
@@ -24,5 +25,5 @@ addresses = targetAddressParser bech32Addresses
 main :: IO ()
 main = do
     putStrLn "Starting the Example rpc http-server on port 3000 example"
-    env <- bootstrapJsonRpc dbpath Nothing addresses
+    env <- bootstrapJsonRpc dbpath Nothing addresses Mainnet
     bootstrapHttp env

@@ -65,6 +65,7 @@ data DBQueryEnv = DBQueryEnv
     { _dbConf         :: DBConfig           -- ^ path to dqlite db
     , _queryQSem      :: QSemN           -- ^ used to serialize addess to sqlite
     , _queryAddresses :: TargetAddresses    -- ^ user provided addresses to filter
+    , _network        :: Cardano.Api.NetworkId   -- ^ cardano network id
     }
 makeClassy ''DBQueryEnv
 

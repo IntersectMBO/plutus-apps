@@ -10,6 +10,7 @@ module Marconi.Api.UtxoIndexersQuery
     , reportQueryAddresses
     , UtxoRow(..)
     , reportQueryCardanoAddresses
+    , withQueryAction
     ) where
 
 import Cardano.Api qualified as CApi
@@ -25,32 +26,36 @@ import Database.SQLite.Simple qualified as SQL
 import Ledger (Address, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag), fromCardanoAddress)
 import Marconi.Api.Types (CardanoAddress, DBConfig (DBConfig),
-                          DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem), HasDBConfig (utxoConn),
-                          HasDBQueryEnv (dbConf, queryAddresses, queryQSem, queryQSem), TargetAddresses,
-                          UtxoRowWrapper (UtxoRowWrapper))
+                          DBQueryEnv (DBQueryEnv, _dbConf, _network, _queryAddresses, _queryQSem),
+                          HasDBConfig (utxoConn), HasDBQueryEnv (dbConf, queryAddresses, queryQSem, queryQSem),
+                          TargetAddresses, UtxoRowWrapper (UtxoRowWrapper))
 import Marconi.Index.Utxo (UtxoRow (UtxoRow, _reference))
 
 bootstrap
     ::  FilePath
     -> TargetAddresses
+    -> CApi.NetworkId
     -> IO DBQueryEnv
-bootstrap dbPath targetAddresses = do
+bootstrap dbPath targetAddresses nId = do
     dbconf <- DBConfig <$> open dbPath
     qsem <- newQSemN 1
     pure $ DBQueryEnv
         {_dbConf = dbconf
         , _queryQSem = qsem
-        , _queryAddresses = targetAddresses}
+        , _queryAddresses = targetAddresses
+        , _network = nId
+        }
 
 findByPlutusAddress
     :: DBQueryEnv
     -> Address              -- ^ Plutus address
     -> IO (Set TxOutRef)    -- ^ set of corresponding TxOutRefs
-findByPlutusAddress env address = withQueryAction action (env ^. queryQSem)
+findByPlutusAddress env address = pure . fromList . fmap _reference =<< withQueryAction action (env ^. queryQSem)
     where
-        action = fromList <$> SQL.queryNamed
+        action :: IO [UtxoRow]
+        action = SQL.queryNamed
                   (env ^. dbConf . utxoConn)
-                  "SELECT txId FROM utxos WHERE utxos.address=:address"
+                  "SELECT * FROM utxos WHERE utxos.address=:address"
                   [":address" := address]
 
 -- | Retrieve a Set of TxOutRefs associated with the given Cardano Era address
