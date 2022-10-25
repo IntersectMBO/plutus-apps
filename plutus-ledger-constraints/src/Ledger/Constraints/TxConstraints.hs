@@ -720,7 +720,7 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- If several calls to 'mustSpendScriptOutput' are performed for the same 'TxOutRef',
 -- if the two constraints have different redeemers, an error will be thrown when the transaction will be submitted.
 -- Otherwise, only one instance of the constraint is kept.
--- If combine with 'mustSpendScriptOutputWithReference' for the same 'TxOutRef', see 'mustSpendScriptOutputWithReference'.
+-- If combined with 'mustSpendScriptOutputWithReference' for the same 'TxOutRef', see 'mustSpendScriptOutputWithReference'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
