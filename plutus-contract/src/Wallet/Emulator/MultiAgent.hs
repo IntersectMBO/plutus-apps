@@ -36,6 +36,7 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Cardano.Api (NetworkId)
+import Data.Foldable (fold)
 import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
@@ -299,7 +300,7 @@ emulatorStateInitialDist networkId mp = do
     outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatum) $ Map.toList mp >>= mkOutputs
     let tx = mempty
            { txOutputs = TxOut <$> outs
-           , txMint = foldMap snd $ Map.toList mp
+           , txMint = fold mp
            , txValidRange = WAPI.defaultSlotRange
            }
         cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty

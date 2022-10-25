@@ -286,7 +286,7 @@ runThreads e = do
             in loop
                 $ initialState
                     & activeThreads . at initialThreadTag . non mempty %~ HashSet.insert initialThreadId
-                    & mailboxes . at initialThreadId .~ Just Seq.empty
+                    & mailboxes . at initialThreadId ?~ Seq.empty
                     & (fst . nextThreadId)
                     & enqueue (suspendThread Normal initialThread)
 
