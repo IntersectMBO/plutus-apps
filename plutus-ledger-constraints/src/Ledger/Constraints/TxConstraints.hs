@@ -718,7 +718,7 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- 'Ledger.Constraints.OffChain.otherData'.
 --
 -- If several calls to 'mustSpendScriptOutput' are performed for the same 'TxOutRef',
--- if the two constraints have different redeemers, an error will be thrown when the transaction will be submitted.
+-- if the two constraints have different redeemers, an error will be thrown when the transaction is created.
 -- Otherwise, only one instance of the constraint is kept.
 -- If combined with 'mustSpendScriptOutputWithReference' for the same 'TxOutRef', see 'mustSpendScriptOutputWithReference'.
 --
@@ -741,8 +741,8 @@ mustSpendScriptOutput txOutref red = singleton $ MustSpendScriptOutput txOutref 
 --
 -- If several calls to 'mustSpendScriptOutputWithReference' are performed for the same 'TxOutRef',
 -- if the two constraints have different redeemers,
--- or if the two constraints use a different 'TxOutRef' as a TxOutRef, an error will be thrown when the transaction will
--- be submitted.
+-- or if the two constraints use a different 'TxOutRef' as a TxOutRef, an error will be thrown when the transaction is
+-- created.
 -- Otherwise, only one instance of the constraint is kept.
 --
 -- If combined with 'mustSpendScriptOutput' for the same 'TxOutRef', an error is throw if they have a different
@@ -761,8 +761,8 @@ mustSpendScriptOutputWithReference txOutref red refTxOutref =
 -- must spend an output locked by the given validator script hash,
 -- which includes a @Datum@ that matches the given datum predicate and a @Value@ that matches the given value predicate.
 --
--- If used in 'Ledger.Constraints.OffChain', this constraint checks that there's exactly one output that matches the requirements,
--- and then adds this as an input to the transaction with the given redeemer.
+-- If used in 'Ledger.Constraints.OffChain', this constraint checks that there's exactly one output that matches the
+-- requirements, and then adds this as an input to the transaction with the given redeemer.
 --
 -- The outputs that will be considered need to be privided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.unspentOutputs'.
