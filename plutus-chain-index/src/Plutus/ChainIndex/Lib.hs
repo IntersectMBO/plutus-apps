@@ -167,14 +167,17 @@ filterTxs isAccepted isStored handler (RollForward (CI.Block blockTip txs) chain
 filterTxs _ _ handler evt = handler evt
 
 -- | Get the slot number of the current tip of the node.
-getTipSlot :: Config.ChainIndexConfig -> IO C.SlotNo
+getTipSlot :: Config.ChainIndexConfig -> IO (Maybe C.SlotNo)
 getTipSlot config = do
-  C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
-    { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-    , C.localNodeNetworkId = Config.cicNetworkId config
-    , C.localNodeSocketPath = Config.cicSocketPath config
-    }
-  pure slotNo
+  tip <- C.getLocalChainTip $ C.LocalNodeConnectInfo
+         { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+         , C.localNodeNetworkId = Config.cicNetworkId config
+         , C.localNodeSocketPath = Config.cicSocketPath config
+         }
+  case tip of
+    C.ChainTip slotNo _ _ -> pure $ Just slotNo
+    C.ChainTipAtGenesis   -> pure $ Nothing
+
 
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
