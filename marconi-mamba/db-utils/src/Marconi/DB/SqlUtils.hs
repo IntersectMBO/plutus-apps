@@ -7,28 +7,23 @@
 module Marconi.DB.SqlUtils where
 
 import Cardano.Api qualified as CApi
-import Control.Lens
+import Control.Concurrent.Async (forConcurrently_)
+import Control.Lens ((^.))
 import Control.Monad (void)
-import Data.Foldable (traverse_)
 import Data.Maybe (catMaybes)
-import Data.Text (Text, intercalate, unpack)
-import Database.SQLite.Simple (NamedParam ((:=)), open)
+import Data.Text (Text)
 import Database.SQLite.Simple qualified as SQL
-import Database.SQLite.Simple.FromField
-import Database.SQLite.Simple.FromField ()
+import Database.SQLite.Simple.FromField (FromField)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
-import Database.SQLite.Simple.ToField
-import Database.SQLite.Simple.ToField ()
+import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
-import GHC.Generics
+import GHC.Generics (Generic)
 import Ledger qualified as Plutus
-import Ledger.Tx.CardanoAPI.Internal
-import Marconi.Api.Types
+import Ledger.Tx.CardanoAPI.Internal (toCardanoAddressInEra)
+import Marconi.Api.Types (DBQueryEnv (..), HasDBQueryEnv (..), utxoConn)
 import Marconi.Api.UtxoIndexersQuery (withQueryAction)
-import Marconi.Index.Utxo
-
 data ShelleyFrequencyTable a = ShelleyFrequencyTable
-    { _sAddress   :: a
+    { _sAddress   :: !a
     , _sFrequency :: Int
     } deriving Generic
 
@@ -47,9 +42,9 @@ freqUtxoTable env = do
     void $ withQueryAction (SQL.execute_ conn
                             "drop table if exists frequtxos") qsem
     void $ withQueryAction (SQL.execute_ conn
-                            "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC") qsem
-    void $ withQueryAction (SQL.execute_ conn
                             "drop table if exists shelleyaddresses") qsem
+    void $ withQueryAction (SQL.execute_ conn
+                            "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC") qsem
     void $ withQueryAction ( SQL.execute_ conn
                              "create TABLE shelleyaddresses (address text not null, frequency int not null)" ) qsem
     pure ()
@@ -63,9 +58,13 @@ freqShelleyTable env = do
                                 "SELECT address, frequency FROM frequtxos") qsem :: IO [ShelleyFrequencyTable Plutus.Address]
     let addresses = catMaybes . fmap (toShelly' nid  ) $ addressFreq
 
-    traverse_ ( \(ShelleyFrequencyTable a f) -> withQueryAction (SQL.execute conn
-                     "insert into shelleyaddresses (address, frequency) values (?, ?)"
-                     (a, f)) qsem ) addresses
+    SQL.execute_ conn "BEGIN TRANSACTION"
+    forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
+                                      (SQL.execute conn
+                                       "insert into shelleyaddresses (address, frequency) values (?, ?)"
+                                       (a, f)))
+    SQL.execute_ conn "COMMIT"
+
     pure . fmap _sAddress $ addresses
 
 toShelly :: CApi.NetworkId  -> Plutus.Address -> Maybe Text

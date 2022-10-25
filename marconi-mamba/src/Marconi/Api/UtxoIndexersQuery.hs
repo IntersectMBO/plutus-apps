@@ -11,6 +11,7 @@ module Marconi.Api.UtxoIndexersQuery
     , UtxoRow(..)
     , reportQueryCardanoAddresses
     , withQueryAction
+    , withDBAction
     ) where
 
 import Cardano.Api qualified as CApi
@@ -45,6 +46,8 @@ bootstrap dbPath targetAddresses nId = do
         , _queryAddresses = targetAddresses
         , _network = nId
         }
+
+
 
 findByPlutusAddress
     :: DBQueryEnv
@@ -103,6 +106,14 @@ findTxOutRefs env = withQueryAction action (env ^. queryQSem)
                     "SELECT address, txId, inputIx FROM utxos limit 100" :: IO [UtxoRow] )
                 >>= pure . fromList . fmap _reference
 
+withDBAction
+    :: IO a     -- ^ connection
+    -> DBQueryEnv    -- ^ database query
+    -> IO a
+
+withDBAction  action env = bracket_ (pure ()) (SQL.close conn) action
+    where
+        conn = env ^. dbConf . utxoConn
 withQueryAction
     :: IO a     -- ^ connection
     -> QSemN    -- ^ database query

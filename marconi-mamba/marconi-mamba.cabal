@@ -183,6 +183,7 @@ library db-utils
   ------------------------
   build-depends:
     , aeson
+    , async
     , base            >=4.9 && <5
     , containers
     , lens
