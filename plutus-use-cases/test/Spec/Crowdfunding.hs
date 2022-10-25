@@ -34,7 +34,7 @@ import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
--- import Test.Tasty.QuickCheck hiding ((.&&.))
+import Test.Tasty.QuickCheck hiding ((.&&.))
 
 import Ledger (Value)
 import Ledger qualified
@@ -169,9 +169,14 @@ tests = testGroup "crowdfunding"
         "test/Spec/contractError.txt"
         (pure $ renderWalletLog (void $ Trace.activateContractWallet w1 con))
 
-    -- TODO: Linked to https://github.com/input-output-hk/plutus-apps/issues/754
-    -- Re-activate once issue is resolved
-    -- , testProperty "QuickCheck ContractModel" prop_Crowdfunding
+    , testProperty "QuickCheck ContractModel" prop_Crowdfunding
+
+    , testProperty "start-at-slot-20" $ withMaxSuccess 1 $
+        let fixedTestCase = do
+              action $ CContribute w6 (Ada.lovelaceValueOf 20000000)
+              waitUntilDL (Slot 20)
+              action CStart
+        in forAllDL fixedTestCase prop_Crowdfunding
     ]
 
     where
@@ -236,16 +241,27 @@ instance ContractModel CrowdfundingModel where
       withdraw w v
       contributions $~ Map.insert w v
     CStart -> do
-      ownerOnline .= True
+      slot' <- viewModelState currentSlot
+      end <- viewContractState endSlot
+      -- Collecting happens immediately if the campaign deadline has passed
+      if slot' < end
+        then do
+          ownerOnline .= True
+        else do
+          cMap <- viewContractState contributions
+          owner <- viewContractState ownerWallet
+          deposit owner (fold cMap)
+          contributions .= Map.empty
+          ownerContractDone .= True
 
   nextReactiveState slot' = do
     -- If the owner is online and its after the
     -- contribution deadline deadline
     -- they collect all the money
     end <- viewContractState endSlot
-    online  <- viewContractState ownerOnline
+    online <- viewContractState ownerOnline
     when (slot' >= end && online) $ do
-      owner   <- viewContractState ownerWallet
+      owner <- viewContractState ownerWallet
       cMap <- viewContractState contributions
       deposit owner (fold cMap)
       contributions .= Map.empty
@@ -303,3 +319,4 @@ prop_Crowdfunding actions = propRunActionsWithOptions
     defaultCoverageOptions
     (\ _ -> pure True)
     actions
+
