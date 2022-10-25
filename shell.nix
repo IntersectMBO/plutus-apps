@@ -9,10 +9,9 @@ let
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt glibcLocales;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cabal-fmt;
 
-  # Feed cardano-wallet, cardano-cli & cardano-node to our shell.
-  # This is stable as it doesn't mix dependencies with this code-base;
-  # the fetched binaries are the "standard" builds that people test.
-  # This should be fast as it mostly fetches Hydra caches without building much.
+  # Feed cardano-wallet, cardano-cli & cardano-node to our shell. This is stable as it doesn't mix
+  # dependencies with this code-base; the fetched binaries are the "standard" builds that people
+  # test. This should be fast as it mostly fetches Hydra caches without building much.
   cardano-wallet = (import sources.flake-compat {
     inherit pkgs;
     src = builtins.fetchTree
@@ -20,16 +19,16 @@ let
         type = "github";
         owner = "input-output-hk";
         repo = "cardano-wallet";
-        rev = "a73d8c9717dc4e174745f8568d6f3fe84f0f9d76";
-        narHash = "sha256-ncoAaIPWRhJ2FShesmrp4q5LK1PtWuzqOKuhlwerWac=";
+        rev = "18a931648550246695c790578d4a55ee2f10463e";
+        narHash = "sha256-3Rnj/g3KLzOW5YSieqsUa9IF1Td22Eskk5KuVsOFgEQ=";
       };
   }).defaultNix;
   cardano-node = import
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-node";
       # A standard release compatible with the cardano-wallet commit above is always preferred.
-      rev = "1.35.0";
-      sha256 = "06arx9hv7dn3qxfy83f0b6018rxbsvh841nvfyg5w6qclm1hddj7";
+      rev = "1.35.3";
+      sha256 = "020fwimsm24yblr1fmnwx240wj8r3x715p89cpjgnnd8axwf32p0";
     })
     { };
 
