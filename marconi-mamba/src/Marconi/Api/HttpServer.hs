@@ -9,19 +9,18 @@ module Marconi.Api.HttpServer(
     ) where
 
 import Cardano.Api ()
-
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
+import Data.Bifunctor (bimap)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
-import Ledger.Tx (TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (Address, DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper)
-import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findByAddress, findTxOutRefs, findUtxos, reportQueryAddresses,
-                                                          reportQueryCardanoAddresses)
+import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper,
+                          UtxoTxOutReport (..))
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findAll, findByAddress, findUtxos, reportBech32Addresses)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
@@ -37,21 +36,27 @@ bootstrap env =  runSettings
 server :: DBQueryEnv -> Server API
 server env
     = ( echo
-        :<|> txOutRefReport env
-        :<|> txOutRefsReport env
+        :<|> utxoTxOutReport env
+        :<|> utxoTxOutReports env
         :<|> utxosReport env
         :<|> targetAddressesReport env
-        :<|> printMessage )
+        :<|> printMessage env )
       :<|> (getTime
             :<|> getTargetAddresses env
-            :<|> printMessage)
+            :<|> printMessage env)
 
 -- | prints message to console
 --  Used for testing the server from console
 printMessage
-    :: String
+    :: DBQueryEnv               -- ^ database configuration
+    -> String
     -> Handler NoContent
-printMessage msg = NoContent <$ liftIO (putStrLn msg)
+printMessage env msg = NoContent <$  (
+    liftIO $ do
+            putStrLn msg
+            putStrLn "\n"
+            print (Q.Utxo.reportBech32Addresses env)
+    )
 
 -- | echos message back as a jsonrpc response
 --  Used for testing the server
@@ -69,25 +74,25 @@ getTime = timeString <$> liftIO getCurrentTime
 
 getTargetAddresses
     :: DBQueryEnv               -- ^ database configuration
-    ->  Handler Text
-getTargetAddresses env =  liftIO $ Q.Utxo.reportQueryCardanoAddresses env
+    ->  Handler (Set Text)
+getTargetAddresses =  pure . Q.Utxo.reportBech32Addresses
 
 -- | Retrieves a set of TxOutRef
-txOutRefReport
+utxoTxOutReport
     :: DBQueryEnv               -- ^ database configuration
     -> String                   -- ^ bech32 addressCredential
-    -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
-txOutRefReport env address =
-    liftIO $ cardanoErrToRpcErr <$> (Q.Utxo.findByAddress env . pack ) address
+    -> Handler (Either (JsonRpcErr String) UtxoTxOutReport )
+utxoTxOutReport env address = liftIO $
+    bimap cardanoErrToRpcErr id <$> (Q.Utxo.findByAddress env . pack $ address)
 
 -- | Retrieves a set of TxOutRef
 --
-txOutRefsReport
+utxoTxOutReports
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) (Set TxOutRef))
-txOutRefsReport env _ =
-    liftIO $ Right <$> Q.Utxo.findTxOutRefs env
+    -> Handler (Either (JsonRpcErr String) (Set UtxoTxOutReport))
+utxoTxOutReports env _ =
+    liftIO $ Right <$> Q.Utxo.findAll env
 
 -- | Retrieves a set of TxOutRef
 --
@@ -101,17 +106,14 @@ utxosReport env _ =
 targetAddressesReport
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) (Set Address))
-targetAddressesReport env _ = liftIO $ Right <$> Q.Utxo.reportQueryAddresses env
+    -> Handler (Either (JsonRpcErr String) (Set Text) )
+targetAddressesReport env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env
 
 -- | convert form cardano error, to jsonrpc protocal error
 cardanoErrToRpcErr
-    :: Either ToCardanoError (Set TxOutRef)
-    -> Either (JsonRpcErr String) (Set TxOutRef)
-cardanoErrToRpcErr = either (Left . f ) Right
-   where
-       f :: ToCardanoError -> JsonRpcErr String
-       f e = JsonRpcErr {
+    :: ToCardanoError
+    -> JsonRpcErr String
+cardanoErrToRpcErr e = JsonRpcErr {
            errorCode = parseErrorCode
            , errorMessage = "address deserialization or conversion related error."
            , errorData = Just . show $ e

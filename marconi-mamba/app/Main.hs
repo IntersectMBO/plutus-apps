@@ -48,7 +48,6 @@ opts = Opt.info (args Opt.<**> Opt.helper)
 main :: IO ()
 main = do
     cli@(CliArgs _ utxoDbPath maybePort nId tAddress)  <- Opt.execParser opts
-    putStrLn $ "Processing addresses:\n " <> show tAddress <> "\n"
     rpcEnv <- bootstrapJsonRpc utxoDbPath maybePort tAddress nId
     race_
        (bootstrapHttp rpcEnv)                            -- start http server

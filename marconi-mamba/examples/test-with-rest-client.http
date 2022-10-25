@@ -23,22 +23,19 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "txOutRefReport"
-, "params": "addr1qxwg25pmc0urp6t5f9em9uvdmecqz6a3j90jr0qk766ty9yxcu5pdxmk0762ejlc6ljjh7axsdqqsyn728lsyy3zdnmqf0ndvp"
+, "method": "utxoTxOutReport"
+, "params": "addr1q837de0y7j3ncegph2a8mc0e86q9evwtekd3ejhlpr97wclrumj7fa9r83jsrw460hslj05qtjcuhnvmrn907zxtua3skv7yyl"
 , "id": 9
 }
-#"addr1qywjwugxprn22w65zdmcqc6c9k3tse4rlft6tngvvg620vlwgcg9jv80wjq5hglp25u2axzntamczptdvqmj6qfvhm8q4d096z"
-#"addr1q8xcmtl4du23g4n8xv64hqdf9cyv3wlumw86ck952y46x46yae0lsnc50jrqqe8hn9w5tqsts2zmdfkx86tgyy5mvc4q86dapf"
-#"addr1q96vdhd8t5p3nsrm4rwtc5lak4htey3rgypm05hf4tjw4eksc0grxn4pmln66cvxjctas9fts7jzfsmvx3lq2ajdcv8qgyxv68"
 #
 # fetch 100 rows from sqlite
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "txOutRefsReport"
+, "method": "utxoTxOutReports"
 , "params": 100
-, "id": 11
+, "id": 14
 }
 #
 # fetch plutus converted addresses the user had provided
@@ -46,7 +43,7 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "addressesReport"
+, "method": "addressesBech32Report"
 , "params": 100
 , "id": 11
 }
@@ -67,3 +64,4 @@ GET http://localhost:3000/rest/time
 #
 # REST call, get the user provided addresses
 GET http://localhost:3000/rest/addresses
+# REST call, get the user provided addresses

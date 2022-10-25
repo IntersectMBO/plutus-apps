@@ -26,16 +26,20 @@ module Marconi.Api.Types
     , JsonRpcEnv (..)
     , HasJsonRpcEnv (..)
     , UtxoRowWrapper (..)
+    , UtxoTxOutReport (..)
     , Address
                          )  where
 
 import Cardano.Api qualified (Address, NetworkId, ShelleyAddr)
 import Control.Concurrent.QSemN (QSemN)
 import Control.Lens (makeClassy)
-import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
+import Data.Aeson (FromJSON, ToJSON (toEncoding), defaultOptions, genericToEncoding)
 import Data.List.NonEmpty (NonEmpty)
+import Data.Set (Set)
+import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import GHC.Generics (Generic)
+import Ledger (TxOutRef)
 import Ledger.Address (Address)
 import Marconi.Index.Utxo (UtxoRow (UtxoRow))
 import Network.Wai.Handler.Warp (Settings)
@@ -75,6 +79,16 @@ data JsonRpcEnv = JsonRpcEnv {
     , _queryEnv   :: DBQueryEnv             -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
+
+data UtxoTxOutReport = UtxoTxOutReport
+    { bech32Address :: Text
+    , txOutRefs     :: Set TxOutRef
+    } deriving (Eq, Ord, Generic)
+
+instance ToJSON UtxoTxOutReport where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON UtxoTxOutReport where
 
 newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving Generic
 
