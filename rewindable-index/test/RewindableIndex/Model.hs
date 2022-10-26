@@ -41,6 +41,7 @@ import Test.Tasty.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Fun, G
                               (==>))
 
 import Debug.Trace qualified as Debug
+import RewindableIndex.Storable qualified as Storable
 
 {- | Laws
   Constructors: new, insert, rewind
@@ -180,6 +181,7 @@ conversion = Conversion
 -- | Generic properties
 prop_observeNew
   :: forall e a n m. (Eq a, Monad m)
+  => Show a
   => Conversion m a e n
   -> Fun (a, e) (a, Maybe n)
   -> a
@@ -200,7 +202,8 @@ prop_observeNew c f a =
       else do
         v <- run $ cView c ix
         h <- run $ cHistory c ix
-        assert $ v == pure (IndexView { ixDepth = depth
+        assert $ -- Debug.trace ("v: " <> show v <> " r: " <> show depth <> ", " <> show a) $
+                 v == pure (IndexView { ixDepth = depth
                                       , ixView  = a
                                       , ixSize  = 1
                                       })
@@ -228,8 +231,8 @@ prop_rewindDepth c (ObservedBuilder ix) =
     monadic (cMonadic c) $ do
       mv <- run $ cView c (rewind depth ix)
       if depth >= ixSize v
-        then assert $ isNothing mv
-        else assert $ isJust    mv
+        then assert $ Debug.trace ("isNothing depth: " <> show depth <> " size: " <> show (ixSize v)) $ isNothing mv
+        else assert $ Debug.trace ("isJust    depth: " <> show depth <> " size: " <> show (ixSize v)) $ isJust    mv
 
 -- | Property that validates the HF data structure.
 prop_sizeLEDepth
@@ -238,6 +241,8 @@ prop_sizeLEDepth
   -> ObservedBuilder a e n
   -> Property
 prop_sizeLEDepth c (ObservedBuilder ix) =
+  let v = fromJust $ view ix in
+  ixDepth v >= 2 ==>
   monadic (cMonadic c) $ do
     (Just v) <- run $ cView c ix
     assert $ ixSize v <= ixDepth v
@@ -245,6 +250,7 @@ prop_sizeLEDepth c (ObservedBuilder ix) =
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
   :: forall e a n m. (Monad m, Show e, Arbitrary e, Eq a)
+  => Show a
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> Property
@@ -262,18 +268,23 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
     h  <- take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
     -- h  <- fromJust <$> run (cHistory c ix)
     h' <- fromJust <$> run (cHistory c ix')
-    assert $ h == h'
+    Debug.trace ("H: " <> show h <> " H': " <> show h') $
+      assert $ h == h'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
 prop_observeInsert
   :: forall e a n m. (Monad m, Eq a)
+  => Show a
+  => Show e
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> [e]
   -> Property
 prop_observeInsert c (ObservedBuilder ix) es =
+  let vo = fromJust $ view ix
+   in ixDepth vo >= 2 ==>
   monadic (cMonadic c) $ do
     Just v  <- run $ cView c ix
     let ix' = insertL es ix
@@ -282,6 +293,10 @@ prop_observeInsert c (ObservedBuilder ix) es =
                         , ixSize  = min (ixDepth v) (length es + ixSize v)
                         , ixView  = foldl' ((fst .) . getFunction ix) (ixView v) es
                         }
+    eso <- run $ cHistory c ix
+    esf <- run $ Debug.trace "FINAL HISTORY" $ cHistory c ix'
+    let esr = scanl' ((fst .) . getFunction ix) (ixView v) es
+    assert $ Debug.trace ("vo: " <> show vo <> " v: " <> show v <> " v': " <> show v' <>" v'': " <> show v'' <> " ES: " <> show es <> " O: " <> show eso <> " F: " <> show esf <> " R: " <> show esr) $ v' == v''
     assert $ v' == v''
 
 -- | Notifications are accumulated as the folding function runs.

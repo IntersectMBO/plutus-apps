@@ -13,6 +13,7 @@ module RewindableIndex.Storable
   , cursor
   , getMemoryEvents
   , getEvents
+  , filterWithQueryInterval
   , StorableEvent
   , StorablePoint
   , StorableQuery
@@ -41,6 +42,10 @@ import Data.Functor ((<&>))
 import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Mutable qualified as VM
+import GHC.Generics (Generic)
+
+import Data.Maybe (isJust)
+import Debug.Trace qualified as Debug
 
 data family StorableEvent h
 
@@ -53,6 +58,7 @@ data family StorableResult h
 data QueryInterval p =
     QEverything
   | QInterval p p
+  deriving (Show, Eq, Generic)
 
 class Buffered h m where
   persistToStorage :: Foldable f => f (StorableEvent h) -> h -> m h
@@ -126,8 +132,8 @@ getEvents
 getEvents s = do
   memoryEs <- getMemoryEvents (s ^. storage)
               & V.freeze <&> V.toList
-  diskEs   <- getStoredEvents $ s ^. handle
-  pure $ memoryEs ++ diskEs
+  diskEs   <- getStoredEvents (s ^. handle)
+  pure $ diskEs ++ memoryEs
 
 insert
   :: Buffered h m
@@ -158,7 +164,8 @@ flushBuffer
 flushBuffer s = do
   let cr = s ^. storage . cursor
       es = getMemoryEvents $ s ^. storage
-  if VM.length es == cr
+      mx = s ^. config . memoryBufferSize
+  if mx == cr
   then do
     v  <- V.freeze es
     h' <- persistToStorage v (s ^. handle)
@@ -188,16 +195,21 @@ rewind
   -> State h m
   -> m (Maybe (State h m))
 rewind p s = do
-  m' <- rewindMemory
-  h' <- rewindStorage p (s ^. handle)
-  pure $ m' <|> (\h -> handle .~ h $ s) <$> h'
+  m' <- Debug.trace "XXX" $ rewindMemory
+  h' <- Debug.trace ("JJJ: " <> show (isJust m')) $ rewindStorage p (s ^. handle)
+  pure $ m' <|> resetMemory s <$> h'
   where
     rewindMemory :: m (Maybe (State h m))
     rewindMemory = do
-      v <- V.freeze $ s ^. storage . events
+      v <- V.freeze $ VM.slice 0 (s ^. storage . cursor) (s ^. storage . events)
       pure $ do
-        ix   <- VG.findIndex (\e -> getPoint e == p) v
-        pure $ s & storage . cursor .~ (ix + 1)
+        ix   <- Debug.trace "find index" $ VG.findIndex (\e -> getPoint e == p) v
+        Debug.trace "returning" $ pure $ s & storage . cursor .~ (ix + 1)
+    resetMemory :: State h m -> h -> State h m
+    resetMemory s' h =
+      s' & handle  .~ h
+         & storage . cursor .~ 0
+
 
 resume
   :: Resumable h m
@@ -215,8 +227,8 @@ filterWithQueryInterval
   -> [StorableEvent h]
 filterWithQueryInterval QEverything es = es
 filterWithQueryInterval (QInterval start end) es =
-  let es' = dropWhile (withPoint (\p -> p >= end)) es
-   in if not (null es') && withPoint (\p -> p > start) (head es')
+  let es' = takeWhile (withPoint (\p -> p <= end)) es
+   in if not (null es') && withPoint (\p -> p >= start) (last es')
       then es'
       else []
   where
@@ -225,6 +237,8 @@ filterWithQueryInterval (QInterval start end) es =
 
 query
   :: HasPoint (StorableEvent h) (StorablePoint h)
+  => Show (StorableEvent h)
+  => Show (StorablePoint h)
   => Ord (StorablePoint h)
   => Queryable h m
   => PrimMonad m
@@ -234,4 +248,5 @@ query
   -> m (StorableResult h)
 query qi s q = do
   es  <- getMemoryEvents (s ^. storage) & V.freeze <&> V.toList
-  queryStorage qi (filterWithQueryInterval qi es) (s ^. handle) q
+  Debug.trace ("Memory events (1): " <> show es <> " QI: " <> show qi) $
+    queryStorage qi (filterWithQueryInterval qi es) (s ^. handle) q

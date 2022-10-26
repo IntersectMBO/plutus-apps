@@ -31,19 +31,18 @@ sProperties :: TestTree
 sProperties = testGroup "New index properties."
   [ testProperty "New: Positive or non-positive depth" $
       withMaxSuccess 10000 $ Ix.prop_observeNew @Int @Int S.conversion
-  , testProperty "History length is always smaller than the max depth" $
-      withMaxSuccess 10000 $ Ix.prop_sizeLEDepth @Int @Int S.conversion
-        {-, testProperty "Rewind: Connection with `ixDepth`" $
-      withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int @Int V.conversion
+  -- , testProperty "History length is always smaller than the max depth" $
+  --     withMaxSuccess 1000 $ Ix.prop_sizeLEDepth @Int @Int S.conversion
+  -- , testProperty "Rewind: Connection with `ixDepth`" $
+  --     withMaxSuccess 1000 $ Ix.prop_rewindDepth @Int @Int S.conversion
   , testProperty "Relationship between Insert/Rewind" $
-      withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int V.conversion
-  , testProperty "Insert is folding the structure" $
-      withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int V.conversion
-  , testProperty "Notifications are accumulated as the fold runs" $
-      withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int V.conversion
-  ,  testProperty "Notifications are not affected by rewind" $
-      withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int V.conversion
-      -}
+      withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int S.conversion
+  -- , testProperty "Insert is folding the structure" $
+  --     withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int S.conversion
+  -- , testProperty "Notifications are accumulated as the fold runs" $
+  --     withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int S.conversion
+  -- ,  testProperty "Notifications are not affected by rewind" $
+  --     withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int S.conversion
   ]
 
 viProperties :: TestTree

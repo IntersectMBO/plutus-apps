@@ -8,11 +8,12 @@ import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
 import Data.Foldable (foldl', toList)
 import Safe (atMay)
 -- import Data.Function ((&))
--- import Data.Functor ((<&>))
+import Data.Functor ((<&>))
 -- import Data.Vector qualified as V
 import Database.SQLite.Simple qualified as Sql
-import Database.SQLite.Simple.FromField (FromField)
+import Database.SQLite.Simple.FromField (FromField (fromField))
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
+import Database.SQLite.Simple.Ok (Ok (Ok))
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
@@ -20,27 +21,33 @@ import Test.QuickCheck (Property)
 import Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
 import RewindableIndex.Model (Conversion (Conversion, cHistory, cMonadic, cNotifications, cView), Index,
-                              IndexView (IndexView, ixDepth, ixSize, ixView))
+                              IndexView (IndexView, ixDepth, ixSize, ixView), getFunction)
 import RewindableIndex.Model qualified as Ix
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage, trimEventStore), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
                                  Resumable (resumeFromStorage), Rewindable (rewindStorage), State, StorableEvent,
                                  StorablePoint, StorableQuery, StorableResult, config, diskBufferSize, emptyState,
-                                 memoryBufferSize)
+                                 filterWithQueryInterval, memoryBufferSize)
 import RewindableIndex.Storable qualified as Storable
 
 import Debug.Trace qualified as Debug
 
 newtype Handle = Handle Sql.Connection
 
-newtype instance StorablePoint Handle = Point Int
-  deriving stock (Generic)
-  deriving newtype (Eq, Ord)
+data instance StorablePoint Handle =
+    Point Int
+  | Genesis
+  deriving stock (Eq, Show, Generic)
+
+instance Ord (StorablePoint Handle) where
+  Genesis   <= _         = True
+  (Point x) <= (Point y) = x <= y
+  _         <= _         = False
 
 data instance StorableEvent Handle = Event
   { sePoint :: StorablePoint Handle
   , seEvent :: Int
-  } deriving (Eq, Generic)
+  } deriving (Show, Eq, Generic)
 
 type TestFn = Int
            -> Int
@@ -53,7 +60,7 @@ data instance StorableQuery Handle =
 newtype instance StorableResult Handle = Result
   { getResult :: Int
   }
-  deriving stock (Generic)
+  deriving stock (Show, Generic)
   deriving newtype (Eq, Ord)
 
 instance HasPoint (StorableEvent Handle) (StorablePoint Handle) where
@@ -79,9 +86,20 @@ instance ToRow (StorableEvent Handle) where
 instance FromRow (StorableEvent Handle) where
   fromRow = Event <$> field <*> field
 
-deriving newtype instance FromField (StorablePoint Handle)
+-- deriving newtype instance FromField (StorablePoint Handle)
 
-deriving newtype instance ToField (StorablePoint Handle)
+instance FromField (StorablePoint Handle) where
+  fromField f =
+    fromField f <&> \p ->
+      if p == -1
+         then Genesis
+         else Point p
+
+-- deriving newtype instance ToField (StorablePoint Handle)
+
+instance ToField (StorablePoint Handle) where
+  toField Genesis   = toField (-1 :: Int)
+  toField (Point p) = toField p
 
 deriving newtype instance FromField (StorableResult Handle)
 
@@ -136,7 +154,7 @@ instance Buffered Handle IO where
 
   getStoredEvents :: Handle -> IO [StorableEvent Handle]
   getStoredEvents (Handle h) = do
-    Sql.query_ h "SELECT * FROM index_property_cache ORDER BY POINT ASC"
+    Sql.query_ h "SELECT * FROM index_property_cache ORDER BY point ASC"
 
   -- TODO
   trimEventStore :: Handle -> Int -> IO Handle
@@ -170,12 +188,15 @@ instance Queryable Handle IO where
     aggregate <- queryStorage qi memoryEs (Handle h) QAccumulator
     es' :: [StorableEvent Handle] <-
       case qi of
-        -- We will only test this path for now.
         QEverything -> Sql.query_ h "SELECT * from index_property_cache ORDER BY point ASC"
         QInterval start end ->
-          Sql.query h "SELECT * from index_property_cache WHERE point >= ? AND point <= ? ORDER BY point ASC" (start, end)
+          -- TODO: Be smarter about this.
+          Sql.query h "SELECT * from index_property_cache WHERE point <= ? ORDER BY point ASC" (Sql.Only end)
     Sql.execute_ h "COMMIT"
-    pure $ foldl' ((fst .) . indexedFn f) aggregate $ toList memoryEs ++ es'
+    let es'' = filterWithQueryInterval qi (es' ++ toList memoryEs)
+    Debug.trace ("Memory events (2): es': " <> show es' <> " es'': " <> show es'') $
+      Debug.trace ("Memory events (3): " <> show (toList memoryEs)) $
+        pure $ foldl' ((fst .) . indexedFn f) aggregate es''
 
 instance Rewindable Handle IO where
   rewindStorage :: StorablePoint Handle -> Handle -> IO (Maybe Handle)
@@ -217,13 +238,19 @@ getHistory ix = do
     Nothing       -> pure Nothing
     Just (ix', _) -> liftIO $ do
       let st = ix' ^. state
-          f  = ix' ^. fn
+          -- f  = ix' ^. fn
+          f  = getFunction ix
+          sz = ix' ^. state . config . memoryBufferSize -- + 1
       es <- Storable.getEvents st
-      let qs = map (\p -> QInterval (Point p) (Point p))
-             $ map seEvent es
+      let qs = map (\p -> QInterval p p)
+             $ map sePoint es
       rs  <- fmap getResult <$> mapM (\qi -> Storable.query qi st (QEvents f)) qs
-      Result ag0 <- Storable.query QEverything st QAccumulator
-      pure . Just $ rs ++ [ag0]
+      if Debug.trace ("history: es: " <> show es <> " rs: " <> show rs <> " qs: " <> show qs) $ null rs
+      then do
+        Result ag0 <- Storable.query QEverything st QAccumulator
+        pure $ Just [ag0]
+      else
+        pure . Just . take sz $ reverse rs -- ++ [ag0]
 
 getView
   :: IndexT
@@ -233,12 +260,15 @@ getView ix = do
   case mix of
     Nothing       -> pure Nothing
     Just (ix', _) -> do
+      let maxSize = ix' ^. state . config . memoryBufferSize + 1
+      es <- liftIO $ Storable.getEvents (ix' ^. state)
       Just rs <- getHistory ix
+      let sz = if null es then 1 else length es + 1
+      -- let sz = if length rs == 1 then 1 else length rs + 1
       pure . Just $
-        IndexView { ixDepth = ix' ^. state . config . memoryBufferSize +
-                              ix' ^. state . config . diskBufferSize
+        IndexView { ixDepth = maxSize
                   , ixView  = head rs
-                  , ixSize  = length rs
+                  , ixSize  = min maxSize sz
                   }
 
 monadic
@@ -246,13 +276,23 @@ monadic
   -> Property
 monadic = monadicIO
 
-lookupEvent
+lookupPoint
   :: Int
   -> Config
-  -> MaybeT IO (StorableEvent Handle)
-lookupEvent n (Config st _) = MaybeT $ do
-  es <- Storable.getEvents st
-  pure $ atMay es n
+  -> MaybeT IO (StorablePoint Handle)
+lookupPoint n (Config st _) = MaybeT $ do
+  let depth = st ^. config . memoryBufferSize + 1
+  es' <- Storable.getEvents st
+  es <- Debug.trace ("EEE: " <> show es') $ take (depth - 1) <$> Storable.getEvents st
+  -- TODO: 10/10 --> return genesis.
+  -- We have a rollback to genesis.
+  if length es == n
+  then pure . Just $ Genesis
+  else if length es > n
+  then
+    Debug.trace ("ES: " <> show (length es) <> " N: " <> show n) $ pure $ atMay es n <&> sePoint
+  else
+    Debug.trace ("NON ES: " <> show (length es) <> " N: " <> show n) $ pure Nothing
 
 run
   :: IndexT
@@ -260,7 +300,8 @@ run
 run (Ix.New f depth ag0)
   | depth <= 0 = pure Nothing
   | otherwise = do
-      indexer <- liftIO $ newSqliteIndexer f 1 (fromIntegral depth - 1) ag0
+      let d = fromIntegral depth
+      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ((d + 1) * 2) ag0
       pure $ (,0) <$> indexer
 run (Ix.Insert e ix) = do
   mix <- run ix
@@ -270,10 +311,10 @@ run (Ix.Insert e ix) = do
       nextState <- Storable.insert (Event (Point sq) e) (ix' ^. state)
       pure . Just . (, sq + 1) $ ix' { _state = nextState }
 run (Ix.Rewind n ix) = do
-  mix <- run ix
+  mix <- Debug.trace "HERE0" $ run ix
   case mix of
-    Nothing        -> pure Nothing
-    Just (ix', sq) -> liftIO . runMaybeT $ do
-      e         <- lookupEvent n ix'
-      nextState <- MaybeT . liftIO $ Storable.rewind (getPoint e) (ix' ^. state)
+    Nothing        -> Debug.trace "REWIND/Nothing" $ pure Nothing
+    Just (ix', sq) -> Debug.trace "HERE1" $ liftIO . runMaybeT $ do
+      p         <- Debug.trace "HERE2" $ lookupPoint n ix'
+      nextState <- Debug.trace "REWIND" $ MaybeT . liftIO $ Storable.rewind p (ix' ^. state)
       pure . (,sq) $ ix' { _state = nextState }
