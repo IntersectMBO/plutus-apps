@@ -39,26 +39,22 @@ import Data.Maybe (fromJust)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (fromString)
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLText))
+import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
--- TODO Remove the following dependencies from plutus-ledger, and
--- then also the package dependency from this package's cabal
--- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Ledger (TxId, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
 import System.Random.MWC (createSystemRandom, uniformR)
 
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-import Marconi.CardanoAPI (Address, TxOut, pattern AsCurrentEra)
+import Marconi.CardanoAPI (Address, TxIn (TxIn), TxOut, TxOutRef, pattern AsCurrentEra, txOutRef)
 
 data UtxoUpdate = UtxoUpdate
-  { _inputs  :: !(Set TxOutRef)
+  { _inputs  :: !(Set TxIn)
   , _outputs :: ![(TxOut, TxOutRef)]
   , _slotNo  :: !SlotNo
   } deriving (Show)
@@ -80,11 +76,17 @@ instance FromField Address where
 instance ToField Address where
   toField = SQLBlob . C.serialiseToRawBytes
 
-instance FromField TxId where
-  fromField f = fromString <$> fromField f
+instance FromField C.TxId where
+  fromField = fmap fromString . fromField
 
-instance ToField TxId where
+instance ToField C.TxId where
   toField = SQLText . fromString . show
+
+instance FromField C.TxIx where
+  fromField = fmap C.TxIx . fromField
+
+instance ToField C.TxIx where
+  toField (C.TxIx i) = SQLInteger $ fromIntegral i
 
 data UtxoRow = UtxoRow
   { _address   :: !Address
@@ -94,18 +96,19 @@ data UtxoRow = UtxoRow
 $(makeLenses ''UtxoRow)
 
 instance FromRow UtxoRow where
-  fromRow = UtxoRow <$> field <*> (TxOutRef <$> field <*> field)
+  fromRow = UtxoRow <$> field <*> (txOutRef <$> field <*> field)
 
 instance ToRow UtxoRow where
   toRow u =  (toField $ u ^. address) : (toRow $ u ^. reference)
 
 instance FromRow TxOutRef where
-  fromRow = TxOutRef <$> field <*> field
+  fromRow = txOutRef <$> field <*> field
 
 instance ToRow TxOutRef where
-  toRow r = [ toField $ txOutRefId  r
-            , toField $ txOutRefIdx r
-            ]
+  toRow (TxIn txOutRefId txOutRefIdx) =
+      [ toField txOutRefId
+      , toField txOutRefIdx
+      ]
 
 open
   :: FilePath
