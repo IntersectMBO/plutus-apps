@@ -170,6 +170,11 @@ getState i =
     in send command
 
 -- | All active contracts with their definitions
+-- WARNING : definition is misleading as this function is retrieving all instances (i.e., not only active ones),
+-- especially when the in memory database setting is used
+-- Indeed, handler defined in ContractStore ignores the status parameter given in GetContracts.
+-- Note also that a contract instance added in the db has active status set to True.
+-- This status is set to False only when the contract is explicitly stopped.
 getActiveContracts ::
     forall t effs.
     ( Member (ContractStore t) effs
