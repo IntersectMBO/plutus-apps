@@ -43,6 +43,7 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
+    Marconi.CardanoAPI
     Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.ScriptTx

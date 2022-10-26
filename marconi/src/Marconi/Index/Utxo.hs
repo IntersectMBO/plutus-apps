@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TemplateHaskell    #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Marconi.Index.Utxo
   ( -- * UtxoIndex
@@ -20,15 +22,19 @@ module Marconi.Index.Utxo
   , slotNo
   , address
   , reference
+  , TxOut
   ) where
 
 import Cardano.Api (SlotNo)
-import Codec.Serialise (deserialiseOrFail, serialise)
+import Cardano.Api qualified as C
+
+import Control.Lens.Fold (has)
 import Control.Lens.Operators ((&), (^.))
+import Control.Lens.Prism (only)
 import Control.Lens.TH (makeLenses)
+
 import Control.Monad (when)
-import Data.ByteString.Lazy (toStrict)
-import Data.Foldable (foldl', forM_, toList)
+import Data.Foldable (forM_, toList)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -43,12 +49,13 @@ import GHC.Generics (Generic)
 -- TODO Remove the following dependencies from plutus-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Ledger (Address, TxId, TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
-import Ledger qualified as Ledger
+import Ledger (TxId, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
 import System.Random.MWC (createSystemRandom, uniformR)
 
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
+
+import Marconi.CardanoAPI (Address, TxOut, pattern AsCurrentEra)
 
 data UtxoUpdate = UtxoUpdate
   { _inputs  :: !(Set TxOutRef)
@@ -66,12 +73,12 @@ newtype Depth = Depth Int
 
 instance FromField Address where
   fromField f = fromField f >>=
-    either (const $ returnError ConversionFailed f "Cannot deserialise address.")
-           pure
-    . deserialiseOrFail
+    maybe (returnError ConversionFailed f "Cannot deserialise address.")
+          pure
+    . C.deserialiseFromRawBytes (C.AsAddressInEra AsCurrentEra)
 
 instance ToField Address where
-  toField = SQLBlob . toStrict . serialise
+  toField = SQLBlob . C.serialiseToRawBytes
 
 instance FromField TxId where
   fromField f = fromString <$> fromField f
@@ -130,7 +137,7 @@ query ix addr updates = do
   -- Perform the db query
   storedUtxos <- SQL.query c "SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?" (Only addr)
   let memoryUtxos  = concatMap (filter (onlyAt addr) . toRows) updates
-      spentOutputs = foldl' Set.union Set.empty $ map _inputs updates
+      spentOutputs = foldMap _inputs updates
   buffered <- Ix.getBuffer $ ix ^. Ix.storage
   let bufferedUtxos = concatMap (filter (onlyAt addr) . toRows) buffered
   pure . Just $ storedUtxos ++ bufferedUtxos ++ memoryUtxos
@@ -163,9 +170,10 @@ onInsert _ix _update = pure []
 
 toRows :: UtxoUpdate -> [UtxoRow]
 toRows update = update ^. outputs
-  & map (\(out, ref)  -> UtxoRow { _address   = Ledger.txOutAddress out
-                                 , _reference = ref
-                                 })
+  & map (\(C.TxOut addr _ _ _, ref) ->
+        UtxoRow { _address   = addr
+                , _reference = ref
+                })
 
 onlyAt :: Address -> UtxoRow -> Bool
-onlyAt address' row = address' == (row ^. address)
+onlyAt address' = has $ address . only address'

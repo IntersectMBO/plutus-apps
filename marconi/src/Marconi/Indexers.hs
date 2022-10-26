@@ -9,7 +9,8 @@ import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (bracket_)
-import Control.Lens.Operators ((&), (<&>), (^.))
+import Control.Lens.Combinators (imap)
+import Control.Lens.Operators ((&), (^.))
 import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
@@ -27,14 +28,14 @@ import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
+import Ledger (TxIn (TxIn), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromTxScriptValidity, scriptDataFromCardanoTxBody,
                              withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
+import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
 import RewindableIndex.Index.VSplit qualified as Ix
 
@@ -42,7 +43,6 @@ type CardanoAddress = C.Address C.ShelleyAddr
 
 -- | Typre represents non empty list of Bech32 compatable addresses"
 type TargetAddresses = NonEmpty CardanoAddress
-
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
@@ -66,16 +66,15 @@ getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}
         let indexersFilter = case maybeTargetAddresses of
                 Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
                 _                    -> id -- no filtering is applied
-        outs  <- either (const Nothing) (
-            Just . map TxOut)
+        outs  <- either (const Nothing) Just
             . traverse (C.eraCast C.BabbageEra)
             . indexersFilter
             $ txOuts
-        pure $ outs & zip ([0..] :: [Integer])
-            <&> (\(ix, out) -> (out, TxOutRef
-                                   { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
-                                   , txOutRefIdx = ix
-                                   }))
+        pure $ outs & imap
+            (\ix out -> (out, TxOutRef
+                        { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
+                        , txOutRefIdx = fromIntegral ix
+                        }))
 getInputs
   :: C.Tx era
   -> Set TxOutRef
