@@ -229,7 +229,7 @@ invalidScript = property $ do
     let invalidTxnUtxo = [(snd outToSpend, fst outToSpend)]
     invalidTxn <- forAll
         $ Gen.genValidTransactionSpending
-            [Gen.TxInputWitnessed (snd outToSpend) (ScriptAddress (Left failValidator) unitRedeemer unitDatum)]
+            [Gen.TxInputWitnessed (snd outToSpend) (ScriptAddress (Left failValidator) unitRedeemer (Just unitDatum))]
             totalVal
     Hedgehog.annotateShow invalidTxn
 

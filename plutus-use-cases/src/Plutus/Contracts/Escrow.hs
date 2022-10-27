@@ -293,7 +293,7 @@ redeem ::
 redeem inst escrow = mapError (review _EscrowError) $ do
     let addr = Scripts.validatorAddress inst
     unspentOutputs <- utxosAt addr
-    current <- currentTime
+    current <- snd <$> currentNodeClientTimeRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
     else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
@@ -302,7 +302,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
       let
           -- Correct validity interval should be:
           -- @
-          --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound $ escrowDeadline escrow)
+          --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ escrowDeadline escrow)
           -- @
           -- See Note [Validity Interval's upper bound]
           validityTimeRange = Interval.to (Haskell.pred $ Haskell.pred $ escrowDeadline escrow)
@@ -366,7 +366,7 @@ payRedeemRefund params vl = do
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do
-                    time <- currentTime
+                    time <- snd <$> currentNodeClientTimeRange
                     if time >= escrowDeadline params
                         then Left <$> refund inst params
                         else waitNSlots 1 >> go

@@ -22,7 +22,6 @@ module Plutus.Script.Utils.V1.Typed.Scripts.Validators
     validatorAddress,
     validatorScript,
     vValidatorScript,
-    unsafeMkTypedValidator,
     forwardingMintingPolicy,
     vForwardingMintingPolicy,
     forwardingMintingPolicyHash,
@@ -42,7 +41,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Kind (Type)
 import GHC.Generics (Generic)
 import Plutus.Script.Utils.Scripts (Datum, Language (PlutusV1), Versioned (Versioned))
-import Plutus.Script.Utils.Typed (Any, DatumType, RedeemerType,
+import Plutus.Script.Utils.Typed (DatumType, RedeemerType,
                                   TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvValidator, tvValidatorHash),
                                   UntypedValidator, ValidatorTypes, forwardingMintingPolicy,
                                   forwardingMintingPolicyHash, generalise, vForwardingMintingPolicy, vValidatorScript,
@@ -148,19 +147,6 @@ mkTypedValidatorParam ::
   TypedValidator a
 mkTypedValidatorParam vc wrapper param =
   mkTypedValidator (vc `applyCode` liftCode param) wrapper
-
--- | Make a 'TypedValidator' (with no type constraints) from an untyped 'Validator' script.
-unsafeMkTypedValidator :: PV1.Validator -> TypedValidator Any
-unsafeMkTypedValidator vl =
-  TypedValidator
-    { tvValidator = Versioned vl PlutusV1
-    , tvValidatorHash = vh
-    , tvForwardingMPS = Versioned mps PlutusV1
-    , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
-    }
-  where
-    vh = Scripts.validatorHash vl
-    mps = MPS.mkForwardingMintingPolicy vh
 
 data WrongOutTypeError
   = ExpectedScriptGotPubkey

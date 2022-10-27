@@ -57,7 +57,7 @@ data CliArgs = CliArgs
   , dbPath          :: FilePath                 -- ^ filepath to local sqlite for utxo index table
   , httpPort        :: Maybe Int                -- ^ optional tcp/ip port number for JSON-RPC http server
   , networkId       :: Cardano.Api.NetworkId   -- ^ cardano network id
-  , targetAddresses :: TargetAddresses          -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
+  , targetAddresses :: !TargetAddresses          -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
 
 newtype DBConfig = DBConfig {

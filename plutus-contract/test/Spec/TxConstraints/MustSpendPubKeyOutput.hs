@@ -8,11 +8,10 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.TxConstraints.MustSpendPubKeyOutput(tests) where
 
+import Control.Lens (at, non, (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Control.Lens ((^.))
-import Data.Map qualified as M (elems)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)
 import Ledger qualified
@@ -21,8 +20,8 @@ import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), ownPaymentPubKeyHash,
                                                              typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
-                                                                  mustPayToTheScriptWithDatumInTx,
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
+                                                                  mustIncludeDatumInTx, mustPayToTheScriptWithDatumInTx,
                                                                   mustSpendPubKeyOutput)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
@@ -31,11 +30,13 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicate, mockWalletPaymentPubKeyHash, w1, w2, walletFundsChange, (.&&.))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef, txOutRefIdx), Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (Address (addressCredential), Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator,
+                             ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Wallet.Emulator.Wallet (WalletState, chainIndexEmulatorState, signPrivateKeys, walletToMockWallet')
+import Wallet.Emulator.Wallet as Wallet (WalletState, chainIndexEmulatorState, ownAddress, signPrivateKeys,
+                                         walletToMockWallet')
 
 tests :: TestTree
 tests =
@@ -68,10 +69,13 @@ baseLovelaceLockedByScript :: Integer
 baseLovelaceLockedByScript = lovelacePerInitialUtxo `div` 2
 
 mustSpendPubKeyOutputContract :: [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
-mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
+mustSpendPubKeyOutputContract = mustSpendPubKeyOutputContract' []
+
+mustSpendPubKeyOutputContract' :: [Ledger.PaymentPubKeyHash] -> [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
+mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs
-            $ Ada.lovelaceValueOf baseLovelaceLockedByScript
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs (Ada.lovelaceValueOf baseLovelaceLockedByScript)
+            <> foldMap Constraints.mustBeSignedBy keys
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -93,55 +97,10 @@ mustSpendPubKeyOutputContract offChainTxOutRefs onChainTxOutRefs pkh = do
         mustSpendPubKeyOutputs = Constraints.mustSpendPubKeyOutput <$> offChainTxOutRefs
 
 txoRefsFromWalletState :: WalletState -> Set TxOutRef
-txoRefsFromWalletState ws = head $ M.elems $ ws ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap
+txoRefsFromWalletState w = let
+  pkCred = addressCredential $ Wallet.ownAddress w
+  in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
--- needed to workaround bug 695
-overrideW1TxOutRefs :: [TxOutRef] -> [TxOutRef]
-overrideW1TxOutRefs = overrideTxOutRefIdxes 50
-
-overrideW2TxOutRefs :: [TxOutRef] -> [TxOutRef]
-overrideW2TxOutRefs = overrideTxOutRefIdxes 20
-
-overrideTxOutRefIdxes :: Integer -> [TxOutRef] -> [TxOutRef]
-overrideTxOutRefIdxes i = fmap (\r@TxOutRef{txOutRefIdx=idx} -> r{txOutRefIdx= idx + i})
---
-
-{-
--- Example of bug https://github.com/input-output-hk/plutus-apps/issues/695: fails with TxOutRefNotFound because w1 does not have utxo with index of 5 from WalletState
-bug695 :: TestTree
-bug695 =
-    let trace = do
-            w1State <- Trace.agentState w1
-            let w1TxoRefs = txoRefsFromWalletState w1State
-                w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef w1MiddleTxoRef w1PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
-
-    in checkPredicate "Example of bug 695"
-        (assertValidatedTransactionCount 2 .&&. walletFundsChange w1 mempty)
-        (void trace)
--}
-
-{-
--- Example of bug https://github.com/input-output-hk/plutus-apps/issues/696
-bug696 :: TestTree
-bug696 =
-    let trace = do
-            thisChainState <- Trace.chainState
-            let traceBlockchain = thisChainState ^. chainNewestFirst
-                traceEmulatorState = emulatorState traceBlockchain
-                walletStateMap = traceEmulatorState ^. walletStates
-                w1State = fromJust $ M.lookup w1 walletStateMap -- Fails here: Maybe.fromJust: Nothing
-
-                w1TxoRefs = txoRefsFromWalletState w1State
-                w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef w1MiddleTxoRef w1PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
-
-    in checkPredicate "Example of bug 696"
-        (assertValidatedTransactionCount 2 .&&. walletFundsChange w1 mempty)
-        (void trace)
--}
 
 -- | Uses onchain and offchain constraint mustSpendPubKeyOutput to spend a single utxo from own wallet
 mustSpendSingleUtxoFromOwnWallet :: TestTree
@@ -150,9 +109,8 @@ mustSpendSingleUtxoFromOwnWallet =
             w1State <- Trace.agentState w1
             let w1TxoRefs = txoRefsFromWalletState w1State
                 w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-                overridedW1TxoRefs = overrideW1TxOutRefs w1MiddleTxoRef -- need to override index due to bug 695
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract overridedW1TxoRefs overridedW1TxoRefs w1PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef w1MiddleTxoRef w1PaymentPubKeyHash
+            void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with a single txOutRef from own wallet"
         (assertValidatedTransactionCount 2 .&&. walletFundsChange w1 mempty)
@@ -165,9 +123,8 @@ mustSpendRemainingInitialUtxosFromOwnWallet =
             w1State <- Trace.agentState w1
             let w1TxoRefs = txoRefsFromWalletState w1State
                 w1RemainingTxoRefs = tail $ S.elems w1TxoRefs
-                overridedW1TxoRefs = overrideW1TxOutRefs w1RemainingTxoRefs -- need to override index due to bug 695
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract overridedW1TxoRefs overridedW1TxoRefs w1PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1RemainingTxoRefs w1RemainingTxoRefs w1PaymentPubKeyHash
+            void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with all remaining initial txOutRefs from own wallet"
         (assertValidatedTransactionCount 2 .&&. walletFundsChange w1 mempty)
@@ -180,10 +137,9 @@ mustSpendSingleUtxoFromOtherWallet =
             w2State <- Trace.agentState w2
             let w2TxoRefs = txoRefsFromWalletState w2State
                 w2MiddleTxoRef = [S.elemAt (length w2TxoRefs `div` 2) w2TxoRefs]
-                overridedW2TxoRefs = overrideW2TxOutRefs w2MiddleTxoRef -- need to override index due to bug 695
             Trace.setSigningProcess w1 (Just $ signPrivateKeys [paymentPrivateKey $ walletToMockWallet' w1, paymentPrivateKey $ walletToMockWallet' w2])
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract overridedW2TxoRefs overridedW2TxoRefs w2PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract' [mockWalletPaymentPubKeyHash w2] w2MiddleTxoRef w2MiddleTxoRef w2PaymentPubKeyHash
+            void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with a single txOutRef from other wallet"
         (assertValidatedTransactionCount 2 .&&. walletFundsChange w2 (Ada.lovelaceValueOf $ negate lovelacePerInitialUtxo))
@@ -196,10 +152,9 @@ mustSpendAllUtxosFromOtherWallet =
             w2State <- Trace.agentState w2
             let w2TxoRefs = txoRefsFromWalletState w2State
                 allW2TxoRefs = S.elems w2TxoRefs
-                overridedW2TxoRefs = overrideW2TxOutRefs allW2TxoRefs -- need to override index due to bug 695
             Trace.setSigningProcess w1 (Just $ signPrivateKeys [paymentPrivateKey $ walletToMockWallet' w1, paymentPrivateKey $ walletToMockWallet' w2])
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract overridedW2TxoRefs overridedW2TxoRefs w2PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract' [mockWalletPaymentPubKeyHash w2] allW2TxoRefs allW2TxoRefs w2PaymentPubKeyHash
+            void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with all initial txOutRefs from other wallet"
     (assertValidatedTransactionCount 2 .&&. walletFundsChange w2 (Ada.lovelaceValueOf $ negate initialLovelacePerWallet))
@@ -211,7 +166,7 @@ contractErrorWhenAttemptingToSpendNonExistentOutput =
     let contract = mustSpendPubKeyOutputContract [nonExistentTxoRef] [nonExistentTxoRef] w1PaymentPubKeyHash
         trace = do
             void $ Trace.activateContractWallet w1 contract
-            void $ Trace.waitNSlots 1
+            void Trace.nextSlot
 
     in checkPredicate "Fail validation when mustSpendPubKeyOutput constraint expects a non-existing txo"
         (assertContractError contract (Trace.walletInstanceTag w1) (\case { ConstraintResolutionContractError ( Constraints.TxOutRefNotFound txoRefInError) -> txoRefInError == nonExistentTxoRef; _ -> False }) "failed to throw error"
@@ -225,9 +180,8 @@ phase2FailureWhenTxoIsNotSpent =
             w1State <- Trace.agentState w1
             let w1TxoRefs = txoRefsFromWalletState w1State
                 w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-                overridedW1TxoRefs = overrideW1TxOutRefs w1MiddleTxoRef -- need to override index due to bug 695
-            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract overridedW1TxoRefs [nonExistentTxoRef] w1PaymentPubKeyHash
-            void $ Trace.waitNSlots 1
+            void $ Trace.activateContractWallet w1 $ mustSpendPubKeyOutputContract w1MiddleTxoRef [nonExistentTxoRef] w1PaymentPubKeyHash
+            void Trace.nextSlot
 
     in checkPredicate "Fail phase-2 validation when txo expected by on-chain mustSpendPubKeyOutput does not exist"
         (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L7":_) _) -> True; _ -> False }))

@@ -81,6 +81,7 @@ import Control.Monad.Freer.Extras.Modify (raiseEnd)
 import Control.Monad.Freer.Reader (Reader, runReader)
 import Control.Monad.Freer.State (State, evalState)
 import Control.Monad.Freer.TH (makeEffect)
+import Data.Aeson qualified as A
 import Data.Default (Default (def))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -122,7 +123,6 @@ import Plutus.Trace.Emulator.Types qualified
 import Streaming (Stream)
 import Streaming.Prelude (Of ((:>)))
 
-import Data.Aeson qualified as A
 import Ledger.Params (Params (..))
 import Ledger.Slot (getSlot)
 import Plutus.V1.Ledger.Value (Value, flattenValue)

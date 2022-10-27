@@ -34,6 +34,7 @@ import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
 import Plutus.ChainIndex.SyncStats (SyncLog)
 import Plutus.Monitoring.Util (PrettyObject)
+import System.Exit (exitFailure)
 
 main :: IO ()
 main = do
@@ -77,9 +78,14 @@ runMainWithLog :: (String -> IO ()) -> CM.Configuration -> Config.ChainIndexConf
 runMainWithLog logger logConfig config = do
   withRunRequirements logConfig config $ \runReq -> do
 
-    slotNo <- getTipSlot config
-    let slotNoStr = "\nThe tip of the local node: " <> show slotNo
-    logger slotNoStr
+    mslotNo <- getTipSlot config
+    case mslotNo of
+      Just slotNo -> do
+        let slotNoStr = "\nThe tip of the local node: " <> show slotNo
+        logger slotNoStr
+      Nothing -> do
+        putStrLn "\nLocal node still at Genesis Tip !!!"
+        exitFailure
 
     -- Queue for processing events
     let maxQueueSize = Config.cicAppendTransactionQueueSize config

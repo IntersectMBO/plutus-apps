@@ -111,7 +111,9 @@ executable marconi-mamba
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi-mamba
+  build-depends:
+    , marconi
+    , marconi-mamba
 
   ------------------------
   -- Non-IOG dependencies
@@ -210,10 +212,13 @@ executable db-utils-exe
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi-mamba
+  build-depends:
+    , db-utils
+    , marconi
+    , marconi-mamba
 
   ------------------------
 
   build-depends:
-    , base      >=4.9 && <5
-    , db-utils
+    , base                  >=4.9 && <5
+    , optparse-applicative

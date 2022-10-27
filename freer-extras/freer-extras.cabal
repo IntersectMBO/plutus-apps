@@ -41,11 +41,16 @@ library
   exposed-modules:
     Control.Monad.Freer.Extras
     Control.Monad.Freer.Extras.Beam
+    Control.Monad.Freer.Extras.Beam.Effects
+    Control.Monad.Freer.Extras.Beam.Postgres
+    Control.Monad.Freer.Extras.Beam.Sqlite
     Control.Monad.Freer.Extras.Log
     Control.Monad.Freer.Extras.Modify
     Control.Monad.Freer.Extras.Pagination
     Control.Monad.Freer.Extras.State
     Control.Monad.Freer.Extras.Stream
+
+  other-modules:   Control.Monad.Freer.Extras.Beam.Common
 
   --------------------------
   -- Other IOG dependencies
@@ -57,8 +62,9 @@ library
   ------------------------
   build-depends:
     , aeson
-    , base           >=4.7 && <5
+    , base               >=4.7 && <5
     , beam-core
+    , beam-postgres
     , beam-sqlite
     , containers
     , data-default
@@ -66,6 +72,7 @@ library
     , lens
     , mtl
     , openapi3
+    , postgresql-simple
     , prettyprinter
     , resource-pool
     , sqlite-simple
@@ -90,15 +97,17 @@ test-suite freer-extras-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base            >=4.7 && <5
+    , base               >=4.7 && <5
     , beam-core
     , beam-migrate
+    , beam-postgres
     , beam-sqlite
     , containers
     , contra-tracer
     , freer-simple
     , hedgehog
     , lens
+    , postgresql-simple
     , resource-pool
     , semigroups
     , sqlite-simple

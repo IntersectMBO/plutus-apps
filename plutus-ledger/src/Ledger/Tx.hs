@@ -29,6 +29,10 @@ module Ledger.Tx
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
+    -- * DatumFromQuery
+    , DatumFromQuery(..)
+    , datumInDatumFromQuery
+    -- * Transactions
     , CardanoTx(..)
     , cardanoApiTx
     , emulatorTx
@@ -40,14 +44,16 @@ module Ledger.Tx
     , getCardanoTxOutRefs
     , getCardanoTxOutputs
     , getCardanoTxSpentOutputs
-    , getCardanoTxUnspentOutputsTx
+    , getCardanoTxProducedOutputs
+    , getCardanoTxReturnCollateral
+    , getCardanoTxProducedReturnCollateral
+    , getCardanoTxTotalCollateral
     , getCardanoTxFee
     , getCardanoTxMint
     , getCardanoTxValidityRange
     , getCardanoTxData
     , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
     , ToCardanoError(..)
-    -- * Transactions
     , addSignature
     , addSignature'
     , addCardanoTxSignature
@@ -70,7 +76,7 @@ import Cardano.Ledger.Babbage.TxBody (TxBody)
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
 import Control.DeepSeq (NFData)
-import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
+import Control.Lens (At (at), Traversal', makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Proxy (Proxy))
 import Data.Default (def)
@@ -100,6 +106,20 @@ import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
                                       outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
 
+-- | A datum in a transaction output that comes from a chain index query.
+data DatumFromQuery
+    = DatumUnknown
+    | DatumInline V2.Datum
+    | DatumInBody V2.Datum
+    deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, NFData, OpenApi.ToSchema)
+
+makePrisms ''DatumFromQuery
+
+datumInDatumFromQuery :: Traversal' DatumFromQuery V2.Datum
+datumInDatumFromQuery _ DatumUnknown    = pure DatumUnknown
+datumInDatumFromQuery f (DatumInline d) = DatumInline <$> f d
+datumInDatumFromQuery f (DatumInBody d) = DatumInBody <$> f d
+
 -- | Transaction output that comes from a chain index query.
 --
 -- It is defined here instead of the plutus-chain-index because plutus-ledger
@@ -117,7 +137,7 @@ data ChainIndexTxOut =
       -- | Value of the transaction output.
       _ciTxOutValue           :: V2.Value,
       -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
-      _ciTxOutPublicKeyDatum  :: Maybe (V2.DatumHash, Maybe V2.Datum),
+      _ciTxOutPublicKeyDatum  :: Maybe (V2.DatumHash, DatumFromQuery),
       -- | Optional reference script attached to the transaction output.
       _ciTxOutReferenceScript :: Maybe (Versioned V1.Script)
     }
@@ -130,7 +150,7 @@ data ChainIndexTxOut =
       -- | Datum attached to the transaction output, either in full (inline datum or datum in transaction body) or as a
       -- hash reference. A transaction output protected by a Plutus script
       -- is guardateed to have an associated datum.
-      _ciTxOutScriptDatum     :: (V2.DatumHash, Maybe V2.Datum),
+      _ciTxOutScriptDatum     :: (V2.DatumHash, DatumFromQuery),
       -- | Optional reference script attached to the transaction output.
       -- The reference script is, in genereal, unrelated to the validator
       -- script althought it could also be the same.
@@ -149,14 +169,17 @@ toTxOut networkId (PublicKeyChainIndexTxOut addr v datum referenceScript) =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId addr
     <*> CardanoAPI.toCardanoTxOutValue v
-    <*> maybe (pure CardanoAPI.toCardanoTxOutNoDatum) (CardanoAPI.toCardanoTxOutDatumHash . fst) datum
+    <*> toTxOutDatum datum
     <*> CardanoAPI.toCardanoReferenceScript referenceScript)
-toTxOut networkId (ScriptChainIndexTxOut addr v (dh, _) referenceScript _validator) =
+toTxOut networkId (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId addr
     <*> CardanoAPI.toCardanoTxOutValue v
-    <*> CardanoAPI.toCardanoTxOutDatumHash dh
+    <*> toTxOutDatum (Just datum)
     <*> CardanoAPI.toCardanoReferenceScript referenceScript)
+
+toTxOutDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
+toTxOutDatum = CardanoAPI.toCardanoTxOutDatum . toPlutusOutputDatum
 
 -- | Converts a transaction output from the chain index to the plutus-ledger-api
 -- transaction output.
@@ -166,13 +189,14 @@ toTxOut networkId (ScriptChainIndexTxOut addr v (dh, _) referenceScript _validat
 -- 'ChainIndexTxOut' to 'TxOut' and back is therefore lossy.
 toTxInfoTxOut :: ChainIndexTxOut -> V2.Tx.TxOut
 toTxInfoTxOut (PublicKeyChainIndexTxOut addr v datum referenceScript) =
-    V2.Tx.TxOut addr v (toPlutusOutDatum datum) (scriptHash <$> referenceScript)
+    V2.Tx.TxOut addr v (toPlutusOutputDatum datum) (scriptHash <$> referenceScript)
 toTxInfoTxOut (ScriptChainIndexTxOut addr v datum referenceScript _validator) =
-    V2.Tx.TxOut addr v (toPlutusOutDatum $ Just datum) (scriptHash <$> referenceScript)
+    V2.Tx.TxOut addr v (toPlutusOutputDatum $ Just datum) (scriptHash <$> referenceScript)
 
-toPlutusOutDatum :: Maybe (V2.DatumHash, Maybe V2.Datum) -> V2.Tx.OutputDatum
-toPlutusOutDatum Nothing       = V2.Tx.NoOutputDatum
-toPlutusOutDatum (Just (d, _)) = V2.Tx.OutputDatumHash d
+toPlutusOutputDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> V2.Tx.OutputDatum
+toPlutusOutputDatum Nothing                   = V2.Tx.NoOutputDatum
+toPlutusOutputDatum (Just (_, DatumInline d)) = V2.Tx.OutputDatum d
+toPlutusOutputDatum (Just (dh, _))            = V2.Tx.OutputDatumHash dh
 
 instance Pretty ChainIndexTxOut where
     pretty PublicKeyChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
@@ -214,7 +238,10 @@ instance Pretty CardanoTx where
                 , hang 2 (vsep ("reference inputs:" : fmap pretty (getCardanoTxReferenceInputs tx)))
                 , hang 2 (vsep ("collateral inputs:" : fmap pretty (getCardanoTxCollateralInputs tx)))
                 , hang 2 (vsep ("outputs:" : fmap pretty (getCardanoTxOutputs tx)))
-                , "mint:" <+> pretty (getCardanoTxMint tx)
+                ]
+                <> maybe [] (\out -> [hang 2 (vsep ["return collateral:", pretty out])]) (getCardanoTxReturnCollateral tx)
+                <> maybe [] (\val -> ["total collateral:" <+> pretty val]) (getCardanoTxTotalCollateral tx)
+                ++ [ "mint:" <+> pretty (getCardanoTxMint tx)
                 , "fee:" <+> pretty (getCardanoTxFee tx)
                 ] ++ onCardanoTx (\tx' ->
                     [ hang 2 (vsep ("mps:": fmap pretty (Map.toList (txMintingScripts tx'))))
@@ -256,7 +283,7 @@ getCardanoTxInputs = onCardanoTx (\tx -> map (fillTxInputWitnesses tx) $ txInput
 
 getCardanoTxCollateralInputs :: CardanoTx -> [TxIn]
 getCardanoTxCollateralInputs = onCardanoTx
-    (\tx -> map (fillTxInputWitnesses tx) $ txCollateral tx)
+    (\tx -> map (fillTxInputWitnesses tx) $ txCollateralInputs tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
 
@@ -282,11 +309,31 @@ getCardanoTxOutRefs = onCardanoTx txOutRefs cardanoApiTxOutRefs
 getCardanoTxOutputs :: CardanoTx -> [TxOut]
 getCardanoTxOutputs = fmap fst . getCardanoTxOutRefs
 
-getCardanoTxUnspentOutputsTx :: CardanoTx -> Map V1.Tx.TxOutRef TxOut
-getCardanoTxUnspentOutputsTx = Map.fromList . fmap swap . getCardanoTxOutRefs
+getCardanoTxProducedOutputs :: CardanoTx -> Map V1.Tx.TxOutRef TxOut
+getCardanoTxProducedOutputs = Map.fromList . fmap swap . getCardanoTxOutRefs
 
 getCardanoTxSpentOutputs :: CardanoTx -> Set V1.Tx.TxOutRef
 getCardanoTxSpentOutputs = Set.fromList . map txInRef . getCardanoTxInputs
+
+getCardanoTxReturnCollateral :: CardanoTx -> Maybe TxOut
+getCardanoTxReturnCollateral = onCardanoTx txReturnCollateral
+    (\(CardanoApiEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) ->
+        case txReturnCollateral of
+            C.TxReturnCollateralNone     -> Nothing
+            C.TxReturnCollateral _ txOut -> Just $ TxOut txOut
+    )
+
+getCardanoTxProducedReturnCollateral :: CardanoTx -> Map V1.Tx.TxOutRef TxOut
+getCardanoTxProducedReturnCollateral tx = maybe Map.empty (Map.singleton (V1.TxOutRef (getCardanoTxId tx) 0)) $
+    getCardanoTxReturnCollateral tx
+
+getCardanoTxTotalCollateral :: CardanoTx -> Maybe V1.Value
+getCardanoTxTotalCollateral = onCardanoTx txTotalCollateral
+    (\(CardanoApiEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) ->
+        case txTotalCollateral of
+            C.TxTotalCollateralNone  -> Nothing
+            C.TxTotalCollateral _ lv -> Just $ CardanoAPI.fromCardanoLovelace lv
+    )
 
 getCardanoTxFee :: CardanoTx -> V1.Value
 getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
@@ -322,23 +369,27 @@ getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty)
 
 -- Defined here as uses `txId`.
 instance Pretty Tx where
-    pretty tx@(Tx _txInputs _txReferenceInputs _txCollateral _txOutputs _txMint _txFee
+    pretty tx@(Tx _txInputs _txReferenceInputs _txCollateralInputs _txOutputs
+                 _txReturnCollateral _txTotalCollateral _txMint _txFee
                  _txValidRange _txMintingScripts _txWithdrawals _txCertificates
                  _txSignatures _txScripts _txData _txMetadata) =
         let showNonEmpty empty x = [x | not empty]
             lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty _txInputs))
                 , hang 2 (vsep ("reference inputs:" : fmap pretty _txReferenceInputs))
-                , hang 2 (vsep ("collateral inputs:" : fmap pretty _txCollateral))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty _txCollateralInputs))
                 , hang 2 (vsep ("outputs:" : fmap pretty _txOutputs))
-                , "mint:" <+> pretty _txMint
+                ]
+                <> maybe [] (\out -> [hang 2 (vsep ["return collateral:", pretty out])]) _txReturnCollateral
+                <> maybe [] (\val -> ["total collateral:" <+> pretty val]) _txTotalCollateral
+                <> [ "mint:" <+> pretty _txMint
                 , "fee:" <+> pretty _txFee
                 , hang 2 (vsep ("mps:": fmap pretty (Map.assocs _txMintingScripts)))
                 , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList _txSignatures)))
                 , "validity range:" <+> viaShow _txValidRange
                 ]
                 <> (showNonEmpty (Map.null _txData) $ hang 2 (vsep ("data:": fmap pretty (Map.toList _txData))))
-                <> (showNonEmpty (Map.null _txScripts) $ hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys _txScripts))))
+                <> (showNonEmpty (Map.null _txScripts) $ hang 2 (vsep ("attached scripts:": fmap pretty (fmap version <$> Map.toList _txScripts))))
                 <> (showNonEmpty (null _txWithdrawals) $ hang 2 (vsep ("withdrawals:": fmap pretty _txWithdrawals)))
                 <> (showNonEmpty (null _txCertificates) $ hang 2 (vsep ("certificates:": fmap pretty _txCertificates)))
                 <> (["metadata: present" | isJust _txMetadata])
@@ -355,12 +406,14 @@ txId tx = TxId $ V1.toBuiltin
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
 updateUtxo :: CardanoTx -> Map V1.Tx.TxOutRef TxOut -> Map V1.Tx.TxOutRef TxOut
-updateUtxo tx unspent = (unspent `Map.withoutKeys` getCardanoTxSpentOutputs tx) `Map.union` getCardanoTxUnspentOutputsTx tx
+updateUtxo tx unspent = (unspent `Map.withoutKeys` getCardanoTxSpentOutputs tx) `Map.union` getCardanoTxProducedOutputs tx
 
 -- | Update a map of unspent transaction outputs and signatures based
 --   on the collateral inputs of a transaction (for when it is invalid).
 updateUtxoCollateral :: CardanoTx -> Map V1.Tx.TxOutRef TxOut -> Map V1.Tx.TxOutRef TxOut
-updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInRef $ getCardanoTxCollateralInputs tx)
+updateUtxoCollateral tx unspent =
+    (unspent `Map.withoutKeys` (Set.fromList . map txInRef $ getCardanoTxCollateralInputs tx))
+    `Map.union` getCardanoTxProducedReturnCollateral tx
 
 -- | A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
 txOutRefs :: Tx -> [(TxOut, V1.Tx.TxOutRef)]

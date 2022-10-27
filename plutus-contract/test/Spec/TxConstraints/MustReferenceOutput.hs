@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.TxConstraints.MustReferenceOutput(tests) where
 
-import Control.Lens ((??), (^.))
+import Control.Lens (At (at), _1, _head, filtered, has, makeClassyPrisms, non, only, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -23,7 +23,6 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Cons
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Scripts (ScriptError (EvaluationError))
 import Ledger.Test (asDatum, asRedeemer, someAddress, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Cons
@@ -40,6 +39,9 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Wallet (WalletState, chainIndexEmulatorState)
+import Wallet.Emulator.Wallet qualified as Wallet
+
+makeClassyPrisms ''L.ScriptError
 
 tests :: TestTree
 tests =
@@ -73,6 +75,9 @@ v2FeaturesTests sub t = testGroup "Plutus V2 features" $
     , phase2FailureWhenUsingV2Script
     ] ?? sub ?? t
 
+evaluationError :: Text.Text -> L.ValidationError -> Bool
+evaluationError errCode = has $ L._ScriptFailure . _EvaluationError . _1 . _head . only errCode
+
 tknValue :: PSU.Language -> Value.Value
 tknValue l = Value.singleton (PSU.scriptCurrencySymbol $ getVersionedScript MustReferenceOutputPolicy l) "mint-me" 1
 
@@ -104,16 +109,9 @@ mustReferenceOutputContract submitTxFromConstraints l offChainTxoRefs onChainTxo
         mustReferenceOutputs = Cons.mustReferenceOutput <$> offChainTxoRefs
 
 txoRefsFromWalletState :: WalletState -> Set Tx.TxOutRef
-txoRefsFromWalletState ws =
-    head $ M.elems $ ws ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap
-
--- needed to workaround bug 695
-overrideW1TxOutRefs :: [Tx.TxOutRef] -> [Tx.TxOutRef]
-overrideW1TxOutRefs = overrideTxOutRefIdxes 50
-
-overrideTxOutRefIdxes :: Integer -> [Tx.TxOutRef] -> [Tx.TxOutRef]
-overrideTxOutRefIdxes i = fmap (\r@Tx.TxOutRef{Tx.txOutRefIdx=idx} -> r{Tx.txOutRefIdx= idx + i})
---
+txoRefsFromWalletState w = let
+  pkCred = L.addressCredential $ Wallet.ownAddress w
+  in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
 -- | Ledger validation error occurs when attempting use of offchain mustReferenceOutput
 --   constraint with V1 script
@@ -154,8 +152,7 @@ phase2FailureWithMustReferenceOutput testDescription submitTxFromConstraints l =
 
     in checkPredicateOptions defaultCheckOptions
     testDescription
-    (assertFailedTransaction (\_ err ->
-        case err of {L.ScriptFailure (EvaluationError ("Lf":_) _) -> True; _ -> False }))
+    (assertFailedTransaction $ const $ evaluationError "Lf")
     (void $ defTrace contractWithoutOffchainConstraint)
 
 -- | Valid scenario using offchain and onchain constraint
@@ -166,10 +163,9 @@ mustReferenceOutputWithSinglePubkeyOutput submitTxFromConstraints l =
             w1State <- Trace.agentState w1
             let w1TxoRefs = txoRefsFromWalletState w1State
                 w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-                overridedW1TxoRefs = overrideW1TxOutRefs w1MiddleTxoRef -- need to override index due to bug 695
                 contract =
                     mustReferenceOutputContract submitTxFromConstraints l
-                    overridedW1TxoRefs overridedW1TxoRefs
+                    w1MiddleTxoRef w1MiddleTxoRef
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 1
 
@@ -185,11 +181,9 @@ mustReferenceOutputWithMultiplePubkeyOutputs :: SubmitTx -> PSU.Language -> Test
 mustReferenceOutputWithMultiplePubkeyOutputs submitTxFromConstraints l =
     let trace = do
             w1State <- Trace.agentState w1
-            let w1TxoRefs = txoRefsFromWalletState w1State
-                overridedW1TxoRefs = overrideW1TxOutRefs $ S.toList w1TxoRefs -- need to override index due to bug 695
+            let w1TxoRefs = S.toList $ txoRefsFromWalletState w1State
                 contract =
-                    mustReferenceOutputContract submitTxFromConstraints l
-                    overridedW1TxoRefs overridedW1TxoRefs
+                    mustReferenceOutputContract submitTxFromConstraints l w1TxoRefs w1TxoRefs
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 1
 
@@ -234,9 +228,9 @@ ledgerValidationErrorWhenReferencingNonExistingTxo submitTxFromConstraints l =
     in checkPredicateOptions defaultCheckOptions
     ("Ledger validation error occurs when using offchain mustReferenceOutput " ++
      "constraint with a txo that doesn't exist")
-    (assertFailedTransaction (\_ err ->
-        case err of {L.CardanoLedgerValidationError msg ->
-            Text.isInfixOf "TranslationLogicMissingInput" msg; _ -> False  }))
+    (assertFailedTransaction (const $ has
+        $ L._CardanoLedgerValidationError . filtered (Text.isInfixOf "TranslationLogicMissingInput"))
+    )
     (void $ defTrace contract)
 
 data UnitTest

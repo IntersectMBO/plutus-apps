@@ -166,7 +166,7 @@ runChainIndexTest
       , MonadIO m)
   => Eff '[ ChainIndexQueryEffect
           , ChainIndexControlEffect
-          , BeamEffect
+          , BeamEffect Sqlite.Sqlite
           ] a
   -> m a
 runChainIndexTest action = do

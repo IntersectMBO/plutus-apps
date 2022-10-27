@@ -110,11 +110,11 @@ fromOnChainTx = \case
             ctx
     Invalid ctx ->
         onCardanoTx
-            (\case tx@Tx{txCollateral, txValidRange, txData, txScripts} ->
+            (\case tx@Tx{txCollateralInputs, txReturnCollateral, txValidRange, txData, txScripts} ->
                     ChainIndexTx
                         { _citxTxId = txId tx
-                        , _citxInputs = map (fillTxInputWitnesses tx) txCollateral
-                        , _citxOutputs = InvalidTx Nothing -- TODO: update when `Tx` supports collateral output
+                        , _citxInputs = map (fillTxInputWitnesses tx) txCollateralInputs
+                        , _citxOutputs = InvalidTx $ fmap (fromCardanoTxOut . getTxOut) txReturnCollateral
                         , _citxValidRange = txValidRange
                         , _citxData = txData
                         , _citxRedeemers = calculateRedeemerPointers tx

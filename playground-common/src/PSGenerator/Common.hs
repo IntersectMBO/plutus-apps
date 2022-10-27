@@ -24,9 +24,10 @@ import Language.PureScript.Bridge.Builder (BridgeData)
 import Language.PureScript.Bridge.PSTypes (psInt, psNumber, psString)
 import Language.PureScript.Bridge.SumType (sigConstructor, sigValues, sumTypeConstructors)
 import Language.PureScript.Bridge.TypeParameters (A)
-import Ledger (Address, BlockId, CardanoTx, Certificate, ChainIndexTxOut, OnChainTx, PaymentPubKey, PaymentPubKeyHash,
-               PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, Tx, TxId, TxIn,
-               TxInType, TxInput, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Withdrawal)
+import Ledger (Address, BlockId, CardanoTx, Certificate, ChainIndexTxOut, DatumFromQuery, OnChainTx, PaymentPubKey,
+               PaymentPubKeyHash, PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash,
+               Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase,
+               Withdrawal)
 import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
@@ -421,6 +422,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @UtxoIndex
     , equal . genericShow . argonaut $ mkSumType @Value
     , equal . genericShow . argonaut $ mkSumType @Withdrawal
+    , equal . genericShow . argonaut $ mkSumType @DatumFromQuery
     -- v2
     , equal . genericShow . argonaut $ mkSumType @PV2.OutputDatum
     , equal . genericShow . argonaut $ mkSumType @ReferenceScript

@@ -4,6 +4,8 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- | This module extracts Shelley addresses from a live utxo SQLite database and ranks them based on their corresponding number of utxos
+--
 module Marconi.DB.SqlUtils where
 
 import Cardano.Api qualified as CApi
@@ -22,6 +24,9 @@ import Ledger qualified as Plutus
 import Ledger.Tx.CardanoAPI.Internal (toCardanoAddressInEra)
 import Marconi.Api.Types (DBQueryEnv (..), HasDBQueryEnv (..), utxoConn)
 import Marconi.Api.UtxoIndexersQuery (withQueryAction)
+
+-- | Represents Shelley type addresses with most utxo transactions
+--
 data ShelleyFrequencyTable a = ShelleyFrequencyTable
     { _sAddress   :: !a
     , _sFrequency :: Int
@@ -32,23 +37,28 @@ instance (FromField a) => FromRow (ShelleyFrequencyTable a) where
 instance (ToField a) => ToRow (ShelleyFrequencyTable a )where
   toRow (ShelleyFrequencyTable ad f) = toRow(ad, f)
 
-bootstrap :: IO ()
-bootstrap =  putStrLn "hello"
-
+-- | create a small SQL pipeline:
+-- first create a table of addresses and their coresponding utxo counts.
+-- Next, create the shelleyaddresses table
+--
 freqUtxoTable :: DBQueryEnv -> IO ()
 freqUtxoTable env = do
     let conn = env ^. dbConf . utxoConn
         qsem = env ^. queryQSem
-    void $ withQueryAction (SQL.execute_ conn
-                            "drop table if exists frequtxos") qsem
-    void $ withQueryAction (SQL.execute_ conn
-                            "drop table if exists shelleyaddresses") qsem
-    void $ withQueryAction (SQL.execute_ conn
-                            "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC") qsem
-    void $ withQueryAction ( SQL.execute_ conn
-                             "create TABLE shelleyaddresses (address text not null, frequency int not null)" ) qsem
+    void $ withQueryAction (
+        SQL.execute_ conn "drop table if exists frequtxos"
+        >> SQL.execute_ conn "drop table if exists shelleyaddresses"
+        >> SQL.execute_ conn "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC"
+        >> SQL.execute_ conn
+           "create TABLE shelleyaddresses (address text not null, frequency int not null)"
+        ) qsem
     pure ()
 
+
+-- | populate the shelleyFrequency table
+-- first create a table of addresses and their coresponding utxo counts.
+-- Next, create the shelleyaddresses table
+--
 freqShelleyTable :: DBQueryEnv -> IO [Text]
 freqShelleyTable env = do
     let conn = env ^. dbConf . utxoConn
@@ -56,23 +66,29 @@ freqShelleyTable env = do
         nid = env ^. network
     addressFreq <- withQueryAction (SQL.query_ conn
                                 "SELECT address, frequency FROM frequtxos") qsem :: IO [ShelleyFrequencyTable Plutus.Address]
-    let addresses = catMaybes . fmap (toShelly' nid  ) $ addressFreq
+    let addresses = catMaybes . fmap (toShelley nid  ) $ addressFreq
 
-    SQL.execute_ conn "BEGIN TRANSACTION"
-    forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
+    withQueryAction (
+        SQL.execute_ conn "BEGIN TRANSACTION"
+        >> forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
                                       (SQL.execute conn
                                        "insert into shelleyaddresses (address, frequency) values (?, ?)"
                                        (a, f)))
-    SQL.execute_ conn "COMMIT"
-
+        >> SQL.execute_ conn "COMMIT"
+        ) qsem
     pure . fmap _sAddress $ addresses
 
-toShelly :: CApi.NetworkId  -> Plutus.Address -> Maybe Text
-toShelly nid address = case toCardanoAddressInEra nid address of
+toShelley' :: CApi.NetworkId  -> Plutus.Address -> Maybe Text
+toShelley' nid address = case toCardanoAddressInEra nid address of
             Left _     -> Nothing
             Right addr -> Just $ CApi.serialiseAddress addr
 
-toShelly' :: CApi.NetworkId  -> ShelleyFrequencyTable Plutus.Address -> Maybe (ShelleyFrequencyTable Text)
-toShelly' nid (ShelleyFrequencyTable a f) = let
-    b = toShelly nid a
-    in fmap (flip ShelleyFrequencyTable f) b
+-- | we want to store addresses as Text.
+-- first conver to cardano address, then seriase to text
+--
+toShelley :: CApi.NetworkId  -> ShelleyFrequencyTable Plutus.Address -> Maybe (ShelleyFrequencyTable Text)
+toShelley nid (ShelleyFrequencyTable a f) =
+    let
+        b = toShelley' nid a
+    in
+        (flip ShelleyFrequencyTable f) <$> b

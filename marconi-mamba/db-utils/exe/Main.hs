@@ -1,27 +1,41 @@
 
 module Main where
-import Cardano.Api qualified as CApi
+import Cardano.Api (NetworkId)
 import Marconi.Api.Types (TargetAddresses)
 import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo
 import Marconi.Bootstrap (targetAddressParser)
+import Marconi.CLI (pNetworkId)
 import Marconi.DB.SqlUtils (freqShelleyTable, freqUtxoTable)
+import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, showDefault, strOption, value,
+                            (<**>))
 
+
+
+data CliOptions = CliOptions
+    { utxoPath  :: FilePath
+    , networkId :: NetworkId  }
+
+-- |
 bech32Addresses :: String   -- ^  valid address to keep track of
 bech32Addresses = "addr1w9645geguy679dvy73mgt6rvc4xyhjpxj4s0wxjtd6swvdc5dxgc3"
--- TODO
-dbpath :: FilePath -- ^ valid SQLite marconi UTxo database path
-dbpath = "./.marconidb/utxodb"
+
+cliParser :: Parser CliOptions
+cliParser = CliOptions
+    <$> strOption (long "utxo-db"
+                              <> short 'd'
+                              <> metavar "FILENAME"
+                              <>  showDefault
+                              <> value "./.marconidb/utxodb"
+                              <> help "Path to the utxo database.")
+    <*> pNetworkId
 
 fakeAddresses :: TargetAddresses
 fakeAddresses = targetAddressParser bech32Addresses
 
-mainNet :: CApi.NetworkId
-mainNet = CApi.Mainnet
-
-
 main :: IO ()
 main  = do
-    dbEnv <- Q.Utxo.bootstrap dbpath fakeAddresses mainNet
+    (CliOptions dbpath networkid) <- execParser $ info (cliParser <**> helper) mempty
+    dbEnv <- Q.Utxo.bootstrap dbpath fakeAddresses networkid
     freqUtxoTable dbEnv
     as <- freqShelleyTable dbEnv
     print (length as)

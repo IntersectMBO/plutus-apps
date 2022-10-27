@@ -21,7 +21,7 @@ import Data.FingerTree ((|>))
 import Data.FingerTree qualified as FT
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
-import Ledger (OnChainTx, TxId, eitherTx)
+import Ledger (OnChainTx, TxId, onChainTxIsValid)
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxTxId, validityFromChainIndex)
 import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), Point (..), RollbackState (..), Tip (..),
                                 TxConfirmedState (..), TxIdState (..), TxStatus, TxStatusFailure (..), TxValidity (..))
@@ -31,7 +31,7 @@ import Plutus.ChainIndex.UtxoState (RollbackFailed (..), RollbackResult (..), Ut
 -- | The 'TxStatus' of a transaction right after it was added to the chain
 initialStatus :: OnChainTx -> TxStatus
 initialStatus tx =
-  TentativelyConfirmed 0 (eitherTx (const TxInvalid) (const TxValid) tx) ()
+  TentativelyConfirmed 0 (if onChainTxIsValid tx then TxValid else TxInvalid) ()
 
 -- | Increase the depth of a tentatively confirmed transaction
 increaseDepth :: TxStatus -> TxStatus

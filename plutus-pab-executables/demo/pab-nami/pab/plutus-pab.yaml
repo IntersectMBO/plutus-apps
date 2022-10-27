@@ -10,6 +10,11 @@ pabWebserverConfig:
   # available. If this is not set, calls to unavailable endpoints fail
   # immediately.
   endpointTimeout: 5
+  # Optional timeout (in seconds) when querying the status of an invoked endpoint for
+  # which the expected contract status must be set to Done.
+  # If this is not set, the query will wait until the instance state is updated.
+  waitStatusTimeout: 60
+  enableMarconi: False
 
 walletServerConfig:
   tag: RemoteWalletConfig
@@ -27,6 +32,11 @@ nodeServerConfig:
     - getWallet: 1
     - getWallet: 2
     - getWallet: 3
+  # Which cardano-node to use
+  # Options are
+  # - MockNode          (plutus-apps internal mock version of the node)
+  # - AlonzoNode        (cardano-node via socket connection)
+  # - NoChainSyncEvents (no node for chain sync events)
   pscNodeMode: AlonzoNode
 
 # Unfortunately, the 'chainIndexConfig' is mandatory in the PAB, even though we don't use it

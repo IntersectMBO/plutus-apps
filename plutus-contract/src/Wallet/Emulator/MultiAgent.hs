@@ -36,6 +36,7 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Cardano.Api (NetworkId)
+import Data.Foldable (fold)
 import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
@@ -299,7 +300,7 @@ emulatorStateInitialDist networkId mp = do
     outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatum) $ Map.toList mp >>= mkOutputs
     let tx = mempty
            { txOutputs = TxOut <$> outs
-           , txMint = foldMap snd $ Map.toList mp
+           , txMint = fold mp
            , txValidRange = WAPI.defaultSlotRange
            }
         cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
@@ -308,7 +309,7 @@ emulatorStateInitialDist networkId mp = do
     where
         -- See [Creating wallets with multiple outputs]
         mkOutputs (key, vl) = mkOutput key <$> splitInto10 vl
-        splitInto10 vl = replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
+        splitInto10 vl = if count <= 1 then [vl] else replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
             where
                 ada = if Value.isAdaOnlyValue vl then Ada.fromValue vl else Ada.fromValue vl - minAdaTxOut
                 -- Make sure we don't make the outputs too small

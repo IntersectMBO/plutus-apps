@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans    #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Integration (tests) where
 
@@ -34,7 +35,7 @@ import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
+-- import Test.Tasty.Hedgehog (testPropertyNamed)
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
@@ -59,7 +60,8 @@ import Marconi.Logging ()
 
 tests :: TestTree
 tests = testGroup "Integration"
-  [ testPropertyNamed "prop_script_hash_in_local_testnet_tx_match" "testIndex" testIndex
+  [ -- Uncomment when bug #775 on github is fixed (PLT-1068)
+    -- testPropertyNamed "prop_script_hash_in_local_testnet_tx_match" "testIndex" testIndex
   ]
 
 {- | We test the script transaction indexer by setting up a testnet,

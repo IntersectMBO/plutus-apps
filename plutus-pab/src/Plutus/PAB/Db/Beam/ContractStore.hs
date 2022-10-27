@@ -1,13 +1,14 @@
-{-# LANGUAGE BlockArguments    #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments      #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeOperators       #-}
 
 {-
 
@@ -23,7 +24,7 @@ import Control.Monad (join)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras (LogMsg)
-import Control.Monad.Freer.Extras.Beam (BeamEffect (..), addRows, selectList, selectOne, updateRows)
+import Control.Monad.Freer.Extras.Beam (BeamEffect (..), Synt, addRows, deleteRows, selectList, selectOne, updateRows)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Builder (toLazyByteString)
 import Data.ByteString.Char8 qualified as B
@@ -38,6 +39,7 @@ import Data.Text.Encoding qualified as Text
 import Data.Typeable (Proxy (..), typeRep)
 import Data.UUID (fromText, toText)
 import Database.Beam
+import Database.Beam.Backend (HasSqlValueSyntax, SqlNull)
 import Plutus.PAB.Db.Schema hiding (ContractInstanceId)
 import Plutus.PAB.Effects.Contract (ContractStore (..), PABContract (..))
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, HasDefinitions (getContract), fromResponse, getResponse)
@@ -95,8 +97,17 @@ uuidStr = toText . unContractInstanceId
 
 -- | Run the 'ContractStore' actions against the database.
 handleContractStore ::
-  forall a effs.
-  ( Member BeamEffect effs
+  forall dbt a effs.
+  ( FromBackendRow dbt Text
+  , FromBackendRow dbt Bool
+  , FromBackendRow dbt SqlNull
+  , HasSqlValueSyntax (Synt dbt) (Maybe Text)
+  , HasSqlValueSyntax (Synt dbt) Text
+  , HasSqlValueSyntax (Synt dbt) Bool
+  , HasSqlEqualityCheck dbt Text
+  , HasSqlEqualityCheck dbt Bool
+  , HasQBuilder dbt
+  , Member (BeamEffect dbt) effs
   , Member (Error PABError) effs
   , Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs
   , ToJSON a
@@ -108,14 +119,14 @@ handleContractStore ::
   ~> Eff effs
 handleContractStore = \case
   PutStartInstance args instanceId ->
-    addRows
+    addRows @dbt
       $ insert (_contractInstances db)
       $ insertValues [ mkRow args instanceId ]
 
   PutState _ instanceId state ->
     let encode' = Text.decodeUtf8 . B.concat . LB.toChunks . encode . getResponse
     in do
-        updateRows
+        updateRows @dbt
           $ update (_contractInstances db)
               (\ci -> ci ^. contractInstanceState <-. val_ (Just $ encode' state))
               (\ci -> ci ^. contractInstanceId ==. val_ (uuidStr instanceId))
@@ -142,7 +153,7 @@ handleContractStore = \case
 
     join
       $ fmap extractState
-      $ selectOne
+      $ selectOne @dbt
       $ select
       $ do
           inst <- all_ (_contractInstances db)
@@ -150,14 +161,14 @@ handleContractStore = \case
           pure inst
 
   PutStopInstance instanceId ->
-    updateRows
+    updateRows @dbt
       $ update (_contractInstances db)
           (\ci -> ci ^. contractInstanceActive <-. val_ False)
           (\ci -> ci ^. contractInstanceId ==. val_ (uuidStr instanceId))
 
   GetContracts mStatus ->
     fmap mkContracts
-      $ selectList
+      $ selectList @dbt
       $ select
       $ do
           ci <- all_ (_contractInstances db)
@@ -165,3 +176,9 @@ handleContractStore = \case
             Just s -> guard_ ( ci ^. contractInstanceActive ==. val_ (s == Active) )
             _      -> pure ()
           pure ci
+
+  DeleteState instanceId ->
+    deleteRows @dbt
+      $ delete
+          (_contractInstances db)
+          (\ci -> ci ^. contractInstanceId ==. val_ (uuidStr instanceId))
