@@ -18,9 +18,8 @@ import Data.Text (Text, unpack)
 import Database.SQLite.Simple (NamedParam ((:=)), open)
 import Database.SQLite.Simple qualified as SQL
 import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag))
-import Marconi.Api.Types (CardanoAddress, DBConfig (DBConfig),
-                          DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem), HasDBConfig (utxoConn),
-                          HasDBQueryEnv (dbConf, queryQSem, queryQSem), TargetAddresses,
+import Marconi.Api.Types (DBConfig (DBConfig), DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem),
+                          HasDBConfig (utxoConn), HasDBQueryEnv (dbConf, queryQSem, queryQSem), TargetAddresses,
                           UtxoRowWrapper (UtxoRowWrapper))
 import Marconi.CardanoAPI (TxOutRef)
 import Marconi.Index.Utxo (UtxoRow (UtxoRow, _reference))
@@ -58,7 +57,7 @@ findByAddress
     -> IO (Either ToCardanoError (Set TxOutRef) )   -- ^ To Plutus address conversion error may occure
 findByAddress env addressText =
     let
-        addressEither :: Either CApi.Bech32DecodeError  CardanoAddress
+        addressEither :: Either CApi.Bech32DecodeError CApi.AddressAny
         addressEither = CApi.toAddressAny <$> CApi.deserialiseFromBech32 CApi.AsShelleyAddress addressText
     in
         case addressEither of

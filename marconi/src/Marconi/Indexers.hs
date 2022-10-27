@@ -43,8 +43,8 @@ import RewindableIndex.Index.VSplit qualified as Ix
 
 type CardanoAddress = C.Address C.ShelleyAddr
 
--- | Typre represents non empty list of Bech32 compatable addresses"
-type TargetAddresses = NonEmpty C.AddressAny
+-- | Typre represents non empty list of Bech32 compatable addresses
+type TargetAddresses = NonEmpty CardanoAddress
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
@@ -161,8 +161,8 @@ isInTargetTxOut
     :: TargetAddresses              -- ^ non empty list of target address
     -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
     -> Bool
-isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
-    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> Shelley.AddressShelley addr `elem` targetAddresses
+isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
+    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
 queryAwareUtxoWorker
