@@ -155,6 +155,7 @@ library
     , data-default
     , deepseq
     , directory
+    , either
     , filepath
     , flat
     , foldl

@@ -6,6 +6,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE ViewPatterns       #-}
 {-| Transaction validation using 'cardano-ledger-specs'
 -}
 module Ledger.Validation(
@@ -48,11 +49,10 @@ import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraBabbage), makeSigned
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (CollectErrors))
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Script, unCostModels)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, Script, unCostModels)
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), ScriptResult (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr)
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.Babbage (TxOut)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -73,7 +73,6 @@ import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Lens (makeLenses, over, (&), (.~), (^.))
-import Control.Monad (guard)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
@@ -213,13 +212,13 @@ applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
-hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Maybe P.ValidationErrorInPhase
+hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either P.ValidationErrorInPhase P.ValidationSuccess
 hasValidationErrors params slotNo utxo tx'@(C.Api.ShelleyTx _ tx) =
   case res of
-    Left e  -> Just (P.Phase1, e)
-    Right _ -> case getTxExUnits params utxo tx' of
-      Left (Left e) -> Just e
-      _             -> Nothing
+    Left e  -> Left (P.Phase1, e)
+    Right _ -> case getTxExUnitsWithLogs params utxo tx' of
+      Left (Left e) -> Left e
+      Right result  -> Right result
   where
     state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
@@ -278,19 +277,18 @@ validateCardanoTx
   -> Slot
   -> UTxO EmulatorEra
   -> CardanoTx
-  -> Maybe P.ValidationErrorInPhase
-validateCardanoTx params slot utxo =
+  -> Either P.ValidationErrorInPhase P.ValidationSuccess
+validateCardanoTx params slot utxo@(UTxO utxoMap) =
   onCardanoTx
       (\_ -> error "validateCardanoTx: EmulatorTx is not supported")
-      (\(CardanoApiEmulatorEraTx tx) -> do
-        guard (utxo /= UTxO Map.empty)
+      (\(CardanoApiEmulatorEraTx tx) -> if Map.null utxoMap then Right Map.empty else
         hasValidationErrors params (fromIntegral slot) utxo tx)
 
-getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
-getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
-  case C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
-    Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . Text.pack . show $ e
-    Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
+getTxExUnitsWithLogs :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either CardanoLedgerError P.ValidationSuccess
+getTxExUnitsWithLogs params utxo (C.Api.ShelleyTx _ tx) =
+  case C.Ledger.evaluateTransactionExecutionUnitsWithLogs (emulatorPParams params) tx utxo ei ss costmdls of
+    Left e       -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . Text.pack . show $ e
+    Right result -> traverse (either toCardanoLedgerError Right) result
   where
     eg = emulatorGlobals params
     ss = systemStart eg
@@ -309,7 +307,7 @@ makeTransactionBody
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.BabbageEra)
 makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
-  exUnits <- getTxExUnits params utxo txTmp
+  exUnits <- Map.map snd <$> getTxExUnitsWithLogs params utxo txTmp
   first Right $ P.makeTransactionBody exUnits txBodyContent
 
 

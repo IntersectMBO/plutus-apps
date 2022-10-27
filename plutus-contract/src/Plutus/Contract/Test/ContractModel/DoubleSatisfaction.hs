@@ -43,6 +43,8 @@ import Control.Monad.State qualified as State
 import Data.Map qualified as Map
 import Data.Maybe
 
+import Data.Either.Combinators (leftToMaybe)
+
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -171,7 +173,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
       QC.assert False
    return env
     where
-      chainEventType (TxnValidate _ constr) = "TxnValidate "
+      chainEventType (TxnValidate _ constr _) = "TxnValidate "
         ++ (head . words . show $ constr)
       chainEventType ce = head . words . show $ ce
 
@@ -192,14 +194,14 @@ getDSCounterexamples params = go 0 mempty
     go _ _ [] = ([], [], [])
     go slot idx (e:es) = case e of
       SlotAdd slot' -> go slot' idx es
-      TxnValidate _ txn ->
+      TxnValidate _ txn _ ->
           let
               cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
               e' = Validation.validateCardanoTx params slot cUtxoIndex txn
               idx' = case e' of
-                  Just (Index.Phase1, _) -> idx
-                  Just (Index.Phase2, _) -> Index.insertCollateral txn idx
-                  Nothing                -> Index.insert txn idx
+                  Left (Index.Phase1, _) -> idx
+                  Left (Index.Phase2, _) -> Index.insertCollateral txn idx
+                  Right _                -> Index.insert txn idx
               cands = doubleSatisfactionCandidates params slot idx e
               potentialCEs = doubleSatisfactionCounterexamples =<< cands
               actualCEs = checkForDoubleSatisfactionVulnerability params slot idx e
@@ -217,8 +219,8 @@ getDSCounterexamples params = go 0 mempty
 --   validation event.
 doubleSatisfactionCandidates :: P.Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
-  TxnValidate txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
-  _                                -> []
+  TxnValidate txid (EmulatorTx tx) _ -> [WrappedTx txid tx idx slot params]
+  _                                  -> []
 
 -- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
 --   failed with error @err@.
@@ -228,7 +230,7 @@ validateWrappedTx' WrappedTx{..} =
     cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsUtxoIndex
     signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
     e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
-  in e'
+  in leftToMaybe e'
 
 -- | Run validation for a `WrappedTx`. Returns @True@ if successful.
 validateWrappedTx :: WrappedTx -> Bool

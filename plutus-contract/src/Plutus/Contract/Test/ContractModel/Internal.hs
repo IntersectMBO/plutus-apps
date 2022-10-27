@@ -1403,7 +1403,7 @@ makeLenses ''CoverageOptions
 -- * set the requriements for every endpoint to 20% and
 -- * not to cover any source locations in the validator scripts.
 defaultCoverageOptions :: CoverageOptions
-defaultCoverageOptions = CoverageOptions { _checkCoverage = False
+defaultCoverageOptions = CoverageOptions { _checkCoverage = True
                                          , _endpointCoverageReq = \ _ _ -> 0
                                          , _coverageIndex = mempty
                                          , _coverageIORef = Nothing }
@@ -1919,7 +1919,7 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     checkEvent _ = False
 
     checkEvents :: [ChainEvent] -> Bool
-    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _) <- events ]
+    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _ _) <- events ]
 
     go :: TracePredicate -> Actions m -> Property
     go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts (\ _ _ -> check) $ do

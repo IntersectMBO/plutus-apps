@@ -155,6 +155,7 @@ library
     , cryptonite         >=0.25
     , data-default
     , deepseq
+    , either
     , flat
     , hashable
     , hedgehog

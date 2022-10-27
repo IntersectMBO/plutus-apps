@@ -40,15 +40,13 @@ getInvokedEndpoints es =
 getCoverageData :: [EmulatorEvent] -> CoverageData
 getCoverageData es =
   let extractLog e = case e of
-        ChainEvent TxnValidate{}       -> []
-        -- TODO: collect executed scripts during validation
-        ChainEvent TxnValidationFail{} -> []
-        _                              -> []
+        ChainEvent (TxnValidate _ _ logs)             -> logs
+        ChainEvent (TxnValidationFail _ _ _ _ _ logs) -> logs
+        _                                             -> []
 
   in fold $ do
     event <- es
-    log <- extractLog $ event ^. eteEvent
-    logEvent <- log
+    logEvent <- extractLog $ event ^. eteEvent
     let msg = Text.unpack logEvent
     return $ coverageDataFromLogMsg msg
 
