@@ -250,6 +250,9 @@ data WebserverConfig =
         , staticDir            :: Maybe FilePath
         , permissiveCorsPolicy :: Bool -- ^ If true; use a very permissive CORS policy (any website can interact.)
         , endpointTimeout      :: Maybe Second
+        -- ^ timeout to be used when endpoint is not available on invocation.
+        , waitStatusTimeout    :: Maybe Second
+        -- ^ timeout to be used when querying endpoint result when expected contract status must be set to Done.
         , enableMarconi        :: Bool
         }
     deriving (Show, Eq, Generic)
@@ -264,6 +267,7 @@ defaultWebServerConfig =
     , staticDir            = Nothing
     , permissiveCorsPolicy = False
     , endpointTimeout      = Nothing
+    , waitStatusTimeout    = Nothing
     , enableMarconi        = False
     }
 
