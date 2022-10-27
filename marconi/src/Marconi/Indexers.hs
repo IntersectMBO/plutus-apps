@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE TupleSections  #-}
 
 module Marconi.Indexers where
@@ -14,20 +15,23 @@ import Control.Lens.Operators ((&), (^.))
 import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
-import Data.Map (assocs)
+import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
-                    chainPointToSlotNo)
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
+                    SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
+import Cardano.Api.Byron qualified as Byron
+import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Data.List.NonEmpty (NonEmpty)
 
-import Marconi.CardanoAPI (Datum, DatumHash, TxIn, TxOutRef, scriptDataFromCardanoTxBody, txOutRef,
-                           txScriptValidityToScriptValidity)
+import Marconi.CardanoAPI (TxIn, TxOutRef, currentEra, txOutRef, txScriptValidityToScriptValidity)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
@@ -42,14 +46,27 @@ type CardanoAddress = C.Address C.ShelleyAddr
 type TargetAddresses = NonEmpty CardanoAddress
 
 -- DatumIndexer
-getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
+getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extractDatumsFromTx txs
   where
+    extractData :: Alonzo.TxDats era -> Map (Hash ScriptData) ScriptData
+    extractData (Alonzo.TxDats' xs) =
+      Map.fromList
+      . fmap ((\x -> (C.hashScriptData x, x)) . Shelley.fromAlonzoData)
+      . Map.elems $ xs
+
+    scriptDataFromCardanoTxBody :: C.TxBody era -> Map (Hash ScriptData) ScriptData
+    scriptDataFromCardanoTxBody Byron.ByronTxBody {} = mempty
+    scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) = mempty
+    scriptDataFromCardanoTxBody
+      (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ dats _) _ _) =
+          extractData dats
+
     extractDatumsFromTx
       :: Tx era
-      -> [(SlotNo, (DatumHash, Datum))]
+      -> [(SlotNo, (Hash ScriptData, ScriptData))]
     extractDatumsFromTx (Tx txBody _) =
-      let hashes = assocs $ scriptDataFromCardanoTxBody txBody
+      let hashes = Map.assocs $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
 
 
@@ -65,7 +82,7 @@ getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}
                 Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
                 _                    -> id -- no filtering is applied
         outs  <- either (const Nothing) Just
-            . traverse (C.eraCast C.BabbageEra)
+            . traverse (C.eraCast currentEra)
             . indexersFilter
             $ txOuts
         pure $ outs & imap

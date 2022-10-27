@@ -25,17 +25,16 @@ import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.ToField (ToField (toField))
 
-import Cardano.Api (AsType (AsHash, AsScriptData), SerialiseAsRawBytes (deserialiseFromRawBytes, serialiseToRawBytes),
-                    SlotNo (SlotNo))
+import Cardano.Api qualified as C
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise.Class (Serialise (decode))
-import Marconi.CardanoAPI (Datum, DatumHash)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-type Event        = [(SlotNo, (DatumHash, Datum))]
+type DatumHash    = C.Hash C.ScriptData
+type Event        = [(C.SlotNo, (DatumHash, C.ScriptData))]
 type Query        = DatumHash
-type Result       = Maybe Datum
+type Result       = Maybe C.ScriptData
 type Notification = ()
 
 type DatumIndex = SqliteIndex Event Notification Query Result
@@ -46,27 +45,28 @@ instance FromField DatumHash where
   fromField f = fromField f >>=
     maybe (returnError ConversionFailed f "Cannot deserialise datumhash.")
            pure
-    . deserialiseFromRawBytes (AsHash AsScriptData)
+    . C.deserialiseFromRawBytes (C.AsHash C.AsScriptData)
 
 instance ToField DatumHash where
-  toField = SQLBlob . serialiseToRawBytes
+  toField = SQLBlob . C.serialiseToRawBytes
 
-instance Serialise Datum where
+instance Serialise C.ScriptData where
   encode = toCBOR
   decode = fromCBOR
 
-instance FromField Datum where
+instance FromField C.ScriptData where
   fromField f = fromField f >>=
-    either (const $ returnError ConversionFailed f "Cannot deserialise datumhash.") pure . deserialiseOrFail
+    either (const $ returnError ConversionFailed f "Cannot deserialise datumhash.") pure
+    . deserialiseOrFail
 
-instance ToField Datum where
+instance ToField C.ScriptData where
   toField = SQLBlob . toStrict . serialise
 
-instance FromField SlotNo where
-  fromField f = SlotNo <$> fromField f
+instance FromField C.SlotNo where
+  fromField f = C.SlotNo <$> fromField f
 
-instance ToField SlotNo where
-  toField (SlotNo s) = SQLInteger $ fromIntegral s
+instance ToField C.SlotNo where
+  toField (C.SlotNo s) = SQLInteger $ fromIntegral s
 
 open
   :: FilePath
@@ -108,10 +108,12 @@ store ix = do
   let c = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
   Ix.getBuffer (ix ^. Ix.storage) >>=
-    mapM_ (SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?,?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?") . map unpack . concat
+    mapM_ ( SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?,?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?"
+          . unpack)
+    . concat
   SQL.execute_ c "COMMIT"
   where
-    unpack :: (SlotNo, (DatumHash, Datum)) -> (SlotNo, DatumHash, Datum, SlotNo)
+    unpack :: (C.SlotNo, (DatumHash, C.ScriptData)) -> (C.SlotNo, DatumHash, C.ScriptData, C.SlotNo)
     unpack (s, (h, d)) = (s, h, d, s)
 
 onInsert :: DatumIndex -> Event -> IO [Notification]
