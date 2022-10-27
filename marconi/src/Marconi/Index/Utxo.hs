@@ -6,6 +6,7 @@
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE GADTs              #-}
 
 module Marconi.Index.Utxo
   ( -- * UtxoIndex
@@ -51,7 +52,7 @@ import System.Random.MWC (createSystemRandom, uniformR)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-import Marconi.CardanoAPI (Address, TxIn (TxIn), TxOut, TxOutRef, pattern AsCurrentEra, txOutRef)
+import Marconi.CardanoAPI (CurrentEra, TxIn (TxIn), TxOut, TxOutRef, txOutRef)
 
 data UtxoUpdate = UtxoUpdate
   { _inputs  :: !(Set TxIn)
@@ -63,17 +64,17 @@ $(makeLenses ''UtxoUpdate)
 
 type Result = Maybe [TxOutRef]
 
-type UtxoIndex = SqliteIndex UtxoUpdate () Address Result
+type UtxoIndex = SqliteIndex UtxoUpdate () C.AddressAny Result
 
 newtype Depth = Depth Int
 
-instance FromField Address where
+instance FromField C.AddressAny where
   fromField f = fromField f >>=
     maybe (returnError ConversionFailed f "Cannot deserialise address.")
           pure
-    . C.deserialiseFromRawBytes (C.AsAddressInEra AsCurrentEra)
+    . C.deserialiseFromRawBytes C.AsAddressAny
 
-instance ToField Address where
+instance ToField C.AddressAny where
   toField = SQLBlob . C.serialiseToRawBytes
 
 instance FromField C.TxId where
@@ -89,7 +90,7 @@ instance ToField C.TxIx where
   toField (C.TxIx i) = SQLInteger $ fromIntegral i
 
 data UtxoRow = UtxoRow
-  { _address   :: !Address
+  { _address   :: !C.AddressAny
   , _reference :: !TxOutRef
   } deriving (Generic)
 
@@ -126,7 +127,7 @@ open dbPath (Depth k) = do
 
 query
   :: UtxoIndex
-  -> Address
+  -> C.AddressAny
   -> [UtxoUpdate]
   -> IO Result
 query ix addr updates = do
@@ -174,9 +175,14 @@ onInsert _ix _update = pure []
 toRows :: UtxoUpdate -> [UtxoRow]
 toRows update = update ^. outputs
   & map (\(C.TxOut addr _ _ _, ref) ->
-        UtxoRow { _address   = addr
+        UtxoRow { _address   = toAddr addr
                 , _reference = ref
                 })
+  where
+    toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
+    toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
+    toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
 
-onlyAt :: Address -> UtxoRow -> Bool
+
+onlyAt :: C.AddressAny -> UtxoRow -> Bool
 onlyAt address' = has $ address . only address'

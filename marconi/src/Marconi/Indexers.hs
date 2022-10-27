@@ -1,7 +1,8 @@
-{-# LANGUAGE GADTs          #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE TupleSections  #-}
+{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE NamedFieldPuns  #-}
+{-# LANGUAGE PackageImports  #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TupleSections   #-}
 
 module Marconi.Indexers where
 
@@ -31,7 +32,7 @@ import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Data.List.NonEmpty (NonEmpty)
 
-import Marconi.CardanoAPI (TxIn, TxOutRef, currentEra, txOutRef, txScriptValidityToScriptValidity)
+import Marconi.CardanoAPI (TxIn, TxOutRef, pattern CurrentEra, txOutRef, txScriptValidityToScriptValidity)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
@@ -43,7 +44,7 @@ import RewindableIndex.Index.VSplit qualified as Ix
 type CardanoAddress = C.Address C.ShelleyAddr
 
 -- | Typre represents non empty list of Bech32 compatable addresses"
-type TargetAddresses = NonEmpty CardanoAddress
+type TargetAddresses = NonEmpty C.AddressAny
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
@@ -82,7 +83,7 @@ getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}
                 Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
                 _                    -> id -- no filtering is applied
         outs  <- either (const Nothing) Just
-            . traverse (C.eraCast currentEra)
+            . traverse (C.eraCast CurrentEra)
             . indexersFilter
             $ txOuts
         pure $ outs & imap
@@ -161,7 +162,7 @@ isInTargetTxOut
     -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
     -> Bool
 isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
-    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
+    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> Shelley.AddressShelley addr `elem` targetAddresses
     _                                                -> False
 
 queryAwareUtxoWorker

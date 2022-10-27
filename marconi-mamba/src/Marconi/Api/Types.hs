@@ -16,17 +16,19 @@
 -- This module provides support for writing handlers for JSON-RPC endpoints
 module Marconi.Api.Types where
 
-import Cardano.Api (Address, NetworkId, ShelleyAddr)
+import Cardano.Api (AddressAny, NetworkId, anyAddressInShelleyBasedEra)
 import Control.Concurrent.QSemN (QSemN)
 import Control.Lens (makeClassy)
-import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
+import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
 import Data.List.NonEmpty (NonEmpty)
 import Database.SQLite.Simple (Connection)
 import GHC.Generics (Generic)
-import Marconi.Index.Utxo (UtxoRow (UtxoRow))
 import Network.Wai.Handler.Warp (Settings)
 
-type CardanoAddress = Address ShelleyAddr
+import Marconi.CardanoAPI (CurrentEra)
+import Marconi.Index.Utxo (UtxoRow (UtxoRow))
+
+type CardanoAddress = AddressAny
 
 -- | Typre represents non empty list of Bech32 compatable addresses"
 type TargetAddresses = NonEmpty CardanoAddress
@@ -68,6 +70,9 @@ instance Ord UtxoRowWrapper where
 
 instance Eq UtxoRowWrapper where
     (UtxoRowWrapper  (UtxoRow a1 t1) ) == ( UtxoRowWrapper (UtxoRow a2 t2) ) = a1 == a2 &&  t1 == t2
+
+instance ToJSON AddressAny where
+  toJSON = toJSON . anyAddressInShelleyBasedEra @CurrentEra
 
 instance ToJSON UtxoRowWrapper where
     toEncoding = genericToEncoding defaultOptions

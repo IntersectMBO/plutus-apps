@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeFamilies       #-}
 -- | This module provides several type aliases and utility functions to deal with the current Cardano era.
@@ -6,11 +7,10 @@ module Marconi.CardanoAPI
        (
        CurrentEra,
        pattern AsCurrentEra,
-       currentEra,
+       pattern CurrentEra,
        C.TxIn(C.TxIn),
        TxOut,
        TxOutRef,
-       Address,
        Ledger.Crypto,
        Ledger.StandardCrypto,
        txScriptValidityToScriptValidity,
@@ -27,17 +27,14 @@ import Cardano.Ledger.Era qualified as Ledger
 -- | An alias for the current era, to ease the transition from one era to the next one
 type CurrentEra = C.BabbageEra
 
-currentEra :: C.CardanoEra CurrentEra
-currentEra = C.BabbageEra
+pattern CurrentEra :: C.CardanoEra CurrentEra
+pattern CurrentEra = C.BabbageEra
 
 pattern AsCurrentEra :: C.AsType CurrentEra
 pattern AsCurrentEra = C.AsBabbageEra
 
 -- | A Cardano TxOut of the current Era
 type TxOut = C.TxOut C.CtxTx CurrentEra
-
--- | A Cardano Address of the current Era
-type Address = C.AddressInEra CurrentEra
 
 -- | A reference to a transaction output. This is a
 -- pair of a transaction reference, and an index indicating which of the outputs

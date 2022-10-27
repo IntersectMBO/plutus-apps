@@ -4,8 +4,8 @@
 module Marconi.Api.Routes where
 
 import Data.Set (Set)
-import Ledger.Tx (TxOutRef)
 import Marconi.Api.Types (UtxoRowWrapper)
+import Marconi.CardanoAPI (TxOutRef)
 import Marconi.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
 import Servant.API (Get, NoContent, PlainText, Post, ReqBody, (:<|>), (:>))
 
