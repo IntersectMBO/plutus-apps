@@ -26,13 +26,8 @@ import Cardano.Api qualified as C
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Data.List.NonEmpty (NonEmpty)
 
--- TODO Remove the following dependencies from cardano-ledger, and
--- then also the package dependency from this package's cabal
--- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Ledger.Scripts (Datum, DatumHash)
-import Ledger.Tx.CardanoAPI.Internal (scriptDataFromCardanoTxBody)
-
-import Marconi.CardanoAPI (TxIn, TxOutRef, txOutRef, txScriptValidityToScriptValidity)
+import Marconi.CardanoAPI (Datum, DatumHash, TxIn, TxOutRef, scriptDataFromCardanoTxBody, txOutRef,
+                           txScriptValidityToScriptValidity)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
@@ -54,8 +49,9 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
       :: Tx era
       -> [(SlotNo, (DatumHash, Datum))]
     extractDatumsFromTx (Tx txBody _) =
-      let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
+      let hashes = assocs $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
+
 
 -- UtxoIndexer
 getOutputs

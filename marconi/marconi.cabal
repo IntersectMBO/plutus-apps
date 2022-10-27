@@ -65,6 +65,7 @@ library
   --------------------------
   build-depends:
     , cardano-api
+    , cardano-binary
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley

@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -13,20 +14,22 @@ module Marconi.Index.Datum
   , open
   ) where
 
-import Codec.Serialise (deserialiseOrFail, serialise)
+import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Control.Applicative ((<|>))
 import Control.Lens.Operators ((^.))
 import Data.ByteString.Lazy (toStrict)
 import Data.Foldable (find)
 import Data.Maybe (fromJust, listToMaybe)
-import Data.String (fromString)
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
+import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.ToField (ToField (toField))
 
-import Cardano.Api (SlotNo (SlotNo))
-import Ledger.Scripts (Datum, DatumHash)
+import Cardano.Api (AsType (AsHash, AsScriptData), SerialiseAsRawBytes (deserialiseFromRawBytes, serialiseToRawBytes),
+                    SlotNo (SlotNo))
+import Cardano.Binary (fromCBOR, toCBOR)
+import Codec.Serialise.Class (Serialise (decode))
+import Marconi.CardanoAPI (Datum, DatumHash)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
@@ -40,16 +43,21 @@ type DatumIndex = SqliteIndex Event Notification Query Result
 newtype Depth = Depth Int
 
 instance FromField DatumHash where
-  fromField f = fromString <$> fromField f
+  fromField f = fromField f >>=
+    maybe (returnError ConversionFailed f "Cannot deserialise datumhash.")
+           pure
+    . deserialiseFromRawBytes (AsHash AsScriptData)
 
 instance ToField DatumHash where
-  toField = SQLText . fromString . show
+  toField = SQLBlob . serialiseToRawBytes
+
+instance Serialise Datum where
+  encode = toCBOR
+  decode = fromCBOR
 
 instance FromField Datum where
   fromField f = fromField f >>=
-    either (const $ returnError ConversionFailed f "Cannot deserialise datum.")
-           pure
-    . deserialiseOrFail
+    either (const $ returnError ConversionFailed f "Cannot deserialise datumhash.") pure . deserialiseOrFail
 
 instance ToField Datum where
   toField = SQLBlob . toStrict . serialise
