@@ -53,10 +53,11 @@ module Plutus.PAB.Core.ContractInstance.STM(
 import Control.Applicative (Alternative (empty))
 import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
-import Control.Monad (guard, (<=<))
+import Control.Monad (guard)
 import Data.Aeson (Value)
 import Data.Foldable (fold)
-import Data.IORef (IORef, readIORef, writeIORef)
+import Data.IORef (IORef)
+import Data.IORef qualified as IORef
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -167,7 +168,7 @@ updateTxChangesR
 updateTxChangesR env f =
     case env of
       Left  _     -> pure ()
-      Right ixRef -> readIORef ixRef >>= f >>= writeIORef ixRef
+      Right ixRef -> IORef.readIORef ixRef >>= f >>= IORef.writeIORef ixRef
 
 -- | Initialise an empty 'BlockchainEnv' value
 emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv
@@ -255,8 +256,8 @@ instance Monoid InstanceClientEnv where
     mappend = (<>)
     mempty = InstanceClientEnv mempty mempty
 
-instancesClientEnv :: InstancesState -> STM InstanceClientEnv
-instancesClientEnv = fmap fold . traverse instanceClientEnv <=< STM.readTVar . getInstancesState
+instancesClientEnv :: InstancesState -> IO (STM InstanceClientEnv)
+instancesClientEnv = fmap (fmap fold . traverse instanceClientEnv) . IORef.readIORef . getInstancesState
 
 instanceClientEnv :: InstanceState -> STM InstanceClientEnv
 instanceClientEnv InstanceState{issTxOutRefs, issAddressRefs} =
@@ -323,7 +324,7 @@ callEndpoint :: OpenEndpoint -> EndpointValue Value -> STM ()
 callEndpoint OpenEndpoint{oepResponse} = STM.putTMVar oepResponse
 
 -- | Call an endpoint on a contract instance. Fail immediately if the endpoint is not active.
-callEndpointOnInstance :: InstancesState -> EndpointDescription -> Value -> ContractInstanceId -> STM (Maybe NotificationError)
+callEndpointOnInstance :: InstancesState -> EndpointDescription -> Value -> ContractInstanceId -> IO (STM (Maybe NotificationError))
 callEndpointOnInstance s endpointDescription value instanceID =
     let err = pure $ Just $ EndpointNotAvailable instanceID endpointDescription
     in callEndpointOnInstance' err s endpointDescription value instanceID
@@ -331,7 +332,7 @@ callEndpointOnInstance s endpointDescription value instanceID =
 -- | Call an endpoint on a contract instance. If the endpoint is not active, wait until the
 --   TMVar is filled, then fail. (if the endpoint becomes active in the meantime it will be
 --   called)
-callEndpointOnInstanceTimeout :: STM.TMVar () -> InstancesState -> EndpointDescription -> Value -> ContractInstanceId -> STM (Maybe NotificationError)
+callEndpointOnInstanceTimeout :: STM.TMVar () -> InstancesState -> EndpointDescription -> Value -> ContractInstanceId -> IO (STM (Maybe NotificationError))
 callEndpointOnInstanceTimeout tmv s endpointDescription value instanceID =
     let err = do
             _ <- STM.takeTMVar tmv
@@ -346,12 +347,12 @@ callEndpointOnInstance' ::
     -> EndpointDescription
     -> Value
     -> ContractInstanceId
-    -> STM (Maybe NotificationError)
+    -> IO (STM (Maybe NotificationError))
 callEndpointOnInstance' notAvailable (InstancesState m) endpointDescription value instanceID = do
-    instances <- STM.readTVar m
+    instances <- IORef.readIORef m
     case Map.lookup instanceID instances of
-        Nothing -> pure $ Just $ InstanceDoesNotExist instanceID
-        Just is -> do
+        Nothing -> pure $ pure (Just $ InstanceDoesNotExist instanceID)
+        Just is -> pure $ do
             mp <- openEndpoints is
             let match OpenEndpoint{oepName=ActiveEndpoint{aeDescription=d}} = endpointDescription == d
             case filter match $ fmap snd $ Map.toList mp of
@@ -364,36 +365,34 @@ yieldedExportTxs :: InstanceState -> STM [ExportTx]
 yieldedExportTxs = STM.readTVar . issYieldedExportTxs
 
 -- | State of all contract instances that are currently running
-newtype InstancesState = InstancesState { getInstancesState :: TVar (Map ContractInstanceId InstanceState) }
+newtype InstancesState = InstancesState { getInstancesState :: IORef (Map ContractInstanceId InstanceState) }
 
 -- | Initialise the 'InstancesState' with an empty value
-emptyInstancesState :: STM InstancesState
-emptyInstancesState = InstancesState <$> STM.newTVar mempty
+emptyInstancesState :: IO InstancesState
+emptyInstancesState = InstancesState <$> IORef.newIORef mempty
 
 -- | The IDs of all contract instances
-instanceIDs :: InstancesState -> STM (Set ContractInstanceId)
-instanceIDs (InstancesState m) = Map.keysSet <$> STM.readTVar m
+instanceIDs :: InstancesState -> IO (Set ContractInstanceId)
+instanceIDs (InstancesState m) = Map.keysSet <$> IORef.readIORef m
 
--- | The 'InstanceState' of the contract instance. Retries of the state can't
+-- | The 'InstanceState' of the contract instance. Retries if the state can't
 --   be found in the map.
-instanceState :: ContractInstanceId -> InstancesState -> STM InstanceState
+instanceState :: ContractInstanceId -> InstancesState -> IO (Maybe InstanceState)
 instanceState instanceId (InstancesState m) = do
-    mp <- STM.readTVar m
-    maybe empty pure (Map.lookup instanceId mp)
+    mp <- IORef.readIORef m
+    return (Map.lookup instanceId mp)
 
 -- | Get the observable state of the contract instance. Blocks if the
 --   state is not available yet.
-observableContractState :: ContractInstanceId -> InstancesState -> STM Value
-observableContractState instanceId m = do
-    InstanceState{issObservableState} <- instanceState instanceId m
+observableContractState :: InstanceState -> STM Value
+observableContractState InstanceState{issObservableState} = do
     v <- STM.readTVar issObservableState
     maybe empty pure v
 
 -- | Return the final state of the contract when it is finished (possibly an
 --   error)
-finalResult :: ContractInstanceId -> InstancesState -> STM (Maybe Value)
-finalResult instanceId m = do
-    InstanceState{issStatus} <- instanceState instanceId m
+finalResult :: InstanceState -> STM (Maybe Value)
+finalResult InstanceState{issStatus} = do
     v <- STM.readTVar issStatus
     case v of
         Done r  -> pure r
@@ -401,8 +400,8 @@ finalResult instanceId m = do
         _       -> empty
 
 -- | Insert an 'InstanceState' value into the 'InstancesState'
-insertInstance :: ContractInstanceId -> InstanceState -> InstancesState -> STM ()
-insertInstance instanceID state (InstancesState m) = STM.modifyTVar m (Map.insert instanceID state)
+insertInstance :: ContractInstanceId -> InstanceState -> InstancesState -> IO ()
+insertInstance instanceID state (InstancesState m) = IORef.modifyIORef' m (Map.insert instanceID state)
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange
@@ -452,7 +451,7 @@ lastSyncedBlockSlot :: BlockchainEnv -> STM Slot
 lastSyncedBlockSlot BlockchainEnv{beLastSyncedBlockSlot} = STM.readTVar beLastSyncedBlockSlot
 
 -- | The IDs of contract instances with their statuses
-instancesWithStatuses :: InstancesState -> STM (Map ContractInstanceId Wallet.ContractActivityStatus)
+instancesWithStatuses :: InstancesState -> IO (STM (Map ContractInstanceId Wallet.ContractActivityStatus))
 instancesWithStatuses (InstancesState m) = do
     let parseStatus :: Activity -> Wallet.ContractActivityStatus
         parseStatus = \case
@@ -463,5 +462,5 @@ instancesWithStatuses (InstancesState m) = do
         flt InstanceState{issStatus} = do
             status <- STM.readTVar issStatus
             return $ parseStatus status
-    mp <- STM.readTVar m
-    traverse flt mp
+    mp <- IORef.readIORef m
+    pure (traverse flt mp)

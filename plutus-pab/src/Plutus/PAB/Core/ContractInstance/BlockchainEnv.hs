@@ -91,8 +91,7 @@ startNodeClient config instancesState = do
     case pscNodeMode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
-            (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot
-            )
+            (\block slot -> handleSyncAction =<< processMockBlock instancesState env block slot)
       AlonzoNode -> do
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
@@ -164,8 +163,8 @@ processChainSyncEvent instancesState env@BlockchainEnv{beTxChanges} event = do
              slot   <- chainPointToSlotNo chainPoint
              offset <- findIndex (\(TxInfo _ _ sn) -> sn < slot) events
              Ix.rewind offset txChanges
-
       STM.atomically $ runRollback env chainPoint
+
 
 data SyncActionFailure
   = RollbackFailure RollbackFailed
@@ -220,18 +219,24 @@ processBlock instancesState header env@BlockchainEnv{beTxChanges} transactions e
       tip = fromCardanoBlockHeader header
       ciTxs = fromCardanoTx era <$> transactions
 
-  stmResult <- STM.atomically $ do
-    STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
+  stmResult <-
     if null transactions
-       then Right <$> blockAndSlot env
-       else do
-          instEnv <- S.instancesClientEnv instancesState
-          updateInstances (indexBlock ciTxs) instEnv
-          updateEmulatorTransactionState tip env (txEvent <$> ciTxs)
+    then do
+      STM.atomically $ do
+        STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
+        Right <$> blockAndSlot env
+    else do
+      instEnv <- S.instancesClientEnv instancesState
+      STM.atomically $ do
+        e <- instEnv
+        STM.writeTVar (beLastSyncedBlockSlot env) (fromIntegral slot)
+        updateInstances (indexBlock ciTxs) e
+        updateEmulatorTransactionState tip env (txEvent <$> ciTxs)
 
   S.updateTxChangesR beTxChanges $ Ix.insert (mkEvent tip <$> ciTxs)
 
   pure stmResult
+
 
 mkEvent :: Tip -> ChainIndexTx -> TxInfo
 mkEvent TipAtGenesis  tx =
@@ -323,36 +328,42 @@ processMockBlock
     -> BlockchainEnv
     -> Block
     -> Slot
-    -> STM (Either SyncActionFailure (Slot, BlockNumber))
+    -> IO (STM (Either SyncActionFailure (Slot, BlockNumber)))
 processMockBlock
   instancesState
   env@BlockchainEnv{beCurrentSlot, beLastSyncedBlockSlot, beLastSyncedBlockNo}
   transactions
   slot = do
 
-  -- In the mock node, contrary to the actual node, the last synced block slot
-  -- and the actual slot is the same.
-  lastSyncedBlockSlot <- STM.readTVar beLastSyncedBlockSlot
-  when (slot > lastSyncedBlockSlot) $ do
-    STM.writeTVar beLastSyncedBlockSlot slot
-
-  lastCurrentSlot <- STM.readTVar beCurrentSlot
-  when (slot > lastCurrentSlot ) $ do
-    STM.writeTVar beCurrentSlot slot
-
   if null transactions
-     then do
-       result <- (,) <$> STM.readTVar beLastSyncedBlockSlot <*> STM.readTVar beLastSyncedBlockNo
-       pure $ Right result
-     else do
-      blockNumber <- STM.readTVar beLastSyncedBlockNo
-
+    then pure $ do
+      updateSlot
+      result <- (,) <$> STM.readTVar beLastSyncedBlockSlot <*> STM.readTVar beLastSyncedBlockNo
+      pure $ Right result
+    else do
       instEnv <- S.instancesClientEnv instancesState
-      updateInstances (indexBlock $ fmap fromOnChainTx transactions) instEnv
+      pure $ do
+        updateSlot
+        blockNumber <- STM.readTVar beLastSyncedBlockNo
+        e <- instEnv
+        updateInstances (indexBlock $ fmap fromOnChainTx transactions) e
 
-      let tip = Tip { tipSlot = slot
-                    , tipBlockId = blockId transactions
-                    , tipBlockNo = blockNumber
-                    }
+        let tip = Tip { tipSlot = slot
+                      , tipBlockId = blockId transactions
+                      , tipBlockNo = blockNumber
+                      }
 
-      updateEmulatorTransactionState tip env (txEvent <$> fmap fromOnChainTx transactions)
+        updateEmulatorTransactionState tip env (txEvent <$> fmap fromOnChainTx transactions)
+
+
+  where
+    updateSlot = do
+      -- In the mock node, contrary to the actual node, the last synced block slot
+      -- and the actual slot is the same.
+      lastSyncedBlockSlot <- STM.readTVar beLastSyncedBlockSlot
+      when (slot > lastSyncedBlockSlot) $ do
+        STM.writeTVar beLastSyncedBlockSlot slot
+
+      lastCurrentSlot <- STM.readTVar beCurrentSlot
+      when (slot > lastCurrentSlot ) $ do
+        STM.writeTVar beCurrentSlot slot
