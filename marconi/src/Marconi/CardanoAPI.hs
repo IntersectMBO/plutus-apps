@@ -47,7 +47,8 @@ txOutRef = C.TxIn
 
 -- * Duplicated from cardano-api (not exposed in cardano-api)
 
--- TODO: Open a ticket to expose it in cardano-api
+-- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
+-- https://github.com/input-output-hk/cardano-node/pull/4569
 txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
 txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
