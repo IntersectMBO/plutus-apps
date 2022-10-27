@@ -129,7 +129,7 @@ payToPaymentPublicKeyHash params range v pk = do
                    <> Constraints.mustBeSignedBy pkh
     utx <- either (throwError . PaymentMkTxError)
                   pure
-                  (Constraints.mkTx @Void mempty constraints)
+                  (Constraints.mkTxWithParams @Void params mempty constraints)
     (missingAdaCosts, adjustedUtx) <- either (throwError . ToCardanoError) pure (adjustUnbalancedTx params utx)
     logDebug $ AdjustingUnbalancedTx missingAdaCosts
     unless (utx == adjustedUtx) $

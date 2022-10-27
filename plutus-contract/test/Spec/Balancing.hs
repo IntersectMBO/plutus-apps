@@ -58,7 +58,7 @@ balanceTxnMinAda =
                         unitDatum
                         (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
                  <> L.Constraints.mustIncludeDatumInTx unitDatum
-                utx1 = either (error . show) id $ L.Constraints.mkTx @Void mempty constraints1
+                utx1 = either (error . show) id $ L.Constraints.mkTxWithParams @Void def mempty constraints1
             submitTxConfirmed utx1
             utxo <- utxosAt someAddress
             let txOutRef = head (Map.keys utxo)
@@ -74,7 +74,7 @@ balanceTxnMinAda =
                     <> L.Constraints.plutusV1OtherScript someValidator
             utx2 <- Con.adjustUnbalancedTx
                   $ either (error . show) id
-                  $ L.Constraints.mkTx @Void lookups2 constraints2
+                  $ L.Constraints.mkTxWithParams @Void def lookups2 constraints2
             submitTxConfirmed utx2
 
         trace = do
@@ -99,7 +99,7 @@ balanceTxnMinAda2 =
         payToWallet w = L.Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
         mkTx lookups constraints =
             Con.adjustUnbalancedTx . either (error . show) id
-            $ L.Constraints.mkTx @Void lookups constraints
+            $ L.Constraints.mkTxWithParams @Void def lookups constraints
 
         setupContract :: Contract () EmptySchema ContractError ()
         setupContract = do
@@ -147,7 +147,7 @@ balanceTxnMinAda2 =
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =
     let vL n = Value.singleton (Scripts.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
-        mkTx lookups constraints = either (error . show) id $ L.Constraints.mkTx @Void lookups constraints
+        mkTx lookups constraints = either (error . show) id $ L.Constraints.mkTxWithParams @Void def lookups constraints
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
         mintingOperation = do
@@ -186,7 +186,7 @@ balanceTxnCollateralTest name count outputLovelace =
                         unitDatum
                         (Value.scale 100 ff <> Ada.lovelaceValueOf outputLovelace)
                 lookups = Tx.Constraints.unspentOutputs utxos
-                utx1 = either (error . show) id $ L.Constraints.mkTx @Void lookups constraints1
+                utx1 = either (error . show) id $ L.Constraints.mkTxWithParams @Void def lookups constraints1
             submitTxConfirmed utx1
 
         trace = do

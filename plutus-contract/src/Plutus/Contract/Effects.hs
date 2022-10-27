@@ -19,6 +19,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _CurrentNodeClientTimeRangeReq,
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
+    _GetParamsReq,
     _OwnContractInstanceIdReq,
     _OwnAddressesReq,
     _ChainIndexQueryReq,
@@ -55,6 +56,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTxStatusChangeResp,
     _AwaitTxStatusChangeResp',
     _AwaitTxOutStatusChangeResp,
+    _GetParamsResp,
     _OwnContractInstanceIdResp,
     _OwnAddressesResp,
     _ChainIndexQueryResp,
@@ -97,6 +99,7 @@ import Data.String (fromString)
 import GHC.Generics (Generic)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
+import Ledger.Params (Params)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
@@ -128,6 +131,7 @@ data PABReq =
     | CurrentChainIndexSlotReq
     | CurrentTimeReq
     | CurrentNodeClientTimeRangeReq
+    | GetParamsReq
     | OwnContractInstanceIdReq
     | OwnAddressesReq
     | ChainIndexQueryReq ChainIndexQuery
@@ -152,6 +156,7 @@ instance Pretty PABReq where
     CurrentNodeClientTimeRangeReq           -> "Current node client time range"
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
+    GetParamsReq                            -> "Get the configured parameter set"
     OwnContractInstanceIdReq                -> "Own contract instance ID"
     OwnAddressesReq                         -> "Own addresses"
     ChainIndexQueryReq q                    -> "Chain index query:" <+> pretty q
@@ -174,6 +179,7 @@ data PABResp =
     | CurrentChainIndexSlotResp Slot
     | CurrentTimeResp POSIXTime
     | CurrentNodeClientTimeRangeResp (POSIXTime, POSIXTime)
+    | GetParamsResp Params
     | OwnContractInstanceIdResp ContractInstanceId
     | OwnAddressesResp (NonEmpty Address)
     | ChainIndexQueryResp ChainIndexResponse
@@ -198,6 +204,7 @@ instance Pretty PABResp where
     CurrentNodeClientTimeRangeResp s         -> "Current node client time range:" <+> pretty s
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
+    GetParamsResp params                     -> "Configured parameters:" <+> pretty params
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
     OwnAddressesResp addrs                   -> "Own addresses:" <+> pretty addrs
     ChainIndexQueryResp rsp                  -> pretty rsp
@@ -220,6 +227,7 @@ matches a b = case (a, b) of
   (CurrentNodeClientTimeRangeReq, CurrentNodeClientTimeRangeResp{}) -> True
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'
+  (GetParamsReq, GetParamsResp _)                          -> True
   (OwnContractInstanceIdReq, OwnContractInstanceIdResp{})  -> True
   (OwnAddressesReq, OwnAddressesResp {}) -> True
   (ChainIndexQueryReq r, ChainIndexQueryResp r')           -> chainIndexMatches r r'

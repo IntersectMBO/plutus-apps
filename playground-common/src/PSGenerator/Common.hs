@@ -34,6 +34,7 @@ import Ledger.Credential (Credential, StakingCredential)
 import Ledger.DCert (DCert)
 import Ledger.Index (ExCPU, ExMemory, ValidationError)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Params (Params)
 import Ledger.Scripts (ScriptError)
 import Ledger.Slot (Slot)
 import Ledger.TimeSlot (SlotConfig, SlotConversionError)
@@ -407,6 +408,7 @@ ledgerTypes =
     , order . genericShow . argonaut $ mkSumType @(Tx.Versioned A)
     , equal . genericShow . argonaut $ mkSumType @Slot
     , equal . genericShow . argonaut $ mkSumType @Ada
+    , equal . genericShow . argonaut $ mkSumType @Params
     , equal . genericShow . argonaut $ mkSumType @SlotConfig
     , equal . genericShow . argonaut $ mkSumType @SlotConversionError
     , equal . genericShow . argonaut $ mkSumType @Certificate
