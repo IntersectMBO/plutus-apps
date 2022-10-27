@@ -108,6 +108,7 @@ newtype NodeUrl = NodeUrl BaseUrl
 data NodeMode =
     MockNode -- ^ Connect to the PAB mock node.
     | AlonzoNode -- ^ Connect to an Alonzo node
+    | NoChainSyncEvents -- ^ Do not connect to any node for chain sync events. Connect to Alonzo node for slot notifications.
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
