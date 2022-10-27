@@ -107,15 +107,15 @@ handlePlaygroundTrace ::
     => EmulatorConfig
     -> Contract w s e ()
     -> PlaygroundTrace a
-    -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
+    -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage) ': effs) ()
 handlePlaygroundTrace conf contract action = do
-    _ <- flip handleError (throwError . EmulatedWalletError)
+    result <- flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleWaiting @_ @effs (pSlotConfig $ _params conf))
+            . interpret (handleWaiting @_ @effs @a (pSlotConfig $ _params conf))
             . subsume
-            . interpret (handleRunContractPlayground @w @s @e @_ @effs (pNetworkId $ _params conf) contract)
+            . interpret (handleRunContractPlayground @w @s @e @_ @effs @a (pNetworkId $ _params conf) contract)
             $ raiseEnd action
-    void $ exit @effs @EmulatorMessage
+    void $ exit @effs @EmulatorMessage result
 
 -- | Run a 'Trace Playground', streaming the log messages as they arrive
 runPlaygroundStream :: forall w s e effs a.
@@ -128,7 +128,7 @@ runPlaygroundStream :: forall w s e effs a.
     => EmulatorConfig
     -> Contract w s e ()
     -> PlaygroundTrace a
-    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Either EmulatorErr a, EmulatorState)
 runPlaygroundStream conf contract =
     let wallets = fromMaybe knownWallets (preview (initialChainState . _Left . to Map.keys) conf)
     in runTraceStream conf . interpretPlaygroundTrace conf contract wallets
@@ -149,18 +149,16 @@ interpretPlaygroundTrace :: forall w s e effs a.
     -> Contract w s e () -- ^ The contract
     -> [Wallet] -- ^ Wallets that should be simulated in the emulator
     -> PlaygroundTrace a
-    -> Eff effs ()
+    -> Eff effs (Maybe a)
 interpretPlaygroundTrace conf contract wallets action =
-    evalState @EmulatorThreads mempty
+        evalState @EmulatorThreads mempty
         $ evalState @(Map Wallet ContractInstanceId) Map.empty
         $ handleDeterministicIds
         $ interpret (mapLog (review schedulerEvent))
         $ runThreads
         $ do
             raise $ launchSystemThreads wallets
-            void
-                $ handlePlaygroundTrace conf contract
-                $ do
-                    void Waiting.nextSlot
-                    traverse_ RunContractPlayground.launchContract wallets
-                    action
+            handlePlaygroundTrace conf contract $ do
+                void Waiting.nextSlot
+                traverse_ RunContractPlayground.launchContract wallets
+                action

@@ -91,7 +91,8 @@ tests = testGroup "all tests" [
     ],
     testGroup "Etc." [
         testPropertyNamed "selectCoin" "selectCoinProp" selectCoinProp,
-        testPropertyNamed "txnFlows" "txnFlowsTest" txnFlowsTest
+        testPropertyNamed "txnFlows" "txnFlowsTest" txnFlowsTest,
+        testPropertyNamed "evalEmulatorTrace test" "evalEmulatorTraceTest" evalEmulatorTraceTest
         ]
     ]
 
@@ -313,6 +314,13 @@ pubKeyTransactions2 = do
     _ <- Trace.nextSlot
     Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always (Ada.adaValueOf 20) pubKey2
     void Trace.nextSlot
+
+evalEmulatorTraceTest :: Property
+evalEmulatorTraceTest = property $ do
+    let trace = Trace.payToWallet wallet1 wallet2 (Ada.adaValueOf 10)
+        res = Trace.evalEmulatorTrace def trace
+    Hedgehog.annotateShow res
+    Hedgehog.assert (either (const False) (const True) res)
 
 genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, CardanoTx)
 genChainTxn = do

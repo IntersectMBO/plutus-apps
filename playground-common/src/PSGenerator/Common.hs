@@ -56,7 +56,7 @@ import Plutus.Contract.Resumable (IterationID, Request, RequestID, Response)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, ContractInstanceTag, EmulatorRuntimeError,
                                     UserThreadMsg)
-import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
+import Plutus.Trace.Scheduler (Priority, SchedulerLog, ThreadEvent, ThreadId)
 import Plutus.Trace.Tag (Tag)
 import Plutus.V1.Ledger.Api (DatumHash, MintingPolicy, StakeValidator, TxOut, Validator)
 import Plutus.V2.Ledger.Tx qualified as PV2
@@ -478,13 +478,12 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @ContractInstanceMsg
     , equal . genericShow . argonaut $ mkSumType @ContractInstanceTag
     , equal . genericShow . argonaut $ mkSumType @EmulatorRuntimeError
-    , equal . genericShow . argonaut $ mkSumType @ThreadEvent
+    , order . equal . genericShow . argonaut $ mkSumType @ThreadEvent
     , equal . genericShow . argonaut $ mkSumType @ThreadId
     , equal . genericShow . argonaut $ mkSumType @(Request A)
     , equal . genericShow . argonaut $ mkSumType @(Response A)
     , order . genericShow . argonaut $ mkSumType @RequestID
     , order . equal . genericShow . argonaut $ mkSumType @Priority
-    , order . equal . genericShow . argonaut $ mkSumType @StopReason
     , order . genericShow . argonaut $ mkSumType @IterationID
     , equal . genericShow . argonaut $ mkSumType @ExCPU
     , equal . genericShow . argonaut $ mkSumType @ExMemory

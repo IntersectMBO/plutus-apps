@@ -74,12 +74,12 @@ data EmulatorControl r where
 -- | Interpret the 'EmulatorControl' effect in the 'MultiAgentEffect' and
 --   scheduler system calls.
 handleEmulatorControl ::
-    forall effs effs2.
+    forall effs effs2 a.
     ( Member (State EmulatorThreads) effs
     , Member (State EmulatorState) effs
     , Member (Error EmulatorRuntimeError) effs
     , Member MultiAgentControlEffect effs
-    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     )
     => SlotConfig
     -> EmulatorControl
@@ -90,11 +90,11 @@ handleEmulatorControl slotCfg = \case
     FreezeContractInstance i -> do
         threadId <- getThread i
         -- see note [Freeze and Thaw]
-        void $ mkSysCall @effs2 @EmulatorMessage Normal (Left $ Message threadId Freeze)
+        void $ mkSysCall @effs2 @EmulatorMessage @_ @a Normal (Left $ Message threadId Freeze)
     ThawContractInstance i -> do
         threadId <- getThread i
         -- see note [Freeze and Thaw]
-        void $ mkSysCall @effs2 @EmulatorMessage Normal (Right $ Thaw threadId)
+        void $ mkSysCall @effs2 @EmulatorMessage @_ @a Normal (Right $ Thaw threadId)
     ChainState -> gets (view EM.chainState)
     GetSlotConfig -> return slotCfg
     DiscardWallets discard -> modify @EmulatorState $ over EM.walletStates (Map.filterWithKey (\ k _ -> not $ discard k))

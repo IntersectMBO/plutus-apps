@@ -62,6 +62,7 @@ module Plutus.Trace.Emulator(
     , runEmulatorStream
     , TraceConfig(..)
     , runEmulatorTrace
+    , evalEmulatorTrace
     , PrintEffect(..)
     , runEmulatorTraceEff
     , runEmulatorTraceIO
@@ -161,25 +162,25 @@ handleEmulatorTrace ::
     )
     => Params
     -> EmulatorTrace a
-    -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
+    -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage) ': effs) ()
 handleEmulatorTrace Params{pNetworkId, pSlotConfig} action = do
-    _ <- subsume @(Error EmulatorRuntimeError)
+    result <- subsume @(Error EmulatorRuntimeError)
             . interpret (mapLog (UserThreadEvent . UserLog))
             . flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleEmulatorControl @_ @effs pSlotConfig)
-            . interpret (handleWaiting @_ @effs pSlotConfig)
-            . interpret (handleAssert @_ @effs)
-            . interpret (handleRunContract @_ @effs)
-            . interpret (handleStartContract @_ @effs pNetworkId)
+            . interpret (handleEmulatorControl @_ @effs @a pSlotConfig)
+            . interpret (handleWaiting @_ @effs @a pSlotConfig)
+            . interpret (handleAssert @_ @effs @a)
+            . interpret (handleRunContract @_ @effs @a)
+            . interpret (handleStartContract @_ @effs @a pNetworkId)
             $ raiseEnd action
-    void $ exit @effs @EmulatorMessage
+    void $ exit @effs @EmulatorMessage result
 
 -- | Run a 'Trace Emulator', streaming the log messages as they arrive
 runEmulatorStream :: forall effs a.
     EmulatorConfig
     -> EmulatorTrace a
-    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Either EmulatorErr a, EmulatorState)
 runEmulatorStream conf = runTraceStream conf . interpretEmulatorTrace conf
 
 -- | Interpret a 'Trace Emulator' action in the multi agent and emulated
@@ -194,12 +195,16 @@ interpretEmulatorTrace :: forall effs a.
     )
     => EmulatorConfig
     -> EmulatorTrace a
-    -> Eff effs ()
+    -> Eff effs (Maybe a)
 interpretEmulatorTrace conf action =
     -- add a wait action to the beginning to ensure that the
     -- initial transaction gets validated before the wallets
     -- try to spend their funds
-    let action' = Waiting.nextSlot >> action >> Waiting.nextSlot
+    let action' = do
+          void Waiting.nextSlot
+          res <- action
+          void Waiting.nextSlot
+          pure res
         wallets = fromMaybe (Wallet.toMockWallet <$> CW.knownMockWallets) (preview (initialChainState . _Left . to Map.keys) conf)
     in
     evalState @EmulatorThreads mempty
@@ -236,12 +241,19 @@ defaultShowEvent = \case
   WalletEvent _ _                                                      -> Nothing
   ev                                                                   -> Just . renderString . layoutPretty defaultLayoutOptions . pretty $ ev
 
+evalEmulatorTrace
+    :: EmulatorConfig
+    -> EmulatorTrace a
+    -> Either EmulatorErr a
+evalEmulatorTrace cfg trace = case runEmulatorTrace cfg trace of
+  (_, r, _) -> r
+
 -- | Run an emulator trace to completion, returning a tuple of the final state
 -- of the emulator, the events, and any error, if any.
 runEmulatorTrace
     :: EmulatorConfig
-    -> EmulatorTrace ()
-    -> ([EmulatorEvent], Maybe EmulatorErr, EmulatorState)
+    -> EmulatorTrace a
+    -> ([EmulatorEvent], Either EmulatorErr a, EmulatorState)
 runEmulatorTrace cfg trace =
     (\(xs :> (y, z)) -> (xs, y, z))
     $ run
@@ -261,8 +273,8 @@ runEmulatorTraceEff tcfg cfg trace =
       balances' = balances (_chainState e) (_walletStates e)
    in do
       case me of
-        Nothing  -> return ()
-        Just err -> printLn $ "ERROR: " <> show err
+        Right _  -> return ()
+        Left err -> printLn $ "ERROR: " <> show err
 
       forM_ xs $ \ete -> do
         case showEvent tcfg (_eteEvent ete) of

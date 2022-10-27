@@ -35,8 +35,8 @@ makeEffect ''Assert
 
 -- | Pass 'EmulatorState' to the provided predicate and throw error unless it's true.
 handleAssert ::
-    forall effs effs2.
-    ( Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    forall effs effs2 a.
+    ( Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     , Member (Error EmulatorRuntimeError) effs
     , Member (State EmulatorState) effs
     )
