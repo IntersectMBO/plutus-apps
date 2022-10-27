@@ -39,6 +39,7 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , InstancesState
     , emptyInstancesState
     , insertInstance
+    , removeInstance
     , callEndpointOnInstance
     , callEndpointOnInstanceTimeout
     , observableContractState
@@ -402,6 +403,10 @@ finalResult InstanceState{issStatus} = do
 -- | Insert an 'InstanceState' value into the 'InstancesState'
 insertInstance :: ContractInstanceId -> InstanceState -> InstancesState -> IO ()
 insertInstance instanceID state (InstancesState m) = IORef.modifyIORef' m (Map.insert instanceID state)
+
+-- | Delete an instance from the 'InstancesState'
+removeInstance :: ContractInstanceId -> InstancesState -> IO ()
+removeInstance instanceID (InstancesState m) = IORef.modifyIORef' m (Map.delete instanceID)
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange
