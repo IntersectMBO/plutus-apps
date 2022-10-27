@@ -9,8 +9,9 @@ module Main(main) where
 
 import Control.Lens (toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
+import Control.Monad.Except (runExcept)
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (ask)
+import Control.Monad.Reader (ask, runReaderT)
 import Data.ByteString qualified as BS
 import Data.Default (def)
 import Data.Map qualified as Map
@@ -26,7 +27,9 @@ import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), DatumFromQuery
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
+import Ledger.Constraints (MkTxError, mustSpendPubKeyOutput, mustSpendScriptOutput, mustSpendScriptOutputWithReference)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.OffChain (prepareConstraints)
 import Ledger.Constraints.OffChain qualified as OC
 import Ledger.Constraints.OnChain.V2 qualified as ConstraintsV2
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
@@ -35,6 +38,7 @@ import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Ledger
 import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
+import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value (CurrencySymbol, Value (Value))
@@ -55,10 +59,29 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "all tests"
-    [ testPropertyNamed "missing value spent" "missingValueSpentProp" missingValueSpentProp
-    , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash" "mustPayToPubKeyAddressStakePubKeyNotNothingProp" mustPayToPubKeyAddressStakePubKeyNotNothingProp
-    , testPropertyNamed "mustPayToOtherScriptAddress should create output addresses with stake validator hash" "mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
-    , testPropertyNamed "mustUseOutputAsCollateral should add a collateral input" "mustUseOutputAsCollateralProp" mustUseOutputAsCollateralProp
+    [ testPropertyNamed "missing value spent"
+        "missingValueSpentProp" missingValueSpentProp
+    , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash"
+        "mustPayToPubKeyAddressStakePubKeyNotNothingProp"
+        mustPayToPubKeyAddressStakePubKeyNotNothingProp
+    , testPropertyNamed "mustPayToOtherScriptAddress should create output addresses with stake validator hash"
+         "mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp"
+         mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
+    , testPropertyNamed "mustUseOutputAsCollateral should add a collateral input"
+        "mustUseOutputAsCollateralProp" mustUseOutputAsCollateralProp
+    , testPropertyNamed "prepareConstraints keep only one duplicated mustSpendPubKeyOutput constraints"
+        "mustSpendPubKeyOutputDuplicate" mustSpendPubKeyOutputDuplicate
+    , testPropertyNamed "prepareConstraints keep only one duplicated mustSpendScriptOutput constraints"
+        "mustSpendScriptOutputDuplicate" mustSpendScriptOutputDuplicate
+    , testPropertyNamed "prepareConstraints keep the constraitnt with a reference script on duplicate"
+        "mustSpendScriptOutputKeepTheOneWithAReferenceScript"
+        mustSpendScriptOutputKeepTheOneWithAReferenceScript
+    , testPropertyNamed "prepareConstraints fails if the same utxo is spent with different redeemers"
+        "mustSpendScriptOutputFailsWithDifferentRedeemers"
+        mustSpendScriptOutputFailsWithDifferentRedeemers
+    , testPropertyNamed "prepareConstraints fails if the same utxo is spent with a different referenceScript"
+        "mustSpendScriptOutputFailsWithDifferentReferenceScript"
+        mustSpendScriptOutputFailsWithDifferentReferenceScript
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.
@@ -168,6 +191,47 @@ mustUseOutputAsCollateralProp = property $ do
             Hedgehog.assert $ length coll == 1
             Hedgehog.assert $ Ledger.txInputRef (head coll) == txOutRef
 
+mustSpendScriptOutputDuplicate :: Property
+mustSpendScriptOutputDuplicate = property $ do
+    let con = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let dup = con <> con
+    Hedgehog.assert $ prepFromTxConstraints dup == prepFromTxConstraints con
+
+mustSpendPubKeyOutputDuplicate :: Property
+mustSpendPubKeyOutputDuplicate = property $ do
+    let con = mustSpendPubKeyOutput @Void @Void (txOutRef 1)
+    let dup = con <> con
+    Hedgehog.assert $ prepFromTxConstraints dup == prepFromTxConstraints con
+
+mustSpendScriptOutputKeepTheOneWithAReferenceScript :: Property
+mustSpendScriptOutputKeepTheOneWithAReferenceScript = property $ do
+    let con = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let dup = mustSpendScriptOutput @Void @Void (txOutRef 1) (asRedeemer ()) <> con
+    Hedgehog.assert $ prepFromTxConstraints dup == prepFromTxConstraints con
+
+mustSpendScriptOutputFailsWithDifferentRedeemers :: Property
+mustSpendScriptOutputFailsWithDifferentRedeemers = property $ do
+    let con  = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let con2 = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer (5 :: Integer)) (txOutRef 0)
+    Hedgehog.assert $ case prepFromTxConstraints (con <> con2) of
+        Left (OC.AmbiguousRedeemer _ _) -> True
+        _                               -> False
+
+mustSpendScriptOutputFailsWithDifferentReferenceScript :: Property
+mustSpendScriptOutputFailsWithDifferentReferenceScript = property $ do
+    let con  = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let con2 = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 1)
+    Hedgehog.assert $ case prepFromTxConstraints (con <> con2) of
+        Left (OC.AmbiguousReferenceScript _ _) -> True
+        _                                      -> False
+
+prepFromTxConstraints
+    :: Constraints.TxConstraints Void Void
+    -> Either MkTxError ([Constraints.TxConstraint], [Constraints.TxConstraint])
+prepFromTxConstraints txCons = runExcept $
+        prepareConstraints @Void (Constraints.txOwnOutputs txCons) (Constraints.txConstraints txCons)
+        `runReaderT` mempty
+
 txOut0 :: Ledger.ChainIndexTxOut
 txOut0 =
     Ledger.ScriptChainIndexTxOut
@@ -176,9 +240,6 @@ txOut0 =
         (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
         (alwaysSucceedValidatorHash, Nothing)
-
-txOutRef0 :: Ledger.TxOutRef
-txOutRef0 = Ledger.TxOutRef (Ledger.TxId "") 0
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest
@@ -213,11 +274,11 @@ txOut1 =
         Nothing
         (validatorHash1, Nothing)
 
-txOutRef1 :: Ledger.TxOutRef
-txOutRef1 = Ledger.TxOutRef (Ledger.TxId "") 1
+txOutRef :: Integer -> Ledger.TxOutRef
+txOutRef = Ledger.TxOutRef (Ledger.TxId "")
 
 utxo1 :: Map.Map Ledger.TxOutRef Ledger.ChainIndexTxOut
-utxo1 = Map.fromList [(txOutRef0, txOut0), (txOutRef1, txOut1)]
+utxo1 = Map.fromList [(txOutRef 0, txOut0), (txOutRef 1, txOut1)]
 
 {-# INLINABLE constraints1 #-}
 constraints1 :: Ledger.ValidatorHash -> Constraints.TxConstraints () ()
@@ -227,7 +288,7 @@ constraints1 vh =
         (Pl.== Ledger.unitDatum)
         (Pl.const True)
         Ledger.unitRedeemer
-    <> Constraints.mustSpendScriptOutput txOutRef1 Ledger.unitRedeemer
+    <> Constraints.mustSpendScriptOutput (txOutRef 1) Ledger.unitRedeemer
 
 lookups1 :: Constraints.ScriptLookups UnitTest
 lookups1

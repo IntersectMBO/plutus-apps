@@ -53,14 +53,13 @@ module Ledger.Tx.Constraints.OffChain(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Control.Lens (Lens', Traversal', coerced, iso, lens, makeLensesFor, set, use, (%=), (.=), (<>=))
-import Control.Monad.Except (Except, MonadError, mapExcept, runExcept, throwError, withExcept)
+import Control.Monad.Except (Except, MonadError, lift, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
-import Data.List qualified as List
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL)
 import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
@@ -161,6 +160,7 @@ instance Pretty MkTxError where
         ToCardanoError err  -> "ToCardanoError" <> colon <+> pretty err
         LedgerMkTxError err -> pretty err
 
+
 -- | Given a list of 'SomeLookupsAndConstraints' describing the constraints
 --   for several scripts, build a single transaction that runs all the scripts.
 mkSomeTx
@@ -175,6 +175,28 @@ mkSomeTx params xs =
         $ runExcept
         $ execStateT (traverse process xs) (initialState params)
 
+data SortedConstraints
+   = MkSortedConstraints
+   { rangeConstraints        :: [POSIXTimeRange]
+   , includeDatumConstraints :: [TxConstraint]
+   , otherConstraints        :: [TxConstraint]
+   }
+
+prepareConstraints
+    :: ToData (DatumType a)
+    => [ScriptOutputConstraint (DatumType a)]
+    -> [TxConstraint]
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) SortedConstraints
+prepareConstraints ownOutputs constraints = do
+    let
+      extractPosixTimeRange = \case
+        P.MustValidateIn range -> Left range
+        other                  -> Right other
+      (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> constraints
+    (other, verification) <- mapLedgerMkTxError $ P.prepareConstraints ownOutputs nonRangeConstraints
+    pure $ MkSortedConstraints ranges verification other
+
+
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
 processLookupsAndConstraints
@@ -185,34 +207,17 @@ processLookupsAndConstraints
     => P.ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> StateT P.ConstraintProcessingState (Except MkTxError) ()
-processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} =
-    let
-      extractPosixTimeRange = \case
-        P.MustValidateIn range -> Left range
-        other                  -> Right other
-      (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> txConstraints
-
-      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
-      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
-      -- must yield the same behavior.
-      isIncludeDatumInTxConstraint = \case
-        P.MustIncludeDatumInTxWithHash {} -> True
-        P.MustIncludeDatumInTx {}         -> True
-        _                                 -> False
-      (includeDatumsConstraints, otherConstraints) = List.partition isIncludeDatumInTxConstraint nonRangeConstraints
-    in do
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} = do
         flip runReaderT lookups $ do
-            ownOutputConstraints <- concat <$> traverse addOwnOutput txOwnOutputs
-            let constraints = otherConstraints <> ownOutputConstraints <> includeDatumsConstraints
-            traverse_ processConstraint constraints
+            sortedConstraints <- prepareConstraints txOwnOutputs txConstraints
+            traverse_ processConstraint (otherConstraints sortedConstraints)
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
             -- P.addMissingValueSpent
+            traverse_ processConstraint (includeDatumConstraints sortedConstraints)
             mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
-        setValidityRange ranges
+            lift $ setValidityRange (rangeConstraints sortedConstraints)
 
 -- | Reinject the validityRange inside the unbalanced Tx.
 --   As the Tx is a Caradano transaction, and as we have access to the SlotConfig,
@@ -348,12 +353,6 @@ lookupScriptAsReferenceScript
     :: Maybe ScriptHash
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
 lookupScriptAsReferenceScript msh = mapLedgerMkTxError $ P.lookupScriptAsReferenceScript msh
-
-addOwnOutput
-    :: ToData (DatumType a)
-    => ScriptOutputConstraint (DatumType a)
-    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) [TxConstraint]
-addOwnOutput soc = mapLedgerMkTxError $ P.addOwnOutput soc
 
 mapLedgerMkTxError
     :: ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except P.MkTxError)) b

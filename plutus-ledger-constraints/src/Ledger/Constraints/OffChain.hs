@@ -81,6 +81,7 @@ module Ledger.Constraints.OffChain(
     , lookupTxOutRef
     , lookupScript
     , lookupScriptAsReferenceScript
+    , prepareConstraints
     , resolveScriptTxOut
     , resolveScriptTxOutValidator
     , resolveScriptTxOutDatumAndValue
@@ -101,6 +102,7 @@ import Data.Functor.Compose (Compose (Compose))
 import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
@@ -432,6 +434,67 @@ mkSomeTx xs =
         $ runExcept
         $ execStateT (traverse process xs) initialState
 
+-- | Filtering MustSpend constraints to ensure their consistency and check that we do not try to spend them
+-- with different redeemer or reference scripts.
+--
+-- When:
+--     - 2 or more MustSpendPubkeyOutput are defined for the same output, we only keep the first one
+--     - 2 or more MustSpendScriptOutpt are defined for the same output:
+--          - if they have different redeemer, we throw an 'AmbiguousRedeemer' error;
+--          - if they provide more than one reference script we throw an 'AmbiguousReferenceScript' error;
+--          - if only one define a reference script, we use that reference script.
+cleaningMustSpendConstraints :: MonadError MkTxError m => [TxConstraint] -> m [TxConstraint]
+cleaningMustSpendConstraints (x@(MustSpendScriptOutput t _ _):xs) = do
+    let
+        spendSame (MustSpendScriptOutput t' _ _) = t == t'
+        spendSame _                              = False
+        getRedeemer (MustSpendScriptOutput _ r _) = Just r
+        getRedeemer _                             = Nothing
+        getReferenceScript (MustSpendScriptOutput _ _ rs) = rs
+        getReferenceScript _                              = Nothing
+        (mustSpendSame, otherConstraints) = List.partition spendSame xs
+        redeemers = Set.fromList $ mapMaybe getRedeemer (x:mustSpendSame)
+        referenceScripts = Set.fromList $ mapMaybe getReferenceScript (x:mustSpendSame)
+    red <- case Set.toList redeemers of
+                []    -> throwError $ AmbiguousRedeemer t [] -- Can't happen as x must have a redeemer
+                [red] -> pure red
+                rs    -> throwError $ AmbiguousRedeemer t rs
+    rs  <- case Set.toList referenceScripts of
+                []  -> pure Nothing
+                [r] -> pure $ Just r
+                rs  -> throwError $ AmbiguousReferenceScript t rs
+    (MustSpendScriptOutput t red rs:) <$> cleaningMustSpendConstraints otherConstraints
+cleaningMustSpendConstraints (x@(MustSpendPubKeyOutput _):xs) =
+    (x :) <$> cleaningMustSpendConstraints (filter (x /=) xs)
+cleaningMustSpendConstraints [] = pure []
+cleaningMustSpendConstraints (x:xs) = (x :) <$> cleaningMustSpendConstraints xs
+
+
+prepareConstraints
+    :: ( ToData (DatumType a)
+       , MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => [ScriptOutputConstraint (DatumType a)]
+    -> [TxConstraint]
+    -> m ([TxConstraint], [TxConstraint])
+prepareConstraints ownOutputs constraints = do
+    let
+      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
+      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
+      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
+      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
+      -- must yield the same behavior.
+      isVerificationConstraints = \case
+        MustIncludeDatumInTxWithHash {} -> True
+        MustIncludeDatumInTx {}         -> True
+        _                               -> False
+      (verificationConstraints, otherConstraints) =
+          List.partition isVerificationConstraints constraints
+    ownOutputConstraints <- concat <$> traverse addOwnOutput ownOutputs
+    cleantConstraints <- cleaningMustSpendConstraints otherConstraints
+    pure (cleantConstraints <> ownOutputConstraints, verificationConstraints)
+
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
 processLookupsAndConstraints
@@ -445,28 +508,14 @@ processLookupsAndConstraints
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> m ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
-    let
-      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
-      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
-      -- must yield the same behavior.
-      isVerificationConstraints = \case
-        MustIncludeDatumInTxWithHash {} -> True
-        MustIncludeDatumInTx {}         -> True
-        _                               -> False
-      (verificationConstraints, otherConstraints) =
-          List.partition isVerificationConstraints txConstraints
-     in do
-        flip runReaderT lookups $ do
-            ownOutputConstraints <- concat <$> traverse addOwnOutput txOwnOutputs
-            let constraints = otherConstraints <> ownOutputConstraints
-            traverse_ processConstraint constraints
-            traverse_ processConstraintFun txCnsFuns
-            traverse_ addOwnInput txOwnInputs
-            traverse_ processConstraint verificationConstraints
-            addMissingValueSpent
-            updateUtxoIndex
+    flip runReaderT lookups $ do
+         (constraints, verificationConstraints) <- prepareConstraints txOwnOutputs txConstraints
+         traverse_ processConstraint constraints
+         traverse_ processConstraintFun txCnsFuns
+         traverse_ addOwnInput txOwnInputs
+         traverse_ processConstraint verificationConstraints
+         addMissingValueSpent
+         updateUtxoIndex
 
 -- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
 --   the constraints. To use this in a contract, see
@@ -905,6 +954,8 @@ data MkTxError =
     | CannotSatisfyAny
     | NoMatchingOutputFound ValidatorHash
     | MultipleMatchingOutputsFound ValidatorHash
+    | AmbiguousRedeemer TxOutRef [Redeemer]
+    | AmbiguousReferenceScript TxOutRef [TxOutRef]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 makeClassyPrisms ''MkTxError
@@ -926,4 +977,6 @@ instance Pretty MkTxError where
         CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
         NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
         MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
+        AmbiguousRedeemer t rs         -> "Try to spend a script output" <+> pretty t <+> "with different redeemers:" <+> pretty rs
+        AmbiguousReferenceScript t rss -> "Try to spend a script output" <+> pretty t <+> "with different referenceScript:" <+> pretty rss
 
