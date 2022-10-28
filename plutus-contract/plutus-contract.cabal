@@ -248,7 +248,6 @@ test-suite plutus-contract-test
     Spec.Contract.Ledger.Constraints.RequiredSigner
     Spec.Contract.Ledger.Constraints.Spec
     Spec.Contract.Ledger.Constraints.TimeValidity
-    Spec.Contract.TxConstraints
     Spec.Emulator
     Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle

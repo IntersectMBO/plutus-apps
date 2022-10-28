@@ -11,7 +11,6 @@ module Main(main) where
 import Spec.Balancing qualified
 import Spec.Contract qualified
 import Spec.Contract.Ledger.Constraints.Spec qualified
-import Spec.Contract.TxConstraints qualified
 import Spec.Emulator qualified
 import Spec.ErrorChecking qualified
 import Spec.Plutus.Contract.Oracle qualified
@@ -33,7 +32,6 @@ tests = testGroup "plutus-contract" [
     Spec.Rows.tests,
     Spec.ThreadToken.tests,
     Spec.Contract.Ledger.Constraints.Spec.tests,
-    Spec.Contract.TxConstraints.tests,
     Spec.Secrets.tests,
     Spec.ErrorChecking.tests,
     Spec.Plutus.Contract.Wallet.tests,

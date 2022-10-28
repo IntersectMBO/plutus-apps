@@ -25,7 +25,7 @@ import Spec.Contract.Ledger.Constraints.MustSpendPubKeyOutput qualified
 import Spec.Contract.Ledger.Constraints.MustSpendScriptOutput qualified
 import Spec.Contract.Ledger.Constraints.RequiredSigner qualified
 import Spec.Contract.Ledger.Constraints.TimeValidity qualified
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, testGroup)
 
 tests :: TestTree
 tests = testGroup "constraints" [
