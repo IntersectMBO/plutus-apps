@@ -58,10 +58,10 @@ Here is a sample invocation :
 
 ``` sh
 $(cabal exec -- which marconi-mamba)
-    --socket "$CARDANO_NODE_SOCKET_PATH" \
+    --socket-path "$CARDANO_NODE_SOCKET_PATH" \
     --testnet-magic 2 \
-    --db "$CONFIG_DIR/.dbMarconi/utxo.sqlite3" \
-    --addresses-to-index  ``"bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"
+    --utxo-db "$CONFIG_DIR/.dbMarconi/utxo.sqlite3" \
+    --addresses-to-index  ``"addr1q837de0y7j3ncegph2a8mc0e86q9evwtekd3ejhlpr97wclrumj7fa9r83jsrw460hslj05qtjcuhnvmrn907zxtua3skv7yyl"
 ```
 
 #### Test with the rest-client
