@@ -102,7 +102,7 @@ Starting from checkpoint in {latestStateFile}
                         ()
                     eventStream =
                       hoist liftIO $
-                        ledgerStateEvents env ledgerState Cardano.QuickValidation blockStream
+                        ledgerStateEvents env ledgerState Cardano.FullValidation blockStream
                 flip evalStateT (StreamerState 0 Nothing Nothing []) $
                   runStream dir (O.optsBlocksPerFile opts) (O.optsEventsPerFile opts) eventStream
         startStreaming
