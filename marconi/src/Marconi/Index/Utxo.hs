@@ -52,7 +52,7 @@ import System.Random.MWC (createSystemRandom, uniformR)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-import Marconi.CardanoAPI (CurrentEra, TxIn (TxIn), TxOut, TxOutRef, txOutRef)
+import Marconi.Types (CurrentEra, TxIn (TxIn), TxOut, TxOutRef, txOutRef)
 
 data UtxoUpdate = UtxoUpdate
   { _inputs  :: !(Set TxIn)

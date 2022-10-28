@@ -30,21 +30,15 @@ import Cardano.Api.Byron qualified as Byron
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Data.List.NonEmpty (NonEmpty)
 
-import Marconi.CardanoAPI (TxIn, TxOutRef, pattern CurrentEra, txOutRef, txScriptValidityToScriptValidity)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
+import Marconi.Types (TargetAddresses, TxIn, TxOutRef, pattern CurrentEra, txOutRef)
 
 import RewindableIndex.Index.VSplit qualified as Ix
-
-type CardanoAddress = C.Address C.ShelleyAddr
-
--- | Typre represents non empty list of Bech32 compatable addresses
-type TargetAddresses = NonEmpty CardanoAddress
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
@@ -286,3 +280,11 @@ forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
 forkIndexer coordinator worker path = do
   ch <- atomically . dupTChan $ _channel coordinator
   void . forkIO . worker coordinator ch $ path
+
+-- | Duplicated from cardano-api (not exposed in cardano-api)
+-- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
+-- https://github.com/input-output-hk/cardano-node/pull/4569
+txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
+txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
+txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
+

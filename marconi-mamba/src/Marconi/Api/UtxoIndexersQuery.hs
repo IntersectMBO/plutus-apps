@@ -20,8 +20,7 @@ import Database.SQLite.Simple qualified as SQL
 import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag))
 import Marconi.Api.Types (DBConfig (DBConfig), DBQueryEnv (DBQueryEnv, _dbConf, _queryAddresses, _queryQSem),
                           HasDBConfig (utxoConn), HasDBQueryEnv (dbConf, queryQSem, queryQSem), TargetAddresses,
-                          UtxoRowWrapper (UtxoRowWrapper))
-import Marconi.CardanoAPI (TxOutRef)
+                          TxOutRef, UtxoRowWrapper (UtxoRowWrapper))
 import Marconi.Index.Utxo (UtxoRow (UtxoRow, _reference))
 
 bootstrap

@@ -2,28 +2,33 @@
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeFamilies       #-}
--- | This module provides several type aliases and utility functions to deal with the current Cardano era.
-module Marconi.CardanoAPI
+-- | This module provides several type aliases and utility functions to deal with them.
+module Marconi.Types
        (
+       -- * Addresses alias used to query marconi
+       CardanoAddress,
+       TargetAddresses,
+       -- * Aliases for the current Cardano era
        CurrentEra,
        pattern AsCurrentEra,
        pattern CurrentEra,
        C.TxIn(C.TxIn),
        TxOut,
+       -- * Aliases to ease concept mapping between plutus types and cardano types
        TxOutRef,
-       Ledger.Crypto,
-       Ledger.StandardCrypto,
-       txScriptValidityToScriptValidity,
        txOutRef
        ) where
 
 import Cardano.Api qualified as C
 
-import Cardano.Ledger.Crypto qualified as Ledger (StandardCrypto)
-import Cardano.Ledger.Era qualified as Ledger
+import Data.List.NonEmpty (NonEmpty)
 
--- * Alias to the current Cardano era
---
+
+type CardanoAddress = C.Address C.ShelleyAddr
+
+-- | Typre represents non empty list of Bech32 compatable addresses
+type TargetAddresses = NonEmpty CardanoAddress
+
 -- | An alias for the current era, to ease the transition from one era to the next one
 type CurrentEra = C.BabbageEra
 
@@ -39,17 +44,7 @@ type TxOut = C.TxOut C.CtxTx CurrentEra
 -- | A reference to a transaction output. This is a
 -- pair of a transaction reference, and an index indicating which of the outputs
 -- of that transaction we are referring to.
---
 type TxOutRef = C.TxIn
 
 txOutRef :: C.TxId -> C.TxIx -> C.TxIn
 txOutRef = C.TxIn
-
--- * Duplicated from cardano-api (not exposed in cardano-api)
-
--- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
--- https://github.com/input-output-hk/cardano-node/pull/4569
-txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
-txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
-txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
-
