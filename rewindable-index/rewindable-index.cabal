@@ -56,7 +56,6 @@ common lang
 library
   import:          lang
   exposed-modules:
-    RewindableIndex.Index
     RewindableIndex.Index.VSplit
     RewindableIndex.Index.VSqlite
     RewindableIndex.Storable

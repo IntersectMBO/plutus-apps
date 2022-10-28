@@ -178,7 +178,6 @@ conversion = Conversion
 -- | Generic properties
 prop_observeNew
   :: forall e a n m. (Eq a, Monad m)
-  => Show a
   => Conversion m a e n
   -> Fun (a, e) (a, Maybe n)
   -> a
@@ -240,13 +239,12 @@ prop_sizeLEDepth c (ObservedBuilder ix) =
   let v = fromJust $ view ix in
   ixDepth v >= 2 ==>
   monadic (cMonadic c) $ do
-    (Just v) <- run $ cView c ix
-    assert $ ixSize v <= ixDepth v
+    Just v' <- run $ cView c ix
+    assert $ ixSize v' <= ixDepth v'
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
   :: forall e a n m. (Monad m, Show e, Arbitrary e, Eq a)
-  => Show a
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> Property
@@ -271,8 +269,6 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
 --   another implmentation is confirming.
 prop_observeInsert
   :: forall e a n m. (Monad m, Eq a)
-  => Show a
-  => Show e
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> [e]
@@ -288,9 +284,6 @@ prop_observeInsert c (ObservedBuilder ix) es =
                         , ixSize  = min (ixDepth v) (length es + ixSize v)
                         , ixView  = foldl' ((fst .) . getFunction ix) (ixView v) es
                         }
-    eso <- run $ cHistory c ix
-    esf <- run $ cHistory c ix'
-    let esr = scanl' ((fst .) . getFunction ix) (ixView v) es
     assert $ v' == v''
 
 -- | Notifications are accumulated as the folding function runs.
