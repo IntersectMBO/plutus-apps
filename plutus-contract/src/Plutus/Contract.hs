@@ -54,6 +54,7 @@ module Plutus.Contract(
     , Request.utxoIsProduced
     -- * Chain index requests
     , Request.datumFromHash
+    , Request.datumsAt
     , Request.validatorFromHash
     , Request.mintingPolicyFromHash
     , Request.stakeValidatorFromHash

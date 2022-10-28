@@ -177,6 +177,7 @@ type API
     :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
     :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
     :<|> "unspent-txouts-at-address" :> Description "Get all unspent transaction output at an address." :> ReqBody '[JSON] QueryAtAddressRequest :> Post '[JSON] (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+    :<|> "datums-at-address" :> Description "Get all Datums at an address." :> ReqBody '[JSON] QueryAtAddressRequest :> Post '[JSON] (QueryResponse [Datum])
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse
     :<|> "txs" :> Description "Get transactions from a list of their ids." :> ReqBody '[JSON] [TxId] :> Post '[JSON] [ChainIndexTx]
     :<|> "txo-at-address" :> Description "Get TxOs at an address." :> ReqBody '[JSON] TxoAtAddressRequest :> Post '[JSON] TxosResponse

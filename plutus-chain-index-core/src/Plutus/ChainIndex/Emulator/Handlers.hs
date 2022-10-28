@@ -23,7 +23,7 @@ module Plutus.ChainIndex.Emulator.Handlers(
     , utxoIndex
     ) where
 
-import Control.Lens (at, ix, makeLenses, over, preview, set, to, view, (&))
+import Control.Lens (at, ix, makeLenses, over, preview, set, to, view, (&), (^?))
 import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
@@ -38,7 +38,8 @@ import GHC.Generics (Generic)
 import Ledger.Address (Address (addressCredential))
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
-import Ledger.Tx qualified as L (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), DatumFromQuery (..))
+import Ledger.Tx qualified as L (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), DatumFromQuery (..),
+                                 datumInDatumFromQuery)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -99,6 +100,7 @@ getTxFromTxId i = do
     case result of
         Nothing -> logWarn (TxNotFound i) >> pure Nothing
         _       -> pure result
+
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getTxOutFromRef ::
@@ -221,7 +223,27 @@ handleQuery = \case
             mtxouts <- mapM getUtxoutFromRef (pageItems page)
             let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
             pure $ QueryResponse txouts (nextPageQuery page)
-
+    DatumsAtAddress pageQuery cred -> do
+      state <- get
+      let outRefs = view (diskState . addressMap . at cred) state
+          txoRefs = fromMaybe mempty outRefs
+          utxo = view (utxoIndex . to utxoState) state
+          page = pageOf pageQuery txoRefs
+          resolveDatum (Just h, Nothing) = gets (view $ diskState . dataMap . at h)
+          resolveDatum (_, Just d)       = pure $ Just d
+          resolveDatum (_, _)            = pure Nothing
+          txOutToDatum (L.PublicKeyChainIndexTxOut _ _ (Just (dh, mdatum)) _) =
+              (Just dh, mdatum ^? L.datumInDatumFromQuery)
+          txOutToDatum (L.ScriptChainIndexTxOut _ _ (dh, mdatum) _ _) =
+              (Just dh, mdatum ^? L.datumInDatumFromQuery)
+          txOutToDatum _ = (Nothing, Nothing)
+      txouts <- catMaybes <$> mapM getTxOutFromRef (pageItems page)
+      datums <- catMaybes <$> mapM (resolveDatum . txOutToDatum) txouts
+      case tip utxo of
+        TipAtGenesis -> do
+          logWarn TipIsGenesis
+          pure $ QueryResponse [] Nothing
+        _ -> pure $ QueryResponse datums (nextPageQuery page)
     UtxoSetWithCurrency pageQuery assetClass -> do
         state <- get
         let outRefs = view (diskState . assetClassMap . at assetClass) state
