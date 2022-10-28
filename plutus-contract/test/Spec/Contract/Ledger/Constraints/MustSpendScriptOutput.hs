@@ -9,7 +9,7 @@
 {-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.MustSpendScriptOutput(tests) where
+module Spec.Contract.Ledger.Constraints.MustSpendScriptOutput(tests) where
 
 import Control.Lens (_1, _head, filtered, has, makeClassyPrisms, only, (&), (.~), (??))
 import Control.Monad (void)

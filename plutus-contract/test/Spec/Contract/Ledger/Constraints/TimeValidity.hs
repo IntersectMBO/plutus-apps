@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.TimeValidity(tests) where
+module Spec.Contract.Ledger.Constraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
 import Control.Lens hiding (contains, from, (.>))

@@ -17,6 +17,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
+-- | Integration tests covering some scenarios using plutus-tx-constraints
 module Spec.Contract.TxConstraints (tests) where
 
 import Control.Lens hiding ((.>))
@@ -64,32 +65,14 @@ tag :: ContractInstanceTag
 tag = "instance 1"
 
 tests :: TestTree
-tests = testGroup "contract tx constraints"
-
-    -- Testing package plutus-ledger-constraints
-
-    [ checkPredicate "mustReferenceOutput returns False on-chain when used for unlocking funds in a PlutusV1 script"
-        (walletFundsChange w1 (Ada.adaValueOf (-5))
-        .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCountOfTotal 1 2
-        ) $ do
-            void $ activateContract w1 mustReferenceOutputV1ConTest tag
-            void $ Trace.waitNSlots 2
-
-    , checkPredicate "mustReferenceOutput can be used on-chain to unlock funds in a PlutusV2 script"
-        (walletFundsChange w1 (Ada.adaValueOf 0)
-        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
-        .&&. assertValidatedTransactionCount 2
-        ) $ do
-            void $ activateContract w1 mustReferenceOutputV2ConTest tag
-            void $ Trace.waitNSlots 3
+tests = testGroup "contract plutus-tx-constraints"
 
     -- Testing package plutus-tx-constraints
 
-    , checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
+    [ checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
         .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCountOfTotal 1 1
+        .&&. assertValidatedTransactionCountOfTotal 1 1 -- 2nd tx fails before validation
         ) $ do
             void $ activateContract w1 mustReferenceOutputTxV1ConTest tag
             void $ Trace.waitNSlots 2
@@ -132,31 +115,6 @@ mustReferenceOutputV1Validator = PV1.mkValidatorScript
 mustReferenceOutputV1ValidatorAddress :: Address
 mustReferenceOutputV1ValidatorAddress =
     PV1.mkValidatorAddress mustReferenceOutputV1Validator
-
-mustReferenceOutputV1ConTest :: Contract () EmptySchema ContractError ()
-mustReferenceOutputV1ConTest = do
-
-    utxos <- ownUtxos
-    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
-        vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV1ValidatorAddress
-        lookups = TC.unspentOutputs utxos
-        datum = Datum $ PlutusTx.toBuiltinData utxoRef
-        tx = TC.mustIncludeDatumInTx datum
-          <> TC.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
-          <> TC.mustSpendPubKeyOutput utxoRefForBalance1
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
-
-    -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt mustReferenceOutputV1ValidatorAddress
-    let
-        addressMap = Map.singleton mustReferenceOutputV1ValidatorAddress scriptUtxos
-        lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
-               <> TC.plutusV1OtherScript mustReferenceOutputV1Validator
-               <> TC.unspentOutputs utxos
-        tx = TC.mustReferenceOutput utxoRef
-          <> TC.collectFromPlutusV1Script addressMap mustReferenceOutputV1Validator unitRedeemer
-          <> TC.mustSpendPubKeyOutput utxoRefForBalance2
-    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 
 mustReferenceOutputTxV1ConTest :: Contract () EmptySchema ContractError ()
 mustReferenceOutputTxV1ConTest = do
@@ -205,31 +163,6 @@ mustReferenceOutputV2Validator = PV2.mkValidatorScript
 mustReferenceOutputV2ValidatorAddress :: Address
 mustReferenceOutputV2ValidatorAddress =
     PV2.mkValidatorAddress mustReferenceOutputV2Validator
-
-mustReferenceOutputV2ConTest :: Contract () EmptySchema ContractError ()
-mustReferenceOutputV2ConTest = do
-
-    utxos <- ownUtxos
-    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ Map.toList utxos
-        vh = fromJust $ Addr.toValidatorHash mustReferenceOutputV2ValidatorAddress
-        lookups = TC.unspentOutputs utxos
-        datum = Datum $ PlutusTx.toBuiltinData utxoRef
-        tx = TC.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
-          <> TC.mustIncludeDatumInTx datum
-          <> TC.mustSpendPubKeyOutput utxoRefForBalance1
-    mkTxConstraints @Void lookups tx >>= submitTxConfirmed
-
-    -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
-    let
-        addressMap = Map.singleton mustReferenceOutputV2ValidatorAddress scriptUtxos
-        lookups = TC.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos)
-               <> TC.plutusV2OtherScript mustReferenceOutputV2Validator
-               <> TC.unspentOutputs utxos
-        tx = TC.mustReferenceOutput utxoRef
-          <> TC.collectFromPlutusV2Script addressMap mustReferenceOutputV2Validator unitRedeemer
-          <> TC.mustSpendPubKeyOutput utxoRefForBalance2
-    mkTxConstraints @Any lookups tx >>= submitTxConfirmed
 
 mustReferenceOutputTxV2ConTest :: Contract () EmptySchema ContractError ()
 mustReferenceOutputTxV2ConTest = do
