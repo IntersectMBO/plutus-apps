@@ -10,8 +10,9 @@ import Ledger qualified
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed as PSU
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
+import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS2
 import Plutus.V1.Ledger.Api (Address, Validator)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
@@ -50,15 +51,29 @@ someAddressV2 = Ledger.scriptValidatorHashAddress someValidatorHashV2 Nothing
 mkPolicy :: () -> Ledger.ScriptContext -> Bool
 mkPolicy _ _ = True
 
+{-# INLINABLE mkPolicyV2 #-}
+mkPolicyV2 :: () -> PV2.ScriptContext -> Bool
+mkPolicyV2 _ _ = True
+
 coinMintingPolicy :: Ledger.MintingPolicy
 coinMintingPolicy = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS.mkUntypedMintingPolicy mkPolicy ||])
+    $$(PlutusTx.compile [|| MPS1.mkUntypedMintingPolicy mkPolicy ||])
 
 coinMintingPolicyHash :: Ledger.MintingPolicyHash
 coinMintingPolicyHash = PV1.mintingPolicyHash coinMintingPolicy
 
+coinMintingPolicyV2 :: Ledger.MintingPolicy
+coinMintingPolicyV2 = Ledger.mkMintingPolicyScript
+    $$(PlutusTx.compile [|| MPS2.mkUntypedMintingPolicy mkPolicyV2 ||])
+
+coinMintingPolicyHashV2 :: Ledger.MintingPolicyHash
+coinMintingPolicyHashV2 = PV2.mintingPolicyHash coinMintingPolicyV2
+
 coinMintingPolicyCurrencySymbol :: Ledger.CurrencySymbol
 coinMintingPolicyCurrencySymbol = Value.mpsSymbol coinMintingPolicyHash
+
+coinMintingPolicyCurrencySymbolV2 :: Ledger.CurrencySymbol
+coinMintingPolicyCurrencySymbolV2 = Value.mpsSymbol coinMintingPolicyHashV2
 
 someToken :: Ledger.Value
 someToken = Value.singleton coinMintingPolicyCurrencySymbol "someToken" 1

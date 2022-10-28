@@ -765,8 +765,7 @@ processConstraint = \case
     MustReferenceOutput txo -> do
         unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput txo]
 
-    MustMintValue mpsHash@(MintingPolicyHash mpsHashBytes) red tn i -> do
-        mintingPolicyScript <- lookupMintingPolicy mpsHash
+    MustMintValue mpsHash@(MintingPolicyHash mpsHashBytes) red tn i mref -> do
         -- See note [Mint and Fee fields must have ada symbol].
         let value = (<>) (Ada.lovelaceValueOf 0) . Value.singleton (Value.mpsSymbol mpsHash) tn
         -- If i is negative we are burning tokens. The tokens burned must
@@ -777,9 +776,20 @@ processConstraint = \case
             then valueSpentInputs <>= provided (value (negate i))
             else valueSpentOutputs <>= provided (value i)
 
-        unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash red
-        unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
+        unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash (red, flip Versioned PlutusV2 <$> mref)
         unbalancedTx . tx . Tx.mint <>= value i
+
+        case mref of
+            Just ref -> do
+                refTxOut <- lookupTxOutRef ref
+                case _ciTxOutReferenceScript refTxOut of
+                    Just _ -> do
+                        unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
+                    _        -> throwError (TxOutRefNoReferenceScript ref)
+            Nothing -> do
+                mintingPolicyScript <- lookupMintingPolicy mpsHash
+                unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
+
 
     MustPayToPubKeyAddress pk skhM mdv refScriptHashM vl -> do
         forM_ mdv $ \case

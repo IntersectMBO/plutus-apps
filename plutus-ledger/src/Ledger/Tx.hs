@@ -244,7 +244,7 @@ instance Pretty CardanoTx where
                 ++ [ "mint:" <+> pretty (getCardanoTxMint tx)
                 , "fee:" <+> pretty (getCardanoTxFee tx)
                 ] ++ onCardanoTx (\tx' ->
-                    [ hang 2 (vsep ("mps:": fmap pretty (Map.toList (txMintingScripts tx'))))
+                    [ hang 2 (vsep ("mps:": fmap pretty (Map.toList (txMintingWitnesses tx'))))
                     , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList (txSignatures tx'))))
                     ]) (const []) tx ++
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
