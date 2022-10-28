@@ -40,9 +40,6 @@ import Test.Tasty.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Fun, G
                               arbitrarySizedIntegral, chooseInt, cover, forAll, frequency, resize, shrinkNothing, sized,
                               (==>))
 
-import Debug.Trace qualified as Debug
-import RewindableIndex.Storable qualified as Storable
-
 {- | Laws
   Constructors: new, insert, rewind
   Observations: view [depth, view, size], getHistory, getFunction
@@ -202,8 +199,7 @@ prop_observeNew c f a =
       else do
         v <- run $ cView c ix
         h <- run $ cHistory c ix
-        assert $ -- Debug.trace ("v: " <> show v <> " r: " <> show depth <> ", " <> show a) $
-                 v == pure (IndexView { ixDepth = depth
+        assert $ v == pure (IndexView { ixDepth = depth
                                       , ixView  = a
                                       , ixSize  = 1
                                       })
@@ -231,8 +227,8 @@ prop_rewindDepth c (ObservedBuilder ix) =
     monadic (cMonadic c) $ do
       mv <- run $ cView c (rewind depth ix)
       if depth >= ixSize v
-        then assert $ Debug.trace ("isNothing depth: " <> show depth <> " size: " <> show (ixSize v)) $ isNothing mv
-        else assert $ Debug.trace ("isJust    depth: " <> show depth <> " size: " <> show (ixSize v)) $ isJust    mv
+        then assert $ isNothing mv
+        else assert $ isJust    mv
 
 -- | Property that validates the HF data structure.
 prop_sizeLEDepth
@@ -268,8 +264,7 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
     h  <- take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
     -- h  <- fromJust <$> run (cHistory c ix)
     h' <- fromJust <$> run (cHistory c ix')
-    Debug.trace ("H: " <> show h <> " H': " <> show h') $
-      assert $ h == h'
+    assert $ h `isPrefixOf` h'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
@@ -294,9 +289,8 @@ prop_observeInsert c (ObservedBuilder ix) es =
                         , ixView  = foldl' ((fst .) . getFunction ix) (ixView v) es
                         }
     eso <- run $ cHistory c ix
-    esf <- run $ Debug.trace "FINAL HISTORY" $ cHistory c ix'
+    esf <- run $ cHistory c ix'
     let esr = scanl' ((fst .) . getFunction ix) (ixView v) es
-    assert $ Debug.trace ("vo: " <> show vo <> " v: " <> show v <> " v': " <> show v' <>" v'': " <> show v'' <> " ES: " <> show es <> " O: " <> show eso <> " F: " <> show esf <> " R: " <> show esr) $ v' == v''
     assert $ v' == v''
 
 -- | Notifications are accumulated as the folding function runs.

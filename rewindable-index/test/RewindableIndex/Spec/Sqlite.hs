@@ -30,8 +30,6 @@ import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage, tr
                                  filterWithQueryInterval, memoryBufferSize)
 import RewindableIndex.Storable qualified as Storable
 
-import Debug.Trace qualified as Debug
-
 newtype Handle = Handle Sql.Connection
 
 data instance StorablePoint Handle =
@@ -194,9 +192,7 @@ instance Queryable Handle IO where
           Sql.query h "SELECT * from index_property_cache WHERE point <= ? ORDER BY point ASC" (Sql.Only end)
     Sql.execute_ h "COMMIT"
     let es'' = filterWithQueryInterval qi (es' ++ toList memoryEs)
-    Debug.trace ("Memory events (2): es': " <> show es' <> " es'': " <> show es'') $
-      Debug.trace ("Memory events (3): " <> show (toList memoryEs)) $
-        pure $ foldl' ((fst .) . indexedFn f) aggregate es''
+    pure $ foldl' ((fst .) . indexedFn f) aggregate es''
 
 instance Rewindable Handle IO where
   rewindStorage :: StorablePoint Handle -> Handle -> IO (Maybe Handle)
@@ -245,7 +241,7 @@ getHistory ix = do
       let qs = map (\p -> QInterval p p)
              $ map sePoint es
       rs  <- fmap getResult <$> mapM (\qi -> Storable.query qi st (QEvents f)) qs
-      if Debug.trace ("history: es: " <> show es <> " rs: " <> show rs <> " qs: " <> show qs) $ null rs
+      if null rs
       then do
         Result ag0 <- Storable.query QEverything st QAccumulator
         pure $ Just [ag0]
@@ -280,19 +276,19 @@ lookupPoint
   :: Int
   -> Config
   -> MaybeT IO (StorablePoint Handle)
+-- TODO: this needs a lot of comments
 lookupPoint n (Config st _) = MaybeT $ do
   let depth = st ^. config . memoryBufferSize + 1
-  es' <- Storable.getEvents st
-  es <- Debug.trace ("EEE: " <> show es') $ take (depth - 1) <$> Storable.getEvents st
-  -- TODO: 10/10 --> return genesis.
-  -- We have a rollback to genesis.
+  es' <- reverse <$> Storable.getEvents st
+  es  <- take (depth - 1) . reverse <$> Storable.getEvents st
   if length es == n
-  then pure . Just $ Genesis
+  then do
+    if length es' > length es
+       then pure . Just $ sePoint $ es' !! n
+       else pure . Just $ Genesis
   else if length es > n
-  then
-    Debug.trace ("ES: " <> show (length es) <> " N: " <> show n) $ pure $ atMay es n <&> sePoint
-  else
-    Debug.trace ("NON ES: " <> show (length es) <> " N: " <> show n) $ pure Nothing
+  then pure $ atMay es' n <&> sePoint
+  else pure Nothing
 
 run
   :: IndexT
@@ -311,10 +307,10 @@ run (Ix.Insert e ix) = do
       nextState <- Storable.insert (Event (Point sq) e) (ix' ^. state)
       pure . Just . (, sq + 1) $ ix' { _state = nextState }
 run (Ix.Rewind n ix) = do
-  mix <- Debug.trace "HERE0" $ run ix
+  mix <- run ix
   case mix of
-    Nothing        -> Debug.trace "REWIND/Nothing" $ pure Nothing
-    Just (ix', sq) -> Debug.trace "HERE1" $ liftIO . runMaybeT $ do
-      p         <- Debug.trace "HERE2" $ lookupPoint n ix'
-      nextState <- Debug.trace "REWIND" $ MaybeT . liftIO $ Storable.rewind p (ix' ^. state)
+    Nothing        -> pure Nothing
+    Just (ix', sq) -> liftIO . runMaybeT $ do
+      p         <- lookupPoint n ix'
+      nextState <- MaybeT . liftIO $ Storable.rewind p (ix' ^. state)
       pure . (,sq) $ ix' { _state = nextState }
