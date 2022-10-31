@@ -9,7 +9,7 @@
 {-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.Contract.Ledger.Constraints.MustSpendScriptOutput(tests) where
+module Spec.Contract.Tx.Constraints.MustSpendScriptOutput(tests) where
 
 import Control.Lens (_1, _head, filtered, has, makeClassyPrisms, only, (&), (.~), (??))
 import Control.Monad (void)
@@ -75,7 +75,7 @@ tests :: TestTree
 tests = testGroup "MustSpendScriptOutput"
       [ testGroup "ledger constraints" [v1Tests, v2Tests]
       , mustSpendScriptOutputsInlineDatumHasNoDataInTx
-      , txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script -- to be replaced to run all tests to tx constraint when MustMint is implemented (PLT-672)
+      , txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script -- to be replaced by running all existing tests with tx constraint when MustMint is implemented (PLT-672)
       ]
 
 v1Tests :: TestTree

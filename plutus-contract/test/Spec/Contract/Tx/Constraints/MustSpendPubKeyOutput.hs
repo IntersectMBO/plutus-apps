@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.Contract.Ledger.Constraints.MustSpendPubKeyOutput(tests) where
+module Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput(tests) where
 
 import Control.Lens (at, non, (^.))
 import Control.Monad (void)

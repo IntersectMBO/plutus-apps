@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
-module Spec.Contract.Ledger.Constraints.MustPayToPubKeyAddress(tests) where
+module Spec.Contract.Tx.Constraints.MustPayToPubKeyAddress(tests) where
 
 import Control.Lens (_1, _head, has, makeClassyPrisms, only, (??), (^.))
 import Control.Monad (void)

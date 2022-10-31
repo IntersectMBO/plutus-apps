@@ -235,19 +235,19 @@ test-suite plutus-contract-test
   other-modules:
     Spec.Balancing
     Spec.Contract
-    Spec.Contract.Ledger.Constraints.MustIncludeDatum
-    Spec.Contract.Ledger.Constraints.MustMint
-    Spec.Contract.Ledger.Constraints.MustPayToOtherScript
-    Spec.Contract.Ledger.Constraints.MustPayToPubKeyAddress
-    Spec.Contract.Ledger.Constraints.MustProduceAtLeast
-    Spec.Contract.Ledger.Constraints.MustReferenceOutput
-    Spec.Contract.Ledger.Constraints.MustSatisfyAnyOf
-    Spec.Contract.Ledger.Constraints.MustSpendAtLeast
-    Spec.Contract.Ledger.Constraints.MustSpendPubKeyOutput
-    Spec.Contract.Ledger.Constraints.MustSpendScriptOutput
-    Spec.Contract.Ledger.Constraints.RequiredSigner
-    Spec.Contract.Ledger.Constraints.Spec
-    Spec.Contract.Ledger.Constraints.TimeValidity
+    Spec.Contract.Tx.Constraints.MustIncludeDatum
+    Spec.Contract.Tx.Constraints.MustMint
+    Spec.Contract.Tx.Constraints.MustPayToOtherScript
+    Spec.Contract.Tx.Constraints.MustPayToPubKeyAddress
+    Spec.Contract.Tx.Constraints.MustProduceAtLeast
+    Spec.Contract.Tx.Constraints.MustReferenceOutput
+    Spec.Contract.Tx.Constraints.MustSatisfyAnyOf
+    Spec.Contract.Tx.Constraints.MustSpendAtLeast
+    Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput
+    Spec.Contract.Tx.Constraints.MustSpendScriptOutput
+    Spec.Contract.Tx.Constraints.RequiredSigner
+    Spec.Contract.Tx.Constraints.Spec
+    Spec.Contract.Tx.Constraints.TimeValidity
     Spec.Emulator
     Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle

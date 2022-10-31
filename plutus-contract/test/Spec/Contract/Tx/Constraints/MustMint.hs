@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.Contract.Ledger.Constraints.MustMint(tests) where
+module Spec.Contract.Tx.Constraints.MustMint(tests) where
 
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)

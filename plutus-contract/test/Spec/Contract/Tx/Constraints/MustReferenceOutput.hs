@@ -8,7 +8,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.Contract.Ledger.Constraints.MustReferenceOutput(tests) where
+module Spec.Contract.Tx.Constraints.MustReferenceOutput(tests) where
 
 import Control.Lens (At (at), _1, _head, filtered, has, makeClassyPrisms, non, only, (??), (^.))
 import Control.Monad (void)

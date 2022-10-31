@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-record-updates
                 -fno-warn-incomplete-uni-patterns
                 #-}
-module Spec.Contract.Ledger.Constraints.MustSatisfyAnyOf(tests) where
+module Spec.Contract.Tx.Constraints.MustSatisfyAnyOf(tests) where
 
 import Control.Lens ((??), (^.))
 import Control.Monad (void)

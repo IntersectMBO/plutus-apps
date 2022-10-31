@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.Contract.Ledger.Constraints.TimeValidity(tests) where
+module Spec.Contract.Tx.Constraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
 import Control.Lens hiding (contains, from, (.>))
@@ -20,7 +20,9 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract as Con
+import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed, currentNodeClientSlot,
+                               currentNodeClientTimeRange, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
+                               submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Script.Utils.V1.Scripts (ValidatorHash)
