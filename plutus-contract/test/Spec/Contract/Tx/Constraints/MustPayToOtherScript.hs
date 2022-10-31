@@ -7,7 +7,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.MustPayToOtherScript(tests) where
+module Spec.Contract.Tx.Constraints.MustPayToOtherScript(tests) where
 
 import Control.Lens ((&), (??), (^.))
 import Control.Monad (void)

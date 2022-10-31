@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.MustSpendAtLeast(tests) where
+module Spec.Contract.Tx.Constraints.MustSpendAtLeast(tests) where
 
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)

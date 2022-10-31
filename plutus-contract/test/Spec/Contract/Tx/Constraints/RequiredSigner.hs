@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.RequiredSigner(tests) where
+module Spec.Contract.Tx.Constraints.RequiredSigner(tests) where
 
 import Control.Monad (void)
 import Data.Void (Void)
