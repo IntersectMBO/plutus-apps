@@ -110,7 +110,7 @@ import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Redeemer (Redeemer), outValue, offchainTxOutReferenceScript)
+import Ledger (Redeemer (Redeemer), offchainTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)

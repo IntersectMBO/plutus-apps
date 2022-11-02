@@ -24,7 +24,7 @@ import Control.Monad (void)
 import Control.Monad.Freer.Extras.Log (LogLevel (Debug))
 import Data.Default (def)
 import Data.Map qualified as Map
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -290,7 +290,7 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
     utxos' <- ownUtxos
     let
         scriptUtxo = fst . head . Map.toList $ scriptUtxos
-        refScriptUtxo = fst . head . Map.toList . Map.filter (isJust . Tx._offchainTxOutReferenceScript) $ utxos'
+        refScriptUtxo = head . Map.keys . Map.filter (has Tx.offchainTxOutReferenceScript) $ utxos'
         lookups = Tx.Constraints.unspentOutputs (Map.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx = Tx.Constraints.mustReferenceOutput utxoRef
           <> Tx.Constraints.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo
