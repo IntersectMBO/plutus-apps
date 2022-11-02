@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendScriptOutput(tests) where
 
-import Control.Lens (_1, _head, filtered, has, makeClassyPrisms, only, (&), (.~), (??))
+import Control.Lens (_1, _Just, _head, filtered, has, makeClassyPrisms, only, (&), (.~), (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -256,7 +256,7 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs validRef
     let versionedMintingPolicy =
             getVersionedScript MustSpendScriptOutputWithReferencePolicy policyVersion
         scriptUtxos' = Prelude.take nScriptOutputs . M.keys $ scriptUtxos
-        refScriptUtxo = head . M.keys . M.filter (has Tx.offchainTxOutReferenceScript) $ utxos'
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
         policyRedeemer' = P.map (, unitRedeemer, refScriptUtxo) scriptUtxos'
         policyRedeemer = asRedeemer $
             if validReference then policyRedeemer' else policyRedeemer' & _head . _1 .~ utxoRef
@@ -285,7 +285,7 @@ mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
     -- Trying to unlock the Ada in the script address
     utxos' <- ownUtxos
     let scriptUtxo = head . M.keys $ scriptUtxos
-        refScriptUtxo = head . M.keys . M.filter (has Tx.offchainTxOutReferenceScript) $ utxos'
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
         lookups2 = Cons.otherScript mustReferenceOutputValidatorVersioned
                 <> Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx2 = Cons.mustReferenceOutput utxoRef
@@ -825,7 +825,7 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
     utxos' <- ownUtxos
     let
         scriptUtxo = fst . head . M.toList $ scriptUtxos
-        refScriptUtxo = head . M.keys . M.filter (has Tx.offchainTxOutReferenceScript) $ utxos'
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
         lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx2 = Cons.mustReferenceOutput utxoRef
           <> Cons.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo
