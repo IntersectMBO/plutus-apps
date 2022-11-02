@@ -44,7 +44,7 @@ module Plutus.Contracts.Tutorial.Escrow(
     , covIdx
     ) where
 
-import Control.Lens (_1, makeClassyPrisms, review, view, (^?))
+import Control.Lens (_1, has, makeClassyPrisms, only, review, view, (^?))
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -302,7 +302,7 @@ refund inst _escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let pkh = Ledger.datumHash $ Datum $ PlutusTx.toBuiltinData pk
-        flt _ ciTxOut = ciTxOut ^? Tx.offchainTxOutScriptDatum . _1 == Just pkh
+        flt _ ciTxOut = has (Tx.offchainTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
     if Constraints.modifiesUtxoSet tx'
     then do
