@@ -63,6 +63,7 @@ library
     , json-rpc
     , marconi
     , plutus-ledger
+    , rewindable-index
 
   ------------------------
   -- Non-IOG dependencies
@@ -76,6 +77,7 @@ library
     , servant
     , servant-server
     , sqlite-simple
+    , stm
     , text
     , time
     , warp
@@ -136,8 +138,24 @@ executable examples-json-rpc-server
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi-mamba
-  build-depends:  base >=4.9 && <5
+  build-depends:
+    , marconi
+    , marconi-mamba
+    , plutus-ledger
+    , rewindable-index
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , async
+    , base                  >=4.9 && <5
+    , containers
+    , lens
+    , optparse-applicative
+    , stm
+    , vector
+    , warp
 
 executable examples-json-rpc-client
   import:         lang
@@ -181,9 +199,6 @@ library db-utils
     , marconi-mamba
     , plutus-ledger
 
-  ------------------------
-  -- Non-IOG dependencies
-  ------------------------
   build-depends:
     , aeson
     , async

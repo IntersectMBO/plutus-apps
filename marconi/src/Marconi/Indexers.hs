@@ -1,6 +1,11 @@
-{-# LANGUAGE GADTs          #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections  #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TupleSections          #-}
+
 
 module Marconi.Indexers where
 
@@ -9,8 +14,9 @@ import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (bracket_)
+import Control.Lens (makeClassy)
 import Control.Lens.Operators ((&), (<&>), (^.))
-import Control.Monad (void)
+import Control.Monad (unless, void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (assocs)
@@ -26,6 +32,7 @@ import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 -- TODO Remove the following dependencies from cardano-ledger, and
 -- then also the package dependency from this package's cabal
 -- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
+import Control.Concurrent.STM.TMVar (TMVar, putTMVar, takeTMVar, tryReadTMVar)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
 import Ledger.Scripts (Datum, DatumHash)
@@ -153,30 +160,41 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
+type QueryRequest = ()
+
+data UtxoQueryComm = UtxoQueryComm
+    { _QueryReq :: TMVar QueryRequest
+    , _Indexer  :: TMVar UtxoIndex
+    }
+makeClassy ''UtxoQueryComm
+
 queryAwareUtxoWorker
-    :: QSemN            -- ^ Semaphore indicating of inflight database queries
+    :: UtxoQueryComm
     -> TargetAddresses  -- ^ Target addresses to filter for
     -> Worker
-queryAwareUtxoWorker qsem targetAddresses Coordinator{_barrier} ch path =
+queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
-    innerLoop index = bracket_   -- Note, Exceptions here will propegate to main thread and abend the application
-        (waitQSemN qsem 1) (signalQSemN qsem 1) $
-        do
-            signalQSemN _barrier 1
-            event <- atomically $ readTChan ch
-            case event of
-                RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-                    let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
-                    Ix.insert utxoRow index >>= innerLoop
-                RollBackward cp _ct -> do
-                    events <- Ix.getEvents (index ^. Ix.storage)
-                    innerLoop $
-                        fromMaybe index $ do
-                            slot   <- chainPointToSlotNo cp
-                            offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
-                            Ix.rewind offset index
+    innerLoop index = do
+        isquery <- atomically . tryReadTMVar $ qreq
+        unless (null isquery) $ bracket_
+            (atomically (takeTMVar qreq ) )
+            (atomically (takeTMVar qreq ) )
+            (atomically  (putTMVar utxoIndexer index) )
+        signalQSemN _barrier 1
+        event <- atomically $ readTChan ch
+        case event of
+            RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+                let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
+                Ix.insert utxoRow index >>= innerLoop
+            RollBackward cp _ct -> do
+                events <- Ix.getEvents (index ^. Ix.storage)
+                innerLoop $
+                    fromMaybe index $ do
+                        slot   <- chainPointToSlotNo cp
+                        offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+                        Ix.rewind offset index
 
 
 utxoWorker :: Maybe TargetAddresses -> Worker

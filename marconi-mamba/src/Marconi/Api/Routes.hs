@@ -6,13 +6,12 @@ module Marconi.Api.Routes where
 
 import Data.Set (Set)
 import Data.Text (Text)
-import Marconi.Api.Types (UtxoRowWrapper, UtxoTxOutReport)
+import Marconi.Api.Types (UtxoTxOutReport)
 import Marconi.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
 import Servant.API (Get, JSON, NoContent, PlainText, Post, ReqBody, (:<|>), (:>))
 type Echo                   = JsonRpc "echo" String String String
 type TxOutRefReport         = JsonRpc "utxoTxOutReport" String String UtxoTxOutReport
 type TxOutRefsReport        = JsonRpc "utxoTxOutReports" Int String (Set UtxoTxOutReport)
-type UtxosReport            = JsonRpc "utxosReport" Int String (Set UtxoRowWrapper)
 type TargetAddressesReport  = JsonRpc "addressesBech32Report" Int String (Set Text)
 
 type Print    = JsonRpcNotification "print" String
@@ -21,7 +20,6 @@ type RpcAPI
     = Echo
     :<|> TxOutRefReport
     :<|> TxOutRefsReport
-    :<|> UtxosReport
     :<|> TargetAddressesReport
     :<|> Print
 

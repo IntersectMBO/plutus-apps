@@ -18,9 +18,8 @@ import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoRowWrapper,
-                          UtxoTxOutReport (..))
-import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findAll, findByAddress, findUtxos, reportBech32Addresses)
+import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoTxOutReport)
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findAll, findByAddress, reportBech32Addresses)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 import Network.Wai.Handler.Warp (runSettings)
@@ -38,7 +37,6 @@ server env
     = ( echo
         :<|> utxoTxOutReport env
         :<|> utxoTxOutReports env
-        :<|> utxosReport env
         :<|> targetAddressesReport env
         :<|> printMessage env )
       :<|> (getTime
@@ -86,22 +84,13 @@ utxoTxOutReport env address = liftIO $
     bimap cardanoErrToRpcErr id <$> (Q.Utxo.findByAddress env . pack $ address)
 
 -- | Retrieves a set of TxOutRef
---
+-- TODO convert this to stream
 utxoTxOutReports
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
     -> Handler (Either (JsonRpcErr String) (Set UtxoTxOutReport))
 utxoTxOutReports env _ =
     liftIO $ Right <$> Q.Utxo.findAll env
-
--- | Retrieves a set of TxOutRef
---
-utxosReport
-    :: DBQueryEnv                   -- ^ database configuration
-    -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) (Set UtxoRowWrapper))
-utxosReport env _ =
-    liftIO $ Right <$> Q.Utxo.findUtxos env
 
 targetAddressesReport
     :: DBQueryEnv                   -- ^ database configuration

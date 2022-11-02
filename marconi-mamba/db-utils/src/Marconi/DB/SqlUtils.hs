@@ -4,16 +4,25 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- | This module extracts Shelley addresses from a live utxo SQLite database and ranks them based on their corresponding number of utxos
+-- | This module extracts Shelley addresses from a utxo SQLite database.
+--   Addresses are:
+--      store in shelleyaddresses table
+--      stored in `Text` Bech32 format, Shelly addresses
+--      ranked on their corresponding number of utxos
 --
+-- to get a sample of the data :
+--  sqlite3 ./.marconidb/2/utxo-db "select * from shelleyaddresses limit 10;" ".exit"
 module Marconi.DB.SqlUtils where
 
 import Cardano.Api qualified as CApi
 import Control.Concurrent.Async (forConcurrently_)
+import Control.Exception (bracket_)
 import Control.Lens ((^.))
 import Control.Monad (void)
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
+import Data.Time.Clock (getCurrentTime)
+import Database.SQLite.Simple (Connection)
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
@@ -22,8 +31,7 @@ import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
 import Ledger qualified as Plutus
 import Ledger.Tx.CardanoAPI.Internal (toCardanoAddressInEra)
-import Marconi.Api.Types (DBQueryEnv (..), HasDBQueryEnv (..), utxoConn)
-import Marconi.Api.UtxoIndexersQuery (withQueryAction)
+import Marconi.Api.Types (DBConfig, DBQueryEnv, HasDBQueryEnv (dbConf, network), utxoConn)
 
 -- | Represents Shelley type addresses with most utxo transactions
 --
@@ -42,18 +50,26 @@ instance (ToField a) => ToRow (ShelleyFrequencyTable a )where
 -- Next, create the shelleyaddresses table
 --
 freqUtxoTable :: DBQueryEnv -> IO ()
-freqUtxoTable env = do
-    let conn = env ^. dbConf . utxoConn
-        qsem = env ^. queryQSem
-    void $ withQueryAction (
+freqUtxoTable env =
+    void $ withQueryAction (env ^. dbConf) ( \conn ->
         SQL.execute_ conn "drop table if exists frequtxos"
         >> SQL.execute_ conn "drop table if exists shelleyaddresses"
         >> SQL.execute_ conn "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC"
         >> SQL.execute_ conn
            "create TABLE shelleyaddresses (address text not null, frequency int not null)"
-        ) qsem
-    pure ()
+        )
 
+withQueryAction :: DBConfig -> (Connection -> IO a) -> IO a
+withQueryAction conf action =
+     let
+         f = do
+             now <- getCurrentTime
+             putStrLn $ "queryAction started at: "  <> show now
+         g = do
+             now <- getCurrentTime
+             putStrLn $ "queryAction completed at: "  <> show now
+        in
+         bracket_  f g (action (utxoConn conf ))
 
 -- | populate the shelleyFrequency table
 -- first create a table of addresses and their coresponding utxo counts.
@@ -61,21 +77,18 @@ freqUtxoTable env = do
 --
 freqShelleyTable :: DBQueryEnv -> IO [Text]
 freqShelleyTable env = do
-    let conn = env ^. dbConf . utxoConn
-        qsem = env ^. queryQSem
-        nid = env ^. network
-    addressFreq <- withQueryAction (SQL.query_ conn
-                                "SELECT address, frequency FROM frequtxos") qsem :: IO [ShelleyFrequencyTable Plutus.Address]
-    let addresses = catMaybes . fmap (toShelley nid  ) $ addressFreq
+    addressFreq <- withQueryAction (env ^. dbConf)( \conn -> (SQL.query_ conn
+                                "SELECT address, frequency FROM frequtxos") :: IO [ShelleyFrequencyTable Plutus.Address])
+    let addresses = catMaybes . fmap (toShelley ( env ^. network) ) $ addressFreq
 
-    withQueryAction (
+    withQueryAction (env ^. dbConf) ( \conn -> (
         SQL.execute_ conn "BEGIN TRANSACTION"
         >> forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
                                       (SQL.execute conn
                                        "insert into shelleyaddresses (address, frequency) values (?, ?)"
                                        (a, f)))
-        >> SQL.execute_ conn "COMMIT"
-        ) qsem
+        >> SQL.execute_ conn "COMMIT" )
+        )
     pure . fmap _sAddress $ addresses
 
 toShelley' :: CApi.NetworkId  -> Plutus.Address -> Maybe Text

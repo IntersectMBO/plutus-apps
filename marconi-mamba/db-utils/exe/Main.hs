@@ -1,4 +1,5 @@
-
+-- | Light exe wrapper for SqlUtils
+--
 module Main where
 import Cardano.Api (NetworkId)
 import Marconi.Api.Types (TargetAddresses)
@@ -9,11 +10,10 @@ import Marconi.DB.SqlUtils (freqShelleyTable, freqUtxoTable)
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, showDefault, strOption, value,
                             (<**>))
 
-
-
 data CliOptions = CliOptions
-    { utxoPath  :: FilePath
-    , networkId :: NetworkId  }
+    { utxoPath  :: FilePath -- ^ path to utxo sqlite database
+    , networkId :: NetworkId  -- ^ network id used for address conversions
+    }
 
 -- |
 bech32Addresses :: String   -- ^  valid address to keep track of
@@ -25,7 +25,7 @@ cliParser = CliOptions
                               <> short 'd'
                               <> metavar "FILENAME"
                               <>  showDefault
-                              <> value "./.marconidb/utxodb"
+                              <> value "./.marconidb/2/utxo-db"
                               <> help "Path to the utxo database.")
     <*> pNetworkId
 

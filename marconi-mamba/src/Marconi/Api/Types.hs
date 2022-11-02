@@ -20,7 +20,6 @@ module Marconi.Api.Types
     , RpcPortNumber
     , CliArgs (..)
     , DBConfig (..)
-    , HasDBConfig (..)
     , DBQueryEnv (..)
     , HasDBQueryEnv (..)
     , JsonRpcEnv (..)
@@ -28,10 +27,11 @@ module Marconi.Api.Types
     , UtxoRowWrapper (..)
     , UtxoTxOutReport (..)
     , Address
+    , UtxoQueryComm (..)
+    , HasUtxoQueryComm (..)
                          )  where
 
 import Cardano.Api qualified (Address, NetworkId, ShelleyAddr)
-import Control.Concurrent.QSemN (QSemN)
 import Control.Lens (makeClassy)
 import Data.Aeson (FromJSON, ToJSON (toEncoding), defaultOptions, genericToEncoding)
 import Data.List.NonEmpty (NonEmpty)
@@ -42,6 +42,7 @@ import GHC.Generics (Generic)
 import Ledger (TxOutRef)
 import Ledger.Address (Address)
 import Marconi.Index.Utxo (UtxoRow (UtxoRow))
+import Marconi.Indexers (HasUtxoQueryComm (indexer, queryReq), UtxoQueryComm (UtxoQueryComm, _Indexer, _QueryReq))
 import Network.Wai.Handler.Warp (Settings)
 
 type CardanoAddress = Cardano.Api.Address Cardano.Api.ShelleyAddr
@@ -61,22 +62,21 @@ data CliArgs = CliArgs
   } deriving (Show)
 
 newtype DBConfig = DBConfig {
-    _utxoConn ::  Connection
+    utxoConn ::  Connection
     }
-makeClassy ''DBConfig
 
 data DBQueryEnv = DBQueryEnv
-    { _dbConf         :: DBConfig           -- ^ path to dqlite db
-    , _queryQSem      :: QSemN           -- ^ used to serialize addess to sqlite
-    , _queryAddresses :: TargetAddresses    -- ^ user provided addresses to filter
-    , _network        :: Cardano.Api.NetworkId   -- ^ cardano network id
+    { _DbConf         :: DBConfig               -- ^ path to dqlite db
+    , _QueryComm      :: UtxoQueryComm
+    , _QueryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
+    , _Network        :: Cardano.Api.NetworkId  -- ^ cardano network id
     }
 makeClassy ''DBQueryEnv
 
 -- | JSON-RPC configuration
-data JsonRpcEnv = JsonRpcEnv {
-    _httpSettings :: Settings               -- ^ HTTP server setting
-    , _queryEnv   :: DBQueryEnv             -- ^ used for query sqlite
+data JsonRpcEnv = JsonRpcEnv
+    { _HttpSettings :: Settings               -- ^ HTTP server setting
+    , _QueryEnv     :: DBQueryEnv             -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
 

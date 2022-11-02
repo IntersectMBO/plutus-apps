@@ -10,14 +10,13 @@ import Control.Lens ((^.))
 import Data.List (nub)
 import Data.List.NonEmpty (fromList)
 import Data.Proxy (Proxy (Proxy))
-import Data.Text (Text, pack, unpack, words)
+import Data.Text qualified as Text (Text, pack, unpack, words)
 import Marconi.Api.HttpServer qualified as Http
-import Marconi.Api.Types (CardanoAddress, CliArgs (CliArgs), HasDBQueryEnv (queryQSem), HasJsonRpcEnv (queryEnv),
-                          JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber, TargetAddresses)
+import Marconi.Api.Types (CardanoAddress, CliArgs (CliArgs), HasDBQueryEnv (queryComm), HasJsonRpcEnv (queryEnv),
+                          JsonRpcEnv (JsonRpcEnv, _HttpSettings, _QueryEnv), RpcPortNumber, TargetAddresses)
 import Marconi.Api.UtxoIndexersQuery qualified as QIUtxo
 import Marconi.Indexers (combineIndexers, queryAwareUtxoWorker)
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
-import Prelude hiding (words)
 
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache
@@ -32,8 +31,8 @@ bootstrapJsonRpc dbPath maybePort targetAddresses nId = do
     queryenv <- QIUtxo.bootstrap dbPath targetAddresses nId
     let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
     pure $ JsonRpcEnv
-        { _httpSettings = httpsettings
-        , _queryEnv = queryenv
+        { _HttpSettings = httpsettings
+        , _QueryEnv = queryenv
         }
 
 bootstrapHttp
@@ -48,7 +47,7 @@ bootstrapUtxoIndexers
     -> IO ()
 bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
     let
-      qsem = env ^. queryEnv . queryQSem
+      qsem = env ^. queryEnv . queryComm
       indexers = combineIndexers [( queryAwareUtxoWorker qsem targetAddresses , dbPath)]
       chainPoint = ChainPointAtGenesis
     in
@@ -63,8 +62,8 @@ targetAddressParser
     = fromList
     . nub
     . fmap (txtToCardano )
-    . words
-    . pack
+    . Text.words
+    . Text.pack
 
 -- | Exit program with error
 -- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
@@ -75,10 +74,11 @@ fromJustWithError v = case v of
         error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
     Right accounts -> accounts
 
-txtToCardano :: Text -> CardanoAddress
+txtToCardano :: Text.Text -> CardanoAddress
 txtToCardano addr = case deserialiseToCardano addr of
-    Left e -> error ( "Error deserializing user provided bech32 address " <> unpack addr <> " to Cardano.Api.Address with error"
-                     <> show e  )
+    Left e -> error ( "Error deserializing user provided bech32 address "
+                      <> Text.unpack addr <> " to Cardano.Api.Address with error"
+                      <> show e  )
     Right a -> a
     where
         deserialiseToCardano = deserialiseFromBech32 (proxyToAsType Proxy)

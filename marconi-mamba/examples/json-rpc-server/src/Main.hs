@@ -1,56 +1,98 @@
 {-
 -- Sample JSON-RPC server program
---  uncomment TODO and provide adequte data
+--
 -}
 module Main where
 
 import Cardano.Api (NetworkId (Mainnet))
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (race_)
+import Control.Concurrent.STM (atomically, putTMVar, takeTMVar, tryReadTMVar)
+import Control.Exception (bracket_)
+import Control.Lens.Operators ((^.))
+import Control.Monad (unless)
 import Data.List (intercalate)
-import Marconi.Api.Types (TargetAddresses)
+import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (queryComm), HasJsonRpcEnv (queryEnv),
+                          HasUtxoQueryComm (indexer, queryReq), TargetAddresses)
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc, targetAddressParser)
-{-
--- white space separated list of addresses
--}
+import Marconi.Index.Utxo (Depth (Depth), open)
+import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, showDefault, strOption, value,
+                            (<**>))
 
--- TODO
-bech32Addresses :: String   -- ^  valid address to keep track of
-bech32Addresses = intercalate " "
+bech32DefaultAddresses :: String   -- ^  valid address to keep track of
+bech32DefaultAddresses = intercalate " "
     [
-        "addr1q837de0y7j3ncegph2a8mc0e86q9evwtekd3ejhlpr97wclrumj7fa9r83jsrw460hslj05qtjcuhnvmrn907zxtua3skv7yyl"
-    ,"addr1qxyxudgzljnnaqghm8hlnpp36uvfr68a8k6uemumgjdcua4y7d04xcx9hnk05lnl6m9ptd9h3pj9vvg2xe4j354uh8vsarpydn"
-    , "addr1qytr6ma495fkqpfnd7gk5kwmtfdh084xvzn7rv83ha87qq6yfm3y8yv39lcrqc6ej3zdzvef4aj3dv3pq2snakkcwscsfyrn3g"
-    , "addr1qxt2ggq005kfm3uwe89emy3ka2zgdtrpxfarvz6033l3fqvk5ssq7lfvnhrcajwtnkfrd65ys6kxzvn6xc95lrrlzjqsjttk32"
-    , "addr1qyhat6v7w65799pkc8ff3mjcwk79kqs8gv8t4expd67f9seqksv3earfx6skxkdhe4hcekjkj0x333dd76u8re8cmg2qwrdzn2"
-    , "addr1qy807crqvtpr0qq0ccvptgsvfvpaul2x3ae4vxlgcegrwgswlasxqckzx7qql3sczk3qcjcrme75drmn2cd733jsxu3qa04mne"
-    , "addr1q87sjen5fqdgkdyrmm2fcstq9mp9amfsdgvplq8wg9ev75mkent5zu88cnkuqrk933fm6mhvq0u867pmv5ysc72vf9xsh6cqr7"
-    , "addr1qxzt6a7clerp5g05m74z7lvzvjnkys8f3f93akk3g4mjpk20tzw0uktgd7awa7gfqck9vq7dx7wt2fr49ufsc6r4dq7qmhajjc"
-    , "addr1q8clmt8gym7j9xpx65xc6zxh244k6jufe2k4ud6rmmjvtk9c5dgkcwdv6z0vehgyclv6k07yn58hh2v7av9gnam8229qcw2zm7"
-    , "addr1qya4q38x5y0rtr53n0pzpxn7fqzmrxn24v9nmftnnw8hkemtpk7llnc73nv82mk57maflppzrjl2dz03c48g05mgxx2q67fthh"
-    , "addr1q8xfgstn2nj9ejt29kcft9m2waxxn2fa3wp94g0r9z575n0lavkt8havfc4wk55pyg6cakngqg0hmxe3a53lvc5q259q4p5rv9"
-    , "addr1qy4fv35z7gj4ny2exnh9fjamkdy84keufzc6l9s0ekvwda6ccx4ez3q3jzz4jff98ayvv0l0nfgnlpn2l55ttlthwjmqd4453t"
-    , "addr1qyreqjfnq69yvx3j6zj66dryzctk96qa54chg0xrp8uwslzykkmtykt2set490qm6dnwfvsp54mg2zh9qhqsesp5cxysay9pzn"
-    , "addr1qxtrqdumg8dleqcra3myptlq6n43m8s0mver0pwgqrr8awvkkcdaz26hglgm4qvc6fdy0rr4ck6q5q249drqc4fzyrgq68vuva"
-    , "addr1q8yr9x2jp24h3lhcp290jyz0cupsdr3z0mgr6wjq4gfyx4zkj6g2hck2e75datgvnvr7eahspjyf6mvqnut26dcgxusqppc2nl"
-    , "addr1qxefewc9n43tyctdyk935lk5a342eus76wk2z0v0nl9wdr0z3sv430tkzngurge0u926gllc3n3vpzy6qnnpnqa0qxpsuj9gqv"
-    , "addr1qxrlkh6yh0km5m5n7923syel0yqqvc3pjrnqrzrz3gwpxd70prfqwehanuxzkwmv55ff9gr7tjx5vymykd2galr9chaqlwjwm9"
-    , "addr1q9dzwgq9t8pvlc7n76r7d46rrshe5s4v0gd7lmzenfxg49lrsguyk4655g488x3hzdyvwlz9zygp8aee6t2hzgc2p9rqry4rcg"
-    , "addr1q9wndwc74g66amxkfwg07x0lfnl84k999u4cer67hq2gzejax6a3a2344mkdvjusluvl7n870tv22tet3j84awq5s9nq8cxcnx"
-    , "addr1vy5q8pvwutswdyh047lwxs33p2yf5r6zf7e8ms6vd4tyhgg09canu"
+         "addr1q87cwj26ftt8ucu52sw9ravms9h7tuwlzg7pyf8f0ln8xxjylayug87f0fumqe0hkm7hffgczcu68vg7fvntlntdu9esg5dupm"
+        , "addr1v9u7va2sktlnz8dp3qadpnxxlv4m03672jy6elmntlxxs7q9nnwl9"
+        , "addr1vypr00ss7hkqejmvh53xkyf0p9q0a4z2uprxmx6njc463vgst3pe4"
+        , "addr1v8v3auqmw0eszza3ww29ea2pwftuqrqqyu26zvzjq9dt2ncydzvs5"
+        , "addr1v95sf69jcfhnmknvffwmfvlvnccatqwfjcyh0nlfc6gh5scta2yzg"
+        , "addr1q9h7mjfkvp45wvmguc7z52v4kglhdddrfndy4ykqxxe7ahx60hvk6wllh2h5ej5zepwmeqdj7p6mdxym8lfj37e9zncqrk8njz"
+        , "addr1q8eqr3mlxtwczmw5zqt8rxf3guk7zppf69xgt6hnqulm6v95mpgr8f9n3xxh9muyyz4z9yth8jze5hfqwnmhv260xzrqnhnjc3"
+        , "addr1vx68aey37n4t73yygc2uykhhxr75eml9nzgsrzxd8wmxcugvyu3rs"
+        , "addr1qx5u2jke0t767lddysx6xwcayrzwd8dygthh9n0ttcd4r337azp9vqwcsreqzug9zwyrv027uve30p2x225yhf62q6ys6ryzm2"
+        , "addr1qxyxudgzljnnaqghm8hlnpp36uvfr68a8k6uemumgjdcua4y7d04xcx9hnk05lnl6m9ptd9h3pj9vvg2xe4j354uh8vsarpydn"
+        , "addr1q8nkg0kqurdd2z8mhv4wd69wqg64uzkhk94rx7vgp5f0vk3wt6qwfvd5z9tdjl5kzwzr2dgjkcvehhmjhhkxca8d9dese2kq4k"
+        , "addr1qxq47au29wss4g8acjk0zsmwwq0h34hhzump6stye9wuldm7nm0t6ad3jz9hy5v3smye0nvcumtzu43k7r36ag0w29qqdafvvk"
+        , "addr1vxpzqpz8mzat8qr9ukcvcgtp5x27zk5wgcqf9yh9d3fq25gtsnye2"
+        , "addr1qxkp553nvr57m5f9ylpdpzpdlhhhn9j4c02zdfxphdwm782tjyh2rcg5u47u9ntq73u8zzpnwrjtz96ss5sks8khw6vsnvke6s"
+        , "addr1vxcnz5w5ccv3nwerjm944hl6hjzdc6axm893c88a9jcsrpsd22m4p"
+        , "addr1q8k565ztcxzxxlxvngp8lyg2vnkptvphjfyrkjc5k70x0vjtjyh2rcg5u47u9ntq73u8zzpnwrjtz96ss5sks8khw6vs4r0kgu"
+        , "addr1q86naxdettc4r8rhls2xqs97kpkd79tvkplrv5lf8e6tfyygy9uwd947cp8mqh8kl04pazxjs9tmyystyv0nhpmc852srht88w"
+        , "addr1q8pa98kn47xkctsvfw2w2cxs4j9yhf2nw5swh230f4ymqwkx5492fgr7vggzp6mxspz8n4lqvdxqz24f6ccszswtdn9s0g2an9"
+        , "addr1qxgddhyma66fh206xcqy440tpufww9a78y626u3sxe065xzrmyxsnc6mpgll4vmlfj07v8wclxh6c5gx42x5uh8r96hqlmjwry"
+        , "addr1q8fwxda8mq09rzjcluxrep9wyrnfe4e8kuzqzkvcdn53vskmspx9w7e55ly30vqnw4a0eza3hj2hxnhhq6hqqh58gyvstww5ww"
     ]
 
+defaultDbpath :: FilePath
+defaultDbpath = "./.marconidb/2/utxo-db"
 
--- TODO
-dbpath :: FilePath -- ^ valid SQLite marconi UTxo database path
-dbpath = "./.marconidb/utxodb"
+data CliOptions = CliOptions
+    { _utxoPath  :: FilePath -- ^ path to utxo sqlite database
+    , _addresses :: TargetAddresses
+    }
 
-addresses :: TargetAddresses
-addresses = targetAddressParser bech32Addresses
+cliParser :: Parser CliOptions
+cliParser = CliOptions
+    <$> strOption (long "utxo-db"
+                              <> short 'd'
+                              <> metavar "FILENAME"
+                              <>  showDefault
+                              <> value defaultDbpath
+                              <> help "Path to the utxo database.")
+    <*> pAddressesParser
+
+pAddressesParser :: Parser TargetAddresses
+pAddressesParser = targetAddressParser <$> strOption
+    (long "addresses-to-index"
+     <> metavar "Address"
+     <>  showDefault
+     <> value bech32DefaultAddresses
+     <> help ("White space separated list of addresses to index."
+                  <>  " i.e \"address-1 address-2 address-3 ...\"" ) )
 
 main :: IO ()
 main = do
-    print (length addresses)
-    putStrLn $ "Starting the Example RPC http-server on port 3000 example for "
-        <> show (length addresses) <> " valid bech32 addresses\n"
+    (CliOptions dbpath addresses) <- execParser $ info (cliParser <**> helper) mempty
+    putStrLn $ "Starting the Example RPC http-server:"
+        <>"\nport =" <> show (3000 :: Int)
+        <> "\nutxo-db =" <> dbpath
+        <> "\nnumber of addresses to index = " <> show (length addresses)
 
     env <- bootstrapJsonRpc dbpath Nothing addresses Mainnet
-    bootstrapHttp env
+    race_ (bootstrapHttp env) (mocUtxoIndexer (env ^. queryEnv) )
+
+mocUtxoIndexer :: DBQueryEnv -> IO ()
+mocUtxoIndexer env = open "" (Depth 4) >>= innerLoop
+    where
+        utxoIndexer = env ^. queryComm . indexer
+        qreq = env ^. queryComm . queryReq
+        innerLoop ix = do
+            isquery <-  atomically $ tryReadTMVar qreq
+            unless (null isquery) $ bracket_
+                (atomically (takeTMVar qreq ) )
+                (atomically (takeTMVar qreq ) )
+                (atomically  (putTMVar utxoIndexer ix) )
+
+            threadDelay 10  --  inserts to sqlite
+            (innerLoop ix)
