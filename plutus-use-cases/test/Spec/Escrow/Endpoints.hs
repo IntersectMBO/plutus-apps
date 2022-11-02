@@ -9,6 +9,7 @@ module Spec.Escrow.Endpoints where
 
 import Data.Text (unpack)
 
+import Control.Lens (_1, has, only)
 import Control.Monad (void)
 
 import Ledger (PaymentPubKeyHash)
@@ -48,7 +49,8 @@ badRefund ::
 badRefund inst pk = do
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     current <- snd <$> currentNodeClientTimeRange
-    let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let pkh = Ledger.datumHash $ Datum $ PlutusTx.toBuiltinData pk
+        flt _ ciTxOut = has (Tx.offchainTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateIn (from (current - 1))
     utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst

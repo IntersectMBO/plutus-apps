@@ -296,7 +296,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     current <- snd <$> currentNodeClientTimeRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
-    else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
+    else if foldMap (view Tx.offchainTxOutValue) unspentOutputs `lt` targetTotal escrow
     then throwing _RedeemFailed NotEnoughFundsAtAddress
     else do
       let
@@ -337,7 +337,7 @@ refund ::
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let flt _ ciTxOut = fst (Tx._offchainTxOutScriptDatum ciTxOut) == datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustBeSignedBy pk
                 <> Constraints.mustValidateIn (from (escrowDeadline escrow))
@@ -362,7 +362,7 @@ payRedeemRefund params vl = do
     let inst = typedValidator params
         go = do
             cur <- utxosAt (Scripts.validatorAddress inst)
-            let presentVal = foldMap (view Tx.ciTxOutValue) cur
+            let presentVal = foldMap (view Tx.offchainTxOutValue) cur
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do

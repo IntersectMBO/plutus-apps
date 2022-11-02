@@ -179,7 +179,7 @@ retrieveFundsC vesting payment = do
     now <- fst <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let
-        currentlyLocked = foldMap (view Tx.ciTxOutValue) (Map.elems unspentOutputs)
+        currentlyLocked = foldMap (view Tx.offchainTxOutValue) (Map.elems unspentOutputs)
         remainingValue = currentlyLocked - payment
         mustRemainLocked = totalAmount vesting - availableAt vesting now
         maxPayment = currentlyLocked - mustRemainLocked

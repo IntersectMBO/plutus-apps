@@ -47,7 +47,7 @@ module EscrowImpl(
     , covIdx
     ) where
 
-import Control.Lens (makeClassyPrisms, review, view)
+import Control.Lens (_1, has, makeClassyPrisms, only, review, view)
 import Control.Monad (Monad ((>>)), void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -308,7 +308,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
                 <> Constraints.mustValidateIn valRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
-    else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
+    else if foldMap (view Tx.offchainTxOutValue) unspentOutputs `lt` targetTotal escrow
          then throwing _RedeemFailed NotEnoughFundsAtAddress
          else do
            utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
@@ -338,7 +338,8 @@ refund ::
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
-    let flt _ ciTxOut = fst (Tx._ciTxOutScriptDatum ciTxOut) == Scripts.datumHash (Datum (PlutusTx.toBuiltinData pk))
+    let pkh = Scripts.datumHash $ Datum $ PlutusTx.toBuiltinData pk
+    let flt _ ciTxOut = has (Tx.offchainTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
@@ -361,7 +362,7 @@ payRedeemRefund params vl = do
     let inst = typedValidator params
         go = do
             cur <- utxosAt (Scripts.validatorAddress inst)
-            let presentVal = foldMap (view Tx.ciTxOutValue) cur
+            let presentVal = foldMap (view Tx.offchainTxOutValue) cur
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do
@@ -370,7 +371,7 @@ payRedeemRefund params vl = do
                         then Left <$> refund inst params
                         else waitNSlots 1 >> go
     -- Pay the value 'vl' into the contract
-    _ <- pay inst params vl
+    void $ pay inst params vl
     go
 
 {- START covIdx -}

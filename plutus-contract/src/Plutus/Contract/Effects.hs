@@ -101,7 +101,7 @@ import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
 import Ledger.TimeSlot (SlotConversionError)
-import Ledger.Tx (CardanoTx, ChainIndexTxOut, Versioned, getCardanoTxId, onCardanoTx)
+import Ledger.Tx (CardanoTx, OffchainTxOut, Versioned, getCardanoTxId, onCardanoTx)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -301,13 +301,13 @@ data ChainIndexResponse =
   | ValidatorHashResponse (Maybe (Versioned Validator))
   | MintingPolicyHashResponse (Maybe (Versioned MintingPolicy))
   | StakeValidatorHashResponse (Maybe (Versioned StakeValidator))
-  | TxOutRefResponse (Maybe ChainIndexTxOut)
-  | UnspentTxOutResponse (Maybe ChainIndexTxOut)
+  | TxOutRefResponse (Maybe OffchainTxOut)
+  | UnspentTxOutResponse (Maybe OffchainTxOut)
   | RedeemerHashResponse (Maybe Redeemer)
   | TxIdResponse (Maybe ChainIndexTx)
   | UtxoSetMembershipResponse IsUtxoResponse
   | UtxoSetAtResponse UtxosResponse
-  | UnspentTxOutsAtResponse (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+  | UnspentTxOutsAtResponse (QueryResponse [(TxOutRef, OffchainTxOut)])
   | DatumsAtResponse (QueryResponse [Datum])
   | UtxoSetWithCurrencyResponse UtxosResponse
   | TxIdsResponse [ChainIndexTx]

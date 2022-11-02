@@ -11,7 +11,7 @@ module Spec.Contract.Tx.Constraints.MustMint(tests) where
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Control.Lens ((&))
+import Control.Lens (has, (&))
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Text qualified as Text
@@ -150,7 +150,7 @@ mustMintValueWithReferenceContract failPhase2 = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx0
 
     utxos' <- ownUtxos
-    let refScriptUtxo = fst . head . filter (isJust . Tx._ciTxOutReferenceScript . snd) . Map.toList $ utxos'
+    let refScriptUtxo = head . Map.keys . Map.filter (has Tx.offchainTxOutReferenceScript) $ utxos'
         redeemerRefUtxo = if failPhase2 then nonExistentTxoRef else refScriptUtxo
         redeemer = asRedeemer $ MustMintValueWithReference redeemerRefUtxo tknValueV2
         lookups1 = Constraints.unspentOutputs (Map.singleton utxoRef utxo <> utxos')
@@ -177,7 +177,7 @@ mustMintValueWithReferenceContractV1Failure = do
 
     utxos' <- ownUtxos
     let
-        refScriptUtxo = fst . head . filter (isJust . Tx._ciTxOutReferenceScript . snd) . Map.toList $ utxos'
+        refScriptUtxo = head . Map.keys . Map.filter (has Tx.offchainTxOutReferenceScript) $ utxos'
         lookups1 = Constraints.unspentOutputs (Map.singleton utxoRef utxo <> utxos')
         tx1 = Constraints.mustMintCurrencyWithReference refScriptUtxo coinMintingPolicyHash tknName tknAmount
     ledgerTx1 <- submitTxConstraintsWith @Any lookups1 tx1

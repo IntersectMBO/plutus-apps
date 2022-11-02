@@ -22,8 +22,8 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), DatumFromQuery (DatumInBody), inputs,
-                         paymentPubKeyHash, scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
+import Ledger qualified (DatumFromQuery (DatumInBody), OffchainTxOut (ScriptOffchainTxOut), inputs, paymentPubKeyHash,
+                         scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
@@ -232,14 +232,15 @@ prepFromTxConstraints txCons = runExcept $
         prepareConstraints @Void (Constraints.txOwnOutputs txCons) (Constraints.txConstraints txCons)
         `runReaderT` mempty
 
-txOut0 :: Ledger.ChainIndexTxOut
+txOut0 :: Ledger.OffchainTxOut
 txOut0 =
-    Ledger.ScriptChainIndexTxOut
-        (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing)
+    Ledger.ScriptOffchainTxOut
+        alwaysSucceedValidatorHash
+        Nothing
         mempty
         (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
-        (alwaysSucceedValidatorHash, Nothing)
+        Nothing
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest
@@ -265,19 +266,20 @@ validator1 = Scripts.mkTypedValidator
 validatorHash1 :: Ledger.ValidatorHash
 validatorHash1 = Scripts.validatorHash validator1
 
-txOut1 :: Ledger.ChainIndexTxOut
+txOut1 :: Ledger.OffchainTxOut
 txOut1 =
-    Ledger.ScriptChainIndexTxOut
-        (Ledger.Address (ScriptCredential validatorHash1) Nothing)
+    Ledger.ScriptOffchainTxOut
+        validatorHash1
+        Nothing
         mempty
         (Ledger.datumHash Ledger.unitDatum, Ledger.DatumInBody Ledger.unitDatum)
         Nothing
-        (validatorHash1, Nothing)
+        Nothing
 
 txOutRef :: Integer -> Ledger.TxOutRef
 txOutRef = Ledger.TxOutRef (Ledger.TxId "")
 
-utxo1 :: Map.Map Ledger.TxOutRef Ledger.ChainIndexTxOut
+utxo1 :: Map.Map Ledger.TxOutRef Ledger.OffchainTxOut
 utxo1 = Map.fromList [(txOutRef 0, txOut0), (txOutRef 1, txOut1)]
 
 {-# INLINABLE constraints1 #-}

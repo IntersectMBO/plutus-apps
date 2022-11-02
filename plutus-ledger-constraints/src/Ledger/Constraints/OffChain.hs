@@ -90,8 +90,10 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, view, (%=), (&), (.=), (.~), (<>=), (^?))
-import Control.Monad (forM_)
+import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, view, (%=), (&), (.=), (.~), (<>=), (^.),
+                     (^?))
+import Control.Lens.Extras (is)
+import Control.Monad (forM_, guard)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
 import Control.Monad.State (MonadState (get, put), execStateT, gets)
@@ -108,7 +110,7 @@ import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Redeemer (Redeemer), outValue)
+import Ledger (Redeemer (Redeemer), outValue, offchainTxOutReferenceScript)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -125,8 +127,8 @@ import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (ChainIndexTxOut (_ciTxOutReferenceScript), Language (PlutusV1, PlutusV2), ReferenceScript,
-                  TxOut (TxOut), TxOutRef, Versioned (Versioned), txOutValue)
+import Ledger.Tx (Language (PlutusV1, PlutusV2), OffchainTxOut, ReferenceScript, TxOut (TxOut), TxOutRef,
+                  Versioned (Versioned), txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
@@ -146,7 +148,7 @@ import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
 data ScriptLookups a =
     ScriptLookups
-        { slTxOutputs            :: Map TxOutRef ChainIndexTxOut
+        { slTxOutputs            :: Map TxOutRef OffchainTxOut
         -- ^ Unspent outputs that the script may want to spend
         , slOtherScripts         :: Map ScriptHash (Versioned Script)
         -- ^ Scripts other than "our script"
@@ -213,7 +215,7 @@ typedValidatorLookups inst =
 
 -- | A script lookups value that uses the map of unspent outputs to resolve
 --   input constraints.
-unspentOutputs :: Map TxOutRef ChainIndexTxOut -> ScriptLookups a
+unspentOutputs :: Map TxOutRef OffchainTxOut -> ScriptLookups a
 unspentOutputs mp = mempty { slTxOutputs = mp }
 
 -- | A script lookups value with a versioned minting policy script.
@@ -612,7 +614,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
       $ do
           (txOut, datum) <- maybe (throwError $ UnknownRef icTxOutRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . Tx.datumInDatumFromQuery
+                                datum <- ciTxOut ^? Tx.offchainTxOutDatum . _2 . Tx.datumInDatumFromQuery
                                 pure (Tx.toTxInfoTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let vl = PV2.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
@@ -645,7 +647,7 @@ lookupTxOutRef
        , MonadError MkTxError m
        )
     => TxOutRef
-    -> m ChainIndexTxOut
+    -> m OffchainTxOut
 lookupTxOutRef outRef =
     let err = throwError (TxOutRefNotFound outRef) in
     asks slTxOutputs >>= maybe err pure . view (at outRef)
@@ -733,12 +735,12 @@ processConstraint = \case
 
     MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
-        case txout of
-          Tx.PublicKeyChainIndexTxOut { Tx._ciTxOutValue } -> do
-              -- TODO: Add the optional datum in the witness set for the pub key output
-              unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
-              valueSpentInputs <>= provided _ciTxOutValue
-          _ -> throwError (TxOutRefWrongType txo)
+        value <- maybe (throwError (TxOutRefWrongType txo)) pure $ do
+                       guard $ is Tx._PublicKeyOffchainTxOut txout
+                       pure $ txout ^. Tx.offchainTxOutValue
+        -- TODO: Add the optional datum in the witness set for the pub key output
+        unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
+        valueSpentInputs <>= provided value
 
     MustSpendScriptOutput txo red mref -> do
         txout <- lookupTxOutRef txo
@@ -748,7 +750,7 @@ processConstraint = \case
         case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
-            case _ciTxOutReferenceScript refTxOut of
+            case refTxOut ^. Tx.offchainTxOutReferenceScript  of
                 Just val -> do
                     unbalancedTx . tx %= Tx.addReferenceTxInput txo (ref <$ val) red (datumWitness datum)
                     unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
@@ -782,10 +784,9 @@ processConstraint = \case
         case mref of
             Just ref -> do
                 refTxOut <- lookupTxOutRef ref
-                case _ciTxOutReferenceScript refTxOut of
-                    Just _ -> do
-                        unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
-                    _        -> throwError (TxOutRefNoReferenceScript ref)
+                case refTxOut ^? offchainTxOutReferenceScript of
+                    Just _ -> unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
+                    _      -> throwError (TxOutRefNoReferenceScript ref)
             Nothing -> do
                 mintingPolicyScript <- lookupMintingPolicy mpsHash
                 unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
@@ -838,13 +839,14 @@ processConstraintFun = \case
     MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
         ScriptLookups{slTxOutputs} <- ask
         -- TODO: Need to precalculate the validator hash or else this won't work
-        -- with PlutusV2 validator. This means changing `ChainIndexTxOut` to
+        -- with PlutusV2 validator. This means changing `OffchainTxOut` to
         -- include the hash.
         let matches (Just (_, d, value)) = datumPred (getDatum d) && valuePred value
             matches Nothing              = False
-        opts <- filter (matches . snd)
-            <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo)
-                (filter ((== vh) . fst . Tx._ciTxOutValidator . snd) (Map.toList slTxOutputs))
+
+        opts <- fmap (Map.toList . Map.filter matches)
+                $ traverse resolveScriptTxOut
+                $ Map.filter ((== Just vh) . preview Tx.offchainTxOutValidatorHash) slTxOutputs
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just (validator, datum, value))] -> do
@@ -864,7 +866,7 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Versioned Validator, DatumWithOrigin, Value))
+    => OffchainTxOut -> m (Maybe (Versioned Validator, DatumWithOrigin, Value))
 resolveScriptTxOut txo = do
     mv <- resolveScriptTxOutValidator txo
     mdv <- resolveScriptTxOutDatumAndValue txo
@@ -874,12 +876,13 @@ resolveScriptTxOutValidator
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (Versioned Validator))
+    => OffchainTxOut -> m (Maybe (Versioned Validator))
 resolveScriptTxOutValidator
-        Tx.ScriptChainIndexTxOut
-            { Tx._ciTxOutValidator = (vh, v)
+        Tx.ScriptOffchainTxOut
+            { Tx._offchainTxOutValidator = v
+            , Tx._offchainTxOutValidatorHash = vh
             } = do
-    -- first check in the 'ChainIndexTxOut' for the validator, then
+    -- first check in the 'OffchainTxOut' for the validator, then
     -- look for it in the 'slOtherScripts' map.
     validator <- maybe (lookupValidator vh) pure v
     pure $ Just validator
@@ -889,20 +892,20 @@ resolveScriptTxOutDatumAndValue
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => ChainIndexTxOut -> m (Maybe (DatumWithOrigin, Value))
+    => OffchainTxOut -> m (Maybe (DatumWithOrigin, Value))
 resolveScriptTxOutDatumAndValue
-        Tx.ScriptChainIndexTxOut
-            { Tx._ciTxOutScriptDatum = (dh, d)
-            , Tx._ciTxOutValue
+        Tx.ScriptOffchainTxOut
+            { Tx._offchainTxOutScriptDatum = (dh, d)
+            , Tx._offchainTxOutValue
             } = do
 
-    -- first check in the 'ChainIndexTxOut' for the datum, then
+    -- first check in the 'OffchainTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
     datum <- case d of
         Tx.DatumUnknown      -> DatumInTx <$> lookupDatum dh
         Tx.DatumInBody datum -> pure (DatumInTx datum)
         Tx.DatumInline datum -> pure (DatumInline datum)
-    pure $ Just (datum, _ciTxOutValue)
+    pure $ Just (datum, _offchainTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
 
 toCardanoTxOutWithOutputDatum ::

@@ -146,7 +146,7 @@ redeemEp = endpoint @"redeem" redeem
       pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
-      let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
+      let value = foldMap (view Tx.offchainTxOutValue) unspentOutputs
           -- Correct validity interval should be:
           -- @
           --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ deadline params)
