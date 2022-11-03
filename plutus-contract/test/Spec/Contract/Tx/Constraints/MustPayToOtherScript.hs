@@ -62,7 +62,7 @@ v1FeaturesTests :: SubmitTx -> PSU.Language -> TestTree
 v1FeaturesTests sub t = testGroup "Plutus V1 features" $
     [ successfulUseOfMustPayToOtherScriptWithDatumInTxWithMintedToken
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
-    , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
+    , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyAda
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWithScriptsExactTokenBalance
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerAdaValue
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerTokenValue
