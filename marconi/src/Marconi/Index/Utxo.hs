@@ -1,9 +1,12 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TemplateHaskell    #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE GADTs              #-}
 
 module Marconi.Index.Utxo
   ( -- * UtxoIndex
@@ -20,38 +23,37 @@ module Marconi.Index.Utxo
   , slotNo
   , address
   , reference
+  , TxOut
   ) where
 
-import Cardano.Api (SlotNo)
-import Codec.Serialise (deserialiseOrFail, serialise)
+import Cardano.Api (SlotNo, TxIn (TxIn))
+import Cardano.Api qualified as C
+
 import Control.Lens.Operators ((&), (^.))
 import Control.Lens.TH (makeLenses)
+
 import Control.Monad (when)
-import Data.ByteString.Lazy (toStrict)
-import Data.Foldable (foldl', forM_, toList)
+import Data.Foldable (forM_, toList)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (fromString)
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLText))
+import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
--- TODO Remove the following dependencies from plutus-ledger, and
--- then also the package dependency from this package's cabal
--- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Ledger (Address, TxId, TxOut, TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
-import Ledger qualified as Ledger
 import System.Random.MWC (createSystemRandom, uniformR)
 
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
+import Marconi.Types (CurrentEra, TxOut, TxOutRef, txOutRef)
+
 data UtxoUpdate = UtxoUpdate
-  { _inputs  :: !(Set TxOutRef)
+  { _inputs  :: !(Set TxIn)
   , _outputs :: ![(TxOut, TxOutRef)]
   , _slotNo  :: !SlotNo
   } deriving (Show)
@@ -60,45 +62,52 @@ $(makeLenses ''UtxoUpdate)
 
 type Result = Maybe [TxOutRef]
 
-type UtxoIndex = SqliteIndex UtxoUpdate () Address Result
+type UtxoIndex = SqliteIndex UtxoUpdate () C.AddressAny Result
 
 newtype Depth = Depth Int
 
-instance FromField Address where
+instance FromField C.AddressAny where
   fromField f = fromField f >>=
-    either (const $ returnError ConversionFailed f "Cannot deserialise address.")
-           pure
-    . deserialiseOrFail
+    maybe (returnError ConversionFailed f "Cannot deserialise address.")
+          pure
+    . C.deserialiseFromRawBytes C.AsAddressAny
 
-instance ToField Address where
-  toField = SQLBlob . toStrict . serialise
+instance ToField C.AddressAny where
+  toField = SQLBlob . C.serialiseToRawBytes
 
-instance FromField TxId where
-  fromField f = fromString <$> fromField f
+instance FromField C.TxId where
+  fromField = fmap fromString . fromField
 
-instance ToField TxId where
+instance ToField C.TxId where
   toField = SQLText . fromString . show
 
+instance FromField C.TxIx where
+  fromField = fmap C.TxIx . fromField
+
+instance ToField C.TxIx where
+  toField (C.TxIx i) = SQLInteger $ fromIntegral i
+
 data UtxoRow = UtxoRow
-  { _address   :: !Address
+  { _address   :: !C.AddressAny
   , _reference :: !TxOutRef
   } deriving (Generic)
 
 $(makeLenses ''UtxoRow)
 
 instance FromRow UtxoRow where
-  fromRow = UtxoRow <$> field <*> (TxOutRef <$> field <*> field)
+  fromRow = UtxoRow <$> field <*> (txOutRef <$> field <*> field)
 
 instance ToRow UtxoRow where
   toRow u =  (toField $ u ^. address) : (toRow $ u ^. reference)
 
 instance FromRow TxOutRef where
-  fromRow = TxOutRef <$> field <*> field
+  fromRow = txOutRef <$> field <*> field
 
 instance ToRow TxOutRef where
-  toRow r = [ toField $ txOutRefId  r
-            , toField $ txOutRefIdx r
-            ]
+  toRow (TxIn txOutRefId txOutRefIdx) =
+      [ toField txOutRefId
+      , toField txOutRefIdx
+      ]
 
 open
   :: FilePath
@@ -116,7 +125,7 @@ open dbPath (Depth k) = do
 
 query
   :: UtxoIndex
-  -> Address
+  -> C.AddressAny
   -> [UtxoUpdate]
   -> IO Result
 query ix addr updates = do
@@ -130,7 +139,7 @@ query ix addr updates = do
   -- Perform the db query
   storedUtxos <- SQL.query c "SELECT address, txId, inputIx FROM utxos LEFT JOIN spent ON utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE utxos.txId IS NULL AND utxos.address = ?" (Only addr)
   let memoryUtxos  = concatMap (filter (onlyAt addr) . toRows) updates
-      spentOutputs = foldl' Set.union Set.empty $ map _inputs updates
+      spentOutputs = foldMap _inputs updates
   buffered <- Ix.getBuffer $ ix ^. Ix.storage
   let bufferedUtxos = concatMap (filter (onlyAt addr) . toRows) buffered
   pure . Just $ storedUtxos ++ bufferedUtxos ++ memoryUtxos
@@ -163,9 +172,15 @@ onInsert _ix _update = pure []
 
 toRows :: UtxoUpdate -> [UtxoRow]
 toRows update = update ^. outputs
-  & map (\(out, ref)  -> UtxoRow { _address   = Ledger.txOutAddress out
-                                 , _reference = ref
-                                 })
+  & map (\(C.TxOut addr _ _ _, ref) ->
+        UtxoRow { _address   = toAddr addr
+                , _reference = ref
+                })
+  where
+    toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
+    toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
+    toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
 
-onlyAt :: Address -> UtxoRow -> Bool
-onlyAt address' row = address' == (row ^. address)
+
+onlyAt :: C.AddressAny -> UtxoRow -> Bool
+onlyAt address' row = address' == row ^. address

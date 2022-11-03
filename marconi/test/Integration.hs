@@ -379,4 +379,3 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   f ws
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
-

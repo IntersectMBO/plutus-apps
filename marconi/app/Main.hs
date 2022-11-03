@@ -17,9 +17,10 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Control.Applicative (optional)
-import Marconi.CLI (TargetAddresses, chainPointParser, targetAddressParser)
+import Marconi.CLI (chainPointParser, targetAddressParser)
 import Marconi.Indexers (combinedIndexer)
 import Marconi.Logging (logging)
+import Marconi.Types (TargetAddresses)
 
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)

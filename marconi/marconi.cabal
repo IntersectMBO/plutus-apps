@@ -50,13 +50,13 @@ library
     Marconi.Indexers
     Marconi.Logging
     Marconi.Orphans
+    Marconi.Types
 
   --------------------
   -- Local components
   --------------------
   build-depends:
     , cardano-streaming
-    , plutus-ledger
     , rewindable-index
 
   --------------------------
@@ -64,6 +64,7 @@ library
   --------------------------
   build-depends:
     , cardano-api
+    , cardano-binary
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
