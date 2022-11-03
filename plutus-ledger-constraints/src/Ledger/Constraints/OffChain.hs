@@ -110,7 +110,7 @@ import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Redeemer (Redeemer), offchainTxOutReferenceScript, outValue)
+import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -127,7 +127,7 @@ import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (Language (PlutusV1, PlutusV2), OffchainTxOut, ReferenceScript, TxOut (TxOut), TxOutRef,
+import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
                   Versioned (Versioned), txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
@@ -148,7 +148,7 @@ import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
 data ScriptLookups a =
     ScriptLookups
-        { slTxOutputs            :: Map TxOutRef OffchainTxOut
+        { slTxOutputs            :: Map TxOutRef DecoratedTxOut
         -- ^ Unspent outputs that the script may want to spend
         , slOtherScripts         :: Map ScriptHash (Versioned Script)
         -- ^ Scripts other than "our script"
@@ -215,7 +215,7 @@ typedValidatorLookups inst =
 
 -- | A script lookups value that uses the map of unspent outputs to resolve
 --   input constraints.
-unspentOutputs :: Map TxOutRef OffchainTxOut -> ScriptLookups a
+unspentOutputs :: Map TxOutRef DecoratedTxOut -> ScriptLookups a
 unspentOutputs mp = mempty { slTxOutputs = mp }
 
 -- | A script lookups value with a versioned minting policy script.
@@ -614,7 +614,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
       $ do
           (txOut, datum) <- maybe (throwError $ UnknownRef icTxOutRef) pure $ do
                                 ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.offchainTxOutDatum . _2 . Tx.datumInDatumFromQuery
+                                datum <- ciTxOut ^? Tx.decoratedTxOutDatum . _2 . Tx.datumInDatumFromQuery
                                 pure (Tx.toTxInfoTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
     let vl = PV2.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
@@ -647,7 +647,7 @@ lookupTxOutRef
        , MonadError MkTxError m
        )
     => TxOutRef
-    -> m OffchainTxOut
+    -> m DecoratedTxOut
 lookupTxOutRef outRef =
     let err = throwError (TxOutRefNotFound outRef) in
     asks slTxOutputs >>= maybe err pure . view (at outRef)
@@ -736,8 +736,8 @@ processConstraint = \case
     MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
         value <- maybe (throwError (TxOutRefWrongType txo)) pure $ do
-                       guard $ is Tx._PublicKeyOffchainTxOut txout
-                       pure $ txout ^. Tx.offchainTxOutValue
+                       guard $ is Tx._PublicKeyDecoratedTxOut txout
+                       pure $ txout ^. Tx.decoratedTxOutValue
         -- TODO: Add the optional datum in the witness set for the pub key output
         unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
         valueSpentInputs <>= provided value
@@ -750,7 +750,7 @@ processConstraint = \case
         case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
-            case refTxOut ^. Tx.offchainTxOutReferenceScript  of
+            case refTxOut ^. Tx.decoratedTxOutReferenceScript  of
                 Just val -> do
                     unbalancedTx . tx %= Tx.addReferenceTxInput txo (ref <$ val) red (datumWitness datum)
                     unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
@@ -784,7 +784,7 @@ processConstraint = \case
         case mref of
             Just ref -> do
                 refTxOut <- lookupTxOutRef ref
-                case refTxOut ^? offchainTxOutReferenceScript of
+                case refTxOut ^? decoratedTxOutReferenceScript of
                     Just _ -> unbalancedTx . tx . Tx.referenceInputs <>= [Tx.pubKeyTxInput ref]
                     _      -> throwError (TxOutRefNoReferenceScript ref)
             Nothing -> do
@@ -839,14 +839,14 @@ processConstraintFun = \case
     MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
         ScriptLookups{slTxOutputs} <- ask
         -- TODO: Need to precalculate the validator hash or else this won't work
-        -- with PlutusV2 validator. This means changing `OffchainTxOut` to
+        -- with PlutusV2 validator. This means changing `DecoratedTxOut` to
         -- include the hash.
         let matches (Just (_, d, value)) = datumPred (getDatum d) && valuePred value
             matches Nothing              = False
 
         opts <- fmap (Map.toList . Map.filter matches)
                 $ traverse resolveScriptTxOut
-                $ Map.filter ((== Just vh) . preview Tx.offchainTxOutValidatorHash) slTxOutputs
+                $ Map.filter ((== Just vh) . preview Tx.decoratedTxOutValidatorHash) slTxOutputs
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just (validator, datum, value))] -> do
@@ -866,7 +866,7 @@ resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => OffchainTxOut -> m (Maybe (Versioned Validator, DatumWithOrigin, Value))
+    => DecoratedTxOut -> m (Maybe (Versioned Validator, DatumWithOrigin, Value))
 resolveScriptTxOut txo = do
     mv <- resolveScriptTxOutValidator txo
     mdv <- resolveScriptTxOutDatumAndValue txo
@@ -876,13 +876,13 @@ resolveScriptTxOutValidator
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => OffchainTxOut -> m (Maybe (Versioned Validator))
+    => DecoratedTxOut -> m (Maybe (Versioned Validator))
 resolveScriptTxOutValidator
-        Tx.ScriptOffchainTxOut
-            { Tx._offchainTxOutValidator = v
-            , Tx._offchainTxOutValidatorHash = vh
+        Tx.ScriptDecoratedTxOut
+            { Tx._decoratedTxOutValidator = v
+            , Tx._decoratedTxOutValidatorHash = vh
             } = do
-    -- first check in the 'OffchainTxOut' for the validator, then
+    -- first check in the 'DecoratedTxOut' for the validator, then
     -- look for it in the 'slOtherScripts' map.
     validator <- maybe (lookupValidator vh) pure v
     pure $ Just validator
@@ -892,20 +892,20 @@ resolveScriptTxOutDatumAndValue
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
        )
-    => OffchainTxOut -> m (Maybe (DatumWithOrigin, Value))
+    => DecoratedTxOut -> m (Maybe (DatumWithOrigin, Value))
 resolveScriptTxOutDatumAndValue
-        Tx.ScriptOffchainTxOut
-            { Tx._offchainTxOutScriptDatum = (dh, d)
-            , Tx._offchainTxOutValue
+        Tx.ScriptDecoratedTxOut
+            { Tx._decoratedTxOutScriptDatum = (dh, d)
+            , Tx._decoratedTxOutValue
             } = do
 
-    -- first check in the 'OffchainTxOut' for the datum, then
+    -- first check in the 'DecoratedTxOut' for the datum, then
     -- look for it in the 'slOtherData' map.
     datum <- case d of
         Tx.DatumUnknown      -> DatumInTx <$> lookupDatum dh
         Tx.DatumInBody datum -> pure (DatumInTx datum)
         Tx.DatumInline datum -> pure (DatumInline datum)
-    pure $ Just (datum, _offchainTxOutValue)
+    pure $ Just (datum, _decoratedTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
 
 toCardanoTxOutWithOutputDatum ::

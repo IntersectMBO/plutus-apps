@@ -126,7 +126,7 @@ tokenValue mp = V.singleton (PSU.scriptCurrencySymbol mp) "A" 1
 
 mustPayToTheScriptWithMultipleOutputsContract
     :: Integer
-    -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.OffchainTxOut)
+    -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.DecoratedTxOut)
 mustPayToTheScriptWithMultipleOutputsContract nScriptOutputs = do
     let lookups = Cons.typedValidatorLookups someTypedValidator
         tx = mustPayToTheScriptWithMultipleOutputs nScriptOutputs
@@ -219,7 +219,7 @@ mustPayToOtherScriptWithMultipleOutputs
     -> Integer
     -> PSU.Versioned Validator
     -> PV2.Address
-    -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.OffchainTxOut)
+    -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.DecoratedTxOut)
 mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr = do
     utxos <- ownUtxos
     payAddr <- ownAddress
@@ -256,7 +256,7 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs validRef
     let versionedMintingPolicy =
             getVersionedScript MustSpendScriptOutputWithReferencePolicy policyVersion
         scriptUtxos' = Prelude.take nScriptOutputs . M.keys $ scriptUtxos
-        refScriptUtxo = head . M.keys . M.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
         policyRedeemer' = P.map (, unitRedeemer, refScriptUtxo) scriptUtxos'
         policyRedeemer = asRedeemer $
             if validReference then policyRedeemer' else policyRedeemer' & _head . _1 .~ utxoRef
@@ -285,7 +285,7 @@ mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
     -- Trying to unlock the Ada in the script address
     utxos' <- ownUtxos
     let scriptUtxo = head . M.keys $ scriptUtxos
-        refScriptUtxo = head . M.keys . M.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
         lookups2 = Cons.otherScript mustReferenceOutputValidatorVersioned
                 <> Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx2 = Cons.mustReferenceOutput utxoRef
@@ -825,7 +825,7 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
     utxos' <- ownUtxos
     let
         scriptUtxo = fst . head . M.toList $ scriptUtxos
-        refScriptUtxo = head . M.keys . M.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
         lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
         tx2 = Cons.mustReferenceOutput utxoRef
           <> Cons.mustSpendScriptOutputWithReference scriptUtxo unitRedeemer refScriptUtxo

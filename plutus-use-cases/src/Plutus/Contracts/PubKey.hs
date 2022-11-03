@@ -69,7 +69,7 @@ pubKeyContract
     )
     => PaymentPubKeyHash
     -> Value
-    -> Contract w s e (TxOutRef, Maybe OffchainTxOut, TypedValidator PubKeyContract)
+    -> Contract w s e (TxOutRef, Maybe DecoratedTxOut, TypedValidator PubKeyContract)
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     let inst = typedValidator pk
         address = Scripts.validatorAddress inst

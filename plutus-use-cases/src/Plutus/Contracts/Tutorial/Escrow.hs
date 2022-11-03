@@ -271,7 +271,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     let
         tx = Constraints.collectFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
-    if foldMap (view Tx.offchainTxOutValue) unspentOutputs `lt` targetTotal escrow
+    if foldMap (view Tx.decoratedTxOutValue) unspentOutputs `lt` targetTotal escrow
        then throwing _RedeemFailed NotEnoughFundsAtAddress
        else do
          utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
@@ -302,7 +302,7 @@ refund inst _escrow = do
     pk <- ownFirstPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let pkh = Ledger.datumHash $ Datum $ PlutusTx.toBuiltinData pk
-        flt _ ciTxOut = has (Tx.offchainTxOutScriptDatum . _1 . only pkh) ciTxOut
+        flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
     if Constraints.modifiesUtxoSet tx'
     then do

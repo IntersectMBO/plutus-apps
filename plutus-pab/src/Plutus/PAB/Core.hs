@@ -108,7 +108,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (Address (addressCredential), Params, TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
-import Ledger.Tx (CardanoTx, TxId, offchainTxOutValue)
+import Ledger.Tx (CardanoTx, TxId, decoratedTxOutValue)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -634,7 +634,7 @@ valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
   handleAgentThread wallet Nothing $ do
     txOutsM <- ChainIndex.collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq cred)
-    pure $ foldMap (view $ _2 . offchainTxOutValue) $ concat txOutsM
+    pure $ foldMap (view $ _2 . decoratedTxOutValue) $ concat txOutsM
   where
     cred = addressCredential $ mockWalletAddress wallet
 

@@ -33,8 +33,8 @@ import Blockfrost.Client
 import Cardano.Api hiding (Block, Script, ScriptDatum, ScriptHash, TxIn, TxOut)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
-import Ledger.Tx (DatumFromQuery (DatumUnknown), Language (PlutusV1), OffchainTxOut (..), RedeemerPtr (..), TxIn (..),
-                  TxOutRef (..), Versioned (Versioned, unversioned), mkPubkeyOffchainTxOut, mkScriptOffchainTxOut,
+import Ledger.Tx (DatumFromQuery (DatumUnknown), DecoratedTxOut (..), Language (PlutusV1), RedeemerPtr (..), TxIn (..),
+                  TxOutRef (..), Versioned (Versioned, unversioned), mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut,
                   pubKeyTxIn, scriptTxIn)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
@@ -110,26 +110,26 @@ processGetValidator val = pure $ val >>= buildResponse
               JSON.Success a -> Just (Versioned a PlutusV1)
               JSON.Error _   -> Nothing
 
-processUnspentTxOut :: Maybe UtxoOutput -> IO (Maybe OffchainTxOut)
+processUnspentTxOut :: Maybe UtxoOutput -> IO (Maybe DecoratedTxOut)
 processUnspentTxOut Nothing = pure Nothing
 processUnspentTxOut (Just utxo) = buildResponse utxo
   where
-    buildResponse :: UtxoOutput -> IO (Maybe OffchainTxOut)
+    buildResponse :: UtxoOutput -> IO (Maybe DecoratedTxOut)
     buildResponse utxoOut = case toPlutusAddress (_utxoOutputAddress utxoOut) of
               Left err   -> ioError (userError err)
               Right addr -> case Ledger.addressCredential addr of
                     PubKeyCredential _ -> pure $ buildPublicKeyTxOut addr utxoOut
                     ScriptCredential _ -> pure $ buildScriptTxOut addr utxoOut
 
-    buildScriptTxOut :: Ledger.Address -> UtxoOutput -> Maybe OffchainTxOut
-    buildScriptTxOut addr utxoOut = mkScriptOffchainTxOut addr
+    buildScriptTxOut :: Ledger.Address -> UtxoOutput -> Maybe DecoratedTxOut
+    buildScriptTxOut addr utxoOut = mkScriptDecoratedTxOut addr
                                                           (utxoValue utxoOut)
                                                           (utxoDatumHash utxoOut, DatumUnknown)
                                                           Nothing
                                                           Nothing
 
-    buildPublicKeyTxOut :: Ledger.Address -> UtxoOutput -> Maybe OffchainTxOut
-    buildPublicKeyTxOut addr utxoOut = mkPubkeyOffchainTxOut addr (utxoValue utxoOut) Nothing Nothing
+    buildPublicKeyTxOut :: Ledger.Address -> UtxoOutput -> Maybe DecoratedTxOut
+    buildPublicKeyTxOut addr utxoOut = mkPubkeyDecoratedTxOut addr (utxoValue utxoOut) Nothing Nothing
 
     utxoValue :: UtxoOutput -> Ledger.Value
     utxoValue = amountsToValue . _utxoOutputAmount
@@ -172,36 +172,36 @@ processUnspentTxOutSetAtAddress ::
     PageQuery TxOutRef
     -> Credential
     -> [AddressUtxo]
-    -> IO (QueryResponse [(TxOutRef, OffchainTxOut)])
+    -> IO (QueryResponse [(TxOutRef, DecoratedTxOut)])
 processUnspentTxOutSetAtAddress _ cred xs =
   return $ QueryResponse {queryResult = items, nextQuery = Nothing}
   where
-    items :: [(TxOutRef, OffchainTxOut)]
+    items :: [(TxOutRef, DecoratedTxOut)]
     items = map transform xs
 
-    transform :: AddressUtxo -> (TxOutRef, OffchainTxOut)
+    transform :: AddressUtxo -> (TxOutRef, DecoratedTxOut)
     transform utxo = (utxoToRef utxo, buildResponse utxo)
 
-    buildResponse :: AddressUtxo -> OffchainTxOut
+    buildResponse :: AddressUtxo -> DecoratedTxOut
     buildResponse utxo = case cred of
         PubKeyCredential pkh     -> buildPublicKeyTxOut pkh utxo
         ScriptCredential valHash -> buildScriptTxOut valHash utxo
 
-    buildScriptTxOut :: ValidatorHash -> AddressUtxo -> OffchainTxOut
-    buildScriptTxOut valHash utxo = ScriptOffchainTxOut { _offchainTxOutValidatorHash=valHash
-                                                        , _offchainTxOutStakingCredential=Nothing
-                                                        , _offchainTxOutValue=utxoValue utxo
-                                                        , _offchainTxOutScriptDatum=(utxoDatumHash utxo, DatumUnknown)
-                                                        , _offchainTxOutValidator=Nothing
-                                                        , _offchainTxOutReferenceScript=Nothing
+    buildScriptTxOut :: ValidatorHash -> AddressUtxo -> DecoratedTxOut
+    buildScriptTxOut valHash utxo = ScriptDecoratedTxOut { _decoratedTxOutValidatorHash=valHash
+                                                        , _decoratedTxOutStakingCredential=Nothing
+                                                        , _decoratedTxOutValue=utxoValue utxo
+                                                        , _decoratedTxOutScriptDatum=(utxoDatumHash utxo, DatumUnknown)
+                                                        , _decoratedTxOutValidator=Nothing
+                                                        , _decoratedTxOutReferenceScript=Nothing
                                                         }
 
-    buildPublicKeyTxOut :: PubKeyHash -> AddressUtxo -> OffchainTxOut
-    buildPublicKeyTxOut pkh utxo = PublicKeyOffchainTxOut { _offchainTxOutPubKeyHash=pkh
-                                                          , _offchainTxOutStakingCredential=Nothing
-                                                           , _offchainTxOutValue=utxoValue utxo
-                                                           , _offchainTxOutPubKeyDatum=Nothing
-                                                           , _offchainTxOutReferenceScript=Nothing
+    buildPublicKeyTxOut :: PubKeyHash -> AddressUtxo -> DecoratedTxOut
+    buildPublicKeyTxOut pkh utxo = PublicKeyDecoratedTxOut { _decoratedTxOutPubKeyHash=pkh
+                                                          , _decoratedTxOutStakingCredential=Nothing
+                                                           , _decoratedTxOutValue=utxoValue utxo
+                                                           , _decoratedTxOutPubKeyDatum=Nothing
+                                                           , _decoratedTxOutReferenceScript=Nothing
                                                            }
 
     utxoValue :: AddressUtxo -> Ledger.Value

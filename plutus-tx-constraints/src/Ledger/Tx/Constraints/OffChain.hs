@@ -277,7 +277,7 @@ processConstraint = \case
     P.MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
         maybe (throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)) pure
-            $ guard $ is Tx._PublicKeyOffchainTxOut txout
+            $ guard $ is Tx._PublicKeyDecoratedTxOut txout
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
 
@@ -286,7 +286,7 @@ processConstraint = \case
         mkWitness <- case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
-            case refTxOut ^. Tx.offchainTxOutReferenceScript of
+            case refTxOut ^. Tx.decoratedTxOutReferenceScript of
                 Just (Tx.Versioned _ lang) -> do
                     txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                     unbalancedTx . tx . txInsReference <>= [ txIn ]
@@ -346,7 +346,7 @@ processConstraint = \case
 
 lookupTxOutRef
     :: Tx.TxOutRef
-    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.OffchainTxOut
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.DecoratedTxOut
 lookupTxOutRef txo = mapLedgerMkTxError $ P.lookupTxOutRef txo
 
 lookupScriptAsReferenceScript

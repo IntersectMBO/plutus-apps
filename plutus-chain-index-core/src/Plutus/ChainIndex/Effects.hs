@@ -35,7 +35,7 @@ import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger (AssetClass, TxId)
 import Ledger.Credential (Credential)
-import Ledger.Tx (OffchainTxOut, TxOutRef, Versioned)
+import Ledger.Tx (DecoratedTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
@@ -60,10 +60,10 @@ data ChainIndexQueryEffect r where
     StakeValidatorFromHash :: StakeValidatorHash -> ChainIndexQueryEffect (Maybe (Versioned StakeValidator))
 
     -- | Get the TxOut from a TxOutRef (if available)
-    UnspentTxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe OffchainTxOut)
+    UnspentTxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe DecoratedTxOut)
 
     -- | Get the TxOut from a TxOutRef (if available)
-    TxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe OffchainTxOut)
+    TxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe DecoratedTxOut)
 
     -- | Get the transaction for a tx ID
     TxFromTxId :: TxId -> ChainIndexQueryEffect (Maybe ChainIndexTx)
@@ -76,7 +76,7 @@ data ChainIndexQueryEffect r where
 
     -- | Get the unspent txouts located at an address
     -- This is to avoid multiple queries from chain-index when using utxosAt
-    UnspentTxOutSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [(TxOutRef, OffchainTxOut)])
+    UnspentTxOutSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [(TxOutRef, DecoratedTxOut)])
 
     -- | get the datums located at addresses with the given credential.
     DatumsAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [Datum])

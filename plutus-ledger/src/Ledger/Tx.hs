@@ -17,28 +17,28 @@
 
 module Ledger.Tx
     ( module Export
-    -- * OffchainTxOut
-    , OffchainTxOut(..)
+    -- * DecoratedTxOut
+    , DecoratedTxOut(..)
     , toTxOut
     , toTxInfoTxOut
     -- ** Lenses and Prisms
-    , offchainTxOutPubKeyHash
-    , offchainTxOutAddress
-    , offchainTxOutDatum
-    , offchainTxOutValue
-    , offchainTxOutPubKeyDatum
-    , offchainTxOutScriptDatum
-    , offchainTxOutStakingCredential
-    , offchainTxOutReferenceScript
-    , offchainTxOutValidatorHash
-    , offchainTxOutValidator
-    , _PublicKeyOffchainTxOut
-    , _ScriptOffchainTxOut
-    , _offchainTxOutAddress
+    , decoratedTxOutPubKeyHash
+    , decoratedTxOutAddress
+    , decoratedTxOutDatum
+    , decoratedTxOutValue
+    , decoratedTxOutPubKeyDatum
+    , decoratedTxOutScriptDatum
+    , decoratedTxOutStakingCredential
+    , decoratedTxOutReferenceScript
+    , decoratedTxOutValidatorHash
+    , decoratedTxOutValidator
+    , _PublicKeyDecoratedTxOut
+    , _ScriptDecoratedTxOut
+    , _decoratedTxOutAddress
     -- ** smart Constructors
-    , mkOffchainTxOut
-    , mkPubkeyOffchainTxOut
-    , mkScriptOffchainTxOut
+    , mkDecoratedTxOut
+    , mkPubkeyDecoratedTxOut
+    , mkScriptDecoratedTxOut
     -- * DatumFromQuery
     , DatumFromQuery(..)
     , datumInDatumFromQuery
@@ -135,90 +135,89 @@ datumInDatumFromQuery f (DatumInline d) = DatumInline <$> f d
 datumInDatumFromQuery f (DatumInBody d) = DatumInBody <$> f d
 
 -- | Offchain view of a transaction output.
-data OffchainTxOut =
-    PublicKeyOffchainTxOut {
+data DecoratedTxOut =
+    PublicKeyDecoratedTxOut {
       -- | The pubKey hash that protects the transaction address
-      _offchainTxOutPubKeyHash        :: V1.PubKeyHash,
+      _decoratedTxOutPubKeyHash        :: V1.PubKeyHash,
       -- | The staking credential of the transaction address, if any
-      _offchainTxOutStakingCredential :: Maybe V1.StakingCredential,
+      _decoratedTxOutStakingCredential :: Maybe V1.StakingCredential,
       -- | Value of the transaction output.
-      _offchainTxOutValue             :: V2.Value,
+      _decoratedTxOutValue             :: V2.Value,
       -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
-      _offchainTxOutPubKeyDatum       :: Maybe (V2.DatumHash, DatumFromQuery),
+      _decoratedTxOutPubKeyDatum       :: Maybe (V2.DatumHash, DatumFromQuery),
       -- | Value of the transaction output.
-      _offchainTxOutReferenceScript   :: Maybe (Versioned V1.Script)
+      _decoratedTxOutReferenceScript   :: Maybe (Versioned V1.Script)
     }
-  | ScriptOffchainTxOut {
+  | ScriptDecoratedTxOut {
       -- | The hash of the script that protects the transaction address
-      _offchainTxOutValidatorHash     :: V1.ValidatorHash,
+      _decoratedTxOutValidatorHash     :: V1.ValidatorHash,
       -- | The staking credential of the transaction address, if any
-      _offchainTxOutStakingCredential :: Maybe V1.StakingCredential,
+      _decoratedTxOutStakingCredential :: Maybe V1.StakingCredential,
       -- | Value of the transaction output.
-      _offchainTxOutValue             :: V2.Value,
+      _decoratedTxOutValue             :: V2.Value,
       -- | Datum attached to the transaction output, either in full (inline datum or datum in transaction body) or as a
       -- hash reference. A transaction output protected by a Plutus script
       -- is guardateed to have an associated datum.
-      _offchainTxOutScriptDatum       :: (V2.DatumHash, DatumFromQuery),
+      _decoratedTxOutScriptDatum       :: (V2.DatumHash, DatumFromQuery),
       -- The reference script is, in genereal, unrelated to the validator
       -- script althought it could also be the same.
-      _offchainTxOutReferenceScript   :: Maybe (Versioned V1.Script),
+      _decoratedTxOutReferenceScript   :: Maybe (Versioned V1.Script),
       -- | Full version of the validator protecting the transaction output
-      _offchainTxOutValidator         :: Maybe (Versioned V1.Validator)
+      _decoratedTxOutValidator         :: Maybe (Versioned V1.Validator)
   }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, NFData, OpenApi.ToSchema)
 
-makeLenses ''OffchainTxOut
-makePrisms ''OffchainTxOut
+makeLenses ''DecoratedTxOut
+makePrisms ''DecoratedTxOut
 
 
-mkOffchainTxOut
+mkDecoratedTxOut
     :: V1.Address -> V2.Value -> (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
-    -> OffchainTxOut
-mkOffchainTxOut a v dat rs = case a of
-  V2.Address (V2.PubKeyCredential c) sc -> PublicKeyOffchainTxOut c sc v (Just dat) rs
-  V2.Address (V2.ScriptCredential c) sc -> ScriptOffchainTxOut c sc v dat rs Nothing
+    -> DecoratedTxOut
+mkDecoratedTxOut a v dat rs = case a of
+  V2.Address (V2.PubKeyCredential c) sc -> PublicKeyDecoratedTxOut c sc v (Just dat) rs
+  V2.Address (V2.ScriptCredential c) sc -> ScriptDecoratedTxOut c sc v dat rs Nothing
 
-mkPubkeyOffchainTxOut
+mkPubkeyDecoratedTxOut
     :: V1.Address -> V2.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
-    -> Maybe OffchainTxOut
-mkPubkeyOffchainTxOut a v dat rs = case a of
-  V2.Address (V2.PubKeyCredential c) sc -> Just $ PublicKeyOffchainTxOut c sc v dat rs
+    -> Maybe DecoratedTxOut
+mkPubkeyDecoratedTxOut a v dat rs = case a of
+  V2.Address (V2.PubKeyCredential c) sc -> Just $ PublicKeyDecoratedTxOut c sc v dat rs
   _                                     -> Nothing
 
-mkScriptOffchainTxOut
+mkScriptDecoratedTxOut
     :: V1.Address
     -> V2.Value
     -> (V2.DatumHash, DatumFromQuery)
     -> Maybe (Versioned V1.Script)
     -> Maybe (Versioned V1.Validator)
-    -> Maybe OffchainTxOut
-mkScriptOffchainTxOut a v dat rs val = case a of
-  V2.Address (V2.ScriptCredential c) sc -> Just $ ScriptOffchainTxOut c sc v dat rs val
+    -> Maybe DecoratedTxOut
+mkScriptDecoratedTxOut a v dat rs val = case a of
+  V2.Address (V2.ScriptCredential c) sc -> Just $ ScriptDecoratedTxOut c sc v dat rs val
   _                                     -> Nothing
 
-_offchainTxOutAddress :: OffchainTxOut -> Address
-_offchainTxOutAddress PublicKeyOffchainTxOut{_offchainTxOutPubKeyHash, _offchainTxOutStakingCredential} =
-    V1.Address (V1.PubKeyCredential _offchainTxOutPubKeyHash) _offchainTxOutStakingCredential
-_offchainTxOutAddress ScriptOffchainTxOut{_offchainTxOutValidatorHash, _offchainTxOutStakingCredential} =
-    V1.Address (V1.ScriptCredential _offchainTxOutValidatorHash) _offchainTxOutStakingCredential
+_decoratedTxOutAddress :: DecoratedTxOut -> Address
+_decoratedTxOutAddress PublicKeyDecoratedTxOut{_decoratedTxOutPubKeyHash, _decoratedTxOutStakingCredential} =
+    V1.Address (V1.PubKeyCredential _decoratedTxOutPubKeyHash) _decoratedTxOutStakingCredential
+_decoratedTxOutAddress ScriptDecoratedTxOut{_decoratedTxOutValidatorHash, _decoratedTxOutStakingCredential} =
+    V1.Address (V1.ScriptCredential _decoratedTxOutValidatorHash) _decoratedTxOutStakingCredential
 
-offchainTxOutAddress :: Getter OffchainTxOut Address
-offchainTxOutAddress = let
-    in to _offchainTxOutAddress
+decoratedTxOutAddress :: Getter DecoratedTxOut Address
+decoratedTxOutAddress = to _decoratedTxOutAddress
 
-offchainTxOutDatum :: Traversal' OffchainTxOut (V2.DatumHash, DatumFromQuery)
-offchainTxOutDatum f p@(PublicKeyOffchainTxOut pkh sc v dat rs) =
-  maybe (pure p) (fmap (\ dat' -> PublicKeyOffchainTxOut pkh sc v (Just dat') rs) . f) dat
-offchainTxOutDatum f (ScriptOffchainTxOut vh sc v dat rs val) =
-  (\dat' -> ScriptOffchainTxOut vh sc v dat' rs val) <$> f dat
+decoratedTxOutDatum :: Traversal' DecoratedTxOut (V2.DatumHash, DatumFromQuery)
+decoratedTxOutDatum f p@(PublicKeyDecoratedTxOut pkh sc v dat rs) =
+  maybe (pure p) (fmap (\ dat' -> PublicKeyDecoratedTxOut pkh sc v (Just dat') rs) . f) dat
+decoratedTxOutDatum f (ScriptDecoratedTxOut vh sc v dat rs val) =
+  (\dat' -> ScriptDecoratedTxOut vh sc v dat' rs val) <$> f dat
 
-toTxOut :: C.NetworkId -> OffchainTxOut -> Either ToCardanoError TxOut
+toTxOut :: C.NetworkId -> DecoratedTxOut -> Either ToCardanoError TxOut
 toTxOut networkId p =
   TxOut <$> (C.TxOut
-    <$> CardanoAPI.toCardanoAddressInEra networkId (p ^. offchainTxOutAddress)
-    <*> CardanoAPI.toCardanoTxOutValue (p ^. offchainTxOutValue)
-    <*> (toTxOutDatum $ p ^? offchainTxOutDatum)
-    <*> CardanoAPI.toCardanoReferenceScript (p ^. offchainTxOutReferenceScript))
+    <$> CardanoAPI.toCardanoAddressInEra networkId (p ^. decoratedTxOutAddress)
+    <*> CardanoAPI.toCardanoTxOutValue (p ^. decoratedTxOutValue)
+    <*> (toTxOutDatum $ p ^? decoratedTxOutDatum)
+    <*> CardanoAPI.toCardanoReferenceScript (p ^. decoratedTxOutReferenceScript))
 
 toTxOutDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
 toTxOutDatum = CardanoAPI.toCardanoTxOutDatum . toPlutusOutputDatum
@@ -226,24 +225,24 @@ toTxOutDatum = CardanoAPI.toCardanoTxOutDatum . toPlutusOutputDatum
 -- | Converts a transaction output from the chain index to the plutus-ledger-api
 -- transaction output.
 --
--- Note that 'OffchainTxOut' supports features such inline datums and
+-- Note that 'DecoratedTxOut' supports features such inline datums and
 -- reference scripts which are not supported by V1 TxOut. Converting from
--- 'OffchainTxOut' to 'TxOut' and back is therefore lossy.
-toTxInfoTxOut :: OffchainTxOut -> V2.Tx.TxOut
+-- 'DecoratedTxOut' to 'TxOut' and back is therefore lossy.
+toTxInfoTxOut :: DecoratedTxOut -> V2.Tx.TxOut
 toTxInfoTxOut p =
-    V2.Tx.TxOut (p ^. offchainTxOutAddress) (p ^. offchainTxOutValue)
-                (toPlutusOutputDatum $ p ^? offchainTxOutDatum)
-                (views offchainTxOutReferenceScript (fmap scriptHash) p)
+    V2.Tx.TxOut (p ^. decoratedTxOutAddress) (p ^. decoratedTxOutValue)
+                (toPlutusOutputDatum $ p ^? decoratedTxOutDatum)
+                (views decoratedTxOutReferenceScript (fmap scriptHash) p)
 
 toPlutusOutputDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> V2.Tx.OutputDatum
 toPlutusOutputDatum Nothing                   = V2.Tx.NoOutputDatum
 toPlutusOutputDatum (Just (_, DatumInline d)) = V2.Tx.OutputDatum d
 toPlutusOutputDatum (Just (dh, _))            = V2.Tx.OutputDatumHash dh
 
-instance Pretty OffchainTxOut where
+instance Pretty DecoratedTxOut where
     pretty p =
-      hang 2 $ vsep [ "-" <+> pretty (p ^. offchainTxOutValue) <+> "addressed to"
-                    , pretty (p ^. offchainTxOutAddress)]
+      hang 2 $ vsep [ "-" <+> pretty (p ^. decoratedTxOutValue) <+> "addressed to"
+                    , pretty (p ^. decoratedTxOutAddress)]
 
 {- Note [Why we have the Both constructor in CardanoTx]
 

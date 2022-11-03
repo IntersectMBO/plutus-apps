@@ -22,7 +22,7 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
-import Ledger qualified (DatumFromQuery (DatumInBody), OffchainTxOut (ScriptOffchainTxOut), inputs, paymentPubKeyHash,
+import Ledger qualified (DatumFromQuery (DatumInBody), DecoratedTxOut (ScriptDecoratedTxOut), inputs, paymentPubKeyHash,
                          scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
@@ -232,9 +232,9 @@ prepFromTxConstraints txCons = runExcept $
         prepareConstraints @Void (Constraints.txOwnOutputs txCons) (Constraints.txConstraints txCons)
         `runReaderT` mempty
 
-txOut0 :: Ledger.OffchainTxOut
+txOut0 :: Ledger.DecoratedTxOut
 txOut0 =
-    Ledger.ScriptOffchainTxOut
+    Ledger.ScriptDecoratedTxOut
         alwaysSucceedValidatorHash
         Nothing
         mempty
@@ -266,9 +266,9 @@ validator1 = Scripts.mkTypedValidator
 validatorHash1 :: Ledger.ValidatorHash
 validatorHash1 = Scripts.validatorHash validator1
 
-txOut1 :: Ledger.OffchainTxOut
+txOut1 :: Ledger.DecoratedTxOut
 txOut1 =
-    Ledger.ScriptOffchainTxOut
+    Ledger.ScriptDecoratedTxOut
         validatorHash1
         Nothing
         mempty
@@ -279,7 +279,7 @@ txOut1 =
 txOutRef :: Integer -> Ledger.TxOutRef
 txOutRef = Ledger.TxOutRef (Ledger.TxId "")
 
-utxo1 :: Map.Map Ledger.TxOutRef Ledger.OffchainTxOut
+utxo1 :: Map.Map Ledger.TxOutRef Ledger.DecoratedTxOut
 utxo1 = Map.fromList [(txOutRef 0, txOut0), (txOutRef 1, txOut1)]
 
 {-# INLINABLE constraints1 #-}

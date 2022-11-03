@@ -33,7 +33,7 @@ import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Proxy (Proxy (..))
 import Ledger (TxId)
-import Ledger.Tx (OffchainTxOut, TxOutRef, Versioned)
+import Ledger.Tx (DecoratedTxOut, TxOutRef, Versioned)
 import Network.HTTP.Types.Status (Status (..))
 import Plutus.ChainIndex.Api (API, IsUtxoResponse, QueryAtAddressRequest (QueryAtAddressRequest), QueryResponse,
                               TxoAtAddressRequest (TxoAtAddressRequest), TxosResponse,
@@ -58,12 +58,12 @@ getMintingPolicy :: MintingPolicyHash -> ClientM (Versioned MintingPolicy)
 getStakeValidator :: StakeValidatorHash -> ClientM (Versioned StakeValidator)
 getRedeemer :: RedeemerHash -> ClientM Redeemer
 
-getTxOut :: TxOutRef -> ClientM OffchainTxOut
+getTxOut :: TxOutRef -> ClientM DecoratedTxOut
 getTx :: TxId -> ClientM ChainIndexTx
-getUnspentTxOut :: TxOutRef -> ClientM OffchainTxOut
+getUnspentTxOut :: TxOutRef -> ClientM DecoratedTxOut
 getIsUtxo :: TxOutRef -> ClientM IsUtxoResponse
 getUtxoSetAtAddress :: UtxoAtAddressRequest -> ClientM UtxosResponse
-getUnspentTxOutsAtAddress :: QueryAtAddressRequest -> ClientM (QueryResponse [(TxOutRef, OffchainTxOut)])
+getUnspentTxOutsAtAddress :: QueryAtAddressRequest -> ClientM (QueryResponse [(TxOutRef, DecoratedTxOut)])
 getDatumsAtAddress :: QueryAtAddressRequest -> ClientM (QueryResponse [Datum])
 getUtxoSetWithCurrency :: UtxoWithCurrencyRequest -> ClientM UtxosResponse
 getTxs :: [TxId] -> ClientM [ChainIndexTx]

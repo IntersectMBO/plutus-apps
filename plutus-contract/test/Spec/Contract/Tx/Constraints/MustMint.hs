@@ -149,7 +149,7 @@ mustMintValueWithReferenceContract failPhase2 = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx0
 
     utxos' <- ownUtxos
-    let refScriptUtxo = head . Map.keys . Map.filter (has $ Tx.offchainTxOutReferenceScript. _Just) $ utxos'
+    let refScriptUtxo = head . Map.keys . Map.filter (has $ Tx.decoratedTxOutReferenceScript. _Just) $ utxos'
         redeemerRefUtxo = if failPhase2 then nonExistentTxoRef else refScriptUtxo
         redeemer = asRedeemer $ MustMintValueWithReference redeemerRefUtxo tknValueV2
         lookups1 = Constraints.unspentOutputs (Map.singleton utxoRef utxo <> utxos')
@@ -176,7 +176,7 @@ mustMintValueWithReferenceContractV1Failure = do
 
     utxos' <- ownUtxos
     let
-        refScriptUtxo = head . Map.keys . Map.filter (has $ Tx.offchainTxOutReferenceScript . _Just) $ utxos'
+        refScriptUtxo = head . Map.keys . Map.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
         lookups1 = Constraints.unspentOutputs (Map.singleton utxoRef utxo <> utxos')
         tx1 = Constraints.mustMintCurrencyWithReference refScriptUtxo coinMintingPolicyHash tknName tknAmount
     ledgerTx1 <- submitTxConstraintsWith @Any lookups1 tx1

@@ -175,7 +175,7 @@ redeemTx :: forall w s e.
 redeemTx account pk = mapError (review _TAContractError) $ do
     let inst = typedValidator account
     utxos <- utxosAt (address account)
-    let totalVal = foldMap (view Ledger.offchainTxOutValue) utxos
+    let totalVal = foldMap (view Ledger.decoratedTxOutValue) utxos
         numInputs = Map.size utxos
     logInfo @String
         $ "TokenAccount.redeemTx: Redeeming "
@@ -213,7 +213,7 @@ balance
     -> Contract w s e Value
 balance account = mapError (review _TAContractError) $ do
     utxos <- utxosAt (address account)
-    let inner = foldMap (view Ledger.offchainTxOutValue) utxos
+    let inner = foldMap (view Ledger.decoratedTxOutValue) utxos
     pure inner
 
 -- | Create a new token and return its 'Account' information.

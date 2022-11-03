@@ -33,7 +33,7 @@ import PlutusTx.Prelude (Bool (False, True), Eq, Foldable (foldMap), Functor (fm
                          not, null, ($), (.), (==), (>>=), (||))
 
 import Ledger.Address (Address (Address), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash (StakePubKeyHash))
-import Ledger.Tx (OffchainTxOut)
+import Ledger.Tx (DecoratedTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
@@ -918,15 +918,15 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
 -- from the address of the given validator script, using the same redeemer script
 -- for all outputs.
 collectFromPlutusV1Script
-    :: Map Address (Map TxOutRef OffchainTxOut)
+    :: Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
 collectFromPlutusV1Script= collectFromPlutusV1ScriptFilter (\_ -> const True)
 
 collectFromPlutusV1ScriptFilter
-    :: (TxOutRef -> OffchainTxOut -> Bool)
-    -> Map Address (Map TxOutRef OffchainTxOut)
+    :: (TxOutRef -> DecoratedTxOut -> Bool)
+    -> Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
@@ -939,12 +939,12 @@ collectFromPlutusV1ScriptFilter flt am vls red =
 -- all the outputs that match a predicate, using the 'RedeemerValue'.
 collectFromTheScriptFilter ::
     forall i o
-    .  (TxOutRef -> OffchainTxOut -> Bool)
-    -> Map.Map TxOutRef OffchainTxOut
+    .  (TxOutRef -> DecoratedTxOut -> Bool)
+    -> Map.Map TxOutRef DecoratedTxOut
     -> i
     -> TxConstraints i o
 collectFromTheScriptFilter flt utxo red =
-    let ourUtxo :: Map.Map TxOutRef OffchainTxOut
+    let ourUtxo :: Map.Map TxOutRef DecoratedTxOut
         ourUtxo = Map.filterWithKey flt utxo
     in collectFromTheScript ourUtxo red
 
@@ -952,7 +952,7 @@ collectFromTheScriptFilter flt utxo red =
 -- at the address
 collectFromTheScript ::
     forall i o
-    .  Map.Map TxOutRef OffchainTxOut
+    .  Map.Map TxOutRef DecoratedTxOut
     -> i
     -> TxConstraints i o
 collectFromTheScript utxo redeemer =
@@ -962,15 +962,15 @@ collectFromTheScript utxo redeemer =
 --   from the address of the given validator script, using the same redeemer
 --   script for all outputs.
 collectFromPlutusV2Script
-    :: Map Address (Map TxOutRef OffchainTxOut)
+    :: Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
 collectFromPlutusV2Script= collectFromPlutusV2ScriptFilter (\_ -> const True)
 
 collectFromPlutusV2ScriptFilter
-    :: (TxOutRef -> OffchainTxOut -> Bool)
-    -> Map Address (Map TxOutRef OffchainTxOut)
+    :: (TxOutRef -> DecoratedTxOut -> Bool)
+    -> Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
@@ -986,12 +986,12 @@ collectFromPlutusV2ScriptFilter flt am vls red = -- (Redeemer red) =
 -- --   all the outputs that match a predicate, using the 'RedeemerValue'.
 -- collectFromTheScriptFilter ::
 --     forall i o
---     .  (TxOutRef -> OffchainTxOut -> Bool)
---     -> Map.Map TxOutRef OffchainTxOut
+--     .  (TxOutRef -> DecoratedTxOut -> Bool)
+--     -> Map.Map TxOutRef DecoratedTxOut
 --     -> i
 --     -> TxConstraints i o
 -- collectFromTheScriptFilter flt utxo red =
---     let ourUtxo :: Map.Map TxOutRef OffchainTxOut
+--     let ourUtxo :: Map.Map TxOutRef DecoratedTxOut
 --         ourUtxo = Map.filterWithKey flt utxo
 --     in collectFromTheScript ourUtxo red
 
@@ -999,7 +999,7 @@ collectFromPlutusV2ScriptFilter flt am vls red = -- (Redeemer red) =
 -- --   at the address
 -- collectFromTheScript ::
 --     forall i o
---     .  Map.Map TxOutRef OffchainTxOut
+--     .  Map.Map TxOutRef DecoratedTxOut
 --     -> i
 --     -> TxConstraints i o
 -- collectFromTheScript utxo redeemer =

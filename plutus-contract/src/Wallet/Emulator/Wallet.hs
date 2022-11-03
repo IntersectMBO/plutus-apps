@@ -48,7 +48,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (CardanoTx, OffchainTxOut, Params (..), PubKeyHash, Tx (txFee, txMint), TxOut (..), TxOutRef,
+import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, Tx (txFee, txMint), TxOut (..), TxOutRef,
                UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -289,7 +289,7 @@ handleWallet = \case
         handleAddSignature txCTx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
-    totalFundsH = foldMap (view Ledger.offchainTxOutValue) <$> (get >>= ownOutputs)
+    totalFundsH = foldMap (view Ledger.decoratedTxOutValue) <$> (get >>= ownOutputs)
 
     yieldUnbalancedTxH ::
         ( Member (Error WalletAPIError) effs
@@ -379,7 +379,7 @@ ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
     )
     => WalletState
-    -> Eff effs (Map.Map TxOutRef OffchainTxOut)
+    -> Eff effs (Map.Map TxOutRef DecoratedTxOut)
 ownOutputs WalletState{_mockWallet} = do
     refs <- allUtxoSet (Just def)
     Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
@@ -395,7 +395,7 @@ ownOutputs WalletState{_mockWallet} = do
       nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
       pure $ ChainIndex.pageItems refPage ++ nextItems
 
-    txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, OffchainTxOut))
+    txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, DecoratedTxOut))
     txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.unspentTxOutFromRef ref
 
 lookupValue ::
@@ -407,7 +407,7 @@ lookupValue ::
 lookupValue outputRef@Tx.TxInput {Tx.txInputRef} = do
     txoutMaybe <- ChainIndex.unspentTxOutFromRef txInputRef
     case txoutMaybe of
-        Just txout -> pure $ txout ^. Ledger.offchainTxOutValue
+        Just txout -> pure $ txout ^. Ledger.decoratedTxOutValue
         Nothing ->
             WAPI.throwOtherError $ "Unable to find TxOut for " <> fromString (show outputRef)
 
@@ -420,7 +420,7 @@ handleBalanceTx ::
     , Member (Error WAPI.WalletAPIError) effs
     , Member (LogMsg TxBalanceMsg) effs
     )
-    => Map.Map TxOutRef OffchainTxOut -- ^ The current wallet's unspent transaction outputs.
+    => Map.Map TxOutRef DecoratedTxOut -- ^ The current wallet's unspent transaction outputs.
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo utx = do
@@ -437,7 +437,7 @@ handleBalanceTx utxo utx = do
         inputsOutRefs = map Tx.txInputRef txInputs
         filteredUtxo = flip Map.filterWithKey utxo $ \txOutRef _ ->
             txOutRef `notElem` inputsOutRefs
-        outRefsWithValue = second (view Ledger.offchainTxOutValue) <$> Map.toList filteredUtxo
+        outRefsWithValue = second (view Ledger.decoratedTxOutValue) <$> Map.toList filteredUtxo
 
     ((neg, newTxIns), (pos, mNewTxOut)) <- calculateTxChanges ownAddr outRefsWithValue $ Value.split balance
 
