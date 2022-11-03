@@ -1,6 +1,9 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- | The set of parameters, like protocol parameters and slot configuration.
 module Ledger.Params(
@@ -35,29 +38,47 @@ import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SlotLength, mkSlotLength)
 import Control.Lens (makeLensesFor, over)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.SOP.Strict (K (K), NP (..))
+import GHC.Generics (Generic)
 import Ledger.TimeSlot (SlotConfig (..), posixTimeToNominalDiffTime, posixTimeToUTCTime)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
 import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
 import Plutus.V1.Ledger.Api (POSIXTime (..))
 import PlutusCore (defaultCostModelParams)
+import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 
 data Params = Params
   { pSlotConfig     :: SlotConfig
   , pProtocolParams :: ProtocolParameters
   , pNetworkId      :: NetworkId
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+deriving instance Generic NetworkId
+deriving instance ToJSON NetworkId
+instance FromJSON NetworkId
+
+deriving newtype instance ToJSON NetworkMagic
+deriving newtype instance FromJSON NetworkMagic
 
 makeLensesFor
   [ ("pSlotConfig", "slotConfigL")
   , ("pProtocolParams", "protocolParamsL")
   , ("pNetworkId", "networkIdL") ]
   ''Params
+
+instance Pretty Params where
+  pretty Params{..} =
+    vsep [ "Slot config:" <+> pretty pSlotConfig
+         , "Network ID:" <+> viaShow pNetworkId
+         , "Protocol Parameters:" <+> viaShow pProtocolParams
+         ]
 
 -- | Set higher limits on transaction size and execution units.
 -- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.

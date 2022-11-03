@@ -38,6 +38,7 @@ module Plutus.Contract.Trace
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
     , handleYieldedUnbalancedTx
+    , handleGetParams
     -- * Initial distributions of emulated chains
     , InitialDistribution
     , defaultDist
@@ -234,6 +235,17 @@ handleAdjustUnbalancedTx =
         (preview E._AdjustUnbalancedTxReq)
         E.AdjustUnbalancedTxResp
         RequestHandler.handleAdjustUnbalancedTx
+
+handleGetParams ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member NodeClientEffect effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleGetParams =
+    generalise
+        (preview E._GetParamsReq)
+        E.GetParamsResp
+        RequestHandler.handleGetParams
 
 defaultDist :: InitialDistribution
 defaultDist = defaultDistFor EM.knownWallets

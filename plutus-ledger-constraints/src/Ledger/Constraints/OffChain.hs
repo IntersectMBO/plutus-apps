@@ -63,6 +63,7 @@ module Ledger.Constraints.OffChain(
     , _NoMatchingOutputFound
     , _MultipleMatchingOutputsFound
     , mkTx
+    , mkTxWithParams
     , mkSomeTx
     -- * Internals exposed for testing
     , ValueSpentBalances(..)
@@ -398,12 +399,12 @@ makeLensesFor
     , ("cpsParams", "paramsL")
     ] ''ConstraintProcessingState
 
-initialState :: ConstraintProcessingState
-initialState = ConstraintProcessingState
+initialState :: Params -> ConstraintProcessingState
+initialState params = ConstraintProcessingState
     { cpsUnbalancedTx = emptyUnbalancedTx
     , cpsValueSpentBalancesInputs = ValueSpentBalances mempty mempty
     , cpsValueSpentBalancesOutputs = ValueSpentBalances mempty mempty
-    , cpsParams = def -- cpsParams is not used here, only in plutus-tx-constraints
+    , cpsParams = params
     }
 
 provided :: Value -> ValueSpentBalances
@@ -424,15 +425,16 @@ data SomeLookupsAndConstraints where
 -- | Given a list of 'SomeLookupsAndConstraints' describing the constraints
 --   for several scripts, build a single transaction that runs all the scripts.
 mkSomeTx
-    :: [SomeLookupsAndConstraints]
+    :: Params
+    -> [SomeLookupsAndConstraints]
     -> Either MkTxError UnbalancedTx
-mkSomeTx xs =
+mkSomeTx params xs =
     let process = \case
             SomeLookupsAndConstraints lookups constraints ->
                 processLookupsAndConstraints lookups constraints
     in fmap cpsUnbalancedTx
         $ runExcept
-        $ execStateT (traverse process xs) initialState
+        $ execStateT (traverse process xs) (initialState params)
 
 -- | Filtering MustSpend constraints to ensure their consistency and check that we do not try to spend them
 -- with different redeemer or reference scripts.
@@ -521,6 +523,8 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, t
 --   the constraints. To use this in a contract, see
 --   'Plutus.Contract.submitTxConstraints'
 --   and related functions.
+--   Uses default 'Params' which is probably not what you want, use 'mkTxWithParams' instead.
+{-# DEPRECATED mkTx "Use mkTxWithParams instead" #-}
 mkTx
     :: ( FromData (DatumType a)
        , ToData (DatumType a)
@@ -529,7 +533,22 @@ mkTx
     => ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> Either MkTxError UnbalancedTx
-mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
+mkTx = mkTxWithParams def
+
+-- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
+--   the constraints. To use this in a contract, see
+--   'Plutus.Contract.submitTxConstraints'
+--   and related functions.
+mkTxWithParams
+    :: ( FromData (DatumType a)
+       , ToData (DatumType a)
+       , ToData (RedeemerType a)
+       )
+    => Params
+    -> ScriptLookups a
+    -> TxConstraints (RedeemerType a) (DatumType a)
+    -> Either MkTxError UnbalancedTx
+mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints lookups txc]
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
