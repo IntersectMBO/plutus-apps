@@ -129,7 +129,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
          hdl <- activateContract w1 (getEnvContract @()) envContractInstanceTag
          void $ callEndpoint @"register-token-env" hdl env
 
-       stream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+       stream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) (Either EmulatorErr ())
        stream = fst <$> runEmulatorStream (opts ^. emulatorConfig) action
 
        (errorResult, events) = S.streamFold (,[]) run (\ (msg S.:> es) -> (fst es, (msg ^. logMessageContent) : snd es)) stream
@@ -138,7 +138,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
        chainEvents = [ ce | ChainEvent ce <- view eteEvent <$> events ]
 
    case errorResult of
-     Just err -> do
+     Left err -> do
        QC.monitor $ counterexample (show err)
        QC.assert False
      _ -> return ()

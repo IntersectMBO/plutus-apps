@@ -72,8 +72,8 @@ waitNMilliSeconds n = do
     waitNSlots (fromIntegral $ TimeSlot.posixTimeToEnclosingSlot slotConfig $ fromMilliSeconds n)
 
 handleWaiting ::
-    forall effs effs2.
-    ( Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    forall effs effs2 a.
+    ( Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     )
     => TimeSlot.SlotConfig
     -> Waiting
@@ -81,4 +81,4 @@ handleWaiting ::
 handleWaiting slotConfig = \case
     GetSlotConfig -> pure slotConfig
     WaitUntilSlot s -> go where
-        go = sleep @effs2 Sleeping >>= \case { Just (NewSlot _ sl) | sl >= s -> pure sl; _ -> go }
+        go = sleep @effs2 @_ @_ @a Sleeping >>= \case { Just (NewSlot _ sl) | sl >= s -> pure sl; _ -> go }

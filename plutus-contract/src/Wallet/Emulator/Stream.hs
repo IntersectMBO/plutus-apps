@@ -109,7 +109,7 @@ foldEmulatorStreamM theFold =
 
 -- | Turn an emulator action into a 'Stream' of emulator log messages, returning
 --   the final state of the emulator.
-runTraceStream :: forall effs.
+runTraceStream :: forall effs a.
     EmulatorConfig
     -> Eff '[ State EmulatorState
             , LogMsg EmulatorEvent'
@@ -118,10 +118,10 @@ runTraceStream :: forall effs.
             , ChainEffect
             , ChainControlEffect
             , Error EmulatorRuntimeError
-            ] ()
-    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
+            ] (Maybe a)
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Either EmulatorErr a, EmulatorState)
 runTraceStream conf@EmulatorConfig{_params} =
-    fmap (first (either Just (const Nothing)))
+    fmap (first $ either Left $ maybe (Left ExitWasNeverCalled) Right)
     . S.hoist (pure . run)
     . runStream @(LogMessage EmulatorEvent) @_ @'[]
     . runState (initialState conf)
@@ -183,6 +183,7 @@ data EmulatorErr =
     | ChainIndexErr ChainIndexError
     | AssertionErr EM.AssertionError
     | InstanceErr EmulatorRuntimeError
+    | ExitWasNeverCalled
     deriving (Show)
 
 handleLogCoroutine :: forall e effs.
