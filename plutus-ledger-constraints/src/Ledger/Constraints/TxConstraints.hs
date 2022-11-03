@@ -567,6 +567,9 @@ mustPayToOtherScriptWithInlineDatum vh dv vl =
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the script transaction output with
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
+-- For @v@, tt meants that the transactions output must be at least the given value.
+-- The output can contain more, or different tokens, but the requested value @v@ must
+-- be present.
 mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScriptAddress vh svh dv vl =
     singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumHash dv) Nothing vl)
@@ -582,6 +585,9 @@ mustPayToOtherScriptAddress vh svh dv vl =
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the script transaction output with
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
+-- For @v@, tt meants that the transactions output must be at least the given value.
+-- The output can contain more, or different tokens, but the requested value @v@ must
+-- be present.
 mustPayToOtherScriptAddressWithDatumInTx
     :: forall i o. ValidatorHash
     -> StakeValidatorHash
@@ -626,7 +632,7 @@ mustMintValueWithRedeemer red = mustMintValueWithRedeemerAndReference red Nothin
 --
 -- Note that we can derive the 'MintingPolicyHash' from the 'Value'\'s currency
 -- symbol.
-mustMintValueWithRedeemerAndReference :: forall i o. Redeemer -> (Maybe TxOutRef) -> Value -> TxConstraints i o
+mustMintValueWithRedeemerAndReference :: forall i o. Redeemer -> Maybe TxOutRef -> Value -> TxConstraints i o
 mustMintValueWithRedeemerAndReference red mref =
     foldMap valueConstraint . (AssocMap.toList . Value.getValue)
     where

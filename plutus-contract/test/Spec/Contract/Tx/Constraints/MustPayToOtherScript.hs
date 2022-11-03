@@ -88,10 +88,10 @@ otherDatum :: Ledger.Datum
 otherDatum = asDatum @P.BuiltinByteString "other datum"
 
 utxoValue :: Value.Value
-utxoValue = Ada.lovelaceValueOf 10_000_000
+utxoValue = Ada.lovelaceValueOf 50_000_000
 
 adaAmount :: Integer
-adaAmount = 5_000_000
+adaAmount = 25_000_000
 
 tknAmount :: Integer
 tknAmount = 5_000_000

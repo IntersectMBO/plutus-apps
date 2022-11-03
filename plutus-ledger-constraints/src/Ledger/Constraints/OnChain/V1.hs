@@ -139,12 +139,10 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                 -- that the tx output's datum hash is the correct one w.r.t the
                 -- provide datum.
                    Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && geq (Value.noAdaValue txOutValue) (Value.noAdaValue vl)
                 && txOutAddress == addr
             checkOutput (TxOutDatumInTx d) TxOut{txOutAddress, txOutValue, txOutDatumHash=Just h} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
                 && geq (Value.noAdaValue txOutValue) (Value.noAdaValue vl)
                 && hsh d == Just h
                 && txOutAddress == addr
