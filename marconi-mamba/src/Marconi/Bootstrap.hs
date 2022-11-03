@@ -4,15 +4,13 @@
 --
 module Marconi.Bootstrap  where
 
-import Cardano.Api (ChainPoint (ChainPointAtGenesis), NetworkId, deserialiseFromBech32, proxyToAsType)
+import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), NetworkId, deserialiseFromBech32)
 import Cardano.Streaming (withChainSyncEventStream)
 import Control.Lens ((^.))
-import Data.List (nub)
-import Data.List.NonEmpty (fromList)
-import Data.Proxy (Proxy (Proxy))
-import Data.Text qualified as Text (Text, pack, unpack, words)
+import Data.List.NonEmpty (fromList, nub)
+import Data.Text (pack)
 import Marconi.Api.HttpServer qualified as Http
-import Marconi.Api.Types (CardanoAddress, CliArgs (CliArgs), HasDBQueryEnv (queryComm), HasJsonRpcEnv (queryEnv),
+import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryComm), HasJsonRpcEnv (queryEnv),
                           JsonRpcEnv (JsonRpcEnv, _HttpSettings, _QueryEnv), RpcPortNumber, TargetAddresses)
 import Marconi.Api.UtxoIndexersQuery qualified as QIUtxo
 import Marconi.Indexers (combineIndexers, queryAwareUtxoWorker)
@@ -58,12 +56,14 @@ bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
 targetAddressParser
     :: String           -- ^ contains white spece delimeted lis of addresses
     -> TargetAddresses  -- ^ a non empty list of valid addresses
-targetAddressParser
-    = fromList
-    . nub
-    . fmap (txtToCardano )
-    . Text.words
-    . Text.pack
+targetAddressParser =
+    nub
+    . fromList
+    . fromJustWithError
+    . traverse (deserializeToCardano . pack)
+    . words
+    where
+        deserializeToCardano = deserialiseFromBech32 AsShelleyAddress
 
 -- | Exit program with error
 -- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
@@ -74,11 +74,11 @@ fromJustWithError v = case v of
         error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
     Right accounts -> accounts
 
-txtToCardano :: Text.Text -> CardanoAddress
-txtToCardano addr = case deserialiseToCardano addr of
-    Left e -> error ( "Error deserializing user provided bech32 address "
-                      <> Text.unpack addr <> " to Cardano.Api.Address with error"
-                      <> show e  )
-    Right a -> a
-    where
-        deserialiseToCardano = deserialiseFromBech32 (proxyToAsType Proxy)
+-- txtToCardano :: Text.Text -> CardanoAddress
+-- txtToCardano addr = case deserialiseToCardano addr of
+--     Left e -> error ( "Error deserializing user provided bech32 address "
+--                       <> Text.unpack addr <> " to Cardano.Api.Address with error"
+--                       <> show e  )
+--     Right a -> a
+--     where
+--         deserialiseToCardano = deserialiseFromBech32 (proxyToAsType Proxy)

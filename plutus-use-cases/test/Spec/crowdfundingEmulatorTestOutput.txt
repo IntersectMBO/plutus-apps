@@ -19,6 +19,10 @@ Slot 1: 00000000-0000-4000-8000-000000000002 {Wallet W[3]}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",10000000)])])"
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Contract instance started
+Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
+          Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
+Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
+          Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
 Slot 1: W[2]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 34be799d6bf634018fb6a20dfa075fc7624321310b84251ab99bc26b8661d641:
@@ -61,10 +65,6 @@ Slot 1: W[2]: Finished balancing:
                     ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                     , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                   redeemers:}
-Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
-          Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
-Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
-          Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
 Slot 1: W[2]: Signing tx: f22ad19506e8360e3fa3deb52c23cd9df14b78639828a18762ed99493c14cdfe
 Slot 1: W[2]: Submitting tx: f22ad19506e8360e3fa3deb52c23cd9df14b78639828a18762ed99493c14cdfe
 Slot 1: W[2]: TxSubmit: f22ad19506e8360e3fa3deb52c23cd9df14b78639828a18762ed99493c14cdfe

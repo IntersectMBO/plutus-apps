@@ -8,16 +8,19 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.MustReferenceOutput(tests) where
+module Spec.Contract.Tx.Constraints.MustReferenceOutput(tests) where
 
 import Control.Lens (At (at), _1, _head, filtered, has, makeClassyPrisms, non, only, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.Default (Default (def))
 import Data.Map qualified as M
+import Data.Maybe (fromJust)
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Text qualified as Text
+import Data.Void (Void)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Cons
@@ -26,16 +29,25 @@ import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Test (asDatum, asRedeemer, someAddress, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Cons
+import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Emulator (diskState)
 import Plutus.ChainIndex.Emulator.DiskState (addressMap, unCredentialMap)
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
-                             defaultCheckOptions, emulatorConfig, w1)
+import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount,
+                             assertValidatedTransactionCountOfTotal, checkPredicate, checkPredicateOptions,
+                             defaultCheckOptions, emulatorConfig, valueAtAddress, w1, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Scripts qualified as PSU
+import Plutus.Script.Utils.Typed (Any)
+import Plutus.Script.Utils.V1.Address qualified as PSU.V1
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as PSU.V1
+import Plutus.Script.Utils.V2.Address qualified as PSU.V2
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
+import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Wallet (WalletState, chainIndexEmulatorState)
@@ -46,7 +58,11 @@ makeClassyPrisms ''L.ScriptError
 tests :: TestTree
 tests =
     testGroup "MustReferenceOutput"
-      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx
+      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx,
+        testGroup "tx constraints"
+        [ txConstraintsTxBuildFailWhenUsingV1Script,
+          txConstraintsCanUnlockFundsWithV2Script
+        ] -- to be replaced with the following line when MustMint is implemented (PLT-672)
       --, testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
       ]
 
@@ -278,3 +294,122 @@ cardanoSubmitTx lookups tx = let
 
 ledgerSubmitTx :: SubmitTx
 ledgerSubmitTx = submitTxConstraintsWith
+
+
+-- plutus-tx-constraints tests
+-- all below to be covered by the above tests when MustMint is implemented (PLT-672)
+
+tag :: Trace.ContractInstanceTag
+tag = "instance 1"
+
+{-# INLINABLE mkMustReferenceOutputV1Validator #-}
+mkMustReferenceOutputV1Validator :: Tx.TxOutRef -> () -> PV1.ScriptContext -> Bool
+mkMustReferenceOutputV1Validator txOutRef _ =
+    Cons.V1.checkScriptContext @Void @Void (Cons.mustReferenceOutput txOutRef)
+
+{-# INLINABLE mustReferenceOutputV1Validator #-}
+mustReferenceOutputV1Validator :: PV1.Validator
+mustReferenceOutputV1Validator = PV1.mkValidatorScript
+    $$(PlutusTx.compile [|| wrap ||])
+ where
+     wrap = PSU.V1.mkUntypedValidator mkMustReferenceOutputV1Validator
+
+mustReferenceOutputV1ValidatorAddress :: L.Address
+mustReferenceOutputV1ValidatorAddress =
+    PSU.V1.mkValidatorAddress mustReferenceOutputV1Validator
+
+txConstraintsTxBuildFailWhenUsingV1Script :: TestTree
+txConstraintsTxBuildFailWhenUsingV1Script =
+    checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
+        (walletFundsChange w1 (Ada.adaValueOf (-5))
+        .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
+        .&&. assertValidatedTransactionCountOfTotal 1 1 -- 2nd tx fails before validation
+        ) $ do
+            void $ Trace.activateContract w1 mustReferenceOutputTxV1Contract tag
+            void $ Trace.waitNSlots 2
+
+mustReferenceOutputTxV1Contract :: Contract () EmptySchema ContractError ()
+mustReferenceOutputTxV1Contract = do
+    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
+
+    utxos <- ownUtxos
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
+        vh = fromJust $ L.toValidatorHash mustReferenceOutputV1ValidatorAddress
+        lookups1 = Cons.unspentOutputs utxos
+        datum = PV1.Datum $ PlutusTx.toBuiltinData utxoRef
+        tx1 = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
+          <> Cons.mustIncludeDatumInTx datum
+          <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
+          <> Cons.mustUseOutputAsCollateral utxoRefForBalance1
+    submitTxConfirmed $ mkTx lookups1 tx1
+
+    -- Trying to unlock the Ada in the script address
+    scriptUtxos <- utxosAt mustReferenceOutputV1ValidatorAddress
+    let
+        scriptUtxo = fst . head . M.toList $ scriptUtxos
+        lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos)
+               <> Cons.plutusV1OtherScript mustReferenceOutputV1Validator
+               <> Cons.unspentOutputs utxos
+        tx2 = Cons.mustReferenceOutput utxoRef
+          <> Cons.mustSpendScriptOutput scriptUtxo L.unitRedeemer
+          <> Cons.mustSpendPubKeyOutput utxoRefForBalance2
+          <> Cons.mustUseOutputAsCollateral utxoRefForBalance2
+    submitTxConfirmed $ mkTx lookups2 tx2
+
+
+mkMustReferenceOutputV2Validator :: Tx.TxOutRef -> () -> PV2.ScriptContext -> Bool
+mkMustReferenceOutputV2Validator txOutRef _ =
+    Cons.V2.checkScriptContext @Void @Void (Cons.mustReferenceOutput txOutRef)
+
+{-# INLINABLE mustReferenceOutputV2Validator #-}
+mustReferenceOutputV2Validator :: PV2.Validator
+mustReferenceOutputV2Validator = PV2.mkValidatorScript
+    $$(PlutusTx.compile [|| wrap ||])
+ where
+     wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
+
+mustReferenceOutputV2ValidatorAddress :: L.Address
+mustReferenceOutputV2ValidatorAddress =
+    PSU.V2.mkValidatorAddress mustReferenceOutputV2Validator
+
+txConstraintsCanUnlockFundsWithV2Script :: TestTree
+txConstraintsCanUnlockFundsWithV2Script =
+    checkPredicate "Tx.Constraints.mustReferenceOutput can be used on-chain to unlock funds in a PlutusV2 script"
+        (walletFundsChange w1 (Ada.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
+        .&&. assertValidatedTransactionCount 2
+        ) $ do
+            void $ Trace.activateContract w1 mustReferenceOutputTxV2Contract tag
+            void $ Trace.waitNSlots 3
+
+mustReferenceOutputTxV2Contract :: Contract () EmptySchema ContractError ()
+mustReferenceOutputTxV2Contract = do
+    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
+
+    utxos <- ownUtxos
+    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
+        vh = fromJust $ L.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        lookups1 = Cons.unspentOutputs utxos
+        datum = L.Datum $ PlutusTx.toBuiltinData utxoRef
+        tx1 = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
+          <> Cons.mustIncludeDatumInTx datum
+          <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
+          <> Cons.mustUseOutputAsCollateral utxoRefForBalance1
+    submitTxConfirmed $ mkTx lookups1 tx1
+
+    -- Trying to unlock the Ada in the script address
+    scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
+    let
+        scriptUtxo = fst . head . M.toList $ scriptUtxos
+        lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos)
+               <> Cons.plutusV2OtherScript mustReferenceOutputV2Validator
+               <> Cons.unspentOutputs utxos
+        tx2 = Cons.mustReferenceOutput utxoRef
+          <> Cons.mustSpendScriptOutput scriptUtxo L.unitRedeemer
+          <> Cons.mustSpendPubKeyOutput utxoRefForBalance2
+          <> Cons.mustUseOutputAsCollateral utxoRefForBalance2
+    submitTxConfirmed $ mkTx lookups2 tx2
+
+get3 :: [a] -> (a, a, a)
+get3 (a:b:c:_) = (a, b, c)
+get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"

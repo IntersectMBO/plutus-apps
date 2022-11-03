@@ -7,6 +7,8 @@
 module PSGenerator.Common where
 
 import Auth (AuthRole, AuthStatus)
+import Cardano.Api.Shelley (Lovelace, NetworkId)
+import Cardano.Slotting.Slot (EpochNo)
 import Control.Applicative (empty, (<|>))
 import Control.Lens (ix, (&), (.~), (^.))
 import Control.Monad.Freer.Extras.Beam (BeamError, BeamLog)
@@ -34,12 +36,14 @@ import Ledger.Credential (Credential, StakingCredential)
 import Ledger.DCert (DCert)
 import Ledger.Index (ExCPU, ExMemory, ValidationError)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Params (Params)
 import Ledger.Scripts (ScriptError)
 import Ledger.Slot (Slot)
 import Ledger.TimeSlot (SlotConfig, SlotConversionError)
 import Ledger.Tx qualified as Tx (Language, Versioned)
 import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
 import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
+import Ouroboros.Network.Magic (NetworkMagic)
 import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
@@ -56,7 +60,7 @@ import Plutus.Contract.Resumable (IterationID, Request, RequestID, Response)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, ContractInstanceTag, EmulatorRuntimeError,
                                     UserThreadMsg)
-import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
+import Plutus.Trace.Scheduler (Priority, SchedulerLog, ThreadEvent, ThreadId)
 import Plutus.Trace.Tag (Tag)
 import Plutus.V1.Ledger.Api (DatumHash, MintingPolicy, StakeValidator, TxOut, Validator)
 import Plutus.V2.Ledger.Tx qualified as PV2
@@ -123,6 +127,12 @@ integerBridge :: BridgePart
 integerBridge = do
     typeName ^== "Integer"
     pure psBigInteger
+
+word32Bridge :: BridgePart
+word32Bridge = do
+    typeName ^== "Word32"
+    typeModule ^== "GHC.Word"
+    pure psInt
 
 word64Bridge :: BridgePart
 word64Bridge = do
@@ -226,11 +236,18 @@ exportTxBridge = do
     typeModule ^== "Plutus.Contract.Wallet"
     pure psJson
 
+protocolParametersBridge :: BridgePart
+protocolParametersBridge = do
+    typeName ^== "ProtocolParameters"
+    typeModule ^== "Cardano.Api.ProtocolParameters"
+    pure psJson
+
 miscBridge :: BridgePart
 miscBridge =
         bultinByteStringBridge
     <|> byteStringBridge
     <|> integerBridge
+    <|> word32Bridge
     <|> word64Bridge
     <|> scientificBridge
     <|> digestBridge
@@ -246,6 +263,7 @@ miscBridge =
     <|> scriptFailureBridge
     <|> utxosPredicateFailureBridge
     <|> exportTxBridge
+    <|> protocolParametersBridge
 
 ------------------------------------------------------------
 
@@ -407,6 +425,11 @@ ledgerTypes =
     , order . genericShow . argonaut $ mkSumType @(Tx.Versioned A)
     , equal . genericShow . argonaut $ mkSumType @Slot
     , equal . genericShow . argonaut $ mkSumType @Ada
+    , equal . genericShow . argonaut $ mkSumType @Params
+    , equal . genericShow . argonaut $ mkSumType @NetworkId
+    , equal . genericShow . argonaut $ mkSumType @NetworkMagic
+    , equal . genericShow . argonaut $ mkSumType @Lovelace
+    , equal . genericShow . argonaut $ mkSumType @EpochNo
     , equal . genericShow . argonaut $ mkSumType @SlotConfig
     , equal . genericShow . argonaut $ mkSumType @SlotConversionError
     , equal . genericShow . argonaut $ mkSumType @Certificate
@@ -478,13 +501,12 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @ContractInstanceMsg
     , equal . genericShow . argonaut $ mkSumType @ContractInstanceTag
     , equal . genericShow . argonaut $ mkSumType @EmulatorRuntimeError
-    , equal . genericShow . argonaut $ mkSumType @ThreadEvent
+    , order . equal . genericShow . argonaut $ mkSumType @ThreadEvent
     , equal . genericShow . argonaut $ mkSumType @ThreadId
     , equal . genericShow . argonaut $ mkSumType @(Request A)
     , equal . genericShow . argonaut $ mkSumType @(Response A)
     , order . genericShow . argonaut $ mkSumType @RequestID
     , order . equal . genericShow . argonaut $ mkSumType @Priority
-    , order . equal . genericShow . argonaut $ mkSumType @StopReason
     , order . genericShow . argonaut $ mkSumType @IterationID
     , equal . genericShow . argonaut $ mkSumType @ExCPU
     , equal . genericShow . argonaut $ mkSumType @ExMemory

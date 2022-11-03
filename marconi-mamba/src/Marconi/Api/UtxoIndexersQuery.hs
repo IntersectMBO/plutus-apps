@@ -3,7 +3,6 @@
 
 module Marconi.Api.UtxoIndexersQuery
     ( bootstrap
-    , findByPlutusAddress
     , findByCardanoAddress
     , findByAddress
     , findAll
@@ -21,19 +20,18 @@ import Control.Exception (bracket_)
 import Control.Lens ((^.))
 import Control.Monad.STM (STM)
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set, fromList, toList, union)
 import Data.Text (Text, intercalate, unpack)
 import Database.SQLite.Simple (NamedParam ((:=)), open)
 import Database.SQLite.Simple qualified as SQL
-import Ledger (Address, TxOutRef)
-import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag, TxBodyError), fromCardanoAddress)
-import Marconi.Api.Types (CardanoAddress, DBConfig (DBConfig, utxoConn),
+import Ledger.Tx.CardanoAPI (ToCardanoError (DeserialisationError, Tag, TxBodyError))
+import Marconi.Api.Types (DBConfig (DBConfig, utxoConn),
                           DBQueryEnv (DBQueryEnv, _DbConf, _Network, _QueryAddresses, _QueryComm),
                           HasDBQueryEnv (dbConf, queryAddresses, queryComm), HasUtxoQueryComm (indexer, queryReq),
                           TargetAddresses, UtxoQueryComm (UtxoQueryComm, _Indexer, _QueryReq),
                           UtxoTxOutReport (UtxoTxOutReport))
 import Marconi.Index.Utxo (UtxoIndex, UtxoRow (UtxoRow, _reference), toRows)
+import Marconi.Types (CardanoAddress, TxOutRef)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
 bootstrap
@@ -59,27 +57,19 @@ findAll env = fromList <$> forConcurrently addresses f
     where
         addresses = NonEmpty.toList (env ^. queryAddresses)
         f  :: CardanoAddress -> IO (UtxoTxOutReport)
-        f addr = UtxoTxOutReport (CApi.serialiseAddress addr) <$> findByCardanoAddress env addr
+        f addr = UtxoTxOutReport (CApi.serialiseAddress addr) <$> findByCardanoAddress env (CApi.toAddressAny addr)
 
-utxoQuery:: DBConfig -> Address -> IO (Set TxOutRef)
+utxoQuery:: DBConfig -> CApi.AddressAny -> IO (Set TxOutRef)
 utxoQuery dbConfig address = SQL.queryNamed (utxoConn dbConfig)
                   "SELECT * FROM utxos WHERE utxos.address=:address"
                   [":address" := address]
                   >>= pure . fromList . fmap _reference
 
-findByPlutusAddress
-    :: DBQueryEnv
-    -> Address              -- ^ Plutus address
-    -> IO (Set TxOutRef)
-findByPlutusAddress env address =
-        withUtxoQueryAction env  address utxoQuery
-
-
 findByCardanoAddress
     :: DBQueryEnv
-    -> CApi.Address addrtype                        -- ^ Cardano address and Era
+    -> CApi.AddressAny
     -> IO (Set TxOutRef)    -- ^ To Plutus address conversion error may occure
-findByCardanoAddress env = findByPlutusAddress env . fromCardanoAddress
+findByCardanoAddress env address = withQueryAction env  address utxoQuery
 
 -- | Retrieve a Set of TxOutRefs associated with the given Cardano Era address
 -- We return an empty Set if no address is found
@@ -91,8 +81,10 @@ findByAddress env addressText =
     let
         f :: Either CApi.Bech32DecodeError CardanoAddress -> IO (Either ToCardanoError UtxoTxOutReport)
         f (Right address)
-            | address `elem` (env ^. queryAddresses) = pure . Right . UtxoTxOutReport addressText
-              =<< findByCardanoAddress env address
+            | address `elem` (env ^. queryAddresses) =
+              (pure . CApi.toAddressAny $ address)
+              >>= findByCardanoAddress env
+              >>= pure . Right . UtxoTxOutReport addressText
             | otherwise = pure . Left . TxBodyError $
               unpack addressText <> " not in the provided target addresses"
         f (Left e) = pure . Left $ Tag (unpack  addressText
@@ -100,10 +92,10 @@ findByAddress env addressText =
                      <> show e)
                      DeserialisationError
     in
-         f $ CApi.deserialiseFromBech32 (CApi.proxyToAsType Proxy) addressText
+        f $ CApi.deserialiseFromBech32 CApi.AsShelleyAddress addressText
 
 
-queryInMemory :: Address -> UtxoIndex-> IO ( Set TxOutRef )
+queryInMemory :: CApi.AddressAny -> UtxoIndex-> IO ( Set TxOutRef )
 queryInMemory address ix =
       Ix.getBuffer (ix ^. Ix.storage)
       >>=  pure
@@ -112,13 +104,13 @@ queryInMemory address ix =
             . filter (isTargetAddress address)
             . concatMap toRows
 
-isTargetAddress :: Address -> UtxoRow -> Bool
+isTargetAddress :: CApi.AddressAny -> UtxoRow -> Bool
 isTargetAddress address (UtxoRow a _ ) =  address == a
 
 withQueryAction
     :: DBQueryEnv
-    -> Address
-    -> (DBConfig -> Address -> IO (Set TxOutRef) )
+    -> CApi.AddressAny
+    -> (DBConfig -> CApi.AddressAny -> IO (Set TxOutRef) )
     -> IO (Set TxOutRef)
 withQueryAction env address qAction =
     let
@@ -135,22 +127,13 @@ withQueryAction env address qAction =
             (atomically $ putTMVar qreq () )
             action
 
-withUtxoQueryAction
-    :: DBQueryEnv
-    -> Address
-    -> (DBConfig -> Address -> IO (Set TxOutRef) )
-    -> IO (Set TxOutRef)
-withUtxoQueryAction  = withQueryAction
-
-
 reportQueryAddresses
     :: DBQueryEnv
-    -> IO (Set Address)
+    -> IO (Set CardanoAddress)
 reportQueryAddresses env
     = pure
     . fromList
     . NonEmpty.toList
-    . fmap fromCardanoAddress
     $ (env ^. queryAddresses )
 
 reportQueryCardanoAddresses

@@ -100,7 +100,8 @@ unlockExchange = awaitPromise $ endpoint @"unlock from exchange" $ \credential -
     (accConstraints, accLookups) <-
         mapError UnlockExchangeTokenAccError
         $ TokenAccount.redeemTx (Credential.tokenAccount credential) ownPK
-    case Constraints.mkSomeTx [SomeLookupsAndConstraints credLookups credConstraints, SomeLookupsAndConstraints accLookups accConstraints] of
+    params <- getParams
+    case Constraints.mkSomeTx params [SomeLookupsAndConstraints credLookups credConstraints, SomeLookupsAndConstraints accLookups accConstraints] of
         Left mkTxErr -> throwError (UnlockMkTxError mkTxErr)
         Right utx -> mapError WithdrawTxError $ do
             tx <- submitUnbalancedTx utx

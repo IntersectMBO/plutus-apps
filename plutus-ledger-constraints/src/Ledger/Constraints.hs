@@ -59,6 +59,7 @@ module Ledger.Constraints(
     , OC.UnbalancedTx(..)
     , OC.MkTxError(..)
     , OC.mkTx
+    , OC.mkTxWithParams
     , OC.adjustUnbalancedTx
     -- ** Combining multiple typed scripts into one transaction
     , OC.SomeLookupsAndConstraints(..)

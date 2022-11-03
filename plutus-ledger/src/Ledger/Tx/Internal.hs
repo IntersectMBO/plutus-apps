@@ -27,6 +27,7 @@ import Codec.Serialise (Serialise, decode, encode)
 import Control.Applicative (empty, (<|>))
 import Control.DeepSeq (NFData, rnf)
 import Control.Lens ((&), (.~), (?~))
+
 import Control.Lens qualified as L
 import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
@@ -250,6 +251,9 @@ instance Pretty TxOut where
             ["with reference script hash" <+> viaShow (C.hashScript s)]
           C.ReferenceScriptNone -> []
 
+type ScriptsMap = Map ScriptHash (Versioned Script)
+type MintingWitnessesMap = Map MintingPolicyHash (Redeemer, Maybe (Versioned TxOutRef))
+
 -- | A Babbage-era transaction, including witnesses for its inputs.
 data Tx = Tx {
     txInputs           :: [TxInput],
@@ -270,15 +274,15 @@ data Tx = Tx {
     -- ^ The fee for this transaction.
     txValidRange       :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintingScripts   :: Map MintingPolicyHash Redeemer,
-    -- ^ The scripts that must be run to check minting conditions matched with their redeemers.
+    txMintingWitnesses :: MintingWitnessesMap,
+    -- ^ The witnesses that must be present to check minting conditions matched with their redeemers.
     txWithdrawals      :: [Withdrawal],
     -- ^ Withdrawals, contains redeemers.
     txCertificates     :: [Certificate],
     -- ^ Certificates, contains redeemers.
     txSignatures       :: Map PubKey Signature,
     -- ^ Signatures of this transaction.
-    txScripts          :: Map.Map ScriptHash (Versioned Script),
+    txScripts          :: ScriptsMap,
     -- ^ Scripts for all script credentials mentioned in this tx.
     txData             :: Map DatumHash Datum,
     -- ^ Datum objects recorded on this transaction.
@@ -299,7 +303,7 @@ instance Semigroup Tx where
         txMint = txMint tx1 <> txMint tx2,
         txFee = txFee tx1 <> txFee tx2,
         txValidRange = txValidRange tx1 /\ txValidRange tx2,
-        txMintingScripts = txMintingScripts tx1 <> txMintingScripts tx2,
+        txMintingWitnesses = txMintingWitnesses tx1 <> txMintingWitnesses tx2,
         txSignatures = txSignatures tx1 <> txSignatures tx2,
         txData = txData tx1 <> txData tx2,
         txScripts = txScripts tx1 <> txScripts tx2,
@@ -370,12 +374,12 @@ mint = L.lens g s where
     g = txMint
     s tx v = tx { txMint = v }
 
-mintScripts :: L.Lens' Tx (Map MintingPolicyHash Redeemer)
+mintScripts :: L.Lens' Tx MintingWitnessesMap
 mintScripts = L.lens g s where
-    g = txMintingScripts
-    s tx fs = tx { txMintingScripts = fs }
+    g = txMintingWitnesses
+    s tx fs = tx { txMintingWitnesses = fs }
 
-scriptWitnesses :: L.Lens' Tx (Map ScriptHash (Versioned Script))
+scriptWitnesses :: L.Lens' Tx ScriptsMap
 scriptWitnesses = L.lens g s where
     g = txScripts
     s tx fs = tx { txScripts = fs }
@@ -494,10 +498,10 @@ outReferenceScript = L.lens
   txOutReferenceScript
   (\(TxOut (C.TxOut aie tov tod _)) rs -> TxOut (C.TxOut aie tov tod rs))
 
-lookupScript :: Map ScriptHash (Versioned Script) -> ScriptHash -> Maybe (Versioned Script)
-lookupScript txScripts hash  = Map.lookup hash txScripts
+lookupScript :: ScriptsMap -> ScriptHash -> Maybe (Versioned Script)
+lookupScript txScripts hash = Map.lookup hash txScripts
 
-lookupValidator :: Map ScriptHash (Versioned Script) -> ValidatorHash -> Maybe (Versioned Validator)
+lookupValidator :: ScriptsMap -> ValidatorHash -> Maybe (Versioned Validator)
 lookupValidator txScripts = (fmap . fmap) Validator . lookupScript txScripts . toScriptHash
     where
         toScriptHash (ValidatorHash b) = ScriptHash b
@@ -510,7 +514,7 @@ spentOutputs = map txInputRef . txInputs
 referencedOutputs :: Tx -> [TxOutRef]
 referencedOutputs = map txInputRef . txReferenceInputs
 
-lookupMintingPolicy :: Map ScriptHash (Versioned Script) -> MintingPolicyHash -> Maybe (Versioned MintingPolicy)
+lookupMintingPolicy :: ScriptsMap -> MintingPolicyHash -> Maybe (Versioned MintingPolicy)
 lookupMintingPolicy txScripts = (fmap . fmap) MintingPolicy . lookupScript txScripts . toScriptHash
     where
         toScriptHash (MintingPolicyHash b) = ScriptHash b
@@ -521,7 +525,7 @@ deriving instance OpenApi.ToSchema TxInput
 deriving instance OpenApi.ToSchema Withdrawal
 deriving instance OpenApi.ToSchema Certificate
 
-lookupStakeValidator :: Map ScriptHash (Versioned Script) -> StakeValidatorHash -> Maybe (Versioned StakeValidator)
+lookupStakeValidator :: ScriptsMap -> StakeValidatorHash -> Maybe (Versioned StakeValidator)
 lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txScripts . toScriptHash
     where
         toScriptHash (StakeValidatorHash b) = ScriptHash b
@@ -542,10 +546,10 @@ fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
 
--- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly. Doesn't alter txMint.
-addMintingPolicy :: Versioned MintingPolicy -> Redeemer -> Tx -> Tx
-addMintingPolicy vvl rd tx@Tx{txMintingScripts, txScripts} = tx
-    {txMintingScripts = Map.insert mph rd txMintingScripts,
+-- | Add minting policy together with the redeemer into txMintingWitnesses and txScripts accordingly. Doesn't alter txMint.
+addMintingPolicy :: Versioned MintingPolicy -> (Redeemer, Maybe (Versioned TxOutRef)) -> Tx -> Tx
+addMintingPolicy vvl rdWithRef tx@Tx{txMintingWitnesses, txScripts} = tx
+    {txMintingWitnesses = Map.insert mph rdWithRef txMintingWitnesses,
      txScripts = Map.insert (ScriptHash b) (fmap getMintingPolicy vvl) txScripts}
     where
         mph@(MintingPolicyHash b) = mintingPolicyHash vvl
@@ -583,7 +587,7 @@ txSpendingRedeemers Tx{txInputs} = flip execState Map.empty $ traverse_ extract 
     extract _ = return ()
 
 txMintingRedeemers :: Tx -> Map MintingPolicyHash Redeemer
-txMintingRedeemers Tx{txMintingScripts} = txMintingScripts
+txMintingRedeemers Tx{txMintingWitnesses} = Map.map fst txMintingWitnesses
 
 txRewardingRedeemers :: Tx -> Map Credential Redeemer
 txRewardingRedeemers Tx{txWithdrawals} = flip execState Map.empty $ traverse_ f txWithdrawals where

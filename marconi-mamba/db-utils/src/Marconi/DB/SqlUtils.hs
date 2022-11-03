@@ -14,7 +14,7 @@
 --  sqlite3 ./.marconidb/2/utxo-db "select * from shelleyaddresses limit 10;" ".exit"
 module Marconi.DB.SqlUtils where
 
-import Cardano.Api qualified as CApi
+import Cardano.Api qualified as C
 import Control.Concurrent.Async (forConcurrently_)
 import Control.Exception (bracket_)
 import Control.Lens ((^.))
@@ -22,15 +22,12 @@ import Control.Monad (void)
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Time.Clock (getCurrentTime)
-import Database.SQLite.Simple (Connection)
-import Database.SQLite.Simple qualified as SQL
+import Database.SQLite.Simple (Connection, execute, execute_, query_)
 import Database.SQLite.Simple.FromField (FromField)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
-import Ledger qualified as Plutus
-import Ledger.Tx.CardanoAPI.Internal (toCardanoAddressInEra)
 import Marconi.Api.Types (DBConfig, DBQueryEnv, HasDBQueryEnv (dbConf, network), utxoConn)
 
 -- | Represents Shelley type addresses with most utxo transactions
@@ -52,10 +49,11 @@ instance (ToField a) => ToRow (ShelleyFrequencyTable a )where
 freqUtxoTable :: DBQueryEnv -> IO ()
 freqUtxoTable env =
     void $ withQueryAction (env ^. dbConf) ( \conn ->
-        SQL.execute_ conn "drop table if exists frequtxos"
-        >> SQL.execute_ conn "drop table if exists shelleyaddresses"
-        >> SQL.execute_ conn "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC"
-        >> SQL.execute_ conn
+        execute_ conn "drop table if exists frequtxos"
+        >> execute_ conn "drop table if exists shelleyaddresses"
+        >> execute_ conn "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC"
+        >> execute_ conn "delete from frequtxos where frequency < 50"
+        >> execute_ conn
            "create TABLE shelleyaddresses (address text not null, frequency int not null)"
         )
 
@@ -77,31 +75,28 @@ withQueryAction conf action =
 --
 freqShelleyTable :: DBQueryEnv -> IO [Text]
 freqShelleyTable env = do
-    addressFreq <- withQueryAction (env ^. dbConf)( \conn -> (SQL.query_ conn
-                                "SELECT address, frequency FROM frequtxos") :: IO [ShelleyFrequencyTable Plutus.Address])
+    addressFreq <- withQueryAction (env ^. dbConf)( \conn -> (query_ conn
+                                "SELECT address, frequency FROM frequtxos") :: IO [ShelleyFrequencyTable C.AddressAny])
     let addresses = catMaybes . fmap (toShelley ( env ^. network) ) $ addressFreq
 
     withQueryAction (env ^. dbConf) ( \conn -> (
-        SQL.execute_ conn "BEGIN TRANSACTION"
-        >> forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
-                                      (SQL.execute conn
+        -- execute_ conn "BEGIN TRANSACTION"
+        forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
+                                      (execute conn
                                        "insert into shelleyaddresses (address, frequency) values (?, ?)"
-                                       (a, f)))
-        >> SQL.execute_ conn "COMMIT" )
+                                       (a, f))))
+        -- >> execute_ conn "COMMIT"
         )
     pure . fmap _sAddress $ addresses
-
-toShelley' :: CApi.NetworkId  -> Plutus.Address -> Maybe Text
-toShelley' nid address = case toCardanoAddressInEra nid address of
-            Left _     -> Nothing
-            Right addr -> Just $ CApi.serialiseAddress addr
 
 -- | we want to store addresses as Text.
 -- first conver to cardano address, then seriase to text
 --
-toShelley :: CApi.NetworkId  -> ShelleyFrequencyTable Plutus.Address -> Maybe (ShelleyFrequencyTable Text)
-toShelley nid (ShelleyFrequencyTable a f) =
+toShelley :: C.NetworkId  -> ShelleyFrequencyTable C.AddressAny -> Maybe (ShelleyFrequencyTable Text)
+toShelley nid (ShelleyFrequencyTable (C.AddressShelley a) f) =
     let
-        b = toShelley' nid a
+        addrTxt = C.serialiseAddress a
     in
-        (flip ShelleyFrequencyTable f) <$> b
+        Just ( ShelleyFrequencyTable addrTxt f)
+toShelley nid _ = Nothing
+

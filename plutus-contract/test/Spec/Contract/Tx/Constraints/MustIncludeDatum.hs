@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.MustIncludeDatum(tests) where
+module Spec.Contract.Tx.Constraints.MustIncludeDatum(tests) where
 
 import Test.Tasty (TestTree, testGroup)
 
