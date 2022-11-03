@@ -12,7 +12,6 @@ module Marconi.Types
        CurrentEra,
        pattern AsCurrentEra,
        pattern CurrentEra,
-       C.TxIn(C.TxIn),
        TxOut,
        -- * Aliases to ease concept mapping between plutus types and cardano types
        TxOutRef,

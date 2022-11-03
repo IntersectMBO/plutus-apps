@@ -26,12 +26,10 @@ module Marconi.Index.Utxo
   , TxOut
   ) where
 
-import Cardano.Api (SlotNo)
+import Cardano.Api (SlotNo, TxIn (TxIn))
 import Cardano.Api qualified as C
 
-import Control.Lens.Fold (has)
 import Control.Lens.Operators ((&), (^.))
-import Control.Lens.Prism (only)
 import Control.Lens.TH (makeLenses)
 
 import Control.Monad (when)
@@ -52,7 +50,7 @@ import System.Random.MWC (createSystemRandom, uniformR)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-import Marconi.Types (CurrentEra, TxIn (TxIn), TxOut, TxOutRef, txOutRef)
+import Marconi.Types (CurrentEra, TxOut, TxOutRef, txOutRef)
 
 data UtxoUpdate = UtxoUpdate
   { _inputs  :: !(Set TxIn)
@@ -185,4 +183,4 @@ toRows update = update ^. outputs
 
 
 onlyAt :: C.AddressAny -> UtxoRow -> Bool
-onlyAt address' = has $ address . only address'
+onlyAt address' row = address' == row ^. address

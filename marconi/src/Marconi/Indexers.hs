@@ -36,7 +36,7 @@ import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Types (TargetAddresses, TxIn, TxOutRef, pattern CurrentEra, txOutRef)
+import Marconi.Types (TargetAddresses, TxOutRef, pattern CurrentEra, txOutRef)
 
 import RewindableIndex.Index.VSplit qualified as Ix
 
@@ -84,7 +84,7 @@ getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}
             (\ix out -> (out, txOutRef (C.getTxId txBody) (C.TxIx $ fromIntegral ix)))
 getInputs
   :: C.Tx era
-  -> Set TxIn
+  -> Set C.TxIn
 getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCollateral}) _) =
   let inputs = case txScriptValidityToScriptValidity txScriptValidity of
         C.ScriptValid -> fst <$> txIns
