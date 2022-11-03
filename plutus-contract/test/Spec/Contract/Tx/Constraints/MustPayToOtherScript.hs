@@ -61,7 +61,7 @@ v1FeaturesTests :: SubmitTx -> LanguageContext -> TestTree
 v1FeaturesTests sub t = testGroup "Plutus V1 features" $
     [ successfulUseOfMustPayToOtherScriptWithDatumInTxWithMintedToken
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyToken
-    --, successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
+    , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWithScriptsExactTokenBalance
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerAdaValue
     , contractErrorWhenAttemptingToSpendMoreThanAdaBalance
@@ -106,7 +106,7 @@ otherTokenValue = someTokenValue "someToken" 1
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
     void $ Trace.activateContractWallet w1 contract
-    void $ Trace.waitNSlots 1
+    void Trace.nextSlot
 
 -- | Contract to a single transaction with mustSpendScriptOutputs offchain
 -- constraint and mint with policy using matching onchain constraint.

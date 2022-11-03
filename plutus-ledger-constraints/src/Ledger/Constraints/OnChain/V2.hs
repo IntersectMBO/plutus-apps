@@ -31,7 +31,7 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Contexts qualified as PV2 hiding (findTxInByTxOutRef)
 import Plutus.V1.Ledger.Address (Address (Address))
 import Plutus.V1.Ledger.Interval (contains)
-import Plutus.V1.Ledger.Value (leq)
+import Plutus.V1.Ledger.Value (geq, leq)
 import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), ScriptPurpose (Spending),
                                   TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
                                   TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoRedeemers, txInfoValidRange),
@@ -153,12 +153,12 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                 -- provide datum.
                    Ada.fromValue txOutValue >= Ada.fromValue vl
                 && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
-                && Value.noAdaValue txOutValue == Value.noAdaValue vl
+                && geq (Value.noAdaValue txOutValue) (Value.noAdaValue vl)
                 && txOutAddress == addr
             checkOutput (TxOutDatumInTx _) TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash h} =
                    Ada.fromValue txOutValue >= Ada.fromValue vl
                 && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
-                && Value.noAdaValue txOutValue == Value.noAdaValue vl
+                && geq (Value.noAdaValue txOutValue) (Value.noAdaValue vl)
                 && hsh == Just h
                 && txOutAddress == addr
             -- With regards to inline datum, we have the actual datum in the tx
