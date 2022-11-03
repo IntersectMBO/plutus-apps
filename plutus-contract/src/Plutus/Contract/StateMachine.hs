@@ -53,7 +53,7 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import Control.Lens (_2, _Just, makeClassyPrisms, review, (^?))
+import Control.Lens (_2, makeClassyPrisms, review, (^?))
 import Control.Monad (unless)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
@@ -77,11 +77,11 @@ import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
-import Plutus.Contract (AsContractError (_ConstraintResolutionContractError, _ContractError), Contract, ContractError,
-                        Promise, adjustUnbalancedTx, awaitPromise, isSlot, isTime, logWarn, mapError, never,
-                        ownFirstPaymentPubKeyHash, ownUtxos, promiseBind, select, submitTxConfirmed, utxoIsProduced,
-                        utxoIsSpent, utxosAt, utxosTxOutTxFromTx)
-import Plutus.Contract.Request (mkTxContract)
+import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Promise, adjustUnbalancedTx,
+                        awaitPromise, isSlot, isTime, logWarn, mapError, never, ownFirstPaymentPubKeyHash, ownUtxos,
+                        promiseBind, select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt,
+                        utxosTxOutTxFromTx)
+import Plutus.Contract.Request (mkTxConstraints)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
 import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
                                              StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
@@ -141,7 +141,7 @@ getStates
 getStates (SM.StateMachineInstance _ si) refMap =
     flip mapMaybe (Map.toList refMap) $ \(txOutRef, ciTxOut) -> do
       let txOut = Tx.toTxInfoTxOut ciTxOut
-      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . _Just
+      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . Tx.datumInDatumFromQuery
       ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef txOut datum
       pure OnChainState{ocsTxOutRef}
 
@@ -448,7 +448,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
               <> foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
               <> Constraints.unspentOutputs utxo
               <> customLookups
-      utx <- mapError (review _ConstraintResolutionContractError) (mkTxContract lookups constraints)
+      utx <- mkTxConstraints lookups constraints
       adjustedUtx <- adjustUnbalancedTx utx
       unless (utx == adjustedUtx) $
         logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "
@@ -497,9 +497,7 @@ runGuardedStepWith userLookups userConstraints smc input guard =
     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
         pk <- ownFirstPaymentPubKeyHash
         let lookups = smtLookups { Constraints.slOwnPaymentPubKeyHash = Just pk }
-        utx <- either (throwing _ConstraintResolutionContractError)
-                      pure
-                      (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))
+        utx <- mkTxConstraints (lookups <> userLookups) (smtConstraints <> userConstraints)
         adjustedUtx <- adjustUnbalancedTx utx
         unless (utx == adjustedUtx) $
           logWarn @Text $ "Plutus.Contract.StateMachine.runStep: "

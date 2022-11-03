@@ -45,7 +45,8 @@ module Plutus.ChainIndex.Lib (
 ) where
 
 import Control.Monad.Freer (Eff)
-import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (SqlLog))
+import Control.Monad.Freer.Extras.Beam (BeamLog (SqlLog))
+import Control.Monad.Freer.Extras.Beam.Effects (BeamEffect)
 import Control.Monad.Freer.Extras.Log qualified as Log
 import Data.Default (def)
 import Data.Functor (void)
@@ -64,6 +65,7 @@ import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
 import Control.Concurrent.STM (atomically, newTVarIO)
 import Control.Concurrent.STM.TBMQueue (TBMQueue, writeTBMQueue)
+import Database.Beam.Sqlite (Sqlite)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
@@ -167,14 +169,17 @@ filterTxs isAccepted isStored handler (RollForward (CI.Block blockTip txs) chain
 filterTxs _ _ handler evt = handler evt
 
 -- | Get the slot number of the current tip of the node.
-getTipSlot :: Config.ChainIndexConfig -> IO C.SlotNo
+getTipSlot :: Config.ChainIndexConfig -> IO (Maybe C.SlotNo)
 getTipSlot config = do
-  C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
-    { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-    , C.localNodeNetworkId = Config.cicNetworkId config
-    , C.localNodeSocketPath = Config.cicSocketPath config
-    }
-  pure slotNo
+  tip <- C.getLocalChainTip $ C.LocalNodeConnectInfo
+         { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+         , C.localNodeNetworkId = Config.cicNetworkId config
+         , C.localNodeSocketPath = Config.cicSocketPath config
+         }
+  case tip of
+    C.ChainTip slotNo _ _ -> pure $ Just slotNo
+    C.ChainTipAtGenesis   -> pure $ Nothing
+
 
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
@@ -190,7 +195,7 @@ syncChainIndex config runReq syncHandler = do
 
 runChainIndexDuringSync
   :: RunRequirements
-  -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect] a
+  -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect Sqlite] a
   -> IO (Maybe a)
 runChainIndexDuringSync runReq effect = do
     errOrResult <- runChainIndexEffects runReq effect

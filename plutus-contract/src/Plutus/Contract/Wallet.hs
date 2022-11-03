@@ -48,13 +48,13 @@ import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
-import Ledger.Constraints.OffChain (UnbalancedTx (unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex), mkTx,
+import Ledger.Constraints.OffChain (UnbalancedTx (unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex),
                                     unBalancedTxTx)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
-import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
+import Plutus.Contract.Error (AsContractError (_OtherContractError))
 import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
 import Plutus.V1.Ledger.Api qualified as Plutus
@@ -113,7 +113,7 @@ getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
 getUnspentOutput = do
     ownPkh <- Contract.ownFirstPaymentPubKeyHash
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
-    utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
+    utx <- Contract.mkTxConstraints @Void mempty constraints
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of
         inp : _ -> pure $ txInRef inp

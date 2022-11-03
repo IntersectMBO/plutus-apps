@@ -312,9 +312,13 @@ observableStateChangeTest = runScenario $ do
     env <- Core.askInstancesState @(Builtin TestContracts) @(Simulator.SimulatorState (Builtin TestContracts))
     instanceId <- Simulator.activateContract defaultWallet Currency
     createCurrency instanceId SimpleMPS{tokenName="my token", amount = 10000}
-    let stream = WS.observableStateChange instanceId env
-    vl2 <- liftIO (readN 2 stream) >>= \case { [_, newVal] -> pure newVal; _ -> throwError (OtherError "newVal not found")}
-    assertBool "observable state should change" (isJust $ getCurrency vl2)
+    s <- liftIO (STM.instanceState instanceId env)
+    case s of
+        Just state -> do
+            let stream = WS.observableStateChange state
+            vl2 <- liftIO (readN 2 stream) >>= \case { [_, newVal] -> pure newVal; _ -> throwError (OtherError "newVal not found")}
+            assertBool "observable state should change" (isJust $ getCurrency vl2)
+        Nothing -> assertBool "contract instance not found" False
 
 currencyTest :: TestTree
 currencyTest =

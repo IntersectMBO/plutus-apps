@@ -67,19 +67,19 @@ just arrive later.
 -}
 
 -- | Start the system threads.
-launchSystemThreads :: forall effs.
+launchSystemThreads :: forall effs a.
     ( Member ChainControlEffect effs
     , Member MultiAgentEffect effs
     , Member MultiAgentControlEffect effs
     )
     => [Wallet]
-    -> Eff (Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
+    -> Eff (Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage) ': effs) ()
 launchSystemThreads wallets = do
-    _ <- sleep @effs @EmulatorMessage Sleeping
+    _ <- sleep @effs @EmulatorMessage @_ @a Sleeping
     -- 1. Threads for updating the agents' states. See note [Simulated Agents]
-    traverse_ (\w -> fork @effs @EmulatorMessage (agentTag w) Normal $ agentThread @effs w) wallets
+    traverse_ (\w -> fork @effs @EmulatorMessage @_ @a (agentTag w) Normal $ agentThread @effs @_ @a w) wallets
     -- 2. Block maker thread. See note [Simulator Time]
-    void $ fork @effs @EmulatorMessage blockMakerTag Normal (blockMaker @effs)
+    void $ fork @effs @EmulatorMessage @_ @a blockMakerTag Normal (blockMaker @effs @_ @a)
 
 -- | Tag for an agent thread. See note [Thread Tag]
 agentTag :: Wallet -> Tag
@@ -90,30 +90,30 @@ blockMakerTag :: Tag
 blockMakerTag = "block maker"
 
 -- | The block maker thread. See note [Simulator Time]
-blockMaker :: forall effs effs2.
+blockMaker :: forall effs effs2 a.
     ( Member ChainControlEffect effs2
-    , Member (Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage)) effs2
+    , Member (Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage)) effs2
     )
     => Eff effs2 ()
 blockMaker = go where
     go = do
         newBlock <- processBlock
         newSlot <- modifySlot succ
-        _ <- mkSysCall @effs Sleeping $ Left $ Broadcast $ NewSlot [newBlock] newSlot
-        _ <- sleep @effs @EmulatorMessage @effs2 Sleeping
+        _ <- mkSysCall @effs @_ @_ @a Sleeping $ Left $ Broadcast $ NewSlot [newBlock] newSlot
+        _ <- sleep @effs @EmulatorMessage @effs2 @a Sleeping
         go
 
 -- | Thread for a simulated agent. See note [Simulated Agents]
-agentThread :: forall effs effs2.
+agentThread :: forall effs effs2 a.
     ( Member MultiAgentEffect effs2
     , Member MultiAgentControlEffect effs2
-    , Member (Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage)) effs2
+    , Member (Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage)) effs2
     )
     => Wallet
     -> Eff effs2 ()
 agentThread wllt = go where
     go = do
-        e <- sleep @effs @EmulatorMessage Sleeping
+        e <- sleep @effs @EmulatorMessage @_ @a Sleeping
         let clientNotis = maybeToList e >>= \case
                 NewSlot blocks slot -> fmap BlockValidated blocks ++ [SlotChanged slot]
                 _                   -> []
@@ -140,4 +140,4 @@ appendNewTipBlock lastTip block newSlot = do
   let nextBlockNo = case lastTip of TipAtGenesis -> 0
                                     Tip _ _ n    -> n + 1
       newTip = Tip newSlot (blockId block) nextBlockNo
-  appendBlocks [(Block newTip (fmap (\tx -> (fromOnChainTx tx, def)) block))]
+  appendBlocks [Block newTip (fmap (\tx -> (fromOnChainTx tx, def)) block)]

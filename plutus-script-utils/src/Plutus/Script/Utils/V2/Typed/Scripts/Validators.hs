@@ -20,7 +20,6 @@ module Plutus.Script.Utils.V2.Typed.Scripts.Validators
     , validatorAddress
     , validatorScript
     , vValidatorScript
-    , unsafeMkTypedValidator
     , forwardingMintingPolicy
     , vForwardingMintingPolicy
     , forwardingMintingPolicyHash
@@ -30,7 +29,7 @@ where
 
 import Data.Kind (Type)
 import Plutus.Script.Utils.Scripts (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.Typed (Any, DatumType, RedeemerType,
+import Plutus.Script.Utils.Typed (DatumType, RedeemerType,
                                   TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvValidator, tvValidatorHash),
                                   UntypedValidator, ValidatorTypes, forwardingMintingPolicy,
                                   forwardingMintingPolicyHash, generalise, vForwardingMintingPolicy, vValidatorScript,
@@ -133,16 +132,3 @@ mkTypedValidatorParam ::
   TypedValidator a
 mkTypedValidatorParam vc wrapper param =
   mkTypedValidator (vc `applyCode` liftCode param) wrapper
-
--- | Make a 'TypedValidator' (with no type constraints) from an untyped 'Validator' script.
-unsafeMkTypedValidator :: PV2.Validator -> TypedValidator Any
-unsafeMkTypedValidator vl =
-  TypedValidator
-    { tvValidator = Versioned vl PlutusV2
-    , tvValidatorHash = vh
-    , tvForwardingMPS = Versioned mps PlutusV2
-    , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
-    }
-  where
-    vh = Scripts.validatorHash vl
-    mps = MPS.mkForwardingMintingPolicy vh

@@ -26,13 +26,15 @@ import Cardano.BM.Trace (Trace)
 import Control.Concurrent.STM (TVar, atomically, readTVarIO, writeTVar)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
-import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
+import Control.Monad.Freer.Extras.Beam.Effects (BeamEffect, handleBeam)
+import Control.Monad.Freer.Extras.Beam.Sqlite (runBeam)
 import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseMUnderN)
 import Control.Monad.Freer.Reader (runReader)
 import Control.Monad.Freer.State (runState)
 import Control.Monad.IO.Class (liftIO)
 import Data.Pool (Pool)
+import Database.Beam.Sqlite (Sqlite)
 import Database.SQLite.Simple qualified as Sqlite
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
@@ -47,7 +49,7 @@ data RunRequirements = RunRequirements
 -- | Run the chain index effects.
 runChainIndexEffects
     :: RunRequirements
-    -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect] a
+    -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect Sqlite] a
     -> IO (Either ChainIndexError a)
 runChainIndexEffects runReq action =
     runLogEffects (convertLog PrettyObject $ trace runReq)
@@ -58,7 +60,7 @@ runChainIndexEffects runReq action =
 handleChainIndexEffects
     :: (LastMember IO effs, Member (LogMsg ChainIndexLog) effs)
     => RunRequirements
-    -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': BeamEffect ': effs) a
+    -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': BeamEffect Sqlite ': effs) a
     -> Eff effs (Either ChainIndexError a)
 handleChainIndexEffects RunRequirements{trace, stateTVar, pool, securityParam} action = do
     state <- liftIO $ readTVarIO stateTVar
@@ -68,7 +70,7 @@ handleChainIndexEffects RunRequirements{trace, stateTVar, pool, securityParam} a
         $ runReader (Depth securityParam)
         $ runError @ChainIndexError
         $ flip handleError (throwError . BeamEffectError)
-        $ interpret (handleBeam (convertLog (PrettyObject . BeamLogItem) trace))
+        $ interpret (handleBeam runBeam (convertLog (PrettyObject . Export.BeamLogItem) trace))
         $ interpret handleControl
         $ interpret handleQuery
         -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.

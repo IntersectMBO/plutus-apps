@@ -150,7 +150,10 @@
                   (con bytestring)
                   (fun
                     (con data)
-                    (fun (con bytestring) (fun (con integer) TxConstraint))
+                    (fun
+                      (con bytestring)
+                      (fun (con integer) (fun [ Maybe TxOutRef ] TxConstraint))
+                    )
                   )
                 )
               )

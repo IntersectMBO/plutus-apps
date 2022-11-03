@@ -28,15 +28,17 @@ module Plutus.Contract.Trace
     , handleSlotNotifications
     , handleTimeNotifications
     , handleOwnAddressesQueries
-    , handleCurrentPABSlotQueries
+    , handleCurrentNodeClientSlotQueries
     , handleCurrentChainIndexSlotQueries
     , handleCurrentTimeQueries
+    , handleCurrentNodeClientTimeRangeQueries
     , handleTimeToSlotConversions
     , handleUnbalancedTransactions
     , handlePendingTransactions
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
     , handleYieldedUnbalancedTx
+    , handleGetParams
     -- * Initial distributions of emulated chains
     , InitialDistribution
     , defaultDist
@@ -117,13 +119,13 @@ handleTimeNotifications ::
 handleTimeNotifications =
     generalise (preview E._AwaitTimeReq) E.AwaitTimeResp RequestHandler.handleTimeNotifications
 
-handleCurrentPABSlotQueries ::
+handleCurrentNodeClientSlotQueries ::
     ( Member (LogObserve (LogMessage Text)) effs
     , Member NodeClientEffect effs
     )
     => RequestHandler effs PABReq PABResp
-handleCurrentPABSlotQueries =
-    generalise (preview E._CurrentPABSlotReq) E.CurrentPABSlotResp RequestHandler.handleCurrentPABSlot
+handleCurrentNodeClientSlotQueries =
+    generalise (preview E._CurrentNodeClientSlotReq) E.CurrentNodeClientSlotResp RequestHandler.handleCurrentNodeClientSlot
 
 handleCurrentChainIndexSlotQueries ::
     ( Member (LogObserve (LogMessage Text)) effs
@@ -140,6 +142,17 @@ handleCurrentTimeQueries ::
     => RequestHandler effs PABReq PABResp
 handleCurrentTimeQueries =
     generalise (preview E._CurrentTimeReq) E.CurrentTimeResp RequestHandler.handleCurrentTime
+
+handleCurrentNodeClientTimeRangeQueries ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member NodeClientEffect effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleCurrentNodeClientTimeRangeQueries =
+    generalise
+        (preview E._CurrentNodeClientTimeRangeReq)
+        E.CurrentNodeClientTimeRangeResp
+        RequestHandler.handleCurrentNodeClientTimeRange
 
 handleTimeToSlotConversions ::
     ( Member (LogObserve (LogMessage Text)) effs
@@ -222,6 +235,17 @@ handleAdjustUnbalancedTx =
         (preview E._AdjustUnbalancedTxReq)
         E.AdjustUnbalancedTxResp
         RequestHandler.handleAdjustUnbalancedTx
+
+handleGetParams ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member NodeClientEffect effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleGetParams =
+    generalise
+        (preview E._GetParamsReq)
+        E.GetParamsResp
+        RequestHandler.handleGetParams
 
 defaultDist :: InitialDistribution
 defaultDist = defaultDistFor EM.knownWallets

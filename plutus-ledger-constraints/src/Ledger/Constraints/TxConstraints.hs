@@ -133,7 +133,7 @@ data TxConstraint =
     -- ^ The transaction must include the utxo as collateral input.
     | MustReferenceOutput TxOutRef
     -- ^ The transaction must reference (not spend) the given unspent transaction output.
-    | MustMintValue MintingPolicyHash Redeemer TokenName Integer
+    | MustMintValue MintingPolicyHash Redeemer TokenName Integer (Maybe TxOutRef)
     -- ^ The transaction must mint the given token and amount.
     | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe (TxOutDatum Datum)) (Maybe ScriptHash) Value
     -- ^ The transaction must create a transaction output with a public key address.
@@ -165,8 +165,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must spend script output:", pretty ref, pretty red, pretty mref]
         MustReferenceOutput ref ->
             hang 2 $ vsep ["must reference output:", pretty ref]
-        MustMintValue mps red tn i ->
-            hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
+        MustMintValue mps red tn i mref ->
+            hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i, pretty mref]
         MustPayToPubKeyAddress pkh skh datum refScript v ->
             hang 2 $ vsep ["must pay to pubkey address:", pretty pkh, pretty skh, pretty datum, pretty refScript, pretty v]
         MustPayToOtherScript vlh skh dv refScript vl ->
@@ -609,19 +609,30 @@ mustPayToOtherScriptAddressWithInlineDatum vh svh dv vl =
 mustMintValue :: forall i o. Value -> TxConstraints i o
 mustMintValue = mustMintValueWithRedeemer unitRedeemer
 
+{-# INLINABLE mustMintValueWithReference #-}
+-- | Same as 'mustMintValueWithRedeemerAndReference', but sets the redeemer to the unit
+-- redeemer.
+mustMintValueWithReference :: forall i o. TxOutRef -> Value -> TxConstraints i o
+mustMintValueWithReference = mustMintValueWithRedeemerAndReference unitRedeemer . Just
+
 {-# INLINABLE mustMintValueWithRedeemer #-}
--- | Same as 'mustMintCurrencyWithRedeemer', but uses the minting policy hash,
+-- | Same as 'mustMintValueWithRedeemerAndReference', but sets the reference to 'Nothing'.
+mustMintValueWithRedeemer :: forall i o. Redeemer -> Value -> TxConstraints i o
+mustMintValueWithRedeemer red = mustMintValueWithRedeemerAndReference red Nothing
+
+{-# INLINABLE mustMintValueWithRedeemerAndReference #-}
+-- | Same as 'mustMintCurrencyWithRedeemerAndReference', but uses the minting policy hash,
 -- token name and amount provided by 'Value'.
 --
 -- Note that we can derive the 'MintingPolicyHash' from the 'Value'\'s currency
 -- symbol.
-mustMintValueWithRedeemer :: forall i o. Redeemer -> Value -> TxConstraints i o
-mustMintValueWithRedeemer red =
+mustMintValueWithRedeemerAndReference :: forall i o. Redeemer -> (Maybe TxOutRef) -> Value -> TxConstraints i o
+mustMintValueWithRedeemerAndReference red mref =
     foldMap valueConstraint . (AssocMap.toList . Value.getValue)
     where
         valueConstraint (currencySymbol, mp) =
             let hs = Value.currencyMPSHash currencySymbol in
-            foldMap (Haskell.uncurry (mustMintCurrencyWithRedeemer hs red))
+            foldMap (Haskell.uncurry (mustMintCurrencyWithRedeemerAndReference mref hs red))
                     (AssocMap.toList mp)
 
 {-# INLINABLE mustMintCurrency #-}
@@ -635,21 +646,20 @@ mustMintCurrency
     -> TxConstraints i o
 mustMintCurrency mps = mustMintCurrencyWithRedeemer mps unitRedeemer
 
+{-# INLINABLE mustMintCurrencyWithReference #-}
+-- | Same as 'mustMintCurrencyWithRedeemerAndReference', but sets the redeemer to the unit
+-- redeemer.
+mustMintCurrencyWithReference
+    :: forall i o
+     . TxOutRef
+    -> MintingPolicyHash
+    -> TokenName
+    -> Integer
+    -> TxConstraints i o
+mustMintCurrencyWithReference ref mps = mustMintCurrencyWithRedeemerAndReference (Just ref) mps unitRedeemer
+
 {-# INLINABLE mustMintCurrencyWithRedeemer #-}
--- | @mustMintCurrencyWithRedeemer mph r tn a@ creates the given amount @a@ of
--- the currency specified with @mph@, @r@ and @tn@.
---
--- If used in 'Ledger.Constraints.OffChain', this constraint mints a currency
--- using @mph@, @r@, @tn@ and @a@, adds @mph@ in the transaction's minting
--- policy witness set and adds @r@ in the transaction's redeemer witness set.
--- The minting policy must be provided in the
--- 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.typedValidatorLookups' or
--- 'Ledger.Constraints.OffChain.plutusV1MintingPolicy'.
---
--- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
--- minted currenty @mph@, @tn@ and @a@ is part of the transaction's minting
--- information.
+-- | Same as 'mustMintCurrencyWithRedeemerAndReference', but sets the reference to 'Nothing'.
 mustMintCurrencyWithRedeemer
     :: forall i o
      . MintingPolicyHash
@@ -657,7 +667,33 @@ mustMintCurrencyWithRedeemer
     -> TokenName
     -> Integer
     -> TxConstraints i o
-mustMintCurrencyWithRedeemer mps red tn a = if a == 0 then mempty else singleton $ MustMintValue mps red tn a
+mustMintCurrencyWithRedeemer = mustMintCurrencyWithRedeemerAndReference Nothing
+
+{-# INLINABLE mustMintCurrencyWithRedeemerAndReference #-}
+-- | @mustMintCurrencyWithRedeemerAndReference mref mph r tn a@ creates the given amount @a@ of
+-- the currency specified with @mph@, @r@ and @tn@. The minting policy script can be specified
+-- with a reference script @mref@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint mints a currency
+-- using @mref@, @mph@, @r@, @tn@ and @a@, adds @mph@ in the transaction's minting
+-- policy witness set and adds @r@ in the transaction's redeemer witness set.
+-- The minting policy must be provided in the
+-- 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.typedValidatorLookups' or
+-- 'Ledger.Constraints.OffChain.plutusV1MintingPolicy'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- minted currenty @mref@, @mph@, @tn@ and @a@ is part of the transaction's minting
+-- information.
+mustMintCurrencyWithRedeemerAndReference
+    :: forall i o
+     . (Maybe TxOutRef)
+    -> MintingPolicyHash
+    -> Redeemer
+    -> TokenName
+    -> Integer
+    -> TxConstraints i o
+mustMintCurrencyWithRedeemerAndReference mref mph red tn a = if a == 0 then mempty else singleton $ MustMintValue mph red tn a mref
 
 {-# INLINABLE mustSpendAtLeast #-}
 -- | @mustSpendAtLeast v@ requires the sum of the transaction's inputs value to
@@ -697,6 +733,9 @@ mustProduceAtLeast = singleton . MustProduceAtLeast
 -- the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.unspentOutputs'.
 --
+-- If several calls to 'mustSpendPubKeyOutput' are performed for the same 'TxOutRef',
+-- only one instance of the constraint is kept when the transaction is created.
+--
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
 mustSpendPubKeyOutput :: forall i o. TxOutRef -> TxConstraints i o
@@ -713,6 +752,11 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- 'Ledger.Constraints.OffChain.otherScript' . The datum must be either provided by
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
 -- 'Ledger.Constraints.OffChain.otherData'.
+--
+-- If several calls to 'mustSpendScriptOutput' are performed for the same 'TxOutRef',
+-- if the two constraints have different redeemers, an error will be thrown when the transaction is created.
+-- Otherwise, only one instance of the constraint is kept.
+-- If combined with 'mustSpendScriptOutputWithReference' for the same 'TxOutRef', see 'mustSpendScriptOutputWithReference'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
@@ -731,6 +775,17 @@ mustSpendScriptOutput txOutref red = singleton $ MustSpendScriptOutput txOutref 
 -- 'Ledger.Constraints.OffChain.unspentOutputs' or through
 -- 'Ledger.Constraints.OffChain.otherData'.
 --
+-- If several calls to 'mustSpendScriptOutputWithReference' are performed for the same 'TxOutRef',
+-- if the two constraints have different redeemers,
+-- or if the two constraints use a different 'TxOutRef' as a TxOutRef, an error will be thrown when the transaction is
+-- created.
+-- Otherwise, only one instance of the constraint is kept.
+--
+-- If combined with 'mustSpendScriptOutput' for the same 'TxOutRef', an error is throw if they have a different
+-- redeemer.
+-- Otherwise, only one instance of the 'mustSpendScriptOutputWithReference' constraint is kept, the
+-- 'mustSpendScriptOutput' constraints are ignored.
+--
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- transaction spends this @utxo@.
 mustSpendScriptOutputWithReference :: TxOutRef -> Redeemer -> TxOutRef -> TxConstraints i o
@@ -742,8 +797,8 @@ mustSpendScriptOutputWithReference txOutref red refTxOutref =
 -- must spend an output locked by the given validator script hash,
 -- which includes a @Datum@ that matches the given datum predicate and a @Value@ that matches the given value predicate.
 --
--- If used in 'Ledger.Constraints.OffChain', this constraint checks that there's exactly one output that matches the requirements,
--- and then adds this as an input to the transaction with the given redeemer.
+-- If used in 'Ledger.Constraints.OffChain', this constraint checks that there's exactly one output that matches the
+-- requirements, and then adds this as an input to the transaction with the given redeemer.
 --
 -- The outputs that will be considered need to be privided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
 -- 'Ledger.Constraints.OffChain.unspentOutputs'.
@@ -827,8 +882,8 @@ requiredSignatories = foldMap f . txConstraints where
 {-# INLINABLE requiredMonetaryPolicies #-}
 requiredMonetaryPolicies :: forall i o. TxConstraints i o -> [MintingPolicyHash]
 requiredMonetaryPolicies = foldMap f . txConstraints where
-    f (MustMintValue mps _ _ _) = [mps]
-    f _                         = []
+    f (MustMintValue mps _ _ _ _) = [mps]
+    f _                           = []
 
 {-# INLINABLE requiredDatums #-}
 requiredDatums :: forall i o. TxConstraints i o -> [Datum]

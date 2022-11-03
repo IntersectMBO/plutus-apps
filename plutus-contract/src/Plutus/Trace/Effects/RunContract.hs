@@ -120,43 +120,43 @@ activateContractWallet w contract = activateContract w contract (walletInstanceT
 
 -- | Handle the 'RunContract' effect by running each contract instance in an
 --   emulator thread.
-handleRunContract :: forall effs effs2.
+handleRunContract :: forall effs effs2 a.
     ( Member (State EmulatorThreads) effs2
     , Member (Error EmulatorRuntimeError) effs2
     , Member (Error EmulatorRuntimeError) effs
     , Member (LogMsg EmulatorEvent') effs
     , Member (State EmulatorThreads) effs
     , Member (Reader ThreadId) effs
-    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     )
     => RunContract
     ~> Eff effs
 handleRunContract = \case
-    CallEndpointP p h v -> handleCallEndpoint @_ @_ @_ @_ @_ @effs @effs2 p h v
+    CallEndpointP p h v -> handleCallEndpoint @_ @_ @_ @_ @_ @effs @effs2 @a p h v
     GetContractState hdl ->
         interpret (mapLog UserThreadEvent)
-            $ handleGetContractState @_ @_ @_ @(LogMsg UserThreadMsg ': effs) @effs2 hdl
+            $ handleGetContractState @_ @_ @_ @(LogMsg UserThreadMsg ': effs) @effs2 @a hdl
 
 -- | Handle the 'StartContract' effect by starting each contract instance in an
 --   emulator thread.
-handleStartContract :: forall effs effs2.
+handleStartContract :: forall effs effs2 a.
     ( Member (State EmulatorThreads) effs2
     , Member (Error EmulatorRuntimeError) effs2
     , Member MultiAgentEffect effs2
     , Member (LogMsg EmulatorEvent') effs2
     , Member ContractInstanceIdEff effs
-    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     )
     => NetworkId
     -> StartContract
     ~> Eff effs
 handleStartContract networkId = \case
-    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 networkId w t (void (toContract c))
+    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 @a networkId w t (void (toContract c))
 
 handleGetContractState ::
-    forall w s e effs effs2.
+    forall w s e effs effs2 a.
     ( Member (State EmulatorThreads) effs
-    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     , Member (Reader ThreadId) effs
     , Member (Error EmulatorRuntimeError) effs
     , JSON.FromJSON e
@@ -168,7 +168,7 @@ handleGetContractState ::
 handleGetContractState ContractHandle{chInstanceId} = do
     ownId <- ask @ThreadId
     threadId <- getThread chInstanceId
-    void $ mkSysCall @effs2 @EmulatorMessage Normal (Left $ Message threadId $ ContractInstanceStateRequest ownId)
+    void $ mkSysCall @effs2 @EmulatorMessage @_ @a Normal (Left $ Message threadId $ ContractInstanceStateRequest ownId)
 
     let checkResponse = \case
             Just (ContractInstanceStateResponse r) -> do
@@ -178,17 +178,17 @@ handleGetContractState ContractHandle{chInstanceId} = do
                         logError $ UserThreadErr msg
                         throwError msg
                     JSON.Success event' -> pure event'
-            _ -> sleep @effs2 Sleeping >>= checkResponse
-    sleep @effs2 Normal >>= checkResponse
+            _ -> sleep @effs2 @_ @_ @a Sleeping >>= checkResponse
+    sleep @effs2 @_ @_ @a Normal >>= checkResponse
 
-handleActivate :: forall w s e effs effs2.
+handleActivate :: forall w s e effs effs2 a.
     ( ContractConstraints s
     , Member ContractInstanceIdEff effs
     , Member (State EmulatorThreads) effs2
     , Member MultiAgentEffect effs2
     , Member (Error EmulatorRuntimeError) effs2
     , Member (LogMsg EmulatorEvent') effs2
-    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     , Show e
     , JSON.ToJSON e
     , JSON.ToJSON w
@@ -202,7 +202,7 @@ handleActivate :: forall w s e effs effs2.
 handleActivate networkId wllt tag con = do
     i <- nextId
     let handle = ContractHandle{chContract=con, chInstanceId = i, chInstanceTag = tag, chNetworkId = networkId}
-    void $ startContractThread @w @s @e @effs @effs2 wllt handle
+    void $ startContractThread @w @s @e @effs @effs2 @a wllt handle
     pure handle
 
 runningContractInstanceTag :: Tag
@@ -211,8 +211,8 @@ runningContractInstanceTag = "contract instance"
 -- | Start a new thread for a contract instance (given by the handle).
 --   The thread runs in the context of the wallet.
 startContractThread ::
-    forall w s e effs effs2.
-    ( Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    forall w s e effs effs2 a.
+    ( Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     , Member (State EmulatorThreads) effs2
     , Member MultiAgentEffect effs2
     , Member (Error EmulatorRuntimeError) effs2
@@ -227,18 +227,18 @@ startContractThread ::
     -> ContractHandle w s e
     -> Eff effs (Maybe EmulatorMessage)
 startContractThread wallet handle =
-    fork @effs2 @EmulatorMessage runningContractInstanceTag Normal
-        (interpret (mapYieldEm @_ @effs2)
+    fork @effs2 @EmulatorMessage @_ @a runningContractInstanceTag Normal
+        (interpret (mapYieldEm @_ @effs2 @_ @a)
             $ handleMultiAgentEffects wallet
             $ interpret (mapLog InstanceEvent)
             $ contractThread handle)
 
 mapYieldEm ::
-    forall effs effs2 c.
-    (Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs)
+    forall effs effs2 c a.
+    (Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs)
     => Yield (AgentSystemCall EmulatorMessage) (Maybe EmulatorMessage) c
     -> Eff effs c
-mapYieldEm = mapYield @_ @(EmSystemCall effs2 EmulatorMessage) (fmap Left) id
+mapYieldEm = mapYield @_ @(EmSystemCall effs2 EmulatorMessage a) (fmap Left) id
 
 -- | Handle a @Yield a b@ with a @Yield a' b'@ effect.
 mapYield ::
@@ -251,12 +251,12 @@ mapYield ::
 mapYield f g = \case
     Yield a cont -> send @(Yield a' b') $ Yield (f a) (lmap g cont)
 
-handleCallEndpoint :: forall w s l e ep effs effs2.
+handleCallEndpoint :: forall w s l e ep effs effs2 a.
     ( HasEndpoint l ep s
     , JSON.ToJSON ep
     , Member (State EmulatorThreads) effs2
     , Member (Error EmulatorRuntimeError) effs2
-    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     )
     => Proxy l
     -> ContractHandle w s e
@@ -268,8 +268,8 @@ handleCallEndpoint p ContractHandle{chInstanceId} ep = do
         thr = do
             threadId <- getThread chInstanceId
             ownId <- ask @ThreadId
-            void $ mkSysCall @effs2 @EmulatorMessage Normal (Left $ Message threadId $ EndpointCall ownId description epJson)
-    void $ fork @effs2 @EmulatorMessage callEndpointTag Normal thr
+            void $ mkSysCall @effs2 @EmulatorMessage @_ @a Normal (Left $ Message threadId $ EndpointCall ownId description epJson)
+    void $ fork @effs2 @EmulatorMessage @_ @a callEndpointTag Normal thr
 
 -- | Get the active endpoints of a contract instance.
 activeEndpoints :: forall w s e effs.

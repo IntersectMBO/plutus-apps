@@ -223,7 +223,7 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
             let Payment{paymentAmount, paymentRecipient, paymentDeadline} = payment
                 -- Correct validity interval should be:
                 -- @
-                --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound $ paymentDeadline p)
+                --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ paymentDeadline p)
                 -- @
                 -- See Note [Validity Interval's upper bound]
                 validityTimeRange = Interval.to $ paymentDeadline - 2

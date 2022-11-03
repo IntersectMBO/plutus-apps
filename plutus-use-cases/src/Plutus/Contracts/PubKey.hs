@@ -81,7 +81,7 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     _ <- awaitTxConfirmed (getCardanoTxId ledgerTx)
     let refs = Map.keys
                $ Map.filter ((==) address . txOutAddress)
-               $ getCardanoTxUnspentOutputsTx ledgerTx
+               $ getCardanoTxProducedOutputs ledgerTx
 
     case refs of
         []                   -> throwing _ScriptOutputMissing pk
@@ -105,7 +105,7 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
             -- The 'awaitChainIndexSlot' blocks the contract until the chain-index
             -- is synced until the current slot. This is not a good solution,
             -- as the chain-index is always some time behind the current slot.
-            slot <- currentPABSlot
+            slot <- currentNodeClientSlot
             awaitChainIndexSlot slot
 
             ciTxOut <- unspentTxOutFromRef outRef

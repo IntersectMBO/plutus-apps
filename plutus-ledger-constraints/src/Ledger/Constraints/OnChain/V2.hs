@@ -122,9 +122,10 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ Just rdmr == AMap.lookup (Spending txOutRef) (txInfoRedeemers scriptContextTxInfo)
         && isJust (PV2.findTxInByTxOutRef txOutRef scriptContextTxInfo)
         && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
-    MustMintValue mps _ tn v ->
+    MustMintValue mps _ tn v mRefTxOutRef ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
+        && maybe True (\ref -> isJust (PV2.findTxRefInByTxOutRef ref scriptContextTxInfo)) mRefTxOutRef
     MustPayToPubKeyAddress (PaymentPubKeyHash pk) _skh mdv _refScript vl ->
         let outs = PV2.txInfoOutputs scriptContextTxInfo
             hsh dv = PV2.findDatumHash dv scriptContextTxInfo

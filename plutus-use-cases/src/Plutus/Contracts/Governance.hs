@@ -183,7 +183,7 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
         let newMap = AssocMap.insert tokenName vote oldMap
             -- Correct validity interval should be:
             -- @
-            --   Interval (LowerBound NegInf True) (Interval.scriptUpperBound $ votingDeadline p)
+            --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ votingDeadline p)
             -- @
             -- See Note [Validity Interval's upper bound]
             validityTimeRange = Interval.to (votingDeadline p - 2)

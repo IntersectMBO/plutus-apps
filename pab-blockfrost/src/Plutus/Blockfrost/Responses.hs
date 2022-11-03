@@ -13,10 +13,12 @@ module Plutus.Blockfrost.Responses (
     , processGetUtxos
     , processGetTxos
     , processUnspentTxOutSetAtAddress
+    , processDatumsAtAddress
     , processGetTxFromTxId
     , processGetTxsFromTxIds
     ) where
 
+import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
 import Data.Aeson qualified as JSON
 import Data.Aeson.QQ
@@ -31,8 +33,8 @@ import Blockfrost.Client
 import Cardano.Api hiding (Block, Script, ScriptDatum, ScriptHash, TxIn, TxOut)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Slot qualified as Ledger (Slot)
-import Ledger.Tx (ChainIndexTxOut (..), Language (PlutusV1), RedeemerPtr (..), TxIn (..), TxOutRef (..),
-                  Versioned (Versioned, unversioned), pubKeyTxIn, scriptTxIn)
+import Ledger.Tx (ChainIndexTxOut (..), DatumFromQuery (DatumUnknown), Language (PlutusV1), RedeemerPtr (..), TxIn (..),
+                  TxOutRef (..), Versioned (Versioned, unversioned), pubKeyTxIn, scriptTxIn)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
@@ -46,6 +48,7 @@ import Plutus.V1.Ledger.Value qualified as Ledger
 import PlutusTx qualified
 
 import Control.Monad ((<=<))
+
 import Plutus.Blockfrost.Types
 import Plutus.Blockfrost.Utils
 import Plutus.ChainIndex.Types qualified as CI
@@ -120,7 +123,7 @@ processUnspentTxOut (Just utxo) = buildResponse utxo
     buildScriptTxOut :: Ledger.Address -> UtxoOutput -> ValidatorHash -> ChainIndexTxOut
     buildScriptTxOut addr utxoOut val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
                                                               , _ciTxOutValue=utxoValue utxoOut
-                                                              , _ciTxOutScriptDatum=(utxoDatumHash utxoOut, Nothing)
+                                                              , _ciTxOutScriptDatum=(utxoDatumHash utxoOut, DatumUnknown)
                                                               , _ciTxOutReferenceScript=Nothing
                                                               , _ciTxOutValidator=(val, Nothing)
                                                               }
@@ -196,7 +199,7 @@ processUnspentTxOutSetAtAddress _ cred xs =
     buildScriptTxOut :: Ledger.Address -> AddressUtxo -> ValidatorHash -> ChainIndexTxOut
     buildScriptTxOut addr utxo val = ScriptChainIndexTxOut { _ciTxOutAddress=addr
                                                            , _ciTxOutValue=utxoValue utxo
-                                                           , _ciTxOutScriptDatum=(utxoDatumHash utxo, Nothing)
+                                                           , _ciTxOutScriptDatum=(utxoDatumHash utxo, DatumUnknown)
                                                            , _ciTxOutValidator=(val, Nothing)
                                                            , _ciTxOutReferenceScript=Nothing
                                                            }
@@ -213,6 +216,18 @@ processUnspentTxOutSetAtAddress _ cred xs =
 
     utxoDatumHash :: AddressUtxo -> Ledger.DatumHash
     utxoDatumHash = textToDatumHash . fromJust . _addressUtxoDataHash
+
+
+processDatumsAtAddress ::
+  PlutusTx.FromData a
+  => PageQuery TxOutRef
+  -> Credential
+  -> [JSON.Value]
+  -> IO (QueryResponse [a])
+processDatumsAtAddress _ _ xs = do
+  items <- mapMaybeM (\d -> processGetDatum (Just d)) xs
+  return $ QueryResponse {queryResult = items, nextQuery = Nothing}
+
 
 processGetTxFromTxId :: Maybe TxResponse -> IO (Maybe ChainIndexTx)
 processGetTxFromTxId Nothing = pure Nothing
@@ -278,7 +293,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
       where
         toPlutusTxIn :: UtxoInput -> Integer -> TxIn
         toPlutusTxIn utxoIn idx = case addr utxoIn  of
-                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (Versioned (val bbs) PlutusV1) (red idx) (dat utxoIn)
+                            ScriptCredential (ValidatorHash bbs)  -> scriptTxIn (txoToRef utxoIn) (Versioned (val bbs) PlutusV1) (red idx) (Just $ dat utxoIn)
                             PubKeyCredential _                    -> pubKeyTxIn $ txoToRef utxoIn
 
         addr :: UtxoInput -> Credential

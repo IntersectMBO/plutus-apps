@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-record-updates
                 -fno-warn-incomplete-uni-patterns
                 #-}
-module Spec.TxConstraints.MustSatisfyAnyOf(tests) where
+module Spec.Contract.Tx.Constraints.MustSatisfyAnyOf(tests) where
 
 import Control.Lens ((??), (^.))
 import Control.Monad (void)
@@ -126,7 +126,7 @@ mustSatisfyAnyOfContract :: SubmitTx -> LanguageContext -> ConstraintParams
                             -> ConstraintParams -> Contract () Empty ContractError ()
 mustSatisfyAnyOfContract
     submitTxFromConstraints lc offChainConstraints onChainConstraints = do
-    now <- Con.currentTime
+    now <- snd <$> Con.currentNodeClientTimeRange
     let offChainConstraintsWithNow =
             buildConstraints (applyNowToTimeValidity offChainConstraints now)
         onChainConstraintsWithNow  = applyNowToTimeValidity onChainConstraints now

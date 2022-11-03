@@ -254,13 +254,15 @@ handleBlockchainQueries =
     <> RequestHandler.handleOwnAddressesQueries
     <> RequestHandler.handleOwnInstanceIdQueries
     <> RequestHandler.handleSlotNotifications
-    <> RequestHandler.handleCurrentPABSlotQueries
+    <> RequestHandler.handleCurrentNodeClientSlotQueries
     <> RequestHandler.handleCurrentChainIndexSlotQueries
     <> RequestHandler.handleTimeNotifications
     <> RequestHandler.handleCurrentTimeQueries
+    <> RequestHandler.handleCurrentNodeClientTimeRangeQueries
     <> RequestHandler.handleTimeToSlotConversions
     <> RequestHandler.handleYieldedUnbalancedTx
     <> RequestHandler.handleAdjustUnbalancedTx
+    <> RequestHandler.handleGetParams
 
 decodeEvent ::
     forall effs.

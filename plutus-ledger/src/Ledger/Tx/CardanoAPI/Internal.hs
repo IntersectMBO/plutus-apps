@@ -42,6 +42,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoScriptData
   , fromCardanoPlutusScript
   , fromCardanoScriptInAnyLang
+  , fromCardanoLovelace
   , fromTxScriptValidity
   , toTxScriptValidity
   , scriptDataFromCardanoTxBody
@@ -61,6 +62,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoAssetName
   , toCardanoPolicyId
   , toCardanoValue
+  , toCardanoLovelace
   , toCardanoFee
   , adaToCardanoValue
   , toCardanoValidityRange
@@ -87,7 +89,6 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.Chain.Common (addrToBase58)
 import Cardano.Ledger.Alonzo.Language qualified as Alonzo
-import Cardano.Ledger.Alonzo.Language qualified as P
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.Core qualified as Ledger

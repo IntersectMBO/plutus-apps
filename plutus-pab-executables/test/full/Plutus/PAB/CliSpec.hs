@@ -30,6 +30,7 @@ import Control.Concurrent.Async (async, cancel)
 import Control.Concurrent.Availability (available, newToken, starting)
 import Control.Lens (over)
 import Control.Monad (forM_, void, when)
+import Control.Monad.Freer.Extras.Beam.Sqlite qualified as FEx.Sqlite
 import Data.Aeson (FromJSON, ToJSON, toJSON)
 import Data.Coerce (coerce)
 import Data.Default (def)
@@ -46,7 +47,7 @@ import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultMan
 import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contracts.PingPong qualified as PingPong
 import Plutus.Monitoring.Util (PrettyObject, convertLog)
-import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
+import Plutus.PAB.App (StorageBackend (BeamBackend))
 import Plutus.PAB.App qualified as App
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltin (SomeBuiltin))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
@@ -60,7 +61,7 @@ import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfi
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
                          Config (Config, chainQueryConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig),
-                         DbConfig (..))
+                         DbConfig (..), takeSqliteDB)
 import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (callInstanceEndpoint),
@@ -121,7 +122,7 @@ bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverCon
                                , walletServerConfig
                                , nodeServerConfig     = n@Node.Types.PABServerConfig{Node.Types.pscBaseUrl=n_u,Node.Types.pscSocketPath=soc}
                                , chainQueryConfig     = PAB.Types.ChainIndexConfig c@ChainIndex.Types.ChainIndexConfig{ChainIndex.Types.ciBaseUrl=c_u}
-                               , dbConfig             = db@PAB.Types.DbConfig{PAB.Types.dbConfigFile=dbFile}
+                               , dbConfig             = PAB.Types.SqliteDB db
                                } = newConf
   where
     bump (BaseUrl scheme url port path) = BaseUrl scheme url (port + x) path
@@ -130,8 +131,9 @@ bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverCon
              , walletServerConfig   = over (Wallet.Types.walletSettingsL . Wallet.Types.baseUrlL) (coerce . bump . coerce) walletServerConfig
              , nodeServerConfig     = n { Node.Types.pscBaseUrl      = bump n_u, Node.Types.pscSocketPath = soc ++ "." ++ show x }
              , chainQueryConfig     = PAB.Types.ChainIndexConfig $ c { ChainIndex.Types.ciBaseUrl = coerce $ bump $ coerce c_u }
-             , dbConfig             = db { PAB.Types.dbConfigFile    = "file::" <> dbName <> "?mode=memory&cache=shared" }
+             , dbConfig             = PAB.Types.SqliteDB db { FEx.Sqlite.dbConfigFile    = "file::" <> dbName <> "?mode=memory&cache=shared" }
              }
+bumpConfig _ _ conf = conf
 
 startPab :: ConfigCommand -> Config -> IO ()
 startPab services pabConfig = do
@@ -144,7 +146,7 @@ startPab services pabConfig = do
               , rollbackHistory = Nothing
               , resumeFrom = PointAtGenesis
               , runEkgServer = False
-              , storageBackend = BeamSqliteBackend
+              , storageBackend = BeamBackend
               , cmd = services
               }
 
@@ -237,7 +239,7 @@ time.
 
 restoreContractStateTests :: TestTree
 restoreContractStateTests =
-  let dbPath = Text.unpack . dbConfigFile . dbConfig in
+  let dbPath = Text.unpack . FEx.Sqlite.dbConfigFile . takeSqliteDB . dbConfig in
   testGroup "restoreContractState scenarios"
     [ testCase "Can init,pong,ping in one PAB instance" $ do
         -- This isn't testing anything related to restoring state; but simply

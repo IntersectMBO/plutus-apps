@@ -46,6 +46,8 @@ module Plutus.PAB.Simulator(
     , instanceState
     , observableState
     , waitForState
+    , waitForInstanceState
+    , waitForInstanceStateWithResult
     , activeEndpoints
     , waitForEndpoint
     , waitForTxStatusChange
@@ -98,8 +100,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, eitherTx, getCardanoTxFee,
-               getCardanoTxId, txOutAddress, txOutValue)
+import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, getCardanoTxFee, getCardanoTxId,
+               txOutAddress, txOutValue, unOnChain)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -136,7 +138,7 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent' (ChainEvent, ChainIndexEvent),
 import Wallet.Emulator.Stream qualified as Emulator
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
 import Wallet.Emulator.Wallet qualified as Wallet
-import Wallet.Types (ContractInstanceId, NotificationError)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId, NotificationError)
 
 -- | The current state of a contract instance
 data SimulatorContractInstanceState t =
@@ -211,7 +213,7 @@ mkSimulatorHandlers params handleContractEffect =
     EffectHandlers
         { initialiseEnvironment =
             (,,)
-                <$> liftIO (STM.atomically   Instances.emptyInstancesState )
+                <$> liftIO (Instances.emptyInstancesState )
                 <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing params)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
@@ -383,6 +385,16 @@ observableState = Core.observableState
 waitForState :: forall t a. (JSON.Value -> Maybe a) -> ContractInstanceId -> Simulation t a
 waitForState = Core.waitForState
 
+waitForInstanceState ::
+  forall t.
+  (Instances.InstanceState -> STM (Maybe ContractActivityStatus)) ->
+  ContractInstanceId ->
+  Simulation t ContractActivityStatus
+waitForInstanceState = Core.waitForInstanceState
+
+waitForInstanceStateWithResult :: forall t. ContractInstanceId -> Simulation t ContractActivityStatus
+waitForInstanceStateWithResult = Core.waitForInstanceStateWithResult
+
 -- | The list of endpoints that are currently open
 activeEndpoints :: forall t. ContractInstanceId -> Simulation t (STM [OpenEndpoint])
 activeEndpoints = Core.activeEndpoints
@@ -422,7 +434,7 @@ waitNSlots = Core.waitNSlots
 type Simulation t a = Core.PABAction t (SimulatorState t) a
 
 runSimulationWith :: SimulatorEffectHandlers t -> Simulation t a -> IO (Either PABError a)
-runSimulationWith = Core.runPAB def
+runSimulationWith = Core.runPAB def def
 
 -- | Handle a 'LogMsg' effect in terms of a "larger" 'State' effect from which we have a setter.
 logIntoTQueue ::
@@ -462,7 +474,7 @@ handleChainControl eff = do
               currentTip <- getTip
               appendNewTipBlock currentTip txns slot
 
-            void $ liftIO $ STM.atomically $ BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot
+            void $ liftIO (BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot >>= STM.atomically)
 
             pure txns
         Chain.ModifySlot f -> runChainEffects @t @_ params (Chain.modifySlot f)
@@ -583,6 +595,7 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     UtxoSetMembership ref            -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr         -> ChainIndex.utxoSetAtAddress pq addr
     UnspentTxOutSetAtAddress pq addr -> ChainIndex.unspentTxOutSetAtAddress pq addr
+    DatumsAtAddress pq addr          -> ChainIndex.datumsAtAddress pq addr
     UtxoSetWithCurrency pq ac        -> ChainIndex.utxoSetWithCurrency pq ac
     TxoSetAtAddress pq addr          -> ChainIndex.txoSetAtAddress pq addr
     TxsFromTxIds txids               -> ChainIndex.txsFromTxIds txids
@@ -638,6 +651,9 @@ handleContractStore = \case
         fmap _contractDef <$> liftIO (STM.readTVarIO instancesTVar)
     Contract.PutStartInstance{} -> pure ()
     Contract.PutStopInstance{} -> pure ()
+    Contract.DeleteState i -> do
+        instancesTVar <- view instances <$> (Core.askUserEnv @t @(SimulatorState t))
+        void $ liftIO $ STM.atomically $ STM.modifyTVar instancesTVar (Map.delete i)
 
 render :: forall a. Pretty a => a -> Text
 render = Render.renderStrict . layoutPretty defaultLayoutOptions . pretty
@@ -702,7 +718,7 @@ walletFees :: forall t. Wallet -> Simulation t Value
 walletFees wallet = succeededFees <$> walletSubmittedFees <*> blockchain
     where
         succeededFees :: Map TxId Value -> Blockchain -> Value
-        succeededFees submitted = foldMap . foldMap $ fold . (submitted Map.!?) . eitherTx getCardanoTxId getCardanoTxId
+        succeededFees submitted = foldMap . foldMap $ fold . (submitted Map.!?) . getCardanoTxId . unOnChain
         walletSubmittedFees = do
             SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)
             result <- liftIO $ STM.atomically $ do

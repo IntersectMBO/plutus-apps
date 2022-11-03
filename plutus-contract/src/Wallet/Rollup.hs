@@ -22,7 +22,7 @@ import Data.List (groupBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut, ValidationPhase (..), Value, consumableInputs,
-               eitherTx, txInRef, txOutRefId, txOutRefIdx, txOutValue)
+               onChainTxIsValid, outputsProduced, txInRef, txOutRefId, txOutRefIdx, txOutValue, unOnChain)
 import Ledger.Tx qualified as Tx
 import Wallet.Emulator.Chain (ChainEvent (..))
 import Wallet.Rollup.Types
@@ -48,8 +48,8 @@ annotateTransaction sequenceId tx = do
                          Just txOut -> pure $ DereferencedInput txIn txOut
                          Nothing    -> pure $ InputNotFound key)
             (consumableInputs tx)
-    let txId = eitherTx Tx.getCardanoTxId Tx.getCardanoTxId tx
-        txOuts = eitherTx (const []) Tx.getCardanoTxOutputs tx
+    let txId = Tx.getCardanoTxId $ unOnChain tx
+        txOuts = Map.elems $ outputsProduced tx
         newOutputs =
             ifoldr
                 (\outputIndex ->
@@ -84,10 +84,10 @@ annotateTransaction sequenceId tx = do
         AnnotatedTx
             { sequenceId
             , txId
-            , tx = eitherTx id id tx
+            , tx = unOnChain tx
             , dereferencedInputs
             , balances = newBalances
-            , valid = eitherTx (const False) (const True) tx
+            , valid = onChainTxIsValid tx
             }
 
 annotateChainSlot :: Monad m => Int -> Block -> StateT Rollup m [AnnotatedTx]

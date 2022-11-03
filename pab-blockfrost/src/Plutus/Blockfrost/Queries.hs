@@ -13,6 +13,7 @@ module Plutus.Blockfrost.Queries (
     , getIsUtxoBlockfrost
     , getUtxoAtAddressBlockfrost
     , getUnspentAtAddressBlockfrost
+    , getDatumsAtAddressBlockfrost
     , getTxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
     , getTxFromTxIdBlockfrost
@@ -79,6 +80,13 @@ getUtxoAtAddressBlockfrost _ addr = do
 
 getUnspentAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [AddressUtxo]
 getUnspentAtAddressBlockfrost _ addr = allPages (wrapperPaged getAddressUtxos' addr)
+
+getDatumsAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [Value]
+getDatumsAtAddressBlockfrost p a = do
+  -- get all txouts at address
+  txos <- getTxoAtAddressBlockfrost p a
+  let dhs = catMaybes $ _utxoInputDataHash <$> txos
+  liftIO $ mapConcurrently getDatumBlockfrost dhs
 
 getTxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m [UtxoInput]
 getTxoAtAddressBlockfrost _ a = do

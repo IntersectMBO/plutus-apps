@@ -13,11 +13,13 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTimeReq,
     _AwaitUtxoSpentReq,
     _AwaitUtxoProducedReq,
-    _CurrentPABSlotReq,
+    _CurrentNodeClientSlotReq,
     _CurrentChainIndexSlotReq,
     _CurrentTimeReq,
+    _CurrentNodeClientTimeRangeReq,
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
+    _GetParamsReq,
     _OwnContractInstanceIdReq,
     _OwnAddressesReq,
     _ChainIndexQueryReq,
@@ -47,12 +49,14 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTimeResp,
     _AwaitUtxoSpentResp,
     _AwaitUtxoProducedResp,
-    _CurrentPABSlotResp,
+    _CurrentNodeClientSlotResp,
     _CurrentChainIndexSlotResp,
     _CurrentTimeResp,
+    _CurrentNodeClientTimeRangeResp,
     _AwaitTxStatusChangeResp,
     _AwaitTxStatusChangeResp',
     _AwaitTxOutStatusChangeResp,
+    _GetParamsResp,
     _OwnContractInstanceIdResp,
     _OwnAddressesResp,
     _ChainIndexQueryResp,
@@ -95,6 +99,7 @@ import Data.String (fromString)
 import GHC.Generics (Generic)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
+import Ledger.Params (Params)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
@@ -122,9 +127,11 @@ data PABReq =
     | AwaitUtxoProducedReq Address
     | AwaitTxStatusChangeReq TxId
     | AwaitTxOutStatusChangeReq TxOutRef
-    | CurrentPABSlotReq
+    | CurrentNodeClientSlotReq
     | CurrentChainIndexSlotReq
     | CurrentTimeReq
+    | CurrentNodeClientTimeRangeReq
+    | GetParamsReq
     | OwnContractInstanceIdReq
     | OwnAddressesReq
     | ChainIndexQueryReq ChainIndexQuery
@@ -143,11 +150,13 @@ instance Pretty PABReq where
     AwaitTimeReq s                          -> "Await time:" <+> pretty s
     AwaitUtxoSpentReq utxo                  -> "Await utxo spent:" <+> pretty utxo
     AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty a
-    CurrentPABSlotReq                       -> "Current PAB slot"
+    CurrentNodeClientSlotReq                -> "Current node client slot"
     CurrentChainIndexSlotReq                -> "Current chain index slot"
     CurrentTimeReq                          -> "Current time"
+    CurrentNodeClientTimeRangeReq           -> "Current node client time range"
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
+    GetParamsReq                            -> "Get the configured parameter set"
     OwnContractInstanceIdReq                -> "Own contract instance ID"
     OwnAddressesReq                         -> "Own addresses"
     ChainIndexQueryReq q                    -> "Chain index query:" <+> pretty q
@@ -166,9 +175,11 @@ data PABResp =
     | AwaitUtxoProducedResp (NonEmpty ChainIndexTx)
     | AwaitTxStatusChangeResp TxId TxStatus
     | AwaitTxOutStatusChangeResp TxOutRef TxOutStatus
-    | CurrentPABSlotResp Slot
+    | CurrentNodeClientSlotResp Slot
     | CurrentChainIndexSlotResp Slot
     | CurrentTimeResp POSIXTime
+    | CurrentNodeClientTimeRangeResp (POSIXTime, POSIXTime)
+    | GetParamsResp Params
     | OwnContractInstanceIdResp ContractInstanceId
     | OwnAddressesResp (NonEmpty Address)
     | ChainIndexQueryResp ChainIndexResponse
@@ -187,11 +198,13 @@ instance Pretty PABResp where
     AwaitTimeResp s                          -> "Time:" <+> pretty s
     AwaitUtxoSpentResp utxo                  -> "Utxo spent:" <+> pretty utxo
     AwaitUtxoProducedResp addr               -> "Utxo produced:" <+> pretty addr
-    CurrentPABSlotResp s                     -> "Current PAB slot:" <+> pretty s
+    CurrentNodeClientSlotResp s              -> "Current node client slot:" <+> pretty s
     CurrentChainIndexSlotResp s              -> "Current chain index slot:" <+> pretty s
     CurrentTimeResp s                        -> "Current time:" <+> pretty s
+    CurrentNodeClientTimeRangeResp s         -> "Current node client time range:" <+> pretty s
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
+    GetParamsResp params                     -> "Configured parameters:" <+> pretty params
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
     OwnAddressesResp addrs                   -> "Own addresses:" <+> pretty addrs
     ChainIndexQueryResp rsp                  -> pretty rsp
@@ -208,11 +221,13 @@ matches a b = case (a, b) of
   (AwaitTimeReq{}, AwaitTimeResp{})                        -> True
   (AwaitUtxoSpentReq{}, AwaitUtxoSpentResp{})              -> True
   (AwaitUtxoProducedReq{}, AwaitUtxoProducedResp{})        -> True
-  (CurrentPABSlotReq, CurrentPABSlotResp{})                -> True
-  (CurrentChainIndexSlotReq, CurrentChainIndexSlotResp{})              -> True
+  (CurrentNodeClientSlotReq, CurrentNodeClientSlotResp{})  -> True
+  (CurrentChainIndexSlotReq, CurrentChainIndexSlotResp{})  -> True
   (CurrentTimeReq, CurrentTimeResp{})                      -> True
+  (CurrentNodeClientTimeRangeReq, CurrentNodeClientTimeRangeResp{}) -> True
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'
+  (GetParamsReq, GetParamsResp _)                          -> True
   (OwnContractInstanceIdReq, OwnContractInstanceIdResp{})  -> True
   (OwnAddressesReq, OwnAddressesResp {}) -> True
   (ChainIndexQueryReq r, ChainIndexQueryResp r')           -> chainIndexMatches r r'
@@ -237,6 +252,7 @@ chainIndexMatches q r = case (q, r) of
     (UtxoSetMembership{}, UtxoSetMembershipResponse{})       -> True
     (UtxoSetAtAddress{}, UtxoSetAtResponse{})                -> True
     (UnspentTxOutSetAtAddress{}, UnspentTxOutsAtResponse{})  -> True
+    (DatumsAtAddress{}, DatumsAtResponse{})                  -> True
     (UtxoSetWithCurrency{}, UtxoSetWithCurrencyResponse{})   -> True
     (TxoSetAtAddress{}, TxoSetAtResponse{})                  -> True
     (TxsFromTxIds{}, TxIdsResponse{})                        -> True
@@ -258,6 +274,7 @@ data ChainIndexQuery =
   | UtxoSetMembership TxOutRef
   | UtxoSetAtAddress (PageQuery TxOutRef) Credential
   | UnspentTxOutSetAtAddress (PageQuery TxOutRef) Credential
+  | DatumsAtAddress (PageQuery TxOutRef) Credential
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds [TxId]
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
@@ -273,11 +290,12 @@ instance Pretty ChainIndexQuery where
         StakeValidatorFromHash h     -> "requesting stake validator from hash" <+> pretty h
         RedeemerFromHash h           -> "requesting redeemer from hash" <+> pretty h
         TxOutFromRef r               -> "requesting utxo from utxo reference" <+> pretty r
-        UnspentTxOutFromRef r        -> "requesting utxo from utxo reference" <+> pretty r
+        UnspentTxOutFromRef r        -> "requesting unspent txos from utxo reference" <+> pretty r
         TxFromTxId i                 -> "requesting chain index tx from id" <+> pretty i
         UtxoSetMembership txOutRef   -> "whether tx output is part of the utxo set" <+> pretty txOutRef
         UtxoSetAtAddress _ c         -> "requesting utxos located at addresses with the credential" <+> pretty c
-        UnspentTxOutSetAtAddress _ c -> "requesting unspent utxos located at addresses with the credential" <+> pretty c
+        UnspentTxOutSetAtAddress _ c -> "requesting unspent txos located at addresses with the credential" <+> pretty c
+        DatumsAtAddress _ c          -> "requesting datums located at addresses with the credential" <+> pretty c
         UtxoSetWithCurrency _ ac     -> "requesting utxos containing the asset class" <+> pretty ac
         TxsFromTxIds i               -> "requesting chain index txs from ids" <+> pretty i
         TxoSetAtAddress _ c          -> "requesting txos located at addresses with the credential" <+> pretty c
@@ -298,6 +316,7 @@ data ChainIndexResponse =
   | UtxoSetMembershipResponse IsUtxoResponse
   | UtxoSetAtResponse UtxosResponse
   | UnspentTxOutsAtResponse (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+  | DatumsAtResponse (QueryResponse [Datum])
   | UtxoSetWithCurrencyResponse UtxosResponse
   | TxIdsResponse [ChainIndexTx]
   | TxoSetAtResponse TxosResponse
@@ -313,7 +332,7 @@ instance Pretty ChainIndexResponse where
         StakeValidatorHashResponse m -> "Chain index stake validator from hash response:" <+> pretty m
         RedeemerHashResponse r -> "Chain index redeemer from hash response:" <+> pretty r
         TxOutRefResponse t -> "Chain index utxo from utxo ref response:" <+> pretty t
-        UnspentTxOutResponse t -> "Chain index utxo from utxo ref response:" <+> pretty t
+        UnspentTxOutResponse t -> "Chain index unspent txo from utxo ref response:" <+> pretty t
         TxIdResponse t -> "Chain index tx from tx id response:" <+> pretty (_citxTxId <$> t)
         UtxoSetMembershipResponse (IsUtxoResponse tip b) ->
                 "Chain index response whether tx output ref is part of the UTxO set:"
@@ -327,7 +346,9 @@ instance Pretty ChainIndexResponse where
             <+> "and utxo refs are"
             <+> hsep (fmap pretty $ pageItems txOutRefPage)
         UnspentTxOutsAtResponse (QueryResponse txouts _) ->
-          "Chain index datums from address response:" <+> hsep (fmap pretty txouts)
+          "Unspent txos from address response:" <+> hsep (fmap pretty txouts)
+        DatumsAtResponse (QueryResponse datums _) ->
+          "Chain index datums from address response:" <+> hsep (fmap pretty datums)
         UtxoSetWithCurrencyResponse (UtxosResponse tip txOutRefPage) ->
                 "Chain index UTxO with asset class response:"
             <+> "Current tip is"

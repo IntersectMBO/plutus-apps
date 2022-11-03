@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -13,26 +14,27 @@ module Marconi.Index.Datum
   , open
   ) where
 
-import Codec.Serialise (deserialiseOrFail, serialise)
+import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Control.Applicative ((<|>))
 import Control.Lens.Operators ((^.))
 import Data.ByteString.Lazy (toStrict)
 import Data.Foldable (find)
 import Data.Maybe (fromJust, listToMaybe)
-import Data.String (fromString)
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
+import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.ToField (ToField (toField))
 
-import Cardano.Api (SlotNo (SlotNo))
-import Ledger.Scripts (Datum, DatumHash)
+import Cardano.Api qualified as C
+import Cardano.Binary (fromCBOR, toCBOR)
+import Codec.Serialise.Class (Serialise (decode))
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-type Event        = [(SlotNo, (DatumHash, Datum))]
+type DatumHash    = C.Hash C.ScriptData
+type Event        = [(C.SlotNo, (DatumHash, C.ScriptData))]
 type Query        = DatumHash
-type Result       = Maybe Datum
+type Result       = Maybe C.ScriptData
 type Notification = ()
 
 type DatumIndex = SqliteIndex Event Notification Query Result
@@ -40,25 +42,31 @@ type DatumIndex = SqliteIndex Event Notification Query Result
 newtype Depth = Depth Int
 
 instance FromField DatumHash where
-  fromField f = fromString <$> fromField f
+  fromField f = fromField f >>=
+    maybe (returnError ConversionFailed f "Cannot deserialise datumhash.")
+           pure
+    . C.deserialiseFromRawBytes (C.AsHash C.AsScriptData)
 
 instance ToField DatumHash where
-  toField = SQLText . fromString . show
+  toField = SQLBlob . C.serialiseToRawBytes
 
-instance FromField Datum where
+instance Serialise C.ScriptData where
+  encode = toCBOR
+  decode = fromCBOR
+
+instance FromField C.ScriptData where
   fromField f = fromField f >>=
-    either (const $ returnError ConversionFailed f "Cannot deserialise datum.")
-           pure
+    either (const $ returnError ConversionFailed f "Cannot deserialise datumhash.") pure
     . deserialiseOrFail
 
-instance ToField Datum where
+instance ToField C.ScriptData where
   toField = SQLBlob . toStrict . serialise
 
-instance FromField SlotNo where
-  fromField f = SlotNo <$> fromField f
+instance FromField C.SlotNo where
+  fromField f = C.SlotNo <$> fromField f
 
-instance ToField SlotNo where
-  toField (SlotNo s) = SQLInteger $ fromIntegral s
+instance ToField C.SlotNo where
+  toField (C.SlotNo s) = SQLInteger $ fromIntegral s
 
 open
   :: FilePath
@@ -100,10 +108,12 @@ store ix = do
   let c = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
   Ix.getBuffer (ix ^. Ix.storage) >>=
-    mapM_ (SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?,?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?") . map unpack . concat
+    mapM_ ( SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?,?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?"
+          . unpack)
+    . concat
   SQL.execute_ c "COMMIT"
   where
-    unpack :: (SlotNo, (DatumHash, Datum)) -> (SlotNo, DatumHash, Datum, SlotNo)
+    unpack :: (C.SlotNo, (DatumHash, C.ScriptData)) -> (C.SlotNo, DatumHash, C.ScriptData, C.SlotNo)
     unpack (s, (h, d)) = (s, h, d, s)
 
 onInsert :: DatumIndex -> Event -> IO [Notification]

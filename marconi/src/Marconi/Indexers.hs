@@ -1,6 +1,8 @@
-{-# LANGUAGE GADTs          #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections  #-}
+{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE NamedFieldPuns  #-}
+{-# LANGUAGE PackageImports  #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TupleSections   #-}
 
 module Marconi.Indexers where
 
@@ -9,51 +11,59 @@ import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (bracket_)
-import Control.Lens.Operators ((&), (<&>), (^.))
+import Control.Lens.Combinators (imap)
+import Control.Lens.Operators ((&), (^.))
 import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
-import Data.Map (assocs)
+import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, SlotNo, Tx (Tx),
-                    chainPointToSlotNo)
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
+                    SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
+import Cardano.Api.Byron qualified as Byron
+import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
--- TODO Remove the following dependencies from cardano-ledger, and
--- then also the package dependency from this package's cabal
--- file. Tracked with: https://input-output.atlassian.net/browse/PLT-777
-import Data.List.NonEmpty (NonEmpty)
-import Ledger (TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txInRef)
-import Ledger.Scripts (Datum, DatumHash)
-import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromTxScriptValidity, scriptDataFromCardanoTxBody,
-                             withIsCardanoEra)
+
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
+import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
+import Marconi.Types (TargetAddresses, TxOutRef, pattern CurrentEra, txOutRef)
+
 import RewindableIndex.Index.VSplit qualified as Ix
 
-type CardanoAddress = C.Address C.ShelleyAddr
-
--- | Typre represents non empty list of Bech32 compatable addresses"
-type TargetAddresses = NonEmpty CardanoAddress
-
-
 -- DatumIndexer
-getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
+getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extractDatumsFromTx txs
   where
+    extractData :: Alonzo.TxDats era -> Map (Hash ScriptData) ScriptData
+    extractData (Alonzo.TxDats' xs) =
+      Map.fromList
+      . fmap ((\x -> (C.hashScriptData x, x)) . Shelley.fromAlonzoData)
+      . Map.elems $ xs
+
+    scriptDataFromCardanoTxBody :: C.TxBody era -> Map (Hash ScriptData) ScriptData
+    scriptDataFromCardanoTxBody Byron.ByronTxBody {} = mempty
+    scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) = mempty
+    scriptDataFromCardanoTxBody
+      (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ dats _) _ _) =
+          extractData dats
+
     extractDatumsFromTx
       :: Tx era
-      -> [(SlotNo, (DatumHash, Datum))]
+      -> [(SlotNo, (Hash ScriptData, ScriptData))]
     extractDatumsFromTx (Tx txBody _) =
-      let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
+      let hashes = Map.assocs $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
+
 
 -- UtxoIndexer
 getOutputs
@@ -66,27 +76,22 @@ getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}
         let indexersFilter = case maybeTargetAddresses of
                 Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
                 _                    -> id -- no filtering is applied
-        outs  <- either (const Nothing) (
-            Just . map TxOut)
-            . traverse (C.eraCast C.BabbageEra)
+        outs  <- either (const Nothing) Just
+            . traverse (C.eraCast CurrentEra)
             . indexersFilter
             $ txOuts
-        pure $ outs & zip ([0..] :: [Integer])
-            <&> (\(ix, out) -> (out, TxOutRef
-                                   { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
-                                   , txOutRefIdx = ix
-                                   }))
+        pure $ outs & imap
+            (\ix out -> (out, txOutRef (C.getTxId txBody) (C.TxIx $ fromIntegral ix)))
 getInputs
   :: C.Tx era
-  -> Set TxOutRef
+  -> Set C.TxIn
 getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCollateral}) _) =
-  let isTxScriptValid = fromTxScriptValidity txScriptValidity
-      inputs = if isTxScriptValid
-                  then fst <$> txIns
-                  else case txInsCollateral of
-                    C.TxInsCollateralNone     -> []
-                    C.TxInsCollateral _ txins -> txins
-  in Set.fromList $ fmap (txInRef . (`TxIn` Nothing) . fromCardanoTxIn) inputs
+  let inputs = case txScriptValidityToScriptValidity txScriptValidity of
+        C.ScriptValid -> fst <$> txIns
+        C.ScriptInvalid -> case txInsCollateral of
+                                C.TxInsCollateralNone     -> []
+                                C.TxInsCollateral _ txins -> txins
+  in Set.fromList inputs
 
 getUtxoUpdate
   :: C.IsCardanoEra era
@@ -144,12 +149,13 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               slot   <- chainPointToSlotNo cp
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
+
 -- | does the transaction contain a targetAddress
 isInTargetTxOut
     :: TargetAddresses              -- ^ non empty list of target address
     -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
     -> Bool
-isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case  address of
+isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
@@ -212,8 +218,8 @@ scriptTxWorker_ onInsert depth Coordinator{_barrier} ch path = do
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs :: Block era) era :: BlockInMode CardanoMode) _ct -> do
-          withIsCardanoEra era (Ix.insert (ScriptTx.toUpdate txs slotNo) index >>= loop)
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs :: Block era) _ :: BlockInMode CardanoMode) _ct -> do
+          Ix.insert (ScriptTx.toUpdate txs slotNo) index >>= loop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           loop $
@@ -274,3 +280,11 @@ forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
 forkIndexer coordinator worker path = do
   ch <- atomically . dupTChan $ _channel coordinator
   void . forkIO . worker coordinator ch $ path
+
+-- | Duplicated from cardano-api (not exposed in cardano-api)
+-- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
+-- https://github.com/input-output-hk/cardano-node/pull/4569
+txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
+txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
+txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
+

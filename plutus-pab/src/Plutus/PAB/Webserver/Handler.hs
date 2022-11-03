@@ -23,7 +23,7 @@ module Plutus.PAB.Webserver.Handler
     ) where
 
 import Control.Lens (preview)
-import Control.Monad (join)
+import Control.Monad (join, unless)
 import Control.Monad.Freer.Error (throwError)
 import Data.Aeson qualified as JSON
 import Data.Foldable (traverse_)
@@ -50,7 +50,7 @@ import Servant.OpenApi (toOpenApi)
 import Servant.Server qualified as Servant
 import Servant.Swagger.UI (SwaggerSchemaUI', swaggerSchemaUIServer)
 import Wallet.Emulator.Wallet (Wallet, WalletId, getWalletId, knownWallet)
-import Wallet.Types (ContractActivityStatus, ContractInstanceId, parseContractActivityStatus)
+import Wallet.Types (ContractActivityStatus (Active), ContractInstanceId, parseContractActivityStatus)
 
 healthcheck :: forall t env. PABAction t env ()
 healthcheck = pure ()
@@ -137,17 +137,22 @@ contractInstanceState
     => ContractInstanceId
     -> PABAction t env (ContractInstanceClientState (Contract.ContractDef t))
 contractInstanceState i = do
-    definition <- Contract.getDefinition @t i
-    instWithStatuses <- Core.instancesWithStatuses
-    case (definition, Map.lookup i instWithStatuses) of
-        (Just ContractActivationArgs{caWallet, caID}, Just s) -> do
-            let wallet = fromMaybe (knownWallet 1) caWallet
-            yieldedExportedTxs <- Core.yieldedExportTxs i
-            fmap ( fromInternalState caID i s wallet yieldedExportedTxs
-                 . fromResp
-                 . Contract.serialisableState (Proxy @t)
-                 ) $ Contract.getState @t i
-        _ -> throwError @PABError (ContractInstanceNotFound i)
+  definition <- Contract.getDefinition @t i
+  s <- Core.waitForInstanceStateWithResult i
+  case definition of
+    Just ContractActivationArgs{caWallet, caID} -> do
+      let wallet = fromMaybe (knownWallet 1) caWallet
+      yieldedExportedTxs <- Core.yieldedExportTxs i
+      istate <- fmap ( fromInternalState caID i s wallet yieldedExportedTxs
+                       . fromResp
+                       . Contract.serialisableState (Proxy @t)
+                     ) $ Contract.getState @t i
+      removeUnlessActive s i
+      pure istate
+    _ -> throwError @PABError (ContractInstanceNotFound i)
+
+removeUnlessActive :: ContractActivityStatus -> ContractInstanceId -> PABAction t env ()
+removeUnlessActive s i = unless (s == Active) (Core.removeInstance i)
 
 callEndpoint :: forall t env. ContractInstanceId -> String -> JSON.Value -> PABAction t env ()
 callEndpoint a b v = Core.callEndpointOnInstance a b v >>= traverse_ (throwError @PABError . EndpointCallError)
@@ -180,4 +185,6 @@ availableContracts = do
     traverse mkSchema def
 
 shutdown :: forall t env. ContractInstanceId -> PABAction t env ()
-shutdown = Core.stopInstance
+shutdown cid = do
+    Core.stopInstance cid
+    Core.removeInstance cid

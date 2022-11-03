@@ -44,7 +44,7 @@ contract in `plutus-use-cases`).
       -- Step 3
       let refs = Map.keys
                  $ Map.filter ((==) address . txOutAddress)
-                 $ getCardanoTxUnspentOutputsTx ledgerTx
+                 $ getCardanoTxProducedOutputs ledgerTx
       case refs of
           []                   -> throwing _ScriptOutputMissing pk
           [outRef] -> do

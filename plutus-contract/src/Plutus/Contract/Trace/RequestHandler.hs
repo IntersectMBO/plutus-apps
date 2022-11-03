@@ -20,16 +20,18 @@ module Plutus.Contract.Trace.RequestHandler(
     , handleAdjustUnbalancedTx
     , handleOwnAddresses
     , handleSlotNotifications
-    , handleCurrentPABSlot
+    , handleCurrentNodeClientSlot
     , handleCurrentChainIndexSlot
     , handleTimeNotifications
     , handleCurrentTime
+    , handleCurrentNodeClientTimeRange
     , handleTimeToSlotConversions
     , handleUnbalancedTransactions
     , handlePendingTransactions
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
     , handleYieldedUnbalancedTx
+    , handleGetParams
     ) where
 
 import Control.Applicative (Alternative (empty, (<|>)))
@@ -89,8 +91,8 @@ tryHandler' ::
     => RequestHandler effs req (f resp)
     -> [req]
     -> Eff effs (f resp)
-tryHandler' (RequestHandler h) requests =
-    foldM (\e i -> fmap (e <|>) $ fmap join $ NonDet.makeChoiceA @f $ h i) empty requests
+tryHandler' (RequestHandler h) =
+    foldM (\e i -> fmap ((e <|>) . join) $ NonDet.makeChoiceA @f $ h i) empty
 
 extract :: Alternative f => Prism' a b -> a -> f b
 extract p = maybe empty pure . preview p
@@ -159,15 +161,15 @@ handleTimeNotifications =
             guard (currentSlot >= targetSlot_)
             pure $ TimeSlot.slotToEndPOSIXTime pSlotConfig currentSlot
 
-handleCurrentPABSlot ::
+handleCurrentNodeClientSlot ::
     forall effs a.
     ( Member NodeClientEffect effs
     , Member (LogObserve (LogMessage Text)) effs
     )
     => RequestHandler effs a Slot
-handleCurrentPABSlot =
+handleCurrentNodeClientSlot =
     RequestHandler $ \_ ->
-        surroundDebug @Text "handleCurrentPABSlot" $ do
+        surroundDebug @Text "handleCurrentNodeClientSlot" $ do
             Wallet.Effects.getClientSlot
 
 handleCurrentChainIndexSlot ::
@@ -195,6 +197,21 @@ handleCurrentTime =
         surroundDebug @Text "handleCurrentTime" $ do
             Params { pSlotConfig }  <- Wallet.Effects.getClientParams
             TimeSlot.slotToEndPOSIXTime pSlotConfig <$> Wallet.Effects.getClientSlot
+
+handleCurrentNodeClientTimeRange ::
+    forall effs a.
+    ( Member NodeClientEffect effs
+    , Member (LogObserve (LogMessage Text)) effs
+    )
+    => RequestHandler effs a (POSIXTime, POSIXTime)
+handleCurrentNodeClientTimeRange =
+    RequestHandler $ \_ ->
+        surroundDebug @Text "handleCurrentNodeClientTimeRange" $ do
+            Params { pSlotConfig }  <- Wallet.Effects.getClientParams
+            nodeClientSlot <- Wallet.Effects.getClientSlot
+            pure ( TimeSlot.slotToBeginPOSIXTime pSlotConfig nodeClientSlot
+                 , TimeSlot.slotToEndPOSIXTime pSlotConfig nodeClientSlot
+                 )
 
 handleTimeToSlotConversions ::
     forall effs.
@@ -253,6 +270,7 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         UtxoSetMembership txOutRef    -> UtxoSetMembershipResponse <$> ChainIndexEff.utxoSetMembership txOutRef
         UtxoSetAtAddress pq c         -> UtxoSetAtResponse <$> ChainIndexEff.utxoSetAtAddress pq c
         UnspentTxOutSetAtAddress pq c -> UnspentTxOutsAtResponse <$> ChainIndexEff.unspentTxOutSetAtAddress pq c
+        DatumsAtAddress pq c          -> DatumsAtResponse <$> ChainIndexEff.datumsAtAddress pq c
         UtxoSetWithCurrency pq ac     -> UtxoSetWithCurrencyResponse <$> ChainIndexEff.utxoSetWithCurrency pq ac
         TxoSetAtAddress pq c          -> TxoSetAtResponse <$> ChainIndexEff.txoSetAtAddress pq c
         TxsFromTxIds txids            -> TxIdsResponse <$> ChainIndexEff.txsFromTxIds txids
@@ -292,3 +310,14 @@ handleAdjustUnbalancedTx =
             forM (adjustUnbalancedTx params utx) $ \(missingAdaCosts, adjusted) -> do
                 logDebug $ AdjustingUnbalancedTx missingAdaCosts
                 pure adjusted
+
+handleGetParams ::
+    forall effs.
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member NodeClientEffect effs
+    )
+    => RequestHandler effs () Params
+handleGetParams =
+    RequestHandler $ \_ ->
+        surroundDebug @Text "handleGetParams" $ do
+            Wallet.Effects.getClientParams

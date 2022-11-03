@@ -27,11 +27,13 @@ module Plutus.Contract(
     , Request.isSlot
     , Request.currentSlot
     , Request.currentPABSlot
+    , Request.currentNodeClientSlot
     , Request.currentChainIndexSlot
     , Request.waitNSlots
     , Request.awaitTime
     , Request.isTime
     , Request.currentTime
+    , Request.currentNodeClientTimeRange
     , Request.waitNMilliSeconds
     -- * Endpoints
     , Request.HasEndpoint
@@ -52,6 +54,7 @@ module Plutus.Contract(
     , Request.utxoIsProduced
     -- * Chain index requests
     , Request.datumFromHash
+    , Request.datumsAt
     , Request.validatorFromHash
     , Request.mintingPolicyFromHash
     , Request.stakeValidatorFromHash
@@ -95,6 +98,8 @@ module Plutus.Contract(
     , Request.isTxConfirmed
     -- ** Tx output confirmation
     , Request.awaitTxOutStatusChange
+    -- * Parameters
+    , Request.getParams
     -- * Checkpoints
     , Plutus.Contract.Types.checkpoint
     , Plutus.Contract.Types.checkpointLoop

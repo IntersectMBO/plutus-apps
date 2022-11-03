@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-module Spec.TxConstraints.TimeValidity(tests) where
+module Spec.Contract.Tx.Constraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
 import Control.Lens hiding (contains, from, (.>))
@@ -20,7 +20,9 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract as Con
+import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed, currentNodeClientSlot,
+                               currentNodeClientTimeRange, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
+                               submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Script.Utils.V1.Scripts (ValidatorHash)
@@ -56,7 +58,7 @@ tests = testGroup "time validitity constraint"
 
 contract :: Contract () Empty ContractError ()
 contract = do
-    now <- Con.currentTime
+    now <- snd <$> Con.currentNodeClientTimeRange
     logInfo @String $ "now: " ++ show now
     let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
@@ -76,7 +78,7 @@ contract = do
     void $ waitNSlots 2
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
-    cSlot <- Con.currentPABSlot
+    cSlot <- Con.currentNodeClientSlot
     logInfo @String $ "Current slot: " ++ show cSlot
 
 trace :: Trace.EmulatorTrace ()
@@ -86,7 +88,7 @@ trace = do
 
 protocolV5 :: TestTree
 protocolV5 = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (7, 0) }))
+    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
     "tx valid time interval is not supported in protocol v5"
     (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
     (void trace)
@@ -115,7 +117,7 @@ contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
     utxos <- Con.ownUtxos
-    now <- Con.currentTime
+    now <- snd <$> Con.currentNodeClientTimeRange
     logInfo @String $ "now: " ++ show now
     let utxoRef = fst $ head' $ Map.toList utxos
         lookups = Tx.Constraints.unspentOutputs utxos
@@ -126,7 +128,7 @@ contractCardano f p = do
     ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
-    cSlot <- Con.currentPABSlot
+    cSlot <- Con.currentNodeClientSlot
     logInfo @String $ "Current slot: " ++ show cSlot
     let txRange = Tx.getCardanoTxValidityRange ledgerTx
     logInfo @String $ show txRange

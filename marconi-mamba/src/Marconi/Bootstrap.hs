@@ -4,11 +4,10 @@
 --
 module Marconi.Bootstrap  where
 
-import Cardano.Api (ChainPoint (ChainPointAtGenesis), deserialiseFromBech32, proxyToAsType)
+import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), deserialiseFromBech32)
 import Cardano.Streaming (withChainSyncEventStream)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
-import Data.Proxy (Proxy (Proxy))
 import Data.Text (pack)
 import Marconi.Api.HttpServer qualified as Http
 import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryQSem), HasJsonRpcEnv (queryEnv),
@@ -63,7 +62,7 @@ targetAddressParser =
     . traverse (deserializeToCardano . pack)
     . words
     where
-        deserializeToCardano = deserialiseFromBech32 (proxyToAsType Proxy)
+        deserializeToCardano = deserialiseFromBech32 AsShelleyAddress
 
 -- | Exit program with error
 -- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
