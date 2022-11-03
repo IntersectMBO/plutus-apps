@@ -64,6 +64,7 @@ v1FeaturesTests sub t = testGroup "Plutus V1 features" $
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyAda -- FAILING when onchain checks for only ada value and token is present -- PLT-885
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWithScriptsExactTokenBalance
     , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerAdaValue
+    , successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerTokenValue
     , contractErrorWhenAttemptingToSpendMoreThanAdaBalance
     , contractErrorWhenAttemptingToSpendMoreThanTokenBalance
     , phase2ErrorWhenExpectingMoreThanValue
@@ -91,17 +92,23 @@ utxoValue = Ada.lovelaceValueOf 10_000_000
 adaAmount :: Integer
 adaAmount = 5_000_000
 
+tknAmount :: Integer
+tknAmount = 5_000_000
+
 adaValue :: Value.Value
 adaValue = Ada.lovelaceValueOf adaAmount
 
+tknValueOf :: Integer -> LanguageContext -> Value.Value
+tknValueOf x tc = Value.singleton (mustPayToOtherScriptPolicyCurrencySymbol tc) "mint-me" x
+
 tknValue :: LanguageContext -> Value.Value
-tknValue tc = Value.singleton (mustPayToOtherScriptPolicyCurrencySymbol tc) "mint-me" 1
+tknValue = tknValueOf tknAmount
 
 adaAndTokenValue :: LanguageContext -> Value.Value
 adaAndTokenValue = (adaValue <>) . tknValue
 
 otherTokenValue :: Value.Value
-otherTokenValue = someTokenValue "someToken" 1
+otherTokenValue = someTokenValue "someToken" 10
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -216,7 +223,6 @@ successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnch
     (void $ trace contract)
 
 -- | Valid scenario using mustPayToOtherScript offchain constraint to include ada and token whilst onchain constraint checks for ada value only
--- FAILING when onchain checks for only ada value and token is present -- PLT-885
 successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOffchainIncludesTokenAndOnchainChecksOnlyAda
     :: SubmitTx
     -> LanguageContext
@@ -297,6 +303,31 @@ successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerAdaValue
                 submitTxFromConstraints
                 lc
                 adaValue
+                onChainConstraint
+
+    in checkPredicateOptions defaultCheckOptions
+    "Successful use of mustPayToOtherScriptWithDatumInTx onchain constraint when it expects less ada than the actual value"
+    (assertValidatedTransactionCount 1)
+    (void $ trace contract)
+
+-- | Valid scenario where onchain mustPayToOtherScript constraint expects less token than the actual value
+successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerTokenValue
+    :: SubmitTx
+    -> LanguageContext
+    -> TestTree
+successfulUseOfMustPayToOtherScriptWithDatumInTxWhenOnchainExpectsLowerTokenValue
+        submitTxFromConstraints lc =
+    let onChainConstraint =
+            asRedeemer
+            $ MustPayToOtherScriptWithDatumInTx
+                someValidatorHash
+                someDatum
+                (tknValueOf (tknAmount - 1) lc)
+        contract =
+            mustPayToOtherScriptWithDatumInTxContract
+                submitTxFromConstraints
+                lc
+                (adaAndTokenValue lc)
                 onChainConstraint
 
     in checkPredicateOptions defaultCheckOptions
