@@ -52,8 +52,9 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (Lens', Traversal', coerced, iso, lens, makeLensesFor, set, use, (%=), (.=), (<>=))
-import Control.Monad.Except (Except, MonadError, lift, mapExcept, runExcept, throwError, withExcept)
+import Control.Lens (Lens', Traversal', coerced, iso, lens, makeLensesFor, set, use, (%=), (.=), (<>=), (^.))
+import Control.Lens.Extras (is)
+import Control.Monad.Except (Except, MonadError, guard, lift, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
@@ -275,18 +276,17 @@ processConstraint = \case
             \outs -> fmap (set txOutDatum datumInTx) outs
     P.MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
-        case txout of
-          Tx.PublicKeyChainIndexTxOut {} -> do
-              txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
-              unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
-          _ -> throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)
+        maybe (throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)) pure
+            $ guard $ is Tx._PublicKeyDecoratedTxOut txout
+        txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
+        unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
 
     P.MustSpendScriptOutput txo redeemer mref -> do
         txout <- lookupTxOutRef txo
         mkWitness <- case mref of
           Just ref -> do
             refTxOut <- lookupTxOutRef ref
-            case Tx._ciTxOutReferenceScript refTxOut of
+            case refTxOut ^. Tx.decoratedTxOutReferenceScript of
                 Just (Tx.Versioned _ lang) -> do
                     txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                     unbalancedTx . tx . txInsReference <>= [ txIn ]
@@ -346,7 +346,7 @@ processConstraint = \case
 
 lookupTxOutRef
     :: Tx.TxOutRef
-    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.ChainIndexTxOut
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) Tx.DecoratedTxOut
 lookupTxOutRef txo = mapLedgerMkTxError $ P.lookupTxOutRef txo
 
 lookupScriptAsReferenceScript
