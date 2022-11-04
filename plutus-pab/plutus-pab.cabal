@@ -220,6 +220,7 @@ library
     , wai
     , wai-cors
     , warp
+    , warp-tls
     , websockets
     , yaml
 

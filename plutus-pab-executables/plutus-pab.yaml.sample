@@ -25,6 +25,9 @@ pabWebserverConfig:
   # If this is not set, the query will wait until the instance state is updated.
   waitStatusTimeout: 60
   enableMarconi: False
+  # Configure the paths to the certificate and the private key file to enable HTTPS:
+  # certificatePath: host.crt
+  # keyPath: host.key
 
 walletServerConfig:
   tag: LocalWalletConfig

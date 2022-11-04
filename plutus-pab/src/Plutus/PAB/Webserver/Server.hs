@@ -34,6 +34,7 @@ import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Network.Wai (Middleware)
 import Network.Wai.Handler.Warp qualified as Warp
+import Network.Wai.Handler.WarpTLS qualified as WarpTLS
 import Network.Wai.Middleware.Cors qualified as Cors
 import Network.Wai.Middleware.Servant.Options qualified as Cors
 import Plutus.PAB.Core (PABAction, PABRunner (PABRunner, runPABAction))
@@ -41,7 +42,8 @@ import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Monitoring.PABLogMsg qualified as LM
 import Plutus.PAB.Simulator (Simulation)
-import Plutus.PAB.Types (PABError, WebserverConfig (WebserverConfig, endpointTimeout, permissiveCorsPolicy, staticDir),
+import Plutus.PAB.Types (PABError,
+                         WebserverConfig (WebserverConfig, certificatePath, endpointTimeout, keyPath, permissiveCorsPolicy, staticDir),
                          baseUrl, defaultWebServerConfig)
 import Plutus.PAB.Webserver.API (API, SwaggerAPI, WSAPI)
 import Plutus.PAB.Webserver.Handler (apiHandler, swagger)
@@ -105,10 +107,10 @@ startServer ::
     => WebserverConfig -- ^ Optional file path for static assets
     -> Availability
     -> PABAction t env (MVar (), PABAction t env ())
-startServer WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTimeout} availability = do
+startServer WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTimeout, certificatePath, keyPath} availability = do
     when permissiveCorsPolicy $
       logWarn @(LM.PABMultiAgentMsg t) (LM.UserLog "Warning: Using a very permissive CORS policy! *Any* website serving JavaScript can interact with these endpoints.")
-    startServer' middlewares (baseUrlPort baseUrl) staticDir availability (timeout endpointTimeout)
+    startServer' middlewares (baseUrlPort baseUrl) tlsSettings staticDir availability (timeout endpointTimeout)
       where
         middlewares = if permissiveCorsPolicy then corsMiddlewares else []
         corsMiddlewares =
@@ -118,6 +120,7 @@ startServer WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTi
             -- this middleware handles preflight OPTIONS browser requests
             , Cors.provideOptions (Proxy @(API (Contract.ContractDef t) Integer))
             ]
+        tlsSettings = WarpTLS.tlsSettings <$> certificatePath <*> keyPath
         -- By default we use the normal request timeout: 30 seconds. But if
         -- someone has asked for a longer endpoint timeout, we need to set
         -- that to be the webserver timeout as well.
@@ -137,11 +140,12 @@ startServer' ::
     )
     => [Middleware] -- ^ Optional wai middleware
     -> Int -- ^ Port
+    -> Maybe WarpTLS.TLSSettings -- ^ Optionally use HTTPS with these settings
     -> Maybe FilePath -- ^ Optional file path for static assets
     -> Availability
     -> Int
     -> PABAction t env (MVar (), PABAction t env ())
-startServer' waiMiddlewares port staticPath availability timeout = do
+startServer' waiMiddlewares port tlsSettings staticPath availability timeout = do
     simRunner <- Core.pabRunner
     shutdownVar <- liftIO $ STM.atomically $ STM.newEmptyTMVar @()
     mvar <- liftIO newEmptyMVar
@@ -159,10 +163,11 @@ startServer' waiMiddlewares port staticPath availability timeout = do
             & Warp.setTimeout timeout
             & Warp.setHost "*6" -- HostIPv6@ - "any IPv4 or IPv6 hostname, IPv6 preferred"
         middleware = appEndo $ foldMap Endo waiMiddlewares
+        run = maybe Warp.runSettings WarpTLS.runTLS tlsSettings
     logInfo @(LM.PABMultiAgentMsg t) (LM.StartingPABBackendServer port)
     void $ liftIO $
         forkFinally
-            (Warp.runSettings warpSettings $ middleware
+            (run warpSettings $ middleware
                $ app staticPath simRunner)
             (\_ -> putMVar mvar ())
 
