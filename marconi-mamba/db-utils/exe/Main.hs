@@ -4,8 +4,7 @@ module Main where
 import Cardano.Api (NetworkId)
 import Marconi.Api.Types (TargetAddresses)
 import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo
-import Marconi.Bootstrap (targetAddressParser)
-import Marconi.CLI (pNetworkId)
+import Marconi.CLI (pNetworkId, targetAddressParser)
 import Marconi.DB.SqlUtils (freqShelleyTable, freqUtxoTable)
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, showDefault, strOption, value,
                             (<**>))
@@ -25,7 +24,7 @@ cliParser = CliOptions
                               <> short 'd'
                               <> metavar "FILENAME"
                               <>  showDefault
-                              <> value "./.marconidb/2/utxo-db"
+                              <> value "./.marconidb/2/utxodb"
                               <> help "Path to the utxo database.")
     <*> pNetworkId
 
@@ -39,5 +38,4 @@ main  = do
     freqUtxoTable dbEnv
     as <- freqShelleyTable dbEnv
     print (length as)
-
     print "end"

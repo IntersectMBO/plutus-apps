@@ -52,10 +52,9 @@ freqUtxoTable env =
         execute_ conn "drop table if exists frequtxos"
         >> execute_ conn "drop table if exists shelleyaddresses"
         >> execute_ conn "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC"
-        >> execute_ conn "delete from frequtxos where frequency < 50"
+        >> execute_ conn "delete from frequtxos where frequency < 50" -- we only want `intersing` data
         >> execute_ conn
-           "create TABLE shelleyaddresses (address text not null, frequency int not null)"
-        )
+           "create TABLE shelleyaddresses (address text not null, frequency int not null)")
 
 withQueryAction :: DBConfig -> (Connection -> IO a) -> IO a
 withQueryAction conf action =
@@ -93,10 +92,9 @@ freqShelleyTable env = do
 -- first conver to cardano address, then seriase to text
 --
 toShelley :: C.NetworkId  -> ShelleyFrequencyTable C.AddressAny -> Maybe (ShelleyFrequencyTable Text)
-toShelley nid (ShelleyFrequencyTable (C.AddressShelley a) f) =
+toShelley _ (ShelleyFrequencyTable (C.AddressShelley a) f) =
     let
         addrTxt = C.serialiseAddress a
     in
         Just ( ShelleyFrequencyTable addrTxt f)
-toShelley nid _ = Nothing
-
+toShelley _ _ = Nothing

@@ -35,10 +35,10 @@ import Control.Lens.TH (makeLenses)
 import Control.Monad (when)
 import Data.Foldable (forM_, toList)
 import Data.Maybe (fromJust)
+import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.String (fromString)
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
+import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
@@ -76,10 +76,14 @@ instance ToField C.AddressAny where
   toField = SQLBlob . C.serialiseToRawBytes
 
 instance FromField C.TxId where
-  fromField = fmap fromString . fromField
+  fromField f = fromField f >>=
+    maybe (returnError ConversionFailed f "Cannot deserialise TxId.")
+          pure
+    . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
+    -- fromField = fmap fromString . fromField
 
 instance ToField C.TxId where
-  toField = SQLText . fromString . show
+  toField = SQLBlob . C.serialiseToRawBytes
 
 instance FromField C.TxIx where
   fromField = fmap C.TxIx . fromField

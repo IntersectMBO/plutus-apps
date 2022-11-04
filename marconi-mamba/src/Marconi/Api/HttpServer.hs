@@ -16,9 +16,9 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
-import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, UtxoTxOutReport)
+import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, QueryExceptions,
+                          UtxoTxOutReport)
 import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findAll, findByAddress, reportBech32Addresses)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
@@ -81,7 +81,7 @@ utxoTxOutReport
     -> String                   -- ^ bech32 addressCredential
     -> Handler (Either (JsonRpcErr String) UtxoTxOutReport )
 utxoTxOutReport env address = liftIO $
-    bimap cardanoErrToRpcErr id <$> (Q.Utxo.findByAddress env . pack $ address)
+    bimap toRpcErr id <$> (Q.Utxo.findByAddress env . pack $ address)
 
 -- | Retrieves a set of TxOutRef
 -- TODO convert this to stream
@@ -98,12 +98,12 @@ targetAddressesReport
     -> Handler (Either (JsonRpcErr String) (Set Text) )
 targetAddressesReport env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env
 
--- | convert form cardano error, to jsonrpc protocal error
-cardanoErrToRpcErr
-    :: ToCardanoError
+-- | convert form to jsonrpc protocal error
+toRpcErr
+    :: QueryExceptions
     -> JsonRpcErr String
-cardanoErrToRpcErr e = JsonRpcErr {
+toRpcErr e = JsonRpcErr {
            errorCode = parseErrorCode
-           , errorMessage = "address deserialization or conversion related error."
+           , errorMessage = "marconi RPC query related error!"
            , errorData = Just . show $ e
            }

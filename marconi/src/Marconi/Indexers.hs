@@ -164,8 +164,11 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
+-- | UtxoWorker that can work with Query threads
+-- The main difference between this worker and the utxoWorker is
+-- that we can perform queries with this worker against utxos Stablecoin
 queryAwareUtxoWorker
-    :: UtxoQueryComm
+    :: UtxoQueryComm    -- ^  used to communicate with query threads
     -> TargetAddresses  -- ^ Target addresses to filter for
     -> Worker
 queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
@@ -175,9 +178,9 @@ queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinato
     innerLoop index = do
         isquery <- atomically . tryReadTMVar $ qreq
         unless (null isquery) $ bracket_
-            (atomically (takeTMVar qreq ) )
-            (atomically (takeTMVar qreq ) )
-            (atomically  (putTMVar utxoIndexer index) )
+            (atomically (takeTMVar qreq ) ) -- block
+            (atomically (takeTMVar qreq ) ) -- unblock
+            (atomically  (putTMVar utxoIndexer index) ) -- allow the query thread to access in-memory utxos
         signalQSemN _barrier 1
         event <- atomically $ readTChan ch
         case event of
@@ -297,8 +300,9 @@ txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.Scrip
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
 type QueryRequest = ()
+
 data UtxoQueryComm = UtxoQueryComm
-    { _QueryReq :: TMVar QueryRequest
-    , _Indexer  :: TMVar UtxoIndex
+    { _QueryReq :: TMVar QueryRequest   -- ^ query request fro query thread
+    , _Indexer  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
     }
 makeClassy ''UtxoQueryComm

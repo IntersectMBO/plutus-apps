@@ -1,9 +1,12 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
@@ -27,8 +30,10 @@ module Marconi.Api.Types
     , UtxoTxOutReport (..)
     , UtxoQueryComm (..)
     , HasUtxoQueryComm (..)
+    , QueryExceptions (..)
                          )  where
 import Cardano.Api (AddressAny, NetworkId, anyAddressInShelleyBasedEra)
+import Control.Exception (Exception)
 import Control.Lens (makeClassy)
 import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
 import Data.Set (Set)
@@ -94,3 +99,11 @@ instance ToJSON UtxoRowWrapper where
 
 instance ToJSON UtxoRow where
     toEncoding = genericToEncoding defaultOptions
+
+data QueryExceptions
+    = AddressNotInListError QueryExceptions
+    | AddressConversionError QueryExceptions
+    | TxRefConversionError QueryExceptions
+    | QueryError String
+    deriving stock Show
+    deriving anyclass  Exception
