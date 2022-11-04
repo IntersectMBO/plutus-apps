@@ -9,6 +9,8 @@
 module Ledger.Params(
   Params(..),
   slotConfigL,
+  emulatorPParamsL,
+  pProtocolParams,
   protocolParamsL,
   networkIdL,
   increaseTransactionLimits,
@@ -18,26 +20,27 @@ module Ledger.Params(
   testnet,
   emulatorEpochSize,
   emulatorGlobals,
-  emulatorPParams,
   emulatorEraHistory
 ) where
 
-import Cardano.Api (CardanoMode, ConsensusMode (..), EraHistory (EraHistory), ShelleyBasedEra (..), toLedgerPParams)
+import Cardano.Api (CardanoMode, ConsensusMode (..), EraHistory (EraHistory))
+import Cardano.Api qualified as C
 import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo (..), ExecutionUnitPrices (..),
                             ExecutionUnits (..), Lovelace (..), NetworkId (..), NetworkMagic (..),
                             PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (retractPP)
+import Cardano.Ledger.Babbage.PParams qualified as C
 import Cardano.Ledger.BaseTypes (boundRational)
-import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (..), Globals, ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SlotLength, mkSlotLength)
-import Control.Lens (makeLensesFor, over)
-import Data.Aeson (FromJSON, ToJSON)
+import Control.Lens (Lens', lens, makeLensesFor, over, (&), (.~))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), (.:), (.=))
+import Data.Aeson qualified as JSON
 import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
@@ -51,13 +54,19 @@ import Plutus.V1.Ledger.Api (POSIXTime (..))
 import PlutusCore (defaultCostModelParams)
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 
+-- | The default era for the emulator
+type EmulatorEra = BabbageEra StandardCrypto
+
+type PParams = C.PParams EmulatorEra
+
 data Params = Params
   { pSlotConfig     :: SlotConfig
-  , pProtocolParams :: ProtocolParameters
+  -- | Convert `Params` to cardano-ledger `PParams`
+  , emulatorPParams :: PParams
   , pNetworkId      :: NetworkId
   }
   deriving (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON)
+  -- deriving anyclass (ToJSON, FromJSON)
 
 deriving instance Generic NetworkId
 deriving instance ToJSON NetworkId
@@ -68,15 +77,37 @@ deriving newtype instance FromJSON NetworkMagic
 
 makeLensesFor
   [ ("pSlotConfig", "slotConfigL")
-  , ("pProtocolParams", "protocolParamsL")
+  , ("emulatorPParams", "emulatorPParamsL")
   , ("pNetworkId", "networkIdL") ]
   ''Params
 
+pProtocolParams :: Params -> ProtocolParameters
+pProtocolParams p = C.fromLedgerPParams C.ShelleyBasedEraBabbage $ emulatorPParams p
+
+protocolParamsL :: Lens' Params ProtocolParameters
+protocolParamsL = let
+  set p pParam = p & emulatorPParamsL .~ C.toLedgerPParams C.ShelleyBasedEraBabbage pParam
+  in lens pProtocolParams set
+
+instance ToJSON Params where
+  toJSON p = JSON.object
+    [ "pSlotConfig" .= toJSON (pSlotConfig p)
+    , "pProtocolParams" .= toJSON (pProtocolParams p)
+    , "pNetworkId" .= toJSON (pNetworkId p)
+    ]
+
+instance FromJSON Params where
+  parseJSON (Object v) = Params
+    <$> (v .: "pSlotConfig" >>= parseJSON)
+    <*> (C.toLedgerPParams C.ShelleyBasedEraBabbage <$> (v .: "pProtocolParams" >>= parseJSON))
+    <*> (v .: "pNetworkId" >>= parseJSON)
+  parseJSON _ = fail "Can't parse a Param"
+
 instance Pretty Params where
-  pretty Params{..} =
+  pretty p@Params{..} =
     vsep [ "Slot config:" <+> pretty pSlotConfig
          , "Network ID:" <+> viaShow pNetworkId
-         , "Protocol Parameters:" <+> viaShow pProtocolParams
+         , "Protocol Parameters:" <+> viaShow (pProtocolParams p)
          ]
 
 -- | Set higher limits on transaction size and execution units.
@@ -134,9 +165,6 @@ instance Default ProtocolParameters where
     }
 
 
--- | The default era for the emulator
-type EmulatorEra = BabbageEra StandardCrypto
-
 -- | Calculate the cardano-ledger `SlotLength`
 slotLength :: Params -> SlotLength
 slotLength Params { pSlotConfig } = mkSlotLength $ posixTimeToNominalDiffTime $ POSIXTime $ scSlotLength pSlotConfig
@@ -148,10 +176,10 @@ emulatorEpochSize = EpochSize 432000
 
 -- | A sensible default 'Globals' value for the emulator
 emulatorGlobals :: Params -> Globals
-emulatorGlobals params@Params { pProtocolParams } = mkShelleyGlobals
+emulatorGlobals params = mkShelleyGlobals
   (genesisDefaultsFromParams params)
   (fixedEpochInfo emulatorEpochSize (slotLength params))
-  (fst $ protocolParamProtocolVersion pProtocolParams)
+  (fst $ protocolParamProtocolVersion $ pProtocolParams params)
 
 genesisDefaultsFromParams :: Params -> ShelleyGenesis EmulatorEra
 genesisDefaultsFromParams params@Params { pSlotConfig, pNetworkId } = shelleyGenesisDefaults
@@ -162,10 +190,6 @@ genesisDefaultsFromParams params@Params { pSlotConfig, pNetworkId } = shelleyGen
   }
   where
     d = fromMaybe (error "3 % 5 should be valid UnitInterval") $ boundRational (3 % 5)
-
--- | Convert `Params` to cardano-ledger `PParams`
-emulatorPParams :: Params -> PParams EmulatorEra
-emulatorPParams Params { pProtocolParams } = toLedgerPParams ShelleyBasedEraBabbage pProtocolParams
 
 -- | A sensible default 'EraHistory' value for the emulator
 emulatorEraHistory :: Params -> EraHistory CardanoMode

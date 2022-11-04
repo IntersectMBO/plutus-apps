@@ -10,7 +10,7 @@ import Data.Bifunctor (bimap, first)
 import Data.Map qualified as Map
 import Ledger.Ada (lovelaceValueOf)
 import Ledger.Address (Address, PaymentPubKeyHash)
-import Ledger.Params (EmulatorEra, Params (pNetworkId, pProtocolParams), emulatorEraHistory, emulatorGlobals)
+import Ledger.Params (EmulatorEra, Params (pNetworkId), emulatorEraHistory, emulatorGlobals, pProtocolParams)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoTxBodyContent)
 import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)

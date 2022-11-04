@@ -48,7 +48,7 @@ toCardanoTxBodyContent
     -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..} = do
+toCardanoTxBodyContent p@P.Params{P.pNetworkId} sigs tx@P.Tx{..} = do
     -- TODO: translate all fields
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
@@ -75,7 +75,7 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith $ Just pProtocolParams
+        , txProtocolParams = C.BuildTxWith $ Just $ P.pProtocolParams p
         , txScriptValidity = C.TxScriptValidityNone
         , txExtraKeyWits
         -- unused:
