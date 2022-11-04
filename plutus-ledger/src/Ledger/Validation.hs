@@ -216,9 +216,7 @@ hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.
 hasValidationErrors params slotNo utxo tx'@(C.Api.ShelleyTx _ tx) =
   case res of
     Left e  -> Left (P.Phase1, e)
-    Right _ -> case getTxExUnitsWithLogs params utxo tx' of
-      Left (Left e) -> Left e
-      Right result  -> Right result
+    Right _ -> getTxExUnitsWithLogs params utxo tx'
   where
     state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
@@ -284,10 +282,10 @@ validateCardanoTx params slot utxo@(UTxO utxoMap) =
       (\(CardanoApiEmulatorEraTx tx) -> if Map.null utxoMap then Right Map.empty else
         hasValidationErrors params (fromIntegral slot) utxo tx)
 
-getTxExUnitsWithLogs :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either CardanoLedgerError P.ValidationSuccess
+getTxExUnitsWithLogs :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either P.ValidationErrorInPhase P.ValidationSuccess
 getTxExUnitsWithLogs params utxo (C.Api.ShelleyTx _ tx) =
   case C.Ledger.evaluateTransactionExecutionUnitsWithLogs (emulatorPParams params) tx utxo ei ss costmdls of
-    Left e       -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . Text.pack . show $ e
+    Left e       -> Left . (P.Phase1,) . P.CardanoLedgerValidationError . Text.pack . show $ e
     Right result -> traverse (either toCardanoLedgerError Right) result
   where
     eg = emulatorGlobals params
@@ -295,10 +293,10 @@ getTxExUnitsWithLogs params utxo (C.Api.ShelleyTx _ tx) =
     ei = epochInfo eg
     costmdls = array (minBound, maxBound) . Map.toList $ unCostModels $ getField @"_costmdls" $ emulatorPParams params
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (V1.CekError ce) logs) =
-      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
+      Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
     toCardanoLedgerError (C.Ledger.ValidationFailedV2 (V1.CekError ce) logs) =
-      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
-    toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError $ Text.pack $ show e)
+      Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs ("CekEvaluationFailure: " ++ show ce)))
+    toCardanoLedgerError e = Left (P.Phase2, P.CardanoLedgerValidationError $ Text.pack $ show e)
 
 makeTransactionBody
   :: P.Params
@@ -307,7 +305,7 @@ makeTransactionBody
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.BabbageEra)
 makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
-  exUnits <- Map.map snd <$> getTxExUnitsWithLogs params utxo txTmp
+  exUnits <- bimap Left id $ (Map.map snd) <$> getTxExUnitsWithLogs params utxo txTmp
   first Right $ P.makeTransactionBody exUnits txBodyContent
 
 
