@@ -62,7 +62,7 @@ import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
 import GHC.Generics (Generic)
-import Ledger (POSIXTimeRange, Params (..), networkIdL)
+import Ledger (POSIXTimeRange, Params (..), networkIdL, pProtocolParams)
 import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
@@ -119,7 +119,7 @@ tx :: Traversal' UnbalancedTx C.CardanoBuildTx
 tx = P.cardanoTx
 
 emptyCardanoBuildTx :: Params -> C.CardanoBuildTx
-emptyCardanoBuildTx Params { pProtocolParams }= C.CardanoBuildTx $ C.TxBodyContent
+emptyCardanoBuildTx p = C.CardanoBuildTx $ C.TxBodyContent
     { C.txIns = mempty
     , C.txInsCollateral = C.TxInsCollateral C.CollateralInBabbageEra mempty
     , C.txInsReference = C.TxInsReferenceNone
@@ -129,7 +129,7 @@ emptyCardanoBuildTx Params { pProtocolParams }= C.CardanoBuildTx $ C.TxBodyConte
     , C.txFee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra mempty
     , C.txValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
     , C.txMintValue = C.TxMintNone
-    , C.txProtocolParams = C.BuildTxWith $ Just pProtocolParams
+    , C.txProtocolParams = C.BuildTxWith $ Just $ pProtocolParams p
     , C.txScriptValidity = C.TxScriptValidityNone
     , C.txExtraKeyWits = C.TxExtraKeyWitnessesNone
     , C.txMetadata = C.TxMetadataNone

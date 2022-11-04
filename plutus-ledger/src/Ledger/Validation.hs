@@ -186,7 +186,7 @@ initialState params = EmulatedLedgerState
   { _ledgerEnv = C.Ledger.LedgerEnv
       { C.Ledger.ledgerSlotNo = 0
       , C.Ledger.ledgerIx = minBound
-      , C.Ledger.ledgerPp = C.Api.toLedgerPParams C.Api.ShelleyBasedEraBabbage $ P.pProtocolParams params
+      , C.Ledger.ledgerPp = emulatorPParams params
       , C.Ledger.ledgerAccount = C.Ledger.AccountState (Coin 0) (Coin 0)
       }
   , _memPoolState = LedgerState

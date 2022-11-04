@@ -84,9 +84,12 @@ makeLensesFor
 pProtocolParams :: Params -> ProtocolParameters
 pProtocolParams p = C.fromLedgerPParams C.ShelleyBasedEraBabbage $ emulatorPParams p
 
+fromProtocolParams :: ProtocolParameters -> PParams
+fromProtocolParams = C.toLedgerPParams C.ShelleyBasedEraBabbage
+
 protocolParamsL :: Lens' Params ProtocolParameters
 protocolParamsL = let
-  set p pParam = p & emulatorPParamsL .~ C.toLedgerPParams C.ShelleyBasedEraBabbage pParam
+  set p pParam = p & emulatorPParamsL .~ fromProtocolParams pParam
   in lens pProtocolParams set
 
 instance ToJSON Params where
@@ -127,7 +130,7 @@ testnet :: NetworkId
 testnet = Testnet $ NetworkMagic 1
 
 instance Default Params where
-  def = Params def def testnet
+  def = Params def (fromProtocolParams def) testnet
 
 instance Default ProtocolParameters where
   -- The protocol parameters as they are in the Alonzo era.

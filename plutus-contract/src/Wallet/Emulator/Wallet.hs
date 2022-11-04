@@ -424,7 +424,7 @@ handleBalanceTx ::
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo utx = do
-    p <- WAPI.getClientParams
+    params <- WAPI.getClientParams
     let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
     let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownAddr <- gets ownAddress
@@ -467,7 +467,7 @@ handleBalanceTx utxo utx = do
         pure txWithinputsAdded
     else do
         let collAddr = maybe ownAddr Ledger.txOutAddress $ Tx.txReturnCollateral txWithinputsAdded
-            collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent (pProtocolParams p))
+            collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent (pProtocolParams params))
             collFees = Ada.toValue $ (Ada.fromValue fees * collateralPercent + 99 {- make sure to round up -}) `Ada.divide` 100
             collBalance = fold collateral PlutusTx.- collFees
 
