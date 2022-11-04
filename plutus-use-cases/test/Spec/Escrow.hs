@@ -16,7 +16,6 @@ module Spec.Escrow( tests
                   , prop_Escrow_DoubleSatisfaction
                   , prop_FinishEscrow
                   , prop_NoLockedFunds
-                  , check_propEscrowWithCoverage
                   , EscrowModel) where
 
 import Control.Lens hiding (both)
@@ -36,8 +35,6 @@ import Ledger.Value
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
-
-import Plutus.Contract.Test.Coverage.ReportCoverage (writeCoverageReport)
 
 import Plutus.Contracts.Escrow hiding (Action (..))
 import Plutus.Trace.Emulator qualified as Trace
@@ -171,14 +168,6 @@ prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> p
 
 prop_Escrow_DoubleSatisfaction :: Actions EscrowModel -> Property
 prop_Escrow_DoubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
-
-check_propEscrowWithCoverage :: IO ()
-check_propEscrowWithCoverage = do
-  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx defaultCoverageOptions) $ \covopts ->
-    withMaxSuccess 20 $
-      propRunActionsWithOptions @EscrowModel options covopts
-        (const (pure True))
-  writeCoverageReport "Escrow" cr
 
 finishEscrow :: DL EscrowModel ()
 finishEscrow = do

@@ -6,7 +6,6 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE ViewPatterns       #-}
 {-| Transaction validation using 'cardano-ledger-specs'
 -}
 module Ledger.Validation(

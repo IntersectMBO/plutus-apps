@@ -1403,7 +1403,7 @@ makeLenses ''CoverageOptions
 -- * set the requriements for every endpoint to 20% and
 -- * not to cover any source locations in the validator scripts.
 defaultCoverageOptions :: CoverageOptions
-defaultCoverageOptions = CoverageOptions { _checkCoverage = True
+defaultCoverageOptions = CoverageOptions { _checkCoverage = False
                                          , _endpointCoverageReq = \ _ _ -> 0
                                          , _coverageIndex = mempty
                                          , _coverageIORef = Nothing }
