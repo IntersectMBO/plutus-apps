@@ -31,7 +31,7 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Contexts qualified as PV2 hiding (findTxInByTxOutRef)
 import Plutus.V1.Ledger.Address (Address (Address))
 import Plutus.V1.Ledger.Interval (contains)
-import Plutus.V1.Ledger.Value (geq, leq)
+import Plutus.V1.Ledger.Value (leq)
 import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), ScriptPurpose (Spending),
                                   TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
                                   TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoRedeemers, txInfoValidRange),
@@ -151,20 +151,16 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                 -- The datum is not added in the tx body with so we can't verify
                 -- that the tx output's datum hash is the correct one w.r.t the
                 -- provide datum.
-                   Ada.fromValue txOutValue >= Ada.fromValue vl
-                && geq (Value.noAdaValue txOutValue) (Value.noAdaValue vl)
+                   vl `leq` txOutValue
                 && txOutAddress == addr
             checkOutput (TxOutDatumInTx _) TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash h} =
-                   Ada.fromValue txOutValue >= Ada.fromValue vl
-                && geq (Value.noAdaValue txOutValue) (Value.noAdaValue vl)
+                   vl `leq` txOutValue
                 && hsh == Just h
                 && txOutAddress == addr
             -- With regards to inline datum, we have the actual datum in the tx
             -- output. Therefore, we can compare it with the provided datum.
             checkOutput (TxOutDatumInline d) TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatum id} =
-                   Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
-                && Value.noAdaValue txOutValue == Value.noAdaValue vl
+                   vl `leq` txOutValue
                 && d == id
                 && txOutAddress == addr
             checkOutput _ _ = False
