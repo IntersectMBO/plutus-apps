@@ -15,7 +15,7 @@ fromPABServerConfig PABServerConfig{pscSlotConfig, pscNetworkId, pscProtocolPara
   protocolParameters <- readProtocolParameters pscProtocolParametersJsonPath
   pure $ Params
     { pSlotConfig     = pscSlotConfig
-    , pProtocolParams = protocolParameters
+    , emulatorPParams = fromProtocolParams protocolParameters
     , pNetworkId      = networkId
     }
 

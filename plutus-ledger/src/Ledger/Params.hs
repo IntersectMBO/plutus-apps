@@ -11,6 +11,7 @@ module Ledger.Params(
   slotConfigL,
   emulatorPParamsL,
   pProtocolParams,
+  fromProtocolParams,
   protocolParamsL,
   networkIdL,
   increaseTransactionLimits,
