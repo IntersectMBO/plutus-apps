@@ -66,10 +66,10 @@ findAll env = fromList <$> forConcurrently addresses f
 -- | Query utxos address address
 --
 utxoQuery:: DBConfig -> CApi.AddressAny -> IO (Set TxOutRef)
-utxoQuery dbConfig address = putStrLn "utxoquery" >> SQL.queryNamed (utxoConn dbConfig)
+utxoQuery dbConfig address = SQL.queryNamed (utxoConn dbConfig)
                   "SELECT txid, inputIx FROM utxos WHERE utxos.address=:address"
                   [":address" := address]
-                  >>= pure . fromList -- . fmap _reference
+                  >>= pure . fromList
 
 -- | Query utxos by Cardano Address
 --  To Cardano error may occure
