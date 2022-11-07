@@ -375,14 +375,14 @@ runTestsWithCoverage = do
                 throwIO e
   where
     coverageTests ref = testGroup "game state machine tests"
-                         [ checkPredicateCoverage "run a successful game trace"
+                         [ checkPredicateCoverageOptions options "run a successful game trace"
                             ref
                             (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
                             .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
                             .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
                             successTrace
 
-                        , checkPredicateCoverage "run a 2nd successful game trace"
+                        , checkPredicateCoverageOptions options "run a 2nd successful game trace"
                             ref
                             (walletFundsChange w2 (Ada.adaValueOf 3)
                             .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 0 ==)
@@ -481,7 +481,7 @@ certification = defaultCertification {
   }
   where
     unitTest ref =
-      checkPredicateCoverage "run a successful game trace" ref
+      checkPredicateCoverageOptions options "run a successful game trace" ref
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
