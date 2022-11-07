@@ -303,9 +303,9 @@ makeTransactionBody
   -> P.CardanoBuildTx
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.BabbageEra)
 makeTransactionBody params utxo txBodyContent = do
-  txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
+  txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody (Just $ emulatorPParams params) mempty txBodyContent
   exUnits <- bimap Left id $ (Map.map snd) <$> getTxExUnitsWithLogs params utxo txTmp
-  first Right $ P.makeTransactionBody exUnits txBodyContent
+  first Right $ P.makeTransactionBody (Just $ emulatorPParams params) exUnits txBodyContent
 
 
 evaluateMinLovelaceOutput :: P.Params -> TxOut EmulatorEra -> P.Ada

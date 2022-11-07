@@ -348,7 +348,8 @@ handleBalance utx = do
         handleError tx (Left (Left (ph, ve))) = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
-                 $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction []) . makeTransactionBody mempty)
+                 $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction [])
+                          . makeTransactionBody Nothing mempty)
                           (pure . Tx.EmulatorTx)
                  $ tx
             logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty []

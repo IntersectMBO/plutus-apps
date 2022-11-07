@@ -119,6 +119,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
+import Ledger.Params (PParams)
 import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
@@ -403,11 +404,12 @@ fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
    in either (const Nothing) Just script
 
 makeTransactionBody
-    :: Map Alonzo.RdmrPtr Alonzo.ExUnits
+    :: Maybe PParams
+    -> Map Alonzo.RdmrPtr Alonzo.ExUnits
     -> CardanoBuildTx
     -> Either ToCardanoError (C.TxBody C.BabbageEra)
-makeTransactionBody exUnits (CardanoBuildTx txBodyContent) =
-  first (TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent
+makeTransactionBody pparams exUnits (CardanoBuildTx txBodyContent) =
+  first (TxBodyError . C.displayError) $ makeTransactionBody' pparams exUnits txBodyContent
 
 fromCardanoTxIn :: C.TxIn -> PV1.TxOutRef
 fromCardanoTxIn (C.TxIn txId (C.TxIx txIx)) = PV1.TxOutRef (fromCardanoTxId txId) (toInteger txIx)
