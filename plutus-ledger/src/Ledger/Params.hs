@@ -16,6 +16,7 @@ module Ledger.Params(
   increaseTransactionLimits,
   -- * cardano-ledger specific types and conversion functions
   EmulatorEra,
+  PParams,
   slotLength,
   testnet,
   emulatorEpochSize,
