@@ -22,7 +22,7 @@ import Data.List qualified as List
 import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog (Property, (===))
 import Hedgehog qualified
-import Ledger (Params (..), Slot, fromProtocolParams, pProtocolParams)
+import Ledger (Params (..), Slot, pParamsFromProtocolParams, pProtocolParams)
 import Ledger.Constraints.OffChain (emptyUnbalancedTx)
 import Ledger.Generators qualified as Gen
 import Ledger.TimeSlot (SlotConfig)
@@ -50,7 +50,7 @@ yieldToInstanceState :: Property
 yieldToInstanceState = Hedgehog.property $ do
     pp <- Hedgehog.forAll Gen.genProtocolParameters
     sc <- Hedgehog.forAll Gen.genSlotConfig
-    let params = def { emulatorPParams = fromProtocolParams pp, pSlotConfig = sc }
+    let params = def { emulatorPParams = pParamsFromProtocolParams pp, pSlotConfig = sc }
     sl <- Hedgehog.forAll Gen.genSlot
     cid <- liftIO randomID
 
@@ -73,7 +73,7 @@ yieldNoCid :: Property
 yieldNoCid = Hedgehog.property $ do
     pp <- Hedgehog.forAll Gen.genProtocolParameters
     sc <- Hedgehog.forAll Gen.genSlotConfig
-    let params = def { emulatorPParams = fromProtocolParams pp, pSlotConfig = sc }
+    let params = def { emulatorPParams = pParamsFromProtocolParams pp, pSlotConfig = sc }
     sl <- Hedgehog.forAll Gen.genSlot
     result <- liftIO $ do
         iss <- emptyInstancesState

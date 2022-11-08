@@ -79,8 +79,8 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
             case Aeson.eitherDecode bs of
                 Left err -> putStrLn err
                 Right pp ->
-                    let params = (_params emulatorCfg) & protocolParamsL .~ pp
-                                                       & networkIdL .~ networkId
+                    let params = _params emulatorCfg & protocolParamsL .~ pp
+                                                     & networkIdL .~ networkId
                     in traverse_
                         (uncurry $ writeTransaction params scPath prefix)
                         (zip [1::Int ..] $ getEvents Folds.walletTxBalanceEvents)
