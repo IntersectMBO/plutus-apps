@@ -34,7 +34,7 @@ main = defaultMain tests
 -- You can override this number for a specific property test by using
 -- 'Test.Tasty.Quickcheck.withMaxSuccess'.
 limit :: Int
-limit = 50
+limit = 100
 
 tests :: TestTree
 tests =
