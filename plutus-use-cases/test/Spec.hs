@@ -24,8 +24,6 @@ import Spec.Uniswap qualified
 import Spec.Vesting qualified
 
 import Test.Tasty
-import Test.Tasty.Hedgehog (HedgehogTestLimit (..))
-import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests))
 
 main :: IO ()
 main = defaultMain tests
