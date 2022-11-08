@@ -83,7 +83,7 @@ fromLedgerUTxO (UTxO utxo) =
   . Map.toList
   $ utxo
 
--- Adapted from cardano-api Cardano.APIpFee to avoid PParams conversion
+-- Adapted from cardano-api Cardano.API.Fee to avoid PParams conversion
 evaluateTransactionFee :: PParams -> C.Api.TxBody C.Api.BabbageEra -> Word -> C.Api.Lovelace
 evaluateTransactionFee pparams txbody keywitcount = case C.Api.makeSignedTransaction [] txbody of
       C.Api.ShelleyTx _  tx -> evalShelleyBasedEra tx

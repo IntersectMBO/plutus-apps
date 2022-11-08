@@ -69,7 +69,6 @@ data Params = Params
   , pNetworkId      :: NetworkId
   }
   deriving (Eq, Show, Generic)
-  -- deriving anyclass (ToJSON, FromJSON)
 
 deriving instance Generic NetworkId
 deriving instance ToJSON NetworkId
