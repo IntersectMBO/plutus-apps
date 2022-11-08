@@ -17,10 +17,10 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Control.Applicative (optional)
-import Marconi.CLI (chainPointParser, targetAddressParser)
+import Marconi.CLI (chainPointParser, multiString)
 import Marconi.Indexers (combinedIndexer)
 import Marconi.Logging (logging)
-import Marconi.Types (TargetAddresses)
+import Marconi.Types (CardanoAddress, TargetAddresses)
 
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -55,12 +55,12 @@ optionsParser =
     <*> optStrParser (long "utxo-db" <> help "Path to the utxo database.")
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
     <*> optStrParser (long "script-tx-db" <> help "Path to the script transactions' database.")
-    <*> optAddressesParser
-optAddressesParser :: Parser (Maybe TargetAddresses)
-optAddressesParser = optional $ targetAddressParser
-    <$> strOption (long "addresses-to-index"
-                   <> help ( "White space separated list of addresses to index."
-                             <> " i.e \"address-1 address-2 address-3 ...\"" ) )
+    <*> optAddressesParser (long "addresses-to-index"
+                            <> help ("Becch32 Shelley addresses to index."
+                                   <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+
+optAddressesParser ::Mod OptionFields [CardanoAddress] -> Parser (Maybe TargetAddresses)
+optAddressesParser =  optional . multiString
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
 optStrParser  = optional . strOption
