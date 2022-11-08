@@ -121,7 +121,7 @@ queryInMemory address ix =
             . concatMap toRows
 
 -- | Execute the query function
--- We must stop the utxo insers before doing the query
+-- We must stop the utxo inserts before doing the query
 withQueryAction
     :: DBQueryEnv                                           -- ^ Query run time environment
     -> CApi.AddressAny                                      -- ^ Cardano address to query

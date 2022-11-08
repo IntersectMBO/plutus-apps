@@ -11,7 +11,7 @@ module Marconi.Api.HttpServer(
 import Cardano.Api ()
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text, pack)
@@ -81,7 +81,7 @@ utxoTxOutReport
     -> String                   -- ^ bech32 addressCredential
     -> Handler (Either (JsonRpcErr String) UtxoTxOutReport )
 utxoTxOutReport env address = liftIO $
-    bimap toRpcErr id <$> (Q.Utxo.findByAddress env . pack $ address)
+    first toRpcErr <$> (Q.Utxo.findByAddress env . pack $ address)
 
 -- | Retrieves a set of TxOutRef
 -- TODO convert this to stream

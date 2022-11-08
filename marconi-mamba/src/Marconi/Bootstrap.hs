@@ -73,12 +73,3 @@ fromJustWithError v = case v of
     Left e ->
         error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
     Right accounts -> accounts
-
--- txtToCardano :: Text.Text -> CardanoAddress
--- txtToCardano addr = case deserialiseToCardano addr of
---     Left e -> error ( "Error deserializing user provided bech32 address "
---                       <> Text.unpack addr <> " to Cardano.Api.Address with error"
---                       <> show e  )
---     Right a -> a
---     where
---         deserialiseToCardano = deserialiseFromBech32 (proxyToAsType Proxy)

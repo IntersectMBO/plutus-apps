@@ -74,6 +74,7 @@ library
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , json-rpc
     , marconi
     , rewindable-index
@@ -81,9 +82,7 @@ library
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:
-    , cardano-api
-    , cardano-streaming
+  build-depends:   cardano-api
 
   ------------------------
   -- Non-IOG dependencies

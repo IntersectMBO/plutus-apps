@@ -80,7 +80,6 @@ instance FromField C.TxId where
     maybe (returnError ConversionFailed f "Cannot deserialise TxId.")
           pure
     . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
-    -- fromField = fmap fromString . fromField
 
 instance ToField C.TxId where
   toField = SQLBlob . C.serialiseToRawBytes

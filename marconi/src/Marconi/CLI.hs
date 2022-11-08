@@ -47,9 +47,9 @@ fromJustWithError v = case v of
     Left e ->
         error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
     Right accounts -> accounts
-    -- TODO: `pNetworkId` and `pTestnetMagic` are copied from
-    -- https://github.com/input-output-hk/cardano-node/blob/988c93085022ed3e2aea5d70132b778cd3e622b9/cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs#L2009-L2027
-    -- Use them from there whenever they are exported.
+-- TODO: `pNetworkId` and `pTestnetMagic` are copied from
+-- https://github.com/input-output-hk/cardano-node/blob/988c93085022ed3e2aea5d70132b778cd3e622b9/cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs#L2009-L2027
+-- Use them from there whenever they are exported.
 pNetworkId :: Opt.Parser C.NetworkId
 pNetworkId = pMainnet Opt.<|> fmap C.Testnet pTestnetMagic
 
