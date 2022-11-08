@@ -41,7 +41,6 @@ common lang
     -Wincomplete-uni-patterns -Wincomplete-record-updates
     -Wredundant-constraints -Widentities -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fprof-auto-top
 
 flag defer-plugin-errors
   description:
