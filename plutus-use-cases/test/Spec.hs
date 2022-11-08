@@ -24,23 +24,13 @@ import Spec.Uniswap qualified
 import Spec.Vesting qualified
 
 import Test.Tasty
-import Test.Tasty.Hedgehog (HedgehogTestLimit (..))
-import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests))
 
 main :: IO ()
 main = defaultMain tests
 
--- | Number of successful tests for each property test.
--- You can override this number for a specific property test by using
--- 'Test.Tasty.Quickcheck.withMaxSuccess'.
-limit :: Int
-limit = 50
-
 tests :: TestTree
 tests =
-    localOption (HedgehogTestLimit (Just $ fromIntegral limit))
-  $ localOption (QuickCheckTests limit)
-  $ testGroup "use cases" [
+  testGroup "use cases" [
     Spec.Crowdfunding.tests,
     Spec.Vesting.tests,
     Spec.ErrorHandling.tests,

@@ -297,7 +297,7 @@ instance Pretty SomeCardanoApiTx where
   pretty = pretty . CardanoApiTx
 
 instance Pretty CardanoAPI.CardanoBuildTx where
-  pretty txBodyContent = case C.makeSignedTransaction [] <$> CardanoAPI.makeTransactionBody mempty txBodyContent of
+  pretty txBodyContent = case C.makeSignedTransaction [] <$> CardanoAPI.makeTransactionBody Nothing mempty txBodyContent of
     Right tx -> pretty $ CardanoApiEmulatorEraTx tx
     _        -> viaShow txBodyContent
 

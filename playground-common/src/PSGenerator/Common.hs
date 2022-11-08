@@ -182,6 +182,13 @@ exBudgetBridge = do
     typeModule ^== "PlutusCore.Evaluation.Machine.ExBudget"
     pure psJson
 
+identityBridge :: BridgePart
+identityBridge = do
+    typeName ^== "Identity"
+    typeModule ^== "Data.Functor.Identity"
+    pure psJson
+
+
 someCardanoApiTxBridge :: BridgePart
 someCardanoApiTxBridge = do
     typeName ^== "SomeCardanoApiTx"
@@ -198,6 +205,18 @@ alonzoEraBridge :: BridgePart
 alonzoEraBridge = do
     typeName ^== "AlonzoEra"
     typeModule ^== "Cardano.Ledger.Alonzo"
+    pure psString
+
+babbageEraBridge :: BridgePart
+babbageEraBridge = do
+    typeName ^== "BabbageEra"
+    typeModule ^== "Cardano.Ledger.Babbage"
+    pure psString
+
+babbagePParamsEraBridge :: BridgePart
+babbagePParamsEraBridge = do
+    typeName ^== "PParams'"
+    typeModule ^== "Cardano.Ledger.Babbage.PParams"
     pure psString
 
 standardCryptoBridge :: BridgePart
@@ -257,6 +276,8 @@ miscBridge =
     <|> someCardanoApiTxBridge
     <|> cardanoBuildTxBridge
     <|> alonzoEraBridge
+    <|> babbageEraBridge
+    <|> babbagePParamsEraBridge
     <|> standardCryptoBridge
     <|> applyTxErrorBridge
     <|> basicFailureBridge
@@ -264,6 +285,7 @@ miscBridge =
     <|> utxosPredicateFailureBridge
     <|> exportTxBridge
     <|> protocolParametersBridge
+    <|> identityBridge
 
 ------------------------------------------------------------
 

@@ -13,11 +13,7 @@ fromPABServerConfig :: PABServerConfig -> IO Params
 fromPABServerConfig PABServerConfig{pscSlotConfig, pscNetworkId, pscProtocolParametersJsonPath} = do
   let NetworkIdWrapper networkId = pscNetworkId
   protocolParameters <- readProtocolParameters pscProtocolParametersJsonPath
-  pure $ Params
-    { pSlotConfig     = pscSlotConfig
-    , pProtocolParams = protocolParameters
-    , pNetworkId      = networkId
-    }
+  pure $ paramsWithProtocolsParameters pscSlotConfig protocolParameters networkId
 
 readProtocolParameters :: Maybe FilePath -> IO ProtocolParameters
 readProtocolParameters = maybe (pure def) readPP
