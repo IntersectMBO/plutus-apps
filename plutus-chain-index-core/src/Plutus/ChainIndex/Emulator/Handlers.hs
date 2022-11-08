@@ -38,8 +38,8 @@ import GHC.Generics (Generic)
 import Ledger.Address (Address (addressCredential))
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
-import Ledger.Tx qualified as L (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), DatumFromQuery (..),
-                                 datumInDatumFromQuery)
+import Ledger.Tx qualified as L (DatumFromQuery (..), DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutDatum,
+                                 mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -109,7 +109,7 @@ getTxOutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.DecoratedTxOut)
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
@@ -124,7 +124,7 @@ getUtxoutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.DecoratedTxOut)
 getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
@@ -138,19 +138,19 @@ makeChainIndexTxOut ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => ChainIndexTxOut
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.DecoratedTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
   -- The output might come from a public key address or a script address.
   -- We need to handle them differently.
   case addressCredential $ citoAddress txout of
     PubKeyCredential _ ->
-      pure $ Just $ L.PublicKeyChainIndexTxOut address value datumWithHash script
+      pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
     ScriptCredential (ValidatorHash h) -> do
       case datumWithHash of
         Just d -> do
           v <- getScriptFromHash (ScriptHash h)
-          pure $ Just $ L.ScriptChainIndexTxOut address value d script (ValidatorHash h, fmap Validator <$> v)
+          pure $ L.mkScriptDecoratedTxOut address value d script (fmap Validator <$> v)
         Nothing -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
@@ -232,11 +232,9 @@ handleQuery = \case
           resolveDatum (Just h, Nothing) = gets (view $ diskState . dataMap . at h)
           resolveDatum (_, Just d)       = pure $ Just d
           resolveDatum (_, _)            = pure Nothing
-          txOutToDatum (L.PublicKeyChainIndexTxOut _ _ (Just (dh, mdatum)) _) =
-              (Just dh, mdatum ^? L.datumInDatumFromQuery)
-          txOutToDatum (L.ScriptChainIndexTxOut _ _ (dh, mdatum) _ _) =
-              (Just dh, mdatum ^? L.datumInDatumFromQuery)
-          txOutToDatum _ = (Nothing, Nothing)
+          txOutToDatum txout = fromMaybe (Nothing, Nothing) $ do
+              (dh, mdatum) <- txout ^? L.decoratedTxOutDatum
+              pure (Just dh, mdatum ^? L.datumInDatumFromQuery)
       txouts <- catMaybes <$> mapM getTxOutFromRef (pageItems page)
       datums <- catMaybes <$> mapM (resolveDatum . txOutToDatum) txouts
       case tip utxo of

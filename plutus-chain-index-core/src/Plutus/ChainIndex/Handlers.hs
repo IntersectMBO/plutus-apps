@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -170,7 +169,7 @@ getTxOutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.DecoratedTxOut)
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   mTx <- getTxFromTxId txOutRefId
   -- Find the output in the tx matching the output ref
@@ -186,7 +185,7 @@ getUtxoutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.DecoratedTxOut)
 getUtxoutFromRef txOutRef = do
     mTxOut <- queryOne $ queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut txOutRef
     case mTxOut of
@@ -199,17 +198,17 @@ makeChainIndexTxOut ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => ChainIndex.ChainIndexTxOut
-  -> Eff effs (Maybe L.ChainIndexTxOut)
+  -> Eff effs (Maybe L.DecoratedTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
   case addressCredential address of
     PubKeyCredential _ ->
-        pure $ Just $ L.PublicKeyChainIndexTxOut address value datumWithHash script
+        pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
     ScriptCredential vh ->
       case datumWithHash of
         Just d -> do
           v <- getScriptFromHash vh
-          pure $ Just $ L.ScriptChainIndexTxOut address value d script (vh, v)
+          pure $ L.mkScriptDecoratedTxOut address value d script v
         Nothing -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
@@ -266,7 +265,7 @@ getTxOutSetAtAddress ::
   )
   => PageQuery TxOutRef
   -> Credential
-  -> Eff effs (QueryResponse [(TxOutRef, L.ChainIndexTxOut)])
+  -> Eff effs (QueryResponse [(TxOutRef, L.DecoratedTxOut)])
 getTxOutSetAtAddress pageQuery cred = do
   (UtxosResponse tip page) <- getUtxoSetAtAddress pageQuery cred
   case tip of

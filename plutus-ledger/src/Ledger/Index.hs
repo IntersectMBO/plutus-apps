@@ -20,6 +20,7 @@ module Ledger.Index(
     _TxOutRefNotFound,
     _ScriptFailure,
     _CardanoLedgerValidationError,
+    ValidationSuccess,
     ValidationErrorInPhase,
     ValidationPhase(..),
     minFee,

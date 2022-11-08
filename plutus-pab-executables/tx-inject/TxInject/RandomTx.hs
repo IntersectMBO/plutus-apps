@@ -95,8 +95,8 @@ generateTx gen slot (UtxoIndex utxo) = do
       txn = Validation.fromPlutusTxSigned params utxoIndex tx CW.knownPaymentKeys
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
-      Nothing -> pure tx
-      Just  _ -> generateTx gen slot (UtxoIndex utxo)
+      Left _  -> pure tx
+      Right _ -> generateTx gen slot (UtxoIndex utxo)
 
 keyPairs :: NonEmpty (PaymentPrivateKey, PaymentPubKey)
 keyPairs =

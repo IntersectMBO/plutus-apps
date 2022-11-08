@@ -28,7 +28,7 @@ addr1qyhat6v7w65799pkc8ff3mjcwk79kqs8gv8t4expd67f9seqksv3earfx6skxkdhe4hcekjkj0x
 ```
 
 ### Why do we need this
-The need for this utility is from the desire to test marconi in a live network with valid addresses that may potentially correspond to a large list of Utxos.  Here are the high level requirements:
+The need for this utility is from the desire to test marconi-mamba in a live network with valid addresses that may potentially correspond to a large list of Utxos.  Here are the high level requirements:
 
 + acquire valid Bech32 Shelley addresses from a given [Cardano network](https://docs.cardano.org/explore-cardano/cardano-network/about-the-cardano-network).
 + rank the addresses based on the number of links they have to Utxos
@@ -57,8 +57,16 @@ cabal build db-utils
 ### Execution
 
 ``` sh
-$(cabal exec -- which  db-utils-exe)
+cabal run db-utils-exe -- --help
 ```
+Note:
+Examine the default CLI parameters from above,  adjust accordingly and run the program.
+
+
+``` sh
+cabal run db-utils-exe --  --testnet-magic 2
+```
+
 
 ## Caution
 This utility is under heavy development and is for internal use at this time!

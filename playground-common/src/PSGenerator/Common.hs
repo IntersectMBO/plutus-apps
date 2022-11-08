@@ -26,7 +26,7 @@ import Language.PureScript.Bridge.Builder (BridgeData)
 import Language.PureScript.Bridge.PSTypes (psInt, psNumber, psString)
 import Language.PureScript.Bridge.SumType (sigConstructor, sigValues, sumTypeConstructors)
 import Language.PureScript.Bridge.TypeParameters (A)
-import Ledger (Address, BlockId, CardanoTx, Certificate, ChainIndexTxOut, DatumFromQuery, OnChainTx, PaymentPubKey,
+import Ledger (Address, BlockId, CardanoTx, Certificate, DatumFromQuery, DecoratedTxOut, OnChainTx, PaymentPubKey,
                PaymentPubKeyHash, PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash,
                Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase,
                Withdrawal)
@@ -521,7 +521,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTx
     , equal . genericShow . argonaut $ mkSumType @ChainIndex.ChainIndexTxOut
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOutputs
-    , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOut
+    , equal . genericShow . argonaut $ mkSumType @DecoratedTxOut
     , equal . genericShow . argonaut $ mkSumType @ChainIndexLog
     , equal . genericShow . argonaut $ mkSumType @ChainIndexError
     , equal . genericShow . argonaut $ mkSumType @BeamError

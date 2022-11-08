@@ -13,6 +13,8 @@ module Ledger.Index.Internal where
 
 import Prelude hiding (lookup)
 
+import Cardano.Ledger.Alonzo.Scripts (ExUnits)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr)
 import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
 import Control.Lens (makeClassyPrisms)
@@ -58,3 +60,4 @@ deriving via (PrettyShow ValidationError) instance Pretty ValidationError
 data ValidationPhase = Phase1 | Phase2 deriving (Eq, Show, Generic, FromJSON, ToJSON)
 deriving via (PrettyShow ValidationPhase) instance Pretty ValidationPhase
 type ValidationErrorInPhase = (ValidationPhase, ValidationError)
+type ValidationSuccess = Map.Map RdmrPtr ([Text], ExUnits)

@@ -159,8 +159,8 @@ txnUpdateUtxo = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidate _ _
-                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _
+                , Chain.TxnValidate _ _ _
+                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _ _
                 , Chain.SlotAdd _
                 ] -> "ApplyTxError [UtxowFailure (UtxoFailure (FromAlonzoUtxoFail (ValueNotConserved" `Text.isInfixOf` msg
                      || "[CollectErrors [BadTranslation (TranslationLogicMissingInput" `Text.isInfixOf` msg
@@ -196,7 +196,7 @@ invalidTrace = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _
+                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _ _
                 , Chain.SlotAdd _
                 ] -> "ValueNotConservedUTxO" `Text.isInfixOf` msg
             _ -> False

@@ -28,7 +28,6 @@ import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo
                             PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (retractPP)
-import Cardano.Ledger.Babbage.Translation (coinsPerUTxOWordToCoinsPerUTxOByte)
 import Cardano.Ledger.BaseTypes (boundRational)
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -102,11 +101,11 @@ instance Default Params where
 instance Default ProtocolParameters where
   -- The protocol parameters as they are in the Alonzo era.
   def = ProtocolParameters
-    { protocolParamProtocolVersion = (6,0)
-    , protocolParamDecentralization = Just (3 % 5)
+    { protocolParamProtocolVersion = (7,0)
+    , protocolParamDecentralization = Nothing
     , protocolParamExtraPraosEntropy = Nothing
     , protocolParamMaxBlockHeaderSize = 1100
-    , protocolParamMaxBlockBodySize = 65536
+    , protocolParamMaxBlockBodySize = 90112
     , protocolParamMaxTxSize = 16384
     , protocolParamTxFeeFixed = 155381
     , protocolParamTxFeePerByte = 44
@@ -115,7 +114,7 @@ instance Default ProtocolParameters where
     , protocolParamStakePoolDeposit = Lovelace 500000000
     , protocolParamMinPoolCost = Lovelace 340000000
     , protocolParamPoolRetireMaxEpoch = EpochNo 18
-    , protocolParamStakePoolTargetNum = 150
+    , protocolParamStakePoolTargetNum = 500
     , protocolParamPoolPledgeInfluence = 3 % 10
     , protocolParamMonetaryExpansion = 3 % 1000
     , protocolParamTreasuryCut = 1 % 5
@@ -124,13 +123,13 @@ instance Default ProtocolParameters where
       [ (AnyPlutusScriptVersion PlutusScriptV1, CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams)
       , (AnyPlutusScriptVersion PlutusScriptV2, CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams) ]
     , protocolParamPrices = Just (ExecutionUnitPrices {priceExecutionSteps = 721 % 10000000, priceExecutionMemory = 577 % 10000})
-    , protocolParamMaxTxExUnits = Just (ExecutionUnits {executionSteps = 10000000000, executionMemory = 10000000})
-    , protocolParamMaxBlockExUnits = Just (ExecutionUnits {executionSteps = 40000000000, executionMemory = 50000000})
+    , protocolParamMaxTxExUnits = Just (ExecutionUnits {executionSteps = 10000000000, executionMemory = 14000000})
+    , protocolParamMaxBlockExUnits = Just (ExecutionUnits {executionSteps = 40000000000, executionMemory = 62000000})
     , protocolParamMaxValueSize = Just 5000
     , protocolParamCollateralPercent = Just 150
     , protocolParamMaxCollateralInputs = Just 3
     , protocolParamUTxOCostPerByte =
-        let (Coin coinsPerUTxOByte) = coinsPerUTxOWordToCoinsPerUTxOByte $ Coin 34482
+        let (Coin coinsPerUTxOByte) = Coin 4310
          in Just $ Lovelace coinsPerUTxOByte
     }
 

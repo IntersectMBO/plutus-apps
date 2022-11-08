@@ -8,7 +8,7 @@ import Control.Applicative (optional)
 import Control.Concurrent.Async (race_)
 import Marconi.Api.Types (CliArgs (CliArgs))
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc, bootstrapUtxoIndexers)
-import Marconi.CLI (pAddressesParser, pNetworkId)
+import Marconi.CLI (multiString, pNetworkId)
 
 
 args :: Opt.Parser CliArgs
@@ -18,7 +18,11 @@ args = CliArgs
   <*> (optional . Opt.option  Opt.auto) (
         Opt.long "http-port" <> Opt.metavar "HTTP-PORT" <> Opt.help "JSON-RPC http port number, default is port 3000.")
   <*> pNetworkId
-  <*> pAddressesParser
+  <*> multiString (Opt.long "addresses-to-index"
+                        <> Opt.help ("Becch32 Shelley addresses to index."
+                                 <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+
+
 opts :: Opt.ParserInfo CliArgs
 opts = Opt.info (args Opt.<**> Opt.helper)
     ( Opt.fullDesc <> Opt.header "marconi-mamba - Cardano blockchain indexer" )

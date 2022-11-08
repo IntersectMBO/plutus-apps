@@ -136,12 +136,12 @@ getStates
     :: forall s i
     . (PlutusTx.FromData s, PlutusTx.ToData s)
     => SM.StateMachineInstance s i
-    -> Map Tx.TxOutRef Tx.ChainIndexTxOut
+    -> Map Tx.TxOutRef Tx.DecoratedTxOut
     -> [OnChainState s i]
 getStates (SM.StateMachineInstance _ si) refMap =
     flip mapMaybe (Map.toList refMap) $ \(txOutRef, ciTxOut) -> do
       let txOut = Tx.toTxInfoTxOut ciTxOut
-      datum <- ciTxOut ^? Tx.ciTxOutScriptDatum . _2 . Tx.datumInDatumFromQuery
+      datum <- ciTxOut ^? Tx.decoratedTxOutScriptDatum . _2 . Tx.datumInDatumFromQuery
       ocsTxOutRef <- either (const Nothing) Just $ Typed.typeScriptTxOutRef si txOutRef txOut datum
       pure OnChainState{ocsTxOutRef}
 
@@ -229,7 +229,7 @@ getOnChainState ::
     , PlutusTx.ToData state
     )
     => StateMachineClient state i
-    -> Contract w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.ChainIndexTxOut))
+    -> Contract w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.DecoratedTxOut))
 getOnChainState StateMachineClient{scInstance, scChooser} = mapError (review _SMContractError) $ do
     utxoTx <- utxosAt (SM.machineAddress scInstance)
     let states = getStates scInstance utxoTx

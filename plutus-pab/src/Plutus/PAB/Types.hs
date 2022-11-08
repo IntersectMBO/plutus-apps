@@ -254,6 +254,8 @@ data WebserverConfig =
         , waitStatusTimeout    :: Maybe Second
         -- ^ timeout to be used when querying endpoint result when expected contract status must be set to Done.
         , enableMarconi        :: Bool
+        , certificatePath      :: Maybe FilePath -- ^ Certificate file for serving over HTTPS
+        , keyPath              :: Maybe FilePath -- ^ Key file for serving over HTTPS
         }
     deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -269,6 +271,8 @@ defaultWebServerConfig =
     , endpointTimeout      = Nothing
     , waitStatusTimeout    = Nothing
     , enableMarconi        = False
+    , certificatePath      = Nothing
+    , keyPath              = Nothing
     }
 
 instance Default WebserverConfig where

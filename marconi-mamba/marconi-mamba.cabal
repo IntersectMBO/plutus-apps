@@ -30,6 +30,7 @@ common lang
     ExplicitForAll
     GeneralizedNewtypeDeriving
     ImportQualifiedPost
+    OverloadedStrings
     ScopedTypeVariables
     StandaloneDeriving
 

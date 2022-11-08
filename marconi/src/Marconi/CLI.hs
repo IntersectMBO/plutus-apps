@@ -1,13 +1,20 @@
-module Marconi.CLI where
+module Marconi.CLI
+    (chainPointParser
+    , multiString
+    , parseCardanoAddresses
+    , pNetworkId
+    ) where
 
 import Cardano.Api qualified as C
+import Control.Applicative (some)
 import Data.ByteString.Char8 qualified as C8
-import Data.List.NonEmpty (fromList, nub)
+import Data.List (nub)
+import Data.List.NonEmpty (fromList)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (pack)
 import Options.Applicative qualified as Opt
 
-import Marconi.Types (TargetAddresses)
+import Marconi.Types (CardanoAddress, TargetAddresses)
 
 chainPointParser :: Opt.Parser C.ChainPoint
 chainPointParser =
@@ -25,20 +32,6 @@ chainPointParser =
       . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
       . C8.pack
 
--- | parses a white space separated address list
--- Note, duplicate addresses are rmoved
-targetAddressParser
-    :: String           -- ^ contains white spece delimeted lis of addresses
-    -> TargetAddresses  -- ^ a non empty list of valid addresses
-targetAddressParser =
-    nub
-    . fromList
-    . fromJustWithError
-    . traverse (deserializeToCardano . pack)
-    . words
-    where
-        deserializeToCardano = C.deserialiseFromBech32 (C.proxyToAsType Proxy)
-
 -- | Exit program with error
 -- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
 -- In such case we should fail fast
@@ -53,13 +46,6 @@ fromJustWithError v = case v of
 pNetworkId :: Opt.Parser C.NetworkId
 pNetworkId = pMainnet Opt.<|> fmap C.Testnet pTestnetMagic
 
-pAddressesParser :: Opt.Parser TargetAddresses
-pAddressesParser = targetAddressParser <$> Opt.strOption
-    (Opt.long "addresses-to-index"
-     <> Opt.metavar "Address"
-     <> Opt.help ("White space separated list of addresses to index."
-                  <>  " i.e \"address-1 address-2 address-3 ...\"" ) )
-
 pMainnet :: Opt.Parser C.NetworkId
 pMainnet = Opt.flag' C.Mainnet (Opt.long "mainnet" <> Opt.help "Use the mainnet magic id.")
 
@@ -68,3 +54,18 @@ pTestnetMagic = C.NetworkMagic <$> Opt.option Opt.auto
     (Opt.long "testnet-magic"
      <> Opt.metavar "NATURAL"
      <> Opt.help "Specify a testnet magic id.")
+
+-- | parses CLI params to valid NonEmpty list of Shelley addresses
+-- We error out if there are any invalid addresses
+multiString :: Opt.Mod Opt.OptionFields [CardanoAddress] -> Opt.Parser TargetAddresses
+multiString desc = fromList . concat <$> some single
+  where
+    single = Opt.option (Opt.str >>= (pure . parseCardanoAddresses)) desc
+
+parseCardanoAddresses :: String -> [CardanoAddress]
+parseCardanoAddresses =  nub
+    . fromJustWithError
+    . traverse (deserializeToCardano . pack)
+    . words
+    where
+        deserializeToCardano = C.deserialiseFromBech32 (C.proxyToAsType Proxy)

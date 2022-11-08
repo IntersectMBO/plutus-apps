@@ -15,6 +15,7 @@ module Wallet.Emulator.LogMessages(
 
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (Address, CardanoTx, TxId, getCardanoTxId)
 import Ledger.Ada qualified as Ada
@@ -62,6 +63,7 @@ data TxBalanceMsg =
         CardanoTx
         ValidationError
         Value -- ^ The amount of collateral stored in the transaction.
+        [Text]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -77,6 +79,6 @@ instance Pretty TxBalanceMsg where
         FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
         SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
         SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
-        ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
+        ValidationFailed p i _ e _ _ -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 
 makePrisms ''TxBalanceMsg
