@@ -1,6 +1,8 @@
 module Marconi.CLI
-    ( multiString
-    , chainPointParser
+    (chainPointParser
+    , multiString
+    , parseCardanoAddresses
+    , pNetworkId
     ) where
 
 import Cardano.Api qualified as C
@@ -38,18 +40,30 @@ fromJustWithError v = case v of
     Left e ->
         error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
     Right accounts -> accounts
+-- TODO: `pNetworkId` and `pTestnetMagic` are copied from
+-- https://github.com/input-output-hk/cardano-node/blob/988c93085022ed3e2aea5d70132b778cd3e622b9/cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs#L2009-L2027
+-- Use them from there whenever they are exported.
+pNetworkId :: Opt.Parser C.NetworkId
+pNetworkId = pMainnet Opt.<|> fmap C.Testnet pTestnetMagic
 
+pMainnet :: Opt.Parser C.NetworkId
+pMainnet = Opt.flag' C.Mainnet (Opt.long "mainnet" <> Opt.help "Use the mainnet magic id.")
+
+pTestnetMagic :: Opt.Parser C.NetworkMagic
+pTestnetMagic = C.NetworkMagic <$> Opt.option Opt.auto
+    (Opt.long "testnet-magic"
+     <> Opt.metavar "NATURAL"
+     <> Opt.help "Specify a testnet magic id.")
 
 -- | parses CLI params to valid NonEmpty list of Shelley addresses
 -- We error out if there are any invalid addresses
 multiString :: Opt.Mod Opt.OptionFields [CardanoAddress] -> Opt.Parser TargetAddresses
 multiString desc = fromList . concat <$> some single
   where
-    single = Opt.option (Opt.str >>= parseStringList) desc
+    single = Opt.option (Opt.str >>= (pure . parseCardanoAddresses)) desc
 
-parseStringList :: Monad m => String -> m [CardanoAddress]
-parseStringList = return
-    . nub
+parseCardanoAddresses :: String -> [CardanoAddress]
+parseCardanoAddresses =  nub
     . fromJustWithError
     . traverse (deserializeToCardano . pack)
     . words

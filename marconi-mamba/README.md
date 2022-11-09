@@ -20,8 +20,10 @@ cabal build
 #### Execute the JSON-RPC server example
 
 ``` sh
-$(cabal exec -- which examples-jsonrpc-server)
+cd ./marconi-mamba/examples
+./start-json-rpc-server.sh
 ```
+Note that the example json-rpc-server relies on test data which may change in future.
 
 #### Execute the JSON-RPC client example
 
@@ -35,11 +37,10 @@ Use the CLI to configure the runtime time environment. To get a list of availabl
 
 ``` sh
 $(cabal exec -- which marconi-mamba) --help
-marconi-mamba - Cardano blockchain indexer
 
 Usage: marconi-mamba --socket-path FILE --utxo-db FILE [--http-port HTTP-PORT]
                      (--mainnet | --testnet-magic NATURAL)
-                     --addresses-to-index Address
+                     (--addresses-to-index ARG)
 
 Available options:
   --socket-path FILE       Socket path to node
@@ -47,9 +48,9 @@ Available options:
   --http-port HTTP-PORT    JSON-RPC http port number, default is port 3000.
   --mainnet                Use the mainnet magic id.
   --testnet-magic NATURAL  Specify a testnet magic id.
-  --addresses-to-index Address
-                           White space separated list of addresses to index. i.e
-                           "address-1 address-2 address-3 ..."
+  --addresses-to-index ARG Becch32 Shelley addresses to index. i.e
+                           "--address-to-index address-1 --address-to-index
+                           address-2 ..."
   -h,--help                Show this help text
 ```
 
@@ -57,12 +58,18 @@ Available options:
 Here is a sample invocation :
 
 ``` sh
-$(cabal exec -- which marconi-mamba)
-    --socket-path "$CARDANO_NODE_SOCKET_PATH" \
+$(cabal exec -- which marconi-mamba) \
     --testnet-magic 2 \
-    --utxo-db "$CONFIG_DIR/.dbMarconi/utxo.sqlite3" \
-    --addresses-to-index  ``"addr1q837de0y7j3ncegph2a8mc0e86q9evwtekd3ejhlpr97wclrumj7fa9r83jsrw460hslj05qtjcuhnvmrn907zxtua3skv7yyl"
+    --socket-path "$CARDANO_NODE_SOCKET_PATH" \
+    --utxo-db "$DB/utxo-db" \
+    --addresses-to-index addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc \
+    --addresses-to-index addr_test1vp8cprhse9pnnv7f4l3n6pj0afq2hjm6f7r2205dz0583egagfjah \
+    --addresses-to-index addr_test1wpzvcmq8yuqnnzerzv0u862hmc4tc8xlm74wtsqmh56tgpc3pvx0f \
+    --addresses-to-index addr_test1vrvf7yfr2h79mtzqrpcn0ql98xrhs63k85w64u8py7709zsm6tsr6 \
+    --addresses-to-index addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99
 ```
+Assumption:
+A suitable version of cardano-node is running and the environment variable `CARDANO_NODE_SOCKET_PATH` is set.
 
 #### Test with the rest-client
 

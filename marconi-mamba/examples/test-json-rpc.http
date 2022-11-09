@@ -1,0 +1,79 @@
+## REST-Client script
+# If you don't know how to use this script, see:  https://github.com/pashky/restclient.el for instruction
+
+#
+# should echo
+POST http://localhost:3000/json-rpc
+Content-Type: application/json-rpc
+{"jsonrpc": "2.0", "method": "echo", "params": "plutus-apps rocks", "id": 0}
+#
+# should fail. `add` method is unknown
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
+#
+# should print message on the console
+# TODO should we modify this to print the target addresses?
+POST http://localhost:3000/json-rpc
+Content-Type: application/json-rpc
+{"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
+#
+# lookup fot txoutrefs , should generate error if the address is not in the target list
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxoTxOutReport"
+, "params": "addr_test1qp9juu544jrkel0hp6pvrjud70h9ev3ajw2fuvezyv8ug3eg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcsytvx58"
+, "id": 5
+}
+#
+# lookup fot txoutrefs , should generate error if the address is not in the target list
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxoTxOutReport"
+, "params": "addr1q86naxdettc4r8rhls2xqs97kpkd79tvkplrv5lf8e6tfyygy9uwd947cp8mqh8kl04pazxjs9tmyystyv0nhpmc852srht88w"
+, "id":16
+}
+#
+# fetch 100 rows from sqlite
+# Note, this may brake the applicaiton depending on how large the database is.
+# We have a todo item to convert this endpoint to streams
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxoTxOutReports"
+, "params": 100
+, "id": 14
+}
+#
+# fetch plutus converted addresses the user had provided
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "addressesBech32Report"
+, "params": 100
+, "id": 11
+}
+#
+#
+# get the top 100 utxos, sorted by ledger.Address
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxosReport"
+, "params": 100
+, "id": 14
+}
+#
+# REST call. get the current time.  This may be used as health-check
+GET http://localhost:3000/rest/time
+#
+# REST call, get the user provided addresses
+GET http://localhost:3000/rest/addresses
+# REST call, get the user provided addresses

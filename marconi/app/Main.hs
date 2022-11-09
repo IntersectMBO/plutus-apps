@@ -6,18 +6,17 @@ module Main where
 
 import Control.Exception (catch)
 import Data.String (IsString)
-import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, metavar,
-                            option, strOption, (<**>), (<|>))
+import Options.Applicative (Mod, OptionFields, Parser, execParser, help, helper, info, long, strOption, (<**>))
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
-import Cardano.Api (ChainPoint, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic))
+import Cardano.Api (ChainPoint, NetworkId)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Control.Applicative (optional)
-import Marconi.CLI (chainPointParser, multiString)
+import Marconi.CLI (chainPointParser, multiString, pNetworkId)
 import Marconi.Indexers (combinedIndexer)
 import Marconi.Logging (logging)
 import Marconi.Types (CardanoAddress, TargetAddresses)
@@ -50,7 +49,7 @@ optionsParser :: Parser Options
 optionsParser =
   Options
     <$> strOption (long "socket-path" <> help "Path to node socket.")
-    <*> networkIdParser
+    <*> pNetworkId
     <*> chainPointParser
     <*> optStrParser (long "utxo-db" <> help "Path to the utxo database.")
     <*> optStrParser (long "datum-db" <> help "Path to the datum database.")
@@ -64,19 +63,6 @@ optAddressesParser =  optional . multiString
 
 optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
 optStrParser  = optional . strOption
-
-networkIdParser :: Parser NetworkId
-networkIdParser =
-  pMainnet <|> pTestnet
-pMainnet :: Parser NetworkId
-pMainnet = flag' Mainnet ( long "mainnet" <> help "Use the mainnet magic id.")
-
-pTestnet :: Parser NetworkId
-pTestnet = Testnet . NetworkMagic <$> option auto
-    ( long "testnet-magic"
-      <> metavar "NATURAL"
-      <> help "Specify a testnet magic id."
-    )
 
 main :: IO ()
 main = do

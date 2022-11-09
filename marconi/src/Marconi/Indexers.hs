@@ -1,8 +1,12 @@
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE PackageImports  #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TupleSections   #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE PackageImports         #-}
+{-# LANGUAGE PatternSynonyms        #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TupleSections          #-}
 
 module Marconi.Indexers where
 
@@ -11,9 +15,10 @@ import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (bracket_)
+import Control.Lens (makeClassy)
 import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((&), (^.))
-import Control.Monad (void)
+import Control.Monad (unless, void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
@@ -30,7 +35,7 @@ import Cardano.Api.Byron qualified as Byron
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-
+import Control.Concurrent.STM.TMVar (TMVar, putTMVar, takeTMVar, tryReadTMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
@@ -159,30 +164,36 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
+-- | UtxoWorker that can work with Query threads
+-- The main difference between this worker and the utxoWorker is
+-- that we can perform queries with this worker against utxos Stablecoin
 queryAwareUtxoWorker
-    :: QSemN            -- ^ Semaphore indicating of inflight database queries
+    :: UtxoQueryComm    -- ^  used to communicate with query threads
     -> TargetAddresses  -- ^ Target addresses to filter for
     -> Worker
-queryAwareUtxoWorker qsem targetAddresses Coordinator{_barrier} ch path =
+queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
    Utxo.open path (Utxo.Depth 2160) >>= innerLoop
   where
     innerLoop :: UtxoIndex -> IO ()
-    innerLoop index = bracket_   -- Note, Exceptions here will propegate to main thread and abend the application
-        (waitQSemN qsem 1) (signalQSemN qsem 1) $
-        do
-            signalQSemN _barrier 1
-            event <- atomically $ readTChan ch
-            case event of
-                RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-                    let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
-                    Ix.insert utxoRow index >>= innerLoop
-                RollBackward cp _ct -> do
-                    events <- Ix.getEvents (index ^. Ix.storage)
-                    innerLoop $
-                        fromMaybe index $ do
-                            slot   <- chainPointToSlotNo cp
-                            offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
-                            Ix.rewind offset index
+    innerLoop index = do
+        isquery <- atomically . tryReadTMVar $ qreq
+        unless (null isquery) $ bracket_
+            (atomically (takeTMVar qreq ) ) -- block
+            (atomically (takeTMVar qreq ) ) -- unblock
+            (atomically  (putTMVar utxoIndexer index) ) -- allow the query thread to access in-memory utxos
+        signalQSemN _barrier 1
+        event <- atomically $ readTChan ch
+        case event of
+            RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
+                let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
+                Ix.insert utxoRow index >>= innerLoop
+            RollBackward cp _ct -> do
+                events <- Ix.getEvents (index ^. Ix.storage)
+                innerLoop $
+                    fromMaybe index $ do
+                        slot   <- chainPointToSlotNo cp
+                        offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+                        Ix.rewind offset index
 
 
 utxoWorker :: Maybe TargetAddresses -> Worker
@@ -288,3 +299,10 @@ txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
 txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
+type QueryRequest = ()
+
+data UtxoQueryComm = UtxoQueryComm
+    { _QueryReq :: TMVar QueryRequest   -- ^ query request fro query thread
+    , _Indexer  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
+    }
+makeClassy ''UtxoQueryComm

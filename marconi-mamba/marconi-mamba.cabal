@@ -30,6 +30,7 @@ common lang
     ExplicitForAll
     GeneralizedNewtypeDeriving
     ImportQualifiedPost
+    OverloadedStrings
     ScopedTypeVariables
     StandaloneDeriving
 
@@ -38,6 +39,27 @@ common lang
     -Wincomplete-uni-patterns -Wmissing-import-lists
     -Wnoncanonical-monad-instances -Wredundant-constraints
     -Wunused-packages
+
+library json-rpc
+  import:          lang
+  hs-source-dirs:  json-rpc/src
+  exposed-modules:
+    Marconi.Client.Types
+    Marconi.JsonRpc.Types
+    Marconi.Server.Types
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                 >=4.9 && <5
+    , containers
+    , http-media
+    , servant
+    , servant-client-core
+    , servant-server
+    , text
 
 library
   import:          lang
@@ -49,68 +71,48 @@ library
     Marconi.Api.UtxoIndexersQuery
     Marconi.Bootstrap
 
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
-    , cardano-api
-    , cardano-streaming
-
   --------------------
   -- Local components
   --------------------
   build-depends:
+    , cardano-streaming
     , json-rpc
     , marconi
-    , plutus-ledger
+    , rewindable-index
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:   cardano-api
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
     , aeson
+    , async
     , base            >=4.9 && <5
     , containers
     , lens
     , servant
     , servant-server
     , sqlite-simple
+    , stm
     , text
     , time
     , warp
-
-library json-rpc
-  import:          lang
-  hs-source-dirs:  json-rpc/src
-  exposed-modules:
-    Marconi.Client.Types
-    Marconi.JsonRpc.Types
-    Marconi.Server.Types
-
-  build-depends:
-    , aeson
-    , base                 >=4.9 && <5
-    , containers
-    , http-media
-    , servant
-    , servant-client-core
-    , servant-server
-    , text
 
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
   main-is:        Main.hs
 
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:  cardano-api
-
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi-mamba
+  build-depends:
+    , marconi
+    , marconi-mamba
 
   ------------------------
   -- Non-IOG dependencies
@@ -128,8 +130,24 @@ executable examples-json-rpc-server
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi-mamba
-  build-depends:  base >=4.9 && <5
+  build-depends:
+    , marconi
+    , marconi-mamba
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , async
+    , base                  >=4.9 && <5
+    , lens
+    , optparse-applicative
+    , stm
 
 executable examples-json-rpc-client
   import:         lang
@@ -141,7 +159,7 @@ executable examples-json-rpc-client
   --------------------
   build-depends:
     , json-rpc
-    , plutus-ledger
+    , marconi
 
   ------------------------
   -- Non-IOG dependencies
@@ -151,3 +169,54 @@ executable examples-json-rpc-client
     , http-client
     , servant
     , servant-client
+
+library db-utils
+  import:          lang
+  hs-source-dirs:  db-utils/src
+  exposed-modules: Marconi.DB.SqlUtils
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:   marconi-mamba
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:   cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , async
+    , base           >=4.9 && <5
+    , lens
+    , sqlite-simple
+    , text
+    , time
+
+executable db-utils-exe
+  import:         lang
+  hs-source-dirs: db-utils/exe
+  main-is:        Main.hs
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , db-utils
+    , marconi
+    , marconi-mamba
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base                  >=4.9 && <5
+    , optparse-applicative
