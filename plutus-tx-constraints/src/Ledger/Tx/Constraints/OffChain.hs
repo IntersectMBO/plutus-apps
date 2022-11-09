@@ -32,7 +32,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.plutusV2OtherScript
     , P.otherData
     , P.ownPaymentPubKeyHash
-    , P.ownStakePubKeyHash
+    , P.ownStakingCredential
     , P.paymentPubKey
     -- * Constraints resolution
     , P.SomeLookupsAndConstraints(..)

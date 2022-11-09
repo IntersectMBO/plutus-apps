@@ -486,7 +486,7 @@ data ConstraintParams =
     MustPayToOtherScriptWithDatumInTx PSU.V1.ValidatorHash Ledger.Datum Value.Value
   | MustPayToOtherScriptAddressWithDatumInTx
         PSU.V1.ValidatorHash
-        PSU.V1.StakeValidatorHash
+        Ledger.StakingCredential
         Ledger.Datum
         Value.Value
   | MustPayToOtherScriptWithInlineDatum
@@ -495,7 +495,7 @@ data ConstraintParams =
         Value.Value
   | MustPayToOtherScriptAddressWithInlineDatum
         PSU.V1.ValidatorHash
-        PSU.V1.StakeValidatorHash
+        Ledger.StakingCredential
         Ledger.Datum
         Value.Value
     deriving (Show)

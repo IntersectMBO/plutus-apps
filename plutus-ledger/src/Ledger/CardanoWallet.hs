@@ -23,6 +23,7 @@ module Ledger.CardanoWallet(
     paymentPrivateKey,
     paymentPubKeyHash,
     paymentPubKey,
+    stakingCredential,
     stakePubKeyHash,
     stakePubKey,
     knownPaymentKeys,
@@ -46,7 +47,8 @@ import GHC.Generics (Generic)
 import Ledger.Address (PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                        PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                        PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash),
-                       StakePubKey (StakePubKey, unStakePubKey), StakePubKeyHash (StakePubKeyHash, unStakePubKeyHash))
+                       StakePubKey (StakePubKey, unStakePubKey), StakePubKeyHash (StakePubKeyHash, unStakePubKeyHash),
+                       stakePubKeyHashCredential)
 import Ledger.Crypto (PubKey (..))
 import Ledger.Crypto qualified as Crypto
 import Plutus.V1.Ledger.Api (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
@@ -142,6 +144,10 @@ stakePubKeyHash w = StakePubKeyHash . Crypto.pubKeyHash . unStakePubKey <$> stak
 -- | The mock wallet's stake public key
 stakePubKey :: MockWallet -> Maybe StakePubKey
 stakePubKey w = StakePubKey . Crypto.toPublicKey . unMockPrivateKey <$> mwStakeKey w
+
+-- | The mock wallet's staking credentials
+stakingCredential :: MockWallet -> Maybe StakingCredential
+stakingCredential = fmap stakePubKeyHashCredential . stakePubKeyHash
 
 knownPaymentPublicKeys :: [PaymentPubKey]
 knownPaymentPublicKeys =

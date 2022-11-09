@@ -33,7 +33,7 @@ module Ledger.Constraints.OffChain(
     , plutusV2OtherScript
     , otherData
     , ownPaymentPubKeyHash
-    , ownStakePubKeyHash
+    , ownStakingCredential
     , paymentPubKey
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
@@ -113,8 +113,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
-                       pubKeyHashAddress)
+import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), pubKeyHashAddress)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
@@ -137,7 +136,8 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator (getValidator), Value, getMintingPolicy)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,
+                             getMintingPolicy)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
@@ -161,8 +161,8 @@ data ScriptLookups a =
         -- ^ The script instance with the typed validator hash & actual compiled program
         , slOwnPaymentPubKeyHash :: Maybe PaymentPubKeyHash
         -- ^ The contract's payment public key hash, used for depositing tokens etc.
-        , slOwnStakePubKeyHash   :: Maybe StakePubKeyHash
-        -- ^ The contract's stake public key hash (optional)
+        , slOwnStakingCredential :: Maybe StakingCredential
+        -- ^ The contract's staking credentials (optional)
         } deriving stock (Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
 
@@ -183,9 +183,9 @@ instance Semigroup (ScriptLookups a) where
             , slOwnPaymentPubKeyHash =
                 fmap getFirst $ (First <$> slOwnPaymentPubKeyHash l)
                              <> (First <$> slOwnPaymentPubKeyHash r)
-            , slOwnStakePubKeyHash =
-                fmap getFirst $ (First <$> slOwnStakePubKeyHash l)
-                             <> (First <$> slOwnStakePubKeyHash r)
+            , slOwnStakingCredential =
+                fmap getFirst $ (First <$> slOwnStakingCredential l)
+                             <> (First <$> slOwnStakingCredential r)
             }
 
 instance Monoid (ScriptLookups a) where
@@ -256,7 +256,7 @@ paymentPubKey (PaymentPubKey pk) =
 
 -- | A script lookups value with a payment public key hash.
 --
--- If called multiple times, only the payment public key hash is kept:
+-- If called multiple times, only the first payment public key hash is kept:
 --
 -- @
 -- ownPaymentPubKeyHash pkh1 <> ownPaymentPubKeyHash pkh2 <> ...
@@ -265,16 +265,16 @@ paymentPubKey (PaymentPubKey pk) =
 ownPaymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
 ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 
--- | A script lookups value with a stake public key hash.
+-- | A script lookups value with staking credentials.
 --
--- If called multiple times, only the stake public key hash is kept:
+-- If called multiple times, only the first staking credential is kept:
 --
 -- @
--- ownStakePubKeyHash skh1 <> ownStakePubKeyHash skh2 <> ...
---     == ownStakePubKeyHash skh1
+-- ownStakingCredential skh1 <> ownStakingCredential skh2 <> ...
+--     == ownStakingCredential skh1
 -- @
-ownStakePubKeyHash :: StakePubKeyHash -> ScriptLookups a
-ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
+ownStakingCredential :: StakingCredential -> ScriptLookups a
+ownStakingCredential sc = mempty { slOwnStakingCredential = Just sc }
 
 -- | An unbalanced transaction. It needs to be balanced and signed before it
 --   can be submitted to the ledger. See note [Submitting transactions from
@@ -591,8 +591,8 @@ addMissingValueSpent = do
             -- transaction.
             -- Step 4 of the process described in [Balance of value spent]
             pkh <- asks slOwnPaymentPubKeyHash >>= maybe (throwError OwnPubKeyMissing) pure
-            skh <- asks slOwnStakePubKeyHash
-            let pv2TxOut = PV2.TxOut { PV2.txOutAddress = pubKeyHashAddress pkh skh
+            sc <- asks slOwnStakingCredential
+            let pv2TxOut = PV2.TxOut { PV2.txOutAddress = pubKeyHashAddress pkh sc
                                      , PV2.txOutValue = missing
                                      , PV2.txOutDatum = PV2.NoOutputDatum
                                      , PV2.txOutReferenceScript = Nothing

@@ -77,7 +77,7 @@ module Ledger.Constraints(
     , OC.otherData
     , OC.paymentPubKey
     , OC.ownPaymentPubKeyHash
-    , OC.ownStakePubKeyHash
+    , OC.ownStakingCredential
     ) where
 
 import Ledger.Constraints.OffChain qualified as OC
