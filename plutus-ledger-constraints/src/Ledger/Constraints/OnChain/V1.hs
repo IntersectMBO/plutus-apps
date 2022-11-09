@@ -30,6 +30,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx), getTxOutDatum)
 import Ledger.Credential (Credential (ScriptCredential))
+import Ledger.Value (leq)
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Address qualified as Address
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
@@ -38,7 +39,6 @@ import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxI
                                   TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue))
 import Plutus.V1.Ledger.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
-import Plutus.V1.Ledger.Value (leq)
 
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?
@@ -138,14 +138,10 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                 -- The datum is not added in the tx body with so we can't verify
                 -- that the tx output's datum hash is the correct one w.r.t the
                 -- provide datum.
-                   Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
-                && Value.noAdaValue txOutValue == Value.noAdaValue vl
+                   vl `leq` txOutValue
                 && txOutAddress == addr
             checkOutput (TxOutDatumInTx d) TxOut{txOutAddress, txOutValue, txOutDatumHash=Just h} =
-                   Ada.fromValue txOutValue >= Ada.fromValue vl
-                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.maxMinAdaTxOut
-                && Value.noAdaValue txOutValue == Value.noAdaValue vl
+                   vl `leq` txOutValue
                 && hsh d == Just h
                 && txOutAddress == addr
             -- By ledger rules, a script output with no datum is unspendable.
