@@ -113,11 +113,11 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), pubKeyHashAddress)
-import Ledger.Address qualified as Address
+import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash),
+                       pubKeyHashAddress)
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
@@ -136,8 +136,8 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,
-                             getMintingPolicy)
+import Plutus.V1.Ledger.Api (Credential (ScriptCredential), Datum (Datum), DatumHash, StakingCredential,
+                             Validator (getValidator), Value, getMintingPolicy)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
@@ -659,7 +659,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = fmap (Datum . toBuiltinData) ocDatum
-    pure [ MustPayToOtherScript (tvValidatorHash inst) Nothing dsV ocReferenceScriptHash ocValue ]
+    pure [ MustPayToAddress (Address (ScriptCredential (tvValidatorHash inst)) Nothing) (Just dsV) ocReferenceScriptHash ocValue ]
 
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m
@@ -811,30 +811,15 @@ processConstraint = \case
                 unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) (fmap getMintingPolicy mintingPolicyScript)
 
 
-    MustPayToPubKeyAddress pk skhM mdv refScriptHashM vl -> do
+    MustPayToAddress addr mdv refScriptHashM vl -> do
         forM_ mdv $ \case
             TxOutDatumInTx d -> do
                 let theHash = P.datumHash d
                 unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just d
             _ -> pure ()
 
-        let addr = pubKeyHashAddress pk skhM
         refScript <- lookupScriptAsReferenceScript refScriptHashM
         txOut <- mkCardanoTxOut addr vl mdv refScript
-        unbalancedTx . tx . Tx.outputs <>= [txOut]
-
-        valueSpentOutputs <>= provided vl
-
-    MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
-        case dv of
-            TxOutDatumInTx d -> do
-                let theHash = P.datumHash d
-                unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just d
-            _ -> pure ()
-
-        let addr = Address.scriptValidatorHashAddress vlh svhM
-        refScript <- lookupScriptAsReferenceScript refScriptHashM
-        txOut <- mkCardanoTxOut addr vl (Just dv) refScript
         unbalancedTx . tx . Tx.outputs <>= [txOut]
 
         valueSpentOutputs <>= provided vl

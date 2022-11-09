@@ -9,14 +9,10 @@ module Ledger.Tx.Constraints(
     , TC.mustPayToTheScript
     , TC.mustPayToTheScriptWithDatumInTx
     , TC.mustPayToTheScriptWithInlineDatum
-    , TC.mustPayToPubKey
-    , TC.mustPayToPubKeyAddress
-    , TC.mustPayWithDatumToPubKey
-    , TC.mustPayWithDatumToPubKeyAddress
-    , TC.mustPayWithDatumInTxToPubKey
-    , TC.mustPayWithDatumInTxToPubKeyAddress
-    , TC.mustPayWithInlineDatumToPubKey
-    , TC.mustPayWithInlineDatumToPubKeyAddress
+    , TC.mustPayToAddress
+    , TC.mustPayToAddressWithDatum
+    , TC.mustPayToAddressWithDatumInTx
+    , TC.mustPayToAddressWithInlineDatum
     , TC.mustPayToAddressWithReferenceScript
     , TC.mustPayToAddressWithReferenceValidator
     , TC.mustPayToAddressWithReferenceMintingPolicy
@@ -37,13 +33,22 @@ module Ledger.Tx.Constraints(
     , TC.mustProduceAtLeast
     , TC.mustIncludeDatumInTxWithHash
     , TC.mustIncludeDatumInTx
+    , TC.mustSatisfyAnyOf
+    -- * Must-pay constraints for specific types of addresses
+    , TC.mustPayToPubKey
+    , TC.mustPayToPubKeyAddress
+    , TC.mustPayWithDatumToPubKey
+    , TC.mustPayWithDatumToPubKeyAddress
+    , TC.mustPayWithDatumInTxToPubKey
+    , TC.mustPayWithDatumInTxToPubKeyAddress
+    , TC.mustPayWithInlineDatumToPubKey
+    , TC.mustPayWithInlineDatumToPubKeyAddress
     , TC.mustPayToOtherScript
     , TC.mustPayToOtherScriptWithDatumInTx
     , TC.mustPayToOtherScriptWithInlineDatum
     , TC.mustPayToOtherScriptAddress
     , TC.mustPayToOtherScriptAddressWithDatumInTx
     , TC.mustPayToOtherScriptAddressWithInlineDatum
-    , TC.mustSatisfyAnyOf
     -- * Defining off-chain only constraints
     , TC.collectFromPlutusV1Script
     , TC.collectFromPlutusV1ScriptFilter

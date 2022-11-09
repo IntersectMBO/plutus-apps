@@ -21,15 +21,15 @@ import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)),
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
+import Ledger.Address (Address (Address), PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx), getTxOutDatum)
-import Ledger.Credential (Credential (ScriptCredential))
+import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Value (leq)
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Address qualified as Address
@@ -114,7 +114,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v _ ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv refScript vl ->
+    MustPayToAddress (Address (PubKeyCredential pk) _) mdv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
             checkOutput (TxOutDatumHash _) TxOut{txOutDatumHash=Just _} =
@@ -126,11 +126,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                 hsh dv == Just svh
             checkOutput _ _ = False
         in
-        traceIfFalse "La" -- "MustPayToPubKey"
+        traceIfFalse "La" -- "MustPayToAddress (PubKey)"
         $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
             && maybe True (\dv -> any (checkOutput dv) outs) mdv
             && isNothing refScript
-    MustPayToOtherScript vlh _ dv refScript vl ->
+    MustPayToAddress (Address (ScriptCredential vlh) _) mdv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh d = V.findDatumHash d scriptContextTxInfo
             addr = Address.scriptHashAddress vlh
@@ -149,8 +149,8 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
             -- script output.
             checkOutput _ _ = False
         in
-        traceIfFalse "Lb" -- "MustPayToOtherScript"
-        $ any (checkOutput dv) outs
+        traceIfFalse "Lb" -- "MustPayToAddress (Script)"
+        $ maybe True (\dv -> any (checkOutput dv) outs) mdv
             && isNothing refScript
     MustIncludeDatumInTxWithHash dvh dv ->
         traceIfFalse "Lc" -- "missing datum"
