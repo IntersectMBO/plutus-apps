@@ -61,9 +61,11 @@ library
     PlutusExample.PlutusVersion1.MintingScript
     PlutusExample.PlutusVersion1.RedeemerContextScripts
     PlutusExample.PlutusVersion1.Sum
+    PlutusExample.PlutusVersion2.EcdsaSecp256k1Loop
     PlutusExample.PlutusVersion2.MintingScript
     PlutusExample.PlutusVersion2.RedeemerContextEquivalence
     PlutusExample.PlutusVersion2.RequireRedeemer
+    PlutusExample.PlutusVersion2.SchnorrSecp256k1Loop
     PlutusExample.PlutusVersion2.StakeScript
     PlutusExample.ScriptContextChecker
 
