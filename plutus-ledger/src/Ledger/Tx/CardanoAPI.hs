@@ -36,6 +36,7 @@ import Cardano.Api.Shelley qualified as C
 import Data.Bitraversable (bisequence)
 import Data.Map qualified as Map
 import Ledger.Address qualified as P
+import Ledger.Params (Params (emulatorPParams))
 import Ledger.Params qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPI.Internal
@@ -48,7 +49,7 @@ toCardanoTxBodyContent
     -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..} = do
+toCardanoTxBodyContent p@P.Params{P.pNetworkId} sigs tx@P.Tx{..} = do
     -- TODO: translate all fields
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
@@ -75,7 +76,7 @@ toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs tx@P.Tx{..
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith $ Just pProtocolParams
+        , txProtocolParams = C.BuildTxWith $ Just $ P.pProtocolParams p
         , txScriptValidity = C.TxScriptValidityNone
         , txExtraKeyWits
         -- unused:
@@ -153,7 +154,7 @@ toCardanoTxBody ::
     -> Either ToCardanoError (C.TxBody C.BabbageEra)
 toCardanoTxBody params sigs tx = do
     txBodyContent <- toCardanoTxBodyContent params sigs tx
-    makeTransactionBody mempty txBodyContent
+    makeTransactionBody (Just $ emulatorPParams params) mempty txBodyContent
 
 toCardanoTxInBuild :: P.Tx -> P.TxInput -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
 toCardanoTxInBuild tx (P.TxInput txInRef txInType) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness tx txInType)

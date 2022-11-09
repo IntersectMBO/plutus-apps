@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes   #-}
+{-# LANGUAGE TypeFamilies #-}
 -- | Calculating transaction fees in the emulator.
 module Ledger.Fee(
   estimateTransactionFee,
@@ -6,11 +8,14 @@ module Ledger.Fee(
 
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.BaseTypes (Globals (systemStart))
+import Cardano.Ledger.Core qualified as C.Ledger (Tx)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
 import Data.Bifunctor (bimap, first)
 import Data.Map qualified as Map
 import Ledger.Ada (lovelaceValueOf)
 import Ledger.Address (Address, PaymentPubKeyHash)
-import Ledger.Params (EmulatorEra, Params (pNetworkId, pProtocolParams), emulatorEraHistory, emulatorGlobals)
+import Ledger.Params (EmulatorEra, PParams, Params (emulatorPParams, pNetworkId), emulatorEraHistory, emulatorGlobals,
+                      pProtocolParams)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoTxBodyContent)
 import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
@@ -26,7 +31,7 @@ estimateTransactionFee params utxo requiredSigners tx = do
   txBodyContent <- first Right $ toCardanoTxBodyContent params requiredSigners tx
   let nkeys = C.Api.estimateTransactionKeyWitnessCount (getCardanoBuildTx txBodyContent)
   txBody <- makeTransactionBody params utxo txBodyContent
-  case C.Api.evaluateTransactionFee (pProtocolParams params) txBody nkeys 0 of
+  case evaluateTransactionFee (emulatorPParams params) txBody nkeys of
     C.Api.Lovelace fee -> pure $ lovelaceValueOf fee
 
 -- | Creates a balanced transaction by calculating the execution units, the fees and the change,
@@ -77,3 +82,11 @@ fromLedgerUTxO (UTxO utxo) =
   . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraBabbage))
   . Map.toList
   $ utxo
+
+-- Adapted from cardano-api Cardano.API.Fee to avoid PParams conversion
+evaluateTransactionFee :: PParams -> C.Api.TxBody C.Api.BabbageEra -> Word -> C.Api.Lovelace
+evaluateTransactionFee pparams txbody keywitcount = case C.Api.makeSignedTransaction [] txbody of
+      C.Api.ShelleyTx _  tx -> evalShelleyBasedEra tx
+  where
+    evalShelleyBasedEra :: C.Ledger.Tx (C.Api.ShelleyLedgerEra C.Api.BabbageEra) -> C.Api.Lovelace
+    evalShelleyBasedEra tx = C.Api.fromShelleyLovelace $ C.Ledger.evaluateTransactionFee pparams tx keywitcount

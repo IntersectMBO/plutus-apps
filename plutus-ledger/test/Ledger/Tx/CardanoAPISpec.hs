@@ -162,7 +162,7 @@ convertMintingTx = property $ do
       vL n = Value.singleton (Value.mpsSymbol mpsHash) "L" n
       tx   = mempty { txMint = vL 1 }
           & addMintingPolicy (Versioned mps PlutusV1) (unitRedeemer, Nothing)
-      ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody mempty
+      ectx = toCardanoTxBodyContent def [] tx >>= makeTransactionBody Nothing mempty
   case ectx of
     -- Check that the converted tx contains exactly one script
     Right (ShelleyTxBody _ _ [_script] _ _ _) -> do

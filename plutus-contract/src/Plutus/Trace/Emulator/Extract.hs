@@ -13,6 +13,7 @@ module Plutus.Trace.Emulator.Extract(
 
 import Cardano.Api qualified as C
 import Control.Foldl qualified as L
+import Control.Lens ((&), (.~))
 import Control.Monad.Freer (run)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
@@ -21,7 +22,7 @@ import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
-import Ledger.Params (Params (..))
+import Ledger.Params (Params (..), networkIdL, protocolParamsL)
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
@@ -78,7 +79,8 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
             case Aeson.eitherDecode bs of
                 Left err -> putStrLn err
                 Right pp ->
-                    let params = (_params emulatorCfg) { pProtocolParams = pp, pNetworkId = networkId }
+                    let params = _params emulatorCfg & protocolParamsL .~ pp
+                                                     & networkIdL .~ networkId
                     in traverse_
                         (uncurry $ writeTransaction params scPath prefix)
                         (zip [1::Int ..] $ getEvents Folds.walletTxBalanceEvents)

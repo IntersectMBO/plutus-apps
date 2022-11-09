@@ -49,7 +49,7 @@ import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
 import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, Tx (txFee, txMint), TxOut (..), TxOutRef,
-               UtxoIndex (..), Value)
+               UtxoIndex (..), Value, pProtocolParams)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address (addressCredential), PaymentPrivateKey (..), PaymentPubKey,
@@ -348,7 +348,8 @@ handleBalance utx = do
         handleError tx (Left (Left (ph, ve))) = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
-                 $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction []) . makeTransactionBody mempty)
+                 $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction [])
+                          . makeTransactionBody Nothing mempty)
                           (pure . Tx.EmulatorTx)
                  $ tx
             logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty []
@@ -424,7 +425,7 @@ handleBalanceTx ::
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo utx = do
-    Params { pProtocolParams } <- WAPI.getClientParams
+    params <- WAPI.getClientParams
     let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
     let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownAddr <- gets ownAddress
@@ -467,7 +468,7 @@ handleBalanceTx utxo utx = do
         pure txWithinputsAdded
     else do
         let collAddr = maybe ownAddr Ledger.txOutAddress $ Tx.txReturnCollateral txWithinputsAdded
-            collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)
+            collateralPercent = maybe 100 fromIntegral (protocolParamCollateralPercent (pProtocolParams params))
             collFees = Ada.toValue $ (Ada.fromValue fees * collateralPercent + 99 {- make sure to round up -}) `Ada.divide` 100
             collBalance = fold collateral PlutusTx.- collFees
 

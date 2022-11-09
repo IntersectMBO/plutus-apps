@@ -16,14 +16,12 @@ Draft
 Context
 -------
 
-Some DApps need to index and query a portion of the blockchain for a specific list of addresses. `Marconi <https://plutus-apps--763.org.readthedocs.build/en/763/adr/0004-marconi-initiative.html>`_ provides a general solution for indexing the blockchain data.  The query interface adds reporting capabilities on top of Marconi for a specific list of addresses for both Haskell and non-Haskell applications.
+`Marconi <https://plutus-apps--763.org.readthedocs.build/en/763/adr/0004-marconi-initiative.html>`_ provides a general solution for indexing the blockchain data.  The query interface adds reporting capabilities on top of Marconi for both Haskell and non-Haskell applications.
 
 Decision
 --------
 
 - We will build the interface on top of the Marconi indexer with minimal impact on the Marconi infrastructure
-
-- The interface indexes for the addresses that the user/DApps provides
 
 - The query interface may be used both as an executable or a Haskell library
 

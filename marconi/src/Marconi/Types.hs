@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeFamilies       #-}
+
 -- | This module provides several type aliases and utility functions to deal with them.
 module Marconi.Types
        (
