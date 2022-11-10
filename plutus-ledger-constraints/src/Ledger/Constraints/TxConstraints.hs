@@ -733,23 +733,24 @@ mustMintCurrencyWithRedeemer = mustMintCurrencyWithRedeemerAndReference Nothing
 -- information.
 mustMintCurrencyWithRedeemerAndReference
     :: forall i o
-     . (Maybe TxOutRef)
+     . Maybe TxOutRef
     -> MintingPolicyHash
     -> Redeemer
     -> TokenName
     -> Integer
     -> TxConstraints i o
-mustMintCurrencyWithRedeemerAndReference mref mph red tn a = if a == 0 then mempty else singleton $ MustMintValue mph red tn a mref
+mustMintCurrencyWithRedeemerAndReference mref mph red tn a =
+  if a == 0 then mempty else singleton $ MustMintValue mph red tn a mref
 
 {-# INLINABLE mustSpendAtLeast #-}
 -- | @mustSpendAtLeast v@ requires the sum of the transaction's inputs value to
 -- be at least @v@.
 --
--- If used in 'Ledger.Constraints.OffChain', this constraint adds the missing
--- input value with an additionnal public key output using the public key hash
--- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.ownPaymentPubKeyHash' and optionaly
--- 'Ledger.Constraints.OffChain.ownStakingCredential'.
+-- If used in 'Ledger.Constraints.OffChain', this constraint checks if
+-- at least the given value is spent in the transaction.
+-- When the transaction is created, a 'MkTxError.DeclaredInputMismatch' error
+-- is raised if it is not the case.
+>>>>>>> bfaddb8a3 (Remove offchain logic for MustProduceAtLeast and MustSpendAtLeast)
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- sum of the transaction's inputs value to be at least @v@.
@@ -760,11 +761,10 @@ mustSpendAtLeast = singleton . MustSpendAtLeast
 -- | @mustProduceAtLeast v@ requires the sum of the transaction's outputs value to
 -- be at least @v@.
 --
--- If used in 'Ledger.Constraints.OffChain', this constraint adds the missing
--- output value with an additionnal public key output using the public key hash
--- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.ownPaymentPubKeyHash' and optionaly
--- 'Ledger.Constraints.OffChain.ownStakingCredential'.
+-- If used in 'Ledger.Constraints.OffChain', this constraint checks if
+-- at least the given value is produced in the transaction.
+-- When the transaction is created, a 'MkTxError.DeclaredOutputMismatch' error
+-- is raised if it is not the case.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- sum of the transaction's outputs value to be at least @v@.
