@@ -12,6 +12,8 @@ let
 
   runtimeGhcWrapped = writeShellScriptBin "runghc" ''
     export PATH=$PATH:${lib.makeBinPath [ bubblewrap runtimeGhc util-linux ]}
+    echo $PATH 
+    echo AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     exec setpriv --ambient-caps -all -- \
       bwrap --ro-bind /nix /nix --ro-bind /proc /proc --dev /dev --ro-bind "''${@: -1}" "''${@: -1}" --unshare-all -- \
       runghc "$@"
