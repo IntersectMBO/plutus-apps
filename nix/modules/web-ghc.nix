@@ -57,7 +57,6 @@ in
         # allow binding on port 80
         AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
 
-
         # sane defaults for security
         DynamicUser = true;
         ProtectKernelTunables = true;
