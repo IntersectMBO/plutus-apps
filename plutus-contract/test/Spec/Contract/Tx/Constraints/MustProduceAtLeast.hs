@@ -16,17 +16,15 @@ import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError, ownPaymentPubKeyHash, typedValidatorLookups,
-                                                             unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Constraints (MkTxError, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustIncludeDatumInTx,
-                                                                  mustPayToTheScriptWithDatumInTx,
+import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustPayToTheScriptWithDatumInTx,
                                                                   mustPayWithDatumInTxToPubKey, mustProduceAtLeast)
 import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, _ConstraintResolutionContractError,
-                               awaitTxConfirmed, submitTxConstraintsWith, utxosAt)
+import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
+                               submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions,
                              mockWalletPaymentPubKeyHash, w1, w6, (.&&.))
@@ -57,7 +55,6 @@ tests =
         , spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup
         , contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup
         , contractErrorWhenUnableToSpendMoreThanScriptTokenBalance
-        , contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing
         , phase2FailureWhenProducedAdaAmountIsNotSatisfied
         , phase2FailureWhenProducedTokenAmountIsNotSatisfied
         ]
@@ -184,37 +181,6 @@ contractErrorWhenUnableToSpendMoreThanScriptTokenBalance =
         options
         "Fail validation when there are not enough tokens to satisfy mustProduceAtLeast constraint"
         (assertContractError contract (Trace.walletInstanceTag w1) (\case { WalletContractError (InsufficientFunds _)-> True; _ -> False }) "failed to throw error"
-        .&&. assertValidatedTransactionCount 1)
-        (void $ trace contract)
-
--- Contract error is thrown when using mostProduceAtLeast constraint and the ownPaymentPubKeyHash lookup is missing from the contract
-contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing :: TestTree
-contractErrorWhenOwnPaymentPubKeyHashLookupIsMissing =
-    let withoutOwnPubkeyHashLookupContract:: Value.Value -> Value.Value -> Contract () Empty ContractError ()
-        withoutOwnPubkeyHashLookupContract offAmt onAmt = do
-            let lookups1 = Constraints.typedValidatorLookups typedValidator
-                tx1 = Constraints.mustPayToTheScriptWithDatumInTx onAmt baseAdaValueLockedByScript
-            ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
-            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-
-            utxos <- utxosAt scrAddress
-            let lookups2 = Constraints.typedValidatorLookups typedValidator
-                    <> Constraints.unspentOutputs utxos
-                tx2 =
-                    Constraints.collectFromTheScript utxos ()
-                    <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
-                    <> Constraints.mustProduceAtLeast offAmt
-            ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
-            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
-
-        amt = baseAdaValueLockedByScript
-        contract = withoutOwnPubkeyHashLookupContract amt amt
-    in checkPredicateOptions
-        defaultCheckOptions
-        "Fail validation when mustProduceAtLeast is greater than script's balance and wallet's pubkey is not in the lookup"
-        (assertContractError contract (Trace.walletInstanceTag w1)
-              (has $ Con._ConstraintResolutionContractError . _DeclaredOutputMismatch)
-              "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         (void $ trace contract)
 

@@ -77,7 +77,6 @@ module Ledger.Constraints.OffChain(
     , processConstraintFun
     , addOwnInput
     , addOwnOutput
-    , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
     , lookupScript
@@ -262,6 +261,7 @@ paymentPubKey (PaymentPubKey pk) =
 -- ownPaymentPubKeyHash pkh1 <> ownPaymentPubKeyHash pkh2 <> ...
 --     == ownPaymentPubKeyHash pkh1
 -- @
+{-# DEPRECATED ownPaymentPubKeyHash "Shouldn't be meaningful due to change in MustSpendAtLeast and MustProduceAtLeast offchain code" #-}
 ownPaymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
 ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 
@@ -273,6 +273,7 @@ ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 -- ownStakingCredential skh1 <> ownStakingCredential skh2 <> ...
 --     == ownStakingCredential skh1
 -- @
+{-# DEPRECATED ownStakePubKeyHash "Shouldn't be meaningful due to change in MustSpendAtLeast and MustProduceAtLeast offchain code" #-}
 ownStakingCredential :: StakingCredential -> ScriptLookups a
 ownStakingCredential sc = mempty { slOwnStakingCredential = Just sc }
 
@@ -387,11 +388,6 @@ missingValueSpent ValueSpentBalances{vbsRequired, vbsProvided} =
         difference = vbsRequired <> N.negate vbsProvided
         (_, missing) = Value.split difference
     in missing
-
-totalMissingValue :: ConstraintProcessingState -> Value
-totalMissingValue ConstraintProcessingState{cpsValueSpentBalancesInputs, cpsValueSpentBalancesOutputs} =
-        missingValueSpent cpsValueSpentBalancesInputs \/
-        missingValueSpent cpsValueSpentBalancesOutputs
 
 makeLensesFor
     [ ("cpsUnbalancedTx", "unbalancedTx")
@@ -585,31 +581,6 @@ adjustTxOut params txOut = do
       pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
     else pure ([], txOut)
 
-
--- | Add the remaining balance of the total value that the tx must spend.
---   See note [Balance of value spent]
-addMissingValueSpent
-    :: ( MonadReader (ScriptLookups a) m
-       , MonadState ConstraintProcessingState m
-       , MonadError MkTxError m
-       )
-    => m ()
-addMissingValueSpent = do
-    missing <- gets totalMissingValue
-    unless (Value.isZero missing) $ do
-        -- add 'missing' to the transaction's outputs. This ensures that the
-        -- wallet will add a corresponding input when balancing the
-        -- transaction.
-        -- Step 4 of the process described in [Balance of value spent]
-        pkh <- asks slOwnPaymentPubKeyHash >>= maybe (throwError OwnPubKeyMissing) pure
-        sc <- asks slOwnStakingCredential
-        let pv2TxOut = PV2.TxOut { PV2.txOutAddress = pubKeyHashAddress pkh sc
-                                 , PV2.txOutValue = missing
-                                 , PV2.txOutDatum = PV2.NoOutputDatum
-                                 , PV2.txOutReferenceScript = Nothing
-                                 }
-        txOut <- toCardanoTxOutWithOutputDatum pv2TxOut
-        unbalancedTx . tx . Tx.outputs %= (txOut:)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
@@ -922,16 +893,6 @@ resolveScriptTxOutDatumAndValue
         Tx.DatumInline datum -> pure (DatumInline datum)
     pure $ Just (datum, _decoratedTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
-
-toCardanoTxOutWithOutputDatum ::
-    ( MonadState ConstraintProcessingState m
-    , MonadError MkTxError m
-    )
-    => PV2.TxOut
-    -> m TxOut
-toCardanoTxOutWithOutputDatum txout = do
-  networkId <- gets $ pNetworkId . cpsParams
-  throwToCardanoError $ TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatum txout
 
 throwToCardanoError :: MonadError MkTxError m => Either C.ToCardanoError a -> m a
 throwToCardanoError (Left err) = throwError $ ToCardanoError err
