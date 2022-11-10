@@ -69,7 +69,7 @@ payment :: POSIXTime -> MS.Payment
 payment startTime =
     MS.Payment
         { MS.paymentAmount    = Ada.adaValueOf 5
-        , MS.paymentRecipient = EM.mockWalletPaymentPubKeyHash w2
+        , MS.paymentRecipient = EM.mockWalletAddress w2
         , MS.paymentDeadline  = startTime + 20000
         }
 

@@ -198,10 +198,10 @@ data AddParams = AddParams
 -- for any pair of tokens at any given time.
 start :: forall w s. Contract w s Text Uniswap
 start = do
-    pkh <- Contract.ownFirstPaymentPubKeyHash
+    addr <- Contract.ownAddress
     cs  <- fmap Currency.currencySymbol $
            mapError (pack . show @Currency.CurrencyError) $
-           Currency.mintContract pkh [(uniswapTokenName, 1)]
+           Currency.mintContract addr [(uniswapTokenName, 1)]
     let c    = mkCoin cs uniswapTokenName
         us   = uniswap cs
         inst = uniswapInstance us

@@ -81,7 +81,7 @@ instance ContractModel AuctionModel where
 
     startInstances _ (Init (Slot ebS) (Slot pS)) =
       let params =  AuctionParams
-            { apOwner      = mockWalletPaymentPubKeyHash w1
+            { apOwner      = mockWalletAddress w1
             , apAsset      = theToken
             , apEndTime    = TimeSlot.scSlotZeroTime def + fromInteger (ebS*1000)
             , apPayoutTime = TimeSlot.scSlotZeroTime def + fromInteger (pS*1000)

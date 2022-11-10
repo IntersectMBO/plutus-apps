@@ -33,7 +33,7 @@ import Control.Lens (makeClassyPrisms)
 import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger (Address, POSIXTime, PaymentPubKeyHash)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -41,8 +41,8 @@ import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
-import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.Script.Utils.V1.Contexts (ScriptContext (..), TxInfo (..))
+import Plutus.Script.Utils.V1.Contexts qualified as Validation
 
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
@@ -70,7 +70,7 @@ import Prelude qualified as Haskell
 data Payment = Payment
     { paymentAmount    :: Value
     -- ^ How much to pay out
-    , paymentRecipient :: PaymentPubKeyHash
+    , paymentRecipient :: Address
     -- ^ Address to pay the value to
     , paymentDeadline  :: POSIXTime
     -- ^ Time until the required amount of signatures has to be collected.
@@ -80,7 +80,7 @@ data Payment = Payment
 
 instance Eq Payment where
     {-# INLINABLE (==) #-}
-    (Payment vl pk sl) == (Payment vl' pk' sl') = vl == vl' && pk == pk' && sl == sl'
+    (Payment vl addr sl) == (Payment vl' addr' sl') = vl == vl' && addr == addr' && sl == sl'
 
 
 data Params = Params
@@ -188,7 +188,7 @@ valuePreserved vl ctx = vl == Validation.valueLockedBy (scriptContextTxInfo ctx)
 -- | @valuePaid pm ptx@ is true if the pending transaction @ptx@ pays
 --   the amount specified in @pm@ to the public key address specified in @pm@
 valuePaid :: Payment -> TxInfo -> Bool
-valuePaid (Payment vl pk _) txinfo = vl == Validation.valuePaidTo txinfo (unPaymentPubKeyHash pk)
+valuePaid (Payment vl addr _) txinfo = vl == Validation.valuePaidTo txinfo addr
 
 {-# INLINABLE transition #-}
 transition :: Params -> State MSState -> Input -> Maybe (TxConstraints Void Void, State MSState)
@@ -229,7 +229,7 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
                 validityTimeRange = Interval.to $ paymentDeadline - 2
                 constraints =
                     Constraints.mustValidateIn validityTimeRange
-                    <> Constraints.mustPayToPubKey paymentRecipient paymentAmount
+                    <> Constraints.mustPayToAddress paymentRecipient paymentAmount
                 newValue = currentValue - paymentAmount
             in Just ( constraints
                     , State

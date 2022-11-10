@@ -50,7 +50,6 @@ import Plutus.Contract (AsContractError (_ContractError), Contract, ContractErro
 import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
-import Ledger (PaymentPubKeyHash)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (CardanoTx)
@@ -77,14 +76,14 @@ instance ValidatorTypes TokenAccount where
     type DatumType TokenAccount = ()
 
 type TokenAccountSchema =
-        Endpoint "redeem" (Account, PaymentPubKeyHash)
+        Endpoint "redeem" (Account, Address)
         .\/ Endpoint "pay" (Account, Value)
-        .\/ Endpoint "new-account" (TokenName, PaymentPubKeyHash)
+        .\/ Endpoint "new-account" (TokenName, Address)
 
 type HasTokenAccountSchema s =
-    ( HasEndpoint "redeem" (Account, PaymentPubKeyHash) s
+    ( HasEndpoint "redeem" (Account, Address) s
     , HasEndpoint "pay" (Account, Value) s
-    , HasEndpoint "new-account" (TokenName, PaymentPubKeyHash) s
+    , HasEndpoint "new-account" (TokenName, Address) s
     )
 
 data TokenAccountError =
@@ -109,7 +108,7 @@ tokenAccountContract
        )
     => Contract w s e ()
 tokenAccountContract = mapError (review _TokenAccountError) (selectList [redeem_, pay_, newAccount_]) where
-    redeem_ = endpoint @"redeem" @(Account, PaymentPubKeyHash) @w @s $ \(accountOwner, destination) -> do
+    redeem_ = endpoint @"redeem" @(Account, Address) @w @s $ \(accountOwner, destination) -> do
         void $ redeem destination accountOwner
         tokenAccountContract
     pay_ = endpoint @"pay" @_ @w @s $ \(accountOwner, value) -> do
@@ -170,9 +169,9 @@ redeemTx :: forall w s e.
     ( AsTokenAccountError e
     )
     => Account
-    -> PaymentPubKeyHash
+    -> Address
     -> Contract w s e (TxConstraints () (), ScriptLookups TokenAccount)
-redeemTx account pk = mapError (review _TAContractError) $ do
+redeemTx account addr = mapError (review _TAContractError) $ do
     let inst = typedValidator account
     utxos <- utxosAt (address account)
     let totalVal = foldMap (view Ledger.decoratedTxOutValue) utxos
@@ -183,19 +182,16 @@ redeemTx account pk = mapError (review _TAContractError) $ do
             <> " outputs with a total value of "
             <> show totalVal
     let constraints = Constraints.collectFromTheScript utxos ()
-                <> Constraints.mustPayToPubKey pk (accountToken account)
+                <> Constraints.mustPayToAddress addr (accountToken account)
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos
-    -- TODO. Replace 'PubKey' with a more general 'Address' type of output?
-    --       Or perhaps add a field 'requiredTokens' to 'LedgerTxConstraints' and let the
-    --       balancing mechanism take care of providing the token.
     pure (constraints, lookups)
 
 -- | Empty the account by spending all outputs belonging to the 'Account'.
 redeem
   :: ( AsTokenAccountError e
      )
-  => PaymentPubKeyHash
+  => Address
   -- ^ Where the token should go after the transaction
   -> Account
   -- ^ The token account
@@ -222,11 +218,11 @@ newAccount
     (AsTokenAccountError e)
     => TokenName
     -- ^ Name of the token
-    -> PaymentPubKeyHash
-    -- ^ Public key of the token's initial owner
+    -> Address
+    -- ^ Address of the token's initial owner
     -> Contract w s e Account
-newAccount tokenName pk = mapError (review _TokenAccountError) $ do
-    cur <- Currency.mintContract pk [(tokenName, 1)]
+newAccount tokenName addr = mapError (review _TokenAccountError) $ do
+    cur <- Currency.mintContract addr [(tokenName, 1)]
     let sym = Currency.currencySymbol cur
     pure $ Account $ Value.assetClass sym tokenName
 
