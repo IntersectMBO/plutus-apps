@@ -249,7 +249,6 @@ create us CreateParams{..} = do
 close :: forall w s. Uniswap -> CloseParams -> Contract w s Text ()
 close us CloseParams{..} = do
     ((oref1, o1, lps), (oref2, o2, lp, liquidity)) <- findUniswapFactoryAndPool us clpCoinA clpCoinB
-    pkh                                            <- Contract.ownFirstPaymentPubKeyHash
     let usInst   = uniswapInstance us
         usScript = uniswapScript us
         usDat    = Factory $ filter (/= lp) lps
@@ -264,7 +263,6 @@ close us CloseParams{..} = do
         lookups  = Constraints.typedValidatorLookups usInst        <>
                    Constraints.plutusV1OtherScript usScript                <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us) <>
-                   Constraints.ownPaymentPubKeyHash pkh                   <>
                    Constraints.unspentOutputs (Map.singleton oref1 o1 <> Map.singleton oref2 o2)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx usDat usVal <>
@@ -281,7 +279,6 @@ close us CloseParams{..} = do
 remove :: forall w s. Uniswap -> RemoveParams -> Contract w s Text ()
 remove us RemoveParams{..} = do
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us rpCoinA rpCoinB
-    pkh                           <- Contract.ownFirstPaymentPubKeyHash
     when (rpDiff < 1 || rpDiff >= liquidity) $ throwError "removed liquidity must be positive and less than total liquidity"
     let usInst       = uniswapInstance us
         usScript     = uniswapScript us
@@ -300,8 +297,7 @@ remove us RemoveParams{..} = do
         lookups  = Constraints.typedValidatorLookups usInst          <>
                    Constraints.plutusV1OtherScript usScript                  <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us)   <>
-                   Constraints.unspentOutputs (Map.singleton oref o) <>
-                   Constraints.ownPaymentPubKeyHash pkh
+                   Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
                    Constraints.mustMintValue (negate lVal)        <>
@@ -314,7 +310,6 @@ remove us RemoveParams{..} = do
 -- | Adds some liquidity to an existing liquidity pool in exchange for newly minted liquidity tokens.
 add :: forall w s. Uniswap -> AddParams -> Contract w s Text ()
 add us AddParams{..} = do
-    pkh                           <- Contract.ownFirstPaymentPubKeyHash
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us apCoinA apCoinB
     when (apAmountA < 0 || apAmountB < 0) $ throwError "amounts must not be negative"
     let outVal = view decoratedTxOutValue o
@@ -340,7 +335,6 @@ add us AddParams{..} = do
         lookups  = Constraints.typedValidatorLookups usInst             <>
                    Constraints.plutusV1OtherScript usScript                     <>
                    Constraints.plutusV1MintingPolicy (liquidityPolicy us)       <>
-                   Constraints.ownPaymentPubKeyHash pkh                        <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
@@ -371,7 +365,6 @@ swap us SwapParams{..} = do
         let outA = Amount $ findSwapB oldA oldB spAmountB
         when (outA == 0) $ throwError "no payout"
         return (oldA - outA, oldB + spAmountB)
-    pkh <- Contract.ownFirstPaymentPubKeyHash
 
     logInfo @String $ printf "oldA = %d, oldB = %d, old product = %d, newA = %d, newB = %d, new product = %d" oldA oldB (unAmount oldA * unAmount oldB) newA newB (unAmount newA * unAmount newB)
 
@@ -380,8 +373,7 @@ swap us SwapParams{..} = do
 
         lookups = Constraints.typedValidatorLookups inst                 <>
                   Constraints.plutusV1OtherScript (Scripts.validatorScript inst) <>
-                  Constraints.unspentOutputs (Map.singleton oref o)      <>
-                  Constraints.ownPaymentPubKeyHash pkh
+                  Constraints.unspentOutputs (Map.singleton oref o)
 
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
                   Constraints.mustPayToTheScriptWithDatumInTx (Pool lp liquidity) val
