@@ -1,42 +1,47 @@
 marconi-mamba
 --
 
-This is an initial draft for the Marconi Mamba README file. Going forward, we will need to discuss and refine this document and/or the implementation so that they match.
+marconi-mamba is a [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) over HTTP built on top of the [marconi](../marconi/README.md).
 
-## Description
-marconi-mamba is a [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) HTTP server on top of the [marconi](../marconi/README.md)
+## What is it
 
-## Playing with the JSON-RPC
-There is an example client/server JSON-RPC to experiment with the JSON-RPC clien/server. Here are the steps to build and execute the examples:
+The purpose of marconi-mamba is to make the core Marcoin APIs available to non-Haskell applications.
 
-#### Build the project
+## How do I use it
+* Building from source
+* Using marconi-mamba
 
-``` sh
-cabal build all
-cd marconi-mamba
-cabal build
-```
+### Requirements
+* local instance of cardano-node, version 1.35.3
+* suitable environment for plutus-platform development, [see plutus-starter](https://github.com/input-output-hk/plutus-starter) for detail.
 
-#### Execute the JSON-RPC server example
-
-``` sh
-cd ./marconi-mamba/examples
-./start-json-rpc-server.sh
-```
-Note that the example json-rpc-server relies on test data which may change in future.
-
-#### Execute the JSON-RPC client example
+### Building from source
+To build from source we assume you have a suitable environment for plutus-platform development, [see plutus-starter](https://github.com/input-output-hk/plutus-starter) for detail.
 
 ``` sh
- $(cabal exec -- which examples-jsonrpc-client)
+git clone git@github.com:input-output-hk/plutus-apps.git
+nix-shell
+cabal clean
+cabal update
+cabal build marconi-mamba
+```
+The above process will build the executalbe in your local environment at:
+
+``` sh
+ cabal exec -- which marconi-mamba
+
 ```
 
-## Experimenting with marconi-mamba
+### Using marconi-mamba
 
-Use the CLI to configure the runtime time environment. To get a list of available options:
+#### Command line summary
+
+The general synopsis is as follows:
 
 ``` sh
 $(cabal exec -- which marconi-mamba) --help
+$(cabal exec -- which marconi-mamba) --help
+marconi-mamba - Cardano blockchain indexer
 
 Usage: marconi-mamba --socket-path FILE --utxo-db FILE [--http-port HTTP-PORT]
                      (--mainnet | --testnet-magic NATURAL)
@@ -54,10 +59,25 @@ Available options:
   -h,--help                Show this help text
 ```
 
+#### Example usage
 
-Here is a sample invocation :
+The following is a an example shell script for executing marconi-mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet)
+**Assumption**
+cardano-node version 1.35.3 is running with the socket-path as outlined below:
 
 ``` sh
+#!/usr/bin/env sh
+
+CARDANO_NODE_DIR=../cardano-node
+MAINNET_DIR="$CARDANO_NODE_DIR/.cardano-node/mainnet"
+PREVIEW_TESTNET_DIR="$CARDANO_NODE_DIR/.cardano-node/preview-testnet"
+
+CONFIG_DIR=$PREVIEW_TESTNET_DIR
+CARDANO_NODE_SOCKET_PATH="$CONFIG_DIR/cardano-node.socket"
+
+DB="./.marconidb/4"
+mkdir -p $DB
+
 $(cabal exec -- which marconi-mamba) \
     --testnet-magic 2 \
     --socket-path "$CARDANO_NODE_SOCKET_PATH" \
@@ -65,14 +85,17 @@ $(cabal exec -- which marconi-mamba) \
     --addresses-to-index addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc \
     --addresses-to-index addr_test1vp8cprhse9pnnv7f4l3n6pj0afq2hjm6f7r2205dz0583egagfjah \
     --addresses-to-index addr_test1wpzvcmq8yuqnnzerzv0u862hmc4tc8xlm74wtsqmh56tgpc3pvx0f \
-    --addresses-to-index addr_test1vrvf7yfr2h79mtzqrpcn0ql98xrhs63k85w64u8py7709zsm6tsr6 \
+    --addresses-to-index addr_test1wrn2wfykuhswv4km08w0zcl5apmnqha0j24fa287vueknasq6t4hc \
+    --addresses-to-index addr_test1qr30nkfx28r452r3006kytnpvn39zv7c2m5uqt4zrg35mly35pesdyk43wnxk3edkkw74ak56n4zh67reqjhcfp3mm7qtyekt4 \
+    --addresses-to-index addr_test1wr9gquc23wc7h8k4chyaad268mjft7t0c08wqertwms70sc0fvx8w \
     --addresses-to-index addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99
+
 ```
-Assumption:
-A suitable version of cardano-node is running and the environment variable `CARDANO_NODE_SOCKET_PATH` is set.
 
-#### Test with the rest-client
+To interact with the server:
 
-To test with the [rest-client](https://github.com/pashky/restclient.el)
-- execute the JSON-RPC server example as outlined above
-- execute the invidual tests in [test-with-rest-client.http](./examples/test-with-rest-client.http)
+``` sh
+curl -d '{"jsonrpc": "2.0" , "method": "utxoTxOutReport" , "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"  , "id": 12}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc
+
+```
+[test-json-rpc.http](./marconi-mamba/examples/test-json-rpc.http) contains additional example usage

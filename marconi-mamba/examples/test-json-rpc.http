@@ -13,12 +13,11 @@ Content-Type: application/json
 {"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
 #
 # should print message on the console
-# TODO should we modify this to print the target addresses?
 POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
 #
-# lookup fot txoutrefs , should generate error if the address is not in the target list
+# lookup for txoutrefs , should generate error if the address is not in the target list
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -41,6 +40,7 @@ Content-Type: application/json
 # fetch 100 rows from sqlite
 # Note, this may brake the applicaiton depending on how large the database is.
 # We have a todo item to convert this endpoint to streams
+# This version of marconi-mamba simply ignores `100` and returns all rows from database. This is a todo item for next release
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -51,6 +51,7 @@ Content-Type: application/json
 }
 #
 # fetch plutus converted addresses the user had provided
+# This version of marconi-mamba simply ignores `100` and returns all rows from database. This is a todo item for next release
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -71,9 +72,10 @@ Content-Type: application/json
 , "id": 14
 }
 #
-# REST call. get the current time.  This may be used as health-check
+####  REST calls ####
+#
+# REST call, get the current time.  This may be used as health-check
 GET http://localhost:3000/rest/time
 #
 # REST call, get the user provided addresses
 GET http://localhost:3000/rest/addresses
-# REST call, get the user provided addresses
