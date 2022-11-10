@@ -26,6 +26,7 @@ module Ledger.CardanoWallet(
     stakingCredential,
     stakePubKeyHash,
     stakePubKey,
+    knownAddresses,
     knownPaymentKeys,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys
@@ -159,3 +160,6 @@ knownPaymentKeys = Map.fromList $ map
 
 knownPaymentPrivateKeys :: [PaymentPrivateKey]
 knownPaymentPrivateKeys = paymentPrivateKey <$> knownMockWallets
+
+knownAddresses :: [Address]
+knownAddresses = mockWalletAddress <$> knownMockWallets

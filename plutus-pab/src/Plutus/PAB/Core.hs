@@ -46,6 +46,7 @@ module Plutus.PAB.Core
     , activateContract'
     , callEndpointOnInstance
     , callEndpointOnInstance'
+    , payToAddress
     , payToPaymentPublicKey
     -- * Agent threads
     , ContractInstanceEffects
@@ -107,7 +108,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (Address (addressCredential), Params, TxOutRef)
-import Ledger.Address (PaymentPubKeyHash)
+import Ledger.Address (PaymentPubKeyHash, pubKeyHashAddress)
 import Ledger.Tx (CardanoTx, TxId, decoratedTxOutValue)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
@@ -351,12 +352,17 @@ callEndpointOnInstance' instanceID ep value = do
     liftIO
         (Instances.callEndpointOnInstance state (EndpointDescription ep) (JSON.toJSON value) instanceID >>= STM.atomically)
 
+-- | Make a payment.
+payToAddress :: Params -> ContractInstanceId -> Wallet -> Address -> Value -> PABAction t env CardanoTx
+payToAddress params cid source target amount =
+    handleAgentThread source (Just cid)
+        $ Modify.wrapError WalletError
+        $ WAPI.payToAddress params WAPI.defaultSlotRange amount target
+
 -- | Make a payment to a payment public key.
 payToPaymentPublicKey :: Params -> ContractInstanceId -> Wallet -> PaymentPubKeyHash -> Value -> PABAction t env CardanoTx
 payToPaymentPublicKey params cid source target amount =
-    handleAgentThread source (Just cid)
-        $ Modify.wrapError WalletError
-        $ WAPI.payToPaymentPublicKeyHash params WAPI.defaultSlotRange amount target
+    payToAddress params cid source (pubKeyHashAddress target Nothing) amount
 
 -- | Effects available to contract instances with access to external services.
 type ContractInstanceEffects t env effs =
