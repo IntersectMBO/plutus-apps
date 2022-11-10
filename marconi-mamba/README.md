@@ -97,5 +97,26 @@ To interact with the server:
 ``` sh
 curl -d '{"jsonrpc": "2.0" , "method": "utxoTxOutReport" , "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"  , "id": 12}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc
 
+{
+  "id": 12,
+  "jsonrpc": "2.0",
+  "result": {
+    "bech32Address": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc",
+    "txOutRefs": [
+      "00022d3d74304c089dc76620d6a39089c008862165c69200d82a34f53a6b93dc#0",
+      "000b106461150f070409f1183efc832a4a95c25f0083777648a1a2f3f9dbe8bc#0",
+      "001351bd6e2f09e275c4ab32570f639fb1ac17d9e6bf6ae8bf7d451aa368336f#0",
+      "00167959f52fab36abad607384a8254ce0e3d4d014147712f7caffbbe6b51385#0",
+      "0017ae0b0a0466c9728ae5040afa484d4f9797da2935db045f08de85aaec32ce#0",
+      "001a23cceafe105d7efd235cf258a7d0d78f2ce335607e8d52e7e25618c7bd90#0",
+      "001c537acf3c98d84d5cb419243dc1f8f14075a787e85360dced600b9b4ef5bb#0",
+      "00260d5e8f70dd061ae3ab4c090ab4d65e49f6501fde980eff1f35d66520f014#0",
+      "002c625c00587f65c606904bb661d3021d45a97ed254d13f117895a5a5dddfba#0",
+      "003dc4490c76a2aa7d3abe53a88918cdbee118fd5cf6436ea2c7e797abd03cdb#0"
+    ]
+  }
+}
+
 ```
+
 [test-json-rpc.http](./marconi-mamba/examples/test-json-rpc.http) contains additional example usage

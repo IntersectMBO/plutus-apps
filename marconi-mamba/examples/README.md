@@ -1,9 +1,24 @@
 marconi-mamba examples
 -----
-TBD
+This library demonstrates end to end examples of creating and executing a sample JSON-RPC server and client
 
-## What is this
+## Example JSON-RPC server
+The main purpose of this example is to run the marconi-mamba in isolation without a need for cardano-node.
 
-## What does it do
+### Usage:
+``` sh
+$(cabal exec -- which  examples-json-rpc-server) --help
+Usage: examples-json-rpc-server [-d|--utxo-db FILENAME]
+                                (--addresses-to-index ARG)
 
-## How do I use it
+Available options:
+  -d,--utxo-db FILENAME    Path to the utxo database.
+                           (default: "./.marconidb/4/utxo-db")
+  --addresses-to-index ARG Becch32 Shelley addresses to index. i.e
+                           "--address-to-index address-1 --address-to-index
+                           address-2 ..."
+  -h,--help                Show this help text
+```
+
+### Assumption
+the --utxo-db points a file that already contains utxo data.
