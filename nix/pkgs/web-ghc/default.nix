@@ -23,6 +23,6 @@ runCommand "web-ghc" { buildInputs = [ makeWrapper ]; } ''
   mkdir -p $out/bin
   ln -s ${web-ghc-server}/bin/web-ghc-server $out/bin/web-ghc-server
   wrapProgram $out/bin/web-ghc-server \
-    --set GHC_BIN_DIR "${runtimeGhcWrapped}/bin" \
+    --set GHC_BIN_DIR "${runtimeGhc}/bin" \
     --set GHC_RTS "-M2G"
 ''
