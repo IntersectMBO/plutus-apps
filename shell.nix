@@ -132,7 +132,7 @@ let
     plutus-playground.start-backend
     psa
     purescript-language-server
-    purs
+    purs-0_14_3
     purs-tidy
     spago
     spago2nix

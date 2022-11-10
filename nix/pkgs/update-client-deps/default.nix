@@ -9,7 +9,7 @@
 , gnused
 , nodejs
 , nodePackages
-, purs
+, purs-0_14_3
 , spago
 , spago2nix
 , clang
@@ -26,7 +26,7 @@ lib.meta.addMetaAttrs { platforms = lib.platforms.linux; } (writeShellScriptBin 
     gnused
     nodejs
     nodePackages.node-gyp
-    purs
+    purs-0_14_3
     spago
     spago2nix
   ] ++ lib.optionals stdenv.isDarwin [ clang ])}
