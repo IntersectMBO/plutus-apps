@@ -77,7 +77,7 @@ let
   sphinxcontrib-haddock = pkgs.callPackage (sources.sphinxcontrib-haddock) { pythonPackages = pkgs.python3Packages; };
 
   # ghc web service
-  web-ghc = pkgs.callPackage ./web-ghc { inherit haskell; gcc = pkgs.gcc; };
+  web-ghc = pkgs.callPackage ./web-ghc { inherit haskell; };
 
   # combined haddock documentation for all public plutus libraries
   plutus-haddock-combined =
