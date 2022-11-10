@@ -21,7 +21,7 @@ import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)),
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (Address), PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
@@ -29,15 +29,14 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx), getTxOutDatum)
-import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
+import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Value (leq)
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Address qualified as Address
-import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
-                                  TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
-                                  TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
-                                  TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue))
-import Plutus.V1.Ledger.Contexts qualified as V
+import Plutus.Script.Utils.V1.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
+                                        TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
+                                        TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
+                                        TxOut (TxOut, txOutDatumHash, txOutValue))
+import Plutus.Script.Utils.V1.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
 
 {-# INLINABLE checkScriptContext #-}
@@ -114,7 +113,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v _ ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToAddress (Address (PubKeyCredential pk) _) mdv refScript vl ->
+    MustPayToAddress addr mdv refScript vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
             checkOutput (TxOutDatumHash _) TxOut{txOutDatumHash=Just _} =
@@ -126,31 +125,9 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
                 hsh dv == Just svh
             checkOutput _ _ = False
         in
-        traceIfFalse "La" -- "MustPayToAddress (PubKey)"
-        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
+        traceIfFalse "La" -- "MustPayToAddress"
+        $ vl `leq` V.valuePaidTo scriptContextTxInfo addr
             && maybe True (\dv -> any (checkOutput dv) outs) mdv
-            && isNothing refScript
-    MustPayToAddress (Address (ScriptCredential vlh) _) mdv refScript vl ->
-        let outs = V.txInfoOutputs scriptContextTxInfo
-            hsh d = V.findDatumHash d scriptContextTxInfo
-            addr = Address.scriptHashAddress vlh
-            checkOutput (TxOutDatumHash _) TxOut{txOutAddress, txOutValue, txOutDatumHash=Just _} =
-                -- The datum is not added in the tx body with so we can't verify
-                -- that the tx output's datum hash is the correct one w.r.t the
-                -- provide datum.
-                   vl `leq` txOutValue
-                && txOutAddress == addr
-            checkOutput (TxOutDatumInTx d) TxOut{txOutAddress, txOutValue, txOutDatumHash=Just h} =
-                   vl `leq` txOutValue
-                && hsh d == Just h
-                && txOutAddress == addr
-            -- By ledger rules, a script output with no datum is unspendable.
-            -- Therefore, we always return False if there is no Datum with the
-            -- script output.
-            checkOutput _ _ = False
-        in
-        traceIfFalse "Lb" -- "MustPayToAddress (Script)"
-        $ maybe True (\dv -> any (checkOutput dv) outs) mdv
             && isNothing refScript
     MustIncludeDatumInTxWithHash dvh dv ->
         traceIfFalse "Lc" -- "missing datum"
