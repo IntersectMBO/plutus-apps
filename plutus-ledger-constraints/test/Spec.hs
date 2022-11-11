@@ -40,7 +40,6 @@ import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Generators qualified as Gen
