@@ -1,11 +1,31 @@
+
 marconi-mamba
 --
 
 marconi-mamba is a [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) over HTTP built on top of the [marconi](../marconi/README.md).
 
-## What is it
 
-The purpose of marconi-mamba is to make the core Marcoin APIs available to non-Haskell applications.
+```
+             Running on a single machine                    Internet
++---------------------------------------------------+
+|                                                   |
+|   +---------------+                +-----------+  |                  +-----------+
+|   |               | node-to-client |           |  |     JSON-RPC     | marconi   |
+|   |  cardano-node +--------------- |  marconi  +--+------------------+   client  |
+|   |               |      IPC       |           |  |       HTTP       |           |
+|   +---------------+                +----+------+  |                  +-----------+
+|                                         |         |
+|                                         |         |
+|                                     +---+----+    |
+|                                     | SQLite |    |
+|                                     +--------+    |
+|                                                   |
++---------------------------------------------------+
+```
+
+## Purpose
+
+The purpose of marconi-mamba is to make the core Marconi APIs available to non-Haskell applications.
 
 ## How do I use it
 * Building from source
@@ -61,6 +81,13 @@ Available options:
 
 #### Example usage
 
+To use the marconi-mamba
+* invoke the JSON-RPC server
+* interrogate the JSON-RPC endpoints
+* interrogate the REST endpoints
+
+##### JSON-RPC Server invocation
+
 The following is a an example shell script for executing marconi-mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet)
 **Assumption**
 cardano-node version 1.35.3 is running with the socket-path as outlined below:
@@ -92,7 +119,35 @@ $(cabal exec -- which marconi-mamba) \
 
 ```
 
-To interact with the server:
+##### JSON-RPC Endpoints
+
+``` sh
+|-----------+-----------+------------------------+---------------------------------------------|
+| HTTP Verb | Endpoints | RPC method             | Description                                 |
+|-----------+-----------+------------------------+---------------------------------------------|
+| POST      | json-rpc  | addresseesBech32Report | Retrieves user provided addresses           |
+| POST      | json-rpc  | utxoReport             | Retrieves TxRefs for an address             |
+| POST      | json-rpc  | utxoReportx            | Retrieves TxRefs for all provided addresses |
+| POST      | JSON-rpc  | echo                   | echo's user input to console                |
+|-----------+-----------+------------------------+---------------------------------------------|
+
+```
+
+##### REST Endpoints
+
+``` sh
+|-----------+-----------+-----------------------------------|
+| HTTP Verb | Endpoints | Description                       |
+|-----------+-----------+-----------------------------------|
+| GET       | addresses | Retrieves user provided addresses |
+| GET       | time      | current local time                |
+|-----------+-----------+-----------------------------------|
+
+```
+
+#### Examples
+
+Here is a curl script to expoint the JSON-RPC server:
 
 ``` sh
 curl -d '{"jsonrpc": "2.0" , "method": "utxoTxOutReport" , "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"  , "id": 12}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc
