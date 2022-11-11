@@ -32,17 +32,15 @@ import PlutusTx.Prelude (Bool (False, True), Eq, Foldable (foldMap), Functor (fm
                          Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concat, foldl, map, mapMaybe,
                          not, null, ($), (.), (==), (>>=), (||))
 
-import Ledger.Address (Address (Address), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash (StakePubKeyHash))
+import Ledger.Address (Address (Address), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Tx (DecoratedTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
-                             POSIXTimeRange, Redeemer, StakeValidatorHash, StakingCredential (StakingHash), TxOutRef,
-                             Validator, ValidatorHash)
+                             POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
-                                 StakeValidatorHash (StakeValidatorHash), ValidatorHash (ValidatorHash), unitDatum,
-                                 unitRedeemer)
+                                 ValidatorHash (ValidatorHash), unitRedeemer)
 import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
 import Plutus.V1.Ledger.Value qualified as Value
 
@@ -135,10 +133,8 @@ data TxConstraint =
     -- ^ The transaction must reference (not spend) the given unspent transaction output.
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer (Maybe TxOutRef)
     -- ^ The transaction must mint the given token and amount.
-    | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe (TxOutDatum Datum)) (Maybe ScriptHash) Value
-    -- ^ The transaction must create a transaction output with a public key address.
-    | MustPayToOtherScript ValidatorHash (Maybe StakeValidatorHash) (TxOutDatum Datum) (Maybe ScriptHash) Value
-    -- ^ The transaction must create a transaction output with a script address.
+    | MustPayToAddress Address (Maybe (TxOutDatum Datum)) (Maybe ScriptHash) Value
+    -- ^ The transaction must create a transaction output.
     | MustSatisfyAnyOf [[TxConstraint]]
     -- ^ The transaction must satisfy constraints given as an alternative of conjuctions (DNF),
     -- that is `check (MustSatisfyAnyOf xs) = any (all check) xs`
@@ -167,10 +163,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must reference output:", pretty ref]
         MustMintValue mps red tn i mref ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i, pretty mref]
-        MustPayToPubKeyAddress pkh skh datum refScript v ->
-            hang 2 $ vsep ["must pay to pubkey address:", pretty pkh, pretty skh, pretty datum, pretty refScript, pretty v]
-        MustPayToOtherScript vlh skh dv refScript vl ->
-            hang 2 $ vsep ["must pay to script:", pretty vlh, pretty skh, pretty dv, pretty refScript, pretty vl]
+        MustPayToAddress addr datum refScript v ->
+            hang 2 $ vsep ["must pay to pubkey address:", pretty addr, pretty datum, pretty refScript, pretty v]
         MustUseOutputAsCollateral ref ->
             hang 2 $ vsep ["must use output as collateral:", pretty ref]
         MustSatisfyAnyOf xs ->
@@ -382,7 +376,7 @@ mustPayToTheScriptWithInlineDatum dt vl =
 -- | @mustPayToPubKey pkh v@ is the same as
 -- 'mustPayWithDatumToPubKeyAddress', but without any staking key hash and datum.
 mustPayToPubKey :: forall i o. PaymentPubKeyHash -> Value -> TxConstraints i o
-mustPayToPubKey pk vl = singleton (MustPayToPubKeyAddress pk Nothing Nothing Nothing vl)
+mustPayToPubKey (PaymentPubKeyHash pkh) vl = singleton (MustPayToAddress (Address (PubKeyCredential pkh) Nothing) Nothing Nothing vl)
 
 {-# INLINABLE mustPayToPubKeyAddress #-}
 -- | @mustPayToPubKeyAddress pkh skh v@ is the same as
@@ -390,11 +384,11 @@ mustPayToPubKey pk vl = singleton (MustPayToPubKeyAddress pk Nothing Nothing Not
 mustPayToPubKeyAddress
     :: forall i o
      . PaymentPubKeyHash
-    -> StakePubKeyHash
+    -> StakingCredential
     -> Value
     -> TxConstraints i o
-mustPayToPubKeyAddress pkh skh vl =
-     singleton (MustPayToPubKeyAddress pkh (Just skh) Nothing Nothing vl)
+mustPayToPubKeyAddress (PaymentPubKeyHash pkh) sc vl =
+     singleton (MustPayToAddress (Address (PubKeyCredential pkh) (Just sc)) Nothing Nothing vl)
 
 {-# INLINABLE mustPayWithDatumToPubKey #-}
 -- | @mustPayWithDatumToPubKey pkh d v@ is the same as
@@ -405,8 +399,8 @@ mustPayWithDatumToPubKey
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayWithDatumToPubKey pk datum vl =
-    singleton (MustPayToPubKeyAddress pk Nothing (Just $ TxOutDatumHash datum) Nothing vl)
+mustPayWithDatumToPubKey (PaymentPubKeyHash pkh) datum vl =
+    singleton (MustPayToAddress (Address (PubKeyCredential pkh) Nothing) (Just $ TxOutDatumHash datum) Nothing vl)
 
 {-# INLINABLE mustPayWithDatumInTxToPubKey #-}
 -- | @mustPayWithDatumInTxToPubKey pkh d v@ is the same as
@@ -417,8 +411,8 @@ mustPayWithDatumInTxToPubKey
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayWithDatumInTxToPubKey pk datum vl =
-    singleton (MustPayToPubKeyAddress pk Nothing (Just $ TxOutDatumInTx datum) Nothing vl)
+mustPayWithDatumInTxToPubKey (PaymentPubKeyHash pkh) datum vl =
+    singleton (MustPayToAddress (Address (PubKeyCredential pkh) Nothing) (Just $ TxOutDatumInTx datum) Nothing vl)
 
 {-# INLINABLE mustPayWithInlineDatumToPubKey #-}
 -- | @mustPayWithInlineDatumToPubKey pkh d v@ is the same as
@@ -429,8 +423,8 @@ mustPayWithInlineDatumToPubKey
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayWithInlineDatumToPubKey pk datum vl =
-    singleton (MustPayToPubKeyAddress pk Nothing (Just $ TxOutDatumInline datum) Nothing vl)
+mustPayWithInlineDatumToPubKey (PaymentPubKeyHash pkh) datum vl =
+    singleton (MustPayToAddress (Address (PubKeyCredential pkh) Nothing) (Just $ TxOutDatumInline datum) Nothing vl)
 
 {-# INLINABLE mustPayWithDatumToPubKeyAddress #-}
 -- | @mustPayWithDatumToPubKeyAddress pkh skh d v@ locks a transaction output
@@ -446,12 +440,12 @@ mustPayWithInlineDatumToPubKey pk datum vl =
 mustPayWithDatumToPubKeyAddress
     :: forall i o
      . PaymentPubKeyHash
-    -> StakePubKeyHash
+    -> StakingCredential
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayWithDatumToPubKeyAddress pkh skh datum vl =
-    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ TxOutDatumHash datum) Nothing vl)
+mustPayWithDatumToPubKeyAddress (PaymentPubKeyHash pkh) sc datum vl =
+    singleton (MustPayToAddress (Address (PubKeyCredential pkh) (Just sc)) (Just $ TxOutDatumHash datum) Nothing vl)
 
 {-# INLINABLE mustPayWithDatumInTxToPubKeyAddress #-}
 -- | @mustPayWithDatumInTxToPubKeyAddress pkh d v@ is the same as
@@ -460,12 +454,12 @@ mustPayWithDatumToPubKeyAddress pkh skh datum vl =
 mustPayWithDatumInTxToPubKeyAddress
     :: forall i o
      . PaymentPubKeyHash
-    -> StakePubKeyHash
+    -> StakingCredential
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayWithDatumInTxToPubKeyAddress pkh skh datum vl =
-    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ TxOutDatumInTx datum) Nothing vl)
+mustPayWithDatumInTxToPubKeyAddress (PaymentPubKeyHash pkh) sc datum vl =
+    singleton (MustPayToAddress (Address (PubKeyCredential pkh) (Just sc)) (Just $ TxOutDatumInTx datum) Nothing vl)
 
 {-# INLINABLE mustPayWithInlineDatumToPubKeyAddress #-}
 -- | @mustPayWithInlineInlineDatumToPubKeyAddress pkh d v@ is the same as
@@ -473,12 +467,12 @@ mustPayWithDatumInTxToPubKeyAddress pkh skh datum vl =
 mustPayWithInlineDatumToPubKeyAddress
     :: forall i o
      . PaymentPubKeyHash
-    -> StakePubKeyHash
+    -> StakingCredential
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayWithInlineDatumToPubKeyAddress pkh skh datum vl =
-    singleton (MustPayToPubKeyAddress pkh (Just skh) (Just $ TxOutDatumInline datum) Nothing vl)
+mustPayWithInlineDatumToPubKeyAddress (PaymentPubKeyHash pkh) sc datum vl =
+    singleton (MustPayToAddress (Address (PubKeyCredential pkh) (Just sc)) (Just $ TxOutDatumInline datum) Nothing vl)
 
 {-# INLINABLE mustPayToAddressWithReferenceValidator #-}
 -- | @mustPayToAddressWithReferenceValidator@ is a helper that calls @mustPayToAddressWithReferenceScript@.
@@ -520,41 +514,29 @@ mustPayToAddressWithReferenceScript
     -> Maybe (TxOutDatum Datum)
     -> Value
     -> TxConstraints i o
-mustPayToAddressWithReferenceScript
-    (Address (PubKeyCredential pkh) (Just (StakingHash (PubKeyCredential sh)))) scriptHash datum value =
-        singleton (MustPayToPubKeyAddress (PaymentPubKeyHash pkh) (Just (StakePubKeyHash sh)) datum (Just scriptHash) value)
-mustPayToAddressWithReferenceScript
-    (Address (PubKeyCredential pkh) Nothing) scriptHash datum value =
-        singleton (MustPayToPubKeyAddress (PaymentPubKeyHash pkh) Nothing datum (Just scriptHash) value)
-mustPayToAddressWithReferenceScript
-    (Address (ScriptCredential vh) (Just (StakingHash (ScriptCredential (ValidatorHash sh))))) scriptHash datum value =
-        singleton (MustPayToOtherScript vh (Just (StakeValidatorHash sh)) (fromMaybe (TxOutDatumInline unitDatum) datum) (Just scriptHash) value)
-mustPayToAddressWithReferenceScript
-    (Address (ScriptCredential vh) Nothing) scriptHash datum value =
-        singleton (MustPayToOtherScript vh Nothing (fromMaybe (TxOutDatumInline unitDatum) datum) (Just scriptHash) value)
-mustPayToAddressWithReferenceScript
-    addr _ _ _ = Haskell.error $ "Ledger.Constraints.TxConstraints.mustPayToAddressWithReferenceScript: unsupported address " Haskell.++ Haskell.show addr
+mustPayToAddressWithReferenceScript addr scriptHash datum value =
+    singleton (MustPayToAddress addr datum (Just scriptHash) value)
 
 {-# INLINABLE mustPayToOtherScript #-}
 -- | @mustPayToOtherScript vh d v@ is the same as
 -- 'mustPayToOtherScriptAddress', but without the staking key hash.
 mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScript vh dv vl =
-    singleton (MustPayToOtherScript vh Nothing (TxOutDatumHash dv) Nothing vl)
+    singleton (MustPayToAddress (Address (ScriptCredential vh) Nothing) (Just (TxOutDatumHash dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptWithDatumInTx #-}
 -- | @mustPayToOtherScriptWithDatumInTx vh d v@ is the same as
 -- 'mustPayToOtherScriptAddress', but without the staking key hash.
 mustPayToOtherScriptWithDatumInTx :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScriptWithDatumInTx vh dv vl =
-    singleton (MustPayToOtherScript vh Nothing (TxOutDatumInTx dv) Nothing vl)
+    singleton (MustPayToAddress (Address (ScriptCredential vh) Nothing) (Just (TxOutDatumInTx dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptWithInlineDatum #-}
 -- | @mustPayToOtherScriptWithInlineDatum vh d v@ is the same as
 -- 'mustPayToOtherScriptAddress', but with an inline datum and without the staking key hash.
 mustPayToOtherScriptWithInlineDatum :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScriptWithInlineDatum vh dv vl =
-    singleton (MustPayToOtherScript vh Nothing (TxOutDatumInline dv) Nothing vl)
+    singleton (MustPayToAddress (Address (ScriptCredential vh) Nothing) (Just (TxOutDatumInline dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptAddress #-}
 -- | @mustPayToOtherScriptAddress vh svh d v@ locks the value @v@ with the given script
@@ -567,9 +549,12 @@ mustPayToOtherScriptWithInlineDatum vh dv vl =
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the script transaction output with
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
-mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptAddress vh svh dv vl =
-    singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumHash dv) Nothing vl)
+-- For @v@, this means that the transactions output must be at least the given value.
+-- The output can contain more, or different tokens, but the requested value @v@ must
+-- be present.
+mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakingCredential -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScriptAddress vh sc dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential vh) (Just sc)) (Just (TxOutDatumHash dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptAddressWithDatumInTx #-}
 -- | @mustPayToOtherScriptAddressWithDatumInTx vh svh d v@ locks the value @v@ with the given script
@@ -582,26 +567,87 @@ mustPayToOtherScriptAddress vh svh dv vl =
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the script transaction output with
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
+-- For @v@, this means that the transactions output must be at least the given value.
+-- The output can contain more, or different tokens, but the requested value @v@ must
+-- be present.
 mustPayToOtherScriptAddressWithDatumInTx
     :: forall i o. ValidatorHash
-    -> StakeValidatorHash
+    -> StakingCredential
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayToOtherScriptAddressWithDatumInTx vh svh dv vl =
-    singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumInTx dv) Nothing vl)
+mustPayToOtherScriptAddressWithDatumInTx vh sc dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential vh) (Just sc)) (Just (TxOutDatumInTx dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptAddressWithInlineDatum #-}
 -- | @mustPayToOtherScriptAddressInlineDatum vh d v@ is the same as
 -- 'mustPayToOtherScriptAddress', but with an inline datum.
 mustPayToOtherScriptAddressWithInlineDatum
     :: forall i o. ValidatorHash
-    -> StakeValidatorHash
+    -> StakingCredential
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayToOtherScriptAddressWithInlineDatum vh svh dv vl =
-    singleton (MustPayToOtherScript vh (Just svh) (TxOutDatumInline dv) Nothing vl)
+mustPayToOtherScriptAddressWithInlineDatum vh sc dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential vh) (Just sc)) (Just (TxOutDatumInline dv)) Nothing vl)
+
+{-# INLINABLE mustPayToAddress #-}
+-- | @mustPayToAddress addr v@ locks the value @v@ at the given address @addr@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
+-- output with @addr@ and @v@.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies
+-- that the script transaction output with
+-- @addr@ and @v@ is part of the transaction's outputs.
+mustPayToAddress :: forall i o. Address -> Value -> TxConstraints i o
+mustPayToAddress addr vl =
+    singleton (MustPayToAddress addr Nothing Nothing vl)
+
+{-# INLINABLE mustPayToAddressWithDatum #-}
+-- | @mustPayToAddress addr d v@ locks the value @v@
+-- at the given address @addr@ alonside a datum @d@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
+-- output with @addr@, @d@ and @v@ and adds @d@ in the transaction's datum
+-- witness set.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
+-- part of the datum witness set and that the script transaction output with
+-- @addr@, @d@ and @v@ is part of the transaction's outputs.
+mustPayToAddressWithDatum :: forall i o. Address -> Datum -> Value -> TxConstraints i o
+mustPayToAddressWithDatum addr dv vl =
+    singleton (MustPayToAddress addr (Just (TxOutDatumHash dv)) Nothing vl)
+
+{-# INLINABLE mustPayToAddressWithDatumInTx #-}
+-- | @mustPayToAddressWithDatumInTx addr d v@ locks the value @v@
+-- at the given address @addr@ alonside a datum @d@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
+-- output with @addr@, @d@ and @v@ and adds @d@ in the transaction's datum
+-- witness set.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
+-- part of the datum witness set and that the script transaction output with
+-- @addr@, @d@ and @v@ as part of the transaction's outputs.
+mustPayToAddressWithDatumInTx
+    :: forall i o. Address
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayToAddressWithDatumInTx addr dv vl =
+    singleton (MustPayToAddress addr (Just (TxOutDatumInTx dv)) Nothing vl)
+
+{-# INLINABLE mustPayToAddressWithInlineDatum #-}
+-- | @mustPayToAddressWithInlineDatum vh d v@ is the same as
+-- 'mustPayToAddress', but with an inline datum.
+mustPayToAddressWithInlineDatum
+    :: forall i o. Address
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayToAddressWithInlineDatum addr dv vl =
+    singleton (MustPayToAddress addr (Just (TxOutDatumInline dv)) Nothing vl)
 
 {-# INLINABLE mustMintValue #-}
 -- | Same as 'mustMintValueWithRedeemer', but sets the redeemer to the unit
@@ -626,7 +672,7 @@ mustMintValueWithRedeemer red = mustMintValueWithRedeemerAndReference red Nothin
 --
 -- Note that we can derive the 'MintingPolicyHash' from the 'Value'\'s currency
 -- symbol.
-mustMintValueWithRedeemerAndReference :: forall i o. Redeemer -> (Maybe TxOutRef) -> Value -> TxConstraints i o
+mustMintValueWithRedeemerAndReference :: forall i o. Redeemer -> Maybe TxOutRef -> Value -> TxConstraints i o
 mustMintValueWithRedeemerAndReference red mref =
     foldMap valueConstraint . (AssocMap.toList . Value.getValue)
     where
@@ -702,8 +748,8 @@ mustMintCurrencyWithRedeemerAndReference mref mph red tn a = if a == 0 then memp
 -- If used in 'Ledger.Constraints.OffChain', this constraint adds the missing
 -- input value with an additionnal public key output using the public key hash
 -- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.ownPaymentPubKeyHash' and optionnaly
--- 'Ledger.Constraints.OffChain.ownStakePubKeyHash'.
+-- 'Ledger.Constraints.OffChain.ownPaymentPubKeyHash' and optionaly
+-- 'Ledger.Constraints.OffChain.ownStakingCredential'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- sum of the transaction's inputs value to be at least @v@.
@@ -717,8 +763,8 @@ mustSpendAtLeast = singleton . MustSpendAtLeast
 -- If used in 'Ledger.Constraints.OffChain', this constraint adds the missing
 -- output value with an additionnal public key output using the public key hash
 -- provided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
--- 'Ledger.Constraints.OffChain.ownPaymentPubKeyHash' and optionnaly
--- 'Ledger.Constraints.OffChain.ownStakePubKeyHash'.
+-- 'Ledger.Constraints.OffChain.ownPaymentPubKeyHash' and optionaly
+-- 'Ledger.Constraints.OffChain.ownStakingCredential'.
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- sum of the transaction's outputs value to be at least @v@.
@@ -857,7 +903,7 @@ pubKeyPayments :: forall i o. TxConstraints i o -> [(PaymentPubKeyHash, Value)]
 pubKeyPayments TxConstraints{txConstraints} =
     Map.toList
     $ Map.fromListWith (<>)
-      (txConstraints >>= \case { MustPayToPubKeyAddress pk _ _ _ vl -> [(pk, vl)]; _ -> [] })
+      (txConstraints >>= \case { MustPayToAddress (Address (PubKeyCredential pk) _) _ _ vl -> [(PaymentPubKeyHash pk, vl)]; _ -> [] })
 
 -- | The minimum 'Value' that satisfies all 'MustSpendAtLeast' constraints
 {-# INLINABLE mustSpendAtLeastTotal #-}
@@ -897,15 +943,14 @@ requiredDatums = foldMap f . txConstraints where
 modifiesUtxoSet :: forall i o. TxConstraints i o -> Bool
 modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
     let requiresInputOutput = \case
-            MustSpendAtLeast{}                -> True
-            MustProduceAtLeast{}              -> True
-            MustSpendPubKeyOutput{}           -> True
-            MustSpendScriptOutput{}           -> True
-            MustMintValue{}                   -> True
-            MustPayToPubKeyAddress _ _ _ _ vl -> not (isZero vl)
-            MustPayToOtherScript _ _ _ _ vl   -> not (isZero vl)
-            MustSatisfyAnyOf xs               -> any requiresInputOutput $ concat xs
-            _                                 -> False
+            MustSpendAtLeast{}        -> True
+            MustProduceAtLeast{}      -> True
+            MustSpendPubKeyOutput{}   -> True
+            MustSpendScriptOutput{}   -> True
+            MustMintValue{}           -> True
+            MustPayToAddress _ _ _ vl -> not (isZero vl)
+            MustSatisfyAnyOf xs       -> any requiresInputOutput $ concat xs
+            _                         -> False
     in any requiresInputOutput txConstraints
         || not (null txOwnOutputs)
         || not (null txOwnInputs)

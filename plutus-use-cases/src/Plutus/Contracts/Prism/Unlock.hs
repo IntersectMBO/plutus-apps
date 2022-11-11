@@ -95,11 +95,11 @@ unlockExchange :: forall w s.
     )
     => Contract w s UnlockError ()
 unlockExchange = awaitPromise $ endpoint @"unlock from exchange" $ \credential -> do
-    ownPK <- mapError WithdrawPkError ownFirstPaymentPubKeyHash
+    ownAddr <- mapError WithdrawPkError ownAddress
     (credConstraints, credLookups) <- obtainCredentialTokenData credential
     (accConstraints, accLookups) <-
         mapError UnlockExchangeTokenAccError
-        $ TokenAccount.redeemTx (Credential.tokenAccount credential) ownPK
+        $ TokenAccount.redeemTx (Credential.tokenAccount credential) ownAddr
     params <- getParams
     case Constraints.mkSomeTx params [SomeLookupsAndConstraints credLookups credConstraints, SomeLookupsAndConstraints accLookups accConstraints] of
         Left mkTxErr -> throwError (UnlockMkTxError mkTxErr)

@@ -79,7 +79,12 @@ import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEf
 -- | Generate the requirements to run the chain index effects given logging configuration and chain index configuration.
 withRunRequirements :: CM.Configuration -> Config.ChainIndexConfig -> (RunRequirements -> IO ()) -> IO ()
 withRunRequirements logConfig config cont = do
-  pool <- Pool.createPool (Sqlite.open (Config.cicDbPath config) >>= setupConn) Sqlite.close 5 1_000_000 5
+  pool <- Pool.newPool Pool.PoolConfig
+    { Pool.createResource = Sqlite.open (Config.cicDbPath config) >>= setupConn
+    , Pool.freeResource = Sqlite.close
+    , Pool.poolCacheTTL = 1_000_000
+    , Pool.poolMaxResources = 25
+    }
   (trace :: Trace IO (PrettyObject ChainIndexLog), _) <- setupTrace_ logConfig "chain-index"
   Pool.withResource pool $ \conn -> do
     Sqlite.runBeamSqliteDebug (logDebug (convertLog PrettyObject trace) . (BeamLogItem . SqlLog)) conn $ do

@@ -171,7 +171,12 @@ runChainIndexTest
   -> m a
 runChainIndexTest action = do
   result <- liftIO $ do
-    pool <- Pool.createPool (Sqlite.open ":memory:") Sqlite.close 1 1_000_000 1
+    pool <- Pool.newPool Pool.PoolConfig
+      { Pool.createResource = Sqlite.open ":memory:"
+      , Pool.freeResource = Sqlite.close
+      , Pool.poolCacheTTL = 1_000_000
+      , Pool.poolMaxResources = 1
+      }
     Pool.withResource pool $ \conn ->
       Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
     stateTVar <- newTVarIO mempty

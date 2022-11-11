@@ -45,6 +45,7 @@ module Plutus.Contract.Trace
     , defaultDistFor
     -- * Wallets
     , EM.Wallet(..)
+    , EM.mockWalletAddress
     , EM.mockWalletPaymentPubKey
     , EM.mockWalletPaymentPubKeyHash
     , EM.knownWallets

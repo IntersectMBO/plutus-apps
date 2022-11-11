@@ -48,6 +48,7 @@ module Ledger.Generators(
     validateMockchain,
     signAll,
     signTx,
+    CW.knownAddresses,
     CW.knownPaymentPublicKeys,
     CW.knownPaymentPrivateKeys,
     CW.knownPaymentKeys,
