@@ -14,4 +14,4 @@ let
     all = pkgs.callPackage ./vm-tests/all.nix { inherit makeTest plutus-playground web-ghc docs vmCompileTests; };
   };
 in
-if isDarwin then { } else tests
+{ }
