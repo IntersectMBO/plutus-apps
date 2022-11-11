@@ -2,6 +2,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeFamilies       #-}
+
+{-# OPTIONS_GHC -fconstraint-solver-iterations=10 #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Temporary code that'll make it easy for us to generate arbitrary events.
@@ -36,7 +39,7 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.QuickCheck (Gen, Positive (..), oneof, sized, suchThatMap)
-import Test.QuickCheck.Arbitrary.Generic (Arbitrary, arbitrary, genericArbitrary, genericShrink, shrink)
+import Test.QuickCheck.Arbitrary.Generic (Arbitrary, Arg, arbitrary, genericArbitrary, genericShrink, shrink)
 import Test.QuickCheck.Instances ()
 import Wallet (WalletAPIError)
 import Wallet.Types (EndpointDescription (..), EndpointValue (..))
@@ -164,19 +167,19 @@ instance Arbitrary RedeemerPtr where
 instance Arbitrary Value where
     arbitrary = oneof [Aeson.String <$> arbitrary, Aeson.Number <$> arbitrary]
 
-instance Arbitrary a => Arbitrary (Extended a) where
+instance (Arg (Extended a) a, Arbitrary a) => Arbitrary (Extended a) where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary a => Arbitrary (LowerBound a) where
+instance (Arg (Extended a) a, Arg (LowerBound a) a, Arbitrary a) => Arbitrary (LowerBound a) where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary a => Arbitrary (UpperBound a) where
+instance (Arg (Extended a) a, Arg (UpperBound a) a, Arbitrary a) => Arbitrary (UpperBound a) where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary a => Arbitrary (Interval a) where
+instance (Arg (Extended a) a, Arg (LowerBound a) a, Arg (UpperBound a) a, Arg (Interval a) a, Arbitrary a) => Arbitrary (Interval a) where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -274,7 +277,7 @@ instance Arbitrary Ledger.Language where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary script => Arbitrary (Ledger.Versioned script) where
+instance (Arg (Ledger.Versioned script) script, Arbitrary script) => Arbitrary (Ledger.Versioned script) where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

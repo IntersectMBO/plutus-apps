@@ -333,18 +333,18 @@ runBeamMigrationPostgres trace conn = Postgres.runBeamPostgresDebug (logDebugStr
 -- | Connect to the database.
 dbConnectPostgres :: Postgres.DbConfig -> Trace IO (PABLogMsg (Builtin a)) -> IO (Pool Postgres.Connection)
 dbConnectPostgres Postgres.DbConfig{..} trace = do
-  pool <- Pool.createPool
-    (Postgres.connect Postgres.ConnectInfo {
-      connectHost=unpack dbConfigHost,
-      connectPort=dbConfigPort,
-      connectUser=unpack dbConfigUser,
-      connectPassword=unpack dbConfigPass,
-      connectDatabase=unpack dbConfigDatabase
-    })
-    Postgres.close
-    dbConfigPoolSize
-    5_000_000
-    5
+  pool <- Pool.newPool Pool.PoolConfig
+    { Pool.createResource = Postgres.connect Postgres.ConnectInfo
+      { Postgres.connectHost = unpack dbConfigHost
+      , Postgres.connectPort = dbConfigPort
+      , Postgres.connectUser = unpack dbConfigUser
+      , Postgres.connectPassword = unpack dbConfigPass
+      , Postgres.connectDatabase = unpack dbConfigDatabase
+      }
+    , Pool.freeResource = Postgres.close
+    , Pool.poolCacheTTL = 5_000_000
+    , Pool.poolMaxResources = dbConfigPoolSize * 5
+    }
   logDebugString trace $ "Connecting to DB: " <> databaseStr
   return pool
   where
@@ -367,7 +367,12 @@ runBeamMigrationSqlite trace conn = Sqlite.runBeamSqliteDebug (logDebugString tr
 
 dbConnectSqlite :: Sqlite.DbConfig -> Trace IO (PABLogMsg (Builtin a)) -> IO (Pool Sqlite.Connection)
 dbConnectSqlite Sqlite.DbConfig {dbConfigFile, dbConfigPoolSize} trace = do
-  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
+  pool <- Pool.newPool Pool.PoolConfig
+    { Pool.createResource = Sqlite.open $ unpack dbConfigFile
+    , Pool.freeResource = Sqlite.close
+    , Pool.poolCacheTTL = 5_000_000
+    , Pool.poolMaxResources = dbConfigPoolSize * 5
+    }
   logDebugString trace $ "Connecting to DB: " <> dbConfigFile
   return pool
 
