@@ -21,14 +21,14 @@ import Wallet.Emulator.Types (Wallet (..), walletPubKey)
 
 initContract :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 initContract = do
-    ownPK <- pubKeyHash <$> ownPubKey
-    cur   <- Currency.mintContract ownPK [(tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
+    ownAddr <- ownAddress
+    cur   <- Currency.mintContract ownAddr [(tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs tn amount | tn <- tokenNames]
     forM_ wallets $ \w -> do
-        let pkh = pubKeyHash $ walletPubKey w
-        when (pkh /= ownPK) $ do
-            mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+        let addr = walletAddress w
+        when (addr /= ownAddr) $ do
+            mkTxConstraints @Void mempty (mustPayToAddress addr v)
               >>= submitTxConfirmed . adjustUnbalancedTx
     tell $ Just $ Semigroup.Last cur
   where

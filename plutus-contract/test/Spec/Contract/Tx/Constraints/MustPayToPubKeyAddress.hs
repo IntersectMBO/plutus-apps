@@ -104,11 +104,11 @@ w1PaymentPubKeyHash = mockWalletPaymentPubKeyHash w1
 w2PaymentPubKeyHash :: Ledger.PaymentPubKeyHash
 w2PaymentPubKeyHash = mockWalletPaymentPubKeyHash w2
 
-w1StakePubKeyHash :: Ledger.StakePubKeyHash
-w1StakePubKeyHash = Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w1PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w1 -- is Nothing
+w1StakingCredential :: Ledger.StakingCredential
+w1StakingCredential = Ledger.stakePubKeyHashCredential $ Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w1PaymentPubKeyHash -- our MockWallet's stakingCredential is Nothing
 
-w2StakePubKeyHash :: Ledger.StakePubKeyHash
-w2StakePubKeyHash = Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w2PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w2 -- is Nothing
+w2StakingCredential :: Ledger.StakingCredential
+w2StakingCredential = Ledger.stakePubKeyHashCredential $ Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w2PaymentPubKeyHash -- our MockWallet's stakingCredential is Nothing
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -185,10 +185,10 @@ successfulUseOfMustPayToPubKeyExpectingALowerAdaValue submitTxFromConstraints tc
 -- | Valid scenario using offchain and onchain constraint mustPayToPubKeyAddress with ada-only value
 successfulUseOfMustPayToPubKeyAddress :: SubmitTx -> LanguageContext -> TestTree
 successfulUseOfMustPayToPubKeyAddress submitTxFromConstraints tc =
-    let onChainConstraint = asRedeemer $ MustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
+    let onChainConstraint = asRedeemer $ MustPayToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
+                tx1 = Constraints.mustPayToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -217,12 +217,12 @@ successfulUseOfMustPayWithDatumInTxToPubKey submitTxFromConstraints tc =
 -- | Valid scenario using offchain and onchain constraint mustPayWithDatumInTxToPubKeyAddress with bytestring datum and ada value
 successfulUseOfMustPayWithDatumInTxToPubKeyAddress :: SubmitTx -> LanguageContext -> TestTree
 successfulUseOfMustPayWithDatumInTxToPubKeyAddress submitTxFromConstraints tc =
-    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress
                         w2PaymentPubKeyHash
-                        w2StakePubKeyHash
+                        w2StakingCredential
                         someDatum
                         adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
@@ -237,12 +237,12 @@ successfulUseOfMustPayWithDatumInTxToPubKeyAddress submitTxFromConstraints tc =
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the PaymentPubkeyHash"
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash :: SubmitTx -> LanguageContext -> TestTree
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
-    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
                 tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress
                         w1PaymentPubKeyHash
-                        w2StakePubKeyHash
+                        w2StakingCredential
                         someDatum
                         adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
@@ -257,10 +257,10 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Datum"
 phase2FailureWhenUsingUnexpectedDatum :: SubmitTx -> LanguageContext -> TestTree
 phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
-    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash otherDatum adaValue
+    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential otherDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -273,10 +273,10 @@ phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
 -- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Value"
 phase2FailureWhenUsingUnexpectedValue :: SubmitTx -> LanguageContext -> TestTree
 phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
-    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum (Ada.lovelaceValueOf $ adaAmount + 1)
+    let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum (Ada.lovelaceValueOf $ adaAmount + 1)
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -392,11 +392,11 @@ ledgerSubmitTx :: SubmitTx
 ledgerSubmitTx = submitTxConstraintsWith
 
 data ConstraintParams = MustPayToPubKey Ledger.PaymentPubKeyHash Value.Value
-                      | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Value.Value
+                      | MustPayToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakingCredential Value.Value
                       | MustPayWithDatumInTxToPubKey Ledger.PaymentPubKeyHash Ledger.Datum Value.Value
-                      | MustPayWithDatumInTxToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Ledger.Datum Value.Value
+                      | MustPayWithDatumInTxToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakingCredential Ledger.Datum Value.Value
                       | MustPayWithInlineDatumToPubKey Ledger.PaymentPubKeyHash Ledger.Datum Value.Value
-                      | MustPayWithInlineDatumToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakePubKeyHash Ledger.Datum Value.Value
+                      | MustPayWithInlineDatumToPubKeyAddress Ledger.PaymentPubKeyHash Ledger.StakingCredential Ledger.Datum Value.Value
     deriving (Show)
 
 PlutusTx.unstableMakeIsData ''ConstraintParams

@@ -13,8 +13,11 @@ module Ledger.Address
     , pubKeyHashAddress
     , pubKeyAddress
     , scriptValidatorHashAddress
+    , stakePubKeyHashCredential
+    , stakeValidatorHashCredential
     , xprvToPaymentPubKey
     , xprvToPaymentPubKeyHash
+    , xprvToStakingCredential
     , xprvToStakePubKey
     , xprvToStakePubKeyHash
     ) where
@@ -77,29 +80,38 @@ makeLift ''StakePubKeyHash
 xprvToStakePubKeyHash :: Crypto.XPrv -> StakePubKeyHash
 xprvToStakePubKeyHash = StakePubKeyHash . pubKeyHash . toPublicKey
 
+xprvToStakingCredential :: Crypto.XPrv -> StakingCredential
+xprvToStakingCredential = stakePubKeyHashCredential . xprvToStakePubKeyHash
+
 {-# INLINABLE paymentPubKeyHash #-}
 paymentPubKeyHash :: PaymentPubKey -> PaymentPubKeyHash
 paymentPubKeyHash (PaymentPubKey pk) = PaymentPubKeyHash (pubKeyHash pk)
 
 {-# INLINABLE pubKeyHashAddress #-}
 -- | The address that should be targeted by a transaction output locked by the
--- given public payment key (with it's public stake key).
-pubKeyHashAddress :: PaymentPubKeyHash -> Maybe StakePubKeyHash -> Address
-pubKeyHashAddress (PaymentPubKeyHash pkh) skh =
-    Address (PubKeyCredential pkh)
-            (fmap (StakingHash . PubKeyCredential . unStakePubKeyHash) skh)
+-- given public payment key (with its staking credentials).
+pubKeyHashAddress :: PaymentPubKeyHash -> Maybe StakingCredential -> Address
+pubKeyHashAddress (PaymentPubKeyHash pkh) = Address (PubKeyCredential pkh)
 
 {-# INLINABLE pubKeyAddress #-}
 -- | The address that should be targeted by a transaction output locked by the given public key.
-pubKeyAddress :: PaymentPubKey -> Maybe StakePubKey -> Address
-pubKeyAddress (PaymentPubKey pk) skh =
-    Address (PubKeyCredential (pubKeyHash pk))
-            (fmap (StakingHash . PubKeyCredential . pubKeyHash . unStakePubKey) skh)
+-- (with its staking credentials).
+pubKeyAddress :: PaymentPubKey -> Maybe StakingCredential -> Address
+pubKeyAddress (PaymentPubKey pk) = Address (PubKeyCredential (pubKeyHash pk))
 
 {-# INLINABLE scriptValidatorHashAddress #-}
 -- | The address that should be used by a transaction output locked by the given validator script
--- (with it's validator stake key).
-scriptValidatorHashAddress :: ValidatorHash -> Maybe StakeValidatorHash -> Address
-scriptValidatorHashAddress vh skh =
-    Address (ScriptCredential vh)
-            (fmap (StakingHash . ScriptCredential . ValidatorHash . (\(StakeValidatorHash h) -> h)) skh)
+-- (with its staking credentials).
+scriptValidatorHashAddress :: ValidatorHash -> Maybe StakingCredential -> Address
+scriptValidatorHashAddress vh = Address (ScriptCredential vh)
+
+{-# INLINABLE stakePubKeyHashCredential #-}
+-- | Construct a `StakingCredential` from a public key hash.
+stakePubKeyHashCredential :: StakePubKeyHash -> StakingCredential
+stakePubKeyHashCredential = StakingHash . PubKeyCredential . unStakePubKeyHash
+
+{-# INLINEABLE stakeValidatorHashCredential #-}
+-- | Construct a `StakingCredential` from a validator script hash.
+stakeValidatorHashCredential :: StakeValidatorHash -> StakingCredential
+stakeValidatorHashCredential (StakeValidatorHash h) = StakingHash . ScriptCredential . ValidatorHash $ h
+

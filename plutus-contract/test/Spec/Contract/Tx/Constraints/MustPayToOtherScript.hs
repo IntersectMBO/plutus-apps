@@ -417,7 +417,7 @@ phase2ErrorWhenExpectingMoreThanValue submitTxFromConstraints lc =
 
     in checkPredicateOptions defaultCheckOptions
     "Phase-2 validation failure when when token amount sent to other script is lower than actual value"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("Lb":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
     (void $ trace contract)
 
 
@@ -486,7 +486,7 @@ data ConstraintParams =
     MustPayToOtherScriptWithDatumInTx PSU.V1.ValidatorHash Ledger.Datum Value.Value
   | MustPayToOtherScriptAddressWithDatumInTx
         PSU.V1.ValidatorHash
-        PSU.V1.StakeValidatorHash
+        Ledger.StakingCredential
         Ledger.Datum
         Value.Value
   | MustPayToOtherScriptWithInlineDatum
@@ -495,7 +495,7 @@ data ConstraintParams =
         Value.Value
   | MustPayToOtherScriptAddressWithInlineDatum
         PSU.V1.ValidatorHash
-        PSU.V1.StakeValidatorHash
+        Ledger.StakingCredential
         Ledger.Datum
         Value.Value
     deriving (Show)

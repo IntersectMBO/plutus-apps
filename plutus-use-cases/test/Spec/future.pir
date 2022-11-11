@@ -63,6 +63,34 @@
           (tyvardecl ScriptOutputConstraint (fun (type) (type)))
           (lam a (type) (all a (type) (fun a a)))
         )
+        (typebind (tyvardecl StakingCredential (type)) (all a (type) (fun a a)))
+        (datatypebind
+          (datatype
+            (tyvardecl Credential (type))
+
+            Credential_match
+            (vardecl PubKeyCredential (fun (con bytestring) Credential))
+            (vardecl ScriptCredential (fun (con bytestring) Credential))
+          )
+        )
+        (datatypebind
+          (datatype
+            (tyvardecl Maybe (fun (type) (type)))
+            (tyvardecl a (type))
+            Maybe_match
+            (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
+          )
+        )
+        (datatypebind
+          (datatype
+            (tyvardecl Address (type))
+
+            Address_match
+            (vardecl
+              Address (fun Credential (fun [ Maybe StakingCredential ] Address))
+            )
+          )
+        )
         (datatypebind
           (datatype
             (tyvardecl Extended (fun (type) (type)))
@@ -114,14 +142,6 @@
         )
         (datatypebind
           (datatype
-            (tyvardecl Maybe (fun (type) (type)))
-            (tyvardecl a (type))
-            Maybe_match
-            (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
-          )
-        )
-        (datatypebind
-          (datatype
             (tyvardecl TxOutDatum (fun (type) (type)))
             (tyvardecl datum (type))
             TxOutDatum_match
@@ -158,16 +178,23 @@
                 )
               )
               (vardecl
-                MustPayToOtherScript
+                MustPayToAddress
                 (fun
-                  (con bytestring)
+                  Address
                   (fun
-                    [ Maybe (con bytestring) ]
+                    [ Maybe [ TxOutDatum (con data) ] ]
                     (fun
-                      [ TxOutDatum (con data) ]
+                      [ Maybe (con bytestring) ]
                       (fun
-                        [ Maybe (con bytestring) ]
-                        (fun
+                        [
+                          [
+                            (lam
+                              k
+                              (type)
+                              (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                            )
+                            (con bytestring)
+                          ]
                           [
                             [
                               (lam
@@ -177,59 +204,10 @@
                               )
                               (con bytestring)
                             ]
-                            [
-                              [
-                                (lam
-                                  k
-                                  (type)
-                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                )
-                                (con bytestring)
-                              ]
-                              (con integer)
-                            ]
+                            (con integer)
                           ]
-                          TxConstraint
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-              (vardecl
-                MustPayToPubKeyAddress
-                (fun
-                  (con bytestring)
-                  (fun
-                    [ Maybe (con bytestring) ]
-                    (fun
-                      [ Maybe [ TxOutDatum (con data) ] ]
-                      (fun
-                        [ Maybe (con bytestring) ]
-                        (fun
-                          [
-                            [
-                              (lam
-                                k
-                                (type)
-                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                              )
-                              (con bytestring)
-                            ]
-                            [
-                              [
-                                (lam
-                                  k
-                                  (type)
-                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                )
-                                (con bytestring)
-                              ]
-                              (con integer)
-                            ]
-                          ]
-                          TxConstraint
-                        )
+                        ]
+                        TxConstraint
                       )
                     )
                   )
@@ -8484,25 +8462,40 @@
                                                                                                                                                                 [
                                                                                                                                                                   [
                                                                                                                                                                     [
+                                                                                                                                                                      MustPayToAddress
                                                                                                                                                                       [
-                                                                                                                                                                        MustPayToOtherScript
-                                                                                                                                                                        ww
+                                                                                                                                                                        [
+                                                                                                                                                                          Address
+                                                                                                                                                                          [
+                                                                                                                                                                            ScriptCredential
+                                                                                                                                                                            ww
+                                                                                                                                                                          ]
+                                                                                                                                                                        ]
+                                                                                                                                                                        {
+                                                                                                                                                                          Nothing
+                                                                                                                                                                          StakingCredential
+                                                                                                                                                                        }
                                                                                                                                                                       ]
-                                                                                                                                                                      {
-                                                                                                                                                                        Nothing
-                                                                                                                                                                        (con
-                                                                                                                                                                          bytestring
-                                                                                                                                                                        )
-                                                                                                                                                                      }
                                                                                                                                                                     ]
                                                                                                                                                                     [
                                                                                                                                                                       {
-                                                                                                                                                                        TxOutDatumInTx
-                                                                                                                                                                        (con
-                                                                                                                                                                          data
-                                                                                                                                                                        )
+                                                                                                                                                                        Just
+                                                                                                                                                                        [
+                                                                                                                                                                          TxOutDatum
+                                                                                                                                                                          (con
+                                                                                                                                                                            data
+                                                                                                                                                                          )
+                                                                                                                                                                        ]
                                                                                                                                                                       }
-                                                                                                                                                                      unitDatum
+                                                                                                                                                                      [
+                                                                                                                                                                        {
+                                                                                                                                                                          TxOutDatumInTx
+                                                                                                                                                                          (con
+                                                                                                                                                                            data
+                                                                                                                                                                          )
+                                                                                                                                                                        }
+                                                                                                                                                                        unitDatum
+                                                                                                                                                                      ]
                                                                                                                                                                     ]
                                                                                                                                                                   ]
                                                                                                                                                                   {
@@ -8550,25 +8543,40 @@
                                                                                                                                                             [
                                                                                                                                                               [
                                                                                                                                                                 [
+                                                                                                                                                                  MustPayToAddress
                                                                                                                                                                   [
-                                                                                                                                                                    MustPayToOtherScript
-                                                                                                                                                                    ww
+                                                                                                                                                                    [
+                                                                                                                                                                      Address
+                                                                                                                                                                      [
+                                                                                                                                                                        ScriptCredential
+                                                                                                                                                                        ww
+                                                                                                                                                                      ]
+                                                                                                                                                                    ]
+                                                                                                                                                                    {
+                                                                                                                                                                      Nothing
+                                                                                                                                                                      StakingCredential
+                                                                                                                                                                    }
                                                                                                                                                                   ]
-                                                                                                                                                                  {
-                                                                                                                                                                    Nothing
-                                                                                                                                                                    (con
-                                                                                                                                                                      bytestring
-                                                                                                                                                                    )
-                                                                                                                                                                  }
                                                                                                                                                                 ]
                                                                                                                                                                 [
                                                                                                                                                                   {
-                                                                                                                                                                    TxOutDatumInTx
-                                                                                                                                                                    (con
-                                                                                                                                                                      data
-                                                                                                                                                                    )
+                                                                                                                                                                    Just
+                                                                                                                                                                    [
+                                                                                                                                                                      TxOutDatum
+                                                                                                                                                                      (con
+                                                                                                                                                                        data
+                                                                                                                                                                      )
+                                                                                                                                                                    ]
                                                                                                                                                                   }
-                                                                                                                                                                  unitDatum
+                                                                                                                                                                  [
+                                                                                                                                                                    {
+                                                                                                                                                                      TxOutDatumInTx
+                                                                                                                                                                      (con
+                                                                                                                                                                        data
+                                                                                                                                                                      )
+                                                                                                                                                                    }
+                                                                                                                                                                    unitDatum
+                                                                                                                                                                  ]
                                                                                                                                                                 ]
                                                                                                                                                               ]
                                                                                                                                                               {
@@ -11350,36 +11358,22 @@
                                                                                                                                                                         [
                                                                                                                                                                           [
                                                                                                                                                                             [
+                                                                                                                                                                              MustPayToAddress
                                                                                                                                                                               [
-                                                                                                                                                                                MustPayToOtherScript
                                                                                                                                                                                 [
-                                                                                                                                                                                  {
+                                                                                                                                                                                  Address
+                                                                                                                                                                                  [
+                                                                                                                                                                                    ScriptCredential
                                                                                                                                                                                     [
-                                                                                                                                                                                      FutureAccounts_match
-                                                                                                                                                                                      fos
-                                                                                                                                                                                    ]
-                                                                                                                                                                                    (con
-                                                                                                                                                                                      bytestring
-                                                                                                                                                                                    )
-                                                                                                                                                                                  }
-                                                                                                                                                                                  (lam
-                                                                                                                                                                                    ds
-                                                                                                                                                                                    [
-                                                                                                                                                                                      [
-                                                                                                                                                                                        Tuple2
+                                                                                                                                                                                      {
+                                                                                                                                                                                        [
+                                                                                                                                                                                          FutureAccounts_match
+                                                                                                                                                                                          fos
+                                                                                                                                                                                        ]
                                                                                                                                                                                         (con
                                                                                                                                                                                           bytestring
                                                                                                                                                                                         )
-                                                                                                                                                                                      ]
-                                                                                                                                                                                      (con
-                                                                                                                                                                                        bytestring
-                                                                                                                                                                                      )
-                                                                                                                                                                                    ]
-                                                                                                                                                                                    (lam
-                                                                                                                                                                                      ds
-                                                                                                                                                                                      (con
-                                                                                                                                                                                        bytestring
-                                                                                                                                                                                      )
+                                                                                                                                                                                      }
                                                                                                                                                                                       (lam
                                                                                                                                                                                         ds
                                                                                                                                                                                         [
@@ -11398,28 +11392,57 @@
                                                                                                                                                                                           (con
                                                                                                                                                                                             bytestring
                                                                                                                                                                                           )
-                                                                                                                                                                                          ds
+                                                                                                                                                                                          (lam
+                                                                                                                                                                                            ds
+                                                                                                                                                                                            [
+                                                                                                                                                                                              [
+                                                                                                                                                                                                Tuple2
+                                                                                                                                                                                                (con
+                                                                                                                                                                                                  bytestring
+                                                                                                                                                                                                )
+                                                                                                                                                                                              ]
+                                                                                                                                                                                              (con
+                                                                                                                                                                                                bytestring
+                                                                                                                                                                                              )
+                                                                                                                                                                                            ]
+                                                                                                                                                                                            (lam
+                                                                                                                                                                                              ds
+                                                                                                                                                                                              (con
+                                                                                                                                                                                                bytestring
+                                                                                                                                                                                              )
+                                                                                                                                                                                              ds
+                                                                                                                                                                                            )
+                                                                                                                                                                                          )
                                                                                                                                                                                         )
                                                                                                                                                                                       )
-                                                                                                                                                                                    )
-                                                                                                                                                                                  )
+                                                                                                                                                                                    ]
+                                                                                                                                                                                  ]
                                                                                                                                                                                 ]
+                                                                                                                                                                                {
+                                                                                                                                                                                  Nothing
+                                                                                                                                                                                  StakingCredential
+                                                                                                                                                                                }
                                                                                                                                                                               ]
-                                                                                                                                                                              {
-                                                                                                                                                                                Nothing
-                                                                                                                                                                                (con
-                                                                                                                                                                                  bytestring
-                                                                                                                                                                                )
-                                                                                                                                                                              }
                                                                                                                                                                             ]
                                                                                                                                                                             [
                                                                                                                                                                               {
-                                                                                                                                                                                TxOutDatumInTx
-                                                                                                                                                                                (con
-                                                                                                                                                                                  data
-                                                                                                                                                                                )
+                                                                                                                                                                                Just
+                                                                                                                                                                                [
+                                                                                                                                                                                  TxOutDatum
+                                                                                                                                                                                  (con
+                                                                                                                                                                                    data
+                                                                                                                                                                                  )
+                                                                                                                                                                                ]
                                                                                                                                                                               }
-                                                                                                                                                                              unitDatum
+                                                                                                                                                                              [
+                                                                                                                                                                                {
+                                                                                                                                                                                  TxOutDatumInTx
+                                                                                                                                                                                  (con
+                                                                                                                                                                                    data
+                                                                                                                                                                                  )
+                                                                                                                                                                                }
+                                                                                                                                                                                unitDatum
+                                                                                                                                                                              ]
                                                                                                                                                                             ]
                                                                                                                                                                           ]
                                                                                                                                                                           {
@@ -11659,36 +11682,22 @@
                                                                                                                                                                       [
                                                                                                                                                                         [
                                                                                                                                                                           [
+                                                                                                                                                                            MustPayToAddress
                                                                                                                                                                             [
-                                                                                                                                                                              MustPayToOtherScript
                                                                                                                                                                               [
-                                                                                                                                                                                {
+                                                                                                                                                                                Address
+                                                                                                                                                                                [
+                                                                                                                                                                                  ScriptCredential
                                                                                                                                                                                   [
-                                                                                                                                                                                    FutureAccounts_match
-                                                                                                                                                                                    fos
-                                                                                                                                                                                  ]
-                                                                                                                                                                                  (con
-                                                                                                                                                                                    bytestring
-                                                                                                                                                                                  )
-                                                                                                                                                                                }
-                                                                                                                                                                                (lam
-                                                                                                                                                                                  ds
-                                                                                                                                                                                  [
-                                                                                                                                                                                    [
-                                                                                                                                                                                      Tuple2
+                                                                                                                                                                                    {
+                                                                                                                                                                                      [
+                                                                                                                                                                                        FutureAccounts_match
+                                                                                                                                                                                        fos
+                                                                                                                                                                                      ]
                                                                                                                                                                                       (con
                                                                                                                                                                                         bytestring
                                                                                                                                                                                       )
-                                                                                                                                                                                    ]
-                                                                                                                                                                                    (con
-                                                                                                                                                                                      bytestring
-                                                                                                                                                                                    )
-                                                                                                                                                                                  ]
-                                                                                                                                                                                  (lam
-                                                                                                                                                                                    ds
-                                                                                                                                                                                    (con
-                                                                                                                                                                                      bytestring
-                                                                                                                                                                                    )
+                                                                                                                                                                                    }
                                                                                                                                                                                     (lam
                                                                                                                                                                                       ds
                                                                                                                                                                                       [
@@ -11707,28 +11716,57 @@
                                                                                                                                                                                         (con
                                                                                                                                                                                           bytestring
                                                                                                                                                                                         )
-                                                                                                                                                                                        ds
+                                                                                                                                                                                        (lam
+                                                                                                                                                                                          ds
+                                                                                                                                                                                          [
+                                                                                                                                                                                            [
+                                                                                                                                                                                              Tuple2
+                                                                                                                                                                                              (con
+                                                                                                                                                                                                bytestring
+                                                                                                                                                                                              )
+                                                                                                                                                                                            ]
+                                                                                                                                                                                            (con
+                                                                                                                                                                                              bytestring
+                                                                                                                                                                                            )
+                                                                                                                                                                                          ]
+                                                                                                                                                                                          (lam
+                                                                                                                                                                                            ds
+                                                                                                                                                                                            (con
+                                                                                                                                                                                              bytestring
+                                                                                                                                                                                            )
+                                                                                                                                                                                            ds
+                                                                                                                                                                                          )
+                                                                                                                                                                                        )
                                                                                                                                                                                       )
                                                                                                                                                                                     )
-                                                                                                                                                                                  )
-                                                                                                                                                                                )
+                                                                                                                                                                                  ]
+                                                                                                                                                                                ]
                                                                                                                                                                               ]
+                                                                                                                                                                              {
+                                                                                                                                                                                Nothing
+                                                                                                                                                                                StakingCredential
+                                                                                                                                                                              }
                                                                                                                                                                             ]
-                                                                                                                                                                            {
-                                                                                                                                                                              Nothing
-                                                                                                                                                                              (con
-                                                                                                                                                                                bytestring
-                                                                                                                                                                              )
-                                                                                                                                                                            }
                                                                                                                                                                           ]
                                                                                                                                                                           [
                                                                                                                                                                             {
-                                                                                                                                                                              TxOutDatumInTx
-                                                                                                                                                                              (con
-                                                                                                                                                                                data
-                                                                                                                                                                              )
+                                                                                                                                                                              Just
+                                                                                                                                                                              [
+                                                                                                                                                                                TxOutDatum
+                                                                                                                                                                                (con
+                                                                                                                                                                                  data
+                                                                                                                                                                                )
+                                                                                                                                                                              ]
                                                                                                                                                                             }
-                                                                                                                                                                            unitDatum
+                                                                                                                                                                            [
+                                                                                                                                                                              {
+                                                                                                                                                                                TxOutDatumInTx
+                                                                                                                                                                                (con
+                                                                                                                                                                                  data
+                                                                                                                                                                                )
+                                                                                                                                                                              }
+                                                                                                                                                                              unitDatum
+                                                                                                                                                                            ]
                                                                                                                                                                           ]
                                                                                                                                                                         ]
                                                                                                                                                                         {

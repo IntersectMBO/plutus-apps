@@ -141,15 +141,15 @@ getBToken = max
 --   the emulated wallets
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 setupTokens = do
-    ownPK <- Contract.ownFirstPaymentPubKeyHash
-    cur   <- Currency.mintContract ownPK [(fromString tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
+    ownAddr <- Contract.ownAddress
+    cur   <- Currency.mintContract ownAddr [(fromString tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs (fromString tn) amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
-        let pkh = mockWalletPaymentPubKeyHash w
-        when (pkh /= ownPK) $ do
-            cs <- mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+        let addr = mockWalletAddress w
+        when (addr /= ownAddr) $ do
+            cs <- mkTxConstraints @Void mempty (mustPayToAddress addr v)
             Contract.adjustUnbalancedTx cs >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur
