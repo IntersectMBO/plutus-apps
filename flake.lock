@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "CHaP": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1668127153,
+        "narHash": "sha256-RCd29xb0ZDZj5u9v9+dykv6nWs6pcEBsAyChm9Ut3To=",
+        "owner": "input-output-hk",
+        "repo": "cardano-haskell-packages",
+        "rev": "316e0a626fed1a928e659c7fc2577c7773770f7f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "repo",
+        "repo": "cardano-haskell-packages",
+        "type": "github"
+      }
+    },
     "cardano-repo-tool": {
       "flake": false,
       "locked": {
@@ -211,6 +228,7 @@
     },
     "root": {
       "inputs": {
+        "CHaP": "CHaP",
         "cardano-repo-tool": "cardano-repo-tool",
         "easy-purescript-nix": "easy-purescript-nix",
         "flake-compat": "flake-compat",
