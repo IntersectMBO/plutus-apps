@@ -33,7 +33,7 @@ import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions, w1,
-                             walletFundsChange, (.&&.))
+                             walletFundsAssetClassChange, (.&&.))
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
@@ -87,13 +87,19 @@ tknValueV1 :: Value.Value
 tknValueV1 = tknValueV1' tknAmount
 
 tknValueV1' :: Integer -> Value.Value
-tknValueV1' = Value.singleton coinMintingPolicyCurrencySymbol tknName
+tknValueV1' = Value.assetClassValue tknAssetClassV1
+
+tknAssetClassV1 :: Value.AssetClass
+tknAssetClassV1 = Value.assetClass coinMintingPolicyCurrencySymbol tknName
 
 tknValueV2 :: Value.Value
 tknValueV2 = tknValueV2' tknAmount
 
 tknValueV2' :: Integer -> Value.Value
-tknValueV2' = Value.singleton coinMintingPolicyCurrencySymbolV2 tknName
+tknValueV2' = Value.assetClassValue tknAssetClassV2
+
+tknAssetClassV2 :: Value.AssetClass
+tknAssetClassV2 = Value.assetClass coinMintingPolicyCurrencySymbolV2 tknName
 
 -- | Valid Contract using a minting policy with mustMintCurrencyWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
 mustMintCurrencyWithRedeemerContract :: Integer -> TokenName -> Contract () Empty ContractError ()
@@ -216,12 +222,12 @@ mustMintCurrencyWithRedeemerSuccessfulMint =
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to burn tokens
 mustMintCurrencyWithRedeemerSuccessfulBurn :: TestTree
 mustMintCurrencyWithRedeemerSuccessfulBurn =
-    let tknBurnAmount = (-1000)
+    let tknBurnAmount = -1000
         options = defaultCheckOptions & changeInitialWalletValue w1 (tknValueV1 <>)
     in checkPredicateOptions
        options
        "Successful token burn using mustMintCurrencyWithRedeemer"
-       (walletFundsChange w1 (tknValueV1' tknBurnAmount <> Value.singleton mustMintPolicyCurrencySymbol tknName 1) -- including mustMintPolicyCurrencySymbol is a workaround, test only cares about tknBurnAmount -- Fixed by PLT-909
+       (walletFundsAssetClassChange w1 tknAssetClassV1 tknBurnAmount
        .&&. assertValidatedTransactionCount 1)
        (void $ trace $ mustMintCurrencyWithRedeemerContract tknBurnAmount tknName)
 
@@ -322,14 +328,14 @@ mustMintValueWithRedeemerSuccessfulMint =
 -- | Uses onchain and offchain constraint mustMintValueWithRedeemer to burn tokens
 mustMintValueWithRedeemerSuccessfulBurn :: TestTree
 mustMintValueWithRedeemerSuccessfulBurn =
-    let tknBurnValue = tknValueV1' (-1000)
+    let tknBurnAmount = -1000
         options = defaultCheckOptions & changeInitialWalletValue w1 (tknValueV1 <>)
     in checkPredicateOptions
        options
        "Successful token burn using mustMintValueWithRedeemer"
-       (walletFundsChange w1 (tknBurnValue <> Value.singleton mustMintPolicyCurrencySymbol tknName 1) -- including mustMintPolicyCurrencySymbol is a workaround, test only cares about tknBurnValue -- Fixed by PLT-909
+       (walletFundsAssetClassChange w1 tknAssetClassV1 tknBurnAmount
        .&&. assertValidatedTransactionCount 1)
-       (void $ trace $ mustMintValueWithRedeemerContract tknBurnValue)
+       (void $ trace $ mustMintValueWithRedeemerContract (tknValueV1' tknBurnAmount))
 
 -- | Uses onchain and offchain constraint mustMintValue to mint tokens
 mustMintValueSuccessfulMint :: TestTree
