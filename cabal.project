@@ -266,8 +266,11 @@ source-repository-package
     type: git
     location: https://github.com/input-output-hk/cardano-addresses
     tag: b7273a5d3c21f1a003595ebf1e1f79c28cd72513
-    subdir: command-line
-            core
+    subdir:
+      -- cardano-addresses-cli
+      command-line
+      -- cardano-addresses
+      core
 
 -- This is needed because we rely on an unreleased feature
 -- https://github.com/input-output-hk/cardano-ledger/pull/3111
