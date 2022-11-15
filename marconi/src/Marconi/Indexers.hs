@@ -39,7 +39,7 @@ import Control.Concurrent.STM.TMVar (TMVar, putTMVar, takeTMVar, tryReadTMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
+import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _blockNo, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types (TargetAddresses, TxOutRef, pattern CurrentEra, txOutRef)
 
@@ -102,14 +102,16 @@ getUtxoUpdate
   :: C.IsCardanoEra era
   => SlotNo
   -> [C.Tx era]
+  -> C.BlockNo
   -> Maybe TargetAddresses
   -> UtxoUpdate
-getUtxoUpdate slot txs maybeAddresses =
+getUtxoUpdate slot txs blkNo maybeAddresses =
   let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
       outs = concat . catMaybes $ getOutputs maybeAddresses <$> txs
   in  UtxoUpdate { _inputs  = ins
                  , _outputs = outs
                  , _slotNo  = slot
+                 , _blockNo  = blkNo
                  }
 
 {- | The way we synchronise channel consumption is by waiting on a QSemN for each
@@ -184,8 +186,8 @@ queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinato
         signalQSemN _barrier 1
         event <- atomically $ readTChan ch
         case event of
-            RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-                let utxoRow = getUtxoUpdate slotNo txs (Just targetAddresses)
+            RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ct -> do
+                let utxoRow = getUtxoUpdate slotNo txs blkNo(Just targetAddresses)
                 Ix.insert utxoRow index >>= innerLoop
             RollBackward cp _ct -> do
                 events <- Ix.getEvents (index ^. Ix.storage)
@@ -195,6 +197,8 @@ queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinato
                         offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
                         Ix.rewind offset index
 
+tbd :: Block era -> IO ()
+tbd = undefined
 
 utxoWorker :: Maybe TargetAddresses -> Worker
 utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
@@ -205,8 +209,9 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct -> do
-          let utxoRow = getUtxoUpdate slotNo txs maybeTargetAddresses
+        RollForward (BlockInMode b@(Block (BlockHeader slotNo _ blkNo) txs) _) _ct -> do
+          let utxoRow = getUtxoUpdate slotNo txs blkNo maybeTargetAddresses
+          tbd b
           Ix.insert utxoRow index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)

@@ -26,7 +26,7 @@ module Marconi.Index.Utxo
   , TxOut
   ) where
 
-import Cardano.Api (SlotNo, TxIn (TxIn))
+import Cardano.Api (BlockNo, SlotNo, TxIn (TxIn))
 import Cardano.Api qualified as C
 
 import Control.Lens.Operators ((&), (^.))
@@ -56,6 +56,7 @@ data UtxoUpdate = UtxoUpdate
   { _inputs  :: !(Set TxIn)
   , _outputs :: ![(TxOut, TxOutRef)]
   , _slotNo  :: !SlotNo
+  , _blockNo :: !BlockNo
   } deriving (Show)
 
 $(makeLenses ''UtxoUpdate)
