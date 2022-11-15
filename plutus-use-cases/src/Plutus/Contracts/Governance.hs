@@ -38,7 +38,7 @@ import Data.Semigroup (Sum (..))
 import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, TokenName)
+import Ledger (Address, POSIXTime, PaymentPubKeyHash, TokenName)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -92,8 +92,8 @@ data GovState = GovState
 
 data GovInput
     = MintTokens [TokenName]
-    | ProposeChange Proposal
-    | AddVote TokenName Bool
+    | ProposeChange PaymentPubKeyHash Proposal
+    | AddVote PaymentPubKeyHash TokenName Bool
     | FinishVoting
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -104,7 +104,7 @@ data GovInput
 -- * @add-vote@ to vote on a proposal with the name of the voting token and a boolean to vote in favor or against.
 type Schema =
     Endpoint "new-law" Law
-        .\/ Endpoint "add-vote" (TokenName, Bool)
+        .\/ Endpoint "add-vote" (PaymentPubKeyHash, TokenName, Bool)
 
 -- | The governace contract parameters.
 data Params = Params
@@ -162,8 +162,8 @@ votingValue mph tokenName =
     Value.singleton (Value.mpsSymbol mph) tokenName 1
 
 {-# INLINABLE ownsVotingToken #-}
-ownsVotingToken :: MintingPolicyHash -> TokenName -> TxConstraints Void Void
-ownsVotingToken mph tokenName = Constraints.mustSpendAtLeast (votingValue mph tokenName)
+ownsVotingToken :: PaymentPubKeyHash -> MintingPolicyHash -> TokenName -> TxConstraints Void Void
+ownsVotingToken owner mph tokenName = Constraints.mustPayToPubKey owner (votingValue mph tokenName)
 
 {-# INLINABLE transition #-}
 transition :: Params -> State GovState -> GovInput -> Maybe (TxConstraints Void Void, State GovState)
@@ -175,11 +175,11 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
                 (zip initialHolders tokenNames)
         in Just (constraints <> Constraints.mustMintValue total, State s stateValue)
 
-    (GovState law mph Nothing, ProposeChange proposal@Proposal{tokenName}) ->
-        let constraints = ownsVotingToken mph tokenName
+    (GovState law mph Nothing, ProposeChange owner proposal@Proposal{tokenName}) ->
+        let constraints = ownsVotingToken owner mph tokenName
         in Just (constraints, State (GovState law mph (Just (Voting proposal AssocMap.empty))) stateValue)
 
-    (GovState law mph (Just (Voting p oldMap)), AddVote tokenName vote) ->
+    (GovState law mph (Just (Voting p oldMap)), AddVote owner tokenName vote) ->
         let newMap = AssocMap.insert tokenName vote oldMap
             -- Correct validity interval should be:
             -- @
@@ -187,7 +187,7 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
             -- @
             -- See Note [Validity Interval's upper bound]
             validityTimeRange = Interval.to (votingDeadline p - 2)
-            constraints = ownsVotingToken mph tokenName
+            constraints = ownsVotingToken owner mph tokenName
                         <> Constraints.mustValidateIn validityTimeRange
         in Just (constraints, State (GovState law mph (Just (Voting p newMap))) stateValue)
 
@@ -206,8 +206,8 @@ contract params = forever $ mapError (review _GovError) endpoints where
     theClient = client params
     endpoints = selectList [initLaw, addVote]
 
-    addVote = endpoint @"add-vote" $ \(tokenName, vote) ->
-        void $ SM.runStep theClient (AddVote tokenName vote)
+    addVote = endpoint @"add-vote" $ \(owner, tokenName, vote) ->
+        void $ SM.runStep theClient (AddVote owner tokenName vote)
 
     initLaw = endpoint @"new-law" $ \law -> do
         let mph = Scripts.forwardingMintingPolicyHash (typedValidator params)
@@ -219,12 +219,13 @@ contract params = forever $ mapError (review _GovError) endpoints where
 proposalContract ::
     AsGovError e
     => Params
+    -> PaymentPubKeyHash
     -> Proposal
     -> Contract () EmptySchema e ()
-proposalContract params proposal = mapError (review _GovError) propose where
+proposalContract params owner proposal = mapError (review _GovError) propose where
     theClient = client params
     propose = do
-        void $ SM.runStep theClient (ProposeChange proposal)
+        void $ SM.runStep theClient (ProposeChange owner proposal)
 
         logInfo @Text "Voting started. Waiting for the voting deadline to count the votes."
         void $ awaitTime $ votingDeadline proposal

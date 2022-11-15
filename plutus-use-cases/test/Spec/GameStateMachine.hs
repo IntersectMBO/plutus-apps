@@ -119,6 +119,7 @@ instance ContractModel GameModel where
         Guess w old new val -> do
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 GuessArgs { guessArgsGameParam = gameParam
+                          , guessTokenTarget = mockWalletPaymentPubKeyHash w
                           , guessArgsOldSecret = old
                           , guessArgsNewSecret = secretArg new
                           , guessArgsValueTakenOut = Ada.lovelaceValueOf val
@@ -408,6 +409,7 @@ successTrace = do
     _ <- Trace.waitNSlots 1
     hdl2 <- Trace.activateContractWallet w2 G.contract
     Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
+                                               , guessTokenTarget = mockWalletPaymentPubKeyHash w2
                                                , guessArgsOldSecret = "hello"
                                                , guessArgsNewSecret = secretArg "new secret"
                                                , guessArgsValueTakenOut = Ada.adaValueOf 3
@@ -423,6 +425,7 @@ successTrace2 = do
     _ <- Trace.waitNSlots 1
     hdl3 <- Trace.activateContractWallet w3 G.contract
     Trace.callEndpoint @"guess" hdl3 GuessArgs { guessArgsGameParam = gameParam
+                                               , guessTokenTarget = mockWalletPaymentPubKeyHash w3
                                                , guessArgsOldSecret = "new secret"
                                                , guessArgsNewSecret = secretArg "hello"
                                                , guessArgsValueTakenOut = Ada.adaValueOf 5
@@ -440,6 +443,7 @@ traceLeaveTwoAdaInScript = do
                                             }
     _ <- Trace.waitNSlots 2
     _ <- Trace.callEndpoint @"guess" hdl GuessArgs { guessArgsGameParam = gameParam
+                                                   , guessTokenTarget = mockWalletPaymentPubKeyHash w1
                                                    , guessArgsOldSecret = "hello"
                                                    , guessArgsNewSecret = secretArg "new secret"
                                                    , guessArgsValueTakenOut = Ada.adaValueOf 7
@@ -460,6 +464,7 @@ failTrace = do
     _ <- Trace.waitNSlots 1
     hdl2 <- Trace.activateContractWallet w2 G.contract
     _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
+                                                    , guessTokenTarget = mockWalletPaymentPubKeyHash w2
                                                     , guessArgsOldSecret = "hola"
                                                     , guessArgsNewSecret = secretArg "new secret"
                                                     , guessArgsValueTakenOut = Ada.adaValueOf 3

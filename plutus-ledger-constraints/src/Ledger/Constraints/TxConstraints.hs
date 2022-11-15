@@ -750,7 +750,6 @@ mustMintCurrencyWithRedeemerAndReference mref mph red tn a =
 -- at least the given value is spent in the transaction.
 -- When the transaction is created, a 'MkTxError.DeclaredInputMismatch' error
 -- is raised if it is not the case.
->>>>>>> bfaddb8a3 (Remove offchain logic for MustProduceAtLeast and MustSpendAtLeast)
 --
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- sum of the transaction's inputs value to be at least @v@.

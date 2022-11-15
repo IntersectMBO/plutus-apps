@@ -273,7 +273,7 @@ ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 -- ownStakingCredential skh1 <> ownStakingCredential skh2 <> ...
 --     == ownStakingCredential skh1
 -- @
-{-# DEPRECATED ownStakePubKeyHash "Shouldn't be meaningful due to change in MustSpendAtLeast and MustProduceAtLeast offchain code" #-}
+{-# DEPRECATED ownStakingCredential "Shouldn't be meaningful due to change in MustSpendAtLeast and MustProduceAtLeast offchain code" #-}
 ownStakingCredential :: StakingCredential -> ScriptLookups a
 ownStakingCredential sc = mempty { slOwnStakingCredential = Just sc }
 
