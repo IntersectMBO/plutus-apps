@@ -9,6 +9,7 @@ Pre-submit checklist:
     - [ ] Commit sequence broadly makes sense
     - [ ] Key commits have useful messages
     - [ ] Formatting, PNG optimization, etc. are updated
+    - [ ] Important changes are reflected in changelog.d of affected packages
 - PR
     - [ ] Self-reviewed the diff
     - [ ] Useful pull request description
