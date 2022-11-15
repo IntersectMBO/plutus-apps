@@ -269,12 +269,6 @@ source-repository-package
     subdir: command-line
             core
 
--- Should follow cardano-node
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-config
-  tag: 1646e9167fab36c0bff82317743b96efa2d3adaa
-
 -- This is needed because we rely on an unreleased feature
 -- https://github.com/input-output-hk/cardano-ledger/pull/3111
 source-repository-package
