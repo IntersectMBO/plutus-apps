@@ -383,6 +383,7 @@ guessingGameTest =
                   game1Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletPaymentPubKeyHash defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount
@@ -398,6 +399,7 @@ guessingGameTest =
                   game2Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletPaymentPubKeyHash defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "password"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "password"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount

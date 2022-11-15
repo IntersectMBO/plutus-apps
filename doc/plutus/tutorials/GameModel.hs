@@ -133,6 +133,7 @@ instance CM.ContractModel GameModel where
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 G.GuessArgs
                     { G.guessArgsGameParam     = gameParam
+                    , G.guessTokenTarget       = mockWalletPaymentPubKeyHash w
                     , G.guessArgsOldSecret     = old
                     , G.guessArgsNewSecret     = secretArg new
                     , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
@@ -422,6 +423,7 @@ v1_model = ()
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 G.GuessArgs
                     { G.guessArgsGameParam = gameParam
+                    , G.guessTokenTarget   = mockWalletPaymentPubKeyHash w
                     , G.guessArgsOldSecret = old
                     , G.guessArgsNewSecret = secretArg new
                     , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
