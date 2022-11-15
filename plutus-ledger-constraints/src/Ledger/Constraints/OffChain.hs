@@ -112,8 +112,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash),
-                       pubKeyHashAddress)
+import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
