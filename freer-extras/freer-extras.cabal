@@ -100,14 +100,12 @@ test-suite freer-extras-test
     , base               >=4.7 && <5
     , beam-core
     , beam-migrate
-    , beam-postgres
     , beam-sqlite
     , containers
     , contra-tracer
     , freer-simple
     , hedgehog
     , lens
-    , postgresql-simple
     , resource-pool
     , semigroups
     , sqlite-simple
