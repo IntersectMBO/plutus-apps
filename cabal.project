@@ -84,14 +84,6 @@ constraints:
   , word-array==0.1.0.0
 
 constraints:
-  -- 3825d3abf75f83f406c1f7161883c438dac7277d
-  , Win32-network==0.1.0.0
-
-constraints:
-  -- ekg-forward 297cd9db5074339a2fb2e5ae7d0780debb670c63
-  , ekg-forward==0.1.0
-
-constraints:
   -- cardano-node 950c4e222086fed5ca53564e642434ce9307b0b9
   , cardano-api==1.35.3
   , cardano-git-rev==0.1.0.0
