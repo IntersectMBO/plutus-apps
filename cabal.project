@@ -101,10 +101,6 @@ constraints:
   , cardano-prelude-test==0.1.0.0
 
 constraints:
-  -- goblins cde90a2b27f79187ca8310b6549331e59595e7ba
-  , goblins==0.2.0.0
-
-constraints:
   -- iohk-monitoring-framework 066f7002aac5a0efc20e49643fea45454f226caa
   , contra-tracer==0.1.0.0
   , iohk-monitoring==0.1.11.0
@@ -130,26 +126,10 @@ constraints:
   , ouroboros-network-testing==0.1.0.0
 
 constraints:
-  -- moo 8c487714fbfdea66188fcb85053e7e292e0cc348
-  , moo==1.2.0.0.0.0.1
-
-constraints:
   -- typed-protocols 181601bc3d9e9d21a671ce01e0b481348b3ca104
   , typed-protocols==0.1.0.0
   , typed-protocols-cborg==0.1.0.0
   , typed-protocols-examples==0.1.0.0
-
-constraints:
-  -- flat ee59880f47ab835dbd73bea0847dab7869fc20d8
-  , flat==0.4.4.0.0.0.0.1
-
-constraints:
-  -- ekg-json 00ebe7211c981686e65730b7144fbf5350462608
-  , ekg-json==0.1.0.7.0.0.0.0.1
-
-constraints:
-  -- hedgehog-extras 714ee03a5a786a05fc57ac5d2f1c2edce4660d85
-  , hedgehog-extras==0.2.0.0
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which
