@@ -70,10 +70,6 @@ constraints:
   , algebraic-graphs <0.7
 
 constraints:
-  -- optparse-applicative 7497a29cb998721a9068d5725d49461f2bba0e7a
-  , optparse-applicative-fork==0.16.1.0
-
-constraints:
   -- cardano-crypto f73079303f663e028288f9f4a9e08bcca39a923e
   , cardano-crypto==1.1.0
 
