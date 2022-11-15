@@ -180,11 +180,86 @@ toRows update = update ^. outputs
         UtxoRow { _address   = toAddr addr
                 , _reference = ref
                 })
-  where
-    toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
-    toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
-    toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
+toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
+toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
+toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
 
 
 onlyAt :: C.AddressAny -> UtxoRow -> Bool
 onlyAt address' row = address' == row ^. address
+
+data UnspentOutput = UnspentOutput
+    { _unspentOutputAddress     :: !C.AddressAny
+    , _unspentOutputSlot        :: !C.SlotNo
+    , _unspentOutputBlockNumber :: !C.BlockNo
+    , _unspentOutputTxOutRef    :: !TxOutRef
+    } deriving Generic
+
+$(makeLenses ''UnspentOutput)
+
+type ResultUnspentOutput = Maybe [(C.SlotNo, C.BlockNo)]
+
+instance FromField C.SlotNo where
+  fromField f = C.SlotNo <$> fromField f
+
+instance ToField C.SlotNo where
+  toField (C.SlotNo s) = SQLInteger $ fromIntegral s
+
+
+instance FromField C.BlockNo where
+  fromField f = C.BlockNo <$> fromField f
+
+instance ToField C.BlockNo where
+  toField (C.BlockNo b) = SQLInteger $ fromIntegral b
+
+
+instance FromRow UnspentOutput where
+  fromRow
+      = UnspentOutput
+      <$> field
+      <*> field
+      <*> field
+      <*> (txOutRef <$> field <*> field)
+
+instance ToRow UnspentOutput where
+  toRow u
+      = (toField $ u ^. unspentOutputAddress)
+      : (toField $ u ^. unspentOutputSlot)
+      : (toField $ u ^. unspentOutputBlockNumber)
+      : (toRow $ u ^. unspentOutputTxOutRef)
+
+
+toUnspentOutput :: UtxoUpdate -> [UnspentOutput]
+toUnspentOutput  update = update ^. outputs
+  & map (\(C.TxOut addr _ _ _, ref) ->
+        UnspentOutput { _unspentOutputAddress       = toAddr addr
+                      , _unspentOutputSlot          = update ^. slotNo
+                      , _unspentOutputBlockNumber   = update ^. blockNo
+                      , _unspentOutputTxOutRef      = ref
+                      } )
+
+type UnspentOutputIndex = UtxoIndex
+
+openUnspentOutput
+  :: FilePath
+  -> Depth
+  -> IO UnspentOutputIndex
+openUnspentOutput dbPath (Depth k) = do
+  -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
+  -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
+  -- queries due to batching more events together.
+  ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
+  let c = ix ^. Ix.handle
+  SQL.execute_ c "CREATE TABLE IF NOT EXISTS unspentOutput (address TEXT NOT NULL, Slot Int, BlockNo Int, txId TEXT NOT NULL, inputIx INT NOT NULL)"
+  pure ix
+
+storeUnspentOutput :: UnspentOutputIndex -> IO ()
+storeUnspentOutput ix = do
+  buffer <- Ix.getBuffer $ ix ^. Ix.storage
+  let uos = concatMap toUnspentOutput buffer
+      c     = ix ^. Ix.handle
+
+  SQL.execute_ c "BEGIN"
+  forM_ uos $
+    SQL.execute c "INSERT INTO unspentOutputs (address, slot, blockNumber, txId, inputIx) VALUES (?, ?, ?, ?, ?)"
+  SQL.execute_ c "COMMIT"
