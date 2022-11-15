@@ -30,7 +30,7 @@ import Test.QuickCheck (Arbitrary, Gen, Property, arbitrary, choose, elements, f
                         shrink, tabulate, withMaxSuccess)
 
 -- START import Contract.Test
-import Plutus.Contract.Test (Wallet, minLogLevel, mockWalletPaymentPubKeyHash, w1, w2, w3)
+import Plutus.Contract.Test (Wallet, minLogLevel, mockWalletAddress, w1, w2, w3)
 -- END import Contract.Test
 
 -- START import ContractModel
@@ -71,7 +71,7 @@ import Data.Default (Default (def))
 
 -- START gameParam
 gameParam :: G.GameParam
-gameParam = G.GameParam (mockWalletPaymentPubKeyHash w1) (TimeSlot.scSlotZeroTime def)
+gameParam = G.GameParam (mockWalletAddress w1) (TimeSlot.scSlotZeroTime def)
 -- END gameParam
 
 -- * QuickCheck model
@@ -133,7 +133,7 @@ instance CM.ContractModel GameModel where
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 G.GuessArgs
                     { G.guessArgsGameParam     = gameParam
-                    , G.guessTokenTarget       = mockWalletPaymentPubKeyHash w
+                    , G.guessTokenTarget       = mockWalletAddress w
                     , G.guessArgsOldSecret     = old
                     , G.guessArgsNewSecret     = secretArg new
                     , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
@@ -423,7 +423,7 @@ v1_model = ()
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 G.GuessArgs
                     { G.guessArgsGameParam = gameParam
-                    , G.guessTokenTarget   = mockWalletPaymentPubKeyHash w
+                    , G.guessTokenTarget   = mockWalletAddress w
                     , G.guessArgsOldSecret = old
                     , G.guessArgsNewSecret = secretArg new
                     , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
