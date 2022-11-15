@@ -38,7 +38,7 @@ import Data.Semigroup (Sum (..))
 import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, PaymentPubKeyHash, TokenName)
+import Ledger (Address, POSIXTime, TokenName)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -92,8 +92,8 @@ data GovState = GovState
 
 data GovInput
     = MintTokens [TokenName]
-    | ProposeChange PaymentPubKeyHash Proposal
-    | AddVote PaymentPubKeyHash TokenName Bool
+    | ProposeChange Address Proposal
+    | AddVote Address TokenName Bool
     | FinishVoting
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -104,7 +104,7 @@ data GovInput
 -- * @add-vote@ to vote on a proposal with the name of the voting token and a boolean to vote in favor or against.
 type Schema =
     Endpoint "new-law" Law
-        .\/ Endpoint "add-vote" (PaymentPubKeyHash, TokenName, Bool)
+        .\/ Endpoint "add-vote" (Address, TokenName, Bool)
 
 -- | The governace contract parameters.
 data Params = Params
@@ -162,8 +162,8 @@ votingValue mph tokenName =
     Value.singleton (Value.mpsSymbol mph) tokenName 1
 
 {-# INLINABLE ownsVotingToken #-}
-ownsVotingToken :: PaymentPubKeyHash -> MintingPolicyHash -> TokenName -> TxConstraints Void Void
-ownsVotingToken owner mph tokenName = Constraints.mustPayToPubKey owner (votingValue mph tokenName)
+ownsVotingToken :: Address -> MintingPolicyHash -> TokenName -> TxConstraints Void Void
+ownsVotingToken owner mph tokenName = Constraints.mustPayToAddress owner (votingValue mph tokenName)
 
 {-# INLINABLE transition #-}
 transition :: Params -> State GovState -> GovInput -> Maybe (TxConstraints Void Void, State GovState)
@@ -219,7 +219,7 @@ contract params = forever $ mapError (review _GovError) endpoints where
 proposalContract ::
     AsGovError e
     => Params
-    -> PaymentPubKeyHash
+    -> Address
     -> Proposal
     -> Contract () EmptySchema e ()
 proposalContract params owner proposal = mapError (review _GovError) propose where

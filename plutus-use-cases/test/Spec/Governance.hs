@@ -75,14 +75,14 @@ lawv3 = Gov.Law "Law v3"
 
 doVoting :: Int -> Int -> Integer -> EmulatorTrace ()
 doVoting ayes nays rounds = do
-    let activate wId = (mockWalletPaymentPubKeyHash w, Gov.mkTokenName baseName wId,)
+    let activate wId = (mockWalletAddress w, Gov.mkTokenName baseName wId,)
                  <$> Trace.activateContractWallet w (Gov.contract @Gov.GovError params)
            where
                w = knownWallet wId
     namesAndHandles <- traverse activate [1..numberOfHolders]
     let handle1 = (\(_,_,h) -> h) (head namesAndHandles)
     let token2 = (\(_,t,_) -> t) (namesAndHandles !! 1)
-    let owner = mockWalletPaymentPubKeyHash w2
+    let owner = mockWalletAddress w2
     void $ Trace.callEndpoint @"new-law" handle1 lawv1
     void $ Trace.waitNSlots 10
     slotCfg <- Trace.getSlotConfig

@@ -56,7 +56,6 @@ module Ledger.Constraints.OffChain(
     , _DatumNotFoundInTx
     , _MintingPolicyNotFound
     , _ScriptHashNotFound
-    , _OwnPubKeyMissing
     , _TypedValidatorMissing
     , _DatumWrongHash
     , _CannotSatisfyAny
@@ -938,7 +937,6 @@ data MkTxError =
     | DeclaredOutputMismatch Value
     | MintingPolicyNotFound MintingPolicyHash
     | ScriptHashNotFound ScriptHash
-    | OwnPubKeyMissing
     | TypedValidatorMissing
     | DatumWrongHash DatumHash Datum
     | CannotSatisfyAny
@@ -963,7 +961,6 @@ instance Pretty MkTxError where
         DeclaredOutputMismatch v       -> "Discrepancy of" <+> pretty v <+> "outputs"
         MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
         ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
-        OwnPubKeyMissing               -> "Own public key is missing"
         TypedValidatorMissing          -> "Script instance is missing"
         DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
         CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
