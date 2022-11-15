@@ -61,20 +61,13 @@ constraints:
     aeson >= 2
   , hedgehog >= 1.1
   , protolude < 0.3.1
-  , algebraic-graphs < 0.7
 
-constraints:
-  -- cardano-base 0f3a867493059e650cda69e20a5cbf1ace289a57
-  , base-deriving-via==0.1.0.0
-  , cardano-binary==1.5.0
-  , cardano-binary-test==1.3.0
-  , cardano-crypto-class==2.0.0
-  , cardano-crypto-praos==2.0.0
-  , cardano-crypto-tests==2.0.0
-  , cardano-slotting==0.1.0.0
-  , measures==0.1.0.0
-  , orphans-deriving-via==0.1.0.0
-  , strict-containers==0.1.0.0
+  -- cardano-ledger-byron-0.1.0.0
+  , cardano-binary <1.5.0.1
+
+  -- plutus-core-1.0.0.0
+  , cardano-crypto-class <2.0.0.0
+  , algebraic-graphs <0.7
 
 constraints:
   -- optparse-applicative 7497a29cb998721a9068d5725d49461f2bba0e7a
@@ -96,7 +89,7 @@ constraints:
 
 constraints:
   -- 3825d3abf75f83f406c1f7161883c438dac7277d
-  , Win32-network == 0.1.0.0
+  , Win32-network==0.1.0.0
 
 constraints:
   -- ekg-forward 297cd9db5074339a2fb2e5ae7d0780debb670c63
