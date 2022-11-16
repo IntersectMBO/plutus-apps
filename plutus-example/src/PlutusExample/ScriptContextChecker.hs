@@ -29,9 +29,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as T
 import GHC.Records (HasField (..))
 
-import Cardano.CLI.Environment
 import Cardano.CLI.Shelley.Run.Query
-import Cardano.CLI.Types (SocketPath (..))
 import Cardano.Ledger.Alonzo qualified as Alonzo
 import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.PlutusScriptApi qualified as Alonzo
@@ -47,11 +45,10 @@ import Cardano.Ledger.TxIn qualified as Ledger
 import Cardano.Ledger.Babbage.TxInfo qualified as Babbage
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
-import Cardano.Slotting.Time (SystemStart)
 import Control.Monad.Trans.Except
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
-import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
+
 import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V2.Ledger.Api qualified as V2
 import PlutusTx.AssocMap qualified as PMap
@@ -80,7 +77,7 @@ data ScriptContextError = NoScriptsInByronEra
                         | NoScriptsInEra
                         | ReadTxBodyError (FileError TextEnvelopeError)
                         | IntervalConvError Text
-                        | AcquireFail AcquireFailure
+                        | AcquireFail AcquiringFailure
                         | NoTipLocalStateError
                         | NoSystemStartTimeError
                         | EnvVarSocketErr EnvSocketError
@@ -209,7 +206,7 @@ createAnyCustomRedeemerFromTxFp pScriptVer fp (AnyConsensusModeParams cModeParam
              fp
 
   sbe <- getSbe $ cardanoEraStyle cEra
-  SocketPath sockPath <- firstExceptT EnvVarSocketErr readEnvSocketPath
+  SocketPath sockPath <- firstExceptT EnvVarSocketErr . newExceptT $ readEnvSocketPath
   case consensusModeOnly cModeParams of
     CardanoMode -> do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath

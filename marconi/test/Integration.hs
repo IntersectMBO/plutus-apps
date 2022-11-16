@@ -19,6 +19,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty qualified as NE
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
@@ -35,7 +36,7 @@ import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
 import Test.Tasty (TestTree, testGroup)
--- import Test.Tasty.Hedgehog (testPropertyNamed)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
@@ -60,8 +61,7 @@ import Marconi.Logging ()
 
 tests :: TestTree
 tests = testGroup "Integration"
-  [ -- Uncomment when bug #775 on github is fixed (PLT-1068)
-    -- testPropertyNamed "prop_script_hash_in_local_testnet_tx_match" "testIndex" testIndex
+  [ testPropertyNamed "prop_script_hash_in_local_testnet_tx_match" "testIndex" testIndex
   ]
 
 {- | We test the script transaction indexer by setting up a testnet,
@@ -296,7 +296,13 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
   because the indexer runs in a separate thread and there is no way
   of awaiting the data to be flushed into the database. -}
 
-  (ScriptTx.TxCbor tx, indexedScriptHashes) :| _ <- liftIO $ IO.readChan indexedTxs
+  indexedWithScriptHashes <- liftIO $ IO.readChan indexedTxs
+
+  -- We have to filter out the txs the empty scripts hashes because
+  -- sometimes the RollForward event contains a block with the first transaction 'tx1'
+  -- which has no scripts. The test fails because of that in 'headM indexedScriptHashes'.
+  -- For more details see https://github.com/input-output-hk/plutus-apps/issues/775
+  let (ScriptTx.TxCbor tx, indexedScriptHashes) = head $ (NE.filter (\(_, hashes) -> hashes /= [])) indexedWithScriptHashes
 
   ScriptTx.ScriptAddress indexedScriptHash <- headM indexedScriptHashes
 

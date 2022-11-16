@@ -52,6 +52,7 @@ module Plutus.Contract.Test(
     , assertEvents
     , walletFundsChange
     , walletFundsExactChange
+    , walletFundsAssetClassChange
     , walletPaidFees
     , waitingForSlot
     , valueAtAddress
@@ -127,7 +128,7 @@ import Ledger.Generators (GeneratorModel, Mockchain (..))
 import Ledger.Generators qualified as Gen
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
-import Ledger.Value (Value)
+import Ledger.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef
@@ -588,35 +589,48 @@ walletFundsExactChange :: Wallet -> Value -> TracePredicate
 walletFundsExactChange = walletFundsChangeImpl True
 
 walletFundsChangeImpl :: Bool -> Wallet -> Value -> TracePredicate
-walletFundsChangeImpl exact w dlt' = TracePredicate $
-    flip postMapM (L.generalize $ (,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents) $ \(finalValue', fees, allWalletsTxOutCosts) -> do
-        dist <- ask @InitialDistribution
-        let initialValue = fold (dist ^. at w)
-            finalValue = finalValue' P.+ if exact then mempty else fees
+walletFundsChangeImpl exact w dlt' =
+    walletFundsCheck w $ \initialValue finalValue' fees allWalletsTxOutCosts ->
+        let finalValue = finalValue' P.+ if exact then mempty else fees
             dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) allWalletsTxOutCosts
             result = initialValue P.+ dlt == finalValue
-        unless result $ do
-            tell @(Doc Void) $ vsep $
-                [ "Expected funds of" <+> pretty w <+> "to change by"
-                , " " <+> viaShow dlt] ++
-                (guard exact >> ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
-                if initialValue == finalValue
-                then ["but they did not change"]
-                else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
-                      "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
-        pure result
+        in if result then Nothing else Just $
+            [ "Expected funds of" <+> pretty w <+> "to change by"
+            , " " <+> viaShow dlt] ++
+            (guard exact >> ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
+            if initialValue == finalValue
+            then ["but they did not change"]
+            else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
+                    "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
 
 walletPaidFees :: Wallet -> Value -> TracePredicate
-walletPaidFees w val = TracePredicate $
-    flip postMapM (L.generalize $ Folds.walletFees w) $ \fees -> do
-        let result = fees == val
-        unless result $ do
-            tell @(Doc Void) $ vsep
-                [ "Expected" <+> pretty w <+> "to pay"
-                , " " <+> viaShow val
-                , "lovelace in fees, but they paid"
-                , " " <+> viaShow fees ]
-        pure result
+walletPaidFees w val = walletFundsCheck w $ \_ _ fees _ -> do
+    if fees == val then Nothing else Just
+        [ "Expected" <+> pretty w <+> "to pay"
+        , " " <+> viaShow val
+        , "lovelace in fees, but they paid"
+        , " " <+> viaShow fees ]
+
+walletFundsAssetClassChange :: Wallet -> AssetClass -> Integer -> TracePredicate
+walletFundsAssetClassChange w ac dlt =
+    walletFundsCheck w $ \initialValue finalValue _ _ ->
+        let realDlt = (finalValue P.- initialValue) `assetClassValueOf` ac
+        in if realDlt == dlt then Nothing else Just $
+            [ "Expected amount of" <+> pretty ac <+> "in" <+> pretty w <+> "to change by"
+            , " " <+> pretty dlt <+> " but they changed by"
+            , " " <+> pretty realDlt ]
+
+walletFundsCheck :: Wallet -> (Value -> Value -> Value -> [Ada.Ada] -> Maybe [Doc Void]) -> TracePredicate
+walletFundsCheck w check = TracePredicate $
+    flip postMapM (L.generalize $ (,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents) $ \(finalValue, fees, allWalletsTxOutCosts) -> do
+        dist <- ask @InitialDistribution
+        let initialValue = fold (dist ^. at w)
+            result = check initialValue finalValue fees allWalletsTxOutCosts
+        case result of
+            Nothing -> pure True
+            Just docLines -> do
+                tell $ vsep docLines
+                pure False
 
 -- | An assertion about the blockchain
 assertBlockchain :: ([Ledger.Block] -> Bool) -> TracePredicate

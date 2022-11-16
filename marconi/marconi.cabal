@@ -70,7 +70,6 @@ library
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , iohk-monitoring
-    , plutus-ledger-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -79,6 +78,7 @@ library
     , base
     , bytestring
     , containers
+    , filepath
     , lens
     , mwc-random
     , optparse-applicative
@@ -105,16 +105,14 @@ executable marconi
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:
-    , cardano-api
-    , iohk-monitoring
+  build-depends:  iohk-monitoring
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base                  >=4.9 && <5
-    , optparse-applicative
+    , base           >=4.9 && <5
+    , directory
     , prettyprinter
 
 test-suite marconi-test
