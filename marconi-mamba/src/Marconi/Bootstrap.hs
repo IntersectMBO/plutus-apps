@@ -5,16 +5,22 @@
 module Marconi.Bootstrap  where
 
 import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), NetworkId, deserialiseFromBech32)
-import Cardano.Streaming (withChainSyncEventStream)
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.BM.Tracing (defaultConfigStdout)
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
+import Control.Exception (catch)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
 import Data.Text (pack)
 import Marconi.Api.HttpServer qualified as Http
-import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryComm), HasJsonRpcEnv (queryEnv),
+import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryTMVar), HasJsonRpcEnv (queryEnv),
                           JsonRpcEnv (JsonRpcEnv, _HttpSettings, _QueryEnv), RpcPortNumber, TargetAddresses)
 import Marconi.Api.UtxoIndexersQuery qualified as QIUtxo
 import Marconi.Indexers (combineIndexers, queryAwareUtxoWorker)
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
 
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache
@@ -44,12 +50,20 @@ bootstrapUtxoIndexers
     -> JsonRpcEnv
     -> IO ()
 bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
-    let
-      qsem = env ^. queryEnv . queryComm
-      indexers = combineIndexers [( queryAwareUtxoWorker qsem targetAddresses , dbPath)]
-      chainPoint = ChainPointAtGenesis
-    in
-        withChainSyncEventStream socket networkId chainPoint indexers
+    do
+        let qsem = env ^. queryEnv . queryTMVar
+            indexers = combineIndexers [( queryAwareUtxoWorker qsem targetAddresses , dbPath)]
+            chainPoint = ChainPointAtGenesis
+        c <- defaultConfigStdout
+        withTrace c "marconi-mamba" $ \trace ->
+          withChainSyncEventStream socket networkId chainPoint indexers
+          `catch` \NoIntersectionFound ->
+            logError trace $
+                renderStrict $
+                    layoutPretty defaultLayoutOptions $
+                        "No intersection found when looking for the chain point"
+                        <+> (pretty . show  $ chainPoint)  <> "."
+                        <+> "Please check the slot number and the block hash do belong to the chain"
 
 -- | parses a white space separated address list
 -- Note, duplicate addresses are rmoved

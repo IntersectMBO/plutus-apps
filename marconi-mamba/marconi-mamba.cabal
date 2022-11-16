@@ -83,7 +83,9 @@ library
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:   cardano-api
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
 
   ------------------------
   -- Non-IOG dependencies
@@ -94,6 +96,7 @@ library
     , base            >=4.9 && <5
     , containers
     , lens
+    , prettyprinter
     , servant
     , servant-server
     , sqlite-simple

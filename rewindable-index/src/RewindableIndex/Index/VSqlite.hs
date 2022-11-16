@@ -17,7 +17,7 @@ import Control.Monad.Primitive (PrimState)
 import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Generic.Mutable qualified as VGM
-import Database.SQLite.Simple (Connection, open)
+import Database.SQLite.Simple (Connection, execute_, open)
 
 import RewindableIndex.Index.VSplit (SplitIndex (SplitIndex), Storage (Storage))
 import RewindableIndex.Index.VSplit qualified as S
@@ -36,6 +36,8 @@ new fquery fstore foninsert k' db vector
   | k' < 0 = pure Nothing
   | otherwise  = do
     connection <- open db
+    execute_ connection "PRAGMA journal_mode=WAL"
+
     pure . Just $ SplitIndex
       { S._handle        = connection
       , S._storage = Storage { S._events = vector

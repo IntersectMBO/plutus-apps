@@ -14,11 +14,9 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
-import Control.Exception (bracket_)
-import Control.Lens (makeClassy)
 import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((&), (^.))
-import Control.Monad (unless, void)
+import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
@@ -35,7 +33,7 @@ import Cardano.Api.Byron qualified as Byron
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Control.Concurrent.STM.TMVar (TMVar, putTMVar, takeTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
@@ -168,19 +166,16 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
 -- The main difference between this worker and the utxoWorker is
 -- that we can perform queries with this worker against utxos Stablecoin
 queryAwareUtxoWorker
-    :: UtxoQueryComm    -- ^  used to communicate with query threads
+    :: UtxoQueryTMVar   -- ^  used to communicate with query threads
     -> TargetAddresses  -- ^ Target addresses to filter for
     -> Worker
-queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
-   Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+queryAwareUtxoWorker (UtxoQueryTMVar utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
+   Utxo.open path (Utxo.Depth 2160) >>= bootstrapQuery >>= innerLoop
   where
+    bootstrapQuery :: UtxoIndex -> IO UtxoIndex
+    bootstrapQuery index = (atomically $ putTMVar utxoIndexer index ) >> pure index
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
-        isquery <- atomically . tryReadTMVar $ qreq
-        unless (null isquery) $ bracket_
-            (atomically (takeTMVar qreq ) ) -- block
-            (atomically (takeTMVar qreq ) ) -- unblock
-            (atomically  (putTMVar utxoIndexer index) ) -- allow the query thread to access in-memory utxos
         signalQSemN _barrier 1
         event <- atomically $ readTChan ch
         case event of
@@ -299,10 +294,6 @@ txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
 txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
-type QueryRequest = ()
-
-data UtxoQueryComm = UtxoQueryComm
-    { _QueryReq :: TMVar QueryRequest   -- ^ query request fro query thread
-    , _Indexer  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
+newtype UtxoQueryTMVar = UtxoQueryTMVar
+    { unUtxoIndex  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
     }
-makeClassy ''UtxoQueryComm
