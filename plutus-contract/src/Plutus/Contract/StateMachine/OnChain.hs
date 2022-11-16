@@ -28,8 +28,7 @@ module Plutus.Contract.StateMachine.OnChain(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                           TxConstraints (txOwnOutputs), TxOutDatum (TxOutDatumInTx))
+import Ledger.Constraints (TxConstraints (txOwnOutputs), mustPayToTheScriptWithDatumInTx)
 import Ledger.Constraints.OnChain.V1 (checkScriptContext)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorTypes, validatorAddress, validatorHash)
 import Ledger.Value (Value, isZero)
@@ -127,17 +126,11 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                     traceIfFalse "S3" {-"Non-zero value allocated in final state"-} (isZero newValue)
                     && traceIfFalse "S4" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext newConstraints ptx)
                 | otherwise ->
-                    let txc =
-                            newConstraints
-                                { txOwnOutputs =
-                                    [ ScriptOutputConstraint
-                                        { ocDatum = TxOutDatumInTx newData
-                                          -- Check that the thread token value is still there
-                                        , ocValue = newValue <> threadTokenValueInner threadToken (ownHash ptx)
-                                        , ocReferenceScriptHash = Nothing
-                                        }
-                                    ]
-                                }
+                    let -- Check that the thread token value is still there
+                        valueWithToken = newValue <> threadTokenValueInner threadToken (ownHash ptx)
+                        constraint = mustPayToTheScriptWithDatumInTx newData valueWithToken
+                        -- Overwrite `txOwnOutputs` to change the output type
+                        txc = newConstraints { txOwnOutputs = txOwnOutputs constraint }
                     in traceIfFalse "S5" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext @_ @s txc ptx)
             Nothing -> trace "S6" {-"State transition invalid - input is not a valid transition at the current state"-} False
     in checkOk && stateAndOutputsOk
