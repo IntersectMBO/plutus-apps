@@ -151,8 +151,9 @@ experiment with a pre-release version of one of our own packages.
 You can use a ``source-repository-package`` stanza to pull in the
 unreleased version.
 
-Try only to do this for a short time, as it does not play very well with
-tooling, and will interfere with the ability to release the node itself.
+Please note that consumers of our packages will not pull these unreleased
+versions when compiling our packages so consider using ``source-repository-package``
+only as a temporary solution.
 
 For packages that we do not control, we can end up in a situation where we
 have a fork that looks like it will be long-lived or permanent (e.g. the
@@ -162,24 +163,6 @@ released).
 In that case, release a patched version to the `Cardano package repository
 <https://github.com/input-output-hk/cardano-haskell-packages>`, which
 allows us to remove the ``source-repository-package`` stanza.
-
-See the README for instructions.
-
-=== Releasing a version of plutus-apps
-
-(There is much more to say here, this is just a small fragment)
-
-==== ... to the Cardano package repository
-
-When releasing a new version of plutus-apps, all packages in this
-repository should be released to the `Cardano package repository
-<https://github.com/input-output-hk/cardano-haskell-packages>`.
-
-See the README for instructions, including a script to automate most of the
-process.
-
-Please note that libraries need bounds on the version of their dependencies
-to avoid bitrot and be effectively reusable.
 
 === How to work with a local copy of source dependencies
 
