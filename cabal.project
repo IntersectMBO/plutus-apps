@@ -54,84 +54,36 @@ benchmarks: true
 test-show-details: direct
 
 allow-newer:
-    *:aeson
-  , size-based:template-haskell
+  -- this is material for the hackage trustees
+  , ekg:aeson
+  , ekg-json:aeson
+  , openapi3:aeson
+  , servant:aeson
+  , servant-client-core:aeson
+  , servant-server:aeson
 
 constraints:
-    aeson >= 2
-  , hedgehog >= 1.1
-  , protolude < 0.3.1
+  -- cardano-prelude-0.1.0.0 needs
+  , protolude <0.3.1
 
-  -- cardano-ledger-byron-0.1.0.0
+  -- cardano-ledger-byron-0.1.0.0 needs
   , cardano-binary <1.5.0.1
 
-  -- plutus-core-1.0.0.1
+  -- plutus-core-1.0.0.1 needs
   , cardano-crypto-class >2.0.0.0
   , algebraic-graphs <0.7
 
-constraints:
-  -- cardano-base cc049d7c9b9a0129c15b1355fd1dff9e1a1a551c
-  , cardano-crypto-class==2.0.0.0.1
-  , cardano-crypto-praos==2.0.0.0.1
-  , cardano-crypto-tests==2.0.0.0.1
+  -- cardano-ledger-core-0.1.0.0 needs
+  , cardano-crypto-class <2.0.0.1
 
-constraints:
-  -- cardano-crypto f73079303f663e028288f9f4a9e08bcca39a923e
-  , cardano-crypto==1.1.0
+  -- cardano-crypto-class-2.0.0.0.1 needs
+  , cardano-prelude <0.1.0.1
 
-constraints:
-  -- plutus d5f6f4a5505094490f61c8d164515adf7c8f46cc
-  , plutus-core==1.0.0.1
-  , plutus-ledger-api==1.0.0.1
-  -- plutus a56c96598b4b25c9e28215214d25189331087244
-  , plutus-tx==1.0.0.0
-  , plutus-tx-plugin==1.0.0.0
-  , prettyprinter-configurable==0.1.0.0
-  , plutus-ghc-stub==8.6.5
-  , word-array==0.1.0.0
+  -- dbvar from cardano-wallet needs
+  , io-classes <0.3.0.0
 
-constraints:
-  -- cardano-node ebc7be471b30e5931b35f9bbc236d21c375b91bb 1.35.4
-  , cardano-api==1.35.4
-  , cardano-cli==1.35.4
-  , cardano-node==1.35.4
-  , cardano-testnet==1.35.4
-
-constraints:
-  -- cardano-prelude bb4ed71ba8e587f672d06edf9d2e376f4b055555
-  , cardano-prelude==0.1.0.0
-  , cardano-prelude-test==0.1.0.0
-
-constraints:
-  -- iohk-monitoring-framework 066f7002aac5a0efc20e49643fea45454f226caa
-  , contra-tracer==0.1.0.0
-  , iohk-monitoring==0.1.11.0
-  , lobemo-backend-aggregation==0.1.0.0
-  , lobemo-backend-ekg==0.1.0.1
-  , lobemo-backend-monitoring==0.1.0.0
-  , lobemo-backend-trace-forwarder==0.1.0.0
-  , lobemo-scribe-systemd==0.1.0.0
-  , tracer-transformers==0.1.0.1
-
-constraints:
-  -- ouroboros-network b6ab4ca226ba541ee89374a30824351a91285226
-  , monoidal-synchronisation==0.1.0.1
-  , network-mux==0.1.0.1
-  , ntp-client==0.0.1
-  , ouroboros-consensus==0.1.0.1
-  , ouroboros-consensus-byron==0.1.0.1
-  , ouroboros-consensus-cardano==0.1.0.1
-  , ouroboros-consensus-protocol==0.1.0.1
-  , ouroboros-consensus-shelley==0.1.0.1
-  , ouroboros-network==0.1.0.1
-  , ouroboros-network-framework==0.1.0.1
-  , ouroboros-network-testing==0.1.0.1
-
-constraints:
-  -- typed-protocols 181601bc3d9e9d21a671ce01e0b481348b3ca104
+  -- newer typed-protocols need io-classes>=0.3.0.0 which is incompatible with dbvar's constraint above
   , typed-protocols==0.1.0.0
-  , typed-protocols-cborg==0.1.0.0
-  , typed-protocols-examples==0.1.0.0
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which
