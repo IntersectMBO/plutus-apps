@@ -199,8 +199,9 @@ instance FromJSON TxConstraintFuns where
 -- output from a target script.
 data ScriptInputConstraint a =
     ScriptInputConstraint
-        { icRedeemer :: a -- ^ The typed 'Redeemer' to be used with the target script
-        , icTxOutRef :: TxOutRef -- ^ The UTXO to be spent by the target script
+        { icRedeemer          :: a -- ^ The typed 'Redeemer' to be used with the target script
+        , icTxOutRef          :: TxOutRef -- ^ The UTXO to be spent by the target script
+        , icReferenceTxOutRef :: Maybe TxOutRef -- ^ Optionally use a reference script as witness
         } deriving stock (Haskell.Show, Generic, Haskell.Functor)
 
 {-# INLINABLE mustSpendOutputFromTheScript #-}
@@ -218,14 +219,14 @@ data ScriptInputConstraint a =
 -- inputs.
 mustSpendOutputFromTheScript :: TxOutRef -> i -> TxConstraints i o
 mustSpendOutputFromTheScript txOutRef red =
-    mempty { txOwnInputs = [ScriptInputConstraint red txOutRef] }
+    mempty { txOwnInputs = [ScriptInputConstraint red txOutRef Nothing] }
 
 instance (Pretty a) => Pretty (ScriptInputConstraint a) where
-    pretty ScriptInputConstraint{icRedeemer, icTxOutRef} =
-        vsep
+    pretty ScriptInputConstraint{icRedeemer, icTxOutRef, icReferenceTxOutRef} =
+        vsep $
             [ "Redeemer:" <+> pretty icRedeemer
             , "TxOutRef:" <+> pretty icTxOutRef
-            ]
+            ] Haskell.++ Haskell.maybe [] (\ref -> ["Reference TxOutRef: " <+> pretty ref]) icReferenceTxOutRef
 
 deriving anyclass instance (ToJSON a) => ToJSON (ScriptInputConstraint a)
 deriving anyclass instance (FromJSON a) => FromJSON (ScriptInputConstraint a)
