@@ -28,6 +28,7 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
+import Ledger.Address.Orphans as Export ()
 import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash, toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Scripts (StakeValidatorHash (..), ValidatorHash (..))

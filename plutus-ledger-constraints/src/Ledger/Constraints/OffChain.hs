@@ -56,7 +56,6 @@ module Ledger.Constraints.OffChain(
     , _DatumNotFoundInTx
     , _MintingPolicyNotFound
     , _ScriptHashNotFound
-    , _OwnPubKeyMissing
     , _TypedValidatorMissing
     , _DatumWrongHash
     , _CannotSatisfyAny
@@ -77,7 +76,6 @@ module Ledger.Constraints.OffChain(
     , processConstraintFun
     , addOwnInput
     , addOwnOutput
-    , addMissingValueSpent
     , updateUtxoIndex
     , lookupTxOutRef
     , lookupScript
@@ -91,8 +89,8 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, view, (%=), (&), (.=), (.~), (<>=), (^.),
-                     (^?))
+import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, uses, view, (%=), (&), (.=), (.~), (<>=),
+                     (^.), (^?))
 import Control.Lens.Extras (is)
 import Control.Monad (forM_, guard)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
@@ -113,8 +111,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash),
-                       pubKeyHashAddress)
+import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
@@ -262,6 +259,7 @@ paymentPubKey (PaymentPubKey pk) =
 -- ownPaymentPubKeyHash pkh1 <> ownPaymentPubKeyHash pkh2 <> ...
 --     == ownPaymentPubKeyHash pkh1
 -- @
+{-# DEPRECATED ownPaymentPubKeyHash "Shouldn't be meaningful due to change in MustSpendAtLeast and MustProduceAtLeast offchain code" #-}
 ownPaymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
 ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 
@@ -273,6 +271,7 @@ ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 -- ownStakingCredential skh1 <> ownStakingCredential skh2 <> ...
 --     == ownStakingCredential skh1
 -- @
+{-# DEPRECATED ownStakingCredential "Shouldn't be meaningful due to change in MustSpendAtLeast and MustProduceAtLeast offchain code" #-}
 ownStakingCredential :: StakingCredential -> ScriptLookups a
 ownStakingCredential sc = mempty { slOwnStakingCredential = Just sc }
 
@@ -387,11 +386,6 @@ missingValueSpent ValueSpentBalances{vbsRequired, vbsProvided} =
         difference = vbsRequired <> N.negate vbsProvided
         (_, missing) = Value.split difference
     in missing
-
-totalMissingValue :: ConstraintProcessingState -> Value
-totalMissingValue ConstraintProcessingState{cpsValueSpentBalancesInputs, cpsValueSpentBalancesOutputs} =
-        missingValueSpent cpsValueSpentBalancesInputs \/
-        missingValueSpent cpsValueSpentBalancesOutputs
 
 makeLensesFor
     [ ("cpsUnbalancedTx", "unbalancedTx")
@@ -518,8 +512,21 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, t
          traverse_ processConstraintFun txCnsFuns
          traverse_ addOwnInput txOwnInputs
          traverse_ processConstraint verificationConstraints
-         addMissingValueSpent
+         checkValueSpent
          updateUtxoIndex
+
+
+checkValueSpent
+    :: ( MonadReader (ScriptLookups a) m
+       , MonadState ConstraintProcessingState m
+       , MonadError MkTxError m
+       )
+    => m ()
+checkValueSpent = do
+    missingInputs <- uses valueSpentInputs missingValueSpent
+    unless (Value.isZero missingInputs) $ throwError $ DeclaredInputMismatch missingInputs
+    missingOutputs <- uses valueSpentOutputs missingValueSpent
+    unless (Value.isZero missingOutputs) $ throwError $ DeclaredOutputMismatch missingOutputs
 
 -- | Turn a 'TxConstraints' value into an unbalanced transaction that satisfies
 --   the constraints. To use this in a contract, see
@@ -572,33 +579,6 @@ adjustTxOut params txOut = do
       pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
     else pure ([], txOut)
 
-
--- | Add the remaining balance of the total value that the tx must spend.
---   See note [Balance of value spent]
-addMissingValueSpent
-    :: ( MonadReader (ScriptLookups a) m
-       , MonadState ConstraintProcessingState m
-       , MonadError MkTxError m
-       )
-    => m ()
-addMissingValueSpent = do
-    missing <- gets totalMissingValue
-    if Value.isZero missing
-        then pure ()
-        else do
-            -- add 'missing' to the transaction's outputs. This ensures that the
-            -- wallet will add a corresponding input when balancing the
-            -- transaction.
-            -- Step 4 of the process described in [Balance of value spent]
-            pkh <- asks slOwnPaymentPubKeyHash >>= maybe (throwError OwnPubKeyMissing) pure
-            sc <- asks slOwnStakingCredential
-            let pv2TxOut = PV2.TxOut { PV2.txOutAddress = pubKeyHashAddress pkh sc
-                                     , PV2.txOutValue = missing
-                                     , PV2.txOutDatum = PV2.NoOutputDatum
-                                     , PV2.txOutReferenceScript = Nothing
-                                     }
-            txOut <- toCardanoTxOutWithOutputDatum pv2TxOut
-            unbalancedTx . tx . Tx.outputs %= (txOut:)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
@@ -912,16 +892,6 @@ resolveScriptTxOutDatumAndValue
     pure $ Just (datum, _decoratedTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
 
-toCardanoTxOutWithOutputDatum ::
-    ( MonadState ConstraintProcessingState m
-    , MonadError MkTxError m
-    )
-    => PV2.TxOut
-    -> m TxOut
-toCardanoTxOutWithOutputDatum txout = do
-  networkId <- gets $ pNetworkId . cpsParams
-  throwToCardanoError $ TxOut <$> C.toCardanoTxOut networkId C.toCardanoTxOutDatum txout
-
 throwToCardanoError :: MonadError MkTxError m => Either C.ToCardanoError a -> m a
 throwToCardanoError (Left err) = throwError $ ToCardanoError err
 throwToCardanoError (Right a)  = pure a
@@ -963,9 +933,10 @@ data MkTxError =
     | TxOutRefNoReferenceScript TxOutRef
     | DatumNotFound DatumHash
     | DatumNotFoundInTx DatumHash
+    | DeclaredInputMismatch Value
+    | DeclaredOutputMismatch Value
     | MintingPolicyNotFound MintingPolicyHash
     | ScriptHashNotFound ScriptHash
-    | OwnPubKeyMissing
     | TypedValidatorMissing
     | DatumWrongHash DatumHash Datum
     | CannotSatisfyAny
@@ -986,14 +957,16 @@ instance Pretty MkTxError where
         TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
         DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
         DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
+        DeclaredInputMismatch v        -> "Discrepancy of" <+> pretty v <+> "inputs"
+        DeclaredOutputMismatch v       -> "Discrepancy of" <+> pretty v <+> "outputs"
         MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
         ScriptHashNotFound h           -> "No script with hash" <+> pretty h <+> "was found"
-        OwnPubKeyMissing               -> "Own public key is missing"
         TypedValidatorMissing          -> "Script instance is missing"
         DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
         CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
         NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
         MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
-        AmbiguousRedeemer t rs         -> "Try to spend a script output" <+> pretty t <+> "with different redeemers:" <+> pretty rs
-        AmbiguousReferenceScript t rss -> "Try to spend a script output" <+> pretty t <+> "with different referenceScript:" <+> pretty rss
-
+        AmbiguousRedeemer t rs         -> "Try to spend a script output" <+> pretty t
+                                       <+> "with different redeemers:" <+> pretty rs
+        AmbiguousReferenceScript t rss -> "Try to spend a script output" <+> pretty t
+                                       <+> "with different referenceScript:" <+> pretty rss

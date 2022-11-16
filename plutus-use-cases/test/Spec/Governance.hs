@@ -75,27 +75,29 @@ lawv3 = Gov.Law "Law v3"
 
 doVoting :: Int -> Int -> Integer -> EmulatorTrace ()
 doVoting ayes nays rounds = do
-    let activate w = (Gov.mkTokenName baseName w,)
-                 <$> Trace.activateContractWallet (knownWallet w)
-                                                  (Gov.contract @Gov.GovError params)
+    let activate wId = (mockWalletAddress w, Gov.mkTokenName baseName wId,)
+                 <$> Trace.activateContractWallet w (Gov.contract @Gov.GovError params)
+           where
+               w = knownWallet wId
     namesAndHandles <- traverse activate [1..numberOfHolders]
-    let handle1 = snd (head namesAndHandles)
-    let token2 = fst (namesAndHandles !! 1)
+    let handle1 = (\(_,_,h) -> h) (head namesAndHandles)
+    let token2 = (\(_,t,_) -> t) (namesAndHandles !! 1)
+    let owner = mockWalletAddress w2
     void $ Trace.callEndpoint @"new-law" handle1 lawv1
     void $ Trace.waitNSlots 10
     slotCfg <- Trace.getSlotConfig
     let votingRound (_, law) = do
             now <- view Trace.currentSlot <$> Trace.chainState
             void $ Trace.activateContractWallet w2
-                (Gov.proposalContract @Gov.GovError params
+                (Gov.proposalContract @Gov.GovError params owner
                     Gov.Proposal { Gov.newLaw = law
                                  , Gov.votingDeadline = TimeSlot.slotToEndPOSIXTime slotCfg $ now + 20
                                  , Gov.tokenName = token2
                                  })
             void $ Trace.waitNSlots 1
-            traverse_ (\(nm, hdl) -> Trace.callEndpoint @"add-vote" hdl (nm, True)  >> Trace.waitNSlots 1)
+            traverse_ (\(ow, nm, hdl) -> Trace.callEndpoint @"add-vote" hdl (ow, nm, True)  >> Trace.waitNSlots 1)
                       (take ayes namesAndHandles)
-            traverse_ (\(nm, hdl) -> Trace.callEndpoint @"add-vote" hdl (nm, False) >> Trace.waitNSlots 1)
+            traverse_ (\(ow, nm, hdl) -> Trace.callEndpoint @"add-vote" hdl (ow, nm, False) >> Trace.waitNSlots 1)
                       (take nays $ drop ayes namesAndHandles)
             Trace.waitNSlots 15
 

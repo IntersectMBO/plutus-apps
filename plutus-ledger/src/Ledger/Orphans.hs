@@ -31,13 +31,11 @@ import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Scripts (Language, Versioned)
 import Ledger.Slot (Slot (Slot))
-import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), DCert, Extended, Interval,
-                             LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
-                             MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
-                             Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
-                             StakeValidatorHash (StakeValidatorHash), StakingCredential, TokenName (TokenName),
-                             TxId (TxId), TxOutRef, UpperBound, Validator (Validator), ValidatorHash (ValidatorHash),
-                             Value (Value), fromBytes)
+import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), DCert, Extended, Interval, LedgerBytes (LedgerBytes),
+                             LowerBound, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
+                             POSIXTime (POSIXTime), Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script,
+                             StakeValidator (StakeValidator), TokenName (TokenName), TxId (TxId), TxOutRef, UpperBound,
+                             Validator (Validator), Value (Value), fromBytes)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Scripts (ScriptError, ScriptHash (..))
@@ -123,19 +121,13 @@ deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (UpperBound a)
 deriving newtype instance OpenApi.ToSchema Redeemer
 deriving newtype instance OpenApi.ToSchema RedeemerHash
 deriving newtype instance OpenApi.ToSchema Value
-deriving instance OpenApi.ToSchema Address
 deriving newtype instance OpenApi.ToSchema MintingPolicy
 deriving newtype instance OpenApi.ToSchema MintingPolicyHash
 deriving newtype instance OpenApi.ToSchema CurrencySymbol
-deriving instance OpenApi.ToSchema Credential
 deriving newtype instance OpenApi.ToSchema PubKey
 deriving newtype instance OpenApi.ToSchema TokenName
-deriving instance OpenApi.ToSchema StakingCredential
 deriving newtype instance OpenApi.ToSchema StakeValidator
-deriving newtype instance OpenApi.ToSchema StakeValidatorHash
-deriving newtype instance OpenApi.ToSchema PubKeyHash
 deriving newtype instance OpenApi.ToSchema LedgerBytes
-deriving newtype instance OpenApi.ToSchema ValidatorHash
 deriving newtype instance OpenApi.ToSchema Signature
 deriving newtype instance OpenApi.ToSchema POSIXTime
 deriving newtype instance OpenApi.ToSchema DiffMilliSeconds

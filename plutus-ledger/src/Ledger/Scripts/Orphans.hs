@@ -64,6 +64,7 @@ deriving anyclass instance ToJSONKey StakeValidatorHash
 deriving anyclass instance FromJSONKey StakeValidatorHash
 deriving newtype instance Hashable StakeValidatorHash
 deriving newtype instance Serialise StakeValidatorHash
+deriving newtype instance OpenApi.ToSchema StakeValidatorHash
 
 deriving anyclass instance ToJSON ScriptHash
 deriving anyclass instance FromJSON ScriptHash
@@ -78,6 +79,7 @@ deriving anyclass instance ToJSONKey ValidatorHash
 deriving anyclass instance FromJSONKey ValidatorHash
 deriving newtype instance Hashable ValidatorHash
 deriving newtype instance Serialise ValidatorHash
+deriving newtype instance OpenApi.ToSchema ValidatorHash
 
 deriving newtype instance ToJSON Context
 deriving newtype instance FromJSON Context
