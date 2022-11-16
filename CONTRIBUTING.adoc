@@ -350,7 +350,7 @@ Do not mix business logic with such things as reformatting and refactoring in a 
 A pull request is communication, so as usual, put yourself in the position of the reader: what does your audience (the reviewer) need to know to do their job?
 This information is easy for you to access, but hard for them to figure out, so write it down!
 
-However, better to put information in the code or commit messages if possible: these persist but PR descriptions do not.
+However, better to put information in the code, commit messages, or changelog if possible: these persist but PR descriptions do not.
 It's okay to repeat information from such places, or simply to point to it.
 For one-commit PRs, Github will automatically populate the PR description with the commit message, so if you've written a good commit message you're done!
 Sometimes there is "change-related" information that doesn't belong in a commit message but is useful ("Kris I think this will fix the issue you had yesterday").
@@ -454,6 +454,25 @@ However, if your PR branch has diverged too much from `main`, it is recommended 
 And whenever you notice a broken `main`, please fix it ASAP.
 
 The same holds for `next-node` if your PR targets `next-node`.
+
+=== Changelog
+
+Each cabal package has its own changelog. We use https://github.com/nedbat/scriv[`scriv`] — a changelog management tool — to avoid conflicts.
+
+==== When to write a changelog entry
+
+The broad heuristic is to put yourself in the position of the consumer of the piece of software in question and ask if you would want to know about this change. If the answer is yes, then write a quick changelog entry.
+
+It's important to reflect the changes that affect the API and break backwards compatibility.
+
+==== How to write a changelog entry
+
+The basic idea is that you write a changelog "fragment" in the `changelog.d` directory.
+When we do a release, these will be collected into the main `CHANGELOG.md`.
+Usually we don't edit `CHANGELOG.md` directly.
+
+You can make a changelog fragment using `scriv create` in the package directory, but you can also just create the fragment directly with an editor.
+A fragment is a markdown file beginning with a header giving the category of change.
 
 == Supporting systems
 
