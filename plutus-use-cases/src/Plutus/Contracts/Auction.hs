@@ -34,7 +34,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Monoid (Last (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
-import Ledger (Ada, POSIXTime, PaymentPubKeyHash, Value)
+import Ledger (Ada, Address, POSIXTime, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
@@ -55,7 +55,7 @@ import Prelude qualified as Haskell
 -- | Definition of an auction
 data AuctionParams
     = AuctionParams
-        { apOwner   :: PaymentPubKeyHash -- ^ Current owner of the asset. This is where the proceeds of the auction will be sent.
+        { apOwner   :: Address -- ^ Current owner of the asset. This is where the proceeds of the auction will be sent.
         , apAsset   :: Value -- ^ The asset itself. This value is going to be locked by the auction script output.
         , apEndTime :: POSIXTime -- ^ When the time window for bidding ends.
         }
@@ -68,7 +68,7 @@ PlutusTx.makeLift ''AuctionParams
 data HighestBid =
     HighestBid
         { highestBid    :: Ada
-        , highestBidder :: PaymentPubKeyHash
+        , highestBidder :: Address
         }
     deriving stock (Haskell.Eq, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -101,14 +101,14 @@ threadTokenOut t = Haskell.mempty { auctionThreadToken = Last (Just t) }
 -- | Initial 'AuctionState'. In the beginning the highest bid is 0 and the
 --   highest bidder is seller of the asset. So if nobody submits
 --   any bids, the seller gets the asset back after the auction has ended.
-initialState :: PaymentPubKeyHash -> AuctionState
+initialState :: Address -> AuctionState
 initialState self = Ongoing HighestBid{highestBid = 0, highestBidder = self}
 
 PlutusTx.unstableMakeIsData ''AuctionState
 
 -- | Transition between auction states
 data AuctionInput
-    = Bid { newBid :: Ada, newBidder :: PaymentPubKeyHash } -- Increase the price
+    = Bid { newBid :: Ada, newBidder :: Address } -- Increase the price
     | Payout
     deriving stock (Generic, Haskell.Show)
     deriving anyclass (ToJSON, FromJSON)
@@ -129,7 +129,7 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=old
 
         (Ongoing HighestBid{highestBid, highestBidder}, Bid{newBid, newBidder}) | newBid > highestBid -> -- if the new bid is higher,
             let constraints = if highestBid == 0 then mempty else
-                    Constraints.mustPayToPubKey highestBidder (Ada.toValue highestBid) -- we pay back the previous highest bid
+                    Constraints.mustPayToAddress highestBidder (Ada.toValue highestBid) -- we pay back the previous highest bid
                     <> Constraints.mustValidateIn (Interval.to apEndTime) -- but only if we haven't gone past 'apEndTime'
                 newState =
                     State
@@ -143,8 +143,8 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=old
         (Ongoing h@HighestBid{highestBidder, highestBid}, Payout) ->
             let constraints =
                     Constraints.mustValidateIn (Interval.from apEndTime) -- When the auction has ended,
-                    <> Constraints.mustPayToPubKey apOwner (Ada.toValue highestBid) -- the owner receives the payment
-                    <> Constraints.mustPayToPubKey highestBidder apAsset -- and the highest bidder the asset
+                    <> Constraints.mustPayToAddress apOwner (Ada.toValue highestBid) -- the owner receives the payment
+                    <> Constraints.mustPayToAddress highestBidder apAsset -- and the highest bidder the asset
                 newState = State { stateData = Finished h, stateValue = mempty }
             in Just (constraints, newState)
 
@@ -218,7 +218,7 @@ auctionSeller :: Value -> POSIXTime -> Contract AuctionOutput SellerSchema Aucti
 auctionSeller value time = do
     threadToken <- SM.getThreadToken
     tell $ threadTokenOut threadToken
-    self <- ownFirstPaymentPubKeyHash
+    self <- ownAddress
     let params       = AuctionParams{apOwner = self, apAsset = value, apEndTime = time }
         inst         = typedValidator (threadToken, params)
         client       = machineClient inst threadToken params
@@ -331,8 +331,8 @@ handleEvent client lastHighestBid change =
         AuctionIsOver s -> tell (auctionStateOut $ Finished s) >> stop
         SubmitOwnBid ada -> do
             logInfo @Haskell.String "Submitting bid"
-            self <- ownFirstPaymentPubKeyHash
-            logInfo @Haskell.String "Received pubkey"
+            self <- ownAddress
+            logInfo @Haskell.String "Received address"
             r <- SM.runStep client Bid{newBid = ada, newBidder = self}
             logInfo @Haskell.String "SM: runStep done"
             case r of

@@ -15,9 +15,11 @@ import PlutusExample.PlutusVersion1.MintingScript (apiExamplePlutusMintingScript
 import PlutusExample.PlutusVersion1.RedeemerContextScripts
 import PlutusExample.PlutusVersion1.Sum (sumScript)
 
+import PlutusExample.PlutusVersion2.EcdsaSecp256k1Loop (v2EcdsaLoopScript)
 import PlutusExample.PlutusVersion2.MintingScript (v2mintingScript)
 import PlutusExample.PlutusVersion2.RedeemerContextEquivalence (v2ScriptContextEquivalenceScript, v2mintEquivScript)
 import PlutusExample.PlutusVersion2.RequireRedeemer (requireRedeemerScript)
+import PlutusExample.PlutusVersion2.SchnorrSecp256k1Loop (v2SchnorrLoopScript)
 import PlutusExample.PlutusVersion2.StakeScript (v2StakeScript)
 
 main :: IO ()
@@ -44,4 +46,7 @@ main = do
   _ <- writeFileTextEnvelope (v2dir </> "stake-script.plutus") Nothing v2StakeScript
   _ <- writeFileTextEnvelope (v2dir </> "context-equivalence-test.plutus") Nothing v2ScriptContextEquivalenceScript
   _ <- writeFileTextEnvelope (v2dir </> "minting-context-equivalance-test.plutus") Nothing v2mintEquivScript
+  _ <- writeFileTextEnvelope (v2dir </> "ecdsa-secp256k1-loop.plutus") Nothing v2EcdsaLoopScript
+  _ <- writeFileTextEnvelope (v2dir </> "schnorr-secp256k1-loop.plutus") Nothing v2SchnorrLoopScript
+
   return ()

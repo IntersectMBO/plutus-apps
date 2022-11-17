@@ -2,11 +2,12 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty, withMaxSuccess)
 
 import RewindableIndex.Model qualified as Ix
+import RewindableIndex.Spec.Sqlite qualified as S
 import RewindableIndex.Spec.VSplit qualified as V
 import RewindableIndex.Spec.VSqlite qualified as VS
 
 tests :: TestTree
-tests = testGroup "Index" [ixProperties, viProperties, vsProperties]
+tests = testGroup "Index" [ixProperties, sProperties, viProperties, vsProperties]
 
 ixProperties :: TestTree
 ixProperties = testGroup "Basic model"
@@ -24,6 +25,20 @@ ixProperties = testGroup "Basic model"
       withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int Ix.conversion
   ,  testProperty "Notifications are not affected by rewind" $
       withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int Ix.conversion
+  ]
+
+sProperties :: TestTree
+sProperties = testGroup "New index properties."
+  [ testProperty "New: Positive or non-positive depth" $
+      withMaxSuccess 10000 $ Ix.prop_observeNew @Int @Int S.conversion
+  , testProperty "History length is always smaller than the max depth" $
+      withMaxSuccess 1000 $ Ix.prop_sizeLEDepth @Int @Int S.conversion
+  , testProperty "Rewind: Connection with `ixDepth`" $
+      withMaxSuccess 1000 $ Ix.prop_rewindDepth @Int @Int S.conversion
+  , testProperty "Relationship between Insert/Rewind" $
+      withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int S.conversion
+  , testProperty "Insert is folding the structure" $
+      withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int S.conversion
   ]
 
 viProperties :: TestTree

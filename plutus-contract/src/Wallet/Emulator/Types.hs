@@ -17,6 +17,7 @@ module Wallet.Emulator.Types(
     Wallet.Emulator.Wallet.WalletId(..),
     Crypto.XPrv,
     Crypto.XPub,
+    Wallet.Emulator.Wallet.mockWalletAddress,
     Wallet.Emulator.Wallet.mockWalletPaymentPubKey,
     Wallet.Emulator.Wallet.mockWalletPaymentPubKeyHash,
     addSignature,

@@ -17,14 +17,25 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
 #
-# lookup for txoutrefs, should generate error if the address is not in the target list
+#
+# lookup fot txoutrefs , should return result, low
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
 , "method": "utxoTxOutReport"
-, "params": "addr_test1qp9juu544jrkel0hp6pvrjud70h9ev3ajw2fuvezyv8ug3eg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcsytvx58"
-, "id": 5
+, "params": "addr_test1qqwh05w69g95065zlr4fef4yfpjkv8r3dr9h3pu0egy5n7pwhxp4f95svdjr9dmtqumqcs6v49s6pe7ap4h2nv8rcaasgrkndk"
+, "id": 91
+}
+#
+# lookup fot txoutrefs , should return result, high
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "utxoTxOutReport"
+, "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"
+, "id": 92
 }
 #
 # lookup fot txoutrefs, should generate error if the address is not in the target list
@@ -34,7 +45,7 @@ Content-Type: application/json
 "jsonrpc": "2.0"
 , "method": "utxoTxOutReport"
 , "params": "addr1q86naxdettc4r8rhls2xqs97kpkd79tvkplrv5lf8e6tfyygy9uwd947cp8mqh8kl04pazxjs9tmyystyv0nhpmc852srht88w"
-, "id":16
+, "id":19
 }
 #
 # fetch 100 rows from sqlite

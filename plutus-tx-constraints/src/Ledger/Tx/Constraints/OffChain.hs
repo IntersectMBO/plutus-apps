@@ -32,7 +32,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.plutusV2OtherScript
     , P.otherData
     , P.ownPaymentPubKeyHash
-    , P.ownStakePubKeyHash
+    , P.ownStakingCredential
     , P.paymentPubKey
     -- * Constraints resolution
     , P.SomeLookupsAndConstraints(..)
@@ -63,7 +63,6 @@ import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL, pProtocolParams)
-import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
@@ -215,7 +214,6 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} 
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
-            -- P.addMissingValueSpent
             traverse_ processConstraint (includeDatumConstraints sortedConstraints)
             mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
             lift $ setValidityRange (rangeConstraints sortedConstraints)
@@ -321,25 +319,15 @@ processConstraint = \case
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txInsReference <>= [ txIn ]
 
-    P.MustPayToPubKeyAddress pk mskh md refScriptHashM vl -> do
+    P.MustPayToAddress addr md refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
         out <- throwLeft ToCardanoError $ C.TxOut
-            <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
+            <$> C.toCardanoAddressInEra networkId addr
             <*> C.toCardanoTxOutValue vl
             <*> pure (toTxOutDatum md)
             <*> pure refScript
 
-        unbalancedTx . tx . txOuts <>= [ out ]
-
-    P.MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
-        networkId <- use (P.paramsL . networkIdL)
-        refScript <- lookupScriptAsReferenceScript refScriptHashM
-        out <- throwLeft ToCardanoError $ C.TxOut
-            <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
-            <*> C.toCardanoTxOutValue vl
-            <*> pure (toTxOutDatum $ Just dv)
-            <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 
     c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"

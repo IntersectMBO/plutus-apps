@@ -27,7 +27,7 @@ The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/
 |                                      | SQLite |    |
 |                                      +--------+    |
 |                                                    |
-+----------------------------=-----------------------+
++----------------------------------------------------+
 ```
 
 ## Requirements

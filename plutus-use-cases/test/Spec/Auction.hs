@@ -63,7 +63,7 @@ slotCfg = def
 params :: AuctionParams
 params =
     AuctionParams
-        { apOwner   = mockWalletPaymentPubKeyHash w1
+        { apOwner   = mockWalletAddress w1
         , apAsset   = theToken
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
@@ -131,7 +131,7 @@ trace1FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace1WinningBid
-            , highestBidder = mockWalletPaymentPubKeyHash w2
+            , highestBidder = mockWalletAddress w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -141,7 +141,7 @@ trace2FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace2WinningBid
-            , highestBidder = mockWalletPaymentPubKeyHash w2
+            , highestBidder = mockWalletAddress w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }

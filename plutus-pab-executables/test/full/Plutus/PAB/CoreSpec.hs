@@ -46,7 +46,7 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
-import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxFee, getCardanoTxId, getCardanoTxOutRefs,
+import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxFee, getCardanoTxId, getCardanoTxOutRefs,
                pubKeyAddress, pubKeyHash, pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs,
                txOutputs)
 import Ledger qualified
@@ -58,7 +58,7 @@ import Ledger.Value (valueOf)
 import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
                           TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
 import Plutus.Contract.State (ContractResponse (ContractResponse, hooks))
-import Plutus.Contract.Test (mockWalletPaymentPubKeyHash, w1)
+import Plutus.Contract.Test (mockWalletAddress, w1)
 import Plutus.Contracts.Currency (OneShotCurrency, SimpleMPS (SimpleMPS, amount, tokenName))
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
 import Plutus.Contracts.PingPong (PingPongState (Pinged, Ponged))
@@ -116,8 +116,8 @@ runScenarioWithSecondSlot sim = do
 defaultWallet :: Wallet
 defaultWallet = knownWallet 1
 
-defaultWalletPaymentPubKeyHash :: PaymentPubKeyHash
-defaultWalletPaymentPubKeyHash = CW.paymentPubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 1)
+defaultWalletAddress :: Address
+defaultWalletAddress = mockWalletAddress defaultWallet
 
 activateContractTests :: TestTree
 activateContractTests =
@@ -357,7 +357,7 @@ guessingGameTest =
                             (valueOf (balance <> fees) adaSymbol adaToken)
 
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
-              let gameParam = Contracts.GameStateMachine.GameParam (mockWalletPaymentPubKeyHash defaultWallet) (TimeSlot.scSlotZeroTime def)
+              let gameParam = Contracts.GameStateMachine.GameParam (mockWalletAddress defaultWallet) (TimeSlot.scSlotZeroTime def)
 
               initialTxCounts <- Simulator.txCounts
               pubKeyHashFundsChange instanceId "Check our opening balance." 0
@@ -383,6 +383,7 @@ guessingGameTest =
                   game1Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletAddress defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount
@@ -398,6 +399,7 @@ guessingGameTest =
                   game2Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletAddress defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "password"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "password"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount

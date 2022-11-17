@@ -60,6 +60,7 @@ library
     Plutus.Script.Utils.Scripts
     Plutus.Script.Utils.Typed
     Plutus.Script.Utils.V1.Address
+    Plutus.Script.Utils.V1.Contexts
     Plutus.Script.Utils.V1.Generators
     Plutus.Script.Utils.V1.Scripts
     Plutus.Script.Utils.V1.Tx

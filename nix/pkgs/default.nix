@@ -41,7 +41,7 @@ let
   fixStylishHaskell = pkgs.callPackage ./fix-stylish-haskell { inherit stylish-haskell; };
   fixPngOptimization = pkgs.callPackage ./fix-png-optimization { };
   updateClientDeps = pkgs.callPackage ./update-client-deps {
-    inherit purs spago spago2nix;
+    inherit purs-0_14_3 spago spago2nix;
   };
 
   #
@@ -49,6 +49,8 @@ let
   #
   sphinx-markdown-tables = pkgs.python3Packages.callPackage ./sphinx-markdown-tables { };
   sphinxemoji = pkgs.python3Packages.callPackage ./sphinxemoji { };
+
+  scriv = pkgs.python3Packages.callPackage ./scriv { };
 
   # By default pre-commit-hooks.nix uses its own pinned version of nixpkgs. In order to
   # to get it to use our version we have to (somewhat awkwardly) use `nix/default.nix`
@@ -71,7 +73,7 @@ let
 
   # We pull out some packages from easyPS that are a pain to get otherwise.
   # This does mean we can't as easily control the version we get, though.
-  inherit (easyPS) purs-tidy purs spago purescript-language-server psa spago2nix;
+  inherit (easyPS) purs-tidy purs-0_14_3 spago purescript-language-server psa spago2nix;
 
   # sphinx haddock support
   sphinxcontrib-haddock = pkgs.callPackage (sources.sphinxcontrib-haddock) { pythonPackages = pkgs.python3Packages; };
@@ -110,9 +112,10 @@ let
 in
 {
   inherit sphinx-markdown-tables sphinxemoji sphinxcontrib-haddock;
+  inherit scriv;
   inherit nix-pre-commit-hooks;
   inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios cabal-fmt;
-  inherit purs-tidy purs spago spago2nix purescript-language-server psa;
+  inherit purs-tidy purs-0_14_3 spago spago2nix purescript-language-server psa;
   inherit fix-purs-tidy fixStylishHaskell fixCabalFmt fixPngOptimization updateClientDeps;
   inherit web-ghc;
   inherit easyPS plutus-haddock-combined;

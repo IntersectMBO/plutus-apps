@@ -94,7 +94,7 @@ runghc t runghcOpts file = do
                 . CompilationErrors
                 . parseErrorsText
                 . Text.pack
-                $ stderr
+                $ (stdout <> "\n" <> stderr)
 
 runProcess
     :: (Show t, TimeUnit t, MonadIO m, MonadError InterpreterError m, MonadMask m)

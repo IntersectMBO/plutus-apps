@@ -17,8 +17,8 @@ import Data.Set qualified as S (elemAt, elems)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), ownPaymentPubKeyHash,
-                                                             typedValidatorLookups, unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), typedValidatorLookups,
+                                                             unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
                                                                   mustIncludeDatumInTx, mustPayToTheScriptWithDatumInTx,
@@ -85,7 +85,6 @@ mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
-            <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
             Constraints.collectFromTheScript scriptUtxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onChainTxOutRefs)

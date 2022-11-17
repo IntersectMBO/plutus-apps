@@ -100,7 +100,7 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
 
-import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
+import Ledger.Address (Address, PaymentPubKey, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Params (EmulatorEra, Params (pNetworkId))
@@ -466,7 +466,7 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
     f (idx, o) = (V1.Tx.TxOutRef (txId t) idx, o)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
-pubKeyTxOut :: V1.Value -> PaymentPubKey -> Maybe StakePubKey -> Either ToCardanoError TxOut
+pubKeyTxOut :: V1.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut
 pubKeyTxOut v pk sk = do
   aie <- CardanoAPI.toCardanoAddressInEra (pNetworkId def) $ pubKeyAddress pk sk
   txov <- CardanoAPI.toCardanoValue v

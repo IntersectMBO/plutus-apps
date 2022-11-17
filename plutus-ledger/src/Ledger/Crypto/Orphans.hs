@@ -1,8 +1,5 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DerivingVia        #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingVia    #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Ledger.Crypto.Orphans where
 
@@ -12,6 +9,7 @@ import Codec.Serialise (Serialise)
 import Control.Newtype.Generics (Newtype)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
+import Data.OpenApi (ToSchema)
 
 import Plutus.V1.Ledger.Crypto
 
@@ -22,3 +20,4 @@ deriving anyclass instance ToJSONKey PubKeyHash
 deriving anyclass instance Newtype PubKeyHash
 deriving newtype instance Serialise PubKeyHash
 deriving newtype instance Hashable PubKeyHash
+deriving anyclass instance ToSchema PubKeyHash

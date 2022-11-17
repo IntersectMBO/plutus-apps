@@ -29,7 +29,7 @@ stdenv.mkDerivation {
   buildInputs = [
     nodejs
     nodeModules
-    easyPS.purs
+    easyPS.purs-0_14_3
     easyPS.spago
     easyPS.psa
     spagoPackages.installSpagoStyle

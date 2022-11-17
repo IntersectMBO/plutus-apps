@@ -25,8 +25,8 @@ import Language.Haskell.TH.Syntax
 import Ledger qualified (DatumFromQuery (DatumInBody), DecoratedTxOut (ScriptDecoratedTxOut), inputs, paymentPubKeyHash,
                          scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
-                       xprvToStakePubKeyHash)
+import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, stakeValidatorHashCredential,
+                       xprvToPaymentPubKeyHash, xprvToStakingCredential)
 import Ledger.Constraints (MkTxError, mustSpendPubKeyOutput, mustSpendScriptOutput, mustSpendScriptOutputWithReference)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (prepareConstraints)
@@ -135,47 +135,33 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp :: Property
 mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     [x,y] <- Hedgehog.forAllWith (const "A known key") $ take 2 <$> Gen.shuffle Gen.knownXPrvs
     let pkh = xprvToPaymentPubKeyHash x
-        skh = xprvToStakePubKeyHash y
-        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToPubKeyAddress pkh skh (Ada.toValue Ledger.minAdaTxOut))
+        sc = xprvToStakingCredential y
+        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToPubKeyAddress pkh sc (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
           Hedgehog.failure
       Right utx -> do
           let outputs = txOutputs (view OC.tx utx)
-          let stakingCreds = mapMaybe stakePaymentPubKeyHash outputs
+          let stakingCreds = mapMaybe (addressStakingCredential . txOutAddress) outputs
           Hedgehog.assert $ not $ null stakingCreds
-          forM_ stakingCreds ((===) skh)
-  where
-      stakePaymentPubKeyHash :: TxOut -> Maybe StakePubKeyHash
-      stakePaymentPubKeyHash tx = do
-          stakeCred <- addressStakingCredential (txOutAddress tx)
-          case stakeCred of
-            StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh
-            _                                  -> Nothing
+          forM_ stakingCreds ((===) sc)
 
 -- | The 'mustPayToOtherScriptAddress' should be able to set the stake validator hash to some value.
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
-    let svh = Ledger.StakeValidatorHash $ examplePlutusScriptAlwaysSucceedsHash WitCtxStake
-        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+    let sc = stakeValidatorHashCredential $ Ledger.StakeValidatorHash $ examplePlutusScriptAlwaysSucceedsHash WitCtxStake
+        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash sc Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
           Hedgehog.failure
       Right utx -> do
           let outputs = txOutputs (view OC.tx utx)
-          let stakingCreds = mapMaybe stakeValidatorHash outputs
+          let stakingCreds = mapMaybe (addressStakingCredential . txOutAddress) outputs
           Hedgehog.assert $ not $ null stakingCreds
-          forM_ stakingCreds ((===) svh)
-  where
-      stakeValidatorHash :: TxOut -> Maybe Ledger.StakeValidatorHash
-      stakeValidatorHash tx = do
-          stakeCred <- addressStakingCredential (txOutAddress tx)
-          case stakeCred of
-            StakingHash (ScriptCredential (Ledger.ValidatorHash svh)) -> Just $ Ledger.StakeValidatorHash svh
-            _                                                         -> Nothing
+          forM_ stakingCreds ((===) sc)
 
 mustUseOutputAsCollateralProp :: Property
 mustUseOutputAsCollateralProp = property $ do

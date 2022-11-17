@@ -47,7 +47,7 @@ import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
 import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints (mustPayToPubKey)
+import Ledger.Constraints (mustPayToAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx (unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex),
                                     unBalancedTxTx)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
@@ -111,8 +111,8 @@ handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 -- | Get an unspent output belonging to the wallet.
 getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
 getUnspentOutput = do
-    ownPkh <- Contract.ownFirstPaymentPubKeyHash
-    let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
+    addr <- Contract.ownAddress
+    let constraints = mustPayToAddress addr (Ada.lovelaceValueOf 1)
     utx <- Contract.mkTxConstraints @Void mempty constraints
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of
