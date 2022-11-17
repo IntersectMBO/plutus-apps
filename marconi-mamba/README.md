@@ -9,7 +9,7 @@ The purpose of Marconi-Mamba is to make the core Marconi APIs available to non-H
 
 ## Interface
 
-The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) (JSON remote-procedure calls) over HTTP built on top of [Marconi](../marconi/README.md).
+The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) over HTTP built on top of [Marconi](../marconi/README.md).
 
 
 ```
@@ -31,7 +31,7 @@ The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/
 ```
 
 ## Requirements
-* Local instance of cardano-node, version 1.35.3
+* Local instance of a compatible version of [cardano-node](https://github.com/input-output-hk/plutus-apps/blob/main/cabal.project#L246).
 * Suitable environment for Plutus Platform development. See the [Plutus Platform starter project](https://github.com/input-output-hk/plutus-starter) for details.
 
 ## Building from source
@@ -51,7 +51,7 @@ The above process will build the executable in your local environment at this lo
  cabal exec -- which marconi-mamba
 ```
 
-### Command line summary
+## Command line summary
 
 The following is a general synopsis of the command line options: 
 
@@ -76,7 +76,7 @@ Available options:
   -h,--help                Show this help text
 ```
 
-### Example of using Marconi-Mamba
+## Example of using Marconi-Mamba
 
 To use Marconi-Mamba, follow these steps: 
 1. Invoke the JSON-RPC server
@@ -85,13 +85,13 @@ To use Marconi-Mamba, follow these steps:
 
 These steps are described in more detail below. 
 
-#### Invoking the JSON-RPC server
+## Invoking the JSON-RPC server
 
 The following is an example shell script for executing Marconi-Mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet). 
 
-##### Requirement
+### Requirement
 
-cardano-node version 1.35.3 must be running with the socket-path as outlined below:
+Compatible version of [cardano-node](https://github.com/input-output-hk/plutus-apps/blob/main/cabal.project#L246) must be running with the socket-path as outlined below:
 
 ``` sh
 #!/usr/bin/env sh
@@ -119,7 +119,7 @@ $(cabal exec -- which marconi-mamba) \
     --addresses-to-index addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99
 ```
 
-#### Interrogating the JSON-RPC endpoints
+## Interrogating the JSON-RPC endpoints
 
 ``` sh
 |-----------+-----------+------------------------+---------------------------------------------|
@@ -132,7 +132,7 @@ $(cabal exec -- which marconi-mamba) \
 |-----------+-----------+------------------------+---------------------------------------------|
 ```
 
-#### Interrogating the REST endpoints
+## Interrogating the REST endpoints
 
 ``` sh
 |-----------+-----------+-----------------------------------|
@@ -143,9 +143,9 @@ $(cabal exec -- which marconi-mamba) \
 |-----------+-----------+-----------------------------------|
 ```
 
-### Examples
+## Examples
 
-Here is a curl script to expoint the JSON-RPC server:
+Here is a curl script to exploit the JSON-RPC server:
 
 ``` sh
 curl -d '{"jsonrpc": "2.0" , "method": "utxoTxOutReport" , "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"  , "id": 12}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc
