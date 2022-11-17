@@ -87,9 +87,9 @@ data QueryInterval p =
    The memory layout of the indexer has been simplified by a lot since the previous
    version and it looks something like this:
 
-   | | | | | | | | | | | | | | | | | | |                                     |
+   |e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|                                     |
    |-------------------|---------------|-------------------------------------|
-   |  memory/buffer    |  disk/events  |     disk/accumulator (optional)     |
+   |  memory/buffer    |  disk/events  |     disk/aggregate (optional)     |
 
    When the buffer is filled with events, they all get flushed to disk. We need this
    operation for performance reasons. Most databases will have significantly improved
@@ -99,8 +99,8 @@ data QueryInterval p =
    developer has to make sure that the allocated space for the buffer and the
    disk/events is greater than the K parameter.
 
-   The last part disk/accumulator represents some aggregated data. At some point the
-   developer should write code to aggregate the disk/events into the accumulator
+   The last part disk/aggregate represents some aggregated data. At some point the
+   developer should write code to aggregate the disk/events into the aggregate
    section of the database. We did not provide any special handling of this for the
    following reasons:
 
