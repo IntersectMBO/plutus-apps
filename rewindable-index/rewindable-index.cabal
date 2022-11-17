@@ -26,20 +26,27 @@ source-repository head
 common lang
   default-language:   Haskell2010
   default-extensions:
+    DeriveAnyClass
     DeriveGeneric
+    DerivingStrategies
     ExplicitForAll
     FlexibleContexts
     FlexibleInstances
     GADTs
+    GeneralizedNewtypeDeriving
     ImportQualifiedPost
+    InstanceSigs
     MultiParamTypeClasses
     NamedFieldPuns
     OverloadedStrings
     PatternSynonyms
     ScopedTypeVariables
+    StandaloneDeriving
     Strict
     TemplateHaskell
+    TupleSections
     TypeApplications
+    TypeFamilies
 
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wunused-packages
@@ -51,6 +58,7 @@ library
   exposed-modules:
     RewindableIndex.Index.VSplit
     RewindableIndex.Index.VSqlite
+    RewindableIndex.Storable
 
   hs-source-dirs:  src
   build-depends:
@@ -66,18 +74,21 @@ test-suite rewindable-index-test
   main-is:        Spec.hs
   other-modules:
     RewindableIndex.Model
+    RewindableIndex.Spec.Sqlite
     RewindableIndex.Spec.VSplit
     RewindableIndex.Spec.VSqlite
 
   hs-source-dirs: test
   build-depends:
-    , base              >=4.7 && <5
+    , base              >=4.7    && <5
     , data-default
     , lens
     , primitive
     , QuickCheck
     , rewindable-index
-    , sqlite-simple
+    , safe
+    , sqlite-simple     >=0.4.18
     , tasty
     , tasty-quickcheck
+    , transformers
     , vector

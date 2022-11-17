@@ -40,7 +40,6 @@ import Test.Tasty.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Fun, G
                               arbitrarySizedIntegral, chooseInt, cover, forAll, frequency, resize, shrinkNothing, sized,
                               (==>))
 
-
 {- | Laws
   Constructors: new, insert, rewind
   Observations: view [depth, view, size], getHistory, getFunction
@@ -237,9 +236,11 @@ prop_sizeLEDepth
   -> ObservedBuilder a e n
   -> Property
 prop_sizeLEDepth c (ObservedBuilder ix) =
+  let v = fromJust $ view ix in
+  ixDepth v >= 2 ==>
   monadic (cMonadic c) $ do
-    (Just v) <- run $ cView c ix
-    assert $ ixSize v <= ixDepth v
+    Just v' <- run $ cView c ix
+    assert $ ixSize v' <= ixDepth v'
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
@@ -261,7 +262,7 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
     h  <- take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
     -- h  <- fromJust <$> run (cHistory c ix)
     h' <- fromJust <$> run (cHistory c ix')
-    assert $ h == h'
+    assert $ h `isPrefixOf` h'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
@@ -273,6 +274,8 @@ prop_observeInsert
   -> [e]
   -> Property
 prop_observeInsert c (ObservedBuilder ix) es =
+  let vo = fromJust $ view ix
+   in ixDepth vo >= 2 ==>
   monadic (cMonadic c) $ do
     Just v  <- run $ cView c ix
     let ix' = insertL es ix
