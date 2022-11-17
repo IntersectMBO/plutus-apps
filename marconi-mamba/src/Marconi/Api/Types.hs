@@ -28,8 +28,7 @@ module Marconi.Api.Types
     , HasJsonRpcEnv (..)
     , UtxoRowWrapper (..)
     , UtxoTxOutReport (..)
-    , UtxoQueryComm (..)
-    , HasUtxoQueryComm (..)
+    , UtxoQueryTMVar (..)
     , QueryExceptions (..)
                          )  where
 import Cardano.Api (AddressAny, NetworkId, anyAddressInShelleyBasedEra)
@@ -41,7 +40,7 @@ import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import GHC.Generics (Generic)
 import Marconi.Index.Utxo (UtxoRow (UtxoRow))
-import Marconi.Indexers (HasUtxoQueryComm (indexer, queryReq), UtxoQueryComm (UtxoQueryComm, _Indexer, _QueryReq))
+import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
 import Marconi.Types as Export (CurrentEra, TargetAddresses, TxOutRef)
 import Network.Wai.Handler.Warp (Settings)
 
@@ -62,7 +61,7 @@ newtype DBConfig = DBConfig {
 
 data DBQueryEnv = DBQueryEnv
     { _DbConf         :: DBConfig               -- ^ path to dqlite db
-    , _QueryComm      :: UtxoQueryComm
+    , _QueryTMVar     :: UtxoQueryTMVar
     , _QueryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
     , _Network        :: Cardano.Api.NetworkId  -- ^ cardano network id
     }

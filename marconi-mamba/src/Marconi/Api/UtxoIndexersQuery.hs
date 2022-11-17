@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Marconi.Api.UtxoIndexersQuery
     ( bootstrap
     , findByCardanoAddress
@@ -15,19 +13,19 @@ import Cardano.Api qualified as CApi
 import Control.Concurrent.Async (concurrently, forConcurrently)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, takeTMVar)
-import Control.Exception (bracket_)
+import Control.Exception (bracket)
 import Control.Lens ((^.))
 import Control.Monad.STM (STM)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Set (Set, fromList, toList, union)
 import Data.Text (Text, intercalate, unpack)
-import Database.SQLite.Simple (NamedParam ((:=)), open)
+import Database.SQLite.Simple (NamedParam ((:=)), execute_, open)
 import Database.SQLite.Simple qualified as SQL
 import Marconi.Api.Types (DBConfig (DBConfig, utxoConn),
-                          DBQueryEnv (DBQueryEnv, _DbConf, _Network, _QueryAddresses, _QueryComm),
-                          HasDBQueryEnv (dbConf, queryAddresses, queryComm), HasUtxoQueryComm (indexer, queryReq),
+                          DBQueryEnv (DBQueryEnv, _DbConf, _Network, _QueryAddresses, _QueryTMVar),
+                          HasDBQueryEnv (dbConf, queryAddresses, queryTMVar),
                           QueryExceptions (AddressNotInListError, QueryError), TargetAddresses,
-                          UtxoQueryComm (UtxoQueryComm, _Indexer, _QueryReq), UtxoTxOutReport (UtxoTxOutReport))
+                          UtxoQueryTMVar (UtxoQueryTMVar), UtxoTxOutReport (UtxoTxOutReport), unUtxoIndex)
 import Marconi.Index.Utxo (UtxoIndex, UtxoRow (UtxoRow, _reference), toRows)
 import Marconi.Types (CardanoAddress, TxOutRef)
 import RewindableIndex.Index.VSqlite qualified as Ix
@@ -41,12 +39,12 @@ bootstrap
     -> CApi.NetworkId           -- ^ cardano networkId
     -> IO DBQueryEnv            -- ^ returns Query runtime environment
 bootstrap dbPath targetAddresses nId = do
-    dbconf <- DBConfig <$> open dbPath
-    _QueryReq <- atomically (newEmptyTMVar :: STM (TMVar () ) )
-    _Indexer <- atomically (newEmptyTMVar :: STM ( TMVar UtxoIndex) )
+    connection <- open dbPath
+    execute_ connection "PRAGMA journal_mode=WAL"
+    ix <- atomically (newEmptyTMVar :: STM ( TMVar UtxoIndex) )
     pure $ DBQueryEnv
-        { _DbConf = dbconf
-        , _QueryComm = UtxoQueryComm {..}
+        { _DbConf = DBConfig connection
+        , _QueryTMVar = UtxoQueryTMVar ix
         , _QueryAddresses = targetAddresses
         , _Network = nId
         }
@@ -128,18 +126,17 @@ withQueryAction
     -> IO (Set TxOutRef)
 withQueryAction env address qAction =
     let
-        qreq = env ^. queryComm . queryReq
-        action =  do
-            ndxr <- atomically $ takeTMVar (env ^. queryComm . indexer)
+        utxoIndexer = unUtxoIndex  $ env ^. queryTMVar
+        action ndxr =  do
             (fromColdStore, fromHotStore) <- concurrently
                 (qAction (env ^. dbConf) address)
                 (queryInMemory address ndxr )
             pure . union fromColdStore $ fromHotStore
     in
-        bracket_
-            (atomically $ putTMVar qreq () ) -- block inserts
-            (atomically $ putTMVar qreq () ) -- unblock inserts
-            action
+        bracket
+          (atomically $ takeTMVar  utxoIndexer)
+          (atomically . (putTMVar utxoIndexer))
+          action
 
 -- | report target addresses
 -- Used by JSON-RPC
