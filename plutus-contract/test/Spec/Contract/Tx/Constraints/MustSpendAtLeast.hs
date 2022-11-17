@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendAtLeast(tests) where
 
+import Control.Lens (has, makeClassyPrisms)
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -19,30 +20,31 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
-                             defaultCheckOptions, w1)
+import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
+                             checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (BuiltinByteString, Datum (Datum), ScriptContext, ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
+
+makeClassyPrisms ''Constraints.MkTxError
 
 tests :: TestTree
 tests =
     testGroup "MustSpendAtLeast"
         [ entireScriptBalance
         , lessThanScriptBalance
-        --, higherThanScriptBalanceWithoutWalletPubkeyLookup -- Failing due to PLT-665
-        --, higherThanScriptBalanceWithWalletPubkeyLookup    -- Failing due to PLT-665
+        , higherThanScriptBalance
         , phase2Failure
         ]
 
 scriptBalance :: Integer
 scriptBalance = 25_000_000
 
-mustSpendAtLeastContract :: Integer -> Integer -> Ledger.PaymentPubKeyHash-> Contract () Empty ContractError ()
-mustSpendAtLeastContract offAmt onAmt pkh = do
+mustSpendAtLeastContract :: Integer -> Integer -> Contract () Empty ContractError ()
+mustSpendAtLeastContract offAmt onAmt = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 onAmt
@@ -53,7 +55,6 @@ mustSpendAtLeastContract offAmt onAmt pkh = do
     utxos <- utxosAt scrAddress
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
-            <> Constraints.ownPaymentPubKeyHash pkh
         tx2 =
             Constraints.collectFromTheScript utxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
@@ -64,14 +65,11 @@ mustSpendAtLeastContract offAmt onAmt pkh = do
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
     void $ Trace.activateContractWallet w1 contract
-    void $ Trace.waitNSlots 1
-
-emptyPubKey :: Ledger.PaymentPubKeyHash
-emptyPubKey = PlutusTx.unsafeFromBuiltinData $ PlutusTx.toBuiltinData ("" :: BuiltinByteString)
+    void Trace.nextSlot
 
 entireScriptBalance :: TestTree
 entireScriptBalance =
-    let contract = mustSpendAtLeastContract scriptBalance scriptBalance emptyPubKey
+    let contract = mustSpendAtLeastContract scriptBalance scriptBalance
     in  checkPredicateOptions
             defaultCheckOptions
             "Successful use of mustSpendAtLeast at script's exact balance"
@@ -81,42 +79,31 @@ entireScriptBalance =
 lessThanScriptBalance :: TestTree
 lessThanScriptBalance =
     let amt = scriptBalance - 1
-        contract = mustSpendAtLeastContract amt amt emptyPubKey
+        contract = mustSpendAtLeastContract amt amt
     in  checkPredicateOptions
             defaultCheckOptions
             "Successful use of mustSpendAtLeast below script's balance"
             (assertValidatedTransactionCount 2)
             (void $ trace contract )
 
--- TODO: These two tests are failing due to PLT-665
-{-
-higherThanScriptBalanceWithWalletPubkeyLookup :: TestTree
-higherThanScriptBalanceWithWalletPubkeyLookup =
+higherThanScriptBalance :: TestTree
+higherThanScriptBalance =
     let amt = scriptBalance + 5_000_000
-        contract = mustSpendAtLeastContract amt amt $ mockWalletPaymentPubKeyHash w1
+        contract = mustSpendAtLeastContract amt amt
     in  checkPredicateOptions
             defaultCheckOptions
             "Validation pass when mustSpendAtLeast is greater than script's balance and wallet's pubkey is included in the lookup"
-            (assertValidatedTransactionCount 2)
-            (void $ trace contract)
-
-higherThanScriptBalanceWithoutWalletPubkeyLookup :: TestTree
-higherThanScriptBalanceWithoutWalletPubkeyLookup =
-    let amt = scriptBalance + 5_000_000
-        contract = mustSpendAtLeastContract amt amt $ mockWalletPaymentPubKeyHash w6
-    in  checkPredicateOptions
-            defaultCheckOptions
-            "Fail validation when mustSpendAtLeast is greater than script's balance and wallet's pubkey is not in the lookup"
-            (assertContractError contract (Trace.walletInstanceTag w1) (\case { ConstraintResolutionContractError Constraints.OwnPubKeyMissing -> True; _ -> False }) "failed to throw error"
+            (assertContractError contract (Trace.walletInstanceTag w1)
+              (has $ _ConstraintResolutionContractError . _DeclaredInputMismatch)
+              "failed to throw error"
             .&&. assertValidatedTransactionCount 1)
             (void $ trace contract)
--}
 
 phase2Failure :: TestTree
 phase2Failure =
     let offAmt = scriptBalance
         onAmt  = scriptBalance + 1
-        contract = mustSpendAtLeastContract offAmt onAmt emptyPubKey
+        contract = mustSpendAtLeastContract offAmt onAmt
     in  checkPredicateOptions
             defaultCheckOptions
             "Fail phase-2 validation when on-chain mustSpendAtLeast is greater than script's balance"
