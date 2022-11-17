@@ -1,11 +1,13 @@
-marconi-mamba examples
------
-This library demonstrates end to end examples of creating and executing a sample JSON-RPC server and client
+## Marconi-Mamba examples
 
-## Example JSON-RPC server
-The main purpose of this example is to run the marconi-mamba in isolation without a need for cardano-node.
+This library demonstrates end-to-end examples of creating and executing a sample JSON-RPC server and client. 
 
-### Usage:
+### Example JSON-RPC server
+
+The main purpose of this example is to run Marconi-Mamba in isolation without a need for cardano-node.
+
+#### Usage
+
 ``` sh
 $(cabal exec -- which  examples-json-rpc-server) --help
 Usage: examples-json-rpc-server [-d|--utxo-db FILENAME]
@@ -21,4 +23,5 @@ Available options:
 ```
 
 ### Assumption
-the --utxo-db points a file that already contains utxo data.
+
+The --utxo-db points to a file that already contains utxo data.

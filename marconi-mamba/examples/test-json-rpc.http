@@ -1,5 +1,5 @@
 ## REST-Client script
-# If you don't know how to use this script, see:  https://github.com/pashky/restclient.el for instruction
+# If you don't know how to use this script, see: https://github.com/pashky/restclient.el for instruction
 
 #
 # should echo
@@ -17,7 +17,7 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
 #
-# lookup for txoutrefs , should generate error if the address is not in the target list
+# lookup for txoutrefs, should generate error if the address is not in the target list
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -27,7 +27,7 @@ Content-Type: application/json
 , "id": 5
 }
 #
-# lookup fot txoutrefs , should generate error if the address is not in the target list
+# lookup fot txoutrefs, should generate error if the address is not in the target list
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
@@ -38,7 +38,7 @@ Content-Type: application/json
 }
 #
 # fetch 100 rows from sqlite
-# Note, this may brake the applicaiton depending on how large the database is.
+# Note: this may break the applicaiton depending on how large the database is
 # We have a todo item to convert this endpoint to streams
 # This version of marconi-mamba simply ignores `100` and returns all rows from database. This is a todo item for next release
 POST http://localhost:3000/json-rpc
@@ -77,5 +77,5 @@ Content-Type: application/json
 # REST call, get the current time.  This may be used as health-check
 GET http://localhost:3000/rest/time
 #
-# REST call, get the user provided addresses
+# REST call, get the user-provided addresses
 GET http://localhost:3000/rest/addresses
