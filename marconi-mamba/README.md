@@ -1,42 +1,41 @@
 
-marconi-mamba
---
+# Marconi-Mamba
 
-marconi-mamba is a [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) over HTTP built on top of the [marconi](../marconi/README.md).
+Marconi-Mamba is a lightweight, customizable chain follower application and library for DApp developers who need to index and query the Cardano blockchain. Marconi-Mamba provides a way for DApps to have access to data that has already been stored on-chain by indexing portions of the blockchain.
+
+## Purpose
+
+The purpose of Marconi-Mamba is to make the core Marconi APIs available to non-Haskell applications.
+
+## Interface
+
+The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0) (JSON remote-procedure calls) over HTTP built on top of [Marconi](../marconi/README.md).
 
 
 ```
              Running on a single machine                    Internet
-+---------------------------------------------------+
-|                                                   |
-|   +---------------+                +-----------+  |                  +-----------+
-|   |               | node-to-client |           |  |     JSON-RPC     | marconi   |
-|   |  cardano-node +--------------- |  marconi  +--+------------------+   client  |
-|   |               |      IPC       |           |  |       HTTP       |           |
-|   +---------------+                +----+------+  |                  +-----------+
-|                                         |         |
-|                                         |         |
-|                                     +---+----+    |
-|                                     | SQLite |    |
-|                                     +--------+    |
-|                                                   |
-+---------------------------------------------------+
++----------------------------------------------------+
+|                                                    |                  +-----------+
+|   +----------------+                +-----------+  |                  |           |
+|   |                | node-to-client |           |  |     JSON-RPC     |  marconi  |
+|   |  cardano-node  +----------------+  marconi  +--+------------------+  client   |
+|   |                |      IPC       |           |  |       HTTP       |           |
+|   +----------------+                +----+------+  |                  +-----------+
+|                                          |         |
+|                                          |         |
+|                                      +---+----+    |
+|                                      | SQLite |    |
+|                                      +--------+    |
+|                                                    |
++----------------------------=-----------------------+
 ```
 
-## Purpose
+## Requirements
+* Local instance of cardano-node, version 1.35.3
+* Suitable environment for Plutus Platform development. See the [Plutus Platform starter project](https://github.com/input-output-hk/plutus-starter) for details.
 
-The purpose of marconi-mamba is to make the core Marconi APIs available to non-Haskell applications.
-
-## How do I use it
-* Building from source
-* Using marconi-mamba
-
-### Requirements
-* local instance of cardano-node, version 1.35.3
-* suitable environment for plutus-platform development, [see plutus-starter](https://github.com/input-output-hk/plutus-starter) for detail.
-
-### Building from source
-To build from source we assume you have a suitable environment for plutus-platform development, [see plutus-starter](https://github.com/input-output-hk/plutus-starter) for detail.
+## Building from source
+To build Marconi-Mamba from the source files, use the following commands: 
 
 ``` sh
 git clone git@github.com:input-output-hk/plutus-apps.git
@@ -45,18 +44,16 @@ cabal clean
 cabal update
 cabal build marconi-mamba
 ```
-The above process will build the executalbe in your local environment at:
+
+The above process will build the executable in your local environment at this location:
 
 ``` sh
  cabal exec -- which marconi-mamba
-
 ```
 
-### Using marconi-mamba
+### Command line summary
 
-#### Command line summary
-
-The general synopsis is as follows:
+The following is a general synopsis of the command line options: 
 
 ``` sh
 $(cabal exec -- which marconi-mamba) --help
@@ -68,29 +65,33 @@ Usage: marconi-mamba --socket-path FILE --utxo-db FILE [--http-port HTTP-PORT]
                      (--addresses-to-index ARG)
 
 Available options:
-  --socket-path FILE       Socket path to node
+  --socket-path FILE       Socket path to node.
   --utxo-db FILE           Path to the utxo database.
-  --http-port HTTP-PORT    JSON-RPC http port number, default is port 3000.
+  --http-port HTTP-PORT    JSON-RPC http port number. Default is port 3000.
   --mainnet                Use the mainnet magic id.
   --testnet-magic NATURAL  Specify a testnet magic id.
-  --addresses-to-index ARG Becch32 Shelley addresses to index. i.e
+  --addresses-to-index ARG Becch32 Shelley addresses to index, i.e.,
                            "--address-to-index address-1 --address-to-index
                            address-2 ..."
   -h,--help                Show this help text
 ```
 
-#### Example usage
+### Example of using Marconi-Mamba
 
-To use the marconi-mamba
-* invoke the JSON-RPC server
-* interrogate the JSON-RPC endpoints
-* interrogate the REST endpoints
+To use Marconi-Mamba, follow these steps: 
+1. Invoke the JSON-RPC server
+2. Interrogate the JSON-RPC endpoints
+3. Interrogate the REST endpoints
 
-##### JSON-RPC Server invocation
+These steps are described in more detail below. 
 
-The following is a an example shell script for executing marconi-mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet)
-**Assumption**
-cardano-node version 1.35.3 is running with the socket-path as outlined below:
+#### Invoking the JSON-RPC server
+
+The following is an example shell script for executing Marconi-Mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet). 
+
+##### Requirement
+
+cardano-node version 1.35.3 must be running with the socket-path as outlined below:
 
 ``` sh
 #!/usr/bin/env sh
@@ -116,10 +117,9 @@ $(cabal exec -- which marconi-mamba) \
     --addresses-to-index addr_test1qr30nkfx28r452r3006kytnpvn39zv7c2m5uqt4zrg35mly35pesdyk43wnxk3edkkw74ak56n4zh67reqjhcfp3mm7qtyekt4 \
     --addresses-to-index addr_test1wr9gquc23wc7h8k4chyaad268mjft7t0c08wqertwms70sc0fvx8w \
     --addresses-to-index addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99
-
 ```
 
-##### JSON-RPC Endpoints
+#### Interrogating the JSON-RPC endpoints
 
 ``` sh
 |-----------+-----------+------------------------+---------------------------------------------|
@@ -130,10 +130,9 @@ $(cabal exec -- which marconi-mamba) \
 | POST      | json-rpc  | utxoReportx            | Retrieves TxRefs for all provided addresses |
 | POST      | JSON-rpc  | echo                   | echo's user input to console                |
 |-----------+-----------+------------------------+---------------------------------------------|
-
 ```
 
-##### REST Endpoints
+#### Interrogating the REST endpoints
 
 ``` sh
 |-----------+-----------+-----------------------------------|
@@ -142,10 +141,9 @@ $(cabal exec -- which marconi-mamba) \
 | GET       | addresses | Retrieves user provided addresses |
 | GET       | time      | current local time                |
 |-----------+-----------+-----------------------------------|
-
 ```
 
-#### Examples
+### Examples
 
 Here is a curl script to expoint the JSON-RPC server:
 
@@ -171,7 +169,6 @@ curl -d '{"jsonrpc": "2.0" , "method": "utxoTxOutReport" , "params": "addr_test1
     ]
   }
 }
-
 ```
 
-[test-json-rpc.http](./marconi-mamba/examples/test-json-rpc.http) contains additional example usage
+[test-json-rpc.http](./marconi-mamba/examples/test-json-rpc.http) contains additional example usage.
