@@ -126,6 +126,7 @@ library
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , freer-extras               >=1.0.0
     , pab-blockfrost
     , playground-common          >=1.0.0
@@ -239,6 +240,7 @@ test-suite plutus-pab-test-light
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , plutus-contract            >=1.0.0
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0

@@ -12,6 +12,7 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestName, TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -61,7 +62,7 @@ balanceTxnMinAda =
                  <> L.Constraints.mustIncludeDatumInTx unitDatum
             utx1 <- mkTxConstraints @Void mempty constraints1
             submitTxConfirmed utx1
-            utxo <- utxosAt $ someCardanoAddress (Ledger.pNetworkId params)
+            utxo <- utxosAt $ someCardanoAddress (Params.pNetworkId params)
             let txOutRef = head (Map.keys utxo)
                 constraints2 =
                     L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
@@ -119,7 +120,7 @@ balanceTxnMinAda2 =
         wallet2Contract :: Contract () EmptySchema ContractError ()
         wallet2Contract = do
             params <- getParams
-            utxos <- utxosAt $ someCardanoAddress (Ledger.pNetworkId params)
+            utxos <- utxosAt $ someCardanoAddress (Params.pNetworkId params)
             let txOutRef = case Map.keys utxos of
                              (x:_) -> x
                              []    -> error $ "there's no utxo at the address " <> show someAddress

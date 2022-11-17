@@ -11,6 +11,9 @@ module Cardano.Wallet.RemoteClientSpec
     ( tests
     ) where
 
+import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Params (Params (..), pParamsFromProtocolParams, pProtocolParams)
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Wallet.RemoteClient (handleWalletClient)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff, interpret, runM, type (~>))
@@ -22,10 +25,8 @@ import Data.List qualified as List
 import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog (Property, (===))
 import Hedgehog qualified
-import Ledger (Params (..), Slot, pParamsFromProtocolParams, pProtocolParams)
+import Ledger (Slot)
 import Ledger.Constraints.OffChain (emptyUnbalancedTx)
-import Ledger.Generators qualified as Gen
-import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract (WalletAPIError)
 import Plutus.PAB.Core.ContractInstance.STM (InstancesState, emptyInstanceState, emptyInstancesState, insertInstance,
                                              instanceState, yieldedExportTxs)

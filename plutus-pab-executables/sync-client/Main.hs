@@ -14,10 +14,10 @@ import Text.Read (readEither)
 
 import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), ChainPoint (..), HasTypeProxy (..),
                     deserialiseFromRawBytesHex, serialiseToRawBytesHexText)
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (..))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
 import Cardano.Protocol.Socket.Type (cfgNetworkId)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Ledger.TimeSlot (SlotConfig (..))
 
 -- | We only need to know the location of the socket.
 --   We can get the protocol versions from Cardano.Protocol.Socket.Type

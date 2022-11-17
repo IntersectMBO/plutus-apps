@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- | The set of parameters, like protocol parameters and slot configuration.
-module Ledger.Params(
+module Cardano.Node.Emulator.Params(
   Params(..),
   paramsWithProtocolsParameters,
   slotConfigL,
@@ -39,6 +39,7 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (..), Globals, ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Slot (EpochSize (..))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (..), posixTimeToNominalDiffTime, posixTimeToUTCTime)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SlotLength, mkSlotLength)
 import Control.Lens (Lens', lens, makeLensesFor, over, (&), (.~))
@@ -50,7 +51,6 @@ import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.SOP.Strict (K (K), NP (..))
 import GHC.Generics (Generic)
-import Ledger.TimeSlot (SlotConfig (..), posixTimeToNominalDiffTime, posixTimeToUTCTime)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
 import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
 import Plutus.V1.Ledger.Api (POSIXTime (..))

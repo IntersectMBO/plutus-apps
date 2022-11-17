@@ -38,7 +38,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 
-import Ledger.Params (pNetworkId, pSlotConfig)
+import Cardano.Node.Emulator.Chain (ChainControlEffect)
+import Cardano.Node.Emulator.Params (pNetworkId, pSlotConfig)
 import Plutus.Contract (Contract (..))
 import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
 import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
@@ -54,7 +55,6 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, EmulatorMessage (..),
 import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
 import Streaming (Stream)
 import Streaming.Prelude (Of)
-import Wallet.Emulator.Chain (ChainControlEffect)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorState, MultiAgentControlEffect,
                                    MultiAgentEffect, schedulerEvent)
 import Wallet.Emulator.Stream (EmulatorConfig (..), EmulatorErr (..), initialChainState, runTraceStream)

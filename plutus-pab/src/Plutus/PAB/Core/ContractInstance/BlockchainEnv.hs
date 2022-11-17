@@ -12,6 +12,7 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
 import Cardano.Api (BlockInMode (..), ChainPoint (..), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types (NodeMode (..),
                            PABServerConfig (PABServerConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
@@ -33,7 +34,6 @@ import Data.Maybe (fromMaybe, maybeToList)
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (Text, unpack)
 import Ledger (Block, Slot (..), TxId (..))
-import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
                           InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..), RollbackFailed (..),
                           RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance,

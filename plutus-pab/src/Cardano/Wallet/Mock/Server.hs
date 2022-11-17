@@ -14,6 +14,7 @@ module Cardano.Wallet.Mock.Server
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Types (ChainIndexUrl (ChainIndexUrl))
+import Cardano.Node.Emulator.Params (Params (..))
 import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.API (API)
@@ -33,7 +34,6 @@ import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Params (Params (..))
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()

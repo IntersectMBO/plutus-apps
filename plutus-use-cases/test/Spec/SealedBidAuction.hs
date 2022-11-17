@@ -16,10 +16,10 @@ import Control.Monad (when)
 import Data.Data
 import Data.Default (Default (def))
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel

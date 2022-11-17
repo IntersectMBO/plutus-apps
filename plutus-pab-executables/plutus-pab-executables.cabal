@@ -264,6 +264,7 @@ executable plutus-pab-test-psgenerator
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , freer-extras               >=1.0.0
     , playground-common          >=1.0.0
     , plutus-contract            >=1.0.0
@@ -321,6 +322,7 @@ test-suite plutus-pab-test-full
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , freer-extras               >=1.0.0
     , playground-common          >=1.0.0
     , plutus-chain-index-core    >=1.0.0
@@ -389,6 +391,7 @@ test-suite plutus-pab-test-full-long-running
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , freer-extras               >=1.0.0
     , playground-common          >=1.0.0
     , plutus-chain-index-core    >=1.0.0
@@ -442,9 +445,10 @@ executable tx-inject
   -- Local components
   --------------------
   build-depends:
-    , plutus-contract  >=1.0.0
-    , plutus-ledger    >=1.0.0
-    , plutus-pab       >=1.0.0
+    , cardano-node-emulator  >=1.0.0
+    , plutus-contract        >=1.0.0
+    , plutus-ledger          >=1.0.0
+    , plutus-pab             >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -477,8 +481,8 @@ executable sync-client
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator    >=1.0.0
     , plutus-chain-index-core  >=1.0.0
-    , plutus-ledger            >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
@@ -569,6 +573,7 @@ executable pab-cli
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator    >=1.0.0
     , freer-extras
     , plutus-chain-index-core  >=1.0.0
     , plutus-ledger            >=1.0.0

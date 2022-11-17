@@ -46,7 +46,7 @@ module Plutus.Trace.Emulator(
     , ChainState.chainNewestFirst
     , ChainState.txPool
     , ChainState.index
-    , ChainState.currentSlot
+    , ChainState.chainCurrentSlot
     -- ** Inspecting the agent states
     , EmulatorControl.agentState
     , Wallet.ownPaymentPrivateKey
@@ -72,6 +72,9 @@ module Plutus.Trace.Emulator(
     , interpretEmulatorTrace
     ) where
 
+import Cardano.Node.Emulator.Chain (ChainControlEffect)
+import Cardano.Node.Emulator.Chain qualified as ChainState
+import Cardano.Node.Emulator.Params (Params (..))
 import Control.Foldl (generalize, list)
 import Control.Lens hiding ((:>))
 import Control.Monad (forM_, void)
@@ -89,7 +92,6 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as Text
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Params (Params (..))
 import Ledger.Slot (getSlot)
 import Plutus.Trace.Effects.Assert (Assert, handleAssert)
 import Plutus.Trace.Effects.Assert qualified as Assert
@@ -117,8 +119,6 @@ import Prettyprinter.Render.Text (renderStrict)
 import Streaming (Stream)
 import Streaming.Prelude (Of ((:>)))
 import System.IO (Handle, hPutStrLn, stdout)
-import Wallet.Emulator.Chain (ChainControlEffect)
-import Wallet.Emulator.Chain qualified as ChainState
 import Wallet.Emulator.MultiAgent (EmulatorEvent,
                                    EmulatorEvent' (InstanceEvent, SchedulerEvent, UserThreadEvent, WalletEvent),
                                    EmulatorState (_chainState, _walletStates), EmulatorTimeEvent (EmulatorTimeEvent),

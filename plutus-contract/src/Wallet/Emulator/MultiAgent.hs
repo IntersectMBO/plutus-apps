@@ -35,14 +35,16 @@ import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Data.Foldable (fold)
 import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
-import Ledger.Tx.CardanoAPI (toCardanoTxOut)
-import Ledger.Validation qualified as Validation
+import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoTxOut)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
@@ -50,7 +52,6 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, 
 import Plutus.Trace.Scheduler qualified as Scheduler
 import Plutus.V2.Ledger.Tx qualified as V2
 import Wallet.API qualified as WAPI
-import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.NodeClient qualified as NC
 import Wallet.Emulator.Wallet (Wallet)
@@ -303,7 +304,7 @@ emulatorStateInitialDist params mp = do
            , txMint = fold mp
            , txValidRange = WAPI.defaultSlotRange
            }
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
+        cUtxoIndex = either (error . show) id $ fromPlutusIndex mempty
         cTx = Validation.fromPlutusTxSigned def cUtxoIndex tx CW.knownPaymentKeys
     pure $ emulatorStatePool [cTx]
     where

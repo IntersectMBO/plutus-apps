@@ -26,6 +26,8 @@ module Plutus.Contract.Wallet(
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Params (Params (emulatorPParams, pNetworkId))
+import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
 import Control.Applicative ((<|>))
 import Control.Monad ((>=>))
 import Control.Monad.Error.Lens (throwing)
@@ -49,7 +51,7 @@ import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx), mustPayToAddress)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
-import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_OtherContractError))
@@ -248,13 +250,13 @@ instance ToJSON ExportTxInput where
             ]
 
 export
-    :: P.Params
+    :: Params
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
 export params (UnbalancedEmulatorTx tx sigs utxos) =
     let requiredSigners = Set.toList sigs
      in ExportTx
-        <$> bimap Right (C.makeSignedTransaction []) (CardanoAPI.toCardanoTxBody params requiredSigners tx)
+        <$> bimap Right (C.makeSignedTransaction []) (CardanoAPI.toCardanoTxBody (pNetworkId params) (emulatorPParams params) requiredSigners tx)
         <*> first Right (mkInputs utxos)
         <*> pure (mkRedeemers tx)
 export params (UnbalancedCardanoTx tx utxos) =

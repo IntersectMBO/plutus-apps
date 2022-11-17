@@ -12,6 +12,7 @@ import Control.Lens (review, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -58,7 +59,7 @@ mustSpendAtLeastContract submitTxFromConstraints offAmt onAmt = do
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt $ scrAddress (Ledger.pNetworkId params)
+    utxos <- utxosAt $ scrAddress (Params.pNetworkId params)
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
         tx2 =

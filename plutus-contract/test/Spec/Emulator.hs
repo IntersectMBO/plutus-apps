@@ -13,6 +13,12 @@
 module Spec.Emulator(tests) where
 
 import Cardano.Api.Shelley qualified as C
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Fee (selectCoin)
+import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
+import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Params (Params (Params, pNetworkId))
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
@@ -34,13 +40,8 @@ import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPu
                Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs,
                mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Ada qualified as Ada
-import Ledger.Fee (selectCoin)
-import Ledger.Generators (Mockchain (Mockchain))
-import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
-import Ledger.Params (Params (Params, pNetworkId))
-import Ledger.Tx.CardanoAPI (toCardanoAddressInEra, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
-import Ledger.Validation qualified as Validation
+import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoAddressInEra, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
@@ -56,7 +57,6 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 import Wallet (payToPaymentPublicKeyHash_, submitTxn)
 import Wallet.API qualified as W
-import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Graph qualified
 
 tests :: TestTree
@@ -232,7 +232,7 @@ invalidScript = property $ do
             totalVal
     Hedgehog.annotateShow invalidTxn
 
-    let cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ Index.UtxoIndex $ Map.fromList invalidTxnUtxo
+    let cUtxoIndex = either (error . show) id $ fromPlutusIndex $ Index.UtxoIndex $ Map.fromList invalidTxnUtxo
         signedInvalidTxn = onCardanoTx
           (\t -> Validation.fromPlutusTxSigned' params cUtxoIndex t Gen.knownPaymentKeys)
           (const $ error "unexpected CardanoTx")

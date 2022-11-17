@@ -18,6 +18,7 @@ module BasicApps where
 
 -- BLOCK0
 
+import Cardano.Node.Emulator.Params (pNetworkId)
 import Control.Monad (forever, void)
 import Control.Monad.Freer.Extras.Log (LogLevel (Debug, Info))
 import Data.Aeson (FromJSON, ToJSON)
@@ -25,7 +26,7 @@ import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
-import Ledger (Ada, CardanoAddress, Params (pNetworkId), PaymentPubKeyHash (unPaymentPubKeyHash), toPlutusAddress)
+import Ledger (Ada, CardanoAddress, PaymentPubKeyHash (unPaymentPubKeyHash), toPlutusAddress)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts

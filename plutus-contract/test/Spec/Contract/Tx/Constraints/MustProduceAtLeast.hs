@@ -12,13 +12,14 @@ import Control.Lens (review, (&), (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Generators (someTokenValue)
+import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints
-import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -237,7 +238,7 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
         wrap = Scripts.mkUntypedValidator
 
 scrAddress :: Ledger.CardanoAddress
-scrAddress = Scripts.validatorCardanoAddress Ledger.testnet typedValidator
+scrAddress = Scripts.validatorCardanoAddress Params.testnet typedValidator
 
 type SubmitTx
   =  Constraints.ScriptLookups UnitTest

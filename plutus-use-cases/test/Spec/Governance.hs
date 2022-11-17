@@ -14,8 +14,9 @@ import Control.Monad (void)
 import Data.Foldable (traverse_)
 import Data.Maybe (listToMaybe)
 
+import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Wallet.Emulator qualified as EM
 
@@ -29,7 +30,7 @@ import Test.Tasty.HUnit qualified as HUnit
 
 validatorAddress :: Ledger.CardanoAddress
 validatorAddress
-  = Scripts.validatorCardanoAddress Ledger.testnet
+  = Scripts.validatorCardanoAddress Params.testnet
   $ Gov.typedValidator params
 
 tests :: TestTree
@@ -92,7 +93,7 @@ doVoting ayes nays rounds = do
     void $ Trace.waitNSlots 10
     slotCfg <- Trace.getSlotConfig
     let votingRound (_, law) = do
-            now <- view Trace.currentSlot <$> Trace.chainState
+            now <- view Trace.chainCurrentSlot <$> Trace.chainState
             void $ Trace.activateContractWallet w2
                 (Gov.proposalContract @Gov.GovError params owner
                     Gov.Proposal { Gov.newLaw = law

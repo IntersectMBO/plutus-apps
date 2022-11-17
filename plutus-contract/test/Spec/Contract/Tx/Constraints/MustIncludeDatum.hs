@@ -10,6 +10,7 @@ module Spec.Contract.Tx.Constraints.MustIncludeDatum(tests) where
 
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Monad (void)
 import Data.Void (Void)
 import Ledger qualified
@@ -81,7 +82,7 @@ mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt (Typed.validatorCardanoAddress (Ledger.pNetworkId params) typedValidator)
+    utxos <- utxosAt (Typed.validatorCardanoAddress (Params.pNetworkId params) typedValidator)
     let lookups2 =
             Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
@@ -133,7 +134,7 @@ mustIncludeDatumInTxCalledBeforeOtherConstraints =
         ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
         awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-        utxos <- utxosAt (Typed.validatorCardanoAddress (Ledger.pNetworkId params) typedValidator)
+        utxos <- utxosAt (Typed.validatorCardanoAddress (Params.pNetworkId params) typedValidator)
         let lookups2 =
                 Constraints.typedValidatorLookups typedValidator
                 <> Constraints.unspentOutputs utxos

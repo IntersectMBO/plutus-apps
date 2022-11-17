@@ -51,6 +51,8 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , InstanceClientEnv(..)
     ) where
 
+import Cardano.Node.Emulator.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Applicative (Alternative (empty))
 import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
@@ -63,9 +65,8 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
-import Ledger (CardanoAddress, Params (pSlotConfig), Slot, TxId, TxOutRef)
+import Ledger (CardanoAddress, Slot, TxId, TxOutRef)
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (BlockNumber), ChainIndexTx, TxIdState, TxOutBalance, TxOutStatus, TxStatus,
                           transactionStatus)
 import Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)

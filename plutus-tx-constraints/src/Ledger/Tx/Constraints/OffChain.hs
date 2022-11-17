@@ -52,6 +52,8 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Cardano.Node.Emulator.Params (Params (..), networkIdL, pProtocolParams)
+import Cardano.Node.Emulator.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Control.Lens (Lens', Traversal', _2, coerced, iso, makeLensesFor, use, uses, (.=), (<>=), (^.), (^?))
 import Control.Lens.Extras (is)
 import Control.Monad.Except (Except, MonadError, guard, lift, mapExcept, runExcept, throwError, unless, withExcept)
@@ -64,8 +66,8 @@ import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Datum, Language (PlutusV2), MintingPolicy, MintingPolicyHash, POSIXTimeRange, Params (..), Versioned,
-               decoratedTxOutReferenceScript, networkIdL, pProtocolParams)
+import Ledger (Datum, Language (PlutusV2), MintingPolicy, MintingPolicyHash, POSIXTimeRange, Versioned,
+               decoratedTxOutReferenceScript)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
@@ -79,7 +81,6 @@ import Plutus.V2.Ledger.Tx qualified as PV2
 import Ledger.Interval ()
 import Ledger.Orphans ()
 import Ledger.Scripts (ScriptHash, getRedeemer, getValidator)
-import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), toCardanoMintWitness, toCardanoPolicyId)
 import Ledger.Tx.CardanoAPI qualified as C

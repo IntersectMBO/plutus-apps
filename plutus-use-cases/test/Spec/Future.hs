@@ -19,11 +19,11 @@ import Data.Default (Default (def))
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value (Value, scale)
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle

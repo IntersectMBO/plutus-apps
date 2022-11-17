@@ -32,13 +32,13 @@ import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper, unNetworkIdWrapper))
 import Cardano.ChainIndex.Types (ChainIndexConfig (ciBaseUrl), ChainIndexUrl (ChainIndexUrl))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (sgNetworkMagic, sgSecurityParam, sgSlotLength, sgSystemStart))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig))
 import Cardano.Node.Types (NodeMode (AlonzoNode),
                            PABServerConfig (pscBaseUrl, pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings),
                              WalletConfig (LocalWalletConfig, RemoteWalletConfig), WalletUrl (WalletUrl))
 import Control.Monad.Freer.Extras.Beam.Sqlite (DbConfig (dbConfigFile, dbConfigPoolSize))
 import Ledger (POSIXTime (POSIXTime))
-import Ledger.TimeSlot (SlotConfig (SlotConfig))
 import Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
                          Config (chainQueryConfig, dbConfig, developmentOptions, nodeServerConfig, pabWebserverConfig, walletServerConfig),

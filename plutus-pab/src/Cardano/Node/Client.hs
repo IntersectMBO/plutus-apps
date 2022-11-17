@@ -8,12 +8,13 @@
 
 module Cardano.Node.Client where
 
+import Cardano.Node.Emulator.Params (Params)
 import Control.Monad.Freer
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class
 import Data.Proxy (Proxy (Proxy))
-import Ledger (Params, onCardanoTx)
+import Ledger (onCardanoTx)
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 

@@ -6,7 +6,7 @@
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeFamilies       #-}
 -- | Calculating transaction fees in the emulator.
-module Ledger.Fee(
+module Cardano.Node.Emulator.Fee(
   estimateTransactionFee,
   estimateCardanoBuildTxFee,
   makeAutoBalancedTransaction,
@@ -22,6 +22,9 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.BaseTypes (Globals (systemStart))
 import Cardano.Ledger.Core qualified as C.Ledger (Tx)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
+import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams, pNetworkId), emulatorEraHistory,
+                                     emulatorGlobals, pProtocolParams)
+import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
 import Control.Lens (over, (&))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (bimap, first)
@@ -36,14 +39,11 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
 import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (TxOutRefNotFound), ValidationPhase (Phase1), adjustTxOut,
                      minAdaTxOutEstimated)
-import Ledger.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory, emulatorGlobals,
-                      pProtocolParams)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx, TxOut, TxOutRef)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoFee, toCardanoReturnCollateral,
-                             toCardanoTotalCollateral, toCardanoTxBodyContent)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
+                             toCardanoReturnCollateral, toCardanoTotalCollateral, toCardanoTxBodyContent)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Validation (CardanoLedgerError, UTxO (..), fromPlutusIndex, makeTransactionBody)
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
@@ -55,7 +55,7 @@ estimateTransactionFee
   -> Tx
   -> Either CardanoLedgerError Value
 estimateTransactionFee params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ toCardanoTxBodyContent params requiredSigners tx
+  txBodyContent <- first Right $ toCardanoTxBodyContent (pNetworkId params) (emulatorPParams params) requiredSigners tx
   estimateCardanoBuildTxFee params utxo txBodyContent
 
 estimateCardanoBuildTxFee

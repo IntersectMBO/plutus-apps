@@ -13,6 +13,7 @@ import Control.Monad (void)
 import Spec.Contract.Error (txOutRefNotFound)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Data.Either (fromRight)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)
@@ -74,7 +75,7 @@ mustSpendPubKeyOutputContract = mustSpendPubKeyOutputContract' []
 
 mustSpendPubKeyOutputContract' :: [Ledger.PaymentPubKeyHash] -> [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
-    networkId <- Ledger.pNetworkId <$> getParams
+    networkId <- Params.pNetworkId <$> getParams
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs (Ada.lovelaceValueOf baseLovelaceLockedByScript)
             <> foldMap Constraints.mustBeSignedBy keys

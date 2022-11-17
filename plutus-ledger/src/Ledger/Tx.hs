@@ -92,7 +92,6 @@ import Cardano.Crypto.Hash (SHA256, digest)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxWitness (txwitsVKey)
-import Cardano.Ledger.Babbage.TxBody (TxBody)
 
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
@@ -100,7 +99,6 @@ import Control.DeepSeq (NFData)
 import Control.Lens (At (at), Getter, Lens', Traversal', lens, makeLenses, makePrisms, to, views, (&), (?~), (^.), (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Proxy (Proxy))
-import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
@@ -114,7 +112,6 @@ import Ledger.Address (Address, CardanoAddress, PaymentPubKey, cardanoAddressCre
                        pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Params (EmulatorEra, Params (pNetworkId))
 import Ledger.Slot (SlotRange)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
@@ -268,7 +265,7 @@ as we don't have Phase2 validation errors via the cardano-ledger library.
 
 To do that we need the required signers which are only available in UnbalancedTx during balancing.
 So during balancing we can create the SomeCardanoApiTx, while proper validation can only happen in
-Wallet.Emulator.Chain.validateBlock, since that's when we know the right Slot number. This means that
+Cardano.Node.Emulator.Chain.validateBlock, since that's when we know the right Slot number. This means that
 we need both transaction types in the path from balancing to validateBlock. -}
 data CardanoTx
     = EmulatorTx { _emulatorTx :: Tx }
@@ -503,7 +500,7 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: V1.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut
 pubKeyTxOut v pk sk = do
-  aie <- CardanoAPI.toCardanoAddressInEra (pNetworkId def) $ pubKeyAddress pk sk
+  aie <- CardanoAPI.toCardanoAddressInEra (C.Testnet $ C.NetworkMagic 1) $ pubKeyAddress pk sk
   txov <- CardanoAPI.toCardanoValue v
   pure $ TxOut $ C.TxOut aie (C.TxOutValue C.MultiAssetInBabbageEra txov) C.TxOutDatumNone C.Api.ReferenceScriptNone
 
@@ -524,7 +521,6 @@ addCardanoTxSignature privKey = cardanoTxMap (addSignature' privKey) addSignatur
               C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
               _                             -> Set.empty
 
-        fromPaymentPrivateKey :: PrivateKey -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.BabbageEra
         fromPaymentPrivateKey xprv txBody
           = C.Api.makeShelleyKeyWitness
               (C.Api.ShelleyTxBody C.Api.ShelleyBasedEraBabbage txBody notUsed notUsed notUsed notUsed)

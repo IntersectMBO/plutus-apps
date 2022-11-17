@@ -124,15 +124,17 @@ import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, s
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Prelude qualified as P
 
+import Cardano.Node.Emulator.Generators (GeneratorModel, Mockchain (..))
+import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
 import Ledger.Address (CardanoAddress)
-import Ledger.Generators (GeneratorModel, Mockchain (..))
-import Ledger.Generators qualified as Gen
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 
+import Cardano.Node.Emulator.Chain (ChainEvent)
 import Data.IORef
 import Ledger.Tx (Tx, onCardanoTx)
 import Plutus.Contract.Test.Coverage
@@ -145,7 +147,6 @@ import PlutusTx.Coverage
 import Streaming qualified as S
 import Streaming.Prelude qualified as S
 import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
-import Wallet.Emulator.Chain (ChainEvent)
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
 import Wallet.Emulator.Folds qualified as Folds
@@ -198,7 +199,7 @@ changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Le
 -- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
 -- Note that if you need this your Plutus script will probably not validate on Mainnet.
 increaseTransactionLimits :: CheckOptions -> CheckOptions
-increaseTransactionLimits = over (emulatorConfig . params) Ledger.increaseTransactionLimits
+increaseTransactionLimits = over (emulatorConfig . params) Params.increaseTransactionLimits
 
 -- | Check if the emulator trace meets the condition
 checkPredicate ::

@@ -17,16 +17,17 @@ import Data.Maybe (fromMaybe)
 import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
+import Cardano.Node.Emulator.Generators (TxInputWitnessed (TxInputWitnessed))
+import Cardano.Node.Emulator.Generators qualified as Generators
+import Cardano.Node.Emulator.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Generators (TxInputWitnessed (TxInputWitnessed))
-import Ledger.Generators qualified as Generators
 import Ledger.Index (UtxoIndex (..))
-import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
-import Ledger.Validation qualified as Validation
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -89,7 +90,7 @@ generateTx gen slot (UtxoIndex utxo) = do
     slotCfg <- Gen.sample Generators.genSlotConfig
     let
       params = def { pSlotConfig = slotCfg }
-      utxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ UtxoIndex utxo
+      utxoIndex = either (error . show) id $ fromPlutusIndex $ UtxoIndex utxo
       txn = Validation.fromPlutusTxSigned params utxoIndex tx CW.knownPaymentKeys
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of

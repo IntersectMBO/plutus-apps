@@ -49,6 +49,8 @@ module Wallet.Emulator.Folds (
     , mkTxLogs
     ) where
 
+import Cardano.Node.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate,
+                                    _TxnValidationFail)
 import Control.Applicative ((<|>))
 import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L
@@ -82,7 +84,6 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (Co
                                     UserThreadMsg, _HandledRequest, cilMessage, cilTag, toInstanceState)
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
-import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
 import Wallet.Emulator.LogMessages (_AdjustingUnbalancedTx, _BalancingUnbalancedTx, _ValidationFailed)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,
                                    userThreadEvent, walletClientEvent, walletEvent')

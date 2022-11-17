@@ -18,6 +18,7 @@ module Plutus.PAB.CoreSpec
     , assertEqual
     ) where
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Concurrent.STM.Extras.Stream (readN, readOne)
 import Control.Lens ((&), (+~), (^.))
 import Control.Monad (replicateM, replicateM_, unless, void)
@@ -30,8 +31,9 @@ import Control.Monad.Freer.State (State)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (fold, traverse_)
-import Ledger.TimeSlot qualified as TimeSlot
 
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Concurrent.STM qualified as STM
 import Data.Aeson.Types qualified as JSON
 import Data.Default (def)
@@ -82,7 +84,6 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Wallet.API (WalletAPIError, ownAddresses)
 import Wallet.API qualified as WAPI
-import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
 import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Rollup (doAnnotateBlockchain)
@@ -107,7 +108,7 @@ runScenario sim = do
 -- To run scenarios with the slot's length to 1s to make the awaiting tests stable
 runScenarioWithSecondSlot :: Simulation (Builtin TestContracts) a -> IO ()
 runScenarioWithSecondSlot sim = do
-    let params = Ledger.increaseTransactionLimits def
+    let params = Params.increaseTransactionLimits def
     result <- Simulator.runSimulationWithParams params sim
     case result of
         Left err -> error (show err)

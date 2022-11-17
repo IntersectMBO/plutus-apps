@@ -25,6 +25,8 @@ module Plutus.Trace.Effects.EmulatorControl(
     , getSlotConfig
     ) where
 
+import Cardano.Node.Emulator.Chain (ChainState)
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Control.Lens (over, view)
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, Member, type (~>))
@@ -33,12 +35,10 @@ import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Map qualified as Map
-import Ledger.TimeSlot (SlotConfig)
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError, getThread)
 import Plutus.Trace.Emulator.Types (EmulatorMessage (Freeze), EmulatorThreads)
 import Plutus.Trace.Scheduler (EmSystemCall, MessageCall (Message), Priority (Normal), ThreadCall (Thaw), mkSysCall)
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.Chain (ChainState)
 import Wallet.Emulator.MultiAgent (EmulatorState, MultiAgentControlEffect, walletControlAction, walletState)
 import Wallet.Emulator.Wallet (SigningProcess, Wallet, WalletState)
 import Wallet.Emulator.Wallet qualified as W

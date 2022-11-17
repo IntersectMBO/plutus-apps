@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 
 -- | Generators for constructing blockchains and transactions for use in property-based testing.
-module Ledger.Generators(
+module Cardano.Node.Emulator.Generators(
     -- * Mockchain
     Mockchain(..),
     genMockchain,
@@ -80,6 +80,10 @@ import Hedgehog.Range qualified as Range
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley (ProtocolParameters (..))
 import Cardano.Crypto.Wallet qualified as Crypto
+import Cardano.Node.Emulator.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Validation (fromPlutusTxSigned, validateCardanoTx)
 import Ledger (Ada, AssetClass, CardanoTx (EmulatorTx), CurrencySymbol, Datum, Interval, Language (PlutusV1),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
@@ -93,11 +97,8 @@ import Ledger (Ada, AssetClass, CardanoTx (EmulatorTx), CurrencySymbol, Datum, I
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index.Internal qualified as Index (UtxoIndex (UtxoIndex))
-import Ledger.Params (Params (pSlotConfig))
-import Ledger.TimeSlot (SlotConfig)
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (fromPlutusIndex, fromPlutusTxSigned, validateCardanoTx)
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value qualified as Value
 import Numeric.Natural (Natural)
 import Plutus.Script.Utils.Scripts (Versioned (Versioned), datumHash)

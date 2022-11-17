@@ -14,12 +14,13 @@ import Control.Monad (void)
 import Spec.Contract.Error (cardanoLedgerErrorContaining, insufficientFundsError)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Generators (someTokenValue)
+import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
-import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (Redeemer)
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
@@ -255,7 +256,7 @@ successfulUseOfMustPayToOtherScriptWithDatumInTxWithScriptsExactTokenBalance sub
         onChainConstraint = asRedeemer $ MustPayToOtherScriptWithDatumInTx someValidatorHash someDatum otherTokenValue
         options = defaultCheckOptions & changeInitialWalletValue w1 (otherTokenValue <>)
         contract = do
-            networkId <- Ledger.pNetworkId <$> getParams
+            networkId <- Params.pNetworkId <$> getParams
             let lookups1 = Constraints.plutusV1OtherScript someValidator
                 tx1 =
                     Constraints.mustPayToOtherScriptWithDatumInTx
