@@ -170,4 +170,4 @@ curl -d '{"jsonrpc": "2.0" , "method": "utxoTxOutReport" , "params": "addr_test1
 }
 ```
 
-[test-json-rpc.http](./marconi-mamba/examples/test-json-rpc.http) contains additional example usage.
+[test-json-rpc.http](./examples/test-json-rpc.http) contains additional example usage.
