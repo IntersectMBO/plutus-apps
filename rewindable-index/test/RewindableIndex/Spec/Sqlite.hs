@@ -42,14 +42,18 @@ import RewindableIndex.Storable qualified as Storable
 -- in the handler type, that they need to implement the storable interface.
 newtype Handle = Handle Sql.Connection
 
--- StorablePoints can be either Point (intergers) or the Genesis block.
-data instance StorablePoint Handle =
+-- This point for this test will be representated by a point on some blockchain where
+-- slot numbers are identified by integers.
+data Point =
     Point Int
   | Genesis
   deriving (Eq, Show, Generic)
 
+-- StorablePoints can be either Point (intergers) or the Genesis block.
+type instance StorablePoint Handle = Point
+
 -- We should be able to order points.
-instance Ord (StorablePoint Handle) where
+instance Ord Point where
   Genesis   <= _         = True
   (Point x) <= (Point y) = x <= y
   _         <= _         = False
@@ -79,7 +83,7 @@ newtype instance StorableResult Handle = Result
   deriving newtype (Eq, Ord)
 
 -- We can extract points from events in the expected way.
-instance HasPoint (StorableEvent Handle) (StorablePoint Handle) where
+instance HasPoint (StorableEvent Handle) Point where
   getPoint (Event point _) = point
 
 data Config = Config
@@ -104,7 +108,7 @@ instance ToRow (StorableEvent Handle) where
 instance FromRow (StorableEvent Handle) where
   fromRow = Event <$> field <*> field
 
-instance FromField (StorablePoint Handle) where
+instance FromField Point where
   fromField f =
     fromField f <&> \p ->
       -- encode -1 as the genesis block.
@@ -112,7 +116,7 @@ instance FromField (StorablePoint Handle) where
          then Genesis
          else Point p
 
-instance ToField (StorablePoint Handle) where
+instance ToField Point where
   -- encode -1 as the genesis block.
   toField Genesis   = toField (-1 :: Int)
   toField (Point p) = toField p

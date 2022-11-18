@@ -62,7 +62,7 @@ import GHC.Generics (Generic)
 -}
 data family StorableEvent h
 
-data family StorablePoint h
+type family StorablePoint h
 
 data family StorableQuery h
 
