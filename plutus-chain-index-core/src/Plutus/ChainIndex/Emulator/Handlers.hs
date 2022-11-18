@@ -278,16 +278,14 @@ appendBlocks [] = pure ()
 appendBlocks blocks = do
     let
         processBlock (utxoIndexState, txs) (Block tip_ transactions) = do
-            if null transactions then return (utxoIndexState, txs)
-            else do
-                case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) utxoIndexState of
-                    Left err -> do
-                        let reason = InsertionFailed err
-                        logError $ Err reason
-                        return (utxoIndexState, txs)
-                    Right InsertUtxoSuccess{newIndex, insertPosition} -> do
-                        logDebug $ InsertionSuccess tip_ insertPosition
-                        return (newIndex, transactions ++ txs)
+            case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) utxoIndexState of
+                Left err -> do
+                    let reason = InsertionFailed err
+                    logError $ Err reason
+                    return (utxoIndexState, txs)
+                Right InsertUtxoSuccess{newIndex, insertPosition} -> do
+                    logDebug $ InsertionSuccess tip_ insertPosition
+                    return (newIndex, transactions ++ txs)
     oldState <- get @ChainIndexEmulatorState
     (newIndex, transactions) <- foldM processBlock (view utxoIndex oldState, []) blocks
     put $ oldState

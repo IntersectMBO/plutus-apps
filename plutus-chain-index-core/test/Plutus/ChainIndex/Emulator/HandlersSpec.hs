@@ -21,11 +21,11 @@ import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
 import Plutus.ChainIndex (ChainIndexLog, ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
-                          TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks, citxTxId, txFromTxId,
-                          unspentTxOutFromRef, utxoSetMembership, utxoSetWithCurrency)
+                          Tip (Tip, TipAtGenesis), TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks,
+                          citxTxId, tipSlot, txFromTxId, unspentTxOutFromRef, utxoSetMembership, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
-import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, getTip)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
 import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), txOuts)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
@@ -40,6 +40,9 @@ tests = do
   testGroup "chain index emulator handlers"
     [ testGroup "txFromTxId"
       [ testPropertyNamed "get tx from tx id" "txFromTxIdSpec" txFromTxIdSpec
+      ]
+    , testGroup "noTxSlot"
+      [ testPropertyNamed "Adding empty slot updates the tip" "noTxSlot" noTxSlot
       ]
     , testGroup "utxoSetAtAddress"
       [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefAtAddressShouldBeUnspentSpec" eachTxOutRefAtAddressShouldBeUnspentSpec
@@ -72,6 +75,23 @@ txFromTxIdSpec = property $ do
   case txs of
     Right (Just tx, Nothing) -> fstTx === tx
     _                        -> Hedgehog.assert False
+
+-- | Test that when a new slot is appended without any blocks, the tip is still updated to the new slot.
+noTxSlot :: Property
+noTxSlot = property $ do
+  (tip, block) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
+  case tip of
+    TipAtGenesis -> pure ()
+    (Tip _ blockId blockNo) -> do
+      let newSlot = succ $ tipSlot tip
+      res <- liftIO $ runEmulatedChainIndex mempty $ do
+          appendBlocks [Block tip (map (, def) block)]
+          appendBlocks [Block (Tip newSlot blockId blockNo) []]
+          tipSlot <$> getTip
+
+      case res of
+        Right slot' -> newSlot === slot'
+        Left _      -> Hedgehog.assert False
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns

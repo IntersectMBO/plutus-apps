@@ -26,12 +26,12 @@ import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger.Ada qualified as Ada
 import Plutus.ChainIndex (ChainIndexTxOut (citoValue), ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
-                          RunRequirements (RunRequirements), TxProcessOption (TxProcessOption, tpoStoreTx),
-                          appendBlocks, citxTxId, runChainIndexEffects, txFromTxId, txOuts, unspentTxOutFromRef,
-                          utxoSetMembership, utxoSetWithCurrency)
+                          RunRequirements (RunRequirements), Tip (Tip, TipAtGenesis),
+                          TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks, citxTxId, runChainIndexEffects,
+                          tipSlot, txFromTxId, txOuts, unspentTxOutFromRef, utxoSetMembership, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
-import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, getTip)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
@@ -42,6 +42,9 @@ tests = do
   testGroup "chain-index handlers"
     [ testGroup "txFromTxId"
       [ testPropertyNamed "get tx from tx id" "txFromTxIdSpec" txFromTxIdSpec
+      ]
+    , testGroup "noTxSlot"
+      [ testPropertyNamed "Adding empty slot updates the tip" "noTxSlot" noTxSlot
       ]
     , testGroup "utxoSetAtAddress"
       [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefAtAddressShouldBeUnspentSpec" eachTxOutRefAtAddressShouldBeUnspentSpec
@@ -73,6 +76,21 @@ txFromTxIdSpec = property $ do
   case txs of
     (Just tx, Nothing) -> fstTx === tx
     _                  -> Hedgehog.assert False
+
+-- | Test that when a new slot is appended without any blocks, the tip is still updated to the new slot.
+noTxSlot :: Property
+noTxSlot = property $ do
+  (tip, block) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
+  case tip of
+    TipAtGenesis -> pure ()
+    (Tip _ blockId blockNo) -> do
+      let newSlot = succ $ tipSlot tip
+      slot' <- runChainIndexTest $ do
+          appendBlocks [Block tip (map (, def) block)]
+          appendBlocks [Block (Tip newSlot blockId blockNo) []]
+          tipSlot <$> getTip
+
+      newSlot === slot'
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
