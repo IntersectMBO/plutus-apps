@@ -1,8 +1,7 @@
 
 # Marconi-Mamba
 
-Marconi-Mamba is a lightweight, customizable chain follower application and library for DApp developers who need to index and query the Cardano blockchain. Marconi-Mamba provides a way for DApps to have access to data that has already been stored on-chain by indexing portions of the blockchain.
-
+Marconi-Mamba is a lightweight, customizable chain follower application and library for the Mamba project to index and query specific information from the Cardano blockchain.
 ## Purpose
 
 The purpose of Marconi-Mamba is to make the core Marconi APIs available to non-Haskell applications.
@@ -15,12 +14,12 @@ The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/
 ```
              Running on a single machine                    Internet
 +----------------------------------------------------+
-|                                                    |                  +-----------+
-|   +----------------+                +-----------+  |                  |           |
-|   |                | node-to-client |           |  |     JSON-RPC     |  marconi  |
-|   |  cardano-node  +----------------+  marconi  +--+------------------+  client   |
-|   |                |      IPC       |           |  |       HTTP       |           |
-|   +----------------+                +----+------+  |                  +-----------+
+|                                                    |                  +-------------+
+|   +----------------+                +-----------+  |                  |             |
+|   |                | node-to-client |           |  |     JSON-RPC     |    mamba    |
+|   |  cardano-node  +----------------+  marconi  +--+------------------+ application |
+|   |                |      IPC       |   mamba   |  |       HTTP       |             |
+|   +----------------+                +----+------+  |                  +------------ +
 |                                          |         |
 |                                          |         |
 |                                      +---+----+    |
@@ -32,7 +31,8 @@ The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/
 
 ## Requirements
 * Local instance of a compatible version of [cardano-node](https://github.com/input-output-hk/plutus-apps/blob/main/cabal.project#L246).
-* Suitable environment for Plutus Platform development. See the [Plutus Platform starter project](https://github.com/input-output-hk/plutus-starter) for details.
+* [Nix](https://nixos.org/download.html): the package manager
+* Enable [IOHK's binary cache](https://iohk.zendesk.com/hc/en-us/articles/900000673963-Installing-Nix-on-Linux-distribution-and-setting-up-IOHK-binaries)
 
 ## Building from source
 To build Marconi-Mamba from the source files, use the following commands: 
@@ -56,7 +56,6 @@ The above process will build the executable in your local environment at this lo
 The following is a general synopsis of the command line options: 
 
 ``` sh
-$(cabal exec -- which marconi-mamba) --help
 $(cabal exec -- which marconi-mamba) --help
 marconi-mamba - Cardano blockchain indexer
 
