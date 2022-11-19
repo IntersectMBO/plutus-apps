@@ -161,6 +161,8 @@ haskell.project.shellFor {
   ''
   + ''
     export WEB_COMMON_SRC=${webCommon.cleanSrc}
+
+    export PYTHONPATH=
   '';
 
   # This is no longer set automatically as of more recent `haskell.nix` revisions,
