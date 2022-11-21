@@ -121,6 +121,8 @@ We don't need to be precise here; we just need a version number higher than the 
 The above process assumes there are additional non-CI tests that need to be run as part of the release QA process, before making a release.
 If this is not the case, we can omit tagging release candidates or creating release branches, and simply tag actual releases from `main`, as long as CI is green.
 
+Please note that libraries need bounds on the version of their dependencies to avoid bitrot and be effectively reusable.
+
 === Release QA Process
 
 The release QA process includes running all tests and checks on the release candidate.

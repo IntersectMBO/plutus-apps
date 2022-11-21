@@ -108,55 +108,61 @@ NOTE: you must run your editor from the nix shell, and not from, say, an
 application launcher like spotlight or dmenu for your editor to find it in
 its PATH.
 
-=== How to add a new Haskell package
-
-You need to do a few things when adding a new package, in the following order:
-
-. Add the cabal file for the new package.
-. Add the package to link:cabal.project[`cabal.project`].
-. Add the package to link:stack.yaml[`stack.yaml`].
-. Check that you can run `nix build -f default.nix plutus-apps.haskell.projectPackages.<package name>` successfully.
-
-[[update-haskell-pins]]
-=== How to update our pinned Haskell dependencies
-
-We have pinned versions of some Haskell packages specified via the usual `source-repository-package` (Cabal) and `extra-dep` (Stack) mechanisms.
-
-These can be managed normally, but ensure that:
-
-* If it is an `source-repository-package`/`extra-dep` from Git, you update the `sha256` mapping in `nix/haskell.nix`.
-For the moment you have to do this by hand, using the following command to get the sha: `nix-prefetch-git --quiet <repo-url> <rev> | jq .sha256`, or by just getting it wrong and trying to build it, in which case Nix will give you the right value.
-* For certain dependencies like `plutus-apps`, please run `nix flake lock --update-input <input-name>` to update `flake.lock`. A wrong-hash error on a `nix build` is a common hint.
-
-[[update-nix-pins]]
-=== How to update our pinned Nix dependencies
-
-We pin versions of some git repositories that are used by Nix, for example `nixpkgs`.
-
-We use Nix flakes to manage these dependencies, even though we do not
-actually use flakes for normal Nix builds. To manage the dependencies,
-see https://nixos.org/manual/nix/unstable/command-ref/new-cli/nix3-flake.html#flake-inputs[the Nix flake inputs documentation]
-and https://nixos.org/manual/nix/unstable/command-ref/new-cli/nix3-flake-lock.html[the Nix flake lock command].
-
-Specifically, you will probably want to say `nix flake lock --update-input <input-name>`.
-Do *not* use `nix flake update`, as that will update all the inputs, which we typically don't want to do.
-
-Inside of the project nix-shell, a version of Nix with flakes is available under the alias `nix-flakes`.
-
 [[update-index-state]]
-=== How to update the Hackage index state
+=== Updating dependencies
 
-The Hackage index state is pinned to a particular time in `cabal.project`.
-This helps with reproducibility: alongside using the same version of `cabal`, this ensures that everyone will get the same result from the `cabal` version solver.
-If you want to use a Hackage package from after the pinned index state time, you need to bump it.
-This is not a big deal, since all it does is change what packages `cabal` considers to be available when doing solving, but it *may* result in different versions being picked, so it's not completely safe.
+==== ... from Hackage
 
-Note that `cabal` itself keeps track of what index states it knows about, so you may need to update this with `cabal update` in order for `cabal` to be happy.
+Updating package dependencies from Hackage should work like normal in a
+Haskell project. The most important thing to note is that we pin the
+``index-state`` of the Hackage package index in ``cabal.project``. This
+means that cabal will always see Hackage “as if” it was that time, ensuring
+reproducibility. But it also means that if you need a package version that
+was released *after* that time, you need to bump the ``index-state`` (and
+to run ``cabal update`` locally). Please also note that index-state is a
+property of your working environment (the cabal project) not of the
+packages. This means that downstream consumers have no idea of your
+``index-state`` setting and you need to make sure your packages work
+correctly also without ``index-state``.
 
-The Nix code which builds our packages also cares about the index state.
-The set of index states which it knows about is controlled by `hackage.nix`, which is a Nix representation of Hackage.
-This therefore needs to be newer than the index state.
-You can update it xref:update-nix-pins[with the Nix flake commands].
+Because of how we use Nix to manage our Haskell build, whenever you do this
+you will also need to pull in the Nix equivalent of the newer
+``index-state``. You can do this by running ``nix flake lock --update-input
+hackage-nix``.
+
+==== ... from the Cardano package repository
+
+Many Cardano packages are not on Hackage and are instead in the `Cardano
+package repository
+<https://github.com/input-output-hk/cardano-haskell-packages>`, see the
+README for (lots) more information.
+
+Getting new packages from there works much like getting them from Hackage.
+The differences are that it can have an independent ``index-state``, and
+that there is a different Nix command you need to run afterwards: ``nix flake
+lock --update-input CHaP``.
+
+===== Using unreleased versions of dependencies
+
+Sometimes we need to use an unreleased version of one of our dependencies,
+either to fix an issue in a package that is not under our control, or to
+experiment with a pre-release version of one of our own packages.
+
+You can use a ``source-repository-package`` stanza to pull in the
+unreleased version.
+
+Please note that consumers of our packages will not pull these unreleased
+versions when compiling our packages so consider using ``source-repository-package``
+only as a temporary solution.
+
+For packages that we do not control, we can end up in a situation where we
+have a fork that looks like it will be long-lived or permanent (e.g. the
+maintainer is unresponsive, or the change has been merged but not
+released).
+
+In that case, release a patched version to the `Cardano package repository
+<https://github.com/input-output-hk/cardano-haskell-packages>`, which
+allows us to remove the ``source-repository-package`` stanza.
 
 === How to work with a local copy of source dependencies
 
@@ -350,7 +356,7 @@ Do not mix business logic with such things as reformatting and refactoring in a 
 A pull request is communication, so as usual, put yourself in the position of the reader: what does your audience (the reviewer) need to know to do their job?
 This information is easy for you to access, but hard for them to figure out, so write it down!
 
-However, better to put information in the code, commit messages, or changelog if possible: these persist but PR descriptions do not.
+However, better to put information in the code, commit messages or changelog if possible: these persist but PR descriptions do not.
 It's okay to repeat information from such places, or simply to point to it.
 For one-commit PRs, Github will automatically populate the PR description with the commit message, so if you've written a good commit message you're done!
 Sometimes there is "change-related" information that doesn't belong in a commit message but is useful ("Kris I think this will fix the issue you had yesterday").
@@ -473,6 +479,7 @@ Usually we don't edit `CHANGELOG.md` directly.
 
 You can make a changelog fragment using `scriv create` in the package directory, but you can also just create the fragment directly with an editor.
 A fragment is a markdown file beginning with a header giving the category of change.
+
 
 == Supporting systems
 
