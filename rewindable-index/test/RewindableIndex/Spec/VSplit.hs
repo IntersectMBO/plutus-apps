@@ -49,6 +49,18 @@ getHistory ix q = do
   es <- S.getEvents (ix ^. S.storage)
   traverse ((ix ^. S.query) ix q) $ tails es
 
+history
+  :: (Show s, Show e, Show n, Default s)
+  => Index s e n
+  -> PropertyM IO (Maybe [s])
+history ix = do
+  mix <- run ix
+  case mix of
+    Nothing  -> pure Nothing
+    Just ix' -> liftIO $ do
+      h <- getHistory ix' ()
+      pure $ Just h
+
 getView
   :: PrimMonad m
   => VGM.MVector (VG.Mutable v) e
@@ -82,18 +94,6 @@ notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
   pure $ getNotifications ix'
-
-history
-  :: (Show s, Show e, Show n, Default s)
-  => Index s e n
-  -> PropertyM IO (Maybe [s])
-history ix = do
-  mix <- run ix
-  case mix of
-    Nothing  -> pure Nothing
-    Just ix' -> liftIO $ do
-      h <- getHistory ix' ()
-      pure $ Just h
 
 monadic
   :: PropertyM IO Property
