@@ -71,6 +71,7 @@ module Ledger.Constraints.OffChain(
     , missingValueSpent
     , ConstraintProcessingState(..)
     , unbalancedTx
+    , valueSpentInputs
     , valueSpentOutputs
     , paramsL
     , processConstraintFun
@@ -78,6 +79,7 @@ module Ledger.Constraints.OffChain(
     , addOwnOutput
     , updateUtxoIndex
     , lookupTxOutRef
+    , lookupMintingPolicy
     , lookupScript
     , lookupScriptAsReferenceScript
     , prepareConstraints
@@ -86,6 +88,7 @@ module Ledger.Constraints.OffChain(
     , resolveScriptTxOutDatumAndValue
     , DatumWithOrigin(..)
     , datumWitness
+    , checkValueSpent
     ) where
 
 import Cardano.Api qualified as C
@@ -107,6 +110,7 @@ import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Debug.Trace qualified
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript)
 import Ledger.Ada qualified as Ada
@@ -727,7 +731,7 @@ processConstraint = \case
 
     MustMintValue mpsHash@(MintingPolicyHash mpsHashBytes) red tn i mref -> do
         -- See note [Mint and Fee fields must have ada symbol].
-        let value = (<>) (Ada.lovelaceValueOf 0) . Value.singleton (Value.mpsSymbol mpsHash) tn
+        let value = Value.singleton (Value.mpsSymbol mpsHash) tn
         -- If i is negative we are burning tokens. The tokens burned must
         -- be provided as an input. So we add the value burnt to
         -- 'valueSpentInputs'. If i is positive then new tokens are created

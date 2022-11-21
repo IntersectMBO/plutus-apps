@@ -31,6 +31,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxInReferenceWitnessHeader
   , toCardanoTxInScriptWitnessHeader
   , toCardanoMintValue
+  , toCardanoMintWitness
   , ToCardanoError(..)
   , FromCardanoError(..)
 ) where
@@ -128,13 +129,13 @@ toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
       C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
           <$> (case scriptOrRef of
             Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> (toCardanoTxIn ref)
+            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
           )
     P.PlutusV2 ->
       C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
           <$> (case scriptOrRef of
             Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> (toCardanoTxIn ref)
+            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
           )
   ) <*> pure datum
     <*> pure (C.fromPlutusData $ PV1.toData redeemer)

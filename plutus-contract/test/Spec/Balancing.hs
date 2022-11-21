@@ -143,7 +143,7 @@ balanceTxnMinAda2 =
 
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =
-    let vL n = Value.singleton (Scripts.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
+    let vL n = Value.singleton (Scripts.scriptCurrencySymbol coinMintingPolicyV1) "coinToken" n
         mkTx lookups constraints = mkTxConstraints @Void lookups constraints
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
@@ -151,7 +151,7 @@ balanceTxnNoExtraOutput =
             pkh <- Con.ownFirstPaymentPubKeyHash
 
             let val = vL 200
-                lookups = L.Constraints.plutusV1MintingPolicy coinMintingPolicy
+                lookups = L.Constraints.plutusV1MintingPolicy coinMintingPolicyV1
                 constraints = L.Constraints.mustMintValue val
                     <> L.Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOutEstimated)
 

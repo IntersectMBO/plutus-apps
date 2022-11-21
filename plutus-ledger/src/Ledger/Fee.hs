@@ -97,14 +97,20 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
     eh = emulatorEraHistory params
     ss = systemStart $ emulatorGlobals params
     utxo' = fromLedgerUTxO utxo
+    txIns = C.Api.txIns txBodyContent
+    (txIns', utxo'') = fromMaybe (txIns, utxo') $ do
+      guard $ null txIns
+      case Map.toList (C.Api.unUTxO utxo') of
+        []   -> Nothing
+        x:xs -> pure ([(fst x, undefined)], C.Api.UTxO $ Map.fromList xs)
     balance cChangeAddr extraOuts = C.Api.makeTransactionBodyAutoBalance
       C.Api.BabbageEraInCardanoMode
       ss
       eh
       (pProtocolParams params)
       mempty
-      utxo'
-      txBodyContent { C.Api.txOuts = C.Api.txOuts txBodyContent ++ extraOuts }
+      utxo''
+      txBodyContent { C.Api.txOuts = C.Api.txOuts txBodyContent ++ extraOuts, C.Api.txIns = txIns' }
       cChangeAddr
       Nothing
 
