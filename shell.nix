@@ -162,6 +162,10 @@ haskell.project.shellFor {
   + ''
     export WEB_COMMON_SRC=${webCommon.cleanSrc}
 
+    # This is probably set by haskell.nix's shellFor, but it interferes 
+    # with the pythonTools in nativeBuildInputs above.
+    # This workaround will become obsolete soon once this respository 
+    # is migrated to Standard.
     export PYTHONPATH=
   '';
 
