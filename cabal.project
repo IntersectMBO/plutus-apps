@@ -54,7 +54,10 @@ benchmarks: true
 test-show-details: direct
 
 allow-newer:
-  -- this is material for the hackage trustees
+  -- cardano-ledger packages need aeson >2, the following packages have a
+  -- too restictive upper bounds on aeson, so we relax them here. The hackage
+  -- trustees can make a revision to these packages cabal file to solve the
+  -- issue permanently.
   , ekg:aeson
   , ekg-json:aeson
   , openapi3:aeson

@@ -122,8 +122,8 @@ was released *after* that time, you need to bump the ``index-state`` (and
 to run ``cabal update`` locally). Please also note that index-state is a
 property of your working environment (the cabal project) not of the
 packages. This means that downstream consumers have no idea of your
-`index-state` setting and you need to make sure your packages work
-correctly also without `index-state`.
+``index-state`` setting and you need to make sure your packages work
+correctly also without ``index-state``.
 
 Because of how we use Nix to manage our Haskell build, whenever you do this
 you will also need to pull in the Nix equivalent of the newer
