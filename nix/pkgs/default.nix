@@ -50,6 +50,8 @@ let
   sphinx-markdown-tables = pkgs.python3Packages.callPackage ./sphinx-markdown-tables { };
   sphinxemoji = pkgs.python3Packages.callPackage ./sphinxemoji { };
 
+  scriv = pkgs.python3Packages.callPackage ./scriv { };
+
   # By default pre-commit-hooks.nix uses its own pinned version of nixpkgs. In order to
   # to get it to use our version we have to (somewhat awkwardly) use `nix/default.nix`
   # to which both `nixpkgs` and `system` can be passed.
@@ -110,6 +112,7 @@ let
 in
 {
   inherit sphinx-markdown-tables sphinxemoji sphinxcontrib-haddock;
+  inherit scriv;
   inherit nix-pre-commit-hooks;
   inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios cabal-fmt;
   inherit purs-tidy purs-0_14_3 spago spago2nix purescript-language-server psa;

@@ -44,8 +44,9 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, PaymentPubKeyHash, ScriptContext, TokenName, Value)
+import Ledger (Address, POSIXTime, ScriptContext, TokenName, Value)
 import Ledger.Ada qualified as Ada
+import Ledger.Address.Orphans ()
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -68,8 +69,8 @@ import Prelude qualified as Haskell
 
 -- | Datatype for creating a parameterized validator.
 data GameParam = GameParam
-    { gameParamPayeePkh  :: PaymentPubKeyHash
-    -- ^ Payment public key hash of the wallet locking some funds
+    { gameParamPayeePkh  :: Address
+    -- ^ Payment address of the wallet locking some funds
     , gameParamStartTime :: POSIXTime
     -- ^ Starting time of the game
     } deriving (Haskell.Show, Generic)
@@ -108,6 +109,8 @@ data GuessArgs =
     GuessArgs
         { guessArgsGameParam     :: GameParam
         -- ^ The parameters for parameterizing the validator.
+        , guessTokenTarget       :: Address
+        -- ^ The recipient of the guess token
         , guessArgsOldSecret     :: Haskell.String
         -- ^ The guess
         , guessArgsNewSecret     :: SecretArgument Haskell.String
@@ -176,7 +179,7 @@ checkGuess (HashedString actual) (ClearString gss) = actual == sha2_256 gss
 data GameInput =
       MintToken
     -- ^ Mint the "guess" token
-    | Guess ClearString HashedString Value
+    | Guess Address ClearString HashedString Value
     -- ^ Make a guess, extract the funds, and lock the remaining funds using a
     --   new secret word.
     deriving stock (Haskell.Show, Generic)
@@ -199,9 +202,9 @@ transition _ State{stateData=oldData, stateValue=oldValue} input = case (oldData
                 , stateValue = oldValue
                 }
              )
-    (Locked mph tn currentSecret, Guess theGuess nextSecret takenOut)
+    (Locked mph tn currentSecret, Guess guessTokenRecipient theGuess nextSecret takenOut)
         | checkGuess currentSecret theGuess ->
-        let constraints = Constraints.mustSpendAtLeast (token mph tn)
+        let constraints = Constraints.mustPayToAddress guessTokenRecipient (token mph tn)
                        <> Constraints.mustMintCurrency mph tn 0
             newValue = oldValue - takenOut
          in Just ( constraints
@@ -249,14 +252,14 @@ lock = endpoint @"lock" $ \LockArgs{lockArgsGameParam, lockArgsSecret, lockArgsV
 
 -- | The @"guess"@ endpoint.
 guess :: Promise () GameStateMachineSchema GameError ()
-guess = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessArgsOldSecret, guessArgsNewSecret, guessArgsValueTakenOut} -> do
+guess = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessTokenTarget, guessArgsOldSecret, guessArgsNewSecret, guessArgsValueTakenOut} -> do
 
     let guessedSecret = ClearString (toBuiltin (C.pack guessArgsOldSecret))
         newSecret     = HashedString (escape_sha2_256 (toBuiltin . C.pack <$> extractSecret guessArgsNewSecret))
 
     void
         $ SM.runStep (client guessArgsGameParam)
-            (Guess guessedSecret newSecret guessArgsValueTakenOut)
+            (Guess guessTokenTarget guessedSecret newSecret guessArgsValueTakenOut)
 
 cc :: PlutusTx.CompiledCode (GameParam -> GameState -> GameInput -> ScriptContext -> ())
 cc = $$(PlutusTx.compile [|| \a b c d -> check (mkValidator a b c d) ||])

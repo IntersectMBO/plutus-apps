@@ -77,6 +77,10 @@
       url = "github:input-output-hk/purescript-web-common";
       flake = false;
     };
+    CHaP = {
+      url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
   };
 
   outputs = { self, flake-utils, ... }@inputs:

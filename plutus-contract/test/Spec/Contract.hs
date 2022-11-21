@@ -381,6 +381,22 @@ tests =
           in run "mustSatisfyAnyOf [mempty] works"
             ( assertDone c tag (const True) "should be done"
             ) (void $ activateContract w1 c tag)
+
+        , let c :: Contract [Ledger.Slot] Schema ContractError () = do
+                void $ submitTx mempty
+                void $ awaitSlot 10
+                slotCI <- currentChainIndexSlot
+                tell [slotCI]
+                slotNC <- currentNodeClientSlot
+                tell [slotNC]
+              expectedState [slotCI, slotNC] = slotCI == slotNC
+              expectedState _                = False
+
+          in run "currentChainIndexSlot"
+            ( assertAccumState c tag expectedState "slots should be equal"
+            ) $ do
+              _ <- activateContract w1 c tag
+              void (Trace.waitNSlots 10)
         ]
 
 checkpointContract :: Contract () Schema ContractError ()

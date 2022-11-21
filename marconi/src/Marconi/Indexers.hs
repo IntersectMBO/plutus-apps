@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE PackageImports         #-}
 {-# LANGUAGE PatternSynonyms        #-}
+{-# LANGUAGE RecordWildCards        #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TupleSections          #-}
 
@@ -14,11 +15,9 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
-import Control.Exception (bracket_)
-import Control.Lens (makeClassy)
 import Control.Lens.Combinators (imap)
-import Control.Lens.Operators ((&), (^.))
-import Control.Monad (unless, void)
+import Control.Lens.Operators ((^.))
+import Control.Monad (void)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
@@ -31,16 +30,16 @@ import Streaming.Prelude qualified as S
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
                     SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
-import Cardano.Api.Byron qualified as Byron
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Control.Concurrent.STM.TMVar (TMVar, putTMVar, takeTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _blockNo, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
+import Marconi.Index.Utxos qualified as Utxos
 import Marconi.Types (TargetAddresses, TxOutRef, pattern CurrentEra, txOutRef)
 
 import RewindableIndex.Index.VSplit qualified as Ix
@@ -48,26 +47,64 @@ import RewindableIndex.Index.VSplit qualified as Ix
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extractDatumsFromTx txs
+    where
+        extractDatumsFromTx :: Tx era -> [(SlotNo, (Hash ScriptData, ScriptData))]
+        extractDatumsFromTx (Tx txBody _) =
+            fmap (slotNo,)
+            . Map.assocs
+            . scriptDataFromCardanoTxBody
+            $ txBody
+
+scriptDataFromCardanoTxBody :: C.TxBody era -> Map (Hash ScriptData) ScriptData
+scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ dats _) _ _) =
+    extractData dats
   where
     extractData :: Alonzo.TxDats era -> Map (Hash ScriptData) ScriptData
     extractData (Alonzo.TxDats' xs) =
       Map.fromList
       . fmap ((\x -> (C.hashScriptData x, x)) . Shelley.fromAlonzoData)
-      . Map.elems $ xs
+      . Map.elems
+      $ xs
+scriptDataFromCardanoTxBody _ = mempty
 
-    scriptDataFromCardanoTxBody :: C.TxBody era -> Map (Hash ScriptData) ScriptData
-    scriptDataFromCardanoTxBody Byron.ByronTxBody {} = mempty
-    scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) = mempty
-    scriptDataFromCardanoTxBody
-      (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ dats _) _ _) =
-          extractData dats
+unspentTx
+  :: C.IsCardanoEra era
+  => C.Tx era
+  -> [Utxos.UnspentTransaction]
+unspentTx (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
+    either (const []) id (unspentTx txOuts)
+    where
+        unspentTx :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxos.UnspentTransaction]
+        unspentTx = fmap (imap txoutToUnspentTransaction) . traverse (C.eraCast CurrentEra)
+        txoutToUnspentTransaction :: Int -> TxOut -> Utxos.UnspentTransaction
+        txoutToUnspentTransaction  ix out =
+            let
+                _txIx = C.TxIx $ fromIntegral ix
+                _txId = C.getTxId txBody
+                (C.TxOut address' value' datum' _ ) = out
+                _address = Utxo.toAddr address'
+                _value = C.txOutValueToValue value'
+                _datumHash = case datum' of
+                    (C.TxOutDatumHash _ d ) -> Just d
+                    _                       ->  Nothing
+                _datum = case datum' of
+                    (C.TxOutDatumInline _ d ) -> Just d
+                    _                         ->  Nothing
+            in
+                Utxos.UnspentTransaction {..}
 
-    extractDatumsFromTx
-      :: Tx era
-      -> [(SlotNo, (Hash ScriptData, ScriptData))]
-    extractDatumsFromTx (Tx txBody _) =
-      let hashes = Map.assocs $ scriptDataFromCardanoTxBody txBody
-       in map (slotNo,) hashes
+unspentTxs
+  :: C.IsCardanoEra era
+  => C.Block era
+  -> Maybe Utxos.UnspentTransactionEvent
+unspentTxs (C.Block (C.BlockHeader slotNo _ blkNo) txs) =
+    let
+        events = (concat . fmap unspentTx $ txs )
+    in
+        if null events then
+            Nothing
+        else
+            Just (Utxos.UnspentTransactionEvent events slotNo blkNo)
 
 
 -- UtxoIndexer
@@ -85,8 +122,8 @@ getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}
             . traverse (C.eraCast CurrentEra)
             . indexersFilter
             $ txOuts
-        pure $ outs & imap
-            (\ix out -> (out, txOutRef (C.getTxId txBody) (C.TxIx $ fromIntegral ix)))
+        pure . imap
+            (\ix out -> (out, txOutRef (C.getTxId txBody) (C.TxIx $ fromIntegral ix))) $ outs
 getInputs
   :: C.Tx era
   -> Set C.TxIn
@@ -170,23 +207,20 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
 -- The main difference between this worker and the utxoWorker is
 -- that we can perform queries with this worker against utxos Stablecoin
 queryAwareUtxoWorker
-    :: UtxoQueryComm    -- ^  used to communicate with query threads
+    :: UtxoQueryTMVar   -- ^  used to communicate with query threads
     -> TargetAddresses  -- ^ Target addresses to filter for
     -> Worker
-queryAwareUtxoWorker (UtxoQueryComm qreq utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
-   Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+queryAwareUtxoWorker (UtxoQueryTMVar utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
+   Utxo.open path (Utxo.Depth 2160) >>= bootstrapQuery >>= innerLoop
   where
+    bootstrapQuery :: UtxoIndex -> IO UtxoIndex
+    bootstrapQuery index = (atomically $ putTMVar utxoIndexer index ) >> pure index
     innerLoop :: UtxoIndex -> IO ()
     innerLoop index = do
-        isquery <- atomically . tryReadTMVar $ qreq
-        unless (null isquery) $ bracket_
-            (atomically (takeTMVar qreq ) ) -- block
-            (atomically (takeTMVar qreq ) ) -- unblock
-            (atomically  (putTMVar utxoIndexer index) ) -- allow the query thread to access in-memory utxos
         signalQSemN _barrier 1
         event <- atomically $ readTChan ch
         case event of
-            RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ct -> do
+            RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ -> do
                 let utxoRow = getUtxoUpdate slotNo txs blkNo(Just targetAddresses)
                 Ix.insert utxoRow index >>= innerLoop
             RollBackward cp _ct -> do
@@ -304,10 +338,6 @@ txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
 txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
-type QueryRequest = ()
-
-data UtxoQueryComm = UtxoQueryComm
-    { _QueryReq :: TMVar QueryRequest   -- ^ query request fro query thread
-    , _Indexer  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
+newtype UtxoQueryTMVar = UtxoQueryTMVar
+    { unUtxoIndex  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
     }
-makeClassy ''UtxoQueryComm

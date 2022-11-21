@@ -23,6 +23,7 @@ module Marconi.Index.Utxo
   , slotNo
   , address
   , reference
+  , toAddr
   , TxOut
   ) where
 

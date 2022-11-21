@@ -214,7 +214,6 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} 
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
-            -- P.addMissingValueSpent
             traverse_ processConstraint (includeDatumConstraints sortedConstraints)
             mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
             lift $ setValidityRange (rangeConstraints sortedConstraints)
