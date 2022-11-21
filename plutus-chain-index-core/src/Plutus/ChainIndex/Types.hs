@@ -315,9 +315,10 @@ instance Monoid Point where
     mempty = PointAtGenesis
 
 instance Ord Tip where
-    TipAtGenesis <= _            = True
-    _            <= TipAtGenesis = False
-    (Tip _ _ lb) <= (Tip _ _ rb) = lb <= rb
+    compare TipAtGenesis TipAtGenesis   = EQ
+    compare TipAtGenesis _              = LT
+    compare _            TipAtGenesis   = GT
+    compare (Tip ls _ lb) (Tip rs _ rb) = compare ls rs <> compare lb rb
 
 instance Pretty Tip where
     pretty TipAtGenesis = "TipAtGenesis"
