@@ -31,8 +31,9 @@ import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustBeSignedBy, mustIncludeDatumInTx,
                                                            mustMintValue, mustMintValueWithRedeemer,
-                                                           mustPayToOtherScript, mustPayToOtherScriptWithDatumInTx,
-                                                           mustPayToPubKey, mustPayToTheScript, mustProduceAtLeast,
+                                                           mustPayToOtherScriptWithDatumHash,
+                                                           mustPayToOtherScriptWithDatumInTx, mustPayToPubKey,
+                                                           mustPayToTheScriptWithDatumHash, mustProduceAtLeast,
                                                            mustSatisfyAnyOf, mustSpendAtLeast, mustValidateIn)
 import Ledger.Test (asDatum, asRedeemer, someValidatorHash)
 import Ledger.Tx qualified as Tx
@@ -109,9 +110,9 @@ allConstraintsValid = ConstraintParams
     { mustValidateIn = Just $ MustValidateIn 1000,
       mustBeSignedBy = Just $ MustBeSignedBy w1Pkh,
       mustIncludeDatumInTx = Just MustIncludeDatumInTx,
-      mustPayToTheScript = Just $ MustPayToTheScript adaValue,
+      mustPayToTheScriptWithDatumHash = Just $ MustPayToTheScript adaValue,
       mustPayToPubKey = Just $ MustPayToPubKey w2Pkh adaValue,
-      mustPayToOtherScript = Just $ MustPayToOtherScript someValidatorHash adaValue,
+      mustPayToOtherScriptWithDatumHash = Just $ MustPayToOtherScript someValidatorHash adaValue,
       mustMintValue = Just $ MustMintValue otherTokenValue,
       mustSpendAtLeast = Just $ MustSpendAtLeast adaValue,
       mustProduceAtLeast = Just $ MustProduceAtLeast adaValue
@@ -150,7 +151,7 @@ mustSatisfyAnyOfContract
             payToScript =
                 if isJust (mustIncludeDatumInTx offChainConstraints)
                 then Cons.mustPayToOtherScriptWithDatumInTx someValidatorHash unitDatum (adaValue <> tknValue lc)
-                else Cons.mustPayToOtherScript someValidatorHash unitDatum (adaValue <> tknValue lc)
+                else Cons.mustPayToOtherScriptWithDatumHash someValidatorHash unitDatum (adaValue <> tknValue lc)
 
 -- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with all of the same
 -- | constraints onchain and offchain
@@ -265,7 +266,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
             (void $ trace contract)
     ,
         let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue,
-                                        mustPayToTheScript = Just $ MustPayToTheScript adaValue }
+                                        mustPayToTheScriptWithDatumHash = Just $ MustPayToTheScript adaValue }
             onChainConstraints  = def { mustValidateIn = Just $ MustValidateIn 1000 }
             contract = mustSatisfyAnyOfContract submitTxFromConstraints
                         lc offChainConstraints onChainConstraints
@@ -346,12 +347,12 @@ buildConstraints cps = do
             P.maybe Nothing (\_ ->
                 Just $ Cons.mustIncludeDatumInTx unitDatum) (mustIncludeDatumInTx cps),
             P.maybe Nothing (\cp ->
-                Just $ Cons.mustPayToTheScript () (value cp)) (mustPayToTheScript cps),
+                Just $ Cons.mustPayToTheScriptWithDatumHash () (value cp)) (mustPayToTheScriptWithDatumHash cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustPayToPubKey (ppkh cp) (value cp)) (mustPayToPubKey cps),
             P.maybe Nothing (\cp ->
                 Just $
-                Cons.mustPayToOtherScript (vh cp) unitDatum (value cp)) (mustPayToOtherScript cps),
+                Cons.mustPayToOtherScriptWithDatumHash (vh cp) unitDatum (value cp)) (mustPayToOtherScriptWithDatumHash cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustMintValue (value cp)) (mustMintValue cps),
             P.maybe Nothing (\cp ->
@@ -382,9 +383,9 @@ data ConstraintParams
     mustValidateIn,
     mustBeSignedBy,
     mustIncludeDatumInTx,
-    mustPayToTheScript,
+    mustPayToTheScriptWithDatumHash,
     mustPayToPubKey,
-    mustPayToOtherScript,
+    mustPayToOtherScriptWithDatumHash,
     mustMintValue,
     mustSpendAtLeast,
     mustProduceAtLeast :: Maybe ConstraintParam

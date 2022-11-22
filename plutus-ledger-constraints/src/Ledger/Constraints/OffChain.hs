@@ -480,8 +480,8 @@ prepareConstraints ownOutputs constraints = do
     let
       -- This is done so that the 'MustIncludeDatumInTxWithHash' and
       -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
+      -- constraints. @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@
+      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@
       -- must yield the same behavior.
       isVerificationConstraints = \case
         MustIncludeDatumInTxWithHash {} -> True

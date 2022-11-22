@@ -175,7 +175,7 @@ mkTx = \case
     PaymentPubKeyTarget pkh vl ->
         Constraints.mustPayToPubKey pkh vl
     ScriptTarget vs ds vl ->
-        Constraints.mustPayToOtherScript vs ds vl
+        Constraints.mustPayToOtherScriptWithDatumHash vs ds vl
 
 data Action = Redeem | Refund
 
@@ -268,7 +268,7 @@ pay ::
     -> Contract w s e TxId
 pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
-    let tx = Constraints.mustPayToTheScript pk vl
+    let tx = Constraints.mustPayToTheScriptWithDatumHash pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
     utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
     getCardanoTxId <$> submitUnbalancedTx utx

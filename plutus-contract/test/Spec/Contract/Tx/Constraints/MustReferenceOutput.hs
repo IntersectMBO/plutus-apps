@@ -214,7 +214,7 @@ mustReferenceOutputWithMultiplePubkeyOutputs submitTxFromConstraints l =
 mustReferenceOutputWithSingleScriptOutput :: SubmitTx -> PSU.Language -> TestTree
 mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
     let contractWithScriptOutput = do
-            let tx1 = Cons.mustPayToOtherScript someValidatorHash
+            let tx1 = Cons.mustPayToOtherScriptWithDatumHash someValidatorHash
                       (asDatum $ PlutusTx.toBuiltinData ()) (Ada.lovelaceValueOf 2_000_000)
             ledgerTx1 <- submitTx tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
