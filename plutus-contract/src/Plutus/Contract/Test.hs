@@ -208,8 +208,8 @@ checkPredicateCoverage ::
     -> TracePredicate -- ^ The predicate to check
     -> EmulatorTrace ()
     -> TestTree
-checkPredicateCoverage nm cr predicate action =
-  checkPredicateCoverageOptions defaultCheckOptions nm cr predicate action
+checkPredicateCoverage =
+  checkPredicateCoverageOptions defaultCheckOptions
 
 checkPredicateCoverageOptions ::
     CheckOptions -- ^ Options to use
@@ -342,8 +342,7 @@ endpointAvailable contract inst = TracePredicate $
                 tell @(Doc Void) ("missing endpoint:" <+> fromString (symbolVal (Proxy :: Proxy l)))
                 pure False
 
-tx
-    :: forall w s e a.
+tx :: forall w s e a.
        ( Monoid w
        )
     => Contract w s e a

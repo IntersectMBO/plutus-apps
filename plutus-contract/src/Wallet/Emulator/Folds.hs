@@ -104,7 +104,7 @@ failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
           <|> preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _ValidationFailed) e
         filterPhase Nothing (_, i, t, v, c, l)   = Just (i, t, v, c, l)
-        filterPhase (Just p) (p', i, t, v, c, l) = if p == p' then Just (i, t, v, c, l) else Nothing
+        filterPhase (Just p) (p', i, t, v, c, l) = guard (p == p') $> (i, t, v, c, l)
 
 -- | Transactions that were validated
 validatedTransactions :: EmulatorEventFold [(TxId, CardanoTx, [Text])]

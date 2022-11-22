@@ -61,6 +61,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL, pProtocolParams)
 import Ledger.Constraints qualified as P
@@ -278,7 +279,8 @@ processConstraint = \case
             $ guard $ is Tx._PublicKeyDecoratedTxOut txout
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
-
+    P.MustBeSignedBy pk ->
+        unbalancedTx . P.requiredSignatories %= Set.insert pk
     P.MustSpendScriptOutput txo redeemer mref -> do
         txout <- lookupTxOutRef txo
         mkWitness <- case mref of
