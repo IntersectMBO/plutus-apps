@@ -17,7 +17,7 @@ import Database.SQLite.Simple.FromField qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
 import GHC.Generics (Generic)
 
-import Cardano.Api (SlotNo)
+import Cardano.Api (SlotNo (SlotNo))
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 -- TODO Remove the following dependencies (and also cardano-ledger-*
@@ -49,6 +49,7 @@ newtype TxCbor = TxCbor BS.ByteString
 data ScriptTxRow = ScriptTxRow
   { scriptAddress :: !ScriptAddress
   , txCbor        :: !TxCbor
+  , txSlot        :: !SlotNo
   } deriving (Generic)
 
 instance SQL.ToField ScriptAddress where
@@ -60,9 +61,15 @@ instance SQL.FromField ScriptAddress where
       (\b -> maybe cantDeserialise (return . ScriptAddress) $ Shelley.deserialiseFromRawBytes Shelley.AsScriptHash b) . deserialiseOrFail
     where
       cantDeserialise = SQL.returnError SQL.ConversionFailed f "Cannot deserialise address."
+instance SQL.ToField SlotNo where
+  toField (SlotNo n) =  SQL.toField $ (fromIntegral n :: Int)
+instance SQL.FromField SlotNo where
+  fromField f = SlotNo <$> SQL.fromField f
 
 instance SQL.ToRow ScriptTxRow where
-  toRow o = [SQL.toField $ scriptAddress o, SQL.toField $ txCbor o]
+  toRow o = [ SQL.toField $ scriptAddress o
+            , SQL.toField $ txCbor o
+            , SQL.toField $ txSlot o ]
 
 -- * Indexer
 
@@ -100,7 +107,7 @@ open :: (ScriptTxIndex -> ScriptTxUpdate -> IO [()]) -> FilePath -> Depth -> IO 
 open onInsert dbPath (Depth k) = do
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
-  SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL)"
+  SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL, slotNo INT NOT NULL)"
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address ON script_transactions (scriptAddress)"
   pure ix
 
@@ -109,13 +116,13 @@ open onInsert dbPath (Depth k) = do
     store ix = do
       buffered <- Ix.getBuffer $ ix ^. Ix.storage
       let rows = do
-            ScriptTxUpdate txScriptAddrs _slotNo <- buffered
+            ScriptTxUpdate txScriptAddrs slotNo <- buffered
             (txCbor', scriptAddrs) <- txScriptAddrs
             scriptAddr <- scriptAddrs
-            pure $ ScriptTxRow scriptAddr txCbor'
+            pure $ ScriptTxRow scriptAddr txCbor' slotNo
       SQL.execute_ (ix ^. Ix.handle) "BEGIN"
       forM_ rows $
-        SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor) VALUES (?, ?)"
+        SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo) VALUES (?, ?, ?)"
       SQL.execute_ (ix ^. Ix.handle) "COMMIT"
 
 query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
