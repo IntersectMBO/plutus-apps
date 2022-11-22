@@ -4,21 +4,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Marconi.Index.ScriptTx where
 
 import Data.ByteString qualified as BS
 import Data.Foldable (foldl', toList)
-import Data.Functor ((<&>))
-import Data.Maybe (catMaybes, fromMaybe)
-import Data.Proxy (Proxy (Proxy))
+import Data.Maybe (catMaybes)
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
 import GHC.Generics (Generic)
 
-import Cardano.Api (BlockHeader, ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, SlotNo (SlotNo))
+import Cardano.Api (BlockHeader, ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, SlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 -- TODO Remove the following dependencies (and also cardano-ledger-*
@@ -32,6 +29,7 @@ import Cardano.Ledger.Crypto qualified as LedgerCrypto
 import Cardano.Ledger.Keys qualified as LedgerShelley
 import Cardano.Ledger.Shelley.Scripts qualified as LedgerShelley
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as Timelock
+import Marconi.Orphans ()
 import Marconi.Types ()
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
@@ -130,10 +128,6 @@ instance SQL.FromField (StorableQuery ScriptTxHandle) where
       \b -> maybe cantDeserialise (return . ScriptTxAddress) $ Shelley.deserialiseFromRawBytes Shelley.AsScriptHash b
     where
       cantDeserialise = SQL.returnError SQL.ConversionFailed f "Cannot deserialise address."
-instance SQL.ToField SlotNo where
-  toField (SlotNo n) =  SQL.toField (fromIntegral n :: Int)
-instance SQL.FromField SlotNo where
-  fromField f = SlotNo <$> SQL.fromField f
 
 instance SQL.ToRow ScriptTxRow where
   toRow o = [ SQL.toField $ scriptAddress o
@@ -142,15 +136,6 @@ instance SQL.ToRow ScriptTxRow where
             , SQL.toField $ blockHash o ]
 
 deriving instance SQL.FromRow ScriptTxRow
-
-instance SQL.ToField (Hash BlockHeader) where
-  toField f = SQL.toField $ C.serialiseToRawBytes f
-
-instance SQL.FromField (Hash BlockHeader) where
-   fromField f =
-      SQL.fromField f <&>
-        fromMaybe (error "Cannot deserialise block hash") .
-          C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
 
 -- * Indexer
 

@@ -62,6 +62,8 @@ import GHC.Generics (Generic)
 -}
 data family StorableEvent h
 
+-- | The resume and query functionality requires a way to specify points on the chain from which we
+-- want to resume, or points up to which we want to query.
 type family StorablePoint h
 
 data family StorableQuery h
@@ -114,7 +116,7 @@ data QueryInterval p =
         if there is a demand from the users of the API.
 -}
 class Buffered h where
-  -- This function persists the memory/buffer events to disk.
+  -- | This function persists the memory/buffer events to disk when the memory buffer is filled.
   persistToStorage :: Foldable f => f (StorableEvent h) -> h -> StorableMonad h h
 
   {- This function retrieves the events from the disk/events area.
