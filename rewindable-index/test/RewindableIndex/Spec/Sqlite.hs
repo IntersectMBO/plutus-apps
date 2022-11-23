@@ -135,12 +135,11 @@ stateId = 1
 newSqliteIndexer
   :: TestFn
   -> Word
-  -> Word
   -> Int
   -> IO (Maybe Config)
-newSqliteIndexer accFn memBuf diskBuf ag0 = do
+newSqliteIndexer accFn memBuf ag0 = do
   h <- Sql.open ":memory:"
-  c <- emptyState (fromIntegral memBuf) (fromIntegral diskBuf) (Handle h)
+  c <- emptyState (fromIntegral memBuf)  (Handle h)
   Sql.execute_ h "DROP TABLE IF EXISTS index_property_tests"
   -- On-disk cache
   Sql.execute_ h "CREATE TABLE index_property_cache (point INTEGER PRIMARY KEY, event INTEGER)"
@@ -339,7 +338,7 @@ run (Ix.New f depth ag0)
       let d = fromIntegral depth
       -- In the model the K value is always `depth` - 1 to make place for the accumulator.
       -- The second parameter is not really that important.
-      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ((d + 1) * 2) ag0
+      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ag0
       -- On creation the slot number will always be 0.
       pure $ (,0) <$> indexer
 run (Ix.Insert e ix) = do

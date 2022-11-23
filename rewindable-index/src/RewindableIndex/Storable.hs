@@ -2,7 +2,6 @@ module RewindableIndex.Storable
   ( -- * State
     Config
   , memoryBufferSize
-  , diskBufferSize
   , State
   , handle
   , config
@@ -182,9 +181,8 @@ class HasPoint e p where
    to allocated and when to flush the memory buffer or roll the disk events into
    an aggregate database structure.
 -}
-data Config = Config
+newtype Config = Config
   { _memoryBufferSize :: Int
-  , _diskBufferSize   :: Int
   } deriving (Show, Eq)
 $(Lens.makeLenses ''Config)
 
@@ -204,13 +202,11 @@ $(Lens.makeLenses ''State)
 emptyState
   :: PrimMonad (StorableMonad h)
   => Int
-  -> Int
   -> h
   -> StorableMonad h (State h)
-emptyState memBuf dskBuf hdl = do
+emptyState memBuf hdl = do
   v <- VM.new memBuf
   pure $ State { _config = Config { _memoryBufferSize = memBuf
-                                  , _diskBufferSize   = dskBuf
                                   }
                , _storage = Storage { _events = v
                                     , _cursor = 0

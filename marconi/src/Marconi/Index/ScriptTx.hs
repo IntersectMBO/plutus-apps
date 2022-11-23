@@ -4,14 +4,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Marconi.Index.ScriptTx where
 
-import Codec.Serialise (deserialiseOrFail)
-import Control.Lens.Operators ((^.))
 import Data.ByteString qualified as BS
-import Data.Foldable (forM_, toList)
-import Data.Maybe (catMaybes, fromJust)
+import Data.Foldable (foldl', forM_, toList)
+import Data.Maybe (catMaybes)
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
@@ -32,37 +31,104 @@ import Cardano.Ledger.Keys qualified as LedgerShelley
 import Cardano.Ledger.Shelley.Scripts qualified as LedgerShelley
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as Timelock
 
-import RewindableIndex.Index.VSqlite (SqliteIndex)
-import RewindableIndex.Index.VSqlite qualified as Ix
+import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
+                                 QueryInterval (QEverything, QInterval), Queryable (queryStorage),
+                                 Rewindable (rewindStorage), StorableEvent, StorableMonad, StorablePoint, StorableQuery,
+                                 StorableResult, emptyState, filterWithQueryInterval)
+import RewindableIndex.Storable qualified as Storable
 
+{- The first thing that we need to define for a new indexer is the `handler` data
+   type, meant as a wrapper for the connection type (in this case the SQLite
+   connection).
+
+   However this is a very good place to add some more configurations
+   that the indexer may require (for example performance tuning settings). In our
+   case we add the number of events that we want to return from the on-disk buffer -}
+
+data ScriptTxHandle = ScriptTxHandle
+  { hdlConnection :: SQL.Connection
+  , hdlDiskStore  :: Int
+  }
+
+{- The next step is to define the data types that make up the indexer. There are
+   5 of these and they depend on the handle that we previously defined. We make use
+   of this semantic dependency by using type and data families that connect these
+   types to the `handle` that was previously defined.
+
+   If you want to consider semantics, you can think of the `handle` type as identifying
+   both the database connection type and the database structure. Thinking of it this
+   way makes the reason for the dependency clearer.
+
+   The first type we introduce is the monad in which the database (and by extension,
+   the indexer) runs. -}
+
+type instance StorableMonad ScriptTxHandle = IO
+
+{- The next type we introduce is the type of events. Events are the data atoms that
+   the indexer consumes. They depend on the `handle` because they need to eventually
+   be persisted in the database, so the database has to be able to accomodate them.
+
+   The original implementation used two spearate data structures for storing data
+   in memory vs. on-disk. It has the advantage of a better usage of memory and the
+   disadvantage of complicating the implementation quite a bit. I am leaving it as-is
+   for now, as this is more of a tutorial implementation and complicating things
+   may have some educational value. -}
+
+data instance StorableEvent ScriptTxHandle = ScriptTxEvent
+  { txScripts :: [(TxCbor, [StorableQuery ScriptTxHandle])]
+  , slotNo    :: !SlotNo
+  } deriving (Show)
+
+{- The resume and query functionality requires a way to specify points on the chain
+   from which we want to resume, or points up to which we want to query. Next we
+   define the types of these points. -}
+
+type instance StorablePoint ScriptTxHandle = SlotNo
+
+-- We also need to know at which slot number an event was produced.
+
+instance HasPoint (StorableEvent ScriptTxHandle) SlotNo where
+  getPoint (ScriptTxEvent _ s) = s
+
+{- Next we begin to defined the types required for running queries. Both request and
+   response types will depend naturally on the structure of the database, which is
+   identified by our `handle`. First, lets define the type for queries (or requests). -}
+
+newtype instance StorableQuery ScriptTxHandle = ScriptTxAddress Shelley.ScriptHash
+  deriving (Show, Eq)
+
+-- Now, we need one more type for the query results.
+
+newtype instance StorableResult ScriptTxHandle = ScriptTxResult [TxCbor]
+
+-- Next, we define types required for the interaction with SQLite and the cardano
+-- blocks.
 
 newtype Depth = Depth Int
 
-newtype ScriptAddress = ScriptAddress Shelley.ScriptHash
-  deriving (Show, Eq)
 newtype TxCbor = TxCbor BS.ByteString
-  deriving (Show)
+  deriving (Eq, Show)
   deriving newtype (SQL.ToField, SQL.FromField)
+
+type ScriptTxIndexer = Storable.State ScriptTxHandle
 
 -- * SQLite
 
 data ScriptTxRow = ScriptTxRow
-  { scriptAddress :: !ScriptAddress
+  { scriptAddress :: !(StorableQuery ScriptTxHandle)
   , txCbor        :: !TxCbor
   , txSlot        :: !SlotNo
   } deriving (Generic)
 
-instance SQL.ToField ScriptAddress where
-  toField (ScriptAddress hash)  = SQL.SQLBlob . Shelley.serialiseToRawBytes $ hash
-instance SQL.FromField ScriptAddress where
+instance SQL.ToField (StorableQuery ScriptTxHandle) where
+  toField (ScriptTxAddress hash)  = SQL.SQLBlob . Shelley.serialiseToRawBytes $ hash
+instance SQL.FromField (StorableQuery ScriptTxHandle) where
   fromField f = SQL.fromField f >>=
-    either
-      (const cantDeserialise)
-      (\b -> maybe cantDeserialise (return . ScriptAddress) $ Shelley.deserialiseFromRawBytes Shelley.AsScriptHash b) . deserialiseOrFail
+      \b -> maybe cantDeserialise (return . ScriptTxAddress) $ Shelley.deserialiseFromRawBytes Shelley.AsScriptHash b
     where
       cantDeserialise = SQL.returnError SQL.ConversionFailed f "Cannot deserialise address."
 instance SQL.ToField SlotNo where
-  toField (SlotNo n) =  SQL.toField $ (fromIntegral n :: Int)
+  toField (SlotNo n) =  SQL.toField (fromIntegral n :: Int)
 instance SQL.FromField SlotNo where
   fromField f = SlotNo <$> SQL.fromField f
 
@@ -71,78 +137,159 @@ instance SQL.ToRow ScriptTxRow where
             , SQL.toField $ txCbor o
             , SQL.toField $ txSlot o ]
 
+deriving anyclass instance SQL.FromRow ScriptTxRow
+
 -- * Indexer
 
-type Query = ScriptAddress
-type Result = [TxCbor]
+type Query = StorableQuery ScriptTxHandle
+type Result = StorableResult ScriptTxHandle
 
-data ScriptTxUpdate = ScriptTxUpdate
-  { txScripts :: [(TxCbor, [ScriptAddress])]
-  , slotNo    :: !SlotNo
-  } deriving (Show)
-
-type ScriptTxIndex = SqliteIndex ScriptTxUpdate () Query Result
-
-
-toUpdate :: forall era . C.IsCardanoEra era => [C.Tx era] -> SlotNo -> ScriptTxUpdate
-toUpdate txs = ScriptTxUpdate txScripts'
+toUpdate
+  :: forall era . C.IsCardanoEra era
+  => [C.Tx era]
+  -> SlotNo
+  -> StorableEvent ScriptTxHandle
+toUpdate txs = ScriptTxEvent txScripts'
   where
     txScripts' = map (\tx -> (TxCbor $ C.serialiseToCBOR tx, getTxScripts tx)) txs
 
-getTxBodyScripts :: forall era . C.TxBody era -> [ScriptAddress]
+getTxBodyScripts :: forall era . C.TxBody era -> [StorableQuery ScriptTxHandle]
 getTxBodyScripts body = let
     hashesMaybe :: [Maybe C.ScriptHash]
     hashesMaybe = case body of
-      Shelley.ShelleyTxBody shelleyBasedEra _ scripts _ _ _ -> flip map scripts $ \script ->
-        case fromShelleyBasedScript shelleyBasedEra script of
-          Shelley.ScriptInEra _ script' -> Just $ C.hashScript script'
+      Shelley.ShelleyTxBody shelleyBasedEra _ scripts _ _ _ ->
+        flip map scripts $ \script ->
+          case fromShelleyBasedScript shelleyBasedEra script of
+            Shelley.ScriptInEra _ script' -> Just $ C.hashScript script'
       _ -> [] -- Byron transactions have no scripts
     hashes = catMaybes hashesMaybe :: [Shelley.ScriptHash]
-  in map ScriptAddress hashes
+  in map ScriptTxAddress hashes
 
-getTxScripts :: forall era . C.Tx era -> [ScriptAddress]
+getTxScripts :: forall era . C.Tx era -> [StorableQuery ScriptTxHandle]
 getTxScripts (C.Tx txBody _ws) = getTxBodyScripts txBody
 
-open :: (ScriptTxIndex -> ScriptTxUpdate -> IO [()]) -> FilePath -> Depth -> IO ScriptTxIndex
-open onInsert dbPath (Depth k) = do
-  ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
-  let c = ix ^. Ix.handle
+{- Now that all connected data types have been defined, we go on to implement some
+   of the type classes required for information storage and retrieval. -}
+
+instance Buffered ScriptTxHandle where
+  {- The data is buffered in memory. When the memory buffer is filled, we need to store
+     it on disk. -}
+  persistToStorage
+    :: Foldable f
+    => f (StorableEvent ScriptTxHandle)
+    -> ScriptTxHandle
+    -> IO ScriptTxHandle
+  persistToStorage es h = do
+    let rows = foldl' (\ea e -> ea ++ flatten e) [] es
+        c    = hdlConnection h
+    SQL.execute_ c "BEGIN"
+    forM_ rows $
+      SQL.execute c "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo) VALUES (?, ?, ?)"
+    SQL.execute_ c "COMMIT"
+    pure h
+
+    where
+      flatten :: StorableEvent ScriptTxHandle -> [ScriptTxRow]
+      flatten (ScriptTxEvent txs sl) = do
+        (tx, scriptAddrs) <- txs
+        addr <- scriptAddrs
+        pure $ ScriptTxRow { scriptAddress = addr
+                           , txCbor        = tx
+                           , txSlot        = sl
+                           }
+
+  {- We want to potentially store data in two formats. The first one is similar (if
+     not identical) to the format of data stored in memory; it should contain information
+     that allows knowing at which point the data was generated.
+
+     We use this first format to support rollbacks for disk data. The second format,
+     which is not always necessary and does not have any predetermined structure,
+     should be thought of as an aggregate of the previously produced events.
+
+     For this indexer we don't really need an aggregate, so our "aggregate" has almost the same
+     structure as the in-memory data. We pretend that there is an aggregate by
+     segregating the data into two sections, by using the `hdlDiskStore` parameter. We
+     take this approach because we don't want to return the entire database when this
+     function is called, and we know that there is a point after which we will not
+     see any rollbacks. -}
+
+  -- TODO: getStoredPoints (?)
+  getStoredEvents
+    :: ScriptTxHandle
+    -> IO [StorableEvent ScriptTxHandle]
+  getStoredEvents (ScriptTxHandle c sz) = do
+    [[sn]] <- SQL.query c "SELECT MIN(slotNo) FROM script_transactions GROUP BY slotNo ORDER BY slotNo LIMIT ?" (SQL.Only sz)
+    es <- SQL.query c "SELECT scriptAddress, txCbor, slotNo FROM script_transactions WHERE slotNo >= ? ORDER BY slotNo DESC, txCbor, scriptAddress" (SQL.Only (sn :: Integer))
+    pure $ asEvents es
+
+-- This function recomposes the in-memory format from the database records. This
+-- function expectes it's first argument to be ordered by slotNo and txCbor for the
+-- proper grouping of records.
+--
+-- TODO: There should be an easier lensy way of doing this.
+asEvents
+  :: [ScriptTxRow]
+  -> [StorableEvent ScriptTxHandle]
+asEvents [] = []
+asEvents rs@(ScriptTxRow _ _ sn : _) =
+   let (xs, ys) = span (\(ScriptTxRow _ _ sn') -> sn == sn') rs
+    in mkEvent xs : asEvents ys
+  where
+    mkEvent :: [ScriptTxRow] -> StorableEvent ScriptTxHandle
+    mkEvent rs'@(ScriptTxRow _ _ sn' : _) =
+       ScriptTxEvent { slotNo = sn'
+                     , txScripts = agScripts rs'
+                     }
+    mkEvent _ = error "We should always be called with a non-empty list"
+    agScripts :: [ScriptTxRow] -> [(TxCbor, [StorableQuery ScriptTxHandle])]
+    agScripts [] = []
+    agScripts rs'@(ScriptTxRow _ tx _ : _) =
+       let (xs, ys) = span (\(ScriptTxRow _ tx' _) -> tx == tx') rs'
+        in (tx, map scriptAddress xs) : agScripts ys
+
+instance Queryable ScriptTxHandle where
+  queryStorage
+    :: Foldable f
+    => QueryInterval SlotNo
+    -> f (StorableEvent ScriptTxHandle)
+    -> ScriptTxHandle
+    -> StorableQuery ScriptTxHandle
+    -> IO (StorableResult ScriptTxHandle)
+  queryStorage qi es (ScriptTxHandle c _) q = do
+    persisted :: [ScriptTxRow] <-
+      case qi of
+        QEverything -> SQL.query c
+          "SELECT scriptAddress, txCbor, slotNo FROM script_transactions WHERE scriptAddress = ? ORDER BY slotNo ASC, txCbor, scriptAddress" (SQL.Only q)
+        QInterval _ e -> SQL.query c
+          "SELECT scriptAddress, txCbor, slotNo FROM script_transactions WHERE slotNo <= ? AND scriptAddress = ? ORDER BY slotNo ASC, txCbor, scriptAddress" (e, q)
+    -- Note that ordering is quite important here, as the `filterWithQueryInterval`
+    -- function assumes events are ordered from oldest (the head) to most recent.
+    let updates = filterWithQueryInterval qi (asEvents persisted ++ toList es)
+    pure . ScriptTxResult $ filterByScriptAddress q updates
+
+    where
+      filterByScriptAddress :: StorableQuery ScriptTxHandle -> [StorableEvent ScriptTxHandle] -> [TxCbor]
+      filterByScriptAddress addr updates = do
+         ScriptTxEvent update _slotNo <- updates
+         map fst $ filter (\(_, addrs) -> addr `elem` addrs) update
+
+instance Rewindable ScriptTxHandle where
+  rewindStorage
+    :: SlotNo
+    -> ScriptTxHandle
+    -> IO (Maybe ScriptTxHandle)
+  rewindStorage sn h@(ScriptTxHandle c _) = do
+     SQL.execute c "DELETE FROM script_transactions WHERE slotNo > ?" (SQL.Only sn)
+     pure $ Just h
+
+open :: FilePath -> Depth -> IO ScriptTxIndexer
+open dbPath (Depth k) = do
+  c <- SQL.open dbPath
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL, slotNo INT NOT NULL)"
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address ON script_transactions (scriptAddress)"
-  pure ix
-
-  where
-    store :: ScriptTxIndex -> IO ()
-    store ix = do
-      buffered <- Ix.getBuffer $ ix ^. Ix.storage
-      let rows = do
-            ScriptTxUpdate txScriptAddrs slotNo <- buffered
-            (txCbor', scriptAddrs) <- txScriptAddrs
-            scriptAddr <- scriptAddrs
-            pure $ ScriptTxRow scriptAddr txCbor' slotNo
-      SQL.execute_ (ix ^. Ix.handle) "BEGIN"
-      forM_ rows $
-        SQL.execute (ix ^. Ix.handle) "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo) VALUES (?, ?, ?)"
-      SQL.execute_ (ix ^. Ix.handle) "COMMIT"
-
-query :: ScriptTxIndex -> Query -> [ScriptTxUpdate] -> IO Result
-query ix scriptAddress' memory = let
-    filterByScriptAddress :: [ScriptTxUpdate] -> [TxCbor]
-    filterByScriptAddress updates' = do
-      ScriptTxUpdate update _slotNo <- updates'
-      map fst $ filter (\(_, addrs) -> scriptAddress' `elem` addrs) update
-  in do
-  persisted :: [SQL.Only TxCbor] <- SQL.query (ix ^. Ix.handle)
-    "SELECT txCbor FROM script_transactions WHERE scriptAddress = ?" (SQL.Only scriptAddress')
-
-  buffered <- Ix.getBuffer $ ix ^. Ix.storage
-  let
-    both :: [TxCbor]
-    both = filterByScriptAddress memory
-      <> filterByScriptAddress buffered
-      <> map (\(SQL.Only txCbor') -> txCbor') persisted
-
-  return both
+  -- Add this index for interval queries.
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address_slot ON script_transactions (scriptAddress, slotNo)"
+  emptyState k (ScriptTxHandle c (k * 2))
 
 -- * Copy-paste
 --
