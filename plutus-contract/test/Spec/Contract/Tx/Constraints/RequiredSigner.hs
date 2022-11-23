@@ -29,7 +29,6 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
                              checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
-import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V2.Typed.Scripts as PSU.V2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)
@@ -176,7 +175,7 @@ cardanoTxOwnWalletContract
     -> Ledger.PaymentPubKeyHash
     -> Contract () EmptySchema ContractError ()
 cardanoTxOwnWalletContract pk pkh = do
-    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
+    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @UnitTest def lookups constraints
 
     utxos <- ownUtxos
     myAddr <- ownAddress
@@ -184,6 +183,7 @@ cardanoTxOwnWalletContract pk pkh = do
         get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
         ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
         lookups1 = Constraints.unspentOutputs utxos
+               <> Constraints.typedValidatorLookups mustBeSignedByTypedValidator
                <> Constraints.plutusV2OtherScript someValidatorV2
                <> Constraints.paymentPubKeyHash pk
         tx1 = Constraints.mustPayToOtherScriptWithDatumInTx
@@ -206,6 +206,7 @@ cardanoTxOwnWalletContract pk pkh = do
         scriptUtxo = fst . head . M.toList $ scriptUtxos
         refScriptUtxo = head . M.keys . M.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
         lookups2 = Constraints.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
+          <> Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx2 = Constraints.mustReferenceOutput utxoRef
           <> Constraints.mustSpendScriptOutputWithReference scriptUtxo Ledger.unitRedeemer refScriptUtxo
           <> Constraints.mustSpendPubKeyOutput utxoRefForBalance2
