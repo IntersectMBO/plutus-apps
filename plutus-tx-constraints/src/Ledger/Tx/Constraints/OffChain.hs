@@ -34,6 +34,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.ownPaymentPubKeyHash
     , P.ownStakingCredential
     , P.paymentPubKey
+    , P.paymentPubKeyHash
     -- * Constraints resolution
     , P.SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)

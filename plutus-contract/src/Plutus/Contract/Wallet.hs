@@ -282,6 +282,7 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> pure otherQuantities
 
 -- TODO: Here there's hidden error of script DCert missing its redeemer - this just counts as no DCert. Don't know if bad.
+-- TODO: Refactor with getGardanoTxRedeemers once we are ceady to move to Cardano Txs
 mkRedeemers :: P.Tx -> [ExportTxRedeemer]
 mkRedeemers = map (uncurry scriptPurposeToExportRedeemer) . Map.assocs . txRedeemers
 

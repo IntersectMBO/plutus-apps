@@ -231,6 +231,8 @@ cardanoTxOtherWalletNoSigningProcess =
             void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions
+        -- Needed to manually balance the transaction
+        -- We may remove it once PLT-321
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
         "without Trace.setSigningProcess fails phase-1 validation"
         (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))

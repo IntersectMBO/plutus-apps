@@ -79,6 +79,7 @@ module Ledger.Tx.Constraints(
     , OC.plutusV2OtherScript
     , OC.otherData
     , OC.paymentPubKey
+    , OC.paymentPubKeyHash
     , OC.ownPaymentPubKeyHash
     , OC.ownStakingCredential
     -- * Deprecated
