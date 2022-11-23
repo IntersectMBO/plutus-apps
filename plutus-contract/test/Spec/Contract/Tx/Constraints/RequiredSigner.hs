@@ -7,10 +7,13 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.RequiredSigner(tests) where
 
+import Control.Lens (_Just, has)
 import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.Default (Default (def))
+import Data.Map as M
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text qualified as Text
@@ -19,14 +22,22 @@ import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet as CW
 import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSignatories)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
+import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
-                             defaultCheckOptions, mockWalletPaymentPubKey, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
+                             checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKey,
+                             mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Script.Utils.Typed (Any)
+import Plutus.Script.Utils.V2.Address qualified as PSU.V2
+import Plutus.Script.Utils.V2.Typed.Scripts as PSU.V2
 import Plutus.Trace qualified as Trace
+import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
@@ -40,6 +51,8 @@ tests =
         , otherWalletNoSigningProcess
         , phase2FailureMustBeSignedBy
         , withoutOffChainMustBeSignedBy
+        , cardanoTxOwnWallet -- When we'll have enough constraints, reuse the previous tests
+        , cardanoTxOtherWalletNoSigningProcess
         ]
 
 mustBeSignedByContract :: Ledger.PaymentPubKey -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
@@ -156,3 +169,98 @@ mustBeSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
+
+
+-- plutus-tx-constraints tests
+-- all below to be covered by the above tests when the corresponding constraints will be implemented
+-- for CardanoTx
+
+
+{-# INLINABLE mustReferenceOutputValidatorV2 #-}
+mustReferenceOutputValidatorV2 :: PV2.Validator
+mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
+    $$(PlutusTx.compile [|| wrap ||])
+ where
+     mkMustReferenceOutputV2Validator = mkMustReferenceOutputValidator Cons.V2.checkScriptContext
+     wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
+
+tag :: Trace.ContractInstanceTag
+tag = "instance 1"
+
+mkMustReferenceOutputValidator
+    :: (Constraints.TxConstraints Void Void -> sc -> Bool)
+    -> PV1.TxOutRef -> () -> sc -> Bool
+mkMustReferenceOutputValidator checkScriptContext txOutRef _ =
+    checkScriptContext (Constraints.mustReferenceOutput txOutRef)
+
+mustReferenceOutputV2ValidatorAddress :: Ledger.Address
+mustReferenceOutputV2ValidatorAddress =
+    PSU.V2.mkValidatorAddress mustReferenceOutputValidatorV2
+
+cardanoTxOwnWalletContract
+    :: Ledger.PaymentPubKey
+    -> Ledger.PaymentPubKeyHash
+    -> Contract () EmptySchema ContractError ()
+cardanoTxOwnWalletContract pk pkh = do
+    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
+
+    utxos <- ownUtxos
+    myAddr <- ownAddress
+    let get3 (a:b:c:_) = (a, b, c)
+        get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
+        ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
+        vh = fromJust $ Ledger.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        lookups1 = Constraints.unspentOutputs utxos
+               <> Constraints.plutusV2OtherScript mustReferenceOutputValidatorV2
+               <> Constraints.paymentPubKey pk
+        tx1 = Constraints.mustPayToOtherScriptWithDatumInTx
+                vh
+                (Ledger.Datum $ PlutusTx.toBuiltinData utxoRef)
+                (Ada.adaValueOf 5)
+          <> Constraints.mustSpendPubKeyOutput utxoRefForBalance1
+          <> Constraints.mustUseOutputAsCollateral utxoRefForBalance1
+          <> Constraints.mustPayToAddressWithReferenceValidator
+                myAddr
+                vh
+                Nothing
+                (Ada.adaValueOf 30)
+    submitTxConfirmed $ mkTx lookups1 tx1
+
+    -- Trying to unlock the Ada in the script address
+    scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
+    utxos' <- ownUtxos
+    let
+        scriptUtxo = fst . head . M.toList $ scriptUtxos
+        refScriptUtxo = head . M.keys . M.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
+        lookups2 = Constraints.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos <> utxos')
+        tx2 = Constraints.mustReferenceOutput utxoRef
+          <> Constraints.mustSpendScriptOutputWithReference scriptUtxo Ledger.unitRedeemer refScriptUtxo
+          <> Constraints.mustSpendPubKeyOutput utxoRefForBalance2
+          <> Constraints.mustUseOutputAsCollateral utxoRefForBalance2
+          <> Constraints.mustBeSignedBy pkh
+    logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
+    submitTxConfirmed $ mkTx lookups2 tx2
+
+cardanoTxOwnWallet :: TestTree
+cardanoTxOwnWallet =
+    let pk  = mockWalletPaymentPubKey     w1
+        pkh = mockWalletPaymentPubKeyHash w1
+        trace = do
+            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pk pkh
+            void Trace.nextSlot
+    in checkPredicateOptions
+        (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+        "own wallet's signature passes on-chain mustBeSignedBy validation with cardano tx" (assertValidatedTransactionCount 2) (void trace)
+
+cardanoTxOtherWalletNoSigningProcess :: TestTree
+cardanoTxOtherWalletNoSigningProcess =
+    let pk  = mockWalletPaymentPubKey     w2
+        pkh = mockWalletPaymentPubKeyHash w2
+        trace = do
+            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pk pkh
+            void Trace.nextSlot
+    in checkPredicateOptions
+        (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+        "without Trace.setSigningProcess fails phase-1 validation"
+        (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
+    (void trace)

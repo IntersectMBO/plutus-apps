@@ -208,8 +208,8 @@ checkPredicateCoverage ::
     -> TracePredicate -- ^ The predicate to check
     -> EmulatorTrace ()
     -> TestTree
-checkPredicateCoverage =
-  checkPredicateCoverageOptions defaultCheckOptions
+checkPredicateCoverage nm cr predicate action =
+  checkPredicateCoverageOptions defaultCheckOptions nm cr predicate action
 
 checkPredicateCoverageOptions ::
     CheckOptions -- ^ Options to use

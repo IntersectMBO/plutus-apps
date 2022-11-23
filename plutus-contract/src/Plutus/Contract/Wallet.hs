@@ -34,7 +34,7 @@ import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (String), object, withObject, (.:), (.=))
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Types (Parser, parseFail)
-import Data.Bifunctor (first)
+import Data.Bifunctor (Bifunctor (bimap), first)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
@@ -47,9 +47,7 @@ import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
 import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
-import Ledger.Constraints (mustPayToAddress)
-import Ledger.Constraints.OffChain (UnbalancedTx (unBalancedTxRequiredSignatories, unBalancedTxUtxoIndex),
-                                    unBalancedTxTx)
+import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx), mustPayToAddress)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Ledger.Value (currencyMPSHash)
@@ -253,19 +251,20 @@ export
     :: P.Params
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
-export params utx =
-    let requiredSigners = Set.toList (unBalancedTxRequiredSignatories utx)
-        fromCardanoTx ctx = do
-            utxo <- fromPlutusIndex $ P.UtxoIndex (unBalancedTxUtxoIndex utx)
+export params (UnbalancedEmulatorTx tx sigs utxos) =
+    let requiredSigners = Set.toList sigs
+     in ExportTx
+        <$> bimap Right (C.makeSignedTransaction []) (CardanoAPI.toCardanoTxBody params requiredSigners tx)
+        <*> first Right (mkInputs (P.pNetworkId params) utxos)
+        <*> pure (mkRedeemers tx)
+export params (UnbalancedCardanoTx tx utxos) =
+    let fromCardanoTx ctx = do
+            utxo <- fromPlutusIndex $ P.UtxoIndex utxos
             makeTransactionBody params utxo ctx
      in ExportTx
-        <$> fmap (C.makeSignedTransaction [])
-                 (either
-                     fromCardanoTx
-                     (first Right . CardanoAPI.toCardanoTxBody params requiredSigners)
-                     (unBalancedTxTx utx))
-        <*> first Right (mkInputs (P.pNetworkId params) (unBalancedTxUtxoIndex utx))
-        <*> either (const $ Right []) (Right . mkRedeemers) (unBalancedTxTx utx)
+        <$> fmap (C.makeSignedTransaction []) (fromCardanoTx tx)
+        <*> first Right (mkInputs (P.pNetworkId params) utxos)
+        <*> pure []
 
 mkInputs :: C.NetworkId -> Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
