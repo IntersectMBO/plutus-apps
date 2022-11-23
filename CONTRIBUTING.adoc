@@ -528,3 +528,21 @@ These perform some of the same checks as Hydra, but Github Actions is often more
 ==== Buildkite
 
 Buildkite currently only performs the continuous deployment steps.
+
+== Project roles and responsibilities
+
+- The regular contributors to the Haskell code, all of whom can review and merge PRs are:
+    - @koslambrou
+    - @raduom
+    - @sjoerdvisscher
+    - @andreabedini
+    - @berewt
+    - @eyeinsky
+    - @james-iohk
+    - @kayvank
+    - @ak3n
+- The maintainer of the documentation is @joseph-fajen.
+- If you have a technical dispute that you need help resolving, you can ask @koslambrou.
+- For problems with the developer environment setup, builds, or CI, you can ask @zeme-iohk, @Pacman99, or @koslambrou.
+- For any QA related issues, you can mainly query @james-iohk, or any of the other regular contributors.
+- The releasing of the software is handled by @ak3n, but if you have a specific problem you may also ask @koslambrou.
