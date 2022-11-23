@@ -195,7 +195,7 @@ mustReferenceOutputV2ValidatorAddress =
     PSU.V2.mkValidatorAddress mustReferenceOutputValidatorV2
 
 cardanoTxOwnWalletContract
-    :: Ledger.PaymentPubKey
+    :: Ledger.PaymentPubKeyHash
     -> Ledger.PaymentPubKeyHash
     -> Contract () EmptySchema ContractError ()
 cardanoTxOwnWalletContract pk pkh = do
@@ -209,7 +209,7 @@ cardanoTxOwnWalletContract pk pkh = do
         vh = fromJust $ Ledger.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups1 = Constraints.unspentOutputs utxos
                <> Constraints.plutusV2OtherScript mustReferenceOutputValidatorV2
-               <> Constraints.paymentPubKey pk
+               <> Constraints.paymentPubKeyHash pk
         tx1 = Constraints.mustPayToOtherScriptWithDatumInTx
                 vh
                 (Ledger.Datum $ PlutusTx.toBuiltinData utxoRef)
@@ -240,10 +240,9 @@ cardanoTxOwnWalletContract pk pkh = do
 
 cardanoTxOwnWallet :: TestTree
 cardanoTxOwnWallet =
-    let pk  = mockWalletPaymentPubKey     w1
-        pkh = mockWalletPaymentPubKeyHash w1
+    let pkh = mockWalletPaymentPubKeyHash w1
         trace = do
-            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pk pkh
+            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pkh pkh
             void Trace.nextSlot
     in checkPredicateOptions
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
@@ -251,10 +250,9 @@ cardanoTxOwnWallet =
 
 cardanoTxOtherWalletNoSigningProcess :: TestTree
 cardanoTxOtherWalletNoSigningProcess =
-    let pk  = mockWalletPaymentPubKey     w2
-        pkh = mockWalletPaymentPubKeyHash w2
+    let pkh = mockWalletPaymentPubKeyHash w2
         trace = do
-            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pk pkh
+            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pkh pkh
             void Trace.nextSlot
     in checkPredicateOptions
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)

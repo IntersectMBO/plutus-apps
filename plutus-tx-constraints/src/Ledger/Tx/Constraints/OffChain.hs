@@ -60,7 +60,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
-import Data.List (nub)
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL, pProtocolParams)
 import Ledger.Constraints qualified as P
@@ -101,13 +101,13 @@ txInsCollateral = coerced . txInsCollateral' . iso toList fromList
         fromList []    = C.TxInsCollateralNone
         fromList txins = C.TxInsCollateral C.CollateralInBabbageEra txins
 
-txExtraKeyWits :: Lens' C.CardanoBuildTx [C.Hash C.PaymentKey]
-txExtraKeyWits = coerced . txExtraKeyWits' . iso toList fromList
+txExtraKeyWits :: Lens' C.CardanoBuildTx (Set.Set (C.Hash C.PaymentKey))
+txExtraKeyWits = coerced . txExtraKeyWits' . iso toSet fromSet
     where
-        toList C.TxExtraKeyWitnessesNone        = []
-        toList (C.TxExtraKeyWitnesses _ txwits) = txwits
-        fromList []     = C.TxExtraKeyWitnessesNone
-        fromList txwits = C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra $ nub txwits
+        toSet C.TxExtraKeyWitnessesNone        = mempty
+        toSet (C.TxExtraKeyWitnesses _ txwits) = Set.fromList txwits
+        fromSet s | null s    = C.TxExtraKeyWitnessesNone
+                  | otherwise = C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra $ Set.toList s
 
 txInsReference :: Lens' C.CardanoBuildTx [C.TxIn]
 txInsReference = coerced . txInsReference' . iso toList fromList
@@ -289,7 +289,7 @@ processConstraint = \case
         unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
     P.MustBeSignedBy pk -> do
         ekw <-  either (throwError . ToCardanoError) pure $ C.toCardanoPaymentKeyHash pk
-        unbalancedTx . tx . txExtraKeyWits <>= [ekw]
+        unbalancedTx . tx . txExtraKeyWits <>= Set.singleton ekw
     P.MustSpendScriptOutput txo redeemer mref -> do
         txout <- lookupTxOutRef txo
         mkWitness <- case mref of
