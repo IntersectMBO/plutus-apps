@@ -35,6 +35,7 @@ module Ledger.Constraints.OffChain(
     , ownPaymentPubKeyHash
     , ownStakingCredential
     , paymentPubKey
+    , paymentPubKeyHash
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
@@ -249,7 +250,12 @@ otherData dt =
 -- | A script lookups value with a payment public key
 paymentPubKey :: PaymentPubKey -> ScriptLookups a
 paymentPubKey (PaymentPubKey pk) =
-    mempty { slPaymentPubKeyHashes = Set.singleton (PaymentPubKeyHash $ pubKeyHash pk) }
+   paymentPubKeyHash (PaymentPubKeyHash $ pubKeyHash pk)
+
+-- | A script lookups value with a payment public key
+paymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
+paymentPubKeyHash pkh =
+    mempty { slPaymentPubKeyHashes = Set.singleton pkh }
 
 -- | A script lookups value with a payment public key hash.
 --

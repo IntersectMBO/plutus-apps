@@ -53,6 +53,7 @@ module Ledger.Tx
     , getCardanoTxCollateralInputs
     , getCardanoTxOutRefs
     , getCardanoTxOutputs
+    , getCardanoTxRedeemers
     , getCardanoTxSpentOutputs
     , getCardanoTxProducedOutputs
     , getCardanoTxReturnCollateral
