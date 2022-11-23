@@ -34,7 +34,6 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions,
                              emulatorConfig, w1, walletFundsAssetClassChange, (.&&.))
-import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
@@ -51,7 +50,7 @@ import Wallet (WalletAPIError (InsufficientFunds))
 tests :: TestTree
 tests = testGroup "MustMint"
       [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx
-      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
+      -- , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
       ]
 
 v1Tests :: SubmitTx -> TestTree
@@ -72,7 +71,7 @@ v1FeaturesTests sub lang =
         [ mustMintCurrencyWithRedeemerSuccessfulMint
         , mustMintCurrencyWithRedeemerSuccessfulBurn
         , mustMintCurrencyWithRedeemerBurnTooMuch
-        -- , mustMintCurrencyWithRedeemerMissingPolicyLookup
+        , mustMintCurrencyWithRedeemerMissingPolicyLookup
         , mustMintCurrencyWithRedeemerPhase2Failure
         , mustMintCurrencySuccessfulMint
         , mustMintValueWithRedeemerSuccessfulMint
@@ -265,13 +264,12 @@ mustMintCurrencyWithRedeemerBurnTooMuch sub lang =
        .&&. assertValidatedTransactionCount 0)
        (void $ trace contract)
 
-{- TypeError at the moment
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer but with a contract that is missing lookup for the minting policy, asserts contract error.
 mustMintCurrencyWithRedeemerMissingPolicyLookup :: SubmitTx -> Ledger.Language -> TestTree
 mustMintCurrencyWithRedeemerMissingPolicyLookup sub lang =
     let contract :: Contract () Empty ContractError () = do
             let tx1 = Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName tknAmount
-            ledgerTx1 <- sub tx1
+            ledgerTx1 <- sub mempty tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicateOptions
@@ -286,7 +284,6 @@ mustMintCurrencyWithRedeemerMissingPolicyLookup sub lang =
         "failed to throw error"
     .&&. assertValidatedTransactionCount 0)
     (void $ trace contract)
-    -}
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer but with a token name mismatch, asserts script evaluation error.
 mustMintCurrencyWithRedeemerPhase2Failure :: SubmitTx -> Ledger.Language -> TestTree
@@ -356,7 +353,7 @@ mustMintValueWithRedeemerSuccessfulBurn sub lang =
     in checkPredicateOptions
        options
        "Successful token burn using mustMintValueWithRedeemer"
-       (walletFundsAssetClassChange w1 (tknAssetClass Ledger.PlutusV1) tknBurnAmount
+       (walletFundsAssetClassChange w1 (tknAssetClass lang) tknBurnAmount
        .&&. assertValidatedTransactionCount 1)
        (void $ trace $ mustMintValueWithRedeemerContract sub lang (tknValue' lang tknBurnAmount))
 

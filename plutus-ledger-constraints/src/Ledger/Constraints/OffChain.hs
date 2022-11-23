@@ -110,7 +110,6 @@ import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Debug.Trace qualified
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript)
 import Ledger.Ada qualified as Ada
