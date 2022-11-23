@@ -24,6 +24,7 @@ import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSign
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Constraints
+import Ledger.Test (someAddressV2, someValidatorHash, someValidatorHashV2, someValidatorV2)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts
@@ -173,26 +174,8 @@ mustBeSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
 -- for CardanoTx
 
 
-{-# INLINABLE mustReferenceOutputValidatorV2 #-}
-mustReferenceOutputValidatorV2 :: PV2.Validator
-mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
-    $$(PlutusTx.compile [|| wrap ||])
- where
-     mkMustReferenceOutputV2Validator = mkMustReferenceOutputValidator Cons.V2.checkScriptContext
-     wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
-
 tag :: Trace.ContractInstanceTag
 tag = "instance 1"
-
-mkMustReferenceOutputValidator
-    :: (Constraints.TxConstraints Void Void -> sc -> Bool)
-    -> PV1.TxOutRef -> () -> sc -> Bool
-mkMustReferenceOutputValidator checkScriptContext txOutRef _ =
-    checkScriptContext (Constraints.mustReferenceOutput txOutRef)
-
-mustReferenceOutputV2ValidatorAddress :: Ledger.Address
-mustReferenceOutputV2ValidatorAddress =
-    PSU.V2.mkValidatorAddress mustReferenceOutputValidatorV2
 
 cardanoTxOwnWalletContract
     :: Ledger.PaymentPubKeyHash
@@ -206,25 +189,24 @@ cardanoTxOwnWalletContract pk pkh = do
     let get3 (a:b:c:_) = (a, b, c)
         get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
         ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
-        vh = fromJust $ Ledger.toValidatorHash mustReferenceOutputV2ValidatorAddress
         lookups1 = Constraints.unspentOutputs utxos
-               <> Constraints.plutusV2OtherScript mustReferenceOutputValidatorV2
+               <> Constraints.plutusV2OtherScript someValidatorV2
                <> Constraints.paymentPubKeyHash pk
         tx1 = Constraints.mustPayToOtherScriptWithDatumInTx
-                vh
+                someValidatorHashV2
                 (Ledger.Datum $ PlutusTx.toBuiltinData utxoRef)
                 (Ada.adaValueOf 5)
           <> Constraints.mustSpendPubKeyOutput utxoRefForBalance1
           <> Constraints.mustUseOutputAsCollateral utxoRefForBalance1
           <> Constraints.mustPayToAddressWithReferenceValidator
                 myAddr
-                vh
+                someValidatorHashV2
                 Nothing
                 (Ada.adaValueOf 30)
     submitTxConfirmed $ mkTx lookups1 tx1
 
     -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
+    scriptUtxos <- utxosAt someAddressV2
     utxos' <- ownUtxos
     let
         scriptUtxo = fst . head . M.toList $ scriptUtxos
