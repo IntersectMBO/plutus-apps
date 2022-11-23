@@ -266,8 +266,8 @@ processConstraint = \case
         -- We map to all known transaction outputs and change the datum to also
         -- be included in the transaction body. The current behavior is
         -- sensitive to the order of the constraints.
-        -- @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@ and
-        -- @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@ yield a
+        -- @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@ and
+        -- @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@ yield a
         -- different result.
         let datumInTx = C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum d))
         unbalancedTx . tx . txOuts %=

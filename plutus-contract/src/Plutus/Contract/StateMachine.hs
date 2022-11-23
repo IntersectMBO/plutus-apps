@@ -66,13 +66,10 @@ import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, Slot, TxOutRef, Value)
 import Ledger qualified
-import Ledger.Constraints (ScriptLookups, TxConstraints, TxOutDatum (TxOutDatumInTx), mustMintValueWithRedeemer,
-                           mustPayToTheScriptWithDatumInTx, mustSpendPubKeyOutput, plutusV1MintingPolicy)
-import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
+                           mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
+                           mustSpendPubKeyOutput, plutusV1MintingPolicy)
 import Ledger.Constraints.OffChain qualified as Constraints
-import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
-                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                                         txOwnInputs, txOwnOutputs)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
@@ -534,7 +531,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                       -- Hide the thread token value from the client code
                     , stateValue = V2.txOutValue (Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef) <> inv (SM.threadTokenValueOrZero scInstance)
                     }
-                inputConstraints = [ScriptInputConstraint{icRedeemer=input, icTxOutRef = Typed.tyTxOutRefRef ocsTxOutRef }]
+                inputConstraints = mustSpendOutputFromTheScript (Typed.tyTxOutRefRef ocsTxOutRef) input
 
             case smTransition oldState input of
                 Just (newConstraints, newState)  ->
@@ -545,21 +542,16 @@ mkStep client@StateMachineClient{scInstance} input = do
                             <> if isFinal then foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine) else mempty
                         red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Burn))
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
-                        outputConstraints =
-                            [ ScriptOutputConstraint
-                                { ocDatum = TxOutDatumInTx $ stateData newState
-                                  -- Add the thread token value back to the output
-                                , ocValue = stateValue newState <> SM.threadTokenValueOrZero scInstance
-                                , ocReferenceScriptHash = Nothing
-                                }
-                            | not isFinal ]
+                        -- Add the thread token value back to the output
+                        valueWithToken = stateValue newState <> SM.threadTokenValueOrZero scInstance
+                        outputConstraints = if isFinal then mempty else mustPayToTheScriptWithDatumInTx (stateData newState) valueWithToken
                     in pure
                         $ Right
                         $ StateMachineTransition
                             { smtConstraints =
                                 (newConstraints <> unmint)
-                                    { txOwnInputs = inputConstraints
-                                    , txOwnOutputs = outputConstraints
+                                    { txOwnInputs = txOwnInputs inputConstraints
+                                    , txOwnOutputs = txOwnOutputs outputConstraints
                                     }
                             , smtOldState = oldState
                             , smtNewState = newState

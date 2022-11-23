@@ -42,7 +42,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatum)
+import Ledger.Tx.CardanoAPI (toCardanoTxOut)
 import Ledger.Validation qualified as Validation
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
@@ -297,7 +297,7 @@ we create 10 Ada-only outputs per wallet here.
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: NetworkId -> Map PaymentPubKeyHash Value -> Either ToCardanoError EmulatorState
 emulatorStateInitialDist networkId mp = do
-    outs <- traverse (toCardanoTxOut networkId toCardanoTxOutDatum) $ Map.toList mp >>= mkOutputs
+    outs <- traverse (toCardanoTxOut networkId) $ Map.toList mp >>= mkOutputs
     let tx = mempty
            { txOutputs = TxOut <$> outs
            , txMint = fold mp

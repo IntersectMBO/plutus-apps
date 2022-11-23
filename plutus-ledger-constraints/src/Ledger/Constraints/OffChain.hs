@@ -111,7 +111,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
@@ -129,12 +129,12 @@ import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
-                             ValidatorTypes (DatumType, RedeemerType))
+                             ValidatorTypes (DatumType, RedeemerType), validatorAddress)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V1.Ledger.Api (Credential (ScriptCredential), Datum (Datum), DatumHash, StakingCredential,
-                             Validator (getValidator), Value, getMintingPolicy)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,
+                             getMintingPolicy)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
@@ -480,8 +480,8 @@ prepareConstraints ownOutputs constraints = do
     let
       -- This is done so that the 'MustIncludeDatumInTxWithHash' and
       -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
+      -- constraints. @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@
+      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@
       -- must yield the same behavior.
       isVerificationConstraints = \case
         MustIncludeDatumInTxWithHash {} -> True
@@ -639,7 +639,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = fmap (Datum . toBuiltinData) ocDatum
-    pure [ MustPayToAddress (Address (ScriptCredential (tvValidatorHash inst)) Nothing) (Just dsV) ocReferenceScriptHash ocValue ]
+    pure [ MustPayToAddress (validatorAddress inst) (Just dsV) ocReferenceScriptHash ocValue ]
 
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m

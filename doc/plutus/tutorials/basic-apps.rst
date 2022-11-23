@@ -68,9 +68,9 @@ The validator looks at the ``ValidatorCtx`` value to see if the conditions for m
 
 The validator checks that the transaction, represented by ``scriptContextTxInfo``, pays half the specified amount to each recipient.
 
-You then need some boilerplate to compile the validator to a Plutus script 
-(see `Writing basic validator scripts <https://plutus.readthedocs.io/en/latest/tutorials/basic-validators.html>`_ 
-in the Plutus Core and Plutus Tx User Guide). 
+You then need some boilerplate to compile the validator to a Plutus script
+(see `Writing basic validator scripts <https://plutus.readthedocs.io/en/latest/tutorials/basic-validators.html>`_
+in the Plutus Core and Plutus Tx User Guide).
 
 .. literalinclude:: BasicApps.hs
    :start-after: BLOCK3
@@ -132,7 +132,7 @@ Using the constraints library that comes with the Plutus SDK you specify a trans
 
 .. code-block:: haskell
 
-   tx = Constraints.mustPayToTheScript s (Ada.toValue amount)
+   tx = Constraints.mustPayToTheScriptWithDatumHash s (Ada.toValue amount)
 
 After calling ``submitTxConstraints`` in the next line, the Plutus app runtime examines the transaction constraints ``tx`` and builds a transaction that fulfills them.
 The runtime then sends the transaction to the wallet, which adds enough to cover the required funds (in this case, the ada amount specified in ``amount``).

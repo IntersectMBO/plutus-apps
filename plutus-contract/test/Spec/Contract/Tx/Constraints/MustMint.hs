@@ -277,7 +277,7 @@ mustMintCurrencyWithRedeemerPhase2Failure =
 mustMintCurrencyWithRedeemerMissingPolicyContract :: Contract () Empty ContractError ()
 mustMintCurrencyWithRedeemerMissingPolicyContract = do
     let lookups1 = Constraints.typedValidatorLookups $ mustMintCurrencyWithRedeemerTypedValidator tknName
-        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25_000_000)
+        tx1 = Constraints.mustPayToTheScriptWithDatumHash () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
