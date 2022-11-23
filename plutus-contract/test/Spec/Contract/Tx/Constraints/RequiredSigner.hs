@@ -15,30 +15,24 @@ import Test.Tasty (TestTree, testGroup)
 import Data.Default (Default (def))
 import Data.Map as M
 import Data.Maybe (fromJust)
-import Data.String (fromString)
 import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSignatories)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
-import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Constraints
-import Ledger.Test (someAddressV2, someValidatorHash, someValidatorHashV2, someValidatorV2)
+import Ledger.Test (someAddressV2, someValidatorHashV2, someValidatorV2)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
-                             checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKey,
-                             mockWalletPaymentPubKeyHash, w1, w2)
+                             checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.Typed (Any)
-import Plutus.Script.Utils.V2.Address qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts as PSU.V2
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)
-import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
@@ -56,6 +50,12 @@ tests =
         , cardanoTxOwnWallet
         , cardanoTxOtherWalletNoSigningProcess
         ]
+
+w1PubKey :: Ledger.PaymentPubKeyHash
+w1PubKey = mockWalletPaymentPubKeyHash w1
+
+w2PubKey :: Ledger.PaymentPubKeyHash
+w2PubKey = mockWalletPaymentPubKeyHash w2
 
 mustBeSignedByContract :: Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustBeSignedByContract paymentPubKey signedPubKey = do
@@ -102,26 +102,23 @@ withoutOffChainMustBeSignedByContract paymentPubKey signedPubKey = do
 
 ownWallet :: TestTree
 ownWallet =
-    let pkh = mockWalletPaymentPubKeyHash w1
-        trace = do
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract pkh pkh
+    let trace = do
+            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "own wallet's signature passes on-chain mustBeSignedBy validation" (assertValidatedTransactionCount 2) (void trace)
 
 otherWallet :: TestTree -- must use Trace.setSigningProcess for w2
 otherWallet =
-    let pkh = mockWalletPaymentPubKeyHash w2
-        trace = do
+    let trace = do
             Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey $ fromJust $ walletToMockWallet w1, CW.paymentPrivateKey $ fromJust $ walletToMockWallet w2])
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract pkh pkh
+            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "other wallet's signature passes on-chain mustBeSignedBy validation" (assertValidatedTransactionCount 2) (void trace)
 
 otherWalletNoSigningProcess :: TestTree
 otherWalletNoSigningProcess =
-    let pkh = mockWalletPaymentPubKeyHash w2
-        trace = do
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract pkh pkh
+    let trace = do
+            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without Trace.setSigningProcess fails phase-1 validation"
     (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
@@ -129,9 +126,8 @@ otherWalletNoSigningProcess =
 
 withoutOffChainMustBeSignedBy :: TestTree -- there's no "required signer" in the txbody logs but still passes phase-2 so it must be there. Raised https://github.com/input-output-hk/plutus-apps/issues/645. It'd be good to check log output for expected required signer pubkey in these tests.
 withoutOffChainMustBeSignedBy =
-    let pkh = mockWalletPaymentPubKeyHash w1
-        trace = do
-            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract pkh pkh
+    let trace = do
+            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint required signer is not included in txbody so phase-2 validation fails"
     (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
@@ -139,11 +135,9 @@ withoutOffChainMustBeSignedBy =
 
 phase2FailureMustBeSignedBy :: TestTree
 phase2FailureMustBeSignedBy =
-    let pkh1  = mockWalletPaymentPubKeyHash     w1
-        pkh2 = Ledger.PaymentPubKeyHash $ fromString "76aaef06f38cc98ed08ceb168ddb55bab2ea5df43a6847a99f086fc9" :: Ledger.PaymentPubKeyHash
-        trace = do
-            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract pkh1 pkh2
-            void $ Trace.waitNSlots 1
+    let trace = do
+            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w2PubKey
+            void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain mustBeSignedBy constraint validation"
     (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
     (void trace)
@@ -222,19 +216,19 @@ cardanoTxOwnWalletContract pk pkh = do
 
 cardanoTxOwnWallet :: TestTree
 cardanoTxOwnWallet =
-    let pkh = mockWalletPaymentPubKeyHash w1
-        trace = do
-            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pkh pkh
+    let trace = do
+            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-        "own wallet's signature passes on-chain mustBeSignedBy validation with cardano tx" (assertValidatedTransactionCount 2) (void trace)
+        "own wallet's signature passes on-chain mustBeSignedBy validation with cardano tx"
+        (assertValidatedTransactionCount 2)
+        (void trace)
 
 cardanoTxOtherWalletNoSigningProcess :: TestTree
 cardanoTxOtherWalletNoSigningProcess =
-    let pkh = mockWalletPaymentPubKeyHash w2
-        trace = do
-            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract pkh pkh
+    let trace = do
+            void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
