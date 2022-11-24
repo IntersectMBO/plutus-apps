@@ -166,9 +166,6 @@ mustBeSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
 -- for CardanoTx
 
 
-tag :: Trace.ContractInstanceTag
-tag = "instance 1"
-
 cardanoTxOwnWalletContract
     :: Ledger.PaymentPubKeyHash
     -> Ledger.PaymentPubKeyHash
@@ -228,4 +225,4 @@ cardanoTxOtherWalletNoSigningProcess =
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
         "without Trace.setSigningProcess fails phase-1 validation"
         (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
-    (void trace)
+        (void trace)
