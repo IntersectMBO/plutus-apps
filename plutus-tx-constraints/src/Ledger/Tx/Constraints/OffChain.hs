@@ -34,6 +34,7 @@ module Ledger.Tx.Constraints.OffChain(
     , P.ownPaymentPubKeyHash
     , P.ownStakingCredential
     , P.paymentPubKey
+    , P.paymentPubKeyHash
     -- * Constraints resolution
     , P.SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
@@ -41,7 +42,6 @@ module Ledger.Tx.Constraints.OffChain(
     , tx
     , txValidityRange
     , txOuts
-    , P.requiredSignatories
     , P.utxoIndex
     , emptyUnbalancedTx
     , P.adjustUnbalancedTx
@@ -61,6 +61,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL, pProtocolParams)
 import Ledger.Constraints qualified as P
@@ -85,6 +86,7 @@ makeLensesFor
     [ ("txIns", "txIns'")
     , ("txInsCollateral", "txInsCollateral'")
     , ("txInsReference", "txInsReference'")
+    , ("txExtraKeyWits", "txExtraKeyWits'")
     , ("txOuts", "txOuts'")
     , ("txValidityRange", "txValidityRange'")
     ] ''C.TxBodyContent
@@ -99,6 +101,14 @@ txInsCollateral = coerced . txInsCollateral' . iso toList fromList
         toList (C.TxInsCollateral _ txins) = txins
         fromList []    = C.TxInsCollateralNone
         fromList txins = C.TxInsCollateral C.CollateralInBabbageEra txins
+
+txExtraKeyWits :: Lens' C.CardanoBuildTx (Set.Set (C.Hash C.PaymentKey))
+txExtraKeyWits = coerced . txExtraKeyWits' . iso toSet fromSet
+    where
+        toSet C.TxExtraKeyWitnessesNone        = mempty
+        toSet (C.TxExtraKeyWitnesses _ txwits) = Set.fromList txwits
+        fromSet s | null s    = C.TxExtraKeyWitnessesNone
+                  | otherwise = C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra $ Set.toList s
 
 txInsReference :: Lens' C.CardanoBuildTx [C.TxIn]
 txInsReference = coerced . txInsReference' . iso toList fromList
@@ -139,7 +149,7 @@ emptyCardanoBuildTx p = C.CardanoBuildTx $ C.TxBodyContent
     }
 
 emptyUnbalancedTx :: Params -> UnbalancedTx
-emptyUnbalancedTx params = UnbalancedCardanoTx (emptyCardanoBuildTx params) mempty mempty
+emptyUnbalancedTx params = UnbalancedCardanoTx (emptyCardanoBuildTx params) mempty
 
 initialState :: Params -> P.ConstraintProcessingState
 initialState params = P.ConstraintProcessingState
@@ -278,7 +288,9 @@ processConstraint = \case
             $ guard $ is Tx._PublicKeyDecoratedTxOut txout
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
-
+    P.MustBeSignedBy pk -> do
+        ekw <-  either (throwError . ToCardanoError) pure $ C.toCardanoPaymentKeyHash pk
+        unbalancedTx . tx . txExtraKeyWits <>= Set.singleton ekw
     P.MustSpendScriptOutput txo redeemer mref -> do
         txout <- lookupTxOutRef txo
         mkWitness <- case mref of

@@ -318,15 +318,15 @@ handleBalance ::
 handleBalance utx = do
     utxo <- get >>= ownOutputs
     params@Params { pNetworkId } <- WAPI.getClientParams
-    let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-        eitherTx = U.unBalancedTxTx utx
+    let eitherTx = U.unBalancedTxTx utx
         plUtxo = traverse (Tx.toTxOut pNetworkId) utxo
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure plUtxo
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo
     case eitherTx of
         Right _ -> do
             -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
-            let calcFee n fee = do
+            let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+                calcFee n fee = do
                     tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
                     newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
                     if newFee /= fee

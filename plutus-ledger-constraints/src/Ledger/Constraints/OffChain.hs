@@ -35,6 +35,7 @@ module Ledger.Constraints.OffChain(
     , ownPaymentPubKeyHash
     , ownStakingCredential
     , paymentPubKey
+    , paymentPubKeyHash
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
@@ -249,7 +250,12 @@ otherData dt =
 -- | A script lookups value with a payment public key
 paymentPubKey :: PaymentPubKey -> ScriptLookups a
 paymentPubKey (PaymentPubKey pk) =
-    mempty { slPaymentPubKeyHashes = Set.singleton (PaymentPubKeyHash $ pubKeyHash pk) }
+   paymentPubKeyHash (PaymentPubKeyHash $ pubKeyHash pk)
+
+-- | A script lookups value with a payment public key
+paymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
+paymentPubKeyHash pkh =
+    mempty { slPaymentPubKeyHashes = Set.singleton pkh }
 
 -- | A script lookups value with a payment public key hash.
 --
@@ -291,13 +297,8 @@ data UnbalancedTx
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
         }
     | UnbalancedCardanoTx
-        { unBalancedCardanoBuildTx        :: C.CardanoBuildTx
-        , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
-        -- ^ These are all the payment public keys that should be used to request the
-        -- signatories from the user's wallet. The signatories are what is required to
-        -- sign the transaction before submitting it to the blockchain. Transaction
-        -- validation will fail if the transaction is not signed by the required wallet.
-        , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
+        { unBalancedCardanoBuildTx :: C.CardanoBuildTx
+        , unBalancedTxUtxoIndex    :: Map TxOutRef TxOut
         -- ^ Utxo lookups that are used for adding inputs to the 'UnbalancedTx'.
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
         }
@@ -325,10 +326,9 @@ instance Pretty UnbalancedTx where
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
-    pretty (UnbalancedCardanoTx utx rs utxo) =
+    pretty (UnbalancedCardanoTx utx utxo) =
         vsep
         [ hang 2 $ vsep ["Tx (cardano-api Representation):", pretty utx]
-        , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
 
