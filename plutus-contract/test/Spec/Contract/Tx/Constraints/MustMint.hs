@@ -13,6 +13,7 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Lens (_Just, has, (&), (??), (^.))
+import Data.Default (Default (def))
 import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Data.Void (Void)
@@ -51,6 +52,9 @@ tests :: TestTree
 tests = testGroup "MustMint"
       [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx
       -- , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
+      -- Remove constraints below and activet the testGroup above once balancing for Tx constraints is implemented
+      , mustMintCurrencyWithRedeemerSuccessfulMintTx Scripts.PlutusV1
+      , mustMintCurrencyWithRedeemerSuccessfulMintTx Scripts.PlutusV2
       ]
 
 v1Tests :: SubmitTx -> TestTree
@@ -389,6 +393,64 @@ mustMintWithReferenceSuccessful sub lang =
     "Successful mustMintValue with reference"
     (assertValidatedTransactionCount 2)
     (void $ trace $ mustMintValueWithReferenceContract sub lang False)
+
+
+-- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to mint tokens
+mustMintCurrencyWithRedeemerSuccessfulMintTx :: Ledger.Language -> TestTree
+mustMintCurrencyWithRedeemerSuccessfulMintTx lang =
+    checkPredicateOptions
+    (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+    "Successful spend of tokens using mustMintCurrencyWithRedeemer"
+    (assertValidatedTransactionCount 1)
+    (void $ trace $ mustMintCurrencyWithRedeemerTxContract cardanoSubmitTx lang tknAmount tknName)
+
+-- | Valid Contract using a minting policy with mustMintCurrencyWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
+mustMintCurrencyWithRedeemerTxContract
+    :: SubmitTx
+    -> Ledger.Language
+    -> Integer
+    -> TokenName
+    -> Contract () Empty ContractError ()
+mustMintCurrencyWithRedeemerTxContract sub lang mintAmount onChainTokenName = do
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest def lookups constraints
+
+    utxos <- ownUtxos
+    let get2 (a:b:_) = (a, b)
+        get2 _       = error "Spec.Contract.TxConstraints.get2: not enough inputs"
+        ((utxoRef, utxo), (utxoRefForBalance1, _)) = get2 $ Map.toList utxos
+        redeemer = asRedeemer $ MustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer onChainTokenName mintAmount
+        lookups1 = Constraints.mintingPolicy (mustMintPolicy lang)
+                <> Constraints.mintingPolicy (coinMintingPolicy lang)
+                <> Constraints.unspentOutputs utxos
+        tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
+           <> Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName mintAmount
+           <> Constraints.mustSpendPubKeyOutput utxoRefForBalance1
+           <> Constraints.mustUseOutputAsCollateral utxoRefForBalance1
+    ledgerTx1 <- sub lookups1 tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+-- | Valid Contract using a minting policy with mustMintCurrency onchain constraint to check that tokens are correctly minted with the other policy
+mustMintCurrencyTxContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
+mustMintCurrencyTxContract sub lang = do
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest def lookups constraints
+
+    utxos <- ownUtxos
+    let get2 (a:b:_) = (a, b)
+        get2 _       = error "Spec.Contract.TxConstraints.get2: not enough inputs"
+        ((utxoRef, utxo), (utxoRefForBalance1, _)) = get2 $ Map.toList utxos
+        redeemer = asRedeemer $ MustMintCurrency (coinMintingPolicyHash lang) tknName tknAmount
+        lookups1 = Constraints.mintingPolicy (mustMintPolicy lang)
+                <> Constraints.mintingPolicy (coinMintingPolicy lang)
+        tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
+           <> Constraints.mustMintCurrency (coinMintingPolicyHash lang) tknName tknAmount
+           <> Constraints.mustSpendPubKeyOutput utxoRefForBalance1
+           <> Constraints.mustUseOutputAsCollateral utxoRefForBalance1
+    ledgerTx1 <- sub lookups1 tx1
+    awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+
+
+
 
 {-# INLINEABLE mkMustMintPolicy #-}
 mkMustMintPolicy :: (Constraints.TxConstraints () () -> sc -> Bool) -> ConstraintParams -> sc -> Bool
