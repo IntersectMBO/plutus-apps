@@ -15,13 +15,11 @@ library
   exposed-modules:
     Auth
     Auth.Types
-    Control.Monad.Except.Extras
     Control.Monad.Now
     Control.Monad.Trace
     Control.Monad.Web
     Gist
     Language.Haskell.Interpreter
-    Playground.API
     Playground.Contract
     Playground.Interpreter.Util
     Playground.Schema
@@ -30,8 +28,6 @@ library
     PSGenerator.Common
     Schema
     Servant.Extra
-    Servant.Prometheus
-    System.IO.Extras
 
   hs-source-dirs:     src
   default-language:   Haskell2010
@@ -68,7 +64,7 @@ library
   build-depends:
       aeson
     , aeson-casing
-    , base                  >=4.7  && <5
+    , base                >=4.7  && <5
     , bytestring
     , containers
     , cookie
@@ -78,7 +74,6 @@ library
     , exceptions
     , foldl
     , freer-simple
-    , hashable
     , http-client
     , http-client-tls
     , http-conduit
@@ -91,15 +86,13 @@ library
     , openapi3
     , prettyprinter
     , process
-    , prometheus            >=2
     , purescript-bridge
-    , recursion-schemes     <5.2
+    , recursion-schemes   <5.2
     , row-types
-    , servant               >=0.16
+    , servant             >=0.16
     , servant-client
     , servant-purescript
     , servant-server
-    , servant-websockets
     , streaming
     , template-haskell
     , text
@@ -107,9 +100,7 @@ library
     , time-out
     , time-units
     , transformers
-    , unordered-containers
     , uuid
-    , wai
 
 test-suite playground-common-test
   type:               exitcode-stdio-1.0
@@ -117,9 +108,7 @@ test-suite playground-common-test
   hs-source-dirs:     test
   other-modules:
     Auth.TypesSpec
-    Language.Haskell.InterpreterSpec
     Paths_playground_common
-    Playground.THSpec
     Playground.TypesSpec
     SchemaSpec
 
@@ -146,7 +135,6 @@ test-suite playground-common-test
       aeson
     , base               >=4.7 && <5
     , bytestring
-    , freer-simple
     , recursion-schemes  <5.2
     , tasty
     , tasty-hunit

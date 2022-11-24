@@ -5,8 +5,6 @@
 , fixCabalFmt
 , fixPngOptimization
 , src
-, plutus-playground
-, web-ghc
 , docs
 , vmCompileTests ? false
 }:
@@ -41,9 +39,5 @@ pkgs.recurseIntoAttrs {
   pngOptimization = pkgs.callPackage ./png-optimization.nix {
     src = cleanSrc;
     inherit fixPngOptimization;
-  };
-
-  vmTests = pkgs.callPackage ./vm.nix {
-    inherit vmCompileTests plutus-playground web-ghc docs;
   };
 }

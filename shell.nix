@@ -5,7 +5,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling sources sourcesOverride; }
 }:
 let
-  inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
+  inherit (packages) pkgs plutus-apps pab-nami-demo docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt glibcLocales;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji scriv nix-pre-commit-hooks cabal-fmt;
 
@@ -130,7 +130,6 @@ let
     hie-bios
     hlint
     pab-nami-demo.start-backend
-    plutus-playground.start-backend
     psa
     purescript-language-server
     purs-0_14_3

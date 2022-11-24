@@ -35,12 +35,10 @@ packages: cardano-streaming
           plutus-ledger-constraints
           plutus-pab
           plutus-pab-executables
-          plutus-playground-server
           plutus-script-utils
           plutus-tx-constraints
           plutus-use-cases
           rewindable-index
-          web-ghc
 
 -- We never, ever, want this.
 write-ghc-environment-files: never

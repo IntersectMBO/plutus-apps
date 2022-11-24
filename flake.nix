@@ -1,7 +1,7 @@
 # NOTE: This flake is only provided as interface to `bitte` and shouldn't be used otherwise
 #
 # Occasionally building flake builds will segfault. The workaround for this is to
-# disable the garbage collector  `GC_DONT_GC=1  nix build .#web-ghc-server
+# disable the garbage collector `GC_DONT_GC=1  nix build .#docs
 #
 # In case you are not sure if you should be using this flake, the answer is: No.
 {
