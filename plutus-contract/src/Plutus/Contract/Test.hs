@@ -47,8 +47,8 @@ module Plutus.Contract.Test(
     , assertAccumState
     , Shrinking(..)
     , assertResumableResult
-    , tx
-    , anyTx
+    , assertUnbalancedTx
+    , anyUnbalancedTx
     , assertEvents
     , walletFundsChange
     , walletFundsExactChange
@@ -342,7 +342,8 @@ endpointAvailable contract inst = TracePredicate $
                 tell @(Doc Void) ("missing endpoint:" <+> fromString (symbolVal (Proxy :: Proxy l)))
                 pure False
 
-tx :: forall w s e a.
+assertUnbalancedTx
+    :: forall w s e a.
        ( Monoid w
        )
     => Contract w s e a
@@ -350,7 +351,7 @@ tx :: forall w s e a.
     -> (UnbalancedTx -> Bool)
     -> String
     -> TracePredicate
-tx contract inst flt nm = TracePredicate $
+assertUnbalancedTx contract inst flt nm = TracePredicate $
     flip postMapM (Folds.instanceTransactions contract inst) $ \unbalancedTxns -> do
         if any flt unbalancedTxns
         then pure True
@@ -432,14 +433,14 @@ waitingForSlot contract inst sl = TracePredicate $
                 pure False
             _ -> pure True
 
-anyTx
+anyUnbalancedTx
     :: forall w s e a.
        ( Monoid w
        )
     => Contract w s e a
     -> ContractInstanceTag
     -> TracePredicate
-anyTx contract inst = tx contract inst (const True) "anyTx"
+anyUnbalancedTx contract inst = assertUnbalancedTx contract inst (const True) "anyUnbalancedTx"
 
 assertHooks
     :: forall w s e a.
