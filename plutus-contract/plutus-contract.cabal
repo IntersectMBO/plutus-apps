@@ -246,6 +246,7 @@ test-suite plutus-contract-test
     Spec.Contract.Tx.Constraints.MustSpendAtLeast
     Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput
     Spec.Contract.Tx.Constraints.MustSpendScriptOutput
+    Spec.Contract.Tx.Constraints.MustUseOutputAsCollateral
     Spec.Contract.Tx.Constraints.RequiredSigner
     Spec.Contract.Tx.Constraints.Spec
     Spec.Contract.Tx.Constraints.TimeValidity
