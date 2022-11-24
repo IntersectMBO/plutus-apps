@@ -28,23 +28,11 @@ in
 rec {
   inherit pkgs plutus-apps;
 
-  inherit (plutus-apps) web-ghc;
-
   inherit (haskell.packages.plutus-pab-executables.components.exes)
     plutus-pab-examples
     plutus-uniswap;
 
   webCommon = pkgs.callPackage sources.web-common { inherit (plutus-apps.lib) gitignore-nix; };
-
-  plutus-playground = pkgs.recurseIntoAttrs rec {
-    haddock = plutus-apps.plutus-haddock-combined;
-
-    inherit (pkgs.callPackage ./plutus-playground-client {
-      inherit (plutus-apps) purs-tidy;
-      inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
-      inherit haskell webCommon;
-    }) client server start-backend generate-purescript;
-  };
 
   # TODO: Fails for now because of webpack can't include `nami-wallet` lib in it's bundle.
   # To reproduce the error, run `npm run build:webpack:prod` in `plutus-pab-executables/demo/pab-nami/client`
@@ -74,7 +62,6 @@ rec {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;
     inherit (plutus-apps) fixStylishHaskell fix-purs-tidy fixPngOptimization fixCabalFmt;
-    inherit plutus-playground web-ghc;
     src = ./.;
   };
 
@@ -86,5 +73,5 @@ rec {
   build-and-push-devcontainer-script = import ./nix/devcontainer/deploy/default.nix { inherit pkgs plutus-apps; };
 
   # Packages needed for the bitte deployment
-  bitte-packages = import ./bitte { inherit plutus-playground docs pkgs web-ghc; };
+  bitte-packages = import ./bitte { inherit docs pkgs; };
 }

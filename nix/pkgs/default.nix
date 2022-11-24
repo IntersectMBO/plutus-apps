@@ -78,9 +78,6 @@ let
   # sphinx haddock support
   sphinxcontrib-haddock = pkgs.callPackage (sources.sphinxcontrib-haddock) { pythonPackages = pkgs.python3Packages; };
 
-  # ghc web service
-  web-ghc = pkgs.callPackage ./web-ghc { inherit haskell; };
-
   # combined haddock documentation for all public plutus libraries
   plutus-haddock-combined =
     let
@@ -117,7 +114,6 @@ in
   inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios cabal-fmt;
   inherit purs-tidy purs-0_14_3 spago spago2nix purescript-language-server psa;
   inherit fix-purs-tidy fixStylishHaskell fixCabalFmt fixPngOptimization updateClientDeps;
-  inherit web-ghc;
   inherit easyPS plutus-haddock-combined;
   inherit lib;
 }

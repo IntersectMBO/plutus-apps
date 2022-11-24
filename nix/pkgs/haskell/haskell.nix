@@ -68,13 +68,11 @@ let
             plutus-ledger-constraints.package.buildable = false;
             plutus-pab.package.buildable = false;
             plutus-pab-executables.package.buildable = false;
-            plutus-playground-server.package.buildable = false; # Would also require libpq
             plutus-script-utils.package.buildable = false;
             plutus-tx-constraints.package.buildable = false;
             plutus-tx-plugin.package.buildable = false;
             plutus-use-cases.package.buildable = false;
             plutus-example.package.buildable = false;
-            web-ghc.package.buildable = false;
             # These need R
             plutus-core.components.benchmarks.cost-model-test.buildable = lib.mkForce false;
             plutus-core.components.benchmarks.update-cost-model.buildable = lib.mkForce false;
@@ -187,7 +185,6 @@ let
             plutus-example.ghcOptions = [ "-Werror" ];
             plutus-ledger.ghcOptions = [ "-Werror" ];
             plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
-            plutus-playground-server.ghcOptions = [ "-Werror" ];
             plutus-pab.ghcOptions = [ "-Werror" ];
             plutus-pab-executables.ghcOptions = [ "-Werror" ];
             plutus-script-utils.ghcOptions = [ "-Werror" ];

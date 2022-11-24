@@ -93,7 +93,7 @@ let
           inherit forceNewEval;
         } // pkgs.lib.optionalAttrs (!rootsOnly) (filterCross {
           # build relevant top level attributes from default.nix
-          inherit (packages) docs tests plutus-playground plutus-use-cases;
+          inherit (packages) docs tests plutus-use-cases;
 
           # Build the shell expression to be sure it works on all platforms
           #
