@@ -1278,27 +1278,15 @@ code:
    :start-after: START badUnitTest
    :end-before: END badUnitTest
 
-We can rerun the test using :hsobj:`Plutus.Contract.Test.ContractModel.withDLTest`, supplying the
-:hsobj:`Plutus.Contract.Test.ContractModel.DL` ``unitTest`` from which the test case was generated,
-as well as the underlying property:
+We can rerun the test by supplying the precise action sequence that was generated:
 
 .. code-block:: text
 
-  > quickCheck $ withDLTest unitTest prop_Game badUnitTest
+  > quickCheck $ forAllDL badUnitTest prop_Game
   *** Failed! Falsified (after 1 test):
 
-(No test case is displayed by QuickCheck because nothing was generated
-in this case--the test case ``badUnitTest`` was supplied explicitly).
-
-If we now correct ``unitTest``, for example by changing the range of
-``val`` from 1-20 to 3-20, then the saved bad test case passes:
-
-.. code-block:: text
-
-  > quickCheck $ withDLTest unitTest prop_Game badUnitTest
-  +++ OK, passed 100 tests.
-
-as do freshly generated random tests:
+If we now correct ``unitTest`` and do freshly generated random tests
+we see that the issue is resolved:
 
 .. code-block:: text
 

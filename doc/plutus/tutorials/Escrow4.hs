@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -19,7 +19,6 @@ module Escrow4(prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) 
 
 import Control.Lens (At (at), makeLenses, to, (%=), (.=), (^.))
 import Control.Monad (void, when)
-import Data.Data (Data)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -49,11 +48,11 @@ data EscrowModel =
         , _targets       :: Map Wallet Value.Value
         , _refundSlot    :: Slot             -- NEW!!!
         , _phase         :: Phase
-        } deriving (Eq, Show, Data)
+        } deriving (Eq, Show, CM.Generic)
 {- END EscrowModel -}
 
 {- START Phase -}
-data Phase = Initial | Running | Refunding deriving (Eq, Show, Data)
+data Phase = Initial | Running | Refunding deriving (Eq, Show, CM.Generic)
 {- END Phase -}
 
 makeLenses ''EscrowModel
@@ -68,7 +67,7 @@ instance CM.ContractModel EscrowModel where
                           | Redeem Wallet
                           | Pay Wallet Integer
                           | Refund Wallet
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, CM.Generic)
 {- END Action -}
 
   data ContractInstanceKey EscrowModel w s e params where

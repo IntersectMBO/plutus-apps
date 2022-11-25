@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns         #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Testing contracts with HUnit and Tasty
 module Plutus.Contract.Test(
@@ -85,7 +86,7 @@ import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
 import Control.Lens (_1, _Left, anyOf, at, folded, ix, makeLenses, makePrisms, over, preview, (&), (.~), (^.))
-import Control.Monad (guard, unless)
+import Control.Monad (guard, unless, void)
 import Control.Monad.Freer (Eff, interpretM, runM)
 import Control.Monad.Freer.Error (Error, runError)
 import Control.Monad.Freer.Extras.Log (LogLevel (..), LogMessage (..))
@@ -147,7 +148,7 @@ import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
 import Wallet.Emulator.Folds qualified as Folds
-import Wallet.Emulator.Stream (filterLogLevel, foldEmulatorStreamM, initialChainState, initialDist)
+import Wallet.Emulator.Stream (EmulatorErr, filterLogLevel, foldEmulatorStreamM, initialChainState, initialDist)
 
 makePrisms ''Ledger.ScriptError
 makePrisms ''WalletAPIError
@@ -224,7 +225,7 @@ checkPredicateCoverageOptions ::
     -> TestTree
 checkPredicateCoverageOptions options nm (CoverageRef ioref) predicate action =
   HUnit.testCaseSteps nm $ \step -> do
-        checkPredicateInner options predicate action step (HUnit.assertBool nm) (\ rep -> modifyIORef ioref (rep<>))
+        void $ checkPredicateInner options predicate action step (HUnit.assertBool nm) (\ rep -> modifyIORef ioref (rep<>))
 
 -- | Check if the emulator trace fails with the condition
 checkEmulatorFails ::
@@ -235,7 +236,7 @@ checkEmulatorFails ::
     -> TestTree
 checkEmulatorFails nm options predicate action = do
     HUnit.testCaseSteps nm $ \step -> do
-        checkPredicateInner options predicate action step (HUnit.assertBool nm . Prelude.not) (const $ return ())
+        void $ checkPredicateInner options predicate action step (HUnit.assertBool nm . Prelude.not) (const $ return ())
 
 -- | Check if the emulator trace meets the condition, using the
 --   'GeneratorModel' to generate initial transactions for the blockchain
@@ -248,57 +249,69 @@ checkPredicateGen = checkPredicateGenOptions defaultCheckOptions
 
 -- | Evaluate a trace predicate on an emulator trace, printing out debug information
 --   and making assertions as we go.
-checkPredicateInner :: forall m.
+checkPredicateInner :: forall m a.
     Monad m
     => CheckOptions
     -> TracePredicate
-    -> EmulatorTrace ()
+    -> EmulatorTrace a
     -> (String -> m ()) -- ^ Print out debug information in case of test failures
+    -- TODO: can we generalize Bool here? We need it to get extractPropertyResult
+    -- to work
     -> (Bool -> m ()) -- ^ assert
     -> (CoverageData -> m ())
-    -> m ()
+    -> m (Either EmulatorErr a)
 checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action =
-    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action)
+    checkPredicateInnerStream opts predicate $ fmap fst (runEmulatorStream _emulatorConfig action)
 
-checkPredicateInnerStream :: forall m.
+checkPredicateInnerStream :: forall m a.
     Monad m
     => CheckOptions
     -> TracePredicate
-    -> (forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ())
+    -> (forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) (Either EmulatorErr a))
     -> (String -> m ()) -- ^ Print out debug information in case of test failures
     -> (Bool -> m ()) -- ^ assert
     -> (CoverageData -> m ())
-    -> m ()
-checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePredicate predicate) theStream annot assert cover = do
+    -> m (Either EmulatorErr a)
+checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig}
+                          (TracePredicate predicate) theStream annot assert cover = do
     let dist = initialDist _emulatorConfig
-        consumedStream :: Eff (TestEffects :++: '[m]) Bool
-        consumedStream = S.fst' <$> foldEmulatorStreamM (liftA2 (&&) predicate generateCoverage) theStream
+        consumedStream :: Eff (TestEffects :++: '[m]) (S.Of Bool (Either EmulatorErr a))
+        consumedStream = foldEmulatorStreamM (liftA2 (&&) predicate generateCoverage) theStream
 
-        generateCoverage = flip postMapM (L.generalize Folds.emulatorLog) $ (True <$) . tell @CoverageData . getCoverageData
+        generateCoverage = flip postMapM (L.generalize Folds.emulatorLog)
+                         $ (True <$) . tell @CoverageData . getCoverageData
+
+        annotate :: Doc Void -> m ()
+        annotate = annot . Text.unpack . renderStrict . layoutPretty defaultLayoutOptions
 
     result <- runM
-                $ interpretM @(Writer CoverageData) @m (\case { Tell r -> cover r })
-                $ interpretM @(Writer (Doc Void)) @m (\case { Tell d -> annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
-                $ runError
-                $ runReader dist
-                consumedStream
+            . interpretM @(Writer CoverageData) @m (\case { Tell r -> cover r })
+            . interpretM @(Writer (Doc Void)) @m (\case { Tell d -> annotate d })
+            . runError
+            . runReader dist
+            $ consumedStream
 
-    unless (result == Right True) $ do
-        annot "Test failed."
-        annot "Emulator log:"
-        S.mapM_ annot
-            $ S.hoist runM
-            $ S.map (Text.unpack . renderStrict . layoutPretty defaultLayoutOptions . pretty)
-            $ filterLogLevel _minLogLevel
-            theStream
+    let logEmulator = do
+          annot "Test failed."
+          annot "Emulator log:"
+          S.mapM_ annot
+              $ S.hoist runM
+              $ S.map (Text.unpack . renderStrict . layoutPretty defaultLayoutOptions . pretty)
+              $ filterLogLevel _minLogLevel
+              theStream
 
-        case result of
-            Left err -> do
-                annot "Error:"
-                annot (describeError err)
-                annot (show err)
-                assert False
-            Right r -> assert r
+    case result of
+      Right (True  S.:> res) -> return res
+      Right (False S.:> res) -> do
+        _ <- logEmulator
+        assert False
+        return res
+      Left err -> do
+        _ <- logEmulator
+        annot "Error:"
+        annot (describeError err)
+        annot (show err)
+        error $ "Unexpected: " ++ show err
 
 -- | A version of 'checkPredicateGen' with configurable 'CheckOptions'.
 --
@@ -314,7 +327,7 @@ checkPredicateGenOptions ::
 checkPredicateGenOptions options gm predicate action = property $ do
     Mockchain{mockchainInitialTxPool} <- forAll (Gen.genMockchain' gm)
     let options' = options & emulatorConfig . initialChainState .~ Right mockchainInitialTxPool
-    checkPredicateInner options' predicate action Hedgehog.annotate Hedgehog.assert (const $ return ())
+    void $ checkPredicateInner options' predicate action Hedgehog.annotate Hedgehog.assert (const $ return ())
 
 -- | A version of 'checkPredicate' with configurable 'CheckOptions'
 checkPredicateOptions ::
@@ -325,7 +338,7 @@ checkPredicateOptions ::
     -> TestTree
 checkPredicateOptions options nm predicate action = do
     HUnit.testCaseSteps nm $ \step -> do
-        checkPredicateInner options predicate action step (HUnit.assertBool nm) (const $ return ())
+        void $ checkPredicateInner options predicate action step (HUnit.assertBool nm) (const $ return ())
 
 endpointAvailable
     :: forall (l :: Symbol) w s e a.
