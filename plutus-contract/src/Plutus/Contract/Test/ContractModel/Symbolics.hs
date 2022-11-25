@@ -78,9 +78,9 @@ class SymValueLike v where
 
 class TokenLike t where
   -- | Get the value of a specific token in a `SymValue`
-  symAssetClassValueOf :: SymValue -> t -> Integer
+  symAssetIdValueOf :: SymValue -> t -> Integer
   -- | Convert a token and an amount to a `SymValue`
-  symAssetClassValue :: t -> Integer -> SymValue
+  symAssetIdValue :: t -> Integer -> SymValue
 
 instance SymValueLike Value where
   toSymValue = SymValue mempty
@@ -92,11 +92,11 @@ instance SymValueLike Ada.Ada where
   toSymValue = toSymValue . Ada.toValue
 
 instance TokenLike SymToken where
-  symAssetClassValueOf (SymValue svm _) t = sum $ Map.lookup t svm
+  symAssetIdValueOf (SymValue svm _) t = sum $ Map.lookup t svm
 
-  symAssetClassValue _ 0 = SymValue mempty mempty
-  symAssetClassValue t i = SymValue (Map.singleton t i) mempty
+  symAssetIdValue _ 0 = SymValue mempty mempty
+  symAssetIdValue t i = SymValue (Map.singleton t i) mempty
 
 instance TokenLike AssetClass where
-  symAssetClassValueOf (SymValue _ v) t = assetClassValueOf v t
-  symAssetClassValue t i = toSymValue $ assetClassValue t i
+  symAssetIdValueOf (SymValue _ v) t = assetClassValueOf v t
+  symAssetIdValue t i = toSymValue $ assetClassValue t i

@@ -132,15 +132,17 @@ library
   build-depends:
     , cardano-api             >=1.35
     , cardano-crypto
+    , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-wallet-core
+    , contractmodel
     , plutus-core             >=1.0.0
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
-    , quickcheck-dynamic
+    , quickcheck-dynamic      >=2.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -158,7 +160,6 @@ library
     , data-default
     , deepseq
     , directory
-    , either
     , filepath
     , flat
     , foldl
@@ -187,7 +188,6 @@ library
     , text
     , text-class
     , transformers
-    , uniplate
     , unordered-containers
     , uuid
 
@@ -199,8 +199,9 @@ library
       Plutus.Contract.Test
       Plutus.Contract.Test.ContractModel
       Plutus.Contract.Test.ContractModel.CrashTolerance
-      Plutus.Contract.Test.ContractModel.DoubleSatisfaction
+      Plutus.Contract.Test.ContractModel.Interface
       Plutus.Contract.Test.ContractModel.Internal
+      Plutus.Contract.Test.ContractModel.Internal.ContractInstance
       Plutus.Contract.Test.ContractModel.Symbolics
       Plutus.Contract.Test.Coverage
       Plutus.Contract.Test.Coverage.Analysis
@@ -282,9 +283,11 @@ test-suite plutus-contract-test
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}  >=1.35
+    , contractmodel
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
+    , quickcheck-dynamic              >=2.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0

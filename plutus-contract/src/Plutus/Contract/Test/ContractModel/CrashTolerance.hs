@@ -28,7 +28,7 @@ import Control.Lens
 import Control.Monad.State
 import Data.Functor.Compose
 import Data.Typeable
-import Plutus.Contract.Test.ContractModel.Internal
+import Plutus.Contract.Test.ContractModel
 import Plutus.Trace.Effects.EmulatorControl
 import Plutus.Trace.Emulator.Types
 import Test.QuickCheck as QC
@@ -62,9 +62,9 @@ instance ContractModel state => Show (Action (WithCrashTolerance state)) where
   showsPrec p (UnderlyingAction a) = showsPrec p a
 deriving instance ContractModel state => Eq (Action (WithCrashTolerance state))
 
-instance {-# OVERLAPPING #-} ContractModel state => HasActions (WithCrashTolerance state) where
-  getAllSymtokens (UnderlyingAction a) = getAllSymtokens a
-  getAllSymtokens _                    = mempty
+instance {-# OVERLAPPING #-} ContractModel state => HasSymTokens (Action (WithCrashTolerance state)) where
+  getAllSymTokens (UnderlyingAction a) = getAllSymTokens a
+  getAllSymTokens _                    = mempty
 
 deriving instance Show (ContractInstanceKey state w s e p) => Show (ContractInstanceKey (WithCrashTolerance state) w s e p)
 deriving instance Eq (ContractInstanceKey state w s e p) => Eq (ContractInstanceKey (WithCrashTolerance state) w s e p)
@@ -74,8 +74,6 @@ liftStartContract (StartContract k p) = StartContract (UnderlyingContractInstanc
 
 instance forall state.
          ( Typeable state
-         , Show (ContractInstanceSpec state)
-         , Eq (ContractInstanceSpec state)
          , CrashTolerance state) => ContractModel (WithCrashTolerance state) where
 
   data Action (WithCrashTolerance state) = Crash (SomeContractInstanceKey state)
@@ -156,5 +154,6 @@ instance forall state.
 liftL :: Functor t => (forall a. t a -> a) -> Lens' s a -> Lens' (t s) (t a)
 liftL extr l ft ts = getCompose . l (Compose . ft . (<$ ts)) $ extr ts
 
+-- TODO: this should move to quickcheck-contractmodel
 embed :: Spec state a -> Spec (WithCrashTolerance state) a
-embed (Spec comp) = Spec (zoom (liftL _contractState underlyingModelState) comp)
+embed (Spec comp) = Spec (zoom (liftL (^. contractState) underlyingModelState) comp)

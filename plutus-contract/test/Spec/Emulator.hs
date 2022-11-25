@@ -166,7 +166,7 @@ txnUpdateUtxo = property $ do
                 ] -> "ApplyTxError [UtxowFailure (UtxoFailure (FromAlonzoUtxoFail (ValueNotConserved" `Text.isInfixOf` msg
                      || "[CollectErrors [BadTranslation (TranslationLogicMissingInput" `Text.isInfixOf` msg
             _ -> False
-    checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
+    void $  checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 validTrace :: Property
 validTrace = property $ do
@@ -174,7 +174,7 @@ validTrace = property $ do
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         signedTx = Gen.signTx params utxo txn
         trace = Trace.liftWallet wallet1 (submitTxn signedTx)
-    checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
+    void $  checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 validTrace2 :: Property
 validTrace2 = property $ do
@@ -185,7 +185,7 @@ validTrace2 = property $ do
             Trace.liftWallet wallet1 (submitTxn signedTx)
             Trace.liftWallet wallet1 (submitTxn signedTx)
         predicate = assertFailedTransaction (\_ _ -> True)
-    checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
+    void $  checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 invalidTrace :: Property
 invalidTrace = property $ do
@@ -201,7 +201,7 @@ invalidTrace = property $ do
                 , Chain.SlotAdd _
                 ] -> "ValueNotConservedUTxO" `Text.isInfixOf` msg
             _ -> False
-    checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
+    void $ checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 invalidScript :: Property
 invalidScript = property $ do
