@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -19,7 +19,6 @@ module Spec.Prism (tests, prismTrace, prop_Prism, prop_NoLock) where
 
 import Control.Lens
 import Control.Monad
-import Data.Data
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger.Ada qualified as Ada
@@ -98,16 +97,16 @@ prismTrace = do
 -- * QuickCheck model
 
 data STOState = STOReady | STOPending | STODone
-    deriving (Eq, Ord, Show, Data)
+    deriving (Eq, Ord, Show, Generic)
 
 data IssueState = NoIssue | Revoked | Issued
-    deriving (Eq, Ord, Show, Data)
+    deriving (Eq, Ord, Show, Generic)
 
 data PrismModel = PrismModel
     { _walletState   :: Map Wallet (IssueState, STOState)
     , _numberOfCalls :: Integer
     }
-    deriving (Show, Data)
+    deriving (Show, Generic)
 
 makeLenses 'PrismModel
 
@@ -137,7 +136,7 @@ deriving instance Show (ContractInstanceKey PrismModel w s e params)
 instance ContractModel PrismModel where
 
     data Action PrismModel = Issue Wallet | Revoke Wallet | Call Wallet
-        deriving (Eq, Show, Data)
+        deriving (Eq, Show, Generic)
 
     data ContractInstanceKey PrismModel w s e params where
         MirrorH  ::           ContractInstanceKey PrismModel () C.MirrorSchema            C.MirrorError ()
@@ -184,7 +183,7 @@ instance ContractModel PrismModel where
         Revoke w  -> wrap $ Trace.callEndpoint @"revoke"             (handle MirrorH) CredentialOwnerReference{coTokenName=kyc, coOwner=w}
         Call w    -> wrap $ Trace.callEndpoint @"sto"                (handle $ UserH w) stoSubscriber
         where                     -- v Wait a generous amount of blocks between calls
-            wrap m   = () <$ m <* delay waitSlots
+            wrap m   = void $ m <* delay waitSlots
 
     shrinkAction _ _ = []
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
@@ -10,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE ViewPatterns        #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing -fno-warn-redundant-constraints #-}
 module Spec.Uniswap where
 
@@ -22,8 +23,6 @@ import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
-import Plutus.Contract.Test.ContractModel.Symbolics
-import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap hiding (pools, setupTokens, tokenNames, wallets)
 import Plutus.Contracts.Uniswap.Trace qualified as Uniswap
@@ -35,7 +34,7 @@ import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
 import Ledger.Value qualified as Value
 
-import Data.Data
+import Data.Coerce
 import Data.Foldable
 import Data.List
 import Data.Map (Map)
@@ -58,7 +57,7 @@ import Ledger.Constraints
 
 import Spec.Uniswap.Endpoints
 
-data PoolIndex = PoolIndex SymToken SymToken deriving (Show, Data)
+data PoolIndex = PoolIndex SymToken SymToken deriving (Show, Generic)
 
 poolIndex :: SymToken -> SymToken -> PoolIndex
 poolIndex t1 t2 = PoolIndex (min t1 t2) (max t1 t2)
@@ -73,13 +72,13 @@ data PoolModel = PoolModel { _coinAAmount    :: Amount A
                            , _coinBAmount    :: Amount B
                            , _liquidities    :: Map Wallet (Amount Liquidity)
                            , _liquidityToken :: SymToken
-                           } deriving (Ord, Eq, Show, Data)
+                           } deriving (Ord, Eq, Show, Generic)
 
 data UniswapModel = UniswapModel { _uniswapToken       :: Maybe SymToken
                                  , _exchangeableTokens :: Set SymToken
                                  , _pools              :: Map PoolIndex PoolModel
                                  , _startedUserCode    :: Set Wallet
-                                 } deriving (Show, Data)
+                                 } deriving (Show, Generic)
 
 makeLenses ''UniswapModel
 makeLenses ''PoolModel
@@ -183,7 +182,7 @@ instance ContractModel UniswapModel where
                            -- ^ An action included for negative testing
                            | BadRemoveLiquidity Wallet SymToken Integer SymToken Integer Integer
                            -- ^ Remove liquidity, specify amounts to get
-                           deriving (Eq, Show, Data)
+                           deriving (Eq, Show, Generic)
 
   data ContractInstanceKey UniswapModel w s e params where
     OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError ()
@@ -332,12 +331,12 @@ instance ContractModel UniswapModel where
       -- Create the tokens
       ts <- forM tokenNames $ \t -> do
         tok <- createToken t
-        mint (symAssetClassValue tok (toInteger $ length wallets * 1000000))
+        mint (symAssetIdValue tok (fromIntegral $ length wallets * 1000000))
         return tok
       -- Give the tokens to the wallets
       forM_ wallets $ \ w -> do
         deposit w $ Ada.toValue Ledger.minAdaTxOutEstimated
-        deposit w $ mconcat [ symAssetClassValue t 1000000 | t <- ts ]
+        deposit w $ mconcat [ symAssetIdValue t 1000000 | t <- ts ]
       exchangeableTokens %= (Set.fromList ts <>)
       wait 21
 
@@ -365,13 +364,13 @@ instance ContractModel UniswapModel where
         -- Create the pool
         pools %= Map.insert (poolIndex t1 t2) (PoolModel tokAAmount tokBAmount (Map.singleton w liq) ltok)
         -- Give `w` the liquidity tokens
-        let liqVal = symAssetClassValue ltok (unAmount liq)
+        let liqVal = symAssetIdValue ltok (fromIntegral $ unAmount liq)
         deposit w liqVal
         mint liqVal
         -- Pay to the pool
         withdraw w $ Ada.toValue Ledger.minAdaTxOutEstimated
-        withdraw w $ symAssetClassValue t1 a1
-                  <> symAssetClassValue t2 a2
+        withdraw w $ symAssetIdValue t1 (fromIntegral a1)
+                  <> symAssetIdValue t2 (fromIntegral a2)
       wait 5
 
     AddLiquidity w t1 a1 t2 a2 -> do
@@ -392,9 +391,9 @@ instance ContractModel UniswapModel where
                & coinBAmount +~ deltaB
         pools . at (poolIndex t1 t2) .= Just p'
         -- Give the tokens to the pool
-        withdraw w $ symAssetClassValue t1 a1 <> symAssetClassValue t2 a2
+        withdraw w $ symAssetIdValue t1 (fromIntegral a1) <> symAssetIdValue t2 (fromIntegral a2)
         -- Create liquidity token and give it to `w`
-        let liqVal = symAssetClassValue (p ^. liquidityToken) (unAmount deltaL)
+        let liqVal = symAssetIdValue (p ^. liquidityToken) (fromIntegral $ unAmount deltaL)
         mint liqVal
         deposit w liqVal
         -- Make sure product increases
@@ -422,8 +421,8 @@ instance ContractModel UniswapModel where
                                 in (a', p', coinAAmount . to unAmount)
       when (0 < a' && a' < p ^. lens) $ do
         -- Swap the coins
-        withdraw w $ symAssetClassValue t1 a
-        deposit w $ symAssetClassValue t2 a'
+        withdraw w $ symAssetIdValue t1 $ fromIntegral a
+        deposit w $ symAssetIdValue t2 $ fromIntegral a'
         -- Update the pool
         pools . at (poolIndex t1 t2) .= Just p'
         -- Make sure product increases
@@ -446,12 +445,12 @@ instance ContractModel UniswapModel where
              & liquidities . at w . _Just -~ Amount a
       pools . at (poolIndex t1 t2) .= Just p'
       -- Take the requisite amount of coin out of the contract
-      deposit w $ symAssetClassValue (getAToken t1 t2) (unAmount $ inA - outA)
-                <> symAssetClassValue (getBToken t1 t2) (unAmount $ inB - outB)
+      deposit w $ symAssetIdValue (getAToken t1 t2) (fromIntegral $ unAmount $ inA - outA)
+                <> symAssetIdValue (getBToken t1 t2) (fromIntegral $ unAmount $ inB - outB)
       -- Burn the liquidity tokens
-      let liqVal = symAssetClassValue (p ^. liquidityToken) a
+      let liqVal = symAssetIdValue (p ^. liquidityToken) $ fromIntegral a
       withdraw w liqVal
-      mint $ inv liqVal
+      mint $ invSymValue liqVal
       wait 5
 
     ClosePool w t1 t2 -> do
@@ -464,12 +463,12 @@ instance ContractModel UniswapModel where
              & liquidities .~ Map.empty
       pools . at (poolIndex t1 t2) .= Just p'
       -- Take the rest of the money out of the contract
-      deposit w $ symAssetClassValue (getAToken t1 t2) (p ^. coinAAmount . to unAmount)
-                <> symAssetClassValue (getBToken t1 t2) (p ^. coinBAmount . to unAmount)
-      let liqVal = symAssetClassValue (p ^. liquidityToken) (p ^. liquidities . at w . to fromJust . to unAmount)
+      deposit w $ symAssetIdValue (getAToken t1 t2) (p ^. coinAAmount . to unAmount . to fromIntegral)
+                <> symAssetIdValue (getBToken t1 t2) (p ^. coinBAmount . to unAmount . to fromIntegral)
+      let liqVal = symAssetIdValue (p ^. liquidityToken) (p ^. liquidities . at w . to fromJust . to unAmount . to fromIntegral)
       -- Burn the remaining liquidity tokens
       withdraw w liqVal
-      mint $ inv liqVal
+      mint $ invSymValue liqVal
       -- Return the 2 ada at the script to the wallet
       deposit w $ Ada.toValue Ledger.minAdaTxOutEstimated
       wait 5
@@ -568,12 +567,12 @@ noLockProof = defaultNLFP {
       nlfpOverhead       = const $ toSymValue Ledger.minAdaTxOutEstimated,
       nlfpErrorMargin    = wiggle }
     where
-        wiggle s = fold [symAssetClassValue t1 (toInteger m) <>
-                         symAssetClassValue t2 (toInteger m) <>
-                         toSymValue Ledger.minAdaTxOutEstimated
-                        | (PoolIndex t1 t2, p) <- Map.toList (s ^. contractState . pools)
-                        , let numLiqs = length $ p ^. liquidities
-                              m = max 0 (numLiqs - 1) ]
+        wiggle (coerce -> s) = fold [ symAssetIdValue t1 (fromIntegral m) <>
+                                      symAssetIdValue t2 (fromIntegral m) <>
+                                      toSymValue Ledger.minAdaTxOutEstimated
+                                    | (PoolIndex t1 t2, p) <- Map.toList (s ^. contractState . pools)
+                                    , let numLiqs = length $ p ^. liquidities
+                                          m = max 0 (numLiqs - 1) ]
         mainStrat = do
             pools <- viewContractState pools
             forM_ (Map.toList pools) $ \ (PoolIndex t1 t2, p) -> do

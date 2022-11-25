@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -20,7 +20,6 @@ module Spec.Tutorial.Escrow6(prop_Escrow, prop_FinishEscrow, prop_FinishFast,
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void, when)
-import Data.Data
 import Data.Default
 import Data.Foldable
 import Data.Map (Map)
@@ -34,7 +33,6 @@ import Plutus.Contract (Contract, selectList)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
-import Plutus.Contract.Test.Coverage
 import Plutus.V1.Ledger.Api (Datum)
 import Plutus.V1.Ledger.Time
 
@@ -48,9 +46,9 @@ data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
                                , _refundSlot    :: Slot
                                , _phase         :: Phase
-                               } deriving (Eq, Show, Data)
+                               } deriving (Eq, Show, Generic)
 
-data Phase = Initial | Running | Refunding deriving (Eq, Show, Data)
+data Phase = Initial | Running | Refunding deriving (Eq, Show, Generic)
 
 makeLenses ''EscrowModel
 
@@ -62,7 +60,7 @@ instance ContractModel EscrowModel where
                           | Redeem Wallet
                           | Pay Wallet Integer
                           | Refund Wallet
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, Generic)
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError (EscrowParams Datum)

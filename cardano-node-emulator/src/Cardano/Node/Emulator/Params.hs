@@ -16,6 +16,7 @@ module Cardano.Node.Emulator.Params(
   protocolParamsL,
   networkIdL,
   increaseTransactionLimits,
+  genesisDefaultsFromParams,
   -- * cardano-ledger specific types and conversion functions
   EmulatorEra,
   PParams,

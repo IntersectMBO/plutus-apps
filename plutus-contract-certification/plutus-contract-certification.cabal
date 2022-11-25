@@ -57,7 +57,9 @@ library
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:   plutus-tx >=1.0.0
+  build-depends:
+    , plutus-tx           >=1.0.0
+    , quickcheck-dynamic  >=2.0
 
   ------------------------
   -- Non-IOG dependencies

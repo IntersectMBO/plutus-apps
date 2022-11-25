@@ -5,10 +5,12 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-
 
 An emulator trace is a contract trace that can be run in the Plutus emulator.
@@ -17,6 +19,8 @@ An emulator trace is a contract trace that can be run in the Plutus emulator.
 module Plutus.Trace.Emulator(
     Emulator
     , EmulatorTrace
+    , EmulatorEffects
+    , BaseEmulatorEffects
     , Wallet.Emulator.Stream.EmulatorErr(..)
     , Plutus.Trace.Emulator.Types.ContractHandle(..)
     , ContractInstanceTag
@@ -70,6 +74,8 @@ module Plutus.Trace.Emulator(
     , runEmulatorTraceIO'
     -- * Interpreter
     , interpretEmulatorTrace
+    -- * New utility functions that I don't know what do about
+    , getParams
     ) where
 
 import Cardano.Node.Emulator.Chain (ChainControlEffect)
@@ -78,7 +84,7 @@ import Cardano.Node.Emulator.Params (Params (..))
 import Control.Foldl (generalize, list)
 import Control.Lens hiding ((:>))
 import Control.Monad (forM_, void)
-import Control.Monad.Freer (Eff, Member, interpret, interpretM, raise, reinterpret, run, runM, subsume)
+import Control.Monad.Freer (Eff, Member, interpret, interpretM, raise, reinterpret, run, runM, subsume, type (~>))
 import Control.Monad.Freer.Coroutine (Yield)
 import Control.Monad.Freer.Error (Error, handleError, throwError)
 import Control.Monad.Freer.Extras.Log (LogLevel (Info), LogMessage (LogMessage), LogMsg, mapLog)
@@ -139,17 +145,29 @@ data PrintEffect r where
   PrintLn :: String -> PrintEffect ()
 makeEffect ''PrintEffect
 
-type EmulatorTrace =
-        Eff
-            '[ StartContract
-            , RunContract
-            , Assert
-            , Waiting
-            , EmulatorControl
-            , EmulatedWalletAPI
-            , LogMsg String
-            , Error EmulatorRuntimeError
-            ]
+data QueryParams r where
+  GetParams     :: QueryParams Params
+makeEffect ''QueryParams
+
+type EmulatorEffects = QueryParams
+                    ': StartContract
+                    ': BaseEmulatorEffects
+
+type BaseEmulatorEffects =
+             [ RunContract
+             , Assert
+             , Waiting
+             , EmulatorControl
+             , EmulatedWalletAPI
+             , LogMsg String
+             , Error EmulatorRuntimeError
+             ]
+
+type EmulatorTrace = Eff EmulatorEffects
+
+handleQueryParams :: Params -> QueryParams ~> Eff effs
+handleQueryParams params = \case
+  GetParams     -> return params
 
 handleEmulatorTrace ::
     forall effs a.
@@ -164,7 +182,7 @@ handleEmulatorTrace ::
     => Params
     -> EmulatorTrace a
     -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage) ': effs) ()
-handleEmulatorTrace Params{pNetworkId, pSlotConfig} action = do
+handleEmulatorTrace params@Params{pNetworkId, pSlotConfig} action = do
     result <- subsume @(Error EmulatorRuntimeError)
             . interpret (mapLog (UserThreadEvent . UserLog))
             . flip handleError (throwError . EmulatedWalletError)
@@ -174,6 +192,7 @@ handleEmulatorTrace Params{pNetworkId, pSlotConfig} action = do
             . interpret (handleAssert @_ @effs @a)
             . interpret (handleRunContract @_ @effs @a)
             . interpret (handleStartContract @_ @effs @a pNetworkId)
+            . interpret (handleQueryParams params)
             $ raiseEnd action
     void $ exit @effs @EmulatorMessage result
 

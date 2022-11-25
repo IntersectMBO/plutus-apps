@@ -82,6 +82,7 @@ data ChainEffect r where
     QueueTx :: CardanoTx -> ChainEffect ()
     GetCurrentSlot :: ChainEffect Slot
     GetParams :: ChainEffect Params
+    GetChainState :: ChainEffect ChainState
 
 -- | Make a new block
 processBlock :: Member ChainControlEffect effs => Eff effs Block
@@ -99,6 +100,9 @@ getParams = send GetParams
 
 getCurrentSlot :: Member ChainEffect effs => Eff effs Slot
 getCurrentSlot = send GetCurrentSlot
+
+getChainState ::  Member ChainEffect effs => Eff effs ChainState
+getChainState = send GetChainState
 
 type ChainEffs = '[State ChainState, LogMsg ChainEvent]
 
@@ -132,6 +136,7 @@ handleChain params = \case
     QueueTx tx     -> modify $ over txPool (addTxToPool tx)
     GetCurrentSlot -> gets _chainCurrentSlot
     GetParams      -> pure params
+    GetChainState  -> gets id
 
 -- | The result of validating a block.
 data ValidatedBlock = ValidatedBlock
