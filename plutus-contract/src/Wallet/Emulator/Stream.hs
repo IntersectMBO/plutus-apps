@@ -54,7 +54,7 @@ import Streaming (Stream)
 import Streaming qualified as S
 import Streaming.Prelude (Of)
 import Streaming.Prelude qualified as S
-import Wallet.API (Params (pNetworkId), WalletAPIError)
+import Wallet.API (Params, WalletAPIError)
 import Wallet.Emulator (EmulatorEvent, EmulatorEvent')
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)

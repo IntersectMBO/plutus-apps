@@ -36,11 +36,10 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Data.Foldable (fold)
-import Ledger hiding (minAdaTxOut, to, value)
+import Ledger hiding (to, value)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Constraints.OffChain (adjustTxOut)
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (toCardanoTxOut)
 import Ledger.Validation qualified as Validation
@@ -297,8 +296,8 @@ we create 10 Ada-only outputs per wallet here.
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Params -> Map PaymentPubKeyHash Value -> Either ToCardanoError EmulatorState
 emulatorStateInitialDist params mp = do
-    minAdaTxOut <- mMinAdaTxOut
-    outs <- traverse (toCardanoTxOut $ pNetworkId params) $ Map.toList mp >>= mkOutputs minAdaTxOut
+    minAdaEmptyTxOut <- mMinAdaTxOut
+    outs <- traverse (toCardanoTxOut $ pNetworkId params) $ Map.toList mp >>= mkOutputs minAdaEmptyTxOut
     let tx = mempty
            { txOutputs = TxOut <$> outs
            , txMint = fold mp
@@ -313,7 +312,7 @@ emulatorStateInitialDist params mp = do
         mMinAdaTxOut = do
           let k = fst $ head $ Map.toList mp
           emptyTxOut <- toCardanoTxOut (pNetworkId params) $ mkOutput k mempty
-          Ada.fromValue . txOutValue . snd <$> adjustTxOut params (TxOut emptyTxOut)
+          pure $ minAdaTxOut params (TxOut emptyTxOut)
         -- See [Creating wallets with multiple outputs]
         mkOutputs minAda (key, vl) = mkOutput key <$> splitInto10 vl minAda
         splitInto10 vl minAda = if count <= 1
