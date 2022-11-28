@@ -76,10 +76,24 @@ curPolicy outRef = mkMintingPolicyScript $
 threadTokenValue :: CurrencySymbol -> ValidatorHash -> Value
 threadTokenValue currency (ValidatorHash vHash) = Value.singleton currency (TokenName vHash) 1
 
+-- | Check exactly `n` thread tokens and no other tokens with the given
+-- @CurrencySymbol@ are in the given @Value@.
 {-# INLINABLE checkThreadTokenInner #-}
-checkThreadTokenInner :: CurrencySymbol -> ValidatorHash -> Value -> Integer -> Bool
-checkThreadTokenInner currency (ValidatorHash vHash) vl i =
-    Value.valueOf vl currency (TokenName vHash) == i
+checkThreadTokenInner ::
+    -- | The currency symbol of the thread token.
+    CurrencySymbol ->
+    -- | The hash of the (state machine) validator script using this thread
+    -- token. This is used as the @TokenName@ of the thread token.
+    ValidatorHash ->
+    -- | The value to check.
+    Value ->
+    -- | The expected number of thread tokens in the given value, `n`.
+    Integer ->
+    -- | True if and only if exactly `n` thread tokens (and no other tokens)
+    -- with the given @CurrencySymbol@ are in the given @Value@.
+    Bool
+checkThreadTokenInner currency (ValidatorHash vHash) value n =
+    Value.currencyValueOf value currency == Value.singleton currency (TokenName vHash) n
 
 {-# INLINABLE checkThreadToken #-}
 checkThreadToken :: Maybe ThreadToken -> ValidatorHash -> Value -> Integer -> Bool
