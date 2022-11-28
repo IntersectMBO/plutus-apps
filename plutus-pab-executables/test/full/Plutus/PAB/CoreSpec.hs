@@ -204,7 +204,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+  void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
   Simulator.waitNSlots 1
   txStatus' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 2"
@@ -214,7 +214,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ (n - 1) $ do
-    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
     Simulator.waitNSlots 1
 
   txStatus'' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
@@ -255,7 +255,7 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+  tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
   Simulator.waitNSlots 1
   txOutStatus1' <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -269,7 +269,7 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ n $ do
-    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
     Simulator.waitNSlots 1
 
   txOutStatus1'' <- Simulator.waitForTxOutStatusChange txOutRef1

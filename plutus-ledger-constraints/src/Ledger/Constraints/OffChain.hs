@@ -569,10 +569,10 @@ adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxO
 adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue minAdaTxOut
+    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
     let txOutEstimate = txOut & outValue .~ withMinAdaValue
-        minAdaTxOut' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
-        missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
+        minAdaTxOutEstimated' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
+        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
     if missingLovelace > 0
     then do
       adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace

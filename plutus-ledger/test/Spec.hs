@@ -119,7 +119,7 @@ splitVal = property $ do
 
 splitValMinAda :: Property
 splitValMinAda = property $ do
-    let minAda = Ada.getLovelace $ Ledger.minAdaTxOut + Ledger.maxFee
+    let minAda = Ada.getLovelace $ Ledger.minAdaTxOutEstimated + Ledger.maxFee
     i <- forAll $ Gen.integral $ Range.linear minAda (100_000_000 :: Integer)
     n <- forAll $ Gen.integral $ Range.linear 1 100
     vs <- forAll $ Gen.splitVal n i

@@ -275,7 +275,7 @@ instance ContractModel AuctionModel where
     shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
 
     monitoring _ (Bid _ bid) =
-      classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOut <> Ledger.maxFee))
+      classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOutEstimated <> Ledger.maxFee))
         "Maximum bid reached"
     monitoring _ _ = id
 

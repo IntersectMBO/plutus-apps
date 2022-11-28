@@ -26,6 +26,7 @@ module Ledger.Index(
     minFee,
     maxFee,
     minAdaTxOut,
+    minAdaTxOutEstimated,
     maxMinAdaTxOut,
     pubKeyTxIns,
     scriptTxIns,
@@ -37,17 +38,20 @@ module Ledger.Index(
 
 import Prelude hiding (lookup)
 
+import Cardano.Api.Shelley qualified as C.Api
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Lens (Fold, folding)
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
-import Ledger.Ada (Ada)
+import Ledger.Ada (Ada, lovelaceOf)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), Tx, TxIn (TxIn, txInType), TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut,
-                  TxOutRef, updateUtxoCollateral)
+import Ledger.Params (Params (emulatorPParams))
+import Ledger.Tx (CardanoTx (..), Tx, TxIn (TxIn, txInType), TxInType (ConsumePublicKeyAddress, ScriptAddress),
+                  TxOut (getTxOut), TxOutRef, updateUtxoCollateral)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
 
@@ -90,12 +94,24 @@ the blockchain.
 
 -}
 
-{-# INLINABLE minAdaTxOut #-}
+minAdaTxOut :: Params -> TxOut -> Ada
+minAdaTxOut params =
+  toValue . C.Ledger.evaluateMinLovelaceOutput (emulatorPParams params) . fromPlutusTxOut
+  where
+    toValue = lovelaceOf . C.Ledger.unCoin
+    fromPlutusTxOut = C.Api.toShelleyTxOut C.Api.ShelleyBasedEraBabbage . C.Api.toCtxUTxOTxOut . getTxOut
+
+{-# INLINABLE minAdaTxOutEstimated #-}
+-- | An exact estimate of the the mimimum of Ada in a TxOut is determined by two things:
+--     - the `PParams`, more precisely its 'coinPerUTxOWord' parameter.
+--     - the size of the 'TxOut'.
+-- In many situations though, we need to determine a plausible value for the minimum of Ada needed for a TxOut
+-- without knowing much of the 'TxOut'.
+-- This function provides a value big enough to balance UTxOs without a large inlined data (larger than a hash).
+-- It's superior to the lowest minimum needed for an UTxO, as the lowest value require no datum.
 -- An estimate of the minimum required Ada for each tx output.
---
--- TODO: Should be removed.
-minAdaTxOut :: Ada
-minAdaTxOut = Ada.lovelaceOf minTxOut
+minAdaTxOutEstimated :: Ada
+minAdaTxOutEstimated = Ada.lovelaceOf minTxOut
 
 {-# INLINABLE minTxOut #-}
 minTxOut :: Integer

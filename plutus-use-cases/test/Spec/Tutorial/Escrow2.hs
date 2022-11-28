@@ -23,7 +23,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (minAdaTxOut)
+import Ledger (minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Value
 import Plutus.Contract
@@ -96,7 +96,7 @@ instance ContractModel EscrowModel where
     Redeem _ -> currentPhase == Running
              && (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
     Pay _ v  -> currentPhase == Running
-             && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
+             && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOutEstimated
     where currentPhase = s ^. contractState . phase
 
 

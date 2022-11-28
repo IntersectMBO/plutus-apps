@@ -88,8 +88,8 @@ import Ledger (Ada, AssetClass, CardanoTx (EmulatorTx), CurrencySymbol, Datum, I
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput (TxInput),
                TxInputType (TxConsumePublicKeyAddress, TxConsumeSimpleScriptAddress, TxScriptAddress), TxOut,
                TxOutRef (TxOutRef), ValidationErrorInPhase, Validator, Value, Versioned, addCardanoTxSignature,
-               addMintingPolicy, getValidator, maxFee, minAdaTxOut, pubKeyTxOut, scriptHash, txData, txOutValue,
-               txScripts, validatorHash)
+               addMintingPolicy, getValidator, maxFee, minAdaTxOutEstimated, pubKeyTxOut, scriptHash, txData,
+               txOutValue, txScripts, validatorHash)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index.Internal qualified as Index (UtxoIndex (UtxoIndex))
@@ -249,7 +249,7 @@ genValidTransactionSpending' g ins totalVal = do
                     -- If there is a minted value, we look for a value in the
                     -- splitted values which can be associated with it.
                     let outValForMint =
-                          maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOut)
+                          maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOutEstimated)
                                           $ List.sort splitOutVals
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
                 txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
@@ -467,7 +467,7 @@ splitVal mx init' = go 0 0 [] where
             if v + c == init'
             then pure $ v : l
             else go (succ i) (v + c) (v : l)
-    minAda = fromIntegral $ Ada.getLovelace $ Ledger.minAdaTxOut + Ledger.maxFee
+    minAda = fromIntegral $ Ada.getLovelace $ Ledger.minAdaTxOutEstimated + Ledger.maxFee
 
 knownXPrvs :: [Crypto.XPrv]
 knownXPrvs = unPaymentPrivateKey <$> CW.knownPaymentPrivateKeys

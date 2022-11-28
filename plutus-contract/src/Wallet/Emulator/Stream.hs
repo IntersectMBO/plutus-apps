@@ -166,11 +166,10 @@ instance Default EmulatorConfig where
 
 initialState :: EmulatorConfig -> EM.EmulatorState
 initialState EmulatorConfig{..} = let
-    networkId = pNetworkId _params
     withInitialWalletValues = either
           (error . ("Cannot build the initial state: " <>) . show)
           id
-          . EM.emulatorStateInitialDist networkId . Map.mapKeys EM.mockWalletPaymentPubKeyHash
+          . EM.emulatorStateInitialDist _params . Map.mapKeys EM.mockWalletPaymentPubKeyHash
     signTx = onCardanoTx
           (\t -> Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys)
           CardanoApiTx
