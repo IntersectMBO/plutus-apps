@@ -23,7 +23,7 @@ import Data.List (sortBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (minAdaTxOut)
+import Ledger (minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Value
 import Plutus.Contract hiding (currentSlot)
@@ -116,14 +116,14 @@ instance ContractModel EscrowModel where
 
   precondition s a = case a of
     Init tgts-> currentPhase == Initial
-             && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+             && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOutEstimated | (_,n) <- tgts]
 --             && and [Ada.adaValueOf (fromInteger n) `gt` Ada.toValue 0 | (_,n) <- tgts]
     Redeem _ -> currentPhase == Running
              && (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
 --             && (s ^. contractState . contributions . to fold) == (s ^. contractState . targets . to fold)
     Refund w -> Nothing /= (s ^. contractState . contributions . at w)
     Pay _ v  -> currentPhase == Running
-            && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
+            && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOutEstimated
             -- disallow payments that take us over the targets
             -- && ((s ^. contractState . contributions . to fold) <> Ada.adaValueOf (fromInteger v)) `leq` (s ^. contractState . targets . to fold)
     where currentPhase = s ^. contractState . phase

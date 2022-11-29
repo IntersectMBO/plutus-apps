@@ -507,7 +507,7 @@ calculateTxChanges addr utxos (neg, pos) = do
               $ toCardanoTxOut (pNetworkId params) $ PV2.TxOut addr pos PV2.NoOutputDatum Nothing
             (missing, extraTxOut) <-
                 either (throwError . WAPI.ToCardanoError) pure
-                $ U.adjustTxOut params txOut
+                $ U.adjustTxOut (emulatorPParams params) txOut
             let missingValue = Ada.toValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
@@ -525,7 +525,7 @@ calculateTxChanges addr utxos (neg, pos) = do
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
             -- which then will calculate a more exact set of inputs
-            then calculateTxChanges addr utxos (neg <> Ada.toValue Ledger.minAdaTxOut, Ada.toValue Ledger.minAdaTxOut)
+            then calculateTxChanges addr utxos (neg <> Ada.toValue Ledger.minAdaTxOutEstimated, Ada.toValue Ledger.minAdaTxOutEstimated)
             -- Else recalculate with the change added to both sides
             -- Ideally this creates the same inputs and outputs and then the change will be zero
             -- But possibly the minimal Ada increases and then we also want to compute a new set of inputs

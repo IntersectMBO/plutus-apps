@@ -123,7 +123,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
-import Ledger.Params (Params (pNetworkId, pSlotConfig))
+import Ledger.Params (PParams, Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
                   Versioned (Versioned), txOutValue)
@@ -131,7 +131,6 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
                              ValidatorTypes (DatumType, RedeemerType), validatorAddress)
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,
@@ -561,18 +560,18 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
-adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
+adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxOut params)
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
+adjustTxOut :: PParams -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue minAdaTxOut
+    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
     let txOutEstimate = txOut & outValue .~ withMinAdaValue
-        minAdaTxOut' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
-        missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
+        minAdaTxOutEstimated' = minAdaTxOut params txOutEstimate
+        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
     if missingLovelace > 0
     then do
       adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace

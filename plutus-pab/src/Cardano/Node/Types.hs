@@ -78,7 +78,7 @@ import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper), testnetNetworkId)
 import Cardano.BM.Tracing (toObject)
-import Ledger.Params (testnet)
+import Ledger.Params (pNetworkId, testnet)
 import Plutus.PAB.Arbitrary ()
 
 -- Configuration ------------------------------------------------------------------------------------------------------
@@ -256,7 +256,7 @@ initialAppState wallets = do
 initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
 initialChainState =
     fromEmulatorChainState . view EM.chainState . fromRight (error "Can't initialise chain state") .
-    MultiAgent.emulatorStateInitialDist testnet . Map.mapKeys EM.mockWalletPaymentPubKeyHash
+    MultiAgent.emulatorStateInitialDist (def {pNetworkId = testnet}) . Map.mapKeys EM.mockWalletPaymentPubKeyHash
 
 -- Effects -------------------------------------------------------------------------------------------------------------
 

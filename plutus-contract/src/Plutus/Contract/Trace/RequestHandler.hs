@@ -307,7 +307,7 @@ handleAdjustUnbalancedTx =
     RequestHandler $ \utx ->
         surroundDebug @Text "handleAdjustUnbalancedTx" $ do
             params <- Wallet.Effects.getClientParams
-            forM (adjustUnbalancedTx params utx) $ \(missingAdaCosts, adjusted) -> do
+            forM (adjustUnbalancedTx (emulatorPParams params) utx) $ \(missingAdaCosts, adjusted) -> do
                 logDebug $ AdjustingUnbalancedTx missingAdaCosts
                 pure adjusted
 

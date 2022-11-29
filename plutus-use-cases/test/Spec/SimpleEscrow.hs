@@ -75,7 +75,7 @@ tests = testGroup "simple-escrow"
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl2 params
     , checkPredicateOptions options "can't redeem if you can't pay"
-        ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> token1 (-10))
+        ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> token1 (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do

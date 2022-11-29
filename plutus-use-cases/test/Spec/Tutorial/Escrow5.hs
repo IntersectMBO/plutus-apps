@@ -25,7 +25,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (Slot (..), minAdaTxOut)
+import Ledger (Slot (..), minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Value (Value, geq)
@@ -113,11 +113,11 @@ instance ContractModel EscrowModel where
   precondition s a = case a of
     Init s tgts -> currentPhase == Initial
                 && s > 1
-                && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+                && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOutEstimated | (_,n) <- tgts]
     Redeem _    -> currentPhase == Running
                 && fold (s ^. contractState . contributions) `geq` fold (s ^. contractState . targets)
     Pay _ v     -> currentPhase == Running
-                && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
+                && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOutEstimated
     Refund w    -> currentPhase == Refunding
                 && w `Map.member` (s ^. contractState . contributions)
     where currentPhase = s ^. contractState . phase
