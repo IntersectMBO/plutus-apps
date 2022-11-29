@@ -16,7 +16,6 @@ module Ledger.Validation(
   EmulatorEra,
   CardanoLedgerError,
   initialState,
-  evaluateMinLovelaceOutput,
   getRequiredSigners,
   hasValidationErrors,
   makeTransactionBody,
@@ -84,7 +83,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Text qualified as Text
 import GHC.Records (HasField (..))
-import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
 import Ledger.Crypto qualified as Crypto
 import Ledger.Index.Internal qualified as P
@@ -307,12 +305,6 @@ makeTransactionBody params utxo txBodyContent = do
   exUnits <- bimap Left (Map.map snd) $ getTxExUnitsWithLogs params utxo txTmp
   first Right $ P.makeTransactionBody (Just $ emulatorPParams params) exUnits txBodyContent
 
-
-evaluateMinLovelaceOutput :: P.Params -> TxOut EmulatorEra -> P.Ada
-evaluateMinLovelaceOutput params = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput (emulatorPParams params)
-  where
-    toPlutusValue :: Coin -> P.Ada
-    toPlutusValue (Coin c) = P.lovelaceOf c
 
 fromPlutusTxSigned'
   :: P.Params

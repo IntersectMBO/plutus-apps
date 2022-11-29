@@ -132,7 +132,8 @@ payToAddress params range v addr = do
     utx <- either (throwError . PaymentMkTxError)
                   pure
                   (Constraints.mkTxWithParams @Void params mempty constraints)
-    (missingAdaCosts, adjustedUtx) <- either (throwError . ToCardanoError) pure (adjustUnbalancedTx params utx)
+    (missingAdaCosts, adjustedUtx) <- either (throwError . ToCardanoError) pure
+                                        (adjustUnbalancedTx (emulatorPParams params) utx)
     logDebug $ AdjustingUnbalancedTx missingAdaCosts
     unless (utx == adjustedUtx) $
       logWarn @Text $ "Wallet.API.payToPublicKeyHash: "

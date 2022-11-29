@@ -312,7 +312,7 @@ emulatorStateInitialDist params mp = do
         mMinAdaTxOut = do
           let k = fst $ head $ Map.toList mp
           emptyTxOut <- toCardanoTxOut (pNetworkId params) $ mkOutput k mempty
-          pure $ minAdaTxOut params (TxOut emptyTxOut)
+          pure $ minAdaTxOut (emulatorPParams params) (TxOut emptyTxOut)
         -- See [Creating wallets with multiple outputs]
         mkOutputs minAda (key, vl) = mkOutput key <$> splitInto10 vl minAda
         splitInto10 vl minAda = if count <= 1

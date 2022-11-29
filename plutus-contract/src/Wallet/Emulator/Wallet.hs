@@ -507,7 +507,7 @@ calculateTxChanges addr utxos (neg, pos) = do
               $ toCardanoTxOut (pNetworkId params) $ PV2.TxOut addr pos PV2.NoOutputDatum Nothing
             (missing, extraTxOut) <-
                 either (throwError . WAPI.ToCardanoError) pure
-                $ U.adjustTxOut params txOut
+                $ U.adjustTxOut (emulatorPParams params) txOut
             let missingValue = Ada.toValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
