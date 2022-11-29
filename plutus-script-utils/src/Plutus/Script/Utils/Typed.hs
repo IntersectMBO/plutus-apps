@@ -5,6 +5,8 @@
 {-# LANGUAGE TypeFamilies       #-}
 module Plutus.Script.Utils.Typed (
   UntypedValidator
+  , UntypedMintingPolicy
+  , UntypedStakeValidator
   ---
   , ValidatorTypes (..)
   , TypedValidator (..)
@@ -23,9 +25,6 @@ module Plutus.Script.Utils.Typed (
   , ScriptContext(mkUntypedValidator, mkUntypedStakeValidator, mkUntypedMintingPolicy)
   , ScriptContextV1
   , ScriptContextV2
-  , UntypedMintingPolicy
-  , UntypedStakeValidator
-  , UntypedValidator
 ) where
 
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))

@@ -22,7 +22,7 @@ import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPur
 import Plutus.V1.Ledger.Contexts qualified as PV1
 import Plutus.V1.Ledger.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx qualified
-import PlutusTx.Prelude (Bool (False), BuiltinData, any, ($), (.), (==))
+import PlutusTx.Prelude (Bool (False), any, ($), (.), (==))
 
 -- TODO: we should add a TypedStakeValidator interface here
 
