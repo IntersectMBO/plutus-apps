@@ -99,7 +99,6 @@ the blockchain.
 -- | Exact computation of the mimimum Ada required for a given TxOut.
 -- TODO: Should be moved to cardano-api-extended once created
 minAdaTxOut :: PParams -> TxOut -> Ada
-
 minAdaTxOut params txOut = let
   toAda = lovelaceOf . C.Ledger.unCoin
   initialValue = txOutValue txOut

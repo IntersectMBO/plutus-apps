@@ -217,7 +217,7 @@ instance ContractModel AuctionModel where
         where
             p    = s ^. contractState . phase
             b    = s ^. contractState . currentBid
-            validBid = choose ((b+1) /\ Ada.getLovelace Ledger.minAdaTxOutEstimated,
+            validBid = choose ((b+1) `max` Ada.getLovelace Ledger.minAdaTxOutEstimated,
                                b + Ada.getLovelace (Ada.adaOf 100))
 {- START precondition -}
     precondition s Init = s ^. contractState . phase == NotStarted
