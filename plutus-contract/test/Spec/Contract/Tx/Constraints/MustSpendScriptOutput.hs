@@ -54,12 +54,12 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
 import Plutus.Script.Utils.Scripts (Language (..))
 import Plutus.Script.Utils.Scripts qualified as PSU
 import Plutus.Script.Utils.Typed (Any)
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Address qualified as PSU.V1
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V1.Typed.Scripts as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PSU.V2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts as PSU.V2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Scripts (ScriptError, unitRedeemer)
@@ -703,7 +703,7 @@ mustSpendScriptOutputPolicyV1 :: PV1.MintingPolicy
 mustSpendScriptOutputPolicyV1 = PV1.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         mkMustSpendScriptOutputPolicyV1 = mkMustSpendScriptOutputPolicy Cons.V1.checkScriptContext
-        wrap = PSU.V1.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV1
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV1
 
 {-# INLINEABLE mustSpendScriptOutputWithMatchingDatumAndValuePolicyV1 #-}
 mustSpendScriptOutputWithMatchingDatumAndValuePolicyV1 :: PV1.MintingPolicy
@@ -711,14 +711,14 @@ mustSpendScriptOutputWithMatchingDatumAndValuePolicyV1 = PV1.mkMintingPolicyScri
     where
         mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV1
             = mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy Cons.V1.checkScriptContext
-        wrap = PSU.V1.mkUntypedMintingPolicy mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV1
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV1
 
 {-# INLINEABLE mustSpendScriptOutputWithReferencePolicyV1 #-}
 mustSpendScriptOutputWithReferencePolicyV1 :: PV1.MintingPolicy
 mustSpendScriptOutputWithReferencePolicyV1 = PV1.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         mkMustSpendScriptOutputPolicyV1 = mkMustSpendScriptOutputWithReferencePolicy Cons.V1.checkScriptContext
-        wrap = PSU.V1.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV1
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV1
 
 {-# INLINABLE mustReferenceOutputValidatorV1 #-}
 mustReferenceOutputValidatorV1 :: PV1.Validator
@@ -726,7 +726,7 @@ mustReferenceOutputValidatorV1 = PV2.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
  where
      mkMustReferenceOutputV1Validator = mkMustReferenceOutputValidator Cons.V1.checkScriptContext
-     wrap = PSU.V1.mkUntypedValidator mkMustReferenceOutputV1Validator
+     wrap = Typed.mkUntypedValidator mkMustReferenceOutputV1Validator
 
 
 {-
@@ -738,7 +738,7 @@ mustSpendScriptOutputPolicyV2 :: PV2.MintingPolicy
 mustSpendScriptOutputPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         mkMustSpendScriptOutputPolicyV2 = mkMustSpendScriptOutputPolicy Cons.V2.checkScriptContext
-        wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV2
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV2
 
 {-# INLINEABLE mustSpendScriptOutputWithDataLengthPolicyV2 #-}
 mustSpendScriptOutputWithDataLengthPolicyV2 :: PV2.MintingPolicy
@@ -747,7 +747,7 @@ mustSpendScriptOutputWithDataLengthPolicyV2 = PV2.mkMintingPolicyScript $$(Plutu
         mkMustSpendScriptOutputWithDataLengthPolicyV2 (constraintParams, len) ctx =
             mkMustSpendScriptOutputPolicy Cons.V2.checkScriptContext constraintParams ctx
             P.&& P.length (PV2.txInfoData (PV2.scriptContextTxInfo ctx)) P.== len
-        wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputWithDataLengthPolicyV2
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputWithDataLengthPolicyV2
 
 {-# INLINEABLE mustSpendScriptOutputWithMatchingDatumAndValuePolicyV2 #-}
 mustSpendScriptOutputWithMatchingDatumAndValuePolicyV2 :: PV2.MintingPolicy
@@ -755,14 +755,14 @@ mustSpendScriptOutputWithMatchingDatumAndValuePolicyV2 = PV2.mkMintingPolicyScri
     where
         mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV2 =
             mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy Cons.V2.checkScriptContext
-        wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV2
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputWithMatchingDatumAndValuePolicyV2
 
 {-# INLINEABLE mustSpendScriptOutputWithReferencePolicyV2 #-}
 mustSpendScriptOutputWithReferencePolicyV2 :: PV2.MintingPolicy
 mustSpendScriptOutputWithReferencePolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         mkMustSpendScriptOutputPolicyV2 = mkMustSpendScriptOutputWithReferencePolicy Cons.V2.checkScriptContext
-        wrap = PSU.V2.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV2
+        wrap = Typed.mkUntypedMintingPolicy mkMustSpendScriptOutputPolicyV2
 
 {-# INLINABLE mustReferenceOutputValidatorV2 #-}
 mustReferenceOutputValidatorV2 :: PV2.Validator
@@ -770,7 +770,7 @@ mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
  where
      mkMustReferenceOutputV2Validator = mkMustReferenceOutputValidator Cons.V2.checkScriptContext
-     wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
+     wrap = Typed.mkUntypedValidator mkMustReferenceOutputV2Validator
 
 
 -- plutus-tx-constraints tests

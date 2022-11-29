@@ -27,6 +27,7 @@ import Ledger.Scripts
 import Ledger.Value (TokenName (..), Value (..))
 import Ledger.Value qualified as Value
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
+import Plutus.Script.Utils.Typed (ScriptContextV1, mkUntypedMintingPolicy)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified
@@ -67,7 +68,7 @@ checkPolicy (TxOutRef refHash refIdx) (vHash, mintingPolarity) ctx@V.ScriptConte
 
 curPolicy :: TxOutRef -> MintingPolicy
 curPolicy outRef = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \r -> Scripts.mkUntypedMintingPolicy (checkPolicy r) ||])
+    $$(PlutusTx.compile [|| \r -> mkUntypedMintingPolicy @ScriptContextV1 (checkPolicy r) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode outRef
 

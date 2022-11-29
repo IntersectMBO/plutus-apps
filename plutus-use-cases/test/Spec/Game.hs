@@ -75,12 +75,12 @@ successTrace = do
                                             , lockArgsValue = Ada.adaValueOf 8
                                             }
     -- One slot for sending the Ada to the script.
-    _ <- Trace.waitNSlots 1
+    void $ Trace.nextSlot
     hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
     Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                , guessArgsSecret = "hello"
                                                }
-    void $ Trace.waitNSlots 1
+    void $ Trace.nextSlot
 
 -- | Wallet 1 locks some funds, and Wallet 2 makes a wrong guess.
 failTrace :: EmulatorTrace ()
@@ -90,9 +90,9 @@ failTrace = do
                                             , lockArgsSecret = "hello"
                                             , lockArgsValue = Ada.adaValueOf 8
                                             }
-    _ <- Trace.waitNSlots 1
+    void $ Trace.nextSlot
     hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
     _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                     , guessArgsSecret = "hola"
                                                     }
-    void $ Trace.waitNSlots 1
+    void $ Trace.nextSlot

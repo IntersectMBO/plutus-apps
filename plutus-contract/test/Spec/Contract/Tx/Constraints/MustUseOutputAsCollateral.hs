@@ -281,7 +281,7 @@ mustUseOutputAsCollateralPolicyV2 :: L.MintingPolicy
 mustUseOutputAsCollateralPolicyV2 = L.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustUseOutputAsCollateralPolicy = mkMustUseOutputAsCollateralPolicy V2.Cons.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustUseOutputAsCollateralPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustUseOutputAsCollateralPolicy
 
 mustUseOutputAsCollateralPolicy :: PSU.Language -> L.MintingPolicy
 mustUseOutputAsCollateralPolicy = \case

@@ -341,7 +341,7 @@ mustPayToPubKeyAddressPolicyV2 :: Ledger.MintingPolicy
 mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToPubKeyAddressPolicy = mkMustPayToPubKeyAddressPolicy V2.Constraints.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToPubKeyAddressPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToPubKeyAddressPolicy
 
 languageContextV1 :: LanguageContext
 languageContextV1 = LanguageContext

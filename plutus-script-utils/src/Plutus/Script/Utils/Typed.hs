@@ -20,6 +20,12 @@ module Plutus.Script.Utils.Typed (
   , Any
   , Language (PlutusV1, PlutusV2)
   , Versioned (Versioned, unversioned, version)
+  , ScriptContext(mkUntypedValidator, mkUntypedStakeValidator, mkUntypedMintingPolicy)
+  , ScriptContextV1
+  , ScriptContextV2
+  , UntypedMintingPolicy
+  , UntypedStakeValidator
+  , UntypedValidator
 ) where
 
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
@@ -30,9 +36,13 @@ import GHC.Generics (Generic)
 import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version))
 import Plutus.V1.Ledger.Address qualified as PV1
 import Plutus.V1.Ledger.Api qualified as PV1
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Builtins (BuiltinData)
+import PlutusTx.Prelude (check)
 
 type UntypedValidator = BuiltinData -> BuiltinData -> BuiltinData -> ()
+type UntypedMintingPolicy = BuiltinData -> BuiltinData -> ()
+type UntypedStakeValidator = BuiltinData -> BuiltinData -> ()
 
 data Any
   deriving stock (Eq, Show, Generic)
@@ -110,3 +120,129 @@ vForwardingMintingPolicy = tvForwardingMPS
 --   validator
 forwardingMintingPolicyHash :: TypedValidator a -> PV1.MintingPolicyHash
 forwardingMintingPolicyHash = tvForwardingMPSHash
+
+class PV1.UnsafeFromData a => ScriptContext a where
+    {-# INLINABLE mkUntypedValidator #-}
+    -- | Converts a custom datum and redeemer from a validator function to an
+    -- untyped validator function. See Note [Scripts returning Bool].
+    --
+    -- Here's an example of how this function can be used:
+    --
+    -- @
+    --   import PlutusTx qualified
+    --   import Plutus.V2.Ledger.Scripts qualified as Plutus
+    --   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
+    --
+    --   newtype MyCustomDatum = MyCustomDatum Integer
+    --   PlutusTx.unstableMakeIsData ''MyCustomDatum
+    --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
+    --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
+    --
+    --   mkValidator :: MyCustomDatum -> MyCustomRedeemer -> Plutus.ScriptContext -> Bool
+    --   mkValidator _ _ _ = True
+    --
+    --   validator :: Plutus.Validator
+    --   validator = Plutus.mkValidatorScript
+    --       $$(PlutusTx.compile [|| wrap ||])
+    --    where
+    --       wrap = mkUntypedValidator mkValidator
+    -- @
+    --
+    -- Here's an example using a parameterized validator:
+    --
+    -- @
+    --   import PlutusTx qualified
+    --   import Plutus.V2.Ledger.Scripts qualified as Plutus
+    --   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
+    --
+    --   newtype MyCustomDatum = MyCustomDatum Integer
+    --   PlutusTx.unstableMakeIsData ''MyCustomDatum
+    --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
+    --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
+    --
+    --   mkValidator :: Int -> MyCustomDatum -> MyCustomRedeemer -> Plutus.ScriptContext -> Bool
+    --   mkValidator _ _ _ _ = True
+    --
+    --   validator :: Int -> Plutus.Validator
+    --   validator i = Plutus.mkValidatorScript
+    --       $$(PlutusTx.compile [|| wrap . mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode i
+    --    where
+    --       wrap = mkUntypedValidator
+    -- @
+    mkUntypedValidator
+        :: forall d r
+        . (PV1.UnsafeFromData d, PV1.UnsafeFromData r)
+        => (d -> r -> a -> Bool)
+        -> UntypedValidator
+    -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
+    mkUntypedValidator f d r p =
+      check $ f (PV1.unsafeFromBuiltinData d) (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
+
+    {-# INLINABLE mkUntypedStakeValidator #-}
+    -- | Converts a custom redeemer from a stake validator function to an
+    -- untyped stake validator function. See Note [Scripts returning Bool].
+    --
+    -- Here's an example of how this function can be used:
+    --
+    -- @
+    --   import PlutusTx qualified
+    --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+    --   import Plutus.Script.Utils.V1.Scripts (mkUntypedStakeValidator)
+    --
+    --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
+    --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
+    --
+    --   mkStakeValidator :: MyCustomRedeemer -> ScriptContext -> Bool
+    --   mkStakeValidator _ _ = True
+    --
+    --   validator :: Plutus.Validator
+    --   validator = Plutus.mkStakeValidatorScript
+    --       $$(PlutusTx.compile [|| wrap ||])
+    --    where
+    --       wrap = mkUntypedStakeValidator mkStakeValidator
+    -- @
+    mkUntypedStakeValidator
+        :: PV1.UnsafeFromData r
+        => (r -> a -> Bool)
+        -> UntypedStakeValidator
+    mkUntypedStakeValidator f r p =
+        check $ f (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
+
+    {-# INLINABLE mkUntypedMintingPolicy #-}
+    -- | Converts a custom redeemer from a minting policy function to an
+    -- untyped minting policy function. See Note [Scripts returning Bool].
+    --
+    -- Here's an example of how this function can be used:
+    --
+    -- @
+    --   import PlutusTx qualified
+    --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+    --   import Plutus.Script.Utils.V1.Scripts (mkUntypedMintingPolicy)
+    --
+    --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
+    --   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
+    --
+    --   mkMintingPolicy :: MyCustomRedeemer -> ScriptContext -> Bool
+    --   mkMintingPolicy _ _ = True
+    --
+    --   validator :: Plutus.Validator
+    --   validator = Plutus.mkMintingPolicyScript
+    --       $$(PlutusTx.compile [|| wrap ||])
+    --    where
+    --       wrap = mkUntypedMintingPolicy mkMintingPolicy
+    -- @
+    mkUntypedMintingPolicy
+        :: PV1.UnsafeFromData r
+        => (r -> a -> Bool)
+        -> UntypedMintingPolicy
+    -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
+    mkUntypedMintingPolicy f r p =
+        check $ f (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
+
+
+type ScriptContextV1 = PV1.ScriptContext
+type ScriptContextV2 = PV2.ScriptContext
+
+instance ScriptContext PV1.ScriptContext where
+
+instance ScriptContext PV2.ScriptContext where

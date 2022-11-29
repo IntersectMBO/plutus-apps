@@ -296,7 +296,7 @@ mustSatisfyAnyOfPolicyV2 :: L.MintingPolicy
 mustSatisfyAnyOfPolicyV2 = L.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToOtherScriptPolicy = mkMustSatisfyAnyOfPolicy Cons.V2.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
 
 data LanguageContext
    = LanguageContext
