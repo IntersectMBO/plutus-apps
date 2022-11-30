@@ -42,6 +42,7 @@ import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Generators qualified as Gen
 import Plutus.Script.Utils.V2.Scripts qualified as Ledger
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
