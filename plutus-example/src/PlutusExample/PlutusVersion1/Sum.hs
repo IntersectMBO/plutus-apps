@@ -19,7 +19,8 @@ import Codec.Serialise
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.Typed qualified as Scripts
+import Plutus.V1.Ledger.Api (ScriptContext)
 import Plutus.V1.Ledger.Scripts qualified as Plutus
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
@@ -32,9 +33,9 @@ smartSum a = loop a 0
     then acc
     else loop (n - 1) (n + acc)
 
--- | The validation function (DataValue -> RedeemerValue -> ScriptContext -> Bool)
+-- | The validation function
 {-# INLINABLE validateSum #-}
-validateSum :: Integer -> Integer -> x -> Bool
+validateSum :: Integer -> Integer -> ScriptContext -> Bool
 validateSum n s _ = isGoodSum n s
 
 {-# INLINABLE isGoodSum #-}
