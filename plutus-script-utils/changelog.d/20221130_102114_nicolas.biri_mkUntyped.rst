@@ -18,8 +18,8 @@ Added
 
 - `Plutus.Script.Utils.Typed.ScriptContext` a type class that allow the creation
   of an untyped minting policy, stake validator or validator.
-- an instance of `Plutus.Script.Utils.Typed.ScriptContext` for the `ScriptContext` of `PlutusV1`
-- an instance of `Plutus.Script.Utils.Typed.ScriptContext` for the `ScriptContext` of `PlutusV2`
+- an instance of `Plutus.Script.Utils.Typed.ScriptContext` for `Plutus. ledger.V1.Ledger.Context.ScriptContext`
+- an instance of `Plutus.Script.Utils.Typed.ScriptContext` for `Plutus. ledger.V2.Ledger.Context.ScriptContext`
 
 .. Changed
 .. -------
