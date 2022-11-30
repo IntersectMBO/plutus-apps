@@ -16,6 +16,7 @@ import Cardano.Api.Shelley qualified as C
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
+import Control.Monad.Freer.Extras.Log (LogLevel (Debug))
 import Control.Monad.Freer.Writer (Writer, runWriter, tell)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 (pack)
@@ -101,7 +102,8 @@ captureTrace
 captureTrace trace
   = pack $ unlines output
   where
-    output = capturePrintEffect $ Trace.runEmulatorTraceEff def def trace
+    output = capturePrintEffect
+           $ Trace.runEmulatorTraceEff (def { Trace.traceConfigMinLogLevel = Debug }) def trace
 
 capturePrintEffect
          :: Eff.Eff '[PrintEffect] r
@@ -307,7 +309,7 @@ pubKeyTransactions2 = do
 evalEmulatorTraceTest :: Property
 evalEmulatorTraceTest = property $ do
     let trace = Trace.payToWallet wallet1 wallet2 (Ada.adaValueOf 10)
-        res = Trace.evalEmulatorTrace def trace
+        res = Trace.evalEmulatorTrace def def trace
     Hedgehog.annotateShow res
     Hedgehog.assert (either (const False) (const True) res)
 

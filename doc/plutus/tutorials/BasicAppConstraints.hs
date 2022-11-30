@@ -46,8 +46,8 @@ import Prelude (Show, flip, (<$>), (<>))
 {-# INLINABLE splitDataConstraints #-}
 splitDataConstraints :: SplitData -> TxConstraints () SplitData
 splitDataConstraints SplitData{recipient1, recipient2, amount} =
-            Constraints.mustPayToPubKey recipient1 (Ada.toValue half)
-  `mappend` Constraints.mustPayToPubKey recipient2 (Ada.toValue $ amount - half)
+            Constraints.mustPayToAddress recipient1 (Ada.toValue half)
+  `mappend` Constraints.mustPayToAddress recipient2 (Ada.toValue $ amount - half)
  where
      half = Ada.divide amount 2
 

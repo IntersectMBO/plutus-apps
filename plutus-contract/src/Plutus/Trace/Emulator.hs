@@ -61,6 +61,7 @@ module Plutus.Trace.Emulator(
     , params
     , runEmulatorStream
     , TraceConfig(..)
+    , traceConfigShowEventExample
     , runEmulatorTrace
     , evalEmulatorTrace
     , PrintEffect(..)
@@ -77,32 +78,19 @@ import Control.Monad (forM_, void)
 import Control.Monad.Freer (Eff, Member, interpret, interpretM, raise, reinterpret, run, runM, subsume)
 import Control.Monad.Freer.Coroutine (Yield)
 import Control.Monad.Freer.Error (Error, handleError, throwError)
-import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, mapLog)
+import Control.Monad.Freer.Extras.Log (LogLevel (Info), LogMessage (LogMessage), LogMsg, mapLog)
 import Control.Monad.Freer.Extras.Modify (raiseEnd)
-import Control.Monad.Freer.Reader (Reader, runReader)
+import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State (State, evalState)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Aeson qualified as A
 import Data.Default (Default (def))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
-import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
-import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty)
-import Prettyprinter.Render.String (renderString)
-import System.IO (Handle, hPutStrLn, stdout)
-import Wallet.Emulator.Chain (ChainControlEffect)
-import Wallet.Emulator.Chain qualified as ChainState
-import Wallet.Emulator.MultiAgent (EmulatorEvent,
-                                   EmulatorEvent' (InstanceEvent, SchedulerEvent, UserThreadEvent, WalletEvent),
-                                   EmulatorState (_chainState, _walletStates), MultiAgentControlEffect,
-                                   MultiAgentEffect, _eteEmulatorTime, _eteEvent, schedulerEvent)
-import Wallet.Emulator.Stream (EmulatorConfig (_initialChainState, _params), EmulatorErr, foldEmulatorStreamM,
-                               initialChainState, initialDist, params, runTraceStream)
-import Wallet.Emulator.Stream qualified
-import Wallet.Emulator.Wallet (Entity, balances)
-import Wallet.Emulator.Wallet qualified as Wallet
-
+import Data.Text qualified as Text
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Params (Params (..))
+import Ledger.Slot (getSlot)
 import Plutus.Trace.Effects.Assert (Assert, handleAssert)
 import Plutus.Trace.Effects.Assert qualified as Assert
 import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
@@ -121,19 +109,32 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog (Co
                                     EmulatorRuntimeError (EmulatedWalletError), EmulatorThreads,
                                     UserThreadMsg (UserLog))
 import Plutus.Trace.Emulator.Types qualified
+import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
+import Plutus.V1.Ledger.Value (Value, flattenValue)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty)
+import Prettyprinter.Render.String (renderString)
+import Prettyprinter.Render.Text (renderStrict)
 import Streaming (Stream)
 import Streaming.Prelude (Of ((:>)))
-
-import Ledger.Params (Params (..))
-import Ledger.Slot (getSlot)
-import Plutus.V1.Ledger.Value (Value, flattenValue)
+import System.IO (Handle, hPutStrLn, stdout)
+import Wallet.Emulator.Chain (ChainControlEffect)
+import Wallet.Emulator.Chain qualified as ChainState
+import Wallet.Emulator.MultiAgent (EmulatorEvent,
+                                   EmulatorEvent' (InstanceEvent, SchedulerEvent, UserThreadEvent, WalletEvent),
+                                   EmulatorState (_chainState, _walletStates), EmulatorTimeEvent (EmulatorTimeEvent),
+                                   MultiAgentControlEffect, MultiAgentEffect, schedulerEvent)
+import Wallet.Emulator.Stream (EmulatorConfig (_initialChainState, _params), EmulatorErr, filterLogLevel, foldStreamM,
+                               initialChainState, params, runTraceStream)
+import Wallet.Emulator.Stream qualified
+import Wallet.Emulator.Wallet (Entity, balances)
+import Wallet.Emulator.Wallet qualified as Wallet
 
 -- | A very simple effect for interpreting the output printing done by the
 -- trace printing functions:
 --
 -- * 'runEmulatorTraceEff'
 -- * 'runEmulatorTraceIO'
--- * 'runEmulatorTraceIO''
+-- * 'runEmulatorTraceIOWithConfig'
 data PrintEffect r where
   PrintLn :: String -> PrintEffect ()
 makeEffect ''PrintEffect
@@ -217,48 +218,72 @@ interpretEmulatorTrace conf action =
 
 -- | Options for how to set up and print the trace.
 data TraceConfig = TraceConfig
-  { showEvent    :: EmulatorEvent' -> Maybe String
+  { traceConfigShowEvent    :: LogMessage EmulatorEvent -> Maybe String
   -- ^ Function to decide how to print the particular events.
-  , outputHandle :: Handle
+  , traceConfigOutputHandle :: Handle
   -- ^ Where to print the outputs to. Default: 'System.IO.stdout'
+  , traceConfigMinLogLevel  :: LogLevel
   }
 
 instance Default TraceConfig where
   def = TraceConfig
-            { showEvent     = defaultShowEvent
-            , outputHandle  = stdout
-            }
+      { traceConfigShowEvent = Just
+                             . Text.unpack
+                             . renderStrict
+                             . layoutPretty defaultLayoutOptions
+                             . pretty
+      , traceConfigOutputHandle = stdout
+      , traceConfigMinLogLevel = Info
+      }
 
-defaultShowEvent :: EmulatorEvent' -> Maybe String
-defaultShowEvent = \case
-  UserThreadEvent (UserLog msg)                                        -> Just $ "*** USER LOG: " <> msg
-  InstanceEvent (ContractInstanceLog (ContractLog (A.String msg)) _ _) -> Just $ "*** CONTRACT LOG: " <> show msg
-  InstanceEvent (ContractInstanceLog (StoppedWithError err)       _ _) -> Just $ "*** CONTRACT STOPPED WITH ERROR: " <> show err
-  InstanceEvent (ContractInstanceLog NoRequestsHandled            _ _) -> Nothing
-  InstanceEvent (ContractInstanceLog (HandledRequest _)           _ _) -> Nothing
-  InstanceEvent (ContractInstanceLog (CurrentRequests _)          _ _) -> Nothing
-  SchedulerEvent _                                                     -> Nothing
-  WalletEvent _ _                                                      -> Nothing
-  ev                                                                   -> Just . renderString . layoutPretty defaultLayoutOptions . pretty $ ev
+-- | Some example of how to configure the 'traceConfigShowEvent'.
+traceConfigShowEventExample :: LogMessage EmulatorEvent -> Maybe String
+traceConfigShowEventExample (LogMessage _minLogLevel (EmulatorTimeEvent slot e)) =
+    let logMsgMaybe = case e of
+          UserThreadEvent (UserLog msg) ->
+              Just $ "*** USER LOG: " <> msg
+          InstanceEvent (ContractInstanceLog (ContractLog (A.String msg)) _ _) ->
+              Just $ "*** CONTRACT LOG: " <> show msg
+          InstanceEvent (ContractInstanceLog (StoppedWithError err)       _ _) ->
+              Just $ "*** CONTRACT STOPPED WITH ERROR: " <> show err
+          InstanceEvent (ContractInstanceLog NoRequestsHandled            _ _) ->
+              Nothing
+          InstanceEvent (ContractInstanceLog (HandledRequest _)           _ _) ->
+              Nothing
+          InstanceEvent (ContractInstanceLog (CurrentRequests _)          _ _) ->
+              Nothing
+          SchedulerEvent _ ->
+              Nothing
+          WalletEvent _ _ ->
+              Nothing
+          ev ->
+              Just . renderString . layoutPretty defaultLayoutOptions . pretty $ ev
+        paddedSlotNo = pad 5 (getSlot slot)
+     in fmap (\m -> "Slot " <> paddedSlotNo <> ": " <> m) logMsgMaybe
+ where
+    pad :: Int -> Integer -> String
+    pad n = (\x -> replicate (n - length x) '0' ++ x) . show
 
 evalEmulatorTrace
-    :: EmulatorConfig
+    :: TraceConfig
+    -> EmulatorConfig
     -> EmulatorTrace a
     -> Either EmulatorErr a
-evalEmulatorTrace cfg trace = case runEmulatorTrace cfg trace of
+evalEmulatorTrace tcfg cfg trace = case runEmulatorTrace tcfg cfg trace of
   (_, r, _) -> r
 
 -- | Run an emulator trace to completion, returning a tuple of the final state
 -- of the emulator, the events, and any error, if any.
 runEmulatorTrace
-    :: EmulatorConfig
+    :: TraceConfig
+    -> EmulatorConfig
     -> EmulatorTrace a
-    -> ([EmulatorEvent], Either EmulatorErr a, EmulatorState)
-runEmulatorTrace cfg trace =
+    -> ([LogMessage EmulatorEvent], Either EmulatorErr a, EmulatorState)
+runEmulatorTrace TraceConfig { traceConfigMinLogLevel } cfg trace =
     (\(xs :> (y, z)) -> (xs, y, z))
     $ run
-    $ runReader (initialDist cfg)
-    $ foldEmulatorStreamM (generalize list)
+    $ foldStreamM (generalize list)
+    $ filterLogLevel traceConfigMinLogLevel
     $ runEmulatorStream cfg trace
 
 -- | Run the emulator trace returning an effect that can be evaluated by
@@ -269,7 +294,7 @@ runEmulatorTraceEff :: forall effs. Member PrintEffect effs
     -> EmulatorTrace ()
     -> Eff effs ()
 runEmulatorTraceEff tcfg cfg trace =
-  let (xs, me, e) = runEmulatorTrace cfg trace
+  let (xs, me, e) = runEmulatorTrace tcfg cfg trace
       balances' = balances (_chainState e) (_walletStates e)
    in do
       case me of
@@ -277,11 +302,9 @@ runEmulatorTraceEff tcfg cfg trace =
         Left err -> printLn $ "ERROR: " <> show err
 
       forM_ xs $ \ete -> do
-        case showEvent tcfg (_eteEvent ete) of
-          Nothing -> return ()
-          Just s  ->
-            let slot = pad 5 (getSlot $ _eteEmulatorTime ete)
-             in printLn $ "Slot " <> slot <> ": " <> s
+        case traceConfigShowEvent tcfg ete of
+          Nothing -> pure ()
+          Just s  -> printLn s
 
       printLn "Final balances"
       printBalances balances'
@@ -297,30 +320,36 @@ runEmulatorTraceIO
     -> IO ()
 runEmulatorTraceIO = runEmulatorTraceIO' def def
 
---- | Runs the trace with a given configuration for the trace and the config.
+-- | Runs the trace with a given configuration for the trace and the config.
 --
 -- Example of running a trace and saving the output to a file:
 --
--- >>> withFile "/tmp/trace-log.txt" WriteMode $ \h -> runEmulatorTraceIO' (def { outputHandle = h }) def (void $ Trace.waitNSlots 1)
+-- >>> withFile "/tmp/trace-log.txt" WriteMode $ \h -> runEmulatorTraceIO' (def { traceConfigOutputHandle = h }) def (void $ Trace.waitNSlots 1)
+runEmulatorTraceIOWithConfig
+    :: TraceConfig
+    -> EmulatorConfig
+    -> EmulatorTrace ()
+    -> IO ()
+runEmulatorTraceIOWithConfig tcfg cfg trace
+  = runPrintEffectIO (traceConfigOutputHandle tcfg) $ runEmulatorTraceEff tcfg cfg trace
+
+{-# DEPRECATED runEmulatorTraceIO' "Renamed to runEmulatorTraceIOWithConfig" #-}
 runEmulatorTraceIO'
     :: TraceConfig
     -> EmulatorConfig
     -> EmulatorTrace ()
     -> IO ()
-runEmulatorTraceIO' tcfg cfg trace
-  = runPrintEffect (outputHandle tcfg) $ runEmulatorTraceEff tcfg cfg trace
+runEmulatorTraceIO' = runEmulatorTraceIOWithConfig
 
-runPrintEffect :: Handle
-         -> Eff '[PrintEffect, IO] r
-         -> IO r
-runPrintEffect hdl = runM . interpretM f
+runPrintEffectIO
+    :: Handle
+    -> Eff '[PrintEffect, IO] r
+    -> IO r
+runPrintEffectIO hdl = runM . interpretM f
   where
     f :: PrintEffect r -> IO r
     f = \case
       PrintLn s -> hPutStrLn hdl s
-
-pad :: Int -> Integer -> String
-pad n = (\x -> replicate (n - length x) '0' ++ x) . show
 
 printBalances :: forall effs. Member PrintEffect effs
               => Map.Map Entity Value
