@@ -323,7 +323,7 @@ txConstraintsTxBuildFailWhenUsingV1Script =
     checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
         .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCountOfTotal 1 1 -- 2nd tx fails before validation
+        .&&. assertValidatedTransactionCountOfTotal 1 2
         ) $ do
             void $ Trace.activateContract w1 mustReferenceOutputTxV1Contract tag
             void $ Trace.waitNSlots 2

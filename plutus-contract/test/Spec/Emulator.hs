@@ -16,7 +16,6 @@ import Cardano.Api.Shelley qualified as C
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
-import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Freer.Writer (Writer, runWriter, tell)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 (pack)
@@ -33,6 +32,7 @@ import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPu
                Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs,
                mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Ada qualified as Ada
+import Ledger.Fee (selectCoin)
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
@@ -52,10 +52,9 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.Hedgehog (testPropertyNamed)
-import Wallet (WalletAPIError, payToPaymentPublicKeyHash_, submitTxn)
+import Wallet (payToPaymentPublicKeyHash_, submitTxn)
 import Wallet.API qualified as W
 import Wallet.Emulator.Chain qualified as Chain
-import Wallet.Emulator.Types (selectCoin)
 import Wallet.Graph qualified
 
 tests :: TestTree
@@ -137,7 +136,7 @@ selectCoinProp :: Property
 selectCoinProp = property $ do
     inputs <- forAll $ zip [(1 :: Integer) ..] <$> Gen.list (Range.linear 1 100) Gen.genValueNonNegative
     target <- forAll Gen.genValueNonNegative
-    let result = Eff.run $ E.runError @WalletAPIError (selectCoin inputs target)
+    let result = selectCoin inputs target
     case result of
         Left _ ->
             Hedgehog.assert $ not $ foldMap snd inputs `Value.geq` target
