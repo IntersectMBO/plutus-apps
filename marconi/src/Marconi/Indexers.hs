@@ -117,14 +117,6 @@ uTxoEvents maybeTargetAddresses slotNo blkNo txs =
         else
             Just (Utxos.UtxoEvent utxos ins slotNo blkNo)
 
--- utxoEventsFromBlocks
---   :: C.IsCardanoEra era
---   => Maybe TargetAddresses
---   -> C.Block era
---   -> Maybe Utxos.UtxoEvent
--- utxoEventsFromBlocks maybeTargetAddresses (C.Block (C.BlockHeader slotNo _ blockNo) txs) =
---     utxoEvents maybeTargetAddresses slotNo blockNo txs
-
 -- UtxoIndexer
 getOutputs
   :: C.IsCardanoEra era

@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-
  Address
 | TxId
@@ -22,7 +23,6 @@
 module Marconi.Index.Utxos where
 
 import Cardano.Api qualified as C
-import Control.Applicative ((<|>))
 import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
 import Control.Lens.TH (makeLenses)
@@ -35,7 +35,6 @@ import Data.ByteString.Lazy (toStrict)
 import Data.Maybe (catMaybes, fromJust)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
-import Data.Text (pack)
 import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
