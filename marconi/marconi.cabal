@@ -124,7 +124,9 @@ test-suite marconi-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Integration
+  other-modules:
+    Index.Spec
+    Integration
 
   --------------------
   -- Local components
@@ -132,6 +134,7 @@ test-suite marconi-test
   build-depends:
     , cardano-streaming
     , marconi
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -156,10 +159,12 @@ test-suite marconi-test
     , filepath
     , hedgehog
     , hedgehog-extras
+    , lens
     , prettyprinter
     , serialise
     , stm
     , streaming
     , tasty
     , tasty-hedgehog
+    , tasty-hunit
     , temporary
