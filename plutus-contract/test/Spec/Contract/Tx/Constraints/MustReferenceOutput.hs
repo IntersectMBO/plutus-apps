@@ -42,8 +42,6 @@ import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PSU.V1
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
