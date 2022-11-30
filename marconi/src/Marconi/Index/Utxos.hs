@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE PatternSynonyms    #-}
@@ -18,12 +19,10 @@
 | Slot
 | BlockNumber
 | transactionIndexWithinTheBlock (-}
-module Marconi.Index.Utxos
-    ( UnspentTransaction (..)
-    , UnspentTransactionEvent (..)
-                           ) where
+module Marconi.Index.Utxos where
 
 import Cardano.Api qualified as C
+import Control.Applicative ((<|>))
 import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
 import Control.Lens.TH (makeLenses)
@@ -31,60 +30,82 @@ import Control.Lens.TH (makeLenses)
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Codec.Serialise.Class (Serialise (decode))
+import Control.Monad (when)
 import Data.ByteString.Lazy (toStrict)
 import Data.Maybe (catMaybes, fromJust)
 import Data.Proxy (Proxy (Proxy))
+import Data.Set qualified as Set
 import Data.Text (pack)
 import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
+import Database.SQLite.Simple.ToRow (ToRow (toRow))
+import Marconi.Types (CurrentEra)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
+import System.Random.MWC (createSystemRandom, uniformR)
 import Text.ParserCombinators.Parsec (parse)
 
-data UnspentTransaction       = UnspentTransaction
-    { _address   :: !C.AddressAny
-    , _txId      :: !C.TxId
-    , _txIx      :: !C.TxIx
-    , _datum     :: Maybe C.ScriptData
-    , _datumHash :: Maybe (C.Hash C.ScriptData)
-    , _value     :: C.Value
+data Utxo               = Utxo
+    { _utxoAddress   :: !C.AddressAny
+    , _utxoTxId      :: !C.TxId
+    , _utxoTxIx      :: !C.TxIx
+    , _utxoDatum     :: Maybe C.ScriptData
+    , _utxoDatumHash :: Maybe (C.Hash C.ScriptData)
+    , _utxoValue     :: C.Value
     -- , _inlineScriptHash    :: Maybe (C.Hash (C.ScriptDatum C.WitCtxTxIn))
     -- , _inlineScript        :: Maybe (C.ScriptDatum C.WitCtxTxIn)
     } deriving Show
 
-$(makeLenses ''UnspentTransaction)
+instance Eq Utxo where
+    u1 == u2 = (_utxoTxId u1) == (_utxoTxId u2)
 
-data UnspentTransactionEvent  = UnspentTransactionEvent
-    { _unspentTransactions :: [UnspentTransaction]
-    , _uSlotNo             :: !C.SlotNo
-    , _uBlockNo            :: !C.BlockNo
-    } deriving Show
+instance Ord Utxo where
+    compare u1 u2 = compare (_utxoTxId u1) (_utxoTxId u2)
 
-$(makeLenses ''UnspentTransactionEvent)
+$(makeLenses ''Utxo)
 
-data UnspentTransactionRow   = UnspentTransactionRow
-    { _unspentTransaction :: UnspentTransaction
-    , _slotNo             :: !C.SlotNo
-    , _blockNo            :: !C.BlockNo
-    } deriving Show
+data UtxoEvent          = UtxoEvent
+    { _utxoEventUtxos   :: [Utxo]
+    , _utxoEventInputs  :: !(Set.Set C.TxIn)
+    , _utxoEventSlotNo  :: !C.SlotNo
+    , _utxoEventBlockNo :: !C.BlockNo
+    } deriving (Show, Eq)
 
-$(makeLenses ''UnspentTransactionRow)
+$(makeLenses ''UtxoEvent)
 
-type Result = Maybe [UnspentTransactionRow]
+data UtxoRow            = UtxoRow
+    { _utxoRowUtxo    :: Utxo
+    , _utxoRowSlotNo  :: !C.SlotNo
+    , _utxoRowBlockNo :: !C.BlockNo
+    } deriving (Show, Eq, Ord)
+
+$(makeLenses ''UtxoRow)
+
+type Result = Maybe [UtxoRow]
 
 type Notification = ()
 
-type UnspentTransactionIndex = SqliteIndex UnspentTransactionEvent Notification C.AddressAny Result
+type UtxoIndex
+    = SqliteIndex
+      UtxoEvent
+      Notification
+      C.AddressAny
+      Result
 
 newtype Depth = Depth Int
 
-instance FromRow UnspentTransactionRow where
+instance FromRow C.TxIn where
+    fromRow = C.TxIn <$> field <*> field
+instance ToRow C.TxIn where
+    toRow (C.TxIn txid txix) = toRow (txid, txix)
+
+instance FromRow UtxoRow where
     fromRow
-        = UnspentTransactionRow
-        <$> (UnspentTransaction
+        = UtxoRow
+        <$> (Utxo
              <$> field
              <*> field
              <*> field
@@ -95,7 +116,8 @@ instance FromRow UnspentTransactionRow where
         <*> field
 
 instance ToField C.Value where
-    toField  = SQLText . pack . show . C.valueToList
+    toField  = SQLText . C.renderValue
+    -- toField  = SQLText . pack . show
 
 instance FromField C.Value where
     fromField f = fromField f >>=
@@ -156,76 +178,103 @@ instance FromField C.BlockNo where
 instance ToField C.BlockNo where
   toField (C.BlockNo s) = SQLInteger $ fromIntegral s
 
+
 open
   :: FilePath
   -> Depth
-  -> IO UnspentTransactionIndex
+  -> IO UtxoIndex
 open dbPath (Depth k) = do
   -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
   -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
   -- queries due to batching more events together.
+-- TODO this required for k > 0
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
-  let c = ix ^. Ix.handle
-  SQL.execute_ c "CREATE TABLE IF NOT EXISTS unspent_transactions (address TEXT NOT NULL, txId TEXT NOT NULL, txIx INT NOT NULL, datum TEXT, datumHash TEXT, value TEXT, slotNo INT, blockNo INT)"
-  SQL.execute_ c "CREATE INDEX IF NOT EXISTS unspent_transaction_address ON unspent_transactions (address)"
-  SQL.execute_ c "CREATE UNIQUE INDEX IF NOT EXISTS unspent_transaction_txid ON unspent_transactions (txId)"
+  let conn = ix ^. Ix.handle
+  SQL.execute_ conn "DROP TABLE IF EXISTS unspent_transactions"
+  SQL.execute_ conn "DROP TABLE IF EXISTS spent"
+  SQL.execute_ conn "CREATE TABLE IF NOT EXISTS unspent_transactions (address TEXT NOT NULL, txId TEXT NOT NULL, txIx INT NOT NULL, datum TEXT, datumHash TEXT, value TEXT, slotNo INT, blockNo INT)"
+  SQL.execute_ conn "CREATE TABLE IF NOT EXISTS spent (txId TEXT NOT NULL, txIx INT NOT NULL)"
+  SQL.execute_ conn "CREATE INDEX IF NOT EXISTS unspent_transaction_address ON unspent_transactions (address)"
+  SQL.execute_ conn "CREATE UNIQUE INDEX IF NOT EXISTS unspent_transaction_txid ON unspent_transactions (txId)"
   pure ix
 
-isAtAddress :: C.AddressAny -> UnspentTransaction -> Bool
-isAtAddress address' utx = (utx ^. address) == address'
+isAtAddress :: C.AddressAny -> Utxo -> Bool
+isAtAddress address' utx = (utx ^. utxoAddress) == address'
 
-onlyAt :: C.AddressAny -> UnspentTransactionEvent -> Maybe UnspentTransactionEvent
+onlyAt :: C.AddressAny -> UtxoEvent -> Maybe UtxoEvent
 onlyAt address' event =
     let
-        uts =  event ^. unspentTransactions ^.. folded . filtered (isAtAddress address')
+        uts =  event ^. utxoEventUtxos ^.. folded . filtered (isAtAddress address')
     in
         if null uts then
             Nothing
-        else Just event {_unspentTransactions = uts}
+        else Just event {_utxoEventUtxos = uts}
 
-toRows :: UnspentTransactionEvent -> [UnspentTransactionRow]
-toRows event =  event ^. unspentTransactions & traversed %~ f
+toRows :: UtxoEvent -> [UtxoRow]
+toRows event =  event ^. utxoEventUtxos & traversed %~ f
     where
-        f :: UnspentTransaction -> UnspentTransactionRow
-        f  u = UnspentTransactionRow u (event ^. uSlotNo ) (event ^. uBlockNo)
+        f :: Utxo -> UtxoRow
+        f  u = UtxoRow u (event ^. utxoEventSlotNo ) (event ^. utxoEventBlockNo)
 
 -- | Query the data stored in the indexer as a whole from:
     -- + hotStore  : in-memory
     -- + coldStore : SQL DB
     -- + buffered  : data that can still change (through rollbacks)
 --
-toFilteredRows :: C.AddressAny -> [UnspentTransactionEvent] -> [UnspentTransactionRow]
-toFilteredRows address' = concatMap toRows . catMaybes . fmap  (onlyAt address')
+addressFilteredRows :: C.AddressAny -> [UtxoEvent] -> Set.Set UtxoRow
+addressFilteredRows addr = Set.fromList . concatMap toRows . catMaybes . fmap (onlyAt addr)
 
 query
-  :: UnspentTransactionIndex
+  :: UtxoIndex
   -> C.AddressAny
-  -> [UnspentTransactionEvent]                    -- ^ inflight events
+  -> [UtxoEvent]                    -- ^ inflight events
   -> IO Result
 query ix address' events = do
-  fromColdStore <- SQL.query (ix ^. Ix.handle) "" (Only address')
+  fromColdStore <-
+      SQL.query
+        (ix ^. Ix.handle)
+        "SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash, u.value, u.slotNo, u.blockNo FROM unspent_transactions u LEFT JOIN spent s ON u.txId = s.txId AND u.txIx = s.txIx WHERE u.address = ?"
+        (Only address')
   buffered <- Ix.getBuffer $ ix ^. Ix.storage
-  pure . Just
-      $ fromColdStore
-      <> toFilteredRows address' buffered
-      <> toFilteredRows address' events
-onInsert :: UnspentTransactionIndex -> UnspentTransactionEvent -> IO [Notification]
-onInsert _ _ = pure []
+  pure . Just . Set.toList
+      $  (Set.fromList fromColdStore
+          `Set.union` (addressFilteredRows address' buffered)
+          `Set.union` (addressFilteredRows address' events) )
 
-store :: UnspentTransactionIndex -> IO ()
+onInsert :: UtxoIndex -> UtxoEvent -> IO [Notification]
+onInsert _ _ =  pure []
+
+store :: UtxoIndex -> IO ()
 store ix = do
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let asTuple :: UnspentTransactionRow -> (C.AddressAny, C.TxId, C.TxIx, Maybe C.ScriptData, Maybe (C.Hash C.ScriptData), C.Value , C.SlotNo, C.BlockNo)
+  let asTuple :: UtxoRow -> (C.AddressAny, C.TxId, C.TxIx, Maybe C.ScriptData, Maybe (C.Hash C.ScriptData), C.Value , C.SlotNo, C.BlockNo)
       asTuple u =
-          ( (u ^. unspentTransaction . address)
-          , (u ^. unspentTransaction . txId)
-          , (u ^. unspentTransaction . txIx)
-          , (u ^. unspentTransaction . datum)
-          , (u ^. unspentTransaction . datumHash)
-          , (u ^. unspentTransaction . value )
-          , (u ^. slotNo)
-          , (u ^. blockNo)  )
+          ( (u ^. utxoRowUtxo . utxoAddress)
+          , (u ^. utxoRowUtxo . utxoTxId)
+          , (u ^. utxoRowUtxo . utxoTxIx)
+          , (u ^. utxoRowUtxo . utxoDatum)
+          , (u ^. utxoRowUtxo . utxoDatumHash)
+          , (u ^. utxoRowUtxo . utxoValue)
+          , (u ^. utxoRowSlotNo)
+          , (u ^. utxoRowBlockNo))
       rows = (fmap asTuple) . (concatMap toRows) $  buffer
-  SQL.executeMany (ix ^. Ix.handle)
-      "INSERT OR REPLACE INTO unspent_transaction (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
+      spent = concatMap (Set.toList . _utxoEventInputs) buffer
+      conn = ix ^. Ix.handle
+  SQL.execute_ conn "BEGIN"
+  SQL.executeMany conn
+      "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
       rows
+  SQL.executeMany conn
+      "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
+      spent
+  SQL.execute_ conn "COMMIT"
+
+  -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
+  rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
+  when (rndCheck == 42) $ do
+    SQL.execute_ conn "DELETE FROM unspent_transactions WHERE unspent_transactions.rowid IN (SELECT unspent_transactions.rowid FROM unspent_transactions LEFT JOIN spent on unspent_transactions.txId = spent.txId AND unspent_transactions.txIx = spent.txIx WHERE spent.txId IS NOT NULL)"
+    SQL.execute_ conn "VACUUM"
+
+toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
+toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
+toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
