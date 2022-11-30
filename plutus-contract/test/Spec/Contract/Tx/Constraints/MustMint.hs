@@ -132,7 +132,7 @@ mustReferenceOutputV2Validator :: PV2.Validator
 mustReferenceOutputV2Validator = PV2.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
  where
-     wrap = PV2.mkUntypedValidator mkMustReferenceOutputV2Validator
+     wrap = Scripts.mkUntypedValidator mkMustReferenceOutputV2Validator
 
 mustReferenceOutputV2ValidatorAddress :: Address
 mustReferenceOutputV2ValidatorAddress =

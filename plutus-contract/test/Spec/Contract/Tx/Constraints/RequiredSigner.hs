@@ -26,7 +26,7 @@ import Ledger.Tx.Constraints qualified as TxCons
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
                              checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
-import Plutus.Script.Utils.V2.Typed.Scripts as PSU.V2
+import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)

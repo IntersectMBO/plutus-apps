@@ -39,7 +39,6 @@ import Plutus.Contract.Test (assertUnbalancedTx, assertValidatedTransactionCount
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, params,
                                                  setSigningProcess, walletInstanceTag)
 import Plutus.V1.Ledger.Value qualified as Value

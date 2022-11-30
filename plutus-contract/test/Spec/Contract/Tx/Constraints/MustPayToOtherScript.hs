@@ -28,7 +28,6 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
-import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedValidatorHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2

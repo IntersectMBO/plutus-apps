@@ -1,0 +1,43 @@
+.. A new scriv changelog fragment.
+..
+.. Uncomment the header that is right (remove the leading dots).
+..
+Removed
+-------
+
+- `mkUntypedMintingPolicyV1` replaced by a version agnostic function
+- `mkUntypedMintingPolicyV2` replaced by a version agnostic function
+- `mkUntypedStakeValidatorV1` replaced by a version agnostic function
+- `mkUntypedStakeValidatorV2` replaced by a version agnostic function
+- `mkUntypedValidatorV1` replaced by a version agnostic function
+- `mkUntypedValidatorV2` replaced by a version agnostic function
+
+
+Added
+-----
+
+- `Plutus.Script.Utils.Typed.ScriptContext` a type class that allow the creation
+  of an untyped minting policy, stake validator or validator.
+- an instance of `Plutus.Script.Utils.Typed.ScriptContext` for the `ScriptContext` of `PlutusV1`
+- an instance of `Plutus.Script.Utils.Typed.ScriptContext` for the `ScriptContext` of `PlutusV2`
+
+.. Changed
+.. -------
+..
+.. - A bullet item for the Changed category.
+..
+.. Deprecated
+.. ----------
+..
+.. - A bullet item for the Deprecated category.
+..
+.. Fixed
+.. -----
+..
+.. - A bullet item for the Fixed category.
+..
+.. Security
+.. --------
+..
+.. - A bullet item for the Security category.
+..
