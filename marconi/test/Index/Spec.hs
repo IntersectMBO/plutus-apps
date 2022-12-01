@@ -28,8 +28,8 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests = testGroup "Marconi.Index.Specs" $
-    [testPropertyNamed  "Index-Utxos-build" "Spec. Utxo from Cardano.Api.Tx" txToUtxoTest
-    , testPropertyNamed "Index-Utxos-store" "Spec. Save and retreive UtxoEvents" roundTripUtxoEventsTest
+    [testPropertyNamed  "Index-utxos-build" "Spec. Utxo from Cardano.Api.Tx" txToUtxoTest
+    , testPropertyNamed "Index-utxos-store" "Spec. Save and retreive UtxoEvents" roundTripUtxoEventsTest
     ]
 
 txToUtxoTest ::  Property
@@ -51,18 +51,19 @@ genEvents :: Gen Utxos.UtxoEvent
 genEvents = do
     slotNo <- CGen.genSlotNo
     blockNo  <- genBlockNo
-    txs <- Gen.list (Range.linear 2 10)(CGen.genTx C.ShelleyEra)
+    txs <- Gen.list (Range.linear 2 5)(CGen.genTx C.ShelleyEra)
     pure . fromJust $ uTxoEvents Nothing slotNo blockNo txs
 
 roundTripUtxoEventsTest :: Property
 roundTripUtxoEventsTest  = property $ do
     ndx <- liftIO $ Utxos.open ":memory:" (Utxos.Depth 1)
-    events <- forAll $ Gen.list (Range.linear 2 5) genEvents -- force db flush
+    events <- forAll $ Gen.list (Range.linear 2 3) genEvents -- force db flush
     let (rows :: [Utxos.UtxoRow]) = nub . concatMap Utxos.toRows $ events
         (addresses :: [C.AddressAny]) = nub . fmap (\r -> r ^. Utxos.utxoRowUtxo . Utxos.utxoAddress ) $ rows
     ix <- liftIO $ Ix.insertL (events) ndx
     let queryIx addr = (ix ^. Ix.query) ix addr [] -- events finding them in the events is the trivial case
     rowsFromStore <- liftIO $ (concat . catMaybes) <$> forM addresses queryIx -- queryByAddress
+    liftIO $ print (length addresses)
     (null rowsFromStore) === False
     let (tid :: Utxos.UtxoRow -> C.AddressAny) = (\r -> r ^. Utxos.utxoRowUtxo . Utxos.utxoAddress)
     (all (`elem` (tid <$> rows)) (tid <$> rowsFromStore)) === True

@@ -6,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-
@@ -20,29 +21,49 @@
 | Slot
 | BlockNumber
 | transactionIndexWithinTheBlock (-}
-module Marconi.Index.Utxos where
+module Marconi.Index.Utxos
+    ( Utxo (..)
+    , UtxoEvent (..)
+    , UtxoRow (..)
+    , C.BlockNo (..)
+    , C.SlotNo (..)
+    , Depth (..)
+    , Result
+    , toRows
+    , addressFilteredRows
+    , toAddr
+    , UtxoIndex
+    , HasUtxo (..)
+    , HasUtxoRow (..)
+    , HasUtxoEvent (..)
+    , open
+                          ) where
 
 import Cardano.Api qualified as C
 import Control.Concurrent.Async (concurrently_)
 import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
-import Control.Lens.TH (makeLenses)
+import Control.Lens.TH (makeClassy)
 
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Codec.Serialise.Class (Serialise (decode))
 import Control.Exception (bracket_)
-import Control.Monad (when)
+import Control.Monad (unless, when)
+import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
+import Data.Aeson qualified
 import Data.ByteString.Lazy (toStrict)
 import Data.Maybe (catMaybes, fromJust)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
+import Data.Text (pack)
 import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
+import GHC.Generics (Generic)
 import Marconi.Types (CurrentEra)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
@@ -58,7 +79,18 @@ data Utxo               = Utxo
     , _utxoValue     :: C.Value
     -- , _inlineScriptHash    :: Maybe (C.Hash (C.ScriptDatum C.WitCtxTxIn))
     -- , _inlineScript        :: Maybe (C.ScriptDatum C.WitCtxTxIn)
-    } deriving Show
+    } deriving (Show, Generic)
+
+$(makeClassy ''Utxo)
+
+instance ToJSON C.AddressAny where
+    toJSON = Data.Aeson.String . C.serialiseAddress
+
+instance ToJSON C.ScriptData where
+    toJSON = Data.Aeson.String . pack . show
+
+instance ToJSON Utxo
+
 
 instance Eq Utxo where
     u1 == u2 = (_utxoTxId u1) == (_utxoTxId u2)
@@ -66,7 +98,6 @@ instance Eq Utxo where
 instance Ord Utxo where
     compare u1 u2 = compare (_utxoTxId u1) (_utxoTxId u2)
 
-$(makeLenses ''Utxo)
 
 data UtxoEvent          = UtxoEvent
     { _utxoEventUtxos   :: [Utxo]
@@ -75,15 +106,19 @@ data UtxoEvent          = UtxoEvent
     , _utxoEventBlockNo :: !C.BlockNo
     } deriving (Show, Eq)
 
-$(makeLenses ''UtxoEvent)
+$(makeClassy ''UtxoEvent)
 
 data UtxoRow            = UtxoRow
     { _utxoRowUtxo    :: Utxo
     , _utxoRowSlotNo  :: !C.SlotNo
     , _utxoRowBlockNo :: !C.BlockNo
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq, Ord, Generic)
 
-$(makeLenses ''UtxoRow)
+$(makeClassy ''UtxoRow)
+
+instance ToJSON C.BlockNo
+
+instance ToJSON UtxoRow
 
 type Result = Maybe [UtxoRow]
 
@@ -261,16 +296,19 @@ store ix = do
       rows = (fmap asTuple) . (concatMap toRows) $  buffer
       spent = concatMap (Set.toList . _utxoEventInputs) buffer
       conn = ix ^. Ix.handle
+
   bracket_
       (SQL.execute_ conn "BEGIN")
       (SQL.execute_ conn "COMMIT")
-      (concurrently_
-          (SQL.executeMany conn
-           "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
-           rows)
-          (SQL.executeMany conn
-           "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
-           spent)
+      ( concurrently_ (
+            unless (null rows)
+                (SQL.executeMany conn
+                "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
+                rows) )
+            (unless (null spent)
+                (SQL.executeMany conn
+                "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
+                spent))
       )
 
   -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
