@@ -7,7 +7,6 @@
 module Marconi.Types
        (
        -- * Addresses alias used to query marconi
-       CardanoAddress,
        TargetAddresses,
        -- * Aliases for the current Cardano era
        CurrentEra,
@@ -24,10 +23,8 @@ import Cardano.Api qualified as C
 import Data.List.NonEmpty (NonEmpty)
 
 
-type CardanoAddress = C.Address C.ShelleyAddr
-
--- | Typre represents non empty list of Bech32 compatable addresses
-type TargetAddresses = NonEmpty CardanoAddress
+-- | Typre represents non empty list of Bech32 Shelley compatable addresses
+type TargetAddresses = NonEmpty (C.Address C.ShelleyAddr)
 
 -- | An alias for the current era, to ease the transition from one era to the next one
 type CurrentEra = C.BabbageEra

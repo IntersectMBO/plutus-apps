@@ -23,6 +23,7 @@
 module Marconi.Index.Utxos where
 
 import Cardano.Api qualified as C
+import Control.Concurrent.Async (concurrently_)
 import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
 import Control.Lens.TH (makeLenses)
@@ -30,6 +31,7 @@ import Control.Lens.TH (makeLenses)
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Codec.Serialise.Class (Serialise (decode))
+import Control.Exception (bracket_)
 import Control.Monad (when)
 import Data.ByteString.Lazy (toStrict)
 import Data.Maybe (catMaybes, fromJust)
@@ -259,14 +261,17 @@ store ix = do
       rows = (fmap asTuple) . (concatMap toRows) $  buffer
       spent = concatMap (Set.toList . _utxoEventInputs) buffer
       conn = ix ^. Ix.handle
-  SQL.execute_ conn "BEGIN"
-  SQL.executeMany conn
-      "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
-      rows
-  SQL.executeMany conn
-      "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
-      spent
-  SQL.execute_ conn "COMMIT"
+  bracket_
+      (SQL.execute_ conn "BEGIN")
+      (SQL.execute_ conn "COMMIT")
+      (concurrently_
+          (SQL.executeMany conn
+           "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
+           rows)
+          (SQL.executeMany conn
+           "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
+           spent)
+      )
 
   -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
   rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)

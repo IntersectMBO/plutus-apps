@@ -44,6 +44,7 @@ import Marconi.Types (TargetAddresses, TxOut, TxOutRef, pattern CurrentEra, txOu
 
 import RewindableIndex.Index.VSplit qualified as Ix
 
+
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extractDatumsFromTx txs
@@ -67,13 +68,14 @@ scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ d
       $ xs
 scriptDataFromCardanoTxBody _ = mempty
 
+-- UtxoIndexer
 uTxo
   :: C.IsCardanoEra era
   => Maybe TargetAddresses
   -> C.Tx era
   -> [Utxos.Utxo]
 uTxo maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
-    either (const []) id (uTxo' txOuts)
+    either (const []) addressDiscriminator (uTxo' txOuts)
     where
         addressDiscriminator :: [Utxos.Utxo] -> [Utxos.Utxo]
         addressDiscriminator = case maybeTargetAddresses of
@@ -81,7 +83,7 @@ uTxo maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
             _                    -> id
 
         uTxo' :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxos.Utxo]
-        uTxo' = (fmap addressDiscriminator) . fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
+        uTxo' = fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
 
         txoutToUtxo :: Int -> TxOut -> Utxos.Utxo
         txoutToUtxo  ix out =
@@ -117,7 +119,6 @@ uTxoEvents maybeTargetAddresses slotNo blkNo txs =
         else
             Just (Utxos.UtxoEvent utxos ins slotNo blkNo)
 
--- UtxoIndexer
 getOutputs
   :: C.IsCardanoEra era
   => Maybe TargetAddresses
@@ -186,6 +187,7 @@ initialCoordinator indexerCount =
 
 type Worker = Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO ()
 
+
 datumWorker :: Worker
 datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >>= innerLoop
   where
@@ -206,8 +208,7 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
 
 -- | does the transaction contain a targetAddress
 isInTargetTxOut
-    :: C.IsCardanoEra era
-    => TargetAddresses              -- ^ non empty list of target address
+    :: TargetAddresses        -- ^ non empty list of target address
     -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
     -> Bool
 isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
@@ -220,12 +221,9 @@ isAddressInTarget
     -> Utxos.Utxo
     -> Bool
 isAddressInTarget targetAddresses utxo =
-    let
-        addr = utxo ^. Utxos.utxoAddress
-    in
-        case addr of
-            C.AddressByron _      -> False
-            C.AddressShelley addr -> addr `elem` targetAddresses
+    case (utxo ^. Utxos.utxoAddress) of
+        C.AddressByron _      -> False
+        C.AddressShelley addr -> addr `elem` targetAddresses
 
 -- | UtxoWorker that can work with Query threads
 -- The main difference between this worker and the utxoWorker is
@@ -264,11 +262,10 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward (BlockInMode b@(Block (BlockHeader slotNo _ blkNo) txs) _) _ct ->
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ct ->
             case (uTxoEvents maybeTargetAddresses slotNo blkNo txs) of
                   Just us ->  Ix.insert ( us) index >>= innerLoop
                   _       -> innerLoop index
-          -- Ix.insert utxoRow index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
