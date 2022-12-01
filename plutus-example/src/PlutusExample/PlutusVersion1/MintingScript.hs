@@ -19,9 +19,8 @@ import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
 
 import Plutus.Script.Utils.Typed qualified as Scripts
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (Script, Validator (Validator), mkMintingPolicyScript, unMintingPolicyScript)
+import Plutus.V1.Ledger.Api (MintingPolicy, Script, ScriptContext, Validator (Validator), mkMintingPolicyScript,
+                             unMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
@@ -31,7 +30,7 @@ import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 mkPolicy :: BuiltinData -> ScriptContext -> Bool
 mkPolicy _redeemer _ctx = True
 
-policy :: Scripts.MintingPolicy
+policy :: MintingPolicy
 policy = mkMintingPolicyScript $$(PlutusTx.compile [|| wrap ||])
  where
      wrap = Scripts.mkUntypedMintingPolicy mkPolicy

@@ -22,7 +22,7 @@ module Plutus.Script.Utils.Typed (
   , Any
   , Language (PlutusV1, PlutusV2)
   , Versioned (Versioned, unversioned, version)
-  , ScriptContext(mkUntypedValidator, mkUntypedStakeValidator, mkUntypedMintingPolicy)
+  , IsScriptContext(mkUntypedValidator, mkUntypedStakeValidator, mkUntypedMintingPolicy)
   , ScriptContextV1
   , ScriptContextV2
 ) where
@@ -120,7 +120,7 @@ vForwardingMintingPolicy = tvForwardingMPS
 forwardingMintingPolicyHash :: TypedValidator a -> PV1.MintingPolicyHash
 forwardingMintingPolicyHash = tvForwardingMPSHash
 
-class PV1.UnsafeFromData a => ScriptContext a where
+class PV1.UnsafeFromData sc => IsScriptContext sc where
     {-# INLINABLE mkUntypedValidator #-}
     -- | Converts a custom datum and redeemer from a validator function to an
     -- untyped validator function. See Note [Scripts returning Bool].
@@ -171,7 +171,7 @@ class PV1.UnsafeFromData a => ScriptContext a where
     mkUntypedValidator
         :: forall d r
         . (PV1.UnsafeFromData d, PV1.UnsafeFromData r)
-        => (d -> r -> a -> Bool)
+        => (d -> r -> sc -> Bool)
         -> UntypedValidator
     -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
     mkUntypedValidator f d r p =
@@ -202,7 +202,7 @@ class PV1.UnsafeFromData a => ScriptContext a where
     -- @
     mkUntypedStakeValidator
         :: PV1.UnsafeFromData r
-        => (r -> a -> Bool)
+        => (r -> sc -> Bool)
         -> UntypedStakeValidator
     mkUntypedStakeValidator f r p =
         check $ f (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
@@ -232,7 +232,7 @@ class PV1.UnsafeFromData a => ScriptContext a where
     -- @
     mkUntypedMintingPolicy
         :: PV1.UnsafeFromData r
-        => (r -> a -> Bool)
+        => (r -> sc -> Bool)
         -> UntypedMintingPolicy
     -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
     mkUntypedMintingPolicy f r p =
@@ -242,6 +242,6 @@ class PV1.UnsafeFromData a => ScriptContext a where
 type ScriptContextV1 = PV1.ScriptContext
 type ScriptContextV2 = PV2.ScriptContext
 
-instance ScriptContext PV1.ScriptContext where
+instance IsScriptContext PV1.ScriptContext where
 
-instance ScriptContext PV2.ScriptContext where
+instance IsScriptContext PV2.ScriptContext where

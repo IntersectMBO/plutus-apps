@@ -29,7 +29,6 @@ import Data.ByteString.Short qualified as SBS
 
 import Plutus.Script.Utils.Typed as Scripts
 import Plutus.V1.Ledger.Api qualified as Plutus
-import Plutus.V1.Ledger.Scripts as Scripts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
@@ -172,7 +171,7 @@ mkPolicy (PV1CustomRedeemer _ _ minted txValidRange _fee _ _ signatories mPurpos
    txInfo :: Plutus.TxInfo
    txInfo = Plutus.scriptContextTxInfo scriptContext
 
-mintingScriptContextTextPolicy :: Scripts.MintingPolicy
+mintingScriptContextTextPolicy :: Plutus.MintingPolicy
 mintingScriptContextTextPolicy = Plutus.mkMintingPolicyScript
            $$(PlutusTx.compile [|| wrap ||])
  where
