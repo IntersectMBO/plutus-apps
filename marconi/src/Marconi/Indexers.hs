@@ -186,6 +186,7 @@ initialCoordinator indexerCount =
 
 type Worker = Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO ()
 
+
 datumWorker :: Worker
 datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >>= innerLoop
   where
