@@ -60,8 +60,8 @@ executable doc-doctests
   ghc-options:        -Wno-unused-imports
   build-tool-depends: doctest:doctest
   other-modules:
+    BasicAppConstraints
     BasicApps
-    BasicValidators
     Escrow
     Escrow2
     Escrow3
