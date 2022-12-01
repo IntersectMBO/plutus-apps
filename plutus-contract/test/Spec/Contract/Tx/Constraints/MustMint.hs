@@ -39,7 +39,6 @@ import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
-import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Address, MintingPolicyHash (MintingPolicyHash), Redeemer, TxOutRef)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
@@ -133,7 +132,7 @@ mustReferenceOutputV2Validator :: PV2.Validator
 mustReferenceOutputV2Validator = PV2.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
  where
-     wrap = PV2.mkUntypedValidator mkMustReferenceOutputV2Validator
+     wrap = Scripts.mkUntypedValidator mkMustReferenceOutputV2Validator
 
 mustReferenceOutputV2ValidatorAddress :: Address
 mustReferenceOutputV2ValidatorAddress =
@@ -403,7 +402,7 @@ mustMintPolicy = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
 mustMintPolicyV2 :: Scripts.MintingPolicy
 mustMintPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
-        wrap = MPS2.mkUntypedMintingPolicy mkMustMintPolicyV2
+        wrap = Scripts.mkUntypedMintingPolicy mkMustMintPolicyV2
 
 mustMintPolicyHash :: Ledger.MintingPolicyHash
 mustMintPolicyHash = PSU.V1.mintingPolicyHash mustMintPolicy

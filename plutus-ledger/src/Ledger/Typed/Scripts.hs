@@ -15,8 +15,6 @@ module Ledger.Typed.Scripts
   , PV1.ValidatorType
   , PV1.mkTypedValidator
   , PV1.mkTypedValidatorParam
-  , PV1.mkUntypedMintingPolicy
-  , PV1.mkUntypedValidator
   ) where
 
 import Ledger.Typed.Scripts.Orphans as Export ()

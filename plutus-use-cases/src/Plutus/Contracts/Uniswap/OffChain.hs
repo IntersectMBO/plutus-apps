@@ -109,7 +109,7 @@ uniswapInstance us = Scripts.mkTypedValidator @Uniswapping
     c :: Coin PoolState
     c = poolStateCoin us
 
-    wrap = Scripts.mkUntypedValidator @UniswapDatum @UniswapAction
+    wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @UniswapDatum @UniswapAction
 
 uniswapScript :: Uniswap -> Validator
 uniswapScript = Scripts.validatorScript . uniswapInstance

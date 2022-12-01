@@ -34,8 +34,8 @@ import Ledger.Ada (Ada (Lovelace), fromValue)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api (ScriptContext (..), ScriptPurpose (..))
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Scripts qualified as Scripts

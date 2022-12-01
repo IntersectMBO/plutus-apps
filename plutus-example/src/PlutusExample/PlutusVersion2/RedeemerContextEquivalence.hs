@@ -23,8 +23,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
 
-import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies as V2
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators as V2
+import Plutus.Script.Utils.Typed as Scripts
 import Plutus.V2.Ledger.Api qualified as V2
 import Plutus.V2.Ledger.Contexts as V2
 import PlutusTx qualified
@@ -144,7 +143,7 @@ validator :: V2.Validator
 validator = V2.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
   where
-    wrap = V2.mkUntypedValidator mkValidator
+    wrap = Scripts.mkUntypedValidator mkValidator
 
 v2ScriptContextEquivalencePlutusScript :: V2.Script
 v2ScriptContextEquivalencePlutusScript = V2.unValidatorScript validator
@@ -182,7 +181,7 @@ mkMintEquivalenceValidator redeemer scriptContext =
 policy :: V2.MintingPolicy
 policy = V2.mkMintingPolicyScript $$(PlutusTx.compile [|| wrap ||])
  where
-  wrap = V2.mkUntypedMintingPolicy mkMintEquivalenceValidator
+  wrap = Scripts.mkUntypedMintingPolicy mkMintEquivalenceValidator
 
 plutusMintEquivScript :: V2.Script
 plutusMintEquivScript =

@@ -30,6 +30,7 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (after, before)
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts (ScriptContextV1)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq)
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
@@ -99,7 +100,7 @@ escrowInstance = Scripts.mkTypedValidator @Escrow
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
       where
-        wrap = Scripts.mkUntypedValidator @EscrowParams @Action
+        wrap = Scripts.mkUntypedValidator @ScriptContextV1 @EscrowParams @Action
 
 {-# INLINABLE validate #-}
 validate :: EscrowParams -> Action -> ScriptContext -> Bool

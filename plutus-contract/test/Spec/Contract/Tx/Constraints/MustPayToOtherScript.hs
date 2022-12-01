@@ -31,7 +31,6 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedValidatorHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -445,7 +444,7 @@ mustPayToOtherScriptPolicyV2 :: Ledger.MintingPolicy
 mustPayToOtherScriptPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToOtherScriptPolicy = mkMustPayToOtherScriptPolicy V2.Constraints.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
 
 mustPayToOtherScriptPolicy :: PSU.Language -> Ledger.MintingPolicy
 mustPayToOtherScriptPolicy = \case

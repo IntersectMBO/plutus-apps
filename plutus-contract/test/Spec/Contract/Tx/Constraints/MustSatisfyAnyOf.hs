@@ -45,7 +45,6 @@ import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransaction
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, params, waitNSlots)
 import Plutus.V1.Ledger.Api (to)
 import Plutus.V1.Ledger.Value
@@ -296,7 +295,7 @@ mustSatisfyAnyOfPolicyV2 :: L.MintingPolicy
 mustSatisfyAnyOfPolicyV2 = L.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToOtherScriptPolicy = mkMustSatisfyAnyOfPolicy Cons.V2.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
 
 data LanguageContext
    = LanguageContext
