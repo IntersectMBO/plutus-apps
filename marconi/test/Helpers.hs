@@ -168,18 +168,18 @@ submitAwaitTx con (tx, txBody) = do
   submitTx con tx
   liftIO $ awaitTxId con $ C.getTxId txBody
 
-transferTx
+mkTransferTx
   :: (MonadIO m, MonadTest m, MonadFail m)
   => C.NetworkId -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address C.ShelleyAddr -> C.Address C.ShelleyAddr -> [C.ShelleyWitnessSigningKey] -> C.Lovelace
   -> m (C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra)
-transferTx networkId con from to keyWitnesses howMuch = do
+mkTransferTx networkId con from to keyWitnesses howMuch = do
   pparams <- getAlonzoProtocolParams con
   (txIns, totalLovelace) <- getAddressTxInsValue con from
   let
     fee0 = 0
     tx0 = (emptyTxBodyContent fee0 pparams)
       { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-      , C.txOuts = [outAddress to $ totalLovelace - fee0]
+      , C.txOuts = [mkAddressAdaTxOut to $ totalLovelace - fee0]
       }
   txBody0 :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx0
   let fee = calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses) networkId txBody0 :: C.Lovelace
@@ -187,14 +187,14 @@ transferTx networkId con from to keyWitnesses howMuch = do
   when (howMuch + fee >= totalLovelace) $ fail "Not enough funds"
   let
     tx = tx0 { C.txFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee
-             , C.txOuts = [ outAddress to howMuch
-                          , outAddress from $ totalLovelace - howMuch - fee
+             , C.txOuts = [ mkAddressAdaTxOut to howMuch
+                          , mkAddressAdaTxOut from $ totalLovelace - howMuch - fee
                           ]}
   txBody :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx
   return (C.signShelleyTransaction txBody keyWitnesses, txBody)
 
-outAddress :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.AlonzoEra
-outAddress address lovelace =
+mkAddressAdaTxOut :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.AlonzoEra
+mkAddressAdaTxOut address lovelace =
   C.TxOut
     (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
     (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue lovelace)
