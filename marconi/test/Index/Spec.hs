@@ -9,14 +9,17 @@
 module Index.Spec (tests) where
 
 import Cardano.Api qualified as C
-import Control.Lens.Operators ((^.))
+import Control.Lens (folded)
+import Control.Lens.Operators ((^.), (^..))
 import Control.Monad (forM)
 import Control.Monad.IO.Class (liftIO)
 import Data.List (nub)
 import Data.List.NonEmpty (nonEmpty, toList)
 import Data.Maybe (catMaybes, fromJust)
+import Database.SQLite.Simple qualified as SQLite
 import Gen.Cardano.Api.Typed qualified as CGen
-import Hedgehog (Gen, Property, forAll, property, (===))
+import Hedgehog (Gen, Property, diff, forAll, property, (===))
+import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Marconi.Index.Utxos qualified as Utxos
@@ -28,9 +31,20 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests = testGroup "Marconi.Index.Specs" $
-    [testPropertyNamed  "Index-Utxos-build" "Spec. Utxo from Cardano.Api.Tx" txToUtxoTest
-    , testPropertyNamed "Index-Utxos-store" "Spec. Save and retreive UtxoEvents" roundTripUtxoEventsTest
+    [testPropertyNamed  "Index-utxos-build" "Spec. Utxo from Cardano.Api.Tx" txToUtxoTest
+    , testPropertyNamed "Index-utxos-event-at-address" "Spec. Filter UtxoEvents for an address"  addressFilteredEventsTest
+    , testPropertyNamed "Index-utxos-store" "Spec. Save and retreive UtxoEvents" roundTripUtxoEventsTest
+    , testPropertyNamed "Index-utxos-hot-store" "Spec. Save and retreive UtxoEvents from hot-store only"
+      hotstoreUtxoEventTest
     ]
+
+addressFilteredEventsTest :: Property
+addressFilteredEventsTest = property $ do
+    event <- forAll $ genEvents -- force db flush
+    let (addresses :: [C.AddressAny]) = nub( event ^. Utxos.utxoEventUtxos ^.. folded . Utxos.utxoAddress)
+        event' =  Utxos.eventAtAddress (head addresses) event
+    Hedgehog.assert ((null event') == False)
+    1 === (length . nub) ( (head event') ^. Utxos.utxoEventUtxos ^.. folded . Utxos.utxoAddress)
 
 txToUtxoTest ::  Property
 txToUtxoTest = property $ do
@@ -39,10 +53,9 @@ txToUtxoTest = property $ do
     let (utxos :: [Utxos.Utxo]) = uTxo targetAddresses t
     -- we should not see any target addresses in the utxos
     (areTargetAddressesInUtxos targetAddresses utxos) === True
-
     let utxos = uTxo Nothing t  :: [Utxos.Utxo]
     -- there should be some utxos
-    null utxos === False
+    Hedgehog.assert (null utxos)
 
 genBlockNo :: Gen C.BlockNo
 genBlockNo = C.BlockNo <$> Gen.word64 Range.constantBounded
@@ -51,18 +64,36 @@ genEvents :: Gen Utxos.UtxoEvent
 genEvents = do
     slotNo <- CGen.genSlotNo
     blockNo  <- genBlockNo
-    txs <- Gen.list (Range.linear 2 10)(CGen.genTx C.ShelleyEra)
+    txs <- Gen.list (Range.linear 2 5)(CGen.genTx C.ShelleyEra)
     pure . fromJust $ uTxoEvents Nothing slotNo blockNo txs
+
+hotstoreUtxoEventTest :: Property
+hotstoreUtxoEventTest  = property $ do
+    event <- forAll $ genEvents
+    let (rows :: [Utxos.UtxoRow]) = Utxos.toRows event
+        (addresses :: [C.AddressAny]) = nub . fmap (\r -> r ^. Utxos.utxoRowUtxo . Utxos.utxoAddress ) $ rows
+    ndx <- liftIO $ Utxos.open ":memory:" (Utxos.Depth 2196) -- no db writes, test memory only
+    ix <- liftIO $ Ix.insert event ndx
+    storeResults <- liftIO $ ( forM addresses (\addr -> Utxos.query ix addr []) :: IO [Utxos.Result ] )
+    let (fromQuery  :: [Utxos.UtxoRow] ) = concat . catMaybes $ storeResults
+    let conn =  ix ^. Ix.handle
+    liftIO $ SQLite.close conn
+    Hedgehog.diff (length rows) (==) (length fromQuery)
+    rows === fromQuery
+
+
+
+
+
 
 roundTripUtxoEventsTest :: Property
 roundTripUtxoEventsTest  = property $ do
-    ndx <- liftIO $ Utxos.open ":memory:" (Utxos.Depth 1)
-    events <- forAll $ Gen.list (Range.linear 2 5) genEvents -- force db flush
+    ndx <- liftIO $ Utxos.open ":memory:" (Utxos.Depth 2196)
+    events <- forAll $ Gen.list (Range.linear 2 4) genEvents -- force db flush
     let (rows :: [Utxos.UtxoRow]) = nub . concatMap Utxos.toRows $ events
         (addresses :: [C.AddressAny]) = nub . fmap (\r -> r ^. Utxos.utxoRowUtxo . Utxos.utxoAddress ) $ rows
     ix <- liftIO $ Ix.insertL (events) ndx
-    let queryIx addr = (ix ^. Ix.query) ix addr [] -- events finding them in the events is the trivial case
-    rowsFromStore <- liftIO $ (concat . catMaybes) <$> forM addresses queryIx -- queryByAddress
+    rowsFromStore <- liftIO $ (concat . catMaybes) <$> forM addresses (\a -> (ix ^. Ix.query) ix a [] )
     (null rowsFromStore) === False
     let (tid :: Utxos.UtxoRow -> C.AddressAny) = (\r -> r ^. Utxos.utxoRowUtxo . Utxos.utxoAddress)
     (all (`elem` (tid <$> rows)) (tid <$> rowsFromStore)) === True

@@ -57,7 +57,7 @@ findAll
 findAll env = fromList <$> forConcurrently addresses f
     where
         addresses = NonEmpty.toList (env ^. queryAddresses)
-        f  :: CardanoAddress -> IO (UtxoTxOutReport)
+        f  :: C.Address C.ShelleyAddr -> IO (UtxoTxOutReport)
         f addr = UtxoTxOutReport (CApi.serialiseAddress addr) <$> findByCardanoAddress env (CApi.toAddressAny addr)
 
 -- | Query utxos address address

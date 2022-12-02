@@ -39,7 +39,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import GHC.Generics (Generic)
-import Marconi.Index.Utxo (UtxoRow (UtxoRow))
+import Marconi.Index.Utxos (UtxoRow (UtxoRow))
 import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
 import Marconi.Types as Export (CurrentEra, TargetAddresses, TxOutRef)
 import Network.Wai.Handler.Warp (Settings)
@@ -82,13 +82,7 @@ data UtxoTxOutReport = UtxoTxOutReport
 instance ToJSON UtxoTxOutReport where
     toEncoding = genericToEncoding defaultOptions
 
-newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving Generic
-
-instance Ord UtxoRowWrapper where
-    compare (UtxoRowWrapper (UtxoRow a _) ) ( UtxoRowWrapper (UtxoRow b _)) =  compare a b
-
-instance Eq UtxoRowWrapper where
-    (UtxoRowWrapper  (UtxoRow a1 t1) ) == ( UtxoRowWrapper (UtxoRow a2 t2) ) = a1 == a2 &&  t1 == t2
+newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving (Eq, Ord, Show, Generic)
 
 instance ToJSON AddressAny where
   toJSON = toJSON . anyAddressInShelleyBasedEra @CurrentEra
