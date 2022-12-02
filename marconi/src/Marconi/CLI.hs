@@ -11,6 +11,7 @@ module Marconi.CLI
     , utxoDbPath
     , datumDbPath
     , scriptTxDbPath
+    , epochStakepoolSizeDbPath
     ) where
 
 import Control.Applicative (optional, some)
@@ -56,6 +57,7 @@ fromJustWithError v = case v of
     Left e ->
         error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
     Right accounts -> accounts
+
 -- TODO: `pNetworkId` and `pTestnetMagic` are copied from
 -- https://github.com/input-output-hk/cardano-node/blob/988c93085022ed3e2aea5d70132b778cd3e622b9/cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs#L2009-L2027
 -- Use them from there whenever they are exported.
@@ -97,14 +99,16 @@ parseCardanoAddresses =  nub
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
 data Options = Options
-  { optionsSocketPath      :: String,
-    optionsNetworkId       :: NetworkId,
-    optionsChainPoint      :: ChainPoint,
-    optionsDbPath          :: FilePath,    -- ^ SQLite database directory path
-    optionsDisableUtxo     :: Bool,
-    optionsDisableDatum    :: Bool,
-    optionsDisableScript   :: Bool,
-    optionsTargetAddresses :: Maybe TargetAddresses
+  { optionsSocketPath           :: String,
+    optionsNetworkId            :: NetworkId,
+    optionsChainPoint           :: ChainPoint,
+    optionsDbPath               :: FilePath,    -- ^ SQLite database directory path
+    optionsDisableUtxo          :: Bool,
+    optionsDisableDatum         :: Bool,
+    optionsDisableScript        :: Bool,
+    optionsDisableStakepoolSize :: Bool,
+    optionsTargetAddresses      :: Maybe TargetAddresses,
+    optionsNodeConfigPath       :: Maybe FilePath
   }
   deriving (Show)
 
@@ -148,13 +152,22 @@ optionsParser =
                       <> Opt.help "disable script-tx indexers."
                       <> Opt.showDefault
                      )
+    <*> Opt.switch (Opt.long "disable-epoch-stakepool-size"
+                      <> Opt.help "disable epoch stakepool size indexers."
+                      <> Opt.showDefault
+                     )
     <*> optAddressesParser (Opt.long "addresses-to-index"
                             <> Opt.short 'a'
                             <> Opt.help ("Becch32 Shelley addresses to index."
                                    <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+    <*> (optional $ Opt.strOption
+         $ Opt.long "node-config-path"
+          <> Opt.help "Path to node configuration which you are connecting to.")
 
 optAddressesParser :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser (Maybe TargetAddresses)
 optAddressesParser =  optional . multiString
+
+-- * Database names and paths
 
 utxoDbName :: FilePath
 utxoDbName = "utxo.db"
@@ -165,6 +178,9 @@ datumDbName = "datum.db"
 scriptTxDbName :: FilePath
 scriptTxDbName = "scripttx.db"
 
+epochStakepoolSizeDbName :: FilePath
+epochStakepoolSizeDbName = "epochstakepool.db"
+
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
 
@@ -173,3 +189,6 @@ datumDbPath o = if optionsDisableDatum o then Nothing; else Just (optionsDbPath 
 
 scriptTxDbPath :: Options -> Maybe FilePath
 scriptTxDbPath o = if optionsDisableScript o then Nothing; else Just (optionsDbPath o </> scriptTxDbName)
+
+epochStakepoolSizeDbPath :: Options -> Maybe FilePath
+epochStakepoolSizeDbPath o = if optionsDisableStakepoolSize o then Nothing else Just (optionsDbPath o </> epochStakepoolSizeDbName)

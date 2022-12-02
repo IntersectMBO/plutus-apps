@@ -13,13 +13,15 @@ import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar, readMVar)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
-import Control.Lens (view)
+import Control.Lens (view, (&))
 import Control.Lens.Operators ((^.))
 import Control.Monad (void)
+import Control.Monad.Trans.Class (lift)
 import Data.List (findIndex, foldl1', intersect)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import Database.SQLite.Simple qualified as SQL
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
@@ -28,9 +30,11 @@ import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Cardano.Streaming qualified as CS
 import Control.Concurrent.STM.TMVar (TMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
+import Marconi.Index.EpochStakepoolSize qualified as EpochStakepoolSize
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types (TargetAddresses)
@@ -185,23 +189,52 @@ newtype UtxoQueryTMVar = UtxoQueryTMVar
     { unUtxoIndex  :: TMVar Utxo.UtxoIndex      -- ^ for query thread to access in-memory utxos
     }
 
+epochStakepoolSizeWorker :: FilePath -> Worker
+epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
+  tchan <- atomically $ dupTChan _channel
+  let
+    -- Read blocks from TChan, emit them as a stream.
+    chainSyncEvents :: S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO ()
+    chainSyncEvents = do
+      lift $ signalQSemN _barrier 1
+      S.yield =<< (lift $ atomically $ readTChan tchan)
+      chainSyncEvents
+
+  dbCon <- SQL.open dbPath
+  (env, initialLedgerStateHistory) <- CS.getEnvAndInitialLedgerStateHistory configPath
+  let
+    indexer = chainSyncEvents
+      & CS.foldLedgerState env initialLedgerStateHistory C.QuickValidation
+      & EpochStakepoolSize.toEvents
+      & EpochStakepoolSize.sqlite dbCon
+
+  void . forkIO $ S.effects indexer
+  pure [ChainPointAtGenesis]
+
+
 filterIndexers
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> Maybe TargetAddresses
+  -> Maybe FilePath
   -> [(Worker, FilePath)]
-filterIndexers utxoPath datumPath scriptTxPath maybeTargetAddresses =
+filterIndexers utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTargetAddresses maybeConfigPath =
   mapMaybe liftMaybe pairs
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
+    epochStakepoolSizeIndexer = case maybeConfigPath of
+      Just configPath -> [(epochStakepoolSizeWorker configPath, epochStakepoolSizePath)]
+      _               -> []
+
     pairs =
         [ (utxoWorker pure maybeTargetAddresses, utxoPath)
         , (datumWorker, datumPath)
         , (scriptTxWorker (\_ -> pure []), scriptTxPath)
-        ]
+        ] <> epochStakepoolSizeIndexer
 
 startIndexers
   :: [(Worker, FilePath)]
