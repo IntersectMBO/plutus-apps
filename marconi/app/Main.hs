@@ -16,6 +16,7 @@ import Marconi.CLI qualified as Cli
 import Marconi.Indexers (combinedIndexer)
 import Marconi.Logging (logging)
 import System.Directory (createDirectoryIfMissing)
+
 main :: IO ()
 main = do
   o <- Cli.parseOptions
@@ -26,7 +27,15 @@ main = do
       (Cli.optionsSocketPath o)
       (Cli.optionsNetworkId o)
       (Cli.optionsChainPoint o)
-      (combinedIndexer (Cli.utxoDbPath o) (Cli.datumDbPath o) (Cli.scriptTxDbPath o) (Cli.optionsTargetAddresses o ) . logging trace)
+
+      (combinedIndexer
+       (Cli.utxoDbPath o)
+       (Cli.datumDbPath o)
+       (Cli.scriptTxDbPath o)
+       (Cli.epochStakepoolSizeDbPath o)
+       (Cli.optionsTargetAddresses o)
+       (Cli.optionsNodeConfigPath o) . logging trace)
+
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $

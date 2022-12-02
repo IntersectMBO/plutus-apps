@@ -17,6 +17,7 @@ import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readT
 import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((&), (^.))
 import Control.Monad (void)
+import Control.Monad.Trans.Class (lift)
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
@@ -24,6 +25,7 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Database.SQLite.Simple qualified as SQL
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
@@ -33,9 +35,11 @@ import Cardano.Api.Byron qualified as Byron
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Cardano.Streaming qualified as CS
 import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
+import Marconi.Index.EpochStakepoolSize qualified as EpochStakepoolSize
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
@@ -241,24 +245,51 @@ scriptTxWorker onInsert coordinator ch path = do
   (loop, _) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator ch path
   loop
 
+epochStakepoolSizeWorker :: FilePath -> Worker
+epochStakepoolSizeWorker configPath Coordinator{_barrier} tchan dbPath = do
+  dbCon <- SQL.open dbPath
+  (env, initialLedgerStateHistory) <- CS.getEnvAndInitialLedgerStateHistory configPath
+  let
+    indexer = chainSyncEvents
+      & CS.foldLedgerState env initialLedgerStateHistory C.QuickValidation
+      & EpochStakepoolSize.toEvents
+      & EpochStakepoolSize.sqlite dbCon
+
+  S.effects indexer
+  where
+    -- Read blocks from TChan, emit them as a stream.
+    chainSyncEvents :: S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO ()
+    chainSyncEvents = do
+      lift $ signalQSemN _barrier 1
+      S.yield =<< (lift $ atomically $ readTChan tchan)
+      chainSyncEvents
+
+
 combinedIndexer
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> Maybe TargetAddresses
+  -> Maybe FilePath -- ^ Node config path, required for epoch stakepool size indexer
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIndexers remainingIndexers
+combinedIndexer utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTargetAddresses maybeConfigPath = combineIndexers remainingIndexers
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
+    epochStakepoolSizeIndexer = case maybeConfigPath of
+      Just configPath -> [(epochStakepoolSizeWorker configPath, epochStakepoolSizePath)]
+      _               -> []
+
     pairs =
         [
             (utxoWorker maybeTargetAddresses, utxoPath)
             , (datumWorker, datumPath)
             , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
-        ]
+        ] <> epochStakepoolSizeIndexer
+
     remainingIndexers = mapMaybe liftMaybe pairs
 
 combineIndexers
