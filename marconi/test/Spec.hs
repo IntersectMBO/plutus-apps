@@ -19,6 +19,7 @@ import Gen.Cardano.Api.Typed qualified as CGen
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
 
+import EpochStakepoolSize qualified
 import Integration qualified
 
 main :: IO ()
@@ -28,6 +29,7 @@ tests :: TestTree
 tests = testGroup "Marconi"
   [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
   , Integration.tests
+  , EpochStakepoolSize.tests
   ]
 
 -- | Create @nScripts@ scripts, add them to a transaction body, then
