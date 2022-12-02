@@ -29,7 +29,10 @@ common lang
 library
   import:          lang
   hs-source-dirs:  src
-  exposed-modules: Cardano.Streaming
+  exposed-modules:
+    Cardano.Streaming
+    Cardano.Streaming.Callbacks
+    Cardano.Streaming.Helpers
 
   --------------------------
   -- Other IOG dependencies
@@ -42,9 +45,39 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , aeson
     , async
-    , base       >=4.9 && <5
+    , base                          >=4.9 && <5
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-crypto-wrapper
+    , cardano-data
+    , cardano-ledger-alonzo
+    , cardano-ledger-byron
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-protocol-tpraos
+    , cardano-slotting
+    , containers
+    , filepath
+    , formatting
+    , memory
+    , ouroboros-consensus
+    , ouroboros-consensus-byron
+    , ouroboros-consensus-cardano
+    , ouroboros-consensus-protocol
+    , ouroboros-consensus-shelley
+    , primitive
+    , small-steps
     , streaming
+    , transformers
+    , transformers-except
+    , typed-protocols
+    , vector
+    , yaml
 
 executable cardano-streaming-example-1
   import:         lang
