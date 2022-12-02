@@ -164,6 +164,7 @@ test-suite marconi-test
     , lens
     , prettyprinter
     , serialise
+    , sqlite-simple
     , stm
     , streaming
     , tasty
