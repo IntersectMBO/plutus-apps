@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustReferenceOutput(tests) where
@@ -16,11 +17,12 @@ import Test.Tasty (TestTree, testGroup)
 
 import Data.Default (Default (def))
 import Data.Map qualified as M
-import Data.Maybe (fromJust)
+import Data.Maybe (catMaybes, fromJust)
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Text qualified as Text
 import Data.Void (Void)
+import GHC.Base (undefined)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Cons
@@ -115,7 +117,9 @@ mustReferenceOutputContract
     -> [Tx.TxOutRef]
     -> Contract () Empty ContractError ()
 mustReferenceOutputContract submitTxFromConstraints l offChainTxoRefs onChainTxoRefs = do
+    lookups <- traverse (\ref -> fmap (ref ,) <$> unspentTxOutFromRef ref) offChainTxoRefs
     let lookups1 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
+            <> Cons.unspentOutputs (M.fromList $ catMaybes lookups)
         tx1 = mconcat mustReferenceOutputs
            <> Cons.mustMintValueWithRedeemer (asRedeemer onChainTxoRefs) (tknValue l)
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
@@ -181,7 +185,7 @@ mustReferenceOutputWithSinglePubkeyOutput submitTxFromConstraints l =
                 w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
                 contract =
                     mustReferenceOutputContract submitTxFromConstraints l
-                    w1MiddleTxoRef w1MiddleTxoRef
+                        w1MiddleTxoRef w1MiddleTxoRef
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 1
 

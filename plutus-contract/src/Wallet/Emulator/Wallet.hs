@@ -23,6 +23,7 @@
 
 module Wallet.Emulator.Wallet where
 
+import Cardano.Api (makeSignedTransaction)
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, view)
 import Control.Monad (foldM, (<=<))
@@ -37,6 +38,8 @@ import Data.Bifunctor (bimap, first)
 import Data.Data (Data)
 import Data.Default (Default (def))
 import Data.Foldable (find, foldl')
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -54,6 +57,7 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
+import Ledger.Fee qualified as Fee
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation (getRequiredSigners)
@@ -65,21 +69,17 @@ import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.V1.Ledger.Api (ValidatorHash)
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
-import Wallet.Effects qualified as WAPI (getClientParams)
-import Wallet.Emulator.Error qualified as WAPI (WalletAPIError (InsufficientFunds, PaymentPrivateKeyNotFound, ToCardanoError, ValidationError))
-import Wallet.Error (WalletAPIError)
-
-import Cardano.Api (makeSignedTransaction)
-import Data.List.NonEmpty (NonEmpty)
-import Data.List.NonEmpty qualified as NonEmpty
-import Ledger.Fee qualified as Fee
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
+import Wallet.Effects qualified as WAPI
 import Wallet.Emulator.Chain (ChainState (_index))
+import Wallet.Emulator.Error qualified as WAPI (WalletAPIError (InsufficientFunds, PaymentPrivateKeyNotFound, ToCardanoError, ValidationError))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx, ValidationFailed))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
+import Wallet.Error (WalletAPIError)
+
 
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> CardanoTx -> Eff effs CardanoTx
@@ -313,17 +313,22 @@ handleBalance utx = do
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure $ traverse (Tx.toTxOut pNetworkId) utxo
     let eitherTx = U.unBalancedTxTx utx
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-    unbalancedBodyContent <- either pure (handleError eitherTx . first Fee.ToCardanoError . CardanoAPI.toCardanoTxBodyContent params requiredSigners) eitherTx
+    unbalancedBodyContent <- either pure (handleError eitherTx . first Right . CardanoAPI.toCardanoTxBodyContent params requiredSigners) eitherTx
     ownAddr <- gets ownAddress
-    cTx <- handleError eitherTx $ Fee.makeAutoBalancedTransactionWithWalletOutputs
+    -- filter out inputs from utxo that are already in unBalancedTx
+    let inputsOutRefs = map Tx.txInRef $ Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent
+        filteredUtxo = flip Map.filterWithKey mappedUtxo $ \txOutRef _ ->
+            txOutRef `notElem` inputsOutRefs
+    cTx <- Fee.makeAutoBalancedTransactionWithUtxoProvider
         params
         (UtxoIndex $ U.unBalancedTxUtxoIndex utx)
         ownAddr
-        mappedUtxo
+        (handleBalancingError eitherTx . Fee.utxoProviderFromWalletOutputs filteredUtxo)
+        (handleError eitherTx . Left)
         unbalancedBodyContent
     pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
     where
-        handleError tx (Left (Fee.ValidationErrorInPhase (ph, ve))) = do
+        handleError tx (Left (Left (ph, ve))) = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
                  $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction [])
@@ -332,12 +337,14 @@ handleBalance utx = do
                  $ tx
             logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty []
             throwError $ WAPI.ValidationError ve
-        handleError _ (Left (Fee.ToCardanoError ce)) = throwError $ WAPI.ToCardanoError ce
-        handleError _ (Left (Fee.InsufficientFunds total expected)) = throwError $ WAPI.InsufficientFunds
+        handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
+        handleError _ (Right v) = pure v
+        handleBalancingError _ (Left (Fee.InsufficientFunds total expected)) = throwError $ WAPI.InsufficientFunds
             $ T.unwords
                 [ "Total:", T.pack $ show total
                 , "expected:", T.pack $ show expected ]
-        handleError _ (Right v) = pure v
+        handleBalancingError tx (Left (Fee.CardanoLedgerError e)) = handleError tx (Left e)
+        handleBalancingError _ (Right v) = pure v
 
 handleAddSignature ::
     ( Member (State WalletState) effs

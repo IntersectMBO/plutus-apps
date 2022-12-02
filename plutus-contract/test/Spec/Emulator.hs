@@ -22,6 +22,7 @@ import Data.ByteString.Lazy.Char8 (pack)
 import Data.Default (Default (def))
 import Data.Foldable (fold)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Text qualified as Text
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
@@ -141,7 +142,7 @@ selectCoinProp = property $ do
         Left _ ->
             Hedgehog.assert $ not $ foldMap snd inputs `Value.geq` target
         Right (ins, change) ->
-            Hedgehog.assert $ foldMap snd ins == (target P.+ change)
+            Hedgehog.assert $ foldMap (fromMaybe mempty . (`lookup` inputs)) ins == (target P.+ change)
 
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
