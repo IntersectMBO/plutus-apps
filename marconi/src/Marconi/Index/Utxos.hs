@@ -40,17 +40,14 @@ module Marconi.Index.Utxos where
     -- , open
     --                       ) whe re
 
-import Cardano.Api qualified as C
+import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
+import Codec.Serialise.Class (Serialise (decode))
 import Control.Concurrent.Async (concurrently_)
+import Control.Exception (bracket_)
 import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
 import Control.Lens.TH (makeLenses)
-
-import Cardano.Binary (fromCBOR, toCBOR)
-import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
-import Codec.Serialise.Class (Serialise (decode))
-import Control.Exception (bracket_)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Aeson (ToJSON (toJSON))
 import Data.Aeson qualified
 import Data.ByteString.Lazy (toStrict)
@@ -66,10 +63,14 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
+import System.Random.MWC (createSystemRandom, uniformR)
+import Text.ParserCombinators.Parsec (parse)
+
+import Cardano.Api qualified as C
+import Cardano.Binary (fromCBOR, toCBOR)
 import Marconi.Types (CurrentEra)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
-import Text.ParserCombinators.Parsec (parse)
 
 data Utxo               = Utxo
     { _utxoAddress   :: !C.AddressAny
@@ -225,16 +226,14 @@ instance FromField C.BlockNo where
 instance ToField C.BlockNo where
   toField (C.BlockNo s) = SQLInteger $ fromIntegral s
 
-
 open
-  :: FilePath
+  :: FilePath  -- ^ sqlite file path
   -> Depth
   -> IO UtxoIndex
 open dbPath (Depth k) = do
   -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
   -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
   -- queries due to batching more events together.
--- TODO this required for k > 0
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let conn = ix ^. Ix.handle
   SQL.execute_ conn "DROP TABLE IF EXISTS unspent_transactions"
@@ -254,8 +253,17 @@ eventAtAddress addr event =
         if null utxosAtAddress  then []
         else [event { _utxoEventUtxos = utxosAtAddress }]
 
-addressFilteredEvents :: C.AddressAny -> [UtxoEvent] -> [UtxoEvent]
-addressFilteredEvents addr = concatMap (eventAtAddress addr)
+findByAddress :: C.AddressAny -> [UtxoEvent] -> [UtxoEvent]
+findByAddress addr = concatMap (eventAtAddress addr)
+
+rmSpentUtxos :: UtxoEvent -> UtxoEvent
+rmSpentUtxos event =
+    event & utxoEventUtxos %~ (f (event ^. utxoEventInputs) )
+    where
+        f :: (Set.Set C.TxIn) -> [Utxo] -> [Utxo]
+        f txIns utxos = filter (not . isUtxoSpent txIns) utxos
+        isUtxoSpent :: (Set.Set C.TxIn) -> Utxo -> Bool
+        isUtxoSpent txIns u = ( C.TxIn (u ^. utxoTxId)(u ^. utxoTxIx)) `Set.member` txIns
 
 toRows :: UtxoEvent -> [UtxoRow]
 toRows event =  event ^. utxoEventUtxos & traversed %~ f
@@ -263,38 +271,38 @@ toRows event =  event ^. utxoEventUtxos & traversed %~ f
         f :: Utxo -> UtxoRow
         f  u = UtxoRow u (event ^. utxoEventSlotNo ) (event ^. utxoEventBlockNo)
 
--- | Query the data stored in the indexer as a whole from:
-    -- + hotStore  : in-memory
-    -- + coldStore : SQL DB
-    -- + buffered  : data that can still change (through rollbacks)
---
 addressFilteredRows :: C.AddressAny -> [UtxoEvent] -> [UtxoRow]
-addressFilteredRows addr = (concatMap toRows ) . addressFilteredEvents addr
+addressFilteredRows addr = (concatMap toRows ) . findByAddress addr
 
+-- | Query the data stored in the indexer
 query
-  :: UtxoIndex
-  -> C.AddressAny
-  -> [UtxoEvent]                    -- ^ inflight events
-  -> IO Result
-query ix addr events = do
-  fromColdStore <-
+  :: UtxoIndex                  -- ^ in-memory indexer
+  -> C.AddressAny               -- ^ Address to filter for
+  -> [UtxoEvent]                -- ^ volatile events that may be rollbacked
+  -> IO Result                  -- ^ search results
+query ix addr volatiles = do
+  diskStored <-
       SQL.query
         (ix ^. Ix.handle)
         "SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash, u.value, u.slotNo, u.blockNo FROM unspent_transactions u LEFT JOIN spent s ON u.txId = s.txId AND u.txIx = s.txIx WHERE u.address = ?"
         (Only addr) :: IO[UtxoRow]
-
-  -- putStrLn $ show fromColdStore <> "fromColdstore"
-  hotStore <- Ix.getEvents $ ix ^. Ix.storage :: IO [UtxoEvent]
-  -- putStrLn $ show hotStore <> " fromhotstore"
+  buffered <- Ix.getBuffer $ ix ^. Ix.storage :: IO [UtxoEvent]
+  let events = volatiles ++ buffered
   pure . Just $
-      (addressFilteredRows addr events)
+      ( concatMap toRows . fmap rmSpentUtxos . (findByAddress addr) $ events)
       `union`
-      (addressFilteredRows addr hotStore)
-      `union`
-      fromColdStore
-      -- TODO
-      -- & filter (\u -> not (_reference u `Set.member` spentOutputs))
-      -- & map _reference
+      diskStored
+
+-- | Query the data stored in the indexer as a whole from:
+    -- + volatile  : in-memory, datat that may rollback
+    -- + diskStore : on-disk
+    -- + buffered  : in-memeoy, data that will flush to storage
+queryPlusVolatile
+  :: UtxoIndex                  -- ^ in-memory indexer
+  -> C.AddressAny               -- ^ Address to filter for
+  -> IO Result                  -- ^ search results
+queryPlusVolatile ix addr =
+  Ix.getEvents (ix ^. Ix.storage)  >>= query ix addr
 
 onInsert :: UtxoIndex -> UtxoEvent -> IO [Notification]
 onInsert  _ _ =  pure []
@@ -319,12 +327,11 @@ store ix = do
                 "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
                 spent) >> putStrLn "inserted spent")
       )
-
   -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
-  -- rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
-  -- when (rndCheck == 42) $ do
-  --   SQL.execute_ conn "DELETE FROM unspent_transactions WHERE unspent_transactions.rowid IN (SELECT unspent_transactions.rowid FROM unspent_transactions LEFT JOIN spent on unspent_transactions.txId = spent.txId AND unspent_transactions.txIx = spent.txIx WHERE spent.txId IS NOT NULL)"
-  --   SQL.execute_ conn "VACUUM"
+  rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
+  when (rndCheck == 42) $ do
+    SQL.execute_ conn "DELETE FROM unspent_transactions WHERE unspent_transactions.rowid IN (SELECT unspent_transactions.rowid FROM unspent_transactions LEFT JOIN spent on unspent_transactions.txId = spent.txId AND unspent_transactions.txIx = spent.txIx WHERE spent.txId IS NOT NULL)"
+    SQL.execute_ conn "VACUUM"
 
 toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
 toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
