@@ -54,7 +54,6 @@ module Ledger.Constraints.OffChain(
     , _TxOutRefWrongType
     , _TxOutRefNoReferenceScript
     , _DatumNotFound
-    , _DatumNotFoundInTx
     , _MintingPolicyNotFound
     , _ScriptHashNotFound
     , _TypedValidatorMissing
@@ -473,23 +472,11 @@ prepareConstraints
        )
     => [ScriptOutputConstraint (DatumType a)]
     -> [TxConstraint]
-    -> m ([TxConstraint], [TxConstraint])
+    -> m [TxConstraint]
 prepareConstraints ownOutputs constraints = do
-    let
-      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
-      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@
-      -- must yield the same behavior.
-      isVerificationConstraints = \case
-        MustIncludeDatumInTxWithHash {} -> True
-        MustIncludeDatumInTx {}         -> True
-        _                               -> False
-      (verificationConstraints, otherConstraints) =
-          List.partition isVerificationConstraints constraints
     ownOutputConstraints <- concat <$> traverse addOwnOutput ownOutputs
-    cleantConstraints <- cleaningMustSpendConstraints otherConstraints
-    pure (cleantConstraints <> ownOutputConstraints, verificationConstraints)
+    cleanedConstraints <- cleaningMustSpendConstraints constraints
+    pure (cleanedConstraints <> ownOutputConstraints)
 
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
@@ -505,11 +492,10 @@ processLookupsAndConstraints
     -> m ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
     flip runReaderT lookups $ do
-         (constraints, verificationConstraints) <- prepareConstraints txOwnOutputs txConstraints
+         constraints <- prepareConstraints txOwnOutputs txConstraints
          traverse_ processConstraint constraints
          traverse_ processConstraintFun txCnsFuns
          traverse_ addOwnInput txOwnInputs
-         traverse_ processConstraint verificationConstraints
          checkValueSpent
          updateUtxoIndex
 
@@ -691,18 +677,8 @@ processConstraint
     => TxConstraint
     -> m ()
 processConstraint = \case
-    MustIncludeDatumInTxWithHash dvh dv -> do
-        let dvHash = P.datumHash dv
-        unless (dvHash == dvh)
-            (throwError $ DatumWrongHash dvh dv)
-        datums <- gets $ view (unbalancedTx . tx . Tx.datumWitnesses)
-        unless (dvHash `elem` Map.keys datums)
-            (throwError $ DatumNotFoundInTx dvHash)
-    MustIncludeDatumInTx dv -> do
-        datums <- gets $ view (unbalancedTx . tx . Tx.datumWitnesses)
-        let dvHash = P.datumHash dv
-        unless (dvHash `elem` Map.keys datums)
-            (throwError $ DatumNotFoundInTx dvHash)
+    MustIncludeDatumInTxWithHash _ _ -> pure () -- always succeeds
+    MustIncludeDatumInTx _ -> pure () -- always succeeds
     MustValidateIn timeRange -> do
         slotRange <-
             gets ( flip posixTimeRangeToContainedSlotRange timeRange
@@ -915,7 +891,6 @@ data MkTxError =
     | TxOutRefWrongType TxOutRef
     | TxOutRefNoReferenceScript TxOutRef
     | DatumNotFound DatumHash
-    | DatumNotFoundInTx DatumHash
     | DeclaredInputMismatch Value
     | DeclaredOutputMismatch Value
     | MintingPolicyNotFound MintingPolicyHash
@@ -939,7 +914,6 @@ instance Pretty MkTxError where
         TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
         TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
         DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
-        DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
         DeclaredInputMismatch v        -> "Discrepancy of" <+> pretty v <+> "inputs"
         DeclaredOutputMismatch v       -> "Discrepancy of" <+> pretty v <+> "outputs"
         MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
