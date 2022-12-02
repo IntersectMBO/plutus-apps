@@ -172,3 +172,5 @@ test-suite marconi-test
     , tasty
     , tasty-hedgehog
     , temporary
+
+  ghc-options:    -fobject-code
