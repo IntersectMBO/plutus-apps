@@ -46,7 +46,6 @@ library
     Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
-    Marconi.Index.Utxo
     Marconi.Index.Utxos
     Marconi.Indexers
     Marconi.Logging

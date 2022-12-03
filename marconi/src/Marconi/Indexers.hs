@@ -22,7 +22,7 @@ import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
@@ -33,14 +33,12 @@ import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
+import Control.Concurrent.STM.TMVar (TMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _blockNo, _inputs, _outputs, _slotNo))
-import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Index.Utxos qualified as Utxos
-import Marconi.Types (TargetAddresses, TxOut, TxOutRef, pattern CurrentEra, txOutRef)
+import Marconi.Types (TargetAddresses, TxOut, pattern CurrentEra)
 
 import RewindableIndex.Index.VSplit qualified as Ix
 
@@ -118,22 +116,6 @@ uTxoEvents maybeTargetAddresses slotNo blkNo txs =
         else
             Just (Utxos.UtxoEvent utxos ins slotNo blkNo)
 
-getOutputs
-  :: C.IsCardanoEra era
-  => Maybe TargetAddresses
-  -> C.Tx era
-  -> Maybe [ (TxOut, TxOutRef) ]
-getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
-    do
-        let indexersFilter = case maybeTargetAddresses of
-                Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
-                _                    -> id -- no filtering is applied
-        outs  <- either (const Nothing) Just
-            . traverse (C.eraCast CurrentEra)
-            . indexersFilter
-            $ txOuts
-        pure . imap
-            (\ix out -> (out, txOutRef (C.getTxId txBody) (C.TxIx $ fromIntegral ix))) $ outs
 getInputs
   :: C.Tx era
   -> Set C.TxIn
@@ -144,22 +126,6 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
                                 C.TxInsCollateralNone     -> []
                                 C.TxInsCollateral _ txins -> txins
   in Set.fromList inputs
-
-getUtxoUpdate
-  :: C.IsCardanoEra era
-  => SlotNo
-  -> [C.Tx era]
-  -> C.BlockNo
-  -> Maybe TargetAddresses
-  -> UtxoUpdate
-getUtxoUpdate slot txs blkNo maybeAddresses =
-  let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-      outs = concat . catMaybes $ getOutputs maybeAddresses <$> txs
-  in  UtxoUpdate { _inputs  = ins
-                 , _outputs = outs
-                 , _slotNo  = slot
-                 , _blockNo  = blkNo
-                 }
 
 {- | The way we synchronise channel consumption is by waiting on a QSemN for each
      of the spawn indexers to finish processing the current event.
