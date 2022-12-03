@@ -22,7 +22,7 @@ import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
@@ -33,14 +33,12 @@ import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
+import Control.Concurrent.STM.TMVar (TMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (UtxoUpdate, _blockNo, _inputs, _outputs, _slotNo))
-import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Index.Utxos qualified as Utxos
-import Marconi.Types (TargetAddresses, TxOut, TxOutRef, pattern CurrentEra, txOutRef)
+import Marconi.Types (TargetAddresses, TxOut, pattern CurrentEra)
 
 import RewindableIndex.Index.VSplit qualified as Ix
 
@@ -119,22 +117,6 @@ uTxoEvents maybeTargetAddresses slotNo blkNo txs =
         else
             Just (Utxos.UtxoEvent utxos ins slotNo blkNo)
 
-getOutputs
-  :: C.IsCardanoEra era
-  => Maybe TargetAddresses
-  -> C.Tx era
-  -> Maybe [ (TxOut, TxOutRef) ]
-getOutputs maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
-    do
-        let indexersFilter = case maybeTargetAddresses of
-                Just targetAddresses -> filter (isInTargetTxOut targetAddresses)
-                _                    -> id -- no filtering is applied
-        outs  <- either (const Nothing) Just
-            . traverse (C.eraCast CurrentEra)
-            . indexersFilter
-            $ txOuts
-        pure . imap
-            (\ix out -> (out, txOutRef (C.getTxId txBody) (C.TxIx $ fromIntegral ix))) $ outs
 getInputs
   :: C.Tx era
   -> Set C.TxIn
@@ -145,22 +127,6 @@ getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCo
                                 C.TxInsCollateralNone     -> []
                                 C.TxInsCollateral _ txins -> txins
   in Set.fromList inputs
-
-getUtxoUpdate
-  :: C.IsCardanoEra era
-  => SlotNo
-  -> [C.Tx era]
-  -> C.BlockNo
-  -> Maybe TargetAddresses
-  -> UtxoUpdate
-getUtxoUpdate slot txs blkNo maybeAddresses =
-  let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-      outs = concat . catMaybes $ getOutputs maybeAddresses <$> txs
-  in  UtxoUpdate { _inputs  = ins
-                 , _outputs = outs
-                 , _slotNo  = slot
-                 , _blockNo  = blkNo
-                 }
 
 {- | The way we synchronise channel consumption is by waiting on a QSemN for each
      of the spawn indexers to finish processing the current event.
@@ -225,37 +191,12 @@ isAddressInTarget targetAddresses utxo =
         C.AddressByron _      -> False
         C.AddressShelley addr -> addr `elem` targetAddresses
 
--- | UtxoWorker that can work with Query threads
--- The main difference between this worker and the utxoWorker is
--- that we can perform queries with this worker against utxos Stablecoin
-queryAwareUtxoWorker
-    :: UtxoQueryTMVar   -- ^  used to communicate with query threads
-    -> TargetAddresses  -- ^ Target addresses to filter for
+utxoWorker
+    :: (Utxos.UtxoIndex -> IO Utxos.UtxoIndex)  -- ^ Callback used for the query therad
+    -> Maybe TargetAddresses                    -- ^ Target addresses to filter for
     -> Worker
-queryAwareUtxoWorker (UtxoQueryTMVar utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
-   Utxo.open path (Utxo.Depth 2160) >>= bootstrapQuery >>= innerLoop
-  where
-    bootstrapQuery :: UtxoIndex -> IO UtxoIndex
-    bootstrapQuery index = (atomically $ putTMVar utxoIndexer index ) >> pure index
-    innerLoop :: UtxoIndex -> IO ()
-    innerLoop index = do
-        signalQSemN _barrier 1
-        event <- atomically $ readTChan ch
-        case event of
-            RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ -> do
-                let utxoRow = getUtxoUpdate slotNo txs blkNo(Just targetAddresses)
-                Ix.insert utxoRow index >>= innerLoop
-            RollBackward cp _ct -> do
-                events <- Ix.getEvents (index ^. Ix.storage)
-                innerLoop $
-                    fromMaybe index $ do
-                        slot   <- chainPointToSlotNo cp
-                        offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
-                        Ix.rewind offset index
-
-utxoWorker :: Maybe TargetAddresses -> Worker
-utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
-    Utxos.open path (Utxos.Depth 2160) >>= innerLoop
+utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
+    Utxos.open path (Utxos.Depth 2160) >>= indexerCallback >>= innerLoop
   where
     innerLoop :: Utxos.UtxoIndex -> IO ()
     innerLoop index = do
@@ -318,7 +259,7 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIn
       _         -> Nothing
     pairs =
         [
-            (utxoWorker maybeTargetAddresses, utxoPath)
+            (utxoWorker pure maybeTargetAddresses, utxoPath)
             , (datumWorker, datumPath)
             , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
         ]
@@ -358,5 +299,5 @@ txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.Scrip
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
 newtype UtxoQueryTMVar = UtxoQueryTMVar
-    { unUtxoIndex  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
+    { unUtxoIndex  :: TMVar Utxos.UtxoIndex      -- ^ for query thread to access in-memory utxos
     }
