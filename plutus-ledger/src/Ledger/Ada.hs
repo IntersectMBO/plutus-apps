@@ -124,5 +124,11 @@ divide (Lovelace a) (Lovelace b) = Lovelace (P.divide a b)
 
 {-# INLINABLE isZero #-}
 -- | Check whether an 'Ada' value is zero.
+--
+-- >>> isZero $ lovelaceOf 1
+-- False
+--
+-- >>> isZero $ lovelaceOf 0
+-- True
 isZero :: Ada -> Bool
 isZero (Lovelace i) = i == 0
