@@ -4,39 +4,42 @@
 --
 module Marconi.Bootstrap  where
 
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMVar (putTMVar)
+import Control.Exception (catch)
+import Control.Lens ((^.))
+import Data.List.NonEmpty (fromList, nub)
+import Data.Text (pack)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+
 import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), NetworkId, deserialiseFromBech32)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-import Control.Exception (catch)
-import Control.Lens ((^.))
-import Data.List.NonEmpty (fromList, nub)
-import Data.Text (pack)
 import Marconi.Api.HttpServer qualified as Http
 import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryTMVar), HasJsonRpcEnv (queryEnv),
-                          JsonRpcEnv (JsonRpcEnv, _HttpSettings, _QueryEnv), RpcPortNumber, TargetAddresses)
-import Marconi.Api.UtxoIndexersQuery qualified as QIUtxo
-import Marconi.Indexers (combineIndexers, queryAwareUtxoWorker)
+                          JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber, TargetAddresses,
+                          UtxoQueryTMVar (UtxoQueryTMVar))
+import Marconi.Api.UtxoIndexersQuery qualified as QApi
+import Marconi.Indexers (combineIndexers, utxoWorker)
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
-import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
-import Prettyprinter.Render.Text (renderStrict)
 
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache
 -- this is just a wrapper for the bootstrapHttp in json-rpc package
 bootstrapJsonRpc
-    :: FilePath
-    -> Maybe RpcPortNumber
+    :: Maybe RpcPortNumber
     -> TargetAddresses
     -> NetworkId
     -> IO JsonRpcEnv
-bootstrapJsonRpc dbPath maybePort targetAddresses nId = do
-    queryenv <- QIUtxo.bootstrap dbPath targetAddresses nId
+bootstrapJsonRpc maybePort targetAddresses nId = do
+    queryenv <- QApi.bootstrap targetAddresses nId
     let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
     pure $ JsonRpcEnv
-        { _HttpSettings = httpsettings
-        , _QueryEnv = queryenv
+        { _httpSettings = httpsettings
+        , _queryEnv = queryenv
         }
 
 bootstrapHttp
@@ -51,8 +54,10 @@ bootstrapUtxoIndexers
     -> IO ()
 bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
     do
-        let qsem = env ^. queryEnv . queryTMVar
-            indexers = combineIndexers [( queryAwareUtxoWorker qsem targetAddresses , dbPath)]
+        let (UtxoQueryTMVar queryTmvar) = env ^. queryEnv . queryTMVar
+            callbackIndexer :: QApi.UtxoIndex -> IO QApi.UtxoIndex
+            callbackIndexer index = (atomically $ putTMVar queryTmvar  index ) >> pure index
+            indexers = combineIndexers [( utxoWorker  callbackIndexer (Just targetAddresses) , dbPath)]
             chainPoint = ChainPointAtGenesis
         c <- defaultConfigStdout
         withTrace c "marconi-mamba" $ \trace ->

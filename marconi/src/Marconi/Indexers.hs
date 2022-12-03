@@ -224,37 +224,12 @@ isAddressInTarget targetAddresses utxo =
         C.AddressByron _      -> False
         C.AddressShelley addr -> addr `elem` targetAddresses
 
--- | UtxoWorker that can work with Query threads
--- The main difference between this worker and the utxoWorker is
--- that we can perform queries with this worker against utxos Stablecoin
-queryAwareUtxoWorker
-    :: UtxoQueryTMVar   -- ^  used to communicate with query threads
-    -> TargetAddresses  -- ^ Target addresses to filter for
+utxoWorker
+    :: (Utxos.UtxoIndex -> IO Utxos.UtxoIndex)  -- ^ Callback used for the query therad
+    -> Maybe TargetAddresses                    -- ^ Target addresses to filter for
     -> Worker
-queryAwareUtxoWorker (UtxoQueryTMVar utxoIndexer) targetAddresses Coordinator{_barrier} ch path =
-   Utxo.open path (Utxo.Depth 2160) >>= bootstrapQuery >>= innerLoop
-  where
-    bootstrapQuery :: UtxoIndex -> IO UtxoIndex
-    bootstrapQuery index = (atomically $ putTMVar utxoIndexer index ) >> pure index
-    innerLoop :: UtxoIndex -> IO ()
-    innerLoop index = do
-        signalQSemN _barrier 1
-        event <- atomically $ readTChan ch
-        case event of
-            RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ -> do
-                let utxoRow = getUtxoUpdate slotNo txs blkNo(Just targetAddresses)
-                Ix.insert utxoRow index >>= innerLoop
-            RollBackward cp _ct -> do
-                events <- Ix.getEvents (index ^. Ix.storage)
-                innerLoop $
-                    fromMaybe index $ do
-                        slot   <- chainPointToSlotNo cp
-                        offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
-                        Ix.rewind offset index
-
-utxoWorker :: Maybe TargetAddresses -> Worker
-utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
-    Utxos.open path (Utxos.Depth 2160) >>= innerLoop
+utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
+    Utxos.open path (Utxos.Depth 2160) >>= indexerCallback >>= innerLoop
   where
     innerLoop :: Utxos.UtxoIndex -> IO ()
     innerLoop index = do
@@ -317,7 +292,7 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIn
       _         -> Nothing
     pairs =
         [
-            (utxoWorker maybeTargetAddresses, utxoPath)
+            (utxoWorker pure maybeTargetAddresses, utxoPath)
             , (datumWorker, datumPath)
             , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
         ]
@@ -357,5 +332,5 @@ txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.Scrip
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
 newtype UtxoQueryTMVar = UtxoQueryTMVar
-    { unUtxoIndex  :: TMVar UtxoIndex      -- ^ for query thread to access in-memory utxos
+    { unUtxoIndex  :: TMVar Utxos.UtxoIndex      -- ^ for query thread to access in-memory utxos
     }

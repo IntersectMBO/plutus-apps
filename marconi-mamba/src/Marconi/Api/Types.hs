@@ -21,7 +21,6 @@ module Marconi.Api.Types
     (TargetAddresses
     , RpcPortNumber
     , CliArgs (..)
-    , DBConfig (..)
     , DBQueryEnv (..)
     , HasDBQueryEnv (..)
     , JsonRpcEnv (..)
@@ -31,18 +30,17 @@ module Marconi.Api.Types
     , UtxoQueryTMVar (..)
     , QueryExceptions (..)
                          )  where
-import Cardano.Api (AddressAny, NetworkId, anyAddressInShelleyBasedEra)
 import Control.Exception (Exception)
 import Control.Lens (makeClassy)
-import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
-import Data.Set (Set)
+import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
 import Data.Text (Text)
-import Database.SQLite.Simple (Connection)
 import GHC.Generics (Generic)
-import Marconi.Index.Utxos (UtxoRow (UtxoRow))
-import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
-import Marconi.Types as Export (CurrentEra, TargetAddresses, TxOutRef)
 import Network.Wai.Handler.Warp (Settings)
+
+import Cardano.Api (NetworkId)
+import Marconi.Index.Utxos (UtxoRow)
+import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
+import Marconi.Types as Export (TargetAddresses)
 
 -- | Type represents http port for JSON-RPC
 type RpcPortNumber = Int
@@ -55,28 +53,24 @@ data CliArgs = CliArgs
   , targetAddresses :: TargetAddresses      -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
 
-newtype DBConfig = DBConfig {
-    utxoConn ::  Connection
-    }
 
 data DBQueryEnv = DBQueryEnv
-    { _DbConf         :: DBConfig               -- ^ path to dqlite db
-    , _QueryTMVar     :: UtxoQueryTMVar
-    , _QueryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
-    , _Network        :: Cardano.Api.NetworkId  -- ^ cardano network id
+    { _queryTMVar     :: UtxoQueryTMVar
+    , _queryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
+    , _network        :: Cardano.Api.NetworkId  -- ^ cardano network id
     }
 makeClassy ''DBQueryEnv
 
 -- | JSON-RPC configuration
 data JsonRpcEnv = JsonRpcEnv
-    { _HttpSettings :: Settings               -- ^ HTTP server setting
-    , _QueryEnv     :: DBQueryEnv             -- ^ used for query sqlite
+    { _httpSettings :: Settings               -- ^ HTTP server setting
+    , _queryEnv     :: DBQueryEnv             -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
 
 data UtxoTxOutReport = UtxoTxOutReport
     { bech32Address :: Text
-    , txOutRefs     :: Set TxOutRef
+    , utxoReport    :: [UtxoRow]
     } deriving (Eq, Ord, Generic)
 
 instance ToJSON UtxoTxOutReport where
@@ -84,14 +78,12 @@ instance ToJSON UtxoTxOutReport where
 
 newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving (Eq, Ord, Show, Generic)
 
-instance ToJSON AddressAny where
-  toJSON = toJSON . anyAddressInShelleyBasedEra @CurrentEra
+-- instance ToJSON AddressAny where toJSON = toJSON . anyAddressInShelleyBasedEra @CurrentEra
 
 instance ToJSON UtxoRowWrapper where
     toEncoding = genericToEncoding defaultOptions
 
-instance ToJSON UtxoRow where
-    toEncoding = genericToEncoding defaultOptions
+-- instance ToJSON UtxoRow where toEncoding = genericToEncoding defaultOptions
 
 data QueryExceptions
     = AddressNotInListError QueryExceptions
