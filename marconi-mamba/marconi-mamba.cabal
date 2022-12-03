@@ -140,7 +140,7 @@ executable examples-json-rpc-server
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api
+  -- build-depends:  cardano-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -181,7 +181,9 @@ library db-utils
   --------------------
   -- Local components
   --------------------
-  build-depends:   marconi-mamba
+  build-depends:
+    , marconi
+    , marconi-mamba
 
   --------------------------
   -- Other IOG dependencies

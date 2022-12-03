@@ -13,7 +13,7 @@ import Data.Text (pack)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
-import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), NetworkId, deserialiseFromBech32)
+import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), deserialiseFromBech32)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
@@ -32,10 +32,9 @@ import Network.Wai.Handler.Warp (defaultSettings, setPort)
 bootstrapJsonRpc
     :: Maybe RpcPortNumber
     -> TargetAddresses
-    -> NetworkId
     -> IO JsonRpcEnv
-bootstrapJsonRpc maybePort targetAddresses nId = do
-    queryenv <- QApi.bootstrap targetAddresses nId
+bootstrapJsonRpc maybePort targetAddresses = do
+    queryenv <- QApi.bootstrap targetAddresses
     let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
     pure $ JsonRpcEnv
         { _httpSettings = httpsettings

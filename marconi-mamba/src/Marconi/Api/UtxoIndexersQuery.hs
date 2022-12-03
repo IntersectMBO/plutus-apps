@@ -22,7 +22,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text (Text, intercalate, pack, unpack)
 
 import Cardano.Api qualified as C
-import Marconi.Api.Types (DBQueryEnv (DBQueryEnv, _network, _queryAddresses, _queryTMVar),
+import Marconi.Api.Types (DBQueryEnv (DBQueryEnv, _queryAddresses, _queryTMVar),
                           HasDBQueryEnv (queryAddresses, queryTMVar),
                           QueryExceptions (AddressNotInListError, QueryError), TargetAddresses,
                           UtxoTxOutReport (UtxoTxOutReport))
@@ -34,14 +34,12 @@ import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
 -- The main issue we try to avoid here is mixing inserts and quries in SQLite to avoid locking the database
 bootstrap
     :: TargetAddresses          -- ^ user provided target addresses
-    -> C.NetworkId           -- ^ cardano networkId
     -> IO DBQueryEnv            -- ^ returns Query runtime environment
-bootstrap targetAddresses nId = do
+bootstrap targetAddresses = do
     ix <- atomically (newEmptyTMVar :: STM (TMVar Utxos.UtxoIndex) )
     pure $ DBQueryEnv
         {_queryTMVar = UtxoQueryTMVar ix
         , _queryAddresses = targetAddresses
-        , _network = nId
         }
 -- | finds reports for all user-provided addresses.
 -- TODO consider sqlite streaming, https://hackage.haskell.org/package/sqlite-simple-0.4.18.2/docs/Database-SQLite-Simple.html#g:14

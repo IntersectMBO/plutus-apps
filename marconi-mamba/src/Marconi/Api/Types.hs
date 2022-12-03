@@ -57,7 +57,6 @@ data CliArgs = CliArgs
 data DBQueryEnv = DBQueryEnv
     { _queryTMVar     :: UtxoQueryTMVar
     , _queryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
-    , _network        :: Cardano.Api.NetworkId  -- ^ cardano network id
     }
 makeClassy ''DBQueryEnv
 

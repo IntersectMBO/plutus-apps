@@ -9,7 +9,6 @@
 -}
 module Main where
 
-import Cardano.Api (NetworkId (Mainnet))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM (atomically, putTMVar)
@@ -20,7 +19,7 @@ import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (queryTMVar), HasJsonRpcEnv 
                           unUtxoIndex)
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc)
 import Marconi.CLI (multiString)
-import Marconi.Index.Utxo (Depth (Depth), open)
+import Marconi.Index.Utxos (Depth (Depth), open)
 
 
 data CliOptions = CliOptions
@@ -33,7 +32,7 @@ cliParser = CliOptions
     <$> strOption (long "utxo-db"
                               <> short 'd'
                               <> metavar "FILENAME"
-                              <> help "Path to the utxo SQLite database.")
+                              <> help "Path to the marconi SQLite database.")
      <*> multiString (long "addresses-to-index"
                         <> help ("Becch32 Shelley addresses to index."
                                  <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
@@ -43,18 +42,17 @@ main = do
     (CliOptions dbpath addresses) <- execParser $ info (cliParser <**> helper) mempty
     putStrLn $ "Starting the Example RPC http-server:"
         <>"\nport =" <> show (3000 :: Int)
-        <> "\nutxo-db =" <> dbpath
+        <> "\nmarconi-db-dir =" <> dbpath
         <> "\nnumber of addresses to index = " <> show (length addresses)
-
-    env <- bootstrapJsonRpc dbpath Nothing addresses Mainnet
-    race_ (bootstrapHttp env) (mocUtxoIndexer (env ^. queryEnv) )
+    env <- bootstrapJsonRpc Nothing addresses
+    race_ (bootstrapHttp env) (mocUtxoIndexer dbpath (env ^. queryEnv) )
 
 -- | moc marconi utxo indexer.
 -- This will allow us to use the UtxoIndexer query interface without having cardano-node or marconi online
 -- Effectively we are going to query SQLite only
-mocUtxoIndexer :: DBQueryEnv -> IO ()
-mocUtxoIndexer env =
-        open "" (Depth 4) >>= atomically . (putTMVar utxoIndexer) >> innerLoop
+mocUtxoIndexer :: FilePath -> DBQueryEnv -> IO ()
+mocUtxoIndexer dbpath env =
+        open dbpath (Depth 4) >>= atomically . (putTMVar utxoIndexer) >> innerLoop
     where
         utxoIndexer = unUtxoIndex $ env ^. queryTMVar
-        innerLoop = threadDelay 1000 >> innerLoop
+        innerLoop = threadDelay 1000000 >> innerLoop -- create some latency

@@ -21,24 +21,27 @@
 | Slot
 | BlockNumber
 | transactionIndexWithinTheBlock (-}
-module Marconi.Index.Utxos where
-    -- ( eventAtAddress
-    -- , Utxo (..)
-    -- , UtxoEvent (..)
-    -- , UtxoRow (..)
-    -- , C.BlockNo (..)
-    -- , C.SlotNo (..)
-    -- , Depth (..)
-    -- , Result
-    -- , toRows
-    -- , addressFilteredRows
-    -- , toAddr
-    -- , UtxoIndex
-    -- , HasUtxo (..)
-    -- , HasUtxoRow (..)
-    -- , HasUtxoEvent (..)
-    -- , open
-    --                       ) whe re
+module Marconi.Index.Utxos
+    ( eventAtAddress
+    , Utxo (..)
+    , utxoAddress
+    , utxoEventSlotNo
+    , UtxoEvent (..)
+    , utxoEventUtxos
+    , UtxoRow (..)
+    , utxoRowUtxo
+    , C.BlockNo (..)
+    , C.SlotNo (..)
+    , Depth (..)
+    , Result
+    , toRows
+    , addressFilteredRows
+    , toAddr
+    , UtxoIndex
+    , open
+    , query
+    , queryPlusVolatile
+    ) where
 
 import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Codec.Serialise.Class (Serialise (decode))
