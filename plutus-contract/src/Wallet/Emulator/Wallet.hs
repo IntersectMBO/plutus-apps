@@ -61,7 +61,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (estimateTransactionFee, makeAutoBalancedTransaction)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI.Internal (makeTransactionBody, toCardanoTxOut, toCardanoTxOutDatum)
+import Ledger.Tx.CardanoAPI.Internal (makeTransactionBody, toCardanoTxOut)
 import Ledger.Validation (fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
@@ -318,15 +318,15 @@ handleBalance ::
 handleBalance utx = do
     utxo <- get >>= ownOutputs
     params@Params { pNetworkId } <- WAPI.getClientParams
-    let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-        eitherTx = U.unBalancedTxTx utx
+    let eitherTx = U.unBalancedTxTx utx
         plUtxo = traverse (Tx.toTxOut pNetworkId) utxo
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure plUtxo
     cUtxoIndex <- handleError eitherTx $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo
     case eitherTx of
         Right _ -> do
             -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
-            let calcFee n fee = do
+            let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+                calcFee n fee = do
                     tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
                     newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
                     if newFee /= fee
@@ -504,10 +504,10 @@ calculateTxChanges addr utxos (neg, pos) = do
             txOut <- either
               (throwError . WAPI.ToCardanoError)
               (pure . TxOut)
-              $ toCardanoTxOut (pNetworkId params) toCardanoTxOutDatum $ PV2.TxOut addr pos PV2.NoOutputDatum Nothing
+              $ toCardanoTxOut (pNetworkId params) $ PV2.TxOut addr pos PV2.NoOutputDatum Nothing
             (missing, extraTxOut) <-
                 either (throwError . WAPI.ToCardanoError) pure
-                $ U.adjustTxOut params txOut
+                $ U.adjustTxOut (emulatorPParams params) txOut
             let missingValue = Ada.toValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
@@ -525,7 +525,7 @@ calculateTxChanges addr utxos (neg, pos) = do
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
             -- which then will calculate a more exact set of inputs
-            then calculateTxChanges addr utxos (neg <> Ada.toValue Ledger.minAdaTxOut, Ada.toValue Ledger.minAdaTxOut)
+            then calculateTxChanges addr utxos (neg <> Ada.toValue Ledger.minAdaTxOutEstimated, Ada.toValue Ledger.minAdaTxOutEstimated)
             -- Else recalculate with the change added to both sides
             -- Ideally this creates the same inputs and outputs and then the change will be zero
             -- But possibly the minimal Ada increases and then we also want to compute a new set of inputs

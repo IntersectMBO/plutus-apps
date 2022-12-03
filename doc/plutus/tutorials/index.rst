@@ -7,7 +7,6 @@ Tutorials
    :maxdepth: 2
    :titlesonly:
 
-   plutus-playground
    basic-apps
    basic-apps-constraints
    contract-testing

@@ -34,7 +34,7 @@ contract in `plutus-use-cases`).
       -- Step 1
       let inst = typedValidator pk
           address = Scripts.validatorAddress inst
-          tx = Constraints.mustPayToTheScript () vl
+          tx = Constraints.mustPayToTheScriptWithDatumHash () vl
       ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
                  >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 

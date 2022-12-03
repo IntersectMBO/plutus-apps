@@ -1,4 +1,0 @@
-[
-  { "name" : "staging",     "url" : "https://plutus-playground-plutus-apps-staging.plutus.aws.iohkdev.io/" },
-  { "name" : "production",  "url" : "https://playground.plutus.iohkdev.io/" }
-]

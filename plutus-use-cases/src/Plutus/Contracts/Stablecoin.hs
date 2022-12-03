@@ -367,7 +367,7 @@ typedValidator :: Stablecoin -> Scripts.TypedValidator (StateMachine BankState I
 typedValidator stablecoin =
     let val = $$(PlutusTx.compile [|| validator ||]) `PlutusTx.applyCode` PlutusTx.liftCode stablecoin
         validator d = SM.mkValidator (stablecoinStateMachine d)
-        wrap = Scripts.mkUntypedValidator @BankState @Input
+        wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @BankState @Input
     in Scripts.mkTypedValidator @(StateMachine BankState Input) val $$(PlutusTx.compile [|| wrap ||])
 
 machineClient ::

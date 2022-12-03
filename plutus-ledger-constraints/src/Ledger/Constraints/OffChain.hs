@@ -35,6 +35,7 @@ module Ledger.Constraints.OffChain(
     , ownPaymentPubKeyHash
     , ownStakingCredential
     , paymentPubKey
+    , paymentPubKeyHash
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
@@ -111,7 +112,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address (Address), PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
@@ -122,19 +123,18 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (minAdaTxOut)
 import Ledger.Orphans ()
-import Ledger.Params (Params (pNetworkId, pSlotConfig))
+import Ledger.Params (PParams, Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
                   Versioned (Versioned), txOutValue)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
-                             ValidatorTypes (DatumType, RedeemerType))
-import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOut)
+                             ValidatorTypes (DatumType, RedeemerType), validatorAddress)
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V1.Ledger.Api (Credential (ScriptCredential), Datum (Datum), DatumHash, StakingCredential,
-                             Validator (getValidator), Value, getMintingPolicy)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,
+                             getMintingPolicy)
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
@@ -249,7 +249,12 @@ otherData dt =
 -- | A script lookups value with a payment public key
 paymentPubKey :: PaymentPubKey -> ScriptLookups a
 paymentPubKey (PaymentPubKey pk) =
-    mempty { slPaymentPubKeyHashes = Set.singleton (PaymentPubKeyHash $ pubKeyHash pk) }
+   paymentPubKeyHash (PaymentPubKeyHash $ pubKeyHash pk)
+
+-- | A script lookups value with a payment public key
+paymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
+paymentPubKeyHash pkh =
+    mempty { slPaymentPubKeyHashes = Set.singleton pkh }
 
 -- | A script lookups value with a payment public key hash.
 --
@@ -291,13 +296,8 @@ data UnbalancedTx
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
         }
     | UnbalancedCardanoTx
-        { unBalancedCardanoBuildTx        :: C.CardanoBuildTx
-        , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
-        -- ^ These are all the payment public keys that should be used to request the
-        -- signatories from the user's wallet. The signatories are what is required to
-        -- sign the transaction before submitting it to the blockchain. Transaction
-        -- validation will fail if the transaction is not signed by the required wallet.
-        , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
+        { unBalancedCardanoBuildTx :: C.CardanoBuildTx
+        , unBalancedTxUtxoIndex    :: Map TxOutRef TxOut
         -- ^ Utxo lookups that are used for adding inputs to the 'UnbalancedTx'.
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
         }
@@ -325,10 +325,9 @@ instance Pretty UnbalancedTx where
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
-    pretty (UnbalancedCardanoTx utx rs utxo) =
+    pretty (UnbalancedCardanoTx utx utxo) =
         vsep
         [ hang 2 $ vsep ["Tx (cardano-api Representation):", pretty utx]
-        , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
 
@@ -480,8 +479,8 @@ prepareConstraints ownOutputs constraints = do
     let
       -- This is done so that the 'MustIncludeDatumInTxWithHash' and
       -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScript ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScript ...@
+      -- constraints. @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@
+      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@
       -- must yield the same behavior.
       isVerificationConstraints = \case
         MustIncludeDatumInTxWithHash {} -> True
@@ -561,18 +560,18 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
-adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
+adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxOut params)
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: Params -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
+adjustTxOut :: PParams -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue minAdaTxOut
+    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
     let txOutEstimate = txOut & outValue .~ withMinAdaValue
-        minAdaTxOut' = evaluateMinLovelaceOutput params (fromPlutusTxOut txOutEstimate)
-        missingLovelace = minAdaTxOut' - Ada.fromValue (txOutValue txOut)
+        minAdaTxOutEstimated' = minAdaTxOut params txOutEstimate
+        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
     if missingLovelace > 0
     then do
       adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
@@ -639,7 +638,7 @@ addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = d
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = fmap (Datum . toBuiltinData) ocDatum
-    pure [ MustPayToAddress (Address (ScriptCredential (tvValidatorHash inst)) Nothing) (Just dsV) ocReferenceScriptHash ocValue ]
+    pure [ MustPayToAddress (validatorAddress inst) (Just dsV) ocReferenceScriptHash ocValue ]
 
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m

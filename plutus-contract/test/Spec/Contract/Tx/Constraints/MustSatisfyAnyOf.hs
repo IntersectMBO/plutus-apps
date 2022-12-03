@@ -31,8 +31,9 @@ import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustBeSignedBy, mustIncludeDatumInTx,
                                                            mustMintValue, mustMintValueWithRedeemer,
-                                                           mustPayToOtherScript, mustPayToOtherScriptWithDatumInTx,
-                                                           mustPayToPubKey, mustPayToTheScript, mustProduceAtLeast,
+                                                           mustPayToOtherScriptWithDatumHash,
+                                                           mustPayToOtherScriptWithDatumInTx, mustPayToPubKey,
+                                                           mustPayToTheScriptWithDatumHash, mustProduceAtLeast,
                                                            mustSatisfyAnyOf, mustSpendAtLeast, mustValidateIn)
 import Ledger.Test (asDatum, asRedeemer, someValidatorHash)
 import Ledger.Tx qualified as Tx
@@ -44,7 +45,6 @@ import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransaction
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, params, waitNSlots)
 import Plutus.V1.Ledger.Api (to)
 import Plutus.V1.Ledger.Value
@@ -109,9 +109,9 @@ allConstraintsValid = ConstraintParams
     { mustValidateIn = Just $ MustValidateIn 1000,
       mustBeSignedBy = Just $ MustBeSignedBy w1Pkh,
       mustIncludeDatumInTx = Just MustIncludeDatumInTx,
-      mustPayToTheScript = Just $ MustPayToTheScript adaValue,
+      mustPayToTheScriptWithDatumHash = Just $ MustPayToTheScript adaValue,
       mustPayToPubKey = Just $ MustPayToPubKey w2Pkh adaValue,
-      mustPayToOtherScript = Just $ MustPayToOtherScript someValidatorHash adaValue,
+      mustPayToOtherScriptWithDatumHash = Just $ MustPayToOtherScript someValidatorHash adaValue,
       mustMintValue = Just $ MustMintValue otherTokenValue,
       mustSpendAtLeast = Just $ MustSpendAtLeast adaValue,
       mustProduceAtLeast = Just $ MustProduceAtLeast adaValue
@@ -150,7 +150,7 @@ mustSatisfyAnyOfContract
             payToScript =
                 if isJust (mustIncludeDatumInTx offChainConstraints)
                 then Cons.mustPayToOtherScriptWithDatumInTx someValidatorHash unitDatum (adaValue <> tknValue lc)
-                else Cons.mustPayToOtherScript someValidatorHash unitDatum (adaValue <> tknValue lc)
+                else Cons.mustPayToOtherScriptWithDatumHash someValidatorHash unitDatum (adaValue <> tknValue lc)
 
 -- | Valid scenario using offchain and onchain constraint mustSatisfyAnyOf with all of the same
 -- | constraints onchain and offchain
@@ -265,7 +265,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
             (void $ trace contract)
     ,
         let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue,
-                                        mustPayToTheScript = Just $ MustPayToTheScript adaValue }
+                                        mustPayToTheScriptWithDatumHash = Just $ MustPayToTheScript adaValue }
             onChainConstraints  = def { mustValidateIn = Just $ MustValidateIn 1000 }
             contract = mustSatisfyAnyOfContract submitTxFromConstraints
                         lc offChainConstraints onChainConstraints
@@ -295,7 +295,7 @@ mustSatisfyAnyOfPolicyV2 :: L.MintingPolicy
 mustSatisfyAnyOfPolicyV2 = L.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToOtherScriptPolicy = mkMustSatisfyAnyOfPolicy Cons.V2.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
 
 data LanguageContext
    = LanguageContext
@@ -346,12 +346,12 @@ buildConstraints cps = do
             P.maybe Nothing (\_ ->
                 Just $ Cons.mustIncludeDatumInTx unitDatum) (mustIncludeDatumInTx cps),
             P.maybe Nothing (\cp ->
-                Just $ Cons.mustPayToTheScript () (value cp)) (mustPayToTheScript cps),
+                Just $ Cons.mustPayToTheScriptWithDatumHash () (value cp)) (mustPayToTheScriptWithDatumHash cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustPayToPubKey (ppkh cp) (value cp)) (mustPayToPubKey cps),
             P.maybe Nothing (\cp ->
                 Just $
-                Cons.mustPayToOtherScript (vh cp) unitDatum (value cp)) (mustPayToOtherScript cps),
+                Cons.mustPayToOtherScriptWithDatumHash (vh cp) unitDatum (value cp)) (mustPayToOtherScriptWithDatumHash cps),
             P.maybe Nothing (\cp ->
                 Just $ Cons.mustMintValue (value cp)) (mustMintValue cps),
             P.maybe Nothing (\cp ->
@@ -382,9 +382,9 @@ data ConstraintParams
     mustValidateIn,
     mustBeSignedBy,
     mustIncludeDatumInTx,
-    mustPayToTheScript,
+    mustPayToTheScriptWithDatumHash,
     mustPayToPubKey,
-    mustPayToOtherScript,
+    mustPayToOtherScriptWithDatumHash,
     mustMintValue,
     mustSpendAtLeast,
     mustProduceAtLeast :: Maybe ConstraintParam

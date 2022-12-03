@@ -144,8 +144,6 @@ library
     , cardano-addresses
     , cardano-api                      >=1.35
     , cardano-ledger-alonzo
-    , cardano-ledger-core
-    , cardano-ledger-shelley
     , cardano-slotting
     , cardano-wallet
     , cardano-wallet-cli
@@ -215,7 +213,6 @@ library
     , time
     , time-units
     , transformers
-    , unordered-containers
     , uuid
     , wai
     , wai-cors

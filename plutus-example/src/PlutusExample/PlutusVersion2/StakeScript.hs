@@ -19,7 +19,7 @@ import Codec.Serialise
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
-import Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators as V2
+import Plutus.Script.Utils.Typed as Scripts
 import Plutus.V2.Ledger.Api qualified as V2
 import Plutus.V2.Ledger.Contexts as V2
 import PlutusTx qualified
@@ -35,7 +35,7 @@ mkPolicy _redeemer _ctx = True
 policy :: V2.StakeValidator
 policy = V2.mkStakeValidatorScript $$(PlutusTx.compile [|| wrap ||])
  where
-  wrap = V2.mkUntypedStakeValidator mkPolicy
+  wrap = Scripts.mkUntypedStakeValidator mkPolicy
 
 plutusScript :: V2.Script
 plutusScript =

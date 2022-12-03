@@ -26,12 +26,12 @@ mkValidator _datum red _txContext =
   case PlutusV2.fromBuiltinData red of
     Nothing -> P.traceError "Trace error: Invalid redeemer"
     Just (n, vkey, msg, sig) ->
-      if n < (0 :: Integer)
-      then traceError "redeemer is < 0"
+      if n < (1000000 :: Integer) -- large number ensures same bitsize for all counter values
+      then traceError "redeemer is < 1000000"
       else loop n vkey msg sig
   where
     loop i v m s
-      | i == 0 = ()
+      | i == 1000000 = ()
       | BI.verifySchnorrSecp256k1Signature v m s = loop (pred i) v m s
       | otherwise = P.traceError "Trace error: Schnorr validation failed"
 

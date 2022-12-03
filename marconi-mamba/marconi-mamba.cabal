@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          marconi-mamba
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -78,7 +78,8 @@ library
     , cardano-streaming
     , json-rpc
     , marconi
-    , rewindable-index
+
+  -- , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -94,17 +95,17 @@ library
     , aeson
     , async
     , base            >=4.9 && <5
-    , containers
     , lens
     , prettyprinter
     , servant
     , servant-server
-    , sqlite-simple
     , stm
     , text
     , time
     , warp
 
+-- , containers
+-- , sqlite-simple
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
@@ -178,13 +179,6 @@ library db-utils
   hs-source-dirs:  db-utils/src
   exposed-modules: Marconi.DB.SqlUtils
 
-  --------------------
-  -- Local components
-  --------------------
-  build-depends:
-    , marconi
-    , marconi-mamba
-
   --------------------------
   -- Other IOG dependencies
   --------------------------
@@ -196,7 +190,6 @@ library db-utils
   build-depends:
     , async
     , base           >=4.9 && <5
-    , lens
     , sqlite-simple
     , text
     , time
@@ -209,15 +202,7 @@ executable db-utils-exe
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , db-utils
-    , marconi
-    , marconi-mamba
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:  cardano-api
+  build-depends:  db-utils
 
   ------------------------
   -- Non-IOG dependencies

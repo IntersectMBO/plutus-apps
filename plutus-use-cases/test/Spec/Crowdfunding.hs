@@ -282,7 +282,7 @@ instance ContractModel CrowdfundingModel where
     CContribute w v -> w `notElem` Map.keys (s ^. contractState . contributions)
                     && w /= (s ^. contractState . ownerWallet)
                     && s ^. currentSlot < s ^. contractState . endSlot
-                    && Ada.fromValue v >= Ledger.minAdaTxOut
+                    && Ada.fromValue v >= Ledger.minAdaTxOutEstimated
     CStart          -> Prelude.not (s ^. contractState . ownerOnline || s ^. contractState . ownerContractDone)
 
   -- To generate a random test case we need to know how to generate a random

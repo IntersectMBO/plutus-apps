@@ -450,14 +450,13 @@ refScriptToScriptHash (C.ReferenceScript _ (C.ScriptInAnyLang _ s)) =
 
 toCardanoTxOut
     :: C.NetworkId
-    -> (PV2.OutputDatum -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
     -> PV2.TxOut
-    -> Either ToCardanoError (C.TxOut ctx C.BabbageEra)
-toCardanoTxOut networkId fromHash (PV2.TxOut addr value datum _rs) =
+    -> Either ToCardanoError (C.TxOut C.CtxTx C.BabbageEra)
+toCardanoTxOut networkId (PV2.TxOut addr value datum _rsHash) =
     C.TxOut <$> toCardanoAddressInEra networkId addr
             <*> toCardanoTxOutValue value
-            <*> fromHash datum
-            <*> pure C.ReferenceScriptNone -- fixme
+            <*> toCardanoTxOutDatum datum
+            <*> pure C.ReferenceScriptNone -- Not possible from just a hash
 
 fromCardanoAddressInEra :: C.AddressInEra era -> P.Address
 fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address

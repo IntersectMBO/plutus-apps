@@ -97,7 +97,7 @@ mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
     where
         mustPayToTheScriptAndIncludeDatumsIfUsingOffChainConstraint =
             if null offChainDatums
-            then Constraints.mustPayToOtherScript valHash validatorDatum (Ada.lovelaceValueOf 2_000_000)
+            then Constraints.mustPayToOtherScriptWithDatumHash valHash validatorDatum (Ada.lovelaceValueOf 2_000_000)
             else mconcat $ fmap (\datum -> Constraints.mustPayToOtherScriptWithDatumInTx valHash datum (Ada.lovelaceValueOf 2_000_000)
                                         <> Constraints.mustIncludeDatumInTx datum) offChainDatums
 
@@ -183,7 +183,7 @@ withoutOffChainConstraintDatumIsNotIncludedInTxBodyByDefault =
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustIncludeDatumInTxPolicy
                 tx1 =
-                    Constraints.mustPayToOtherScript
+                    Constraints.mustPayToOtherScriptWithDatumHash
                         valHash
                         (Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData validatorDatumBs)
                         (Ada.lovelaceValueOf 25_000_000)
@@ -234,7 +234,7 @@ mustIncludeDatumInTxToPubKeyAddress =
     let onChainConstraintDatumsAsRedeemer = Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ([validatorDatum] :: [Datum])
         contract = do
             let lookups1 = Constraints.plutusV1MintingPolicy mustIncludeDatumInTxPolicy
-                tx1 = Constraints.mustPayWithDatumInTxToPubKey (mockWalletPaymentPubKeyHash w1) validatorDatum (Ada.lovelaceValueOf 25_000_000)
+                tx1 = Constraints.mustPayToPubKeyWithDatumInTx (mockWalletPaymentPubKeyHash w1) validatorDatum (Ada.lovelaceValueOf 25_000_000)
                    <> Constraints.mustIncludeDatumInTx validatorDatum
                    <> Constraints.mustMintValueWithRedeemer onChainConstraintDatumsAsRedeemer tknValue
             ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
@@ -254,7 +254,7 @@ phase2FailureWhenDatumIsNotInWitnessSet =
             let lookups1 = Constraints.typedValidatorLookups typedValidator
                         <> Constraints.plutusV1MintingPolicy mustIncludeDatumInTxPolicy
                 tx1 =
-                    Constraints.mustPayToOtherScript
+                    Constraints.mustPayToOtherScriptWithDatumHash
                         valHash
                         (Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData validatorDatumBs)
                         (Ada.lovelaceValueOf 25_000_000)

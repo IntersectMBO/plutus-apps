@@ -26,7 +26,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (Slot (..), minAdaTxOut)
+import Ledger (Slot (..), minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
@@ -126,7 +126,7 @@ instance ContractModel EscrowModel where
     Refund w -> s ^. currentSlot >= s ^. contractState . refundSlot
              && Nothing /= (s ^. contractState . contributions . at w)
     Pay _ v -> s ^. currentSlot + 1 < s ^. contractState . refundSlot
-            && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
+            && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOutEstimated
     BadRefund w w' -> s ^. currentSlot < s ^. contractState . refundSlot - 2  -- why -2?
                    || w /= w'
 

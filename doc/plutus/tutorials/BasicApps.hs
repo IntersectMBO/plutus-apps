@@ -66,7 +66,7 @@ splitValidator :: Scripts.TypedValidator Split
 splitValidator = Scripts.mkTypedValidator @Split
     $$(PlutusTx.compile [|| validateSplit ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.mkUntypedValidator @SplitData @()
+        wrap = Scripts.mkUntypedValidator @ScriptContext @SplitData @()
 
 -- BLOCK4
 
@@ -106,7 +106,7 @@ mkSplitData LockArgs{recipient1Wallet, recipient2Wallet, totalAda} =
 lockFunds :: SplitData -> Contract () SplitSchema T.Text ()
 lockFunds s@SplitData{amount} = do
     logInfo $ "Locking " <> Haskell.show amount
-    let constraints = Constraints.mustPayToTheScript s (Ada.toValue amount)
+    let constraints = Constraints.mustPayToTheScriptWithDatumHash s (Ada.toValue amount)
     void $ submitTxConstraints splitValidator constraints
 
 -- BLOCK8

@@ -16,13 +16,14 @@ module BasicAppConstraints where
 
 -- BLOCK0
 
-import BasicApps (SplitData (SplitData, amount, recipient1, recipient2), SplitSchema, mkSplitData)
-import Ledger (Ada, ChainIndexTxOut, PaymentPubKeyHash, ScriptContext, TxOutRef)
+import BasicApps (Split, SplitData (SplitData, amount, recipient1, recipient2), SplitSchema, mkSplitData)
+import Ledger (Ada, PaymentPubKeyHash, ScriptContext, TxOutRef)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (MkTxError, TxConstraints, UnbalancedTx)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (Contract, Promise, collectFromScript, endpoint, submitTxConstraintsSpending, utxosAt)
+import Plutus.Contract (Contract, Promise, endpoint, submitTxConstraintsSpending, utxosAt)
 
 import Control.Monad (void)
 import Data.Either (Either)
@@ -33,7 +34,7 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool, mappend, ($), (-), (.))
-import Prelude (Show, flip, (<>))
+import Prelude (Show, flip, (<$>), (<>))
 
 -- BLOCK1
 
@@ -82,7 +83,7 @@ unlockFunds splitData = do
     utxos <- utxosAt contractAddress
     -- Generate constraints which will spend all utxos locked by the Split
     -- validator and split the value evenly between the two payment keys.
-    let constraints = collectFromScript utxos ()
+    let constraints = Constraints.collectFromTheScript utxos ()
                       <> splitDataConstraints splitData
     -- Create, Balance and submit the transaction
     void $ submitTxConstraintsSpending splitValidator utxos constraints

@@ -30,6 +30,7 @@ import Spec.Contract.Tx.Constraints.MustSatisfyAnyOf qualified
 import Spec.Contract.Tx.Constraints.MustSpendAtLeast qualified
 import Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput qualified
 import Spec.Contract.Tx.Constraints.MustSpendScriptOutput qualified
+import Spec.Contract.Tx.Constraints.MustUseOutputAsCollateral qualified
 import Spec.Contract.Tx.Constraints.RequiredSigner qualified
 import Spec.Contract.Tx.Constraints.TimeValidity qualified
 import Test.Tasty (TestTree, testGroup)
@@ -46,6 +47,7 @@ tests = testGroup "constraints" [
     Spec.Contract.Tx.Constraints.MustSpendAtLeast.tests,
     Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput.tests,
     Spec.Contract.Tx.Constraints.MustSpendScriptOutput.tests,
+    Spec.Contract.Tx.Constraints.MustUseOutputAsCollateral.tests,
     Spec.Contract.Tx.Constraints.RequiredSigner.tests,
     Spec.Contract.Tx.Constraints.TimeValidity.tests
     ]

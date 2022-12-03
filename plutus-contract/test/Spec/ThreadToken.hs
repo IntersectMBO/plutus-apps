@@ -18,6 +18,7 @@ import Plutus.Contract (Contract, EmptySchema, logError, mapError)
 import Plutus.Contract.StateMachine (StateMachine, StateMachineClient, ThreadToken, mkStateMachine, stateData)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Test
+import Plutus.Script.Utils.Typed (ScriptContextV1)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
 import Plutus.Trace (EmulatorTrace, activateContractWallet)
 import Plutus.Trace qualified as Trace
@@ -59,7 +60,7 @@ typedValidator threadToken =
     $$(PlutusTx.compile [||wrap||])
  where
   validator c = SM.mkValidator (stateMachine c)
-  wrap = Scripts.mkUntypedValidator @State @Input
+  wrap = Scripts.mkUntypedValidator @ScriptContextV1 @State @Input
 
 stateMachineClient :: ThreadToken -> StateMachineClient State Input
 stateMachineClient threadToken =

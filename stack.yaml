@@ -13,10 +13,8 @@ packages:
 - plutus-contract
 - plutus-ledger
 - plutus-pab
-- plutus-playground-server
 - plutus-use-cases
 - quickcheck-dynamic
-- web-ghc
 
 extra-deps:
 - OddWord-1.0.2.0@sha256:5d848ff5db2c0457ce37ccc8898ce2b6b880a1c6a78e5b16841328a7404ff5ee,1888

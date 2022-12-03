@@ -317,7 +317,7 @@ typedValidator future ftos =
                 `PlutusTx.applyCode`
                     PlutusTx.liftCode ftos
         validatorParam f g = SM.mkValidator (futureStateMachine f g)
-        wrap = Scripts.mkUntypedValidator @FutureState @FutureAction
+        wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @FutureState @FutureAction
 
     in Scripts.mkTypedValidator @(SM.StateMachine FutureState FutureAction)
         val

@@ -121,7 +121,7 @@ contractCardano f p = do
     logInfo @String $ "now: " ++ show now
     let utxoRef = fst $ head' $ Map.toList utxos
         lookups = Tx.Constraints.unspentOutputs utxos
-        tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+        tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOutEstimated)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
             <> Tx.Constraints.mustValidateIn (f now)
     void $ waitNSlots 2

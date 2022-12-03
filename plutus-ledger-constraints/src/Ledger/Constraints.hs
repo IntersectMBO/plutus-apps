@@ -7,11 +7,11 @@ module Ledger.Constraints(
     , TC.ScriptOutputConstraint(..)
     , TC.TxOutDatum(..)
     -- * Defining constraints
-    , TC.mustPayToTheScript
+    , TC.mustPayToTheScriptWithDatumHash
     , TC.mustPayToTheScriptWithDatumInTx
     , TC.mustPayToTheScriptWithInlineDatum
     , TC.mustPayToAddress
-    , TC.mustPayToAddressWithDatum
+    , TC.mustPayToAddressWithDatumHash
     , TC.mustPayToAddressWithDatumInTx
     , TC.mustPayToAddressWithInlineDatum
     , TC.mustPayToAddressWithReferenceScript
@@ -38,16 +38,16 @@ module Ledger.Constraints(
     -- * Must-pay constraints for specific types of addresses
     , TC.mustPayToPubKey
     , TC.mustPayToPubKeyAddress
-    , TC.mustPayWithDatumToPubKey
-    , TC.mustPayWithDatumToPubKeyAddress
-    , TC.mustPayWithDatumInTxToPubKey
-    , TC.mustPayWithDatumInTxToPubKeyAddress
-    , TC.mustPayWithInlineDatumToPubKey
-    , TC.mustPayWithInlineDatumToPubKeyAddress
-    , TC.mustPayToOtherScript
+    , TC.mustPayToPubKeyWithDatumHash
+    , TC.mustPayToPubKeyAddressWithDatumHash
+    , TC.mustPayToPubKeyWithDatumInTx
+    , TC.mustPayToPubKeyAddressWithDatumInTx
+    , TC.mustPayToPubKeyWithInlineDatum
+    , TC.mustPayToPubKeyAddressWithInlineDatum
+    , TC.mustPayToOtherScriptWithDatumHash
     , TC.mustPayToOtherScriptWithDatumInTx
     , TC.mustPayToOtherScriptWithInlineDatum
-    , TC.mustPayToOtherScriptAddress
+    , TC.mustPayToOtherScriptAddressWithDatumHash
     , TC.mustPayToOtherScriptAddressWithDatumInTx
     , TC.mustPayToOtherScriptAddressWithInlineDatum
     -- * Defining off-chain only constraints
@@ -83,6 +83,17 @@ module Ledger.Constraints(
     , OC.paymentPubKey
     , OC.ownPaymentPubKeyHash
     , OC.ownStakingCredential
+    -- * Deprecated
+    , TC.mustPayToTheScript
+    , TC.mustPayToAddressWithDatum
+    , TC.mustPayWithDatumToPubKey
+    , TC.mustPayWithDatumToPubKeyAddress
+    , TC.mustPayWithDatumInTxToPubKey
+    , TC.mustPayWithDatumInTxToPubKeyAddress
+    , TC.mustPayWithInlineDatumToPubKey
+    , TC.mustPayWithInlineDatumToPubKeyAddress
+    , TC.mustPayToOtherScript
+    , TC.mustPayToOtherScriptAddress
     ) where
 
 import Ledger.Constraints.OffChain qualified as OC
@@ -91,7 +102,7 @@ import Ledger.Constraints.TxConstraints qualified as TC
 -- $constraints
 -- This module defines 'Ledger.Constraints.TxConstraints.TxConstraints', a list
 -- of constraints on transactions. To construct a value of 'Ledger.Constraints.TxConstraints.TxConstraints' use
--- the 'Ledger.Constraints.TxConstraints.mustPayToTheScript',
+-- the 'Ledger.Constraints.TxConstraints.mustPayToTheScriptWithDatumHash',
 -- 'Ledger.Constraints.TxConstraints.mustSpendAtLeast', etc functions. Once we have a
 -- 'Ledger.Constraints.TxConstraints.TxConstraints' value it can be used both to generate a transaction that
 -- satisfies the constraints (off-chain, using 'Ledger.Constraints.TxConstraints.OffChain.mkTx') and to check whether

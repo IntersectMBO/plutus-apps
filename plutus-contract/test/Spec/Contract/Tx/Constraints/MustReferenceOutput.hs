@@ -42,8 +42,6 @@ import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PSU.V1
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
@@ -214,7 +212,7 @@ mustReferenceOutputWithMultiplePubkeyOutputs submitTxFromConstraints l =
 mustReferenceOutputWithSingleScriptOutput :: SubmitTx -> PSU.Language -> TestTree
 mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
     let contractWithScriptOutput = do
-            let tx1 = Cons.mustPayToOtherScript someValidatorHash
+            let tx1 = Cons.mustPayToOtherScriptWithDatumHash someValidatorHash
                       (asDatum $ PlutusTx.toBuiltinData ()) (Ada.lovelaceValueOf 2_000_000)
             ledgerTx1 <- submitTx tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -271,7 +269,7 @@ mustReferenceOutputPolicyV2 :: L.MintingPolicy
 mustReferenceOutputPolicyV2 = L.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToOtherScriptPolicy = mkMustReferenceOutputPolicy Cons.V2.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
 data Script a where
    MustReferenceOutputPolicy :: Script L.MintingPolicy
 
@@ -366,7 +364,7 @@ mustReferenceOutputV2Validator :: PV2.Validator
 mustReferenceOutputV2Validator = PV2.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
  where
-     wrap = PSU.V2.mkUntypedValidator mkMustReferenceOutputV2Validator
+     wrap = Scripts.mkUntypedValidator mkMustReferenceOutputV2Validator
 
 mustReferenceOutputV2ValidatorAddress :: L.Address
 mustReferenceOutputV2ValidatorAddress =

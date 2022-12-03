@@ -28,7 +28,6 @@ import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransaction
                              defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -198,29 +197,29 @@ successfulUseOfMustPayToPubKeyAddress submitTxFromConstraints tc =
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
--- | Valid scenario using offchain and onchain constraint mustPayWithDatumInTxToPubKey with bytestring datum and ada value
+-- | Valid scenario using offchain and onchain constraint mustPayToPubKeyWithDatumInTx with bytestring datum and ada value
 successfulUseOfMustPayWithDatumInTxToPubKey :: SubmitTx -> LanguageContext -> TestTree
 successfulUseOfMustPayWithDatumInTxToPubKey submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKey w2PaymentPubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayToPubKeyWithDatumInTx w2PaymentPubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
-    "Successful use of offchain and onchain mustPayWithDatumInTxToPubKey constraint with bytestring datum and ada value"
+    "Successful use of offchain and onchain mustPayToPubKeyWithDatumInTx constraint with bytestring datum and ada value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
--- | Valid scenario using offchain and onchain constraint mustPayWithDatumInTxToPubKeyAddress with bytestring datum and ada value
+-- | Valid scenario using offchain and onchain constraint mustPayToPubKeyAddressWithDatumInTx with bytestring datum and ada value
 successfulUseOfMustPayWithDatumInTxToPubKeyAddress :: SubmitTx -> LanguageContext -> TestTree
 successfulUseOfMustPayWithDatumInTxToPubKeyAddress submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress
+                tx1 = Constraints.mustPayToPubKeyAddressWithDatumInTx
                         w2PaymentPubKeyHash
                         w2StakingCredential
                         someDatum
@@ -230,17 +229,17 @@ successfulUseOfMustPayWithDatumInTxToPubKeyAddress submitTxFromConstraints tc =
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
-    "Successful use of offchain and onchain mustPayWithDatumInTxToPubKeyAddress constraint with bytestring datum and ada value"
+    "Successful use of offchain and onchain mustPayToPubKeyAddressWithDatumInTx constraint with bytestring datum and ada value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
--- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the PaymentPubkeyHash"
+-- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the PaymentPubkeyHash"
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash :: SubmitTx -> LanguageContext -> TestTree
 phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress
+                tx1 = Constraints.mustPayToPubKeyAddressWithDatumInTx
                         w1PaymentPubKeyHash
                         w2StakingCredential
                         someDatum
@@ -250,57 +249,57 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
-    "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected PaymentPubkeyHash"
+    "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected PaymentPubkeyHash"
     (assertFailedTransaction $ const $ evaluationError "La")
     (void $ trace contract)
 
--- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Datum"
+-- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the Datum"
 phase2FailureWhenUsingUnexpectedDatum :: SubmitTx -> LanguageContext -> TestTree
 phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential otherDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
+                tx1 = Constraints.mustPayToPubKeyAddressWithDatumInTx w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
-    "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected Datum"
+    "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected Datum"
     (assertFailedTransaction $ const $ evaluationError "La")
     (void $ trace contract)
 
--- | Phase-2 failure when onchain mustPayWithDatumInTxToPubKeyAddress constraint cannot verify the Value"
+-- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the Value"
 phase2FailureWhenUsingUnexpectedValue :: SubmitTx -> LanguageContext -> TestTree
 phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum (Ada.lovelaceValueOf $ adaAmount + 1)
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
+                tx1 = Constraints.mustPayToPubKeyAddressWithDatumInTx w2PaymentPubKeyHash w2StakingCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
-    "Phase-2 validation failure occurs when onchain mustPayWithDatumInTxToPubKeyAddress constraint sees an unexpected Value"
+    "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected Value"
     (assertFailedTransaction $ const $ evaluationError "La")
     (void $ trace contract)
 
 
 
--- | Valid scenario using offchain and onchain constraint mustPayWithDatumInTxToPubKey with inline bytestring datum and ada value
+-- | Valid scenario using offchain and onchain constraint mustPayToPubKeyWithDatumInTx with inline bytestring datum and ada value
 successfulUseOfMustPayWithInlineDatumToPubKeyV2 :: SubmitTx -> LanguageContext -> TestTree
 successfulUseOfMustPayWithInlineDatumToPubKeyV2 submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithInlineDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithInlineDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayToPubKeyWithInlineDatum w2PaymentPubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicate
-    "Successful use of offchain and onchain mustPayWithDatumInTxToPubKey constraint with inline bytestring datum and ada value"
+    "Successful use of offchain and onchain mustPayToPubKeyWithDatumInTx constraint with inline bytestring datum and ada value"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
@@ -310,7 +309,7 @@ phase1FailureWhenUsingInlineDatumWithV1 submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithInlineDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithInlineDatumToPubKey w2PaymentPubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayToPubKeyWithInlineDatum w2PaymentPubKeyHash someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -341,7 +340,7 @@ mustPayToPubKeyAddressPolicyV2 :: Ledger.MintingPolicy
 mustPayToPubKeyAddressPolicyV2 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToPubKeyAddressPolicy = mkMustPayToPubKeyAddressPolicy V2.Constraints.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToPubKeyAddressPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToPubKeyAddressPolicy
 
 languageContextV1 :: LanguageContext
 languageContextV1 = LanguageContext
@@ -364,13 +363,13 @@ mkMustPayToPubKeyAddressPolicy checkScriptContext = \case
     MustPayToPubKeyAddress ppkh spkh v ->
         checkScriptContext (Constraints.mustPayToPubKeyAddress ppkh spkh v)
     MustPayWithDatumInTxToPubKey ppkh d v ->
-        checkScriptContext (Constraints.mustPayWithDatumInTxToPubKey ppkh d v)
+        checkScriptContext (Constraints.mustPayToPubKeyWithDatumInTx ppkh d v)
     MustPayWithDatumInTxToPubKeyAddress ppkh spkh d v ->
-        checkScriptContext (Constraints.mustPayWithDatumInTxToPubKeyAddress ppkh spkh d v)
+        checkScriptContext (Constraints.mustPayToPubKeyAddressWithDatumInTx ppkh spkh d v)
     MustPayWithInlineDatumToPubKey ppkh d v ->
-        checkScriptContext (Constraints.mustPayWithInlineDatumToPubKey ppkh d v)
+        checkScriptContext (Constraints.mustPayToPubKeyWithInlineDatum ppkh d v)
     MustPayWithInlineDatumToPubKeyAddress ppkh spkh d v ->
-        checkScriptContext (Constraints.mustPayWithInlineDatumToPubKeyAddress ppkh spkh d v)
+        checkScriptContext (Constraints.mustPayToPubKeyAddressWithInlineDatum ppkh spkh d v)
 
 mustPayToPubKeyAddressPolicyHash :: LanguageContext -> Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash tc = mintingPolicyHash tc $ mustPayToPubKeyAddressPolicy tc

@@ -40,9 +40,9 @@ import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
-import Ledger.Tx.CardanoAPI (toCardanoTxOut, toCardanoTxOutDatumHash)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Generators qualified as Gen
 import Plutus.Script.Utils.V2.Scripts qualified as Ledger
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
@@ -64,7 +64,7 @@ tests = testGroup "all tests"
     , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash"
         "mustPayToPubKeyAddressStakePubKeyNotNothingProp"
         mustPayToPubKeyAddressStakePubKeyNotNothingProp
-    , testPropertyNamed "mustPayToOtherScriptAddress should create output addresses with stake validator hash"
+    , testPropertyNamed "mustPayToOtherScriptAddressWithDatumHash should create output addresses with stake validator hash"
          "mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp"
          mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
     , testPropertyNamed "mustUseOutputAsCollateral should add a collateral input"
@@ -136,7 +136,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     [x,y] <- Hedgehog.forAllWith (const "A known key") $ take 2 <$> Gen.shuffle Gen.knownXPrvs
     let pkh = xprvToPaymentPubKeyHash x
         sc = xprvToStakingCredential y
-        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToPubKeyAddress pkh sc (Ada.toValue Ledger.minAdaTxOut))
+        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToPubKeyAddress pkh sc (Ada.toValue Ledger.minAdaTxOutEstimated))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
@@ -147,12 +147,12 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) sc)
 
--- | The 'mustPayToOtherScriptAddress' should be able to set the stake validator hash to some value.
+-- | The 'mustPayToOtherScriptAddressWithDatumHash' should be able to set the stake validator hash to some value.
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
     let sc = stakeValidatorHashCredential $ Ledger.StakeValidatorHash $ examplePlutusScriptAlwaysSucceedsHash WitCtxStake
-        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash sc Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustPayToOtherScriptAddressWithDatumHash alwaysSucceedValidatorHash sc Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOutEstimated))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err

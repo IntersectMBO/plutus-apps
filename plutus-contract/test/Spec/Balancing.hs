@@ -56,7 +56,7 @@ balanceTxnMinAda =
                     L.Constraints.mustPayToOtherScriptWithDatumInTx
                         vHash
                         unitDatum
-                        (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
+                        (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOutEstimated)
                  <> L.Constraints.mustIncludeDatumInTx unitDatum
             utx1 <- mkTxConstraints @Void mempty constraints1
             submitTxConfirmed utx1
@@ -105,7 +105,7 @@ balanceTxnMinAda2 =
               =<< mkTx mempty
                        (payToWallet w2 ( vA 1
                                       <> vB 1
-                                      <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)
+                                      <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOutEstimated)
                                        ))
             -- Make sure there is a UTxO with 1 B and datum () at the script
             submitTxConfirmed
@@ -153,7 +153,7 @@ balanceTxnNoExtraOutput =
             let val = vL 200
                 lookups = L.Constraints.plutusV1MintingPolicy coinMintingPolicy
                 constraints = L.Constraints.mustMintValue val
-                    <> L.Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOut)
+                    <> L.Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOutEstimated)
 
             tx <- submitUnbalancedTx =<< mkTx lookups constraints
             tell [length $ Ledger.getCardanoTxOutRefs tx]
@@ -207,7 +207,7 @@ balanceCardanoTx =
             pkh <- Con.ownFirstPaymentPubKeyHash
             utxos <- Con.ownUtxos
 
-            let constraints = Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            let constraints = Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOutEstimated)
                     <> Tx.Constraints.mustSpendPubKeyOutput (fst . head . Map.toList $ utxos)
                 lookups = Tx.Constraints.unspentOutputs utxos
 
