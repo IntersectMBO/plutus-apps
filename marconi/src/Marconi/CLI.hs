@@ -6,6 +6,7 @@ module Marconi.CLI
     , parseCardanoAddresses
     , pNetworkId
     , Options (..)
+    , optionsParser
     , parseOptions
     , utxoDbPath
     , datumDbPath

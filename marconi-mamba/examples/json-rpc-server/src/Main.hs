@@ -19,7 +19,7 @@ import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (queryTMVar), HasJsonRpcEnv 
                           unUtxoIndex)
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc)
 import Marconi.CLI (multiString)
-import Marconi.Index.Utxos (Depth (Depth), open)
+import Marconi.Index.Utxo (Depth (Depth), open)
 
 
 data CliOptions = CliOptions

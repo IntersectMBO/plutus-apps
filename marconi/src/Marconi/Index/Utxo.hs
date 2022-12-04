@@ -21,7 +21,7 @@
 | Slot
 | BlockNumber
 | transactionIndexWithinTheBlock (-}
-module Marconi.Index.Utxos
+module Marconi.Index.Utxo
     ( eventAtAddress
     , Utxo (..)
     , utxoAddress

@@ -38,7 +38,7 @@ import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (Settings)
 
 import Cardano.Api (NetworkId)
-import Marconi.Index.Utxos (UtxoRow)
+import Marconi.Index.Utxo (UtxoRow)
 import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
 import Marconi.Types as Export (TargetAddresses)
 

@@ -46,7 +46,7 @@ library
     Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.ScriptTx
-    Marconi.Index.Utxos
+    Marconi.Index.Utxo
     Marconi.Indexers
     Marconi.Logging
     Marconi.Orphans
@@ -125,8 +125,9 @@ test-suite marconi-test
   main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
-    Index.Spec
     Integration
+    Spec.Cli
+    Spec.Utxo
 
   --------------------
   -- Local components
@@ -153,7 +154,7 @@ test-suite marconi-test
   ------------------------
   build-depends:
     , aeson
-    , base             >=4.9 && <5
+    , base                  >=4.9 && <5
     , bytestring
     , containers
     , directory
@@ -161,12 +162,15 @@ test-suite marconi-test
     , hedgehog
     , hedgehog-extras
     , lens
+    , optparse-applicative
     , prettyprinter
     , serialise
     , sqlite-simple
     , stm
     , streaming
     , tasty
+    , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
     , temporary
+    , text

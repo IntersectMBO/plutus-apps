@@ -37,7 +37,7 @@ import Control.Concurrent.STM.TMVar (TMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Marconi.Index.Utxos qualified as Utxos
+import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types (TargetAddresses, TxOut, pattern CurrentEra)
 
 import RewindableIndex.Index.VSplit qualified as Ix
@@ -71,25 +71,25 @@ uTxo
   :: C.IsCardanoEra era
   => Maybe TargetAddresses
   -> C.Tx era
-  -> [Utxos.Utxo]
+  -> [Utxo.Utxo]
 uTxo maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
     either (const []) addressDiscriminator (uTxo' txOuts)
     where
-        addressDiscriminator :: [Utxos.Utxo] -> [Utxos.Utxo]
+        addressDiscriminator :: [Utxo.Utxo] -> [Utxo.Utxo]
         addressDiscriminator = case maybeTargetAddresses of
             Just targetAddresses -> filter ( isAddressInTarget targetAddresses)
             _                    -> id
 
-        uTxo' :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxos.Utxo]
+        uTxo' :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxo.Utxo]
         uTxo' = fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
 
-        txoutToUtxo :: Int -> TxOut -> Utxos.Utxo
+        txoutToUtxo :: Int -> TxOut -> Utxo.Utxo
         txoutToUtxo  ix out =
             let
                 _utxoTxIx = C.TxIx $ fromIntegral ix
                 _utxoTxId = C.getTxId txBody
                 (C.TxOut address' value' datum' _ ) = out
-                _utxoAddress = Utxos.toAddr address'
+                _utxoAddress = Utxo.toAddr address'
                 _utxoValue = C.txOutValueToValue value'
                 _utxoDatumHash = case datum' of
                     (C.TxOutDatumHash _ d ) -> Just d
@@ -98,7 +98,7 @@ uTxo maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
                     (C.TxOutDatumInline _ d ) -> Just d
                     _                         ->  Nothing
             in
-                Utxos.Utxo {..}
+                Utxo.Utxo {..}
 
 uTxoEvents
   :: C.IsCardanoEra era
@@ -106,7 +106,7 @@ uTxoEvents
   -> C.SlotNo
   -> C.BlockNo
   -> [C.Tx era]
-  -> Maybe Utxos.UtxoEvent
+  -> Maybe Utxo.UtxoEvent
 uTxoEvents maybeTargetAddresses slotNo blkNo txs =
     let
         utxos = (concat . fmap (uTxo maybeTargetAddresses) $ txs )
@@ -115,7 +115,7 @@ uTxoEvents maybeTargetAddresses slotNo blkNo txs =
         if null utxos then
             Nothing
         else
-            Just (Utxos.UtxoEvent utxos ins slotNo blkNo)
+            Just (Utxo.UtxoEvent utxos ins slotNo blkNo)
 
 getInputs
   :: C.Tx era
@@ -184,21 +184,21 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
 -- | does the transaction contain a targetAddress
 isAddressInTarget
     :: TargetAddresses
-    -> Utxos.Utxo
+    -> Utxo.Utxo
     -> Bool
 isAddressInTarget targetAddresses utxo =
-    case (utxo ^. Utxos.utxoAddress) of
+    case (utxo ^. Utxo.utxoAddress) of
         C.AddressByron _      -> False
         C.AddressShelley addr -> addr `elem` targetAddresses
 
 utxoWorker
-    :: (Utxos.UtxoIndex -> IO Utxos.UtxoIndex)  -- ^ Callback used for the query therad
+    :: (Utxo.UtxoIndex -> IO Utxo.UtxoIndex)  -- ^ Callback used for the query therad
     -> Maybe TargetAddresses                    -- ^ Target addresses to filter for
     -> Worker
 utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
-    Utxos.open path (Utxos.Depth 2160) >>= indexerCallback >>= innerLoop
+    Utxo.open path (Utxo.Depth 2160) >>= indexerCallback >>= innerLoop
   where
-    innerLoop :: Utxos.UtxoIndex -> IO ()
+    innerLoop :: Utxo.UtxoIndex -> IO ()
     innerLoop index = do
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
@@ -212,7 +212,7 @@ utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
           innerLoop $
             fromMaybe index $ do
               slot   <- chainPointToSlotNo cp
-              offset <- findIndex  (\u -> (u ^. Utxos.utxoEventSlotNo) < slot) events
+              offset <- findIndex  (\u -> (u ^. Utxo.utxoEventSlotNo) < slot) events
               Ix.rewind offset index
 
 scriptTxWorker_
@@ -299,5 +299,5 @@ txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.Scrip
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
 newtype UtxoQueryTMVar = UtxoQueryTMVar
-    { unUtxoIndex  :: TMVar Utxos.UtxoIndex      -- ^ for query thread to access in-memory utxos
+    { unUtxoIndex  :: TMVar Utxo.UtxoIndex      -- ^ for query thread to access in-memory utxos
     }

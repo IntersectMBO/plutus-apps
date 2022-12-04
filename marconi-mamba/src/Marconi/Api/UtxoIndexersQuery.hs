@@ -6,8 +6,8 @@ module Marconi.Api.UtxoIndexersQuery
     , findByAddress
     , findAll
     , reportQueryAddresses
-    , Utxos.UtxoRow(..)
-    , Utxos.UtxoIndex
+    , Utxo.UtxoRow(..)
+    , Utxo.UtxoIndex
     , reportQueryCardanoAddresses
     , reportBech32Addresses
     , withQueryAction
@@ -26,7 +26,7 @@ import Marconi.Api.Types (DBQueryEnv (DBQueryEnv, _queryAddresses, _queryTMVar),
                           HasDBQueryEnv (queryAddresses, queryTMVar),
                           QueryExceptions (AddressNotInListError, QueryError), TargetAddresses,
                           UtxoTxOutReport (UtxoTxOutReport))
-import Marconi.Index.Utxos qualified as Utxos
+import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
 
 -- | Bootstraps the utxo query environment.
@@ -36,7 +36,7 @@ bootstrap
     :: TargetAddresses          -- ^ user provided target addresses
     -> IO DBQueryEnv            -- ^ returns Query runtime environment
 bootstrap targetAddresses = do
-    ix <- atomically (newEmptyTMVar :: STM (TMVar Utxos.UtxoIndex) )
+    ix <- atomically (newEmptyTMVar :: STM (TMVar Utxo.UtxoIndex) )
     pure $ DBQueryEnv
         {_queryTMVar = UtxoQueryTMVar ix
         , _queryAddresses = targetAddresses
@@ -60,7 +60,7 @@ findAll env = forConcurrently addresses f
 findByCardanoAddress
     :: DBQueryEnv                   -- ^ Query run time environment
     -> C.AddressAny      -- ^ Cardano address to query
-    -> IO [Utxos.UtxoRow]
+    -> IO [Utxo.UtxoRow]
 findByCardanoAddress env address = withQueryAction env  address
 
 -- | Retrieve a Set of TxOutRefs associated with the given Cardano Era address
@@ -90,12 +90,12 @@ findByAddress env addressText =
 withQueryAction
     :: DBQueryEnv                                           -- ^ Query run time environment
     -> C.AddressAny                                      -- ^ Cardano address to query
-    -> IO [Utxos.UtxoRow]
+    -> IO [Utxo.UtxoRow]
 withQueryAction env address =
     let
         utxoIndexer = unUtxoIndex  $ env ^. queryTMVar
-        action :: Utxos.UtxoIndex -> IO [Utxos.UtxoRow]
-        action ndxr = (Utxos.queryPlusVolatile ndxr address) >>= pure . (\case { Just x -> x; _ -> [] })
+        action :: Utxo.UtxoIndex -> IO [Utxo.UtxoRow]
+        action ndxr = (Utxo.queryPlusVolatile ndxr address) >>= pure . (\case { Just x -> x; _ -> [] })
     in
         bracket
           (atomically $ takeTMVar  utxoIndexer)
