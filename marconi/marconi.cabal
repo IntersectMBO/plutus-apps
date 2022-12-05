@@ -75,7 +75,6 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
     , async
     , base
     , bytestring
@@ -86,6 +85,7 @@ library
     , optparse-applicative
     , parsec
     , prettyprinter
+    , raw-strings-qq
     , serialise
     , sqlite-simple
     , stm
@@ -126,7 +126,6 @@ test-suite marconi-test
   hs-source-dirs: test
   other-modules:
     Integration
-    Spec.Cli
     Spec.Utxo
 
   --------------------
@@ -153,7 +152,6 @@ test-suite marconi-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
     , base                  >=4.9 && <5
     , bytestring
     , containers
@@ -174,3 +172,5 @@ test-suite marconi-test
     , tasty-hunit
     , temporary
     , text
+
+-- , aeson

@@ -5,7 +5,6 @@
 module Marconi.Bootstrap  where
 
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (putTMVar)
 import Control.Exception (catch)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
@@ -53,9 +52,9 @@ bootstrapUtxoIndexers
     -> IO ()
 bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
     do
-        let (UtxoQueryTMVar queryTmvar) = env ^. queryEnv . queryTMVar
+        let (UtxoQueryTMVar qTMVar) = env ^. queryEnv . queryTMVar
             callbackIndexer :: QApi.UtxoIndex -> IO QApi.UtxoIndex
-            callbackIndexer index = (atomically $ putTMVar queryTmvar  index ) >> pure index
+            callbackIndexer index = atomically $ (QApi.writeTMVar qTMVar  index)  >>  pure index
             indexers = combineIndexers [( utxoWorker  callbackIndexer (Just targetAddresses) , dbPath)]
             chainPoint = ChainPointAtGenesis
         c <- defaultConfigStdout

@@ -1,3 +1,0 @@
---rocket-path /a/b/d --mainnet --slot-no 53427524 --block-hash 5e2bde4e504a9888a4f218dafc79a7619083f97d48684fcdba9dc78190df8f99 --addresses-to-index xx001122 -d /a/v
-
---socket-path /a/b/d --mainnet --slot-no 53427524 --block-hash 5e2 xxxxxxxxxxxbde4e504a9888a4f218dafc79a7619083f97d48684fcdba9dc78190df8f99 --addresses-to-index xx001122 -d /a/v

@@ -17,7 +17,7 @@ parserCliArgs = CliArgs
         long "http-port" <> metavar "HTTP-PORT" <> help "JSON-RPC http port number, default is port 3000.")
   <*> pNetworkId
   <*> multiString (long "addresses-to-index"
-                        <> help ("Becch32 Shelley addresses to index."
+                        <> help ("Bech32 Shelley addresses to index."
                                  <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
 
 parserOpts :: ParserInfo CliArgs

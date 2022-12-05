@@ -5,22 +5,29 @@
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE PackageImports     #-}
 {-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TemplateHaskell    #-}
+
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
- Address
-| TxId
-| TxIdx
-| DatumHash
-| Datum
-| Value
-| InlineScriptHash
-| InlineScript
-| Slot
-| BlockNumber
-| transactionIndexWithinTheBlock (-}
+-- | Back-end support for Utxo Indexer
+
+-- This module will create the SQL tables:
++ table: unspentTransactions
+|---------+------+-------+-----------+-------+-------+------------------+--------------+------+-------------|
+| Address | TxId | TxIdx | DatumHash | Datum | Value | InlineScriptHash | InlineScript | Slot | BlockNumber |
+|---------+------+-------+-----------+-------+-------+------------------+--------------+------+-------------|
+
++ table: spent
+  |------+------|
+  | txId | txIx |
+  |------+------|
+
+-}
 module Marconi.Index.Utxo
     ( eventAtAddress
     , Utxo (..)
@@ -43,6 +50,7 @@ module Marconi.Index.Utxo
     , queryPlusVolatile
     ) where
 
+import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Codec.Serialise.Class (Serialise (decode))
 import Control.Concurrent.Async (concurrently_)
@@ -51,14 +59,12 @@ import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
 import Control.Lens.TH (makeLenses)
 import Control.Monad (unless, when)
-import Data.Aeson (ToJSON (toJSON))
-import Data.Aeson qualified
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (toStrict)
 import Data.List (union)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
-import Data.Text (pack)
 import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
@@ -68,41 +74,31 @@ import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
 import System.Random.MWC (createSystemRandom, uniformR)
 import Text.ParserCombinators.Parsec (parse)
+import Text.RawString.QQ (r)
 
 import Cardano.Api qualified as C
-import Cardano.Binary (fromCBOR, toCBOR)
 import Marconi.Types (CurrentEra)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
-data Utxo               = Utxo
-    { _utxoAddress   :: !C.AddressAny
-    , _utxoTxId      :: !C.TxId
-    , _utxoTxIx      :: !C.TxIx
-    , _utxoDatum     :: Maybe C.ScriptData
-    , _utxoDatumHash :: Maybe (C.Hash C.ScriptData)
-    , _utxoValue     :: C.Value
-    -- , _inlineScriptHash    :: Maybe (C.Hash (C.ScriptDatum C.WitCtxTxIn))
-    -- , _inlineScript        :: Maybe (C.ScriptDatum C.WitCtxTxIn)
+data Utxo                       = Utxo
+    { _utxoAddress          :: !C.AddressAny
+    , _utxoTxId             :: !C.TxId
+    , _utxoTxIx             :: !C.TxIx
+    , _utxoDatum            :: Maybe C.ScriptData
+    , _utxoDatumHash        :: Maybe (C.Hash C.ScriptData)
+    , _utxoValue            :: C.Value
+    , _utxoInlineScript     :: Maybe ByteString
+    , _utxoInlineScriptHash :: Maybe (C.ScriptHash)
     } deriving (Show, Generic)
 
 $(makeLenses ''Utxo)
-
-instance ToJSON C.AddressAny where
-    toJSON = Data.Aeson.String . C.serialiseAddress
-
-instance ToJSON C.ScriptData where
-    toJSON = Data.Aeson.String . pack . show
-
-instance ToJSON Utxo
-
 
 instance Eq Utxo where
     u1 == u2 = (_utxoTxId u1) == (_utxoTxId u2)
 
 instance Ord Utxo where
     compare u1 u2 = compare (_utxoTxId u1) (_utxoTxId u2)
-
 
 data UtxoEvent          = UtxoEvent
     { _utxoEventUtxos   :: [Utxo]
@@ -120,10 +116,6 @@ data UtxoRow            = UtxoRow
     } deriving (Show, Eq, Ord, Generic)
 
 $(makeLenses ''UtxoRow)
-
-instance ToJSON C.BlockNo
-
-instance ToJSON UtxoRow
 
 type Result = Maybe [UtxoRow]
 
@@ -150,6 +142,8 @@ instance ToRow UtxoRow where
         , (u ^. utxoRowUtxo . utxoDatum)
         , (u ^. utxoRowUtxo . utxoDatumHash)
         , (u ^. utxoRowUtxo . utxoValue)
+        , (u ^. utxoRowUtxo . utxoInlineScript)
+        , (u ^. utxoRowUtxo . utxoInlineScriptHash)
         , (u ^. utxoRowSlotNo)
         , (u ^. utxoRowBlockNo))
 
@@ -162,18 +156,11 @@ instance FromRow UtxoRow where
              <*> field
              <*> field
              <*> field
+             <*> field
+             <*> field
              <*> field )
         <*> field
         <*> field
-
-instance ToField C.Value where
-    toField  = SQLText . C.renderValue
-    -- toField  = SQLText . pack . show
-
-instance FromField C.Value where
-    fromField f = fromField f >>=
-        either (const $ returnError ConversionFailed f "Cannot deserialise value.") pure
-        . (parse C.parseValue "")
 
 instance FromField C.AddressAny where
   fromField f = fromField f >>=
@@ -217,6 +204,23 @@ instance FromField C.ScriptData where
 instance ToField C.ScriptData where
   toField = SQLBlob . toStrict . serialise
 
+instance ToField C.Value where
+    toField  = SQLText . C.renderValue
+
+instance FromField C.Value where
+    fromField f = fromField f >>=
+        either (const $ returnError ConversionFailed f "Cannot deserialise value.") pure
+        . (parse C.parseValue "")
+
+instance ToField C.ScriptHash where
+    toField = SQLBlob . C.serialiseToRawBytes
+
+instance FromField C.ScriptHash where
+    fromField f = fromField f >>=
+        maybe (returnError ConversionFailed f "Cannot deserialise scriptDataHash.")
+          pure . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
+
+
 instance FromField C.SlotNo where
   fromField f = C.SlotNo <$> fromField f
 
@@ -241,10 +245,26 @@ open dbPath (Depth k) = do
   let conn = ix ^. Ix.handle
   SQL.execute_ conn "DROP TABLE IF EXISTS unspent_transactions"
   SQL.execute_ conn "DROP TABLE IF EXISTS spent"
-  SQL.execute_ conn "CREATE TABLE IF NOT EXISTS unspent_transactions (address TEXT NOT NULL, txId TEXT NOT NULL, txIx INT NOT NULL, datum TEXT, datumHash TEXT, value TEXT, slotNo INT, blockNo INT)"
-  SQL.execute_ conn "CREATE TABLE IF NOT EXISTS spent (txId TEXT NOT NULL, txIx INT NOT NULL)"
-  SQL.execute_ conn "CREATE INDEX IF NOT EXISTS unspent_transaction_address ON unspent_transactions (address)"
-  SQL.execute_ conn "CREATE UNIQUE INDEX IF NOT EXISTS unspent_transaction_txid ON unspent_transactions (txId)"
+  SQL.execute_ conn [r|CREATE TABLE IF NOT EXISTS unspent_transactions
+                            (address TEXT NOT NULL
+                            ,txId TEXT NOT NULL
+                            , txIx INT NOT NULL
+                            , datum BLOB
+                            , datumHash BLOB
+                            , value TEXT
+                            , inLineScript BLOB
+                            , inLineScriptHash BLOB
+                            , slotNo INT
+                            , blockNo INT)|]
+  SQL.execute_ conn [r|CREATE TABLE IF NOT EXISTS spent
+                            (txId TEXT NOT NULL
+                            , txIx INT NOT NULL)|]
+  SQL.execute_ conn [r|CREATE INDEX IF NOT EXISTS
+                      unspent_transaction_address
+                      ON unspent_transactions (address)|]
+  SQL.execute_ conn [r|CREATE UNIQUE INDEX IF NOT EXISTS
+                      unspent_transaction_txid ON
+                      unspent_transactions (txId)|]
   pure ix
 
 eventAtAddress :: C.AddressAny -> UtxoEvent -> [UtxoEvent]
@@ -259,6 +279,7 @@ eventAtAddress addr event =
 findByAddress :: C.AddressAny -> [UtxoEvent] -> [UtxoEvent]
 findByAddress addr = concatMap (eventAtAddress addr)
 
+-- | remove spent transactions
 rmSpentUtxos :: UtxoEvent -> UtxoEvent
 rmSpentUtxos event =
     event & utxoEventUtxos %~ (f (event ^. utxoEventInputs) )
@@ -268,16 +289,19 @@ rmSpentUtxos event =
         isUtxoSpent :: (Set.Set C.TxIn) -> Utxo -> Bool
         isUtxoSpent txIns u = ( C.TxIn (u ^. utxoTxId)(u ^. utxoTxIx)) `Set.member` txIns
 
+-- | convert utoEvents to utxoRows
 toRows :: UtxoEvent -> [UtxoRow]
 toRows event =  event ^. utxoEventUtxos & traversed %~ f
     where
         f :: Utxo -> UtxoRow
         f  u = UtxoRow u (event ^. utxoEventSlotNo ) (event ^. utxoEventBlockNo)
 
+-- | only store rows in the address list.
 addressFilteredRows :: C.AddressAny -> [UtxoEvent] -> [UtxoRow]
 addressFilteredRows addr = (concatMap toRows ) . findByAddress addr
 
 -- | Query the data stored in the indexer
+-- Quries SQL + buffered data, where buffered data is the data that will be batched to SQL
 query
   :: UtxoIndex                  -- ^ in-memory indexer
   -> C.AddressAny               -- ^ Address to filter for
@@ -287,8 +311,21 @@ query ix addr volatiles = do
   diskStored <-
       SQL.query
         (ix ^. Ix.handle)
-        "SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash, u.value, u.slotNo, u.blockNo FROM unspent_transactions u LEFT JOIN spent s ON u.txId = s.txId AND u.txIx = s.txIx WHERE u.address = ?"
-        (Only addr) :: IO[UtxoRow]
+        [r|SELECT u.address
+            , u.txId
+            , u.txIx
+            , u.datum
+            , u.datumHash
+            , u.value
+            , u.inLineScriptHash
+            , u.inLineScriptHash
+            , u.slotNo, u.blockNo
+       FROM unspent_transactions u
+       LEFT JOIN spent s ON u.txId = s.txId
+            AND u.txIx = s.txIx
+       WHERE u.address = ?|]
+        -- "SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash, u.value, u.inLineScriptHash, u.inLineScriptHash, u.slotNo, u.blockNo FROM unspent_transactions u LEFT JOIN spent s ON u.txId = s.txId AND u.txIx = s.txIx WHERE u.address = ?"
+       (Only addr) :: IO[UtxoRow]
   buffered <- Ix.getBuffer $ ix ^. Ix.storage :: IO [UtxoEvent]
   let events = volatiles ++ buffered
   pure . Just $
@@ -313,22 +350,21 @@ onInsert  _ _ =  pure []
 store :: UtxoIndex -> IO ()
 store ix = do
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  putStrLn "storing row"
   let rows =  (concatMap toRows) $  buffer
       spent = concatMap (Set.toList . _utxoEventInputs) buffer
       conn = ix ^. Ix.handle
   bracket_
       (SQL.execute_ conn "BEGIN")
       (SQL.execute_ conn "COMMIT")
-      ( concurrently_ (
-            unless (null rows)
+      ( concurrently_
+            (unless (null rows)
                 (SQL.executeMany conn
-                "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?)"
-                rows) >> putStrLn "inserted utxo")
+                "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, inlineScript, inlineScriptHash, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?,?,?)"
+                rows))
             (unless (null spent)
                 (SQL.executeMany conn
                 "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
-                spent) >> putStrLn "inserted spent")
+                spent))
       )
   -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
   rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
@@ -336,6 +372,7 @@ store ix = do
     SQL.execute_ conn "DELETE FROM unspent_transactions WHERE unspent_transactions.rowid IN (SELECT unspent_transactions.rowid FROM unspent_transactions LEFT JOIN spent on unspent_transactions.txId = spent.txId AND unspent_transactions.txIx = spent.txIx WHERE spent.txId IS NOT NULL)"
     SQL.execute_ conn "VACUUM"
 
+-- convert to AddressAny from address in any valid cardano era
 toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
 toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
 toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr

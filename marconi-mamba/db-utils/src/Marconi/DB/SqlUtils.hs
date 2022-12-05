@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -27,6 +28,7 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
+import Text.RawString.QQ (r)
 
 -- | Represents Shelley type addresses with most utxo transactions
 --
@@ -59,10 +61,14 @@ freqUtxoTable env =
     void $ withQueryAction env ( \conn ->
         execute_ conn "drop table if exists frequtxos"
         >> execute_ conn "drop table if exists shelleyaddresses"
-        >> execute_ conn "create table frequtxos as select address, count (address) as frequency from utxos group by address order by frequency DESC"
+        >> execute_ conn [r|CREATE TABLE frequtxos AS
+                               SELECT address, count (address)
+                               AS frequency FROM unspent_transactions
+                               GROUP BY address
+                               ORDER BY frequency DESC|]
         >> execute_ conn "delete from frequtxos where frequency < 50" -- we only want `intersing` data
-        >> execute_ conn
-           "create TABLE shelleyaddresses (address text not null, frequency int not null)")
+        >> execute_ conn [r|CREATE TABLE shelleyaddresses
+                              (address TEXT NOT NULL, frequency INT NOT NULL)|])
 
 withQueryAction :: DBEnv -> (Connection -> IO a) -> IO a
 withQueryAction env action =

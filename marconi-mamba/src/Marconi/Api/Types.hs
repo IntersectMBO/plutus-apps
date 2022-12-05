@@ -32,13 +32,16 @@ module Marconi.Api.Types
                          )  where
 import Control.Exception (Exception)
 import Control.Lens (makeClassy)
-import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
-import Data.Text (Text)
+import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
+import Data.Aeson qualified
+import Data.ByteString (ByteString)
+import Data.Text (Text, pack)
+import Data.Text.Encoding (decodeLatin1)
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (Settings)
 
-import Cardano.Api (NetworkId)
-import Marconi.Index.Utxo (UtxoRow)
+import Cardano.Api qualified as C
+import Marconi.Index.Utxo (Utxo, UtxoRow)
 import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
 import Marconi.Types as Export (TargetAddresses)
 
@@ -49,10 +52,9 @@ data CliArgs = CliArgs
   { socket          :: FilePath             -- ^ POSIX socket file to communicate with cardano node
   , dbPath          :: FilePath             -- ^ filepath to local sqlite for utxo index table
   , httpPort        :: Maybe Int            -- ^ optional tcp/ip port number for JSON-RPC http server
-  , networkId       :: NetworkId            -- ^ cardano network id
+  , networkId       :: C.NetworkId          -- ^ cardano network id
   , targetAddresses :: TargetAddresses      -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
-
 
 data DBQueryEnv = DBQueryEnv
     { _queryTMVar     :: UtxoQueryTMVar
@@ -91,3 +93,18 @@ data QueryExceptions
     | QueryError String
     deriving stock Show
     deriving anyclass  Exception
+
+instance ToJSON C.AddressAny where
+    toJSON = Data.Aeson.String . C.serialiseAddress
+
+instance ToJSON C.ScriptData where
+    toJSON = Data.Aeson.String . pack . show
+
+instance ToJSON ByteString where
+    toJSON = Data.Aeson.String . decodeLatin1
+
+instance ToJSON Utxo
+
+instance ToJSON C.BlockNo
+
+instance ToJSON UtxoRow

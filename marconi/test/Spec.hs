@@ -19,7 +19,6 @@ import Gen.Cardano.Api.Typed qualified as CGen
 
 import Integration qualified
 import Marconi.Index.ScriptTx qualified as ScriptTx
-import Spec.Cli qualified
 import Spec.Utxo qualified
 
 main :: IO ()
@@ -30,7 +29,6 @@ tests = testGroup "Marconi"
   [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
   , Spec.Utxo.tests
   , Integration.tests
-  , Spec.Cli.tests
   ]
 
 -- | Create @nScripts@ scripts, add them to a transaction body, then

@@ -80,8 +80,6 @@ library
     , json-rpc
     , marconi
 
-  -- , rewindable-index
-
   --------------------------
   -- Other IOG dependencies
   --------------------------
@@ -96,18 +94,17 @@ library
     , aeson
     , async
     , base                  >=4.9 && <5
+    , bytestring
     , lens
     , optparse-applicative
     , prettyprinter
     , servant
     , servant-server
-    , stm
+    , stm                   >=2.5
     , text
     , time
     , warp
 
--- , containers
--- , sqlite-simple
 executable marconi-mamba
   import:         lang
   hs-source-dirs: app
@@ -136,11 +133,6 @@ executable examples-json-rpc-server
   build-depends:
     , marconi
     , marconi-mamba
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  -- build-depends:  cardano-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -188,7 +180,8 @@ library db-utils
   ------------------------
   build-depends:
     , async
-    , base           >=4.9 && <5
+    , base            >=4.9 && <5
+    , raw-strings-qq
     , sqlite-simple
     , text
     , time
@@ -216,7 +209,7 @@ test-suite marconi-mamba-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Spec.Cli
+  other-modules:  Spec.UtxoIndexersQuery
 
   --------------------
   -- Local components
@@ -224,6 +217,7 @@ test-suite marconi-mamba-test
   build-depends:
     , marconi
     , marconi-mamba
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies

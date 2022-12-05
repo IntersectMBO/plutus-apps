@@ -11,10 +11,11 @@ module Marconi.Api.UtxoIndexersQuery
     , reportQueryCardanoAddresses
     , reportBech32Addresses
     , withQueryAction
+    , writeTMVar
     ) where
 import Control.Concurrent.Async (forConcurrently)
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, takeTMVar)
+import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, takeTMVar, tryTakeTMVar)
 import Control.Exception (bracket)
 import Control.Lens ((^.))
 import Control.Monad.STM (STM)
@@ -38,7 +39,7 @@ bootstrap
 bootstrap targetAddresses = do
     ix <- atomically (newEmptyTMVar :: STM (TMVar Utxo.UtxoIndex) )
     pure $ DBQueryEnv
-        {_queryTMVar = UtxoQueryTMVar ix
+        { _queryTMVar = UtxoQueryTMVar ix
         , _queryAddresses = targetAddresses
         }
 -- | finds reports for all user-provided addresses.
@@ -59,16 +60,16 @@ findAll env = forConcurrently addresses f
 --  To Cardano error may occure
 findByCardanoAddress
     :: DBQueryEnv                   -- ^ Query run time environment
-    -> C.AddressAny      -- ^ Cardano address to query
+    -> C.AddressAny                 -- ^ Cardano address to query
     -> IO [Utxo.UtxoRow]
-findByCardanoAddress env address = withQueryAction env  address
+findByCardanoAddress  = withQueryAction
 
 -- | Retrieve a Set of TxOutRefs associated with the given Cardano Era address
 -- We return an empty Set if no address is found
 findByAddress
-    :: DBQueryEnv                   -- ^ Query run time environment
+    :: DBQueryEnv                                   -- ^ Query run time environment
     -> Text                                         -- ^ Bech32 Address
-    -> IO (Either QueryExceptions UtxoTxOutReport)   -- ^ To Plutus address conversion error may occure
+    -> IO (Either QueryExceptions UtxoTxOutReport)  -- ^ To Plutus address conversion error may occure
 findByAddress env addressText =
     let
         f :: Either C.Bech32DecodeError (C.Address C.ShelleyAddr) -> IO (Either QueryExceptions UtxoTxOutReport)
@@ -88,14 +89,19 @@ findByAddress env addressText =
 -- | Execute the query function
 -- We must stop the utxo inserts before doing the query
 withQueryAction
-    :: DBQueryEnv                                           -- ^ Query run time environment
-    -> C.AddressAny                                      -- ^ Cardano address to query
+    :: DBQueryEnv                                            -- ^ Query run time environment
+    -> C.AddressAny                                          -- ^ Cardano address to query
     -> IO [Utxo.UtxoRow]
 withQueryAction env address =
     let
         utxoIndexer = unUtxoIndex  $ env ^. queryTMVar
         action :: Utxo.UtxoIndex -> IO [Utxo.UtxoRow]
-        action ndxr = (Utxo.queryPlusVolatile ndxr address) >>= pure . (\case { Just x -> x; _ -> [] })
+        action ndxr = do
+            mayberows <- (Utxo.queryPlusVolatile ndxr address)
+            let rows =  case mayberows of
+                    Nothing -> []
+                    Just r  -> r
+            pure rows
     in
         bracket
           (atomically $ takeTMVar  utxoIndexer)
@@ -124,3 +130,8 @@ reportBech32Addresses env
     = NonEmpty.toList
     . fmap C.serialiseAddress
     $ (env ^. queryAddresses )
+
+-- | Non-blocking write of a new value to a 'TMVar'
+-- Puts if empty. Replaces if populated.
+writeTMVar :: TMVar a -> a -> STM ()
+writeTMVar t new = tryTakeTMVar t >> putTMVar t new

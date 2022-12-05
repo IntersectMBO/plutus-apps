@@ -11,12 +11,13 @@ module Main where
 
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (race_)
-import Control.Concurrent.STM (atomically, putTMVar)
+import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, strOption, (<**>))
 
 import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (queryTMVar), HasJsonRpcEnv (queryEnv), TargetAddresses,
                           unUtxoIndex)
+import Marconi.Api.UtxoIndexersQuery (writeTMVar)
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc)
 import Marconi.CLI (multiString)
 import Marconi.Index.Utxo (Depth (Depth), open)
@@ -32,9 +33,9 @@ cliParser = CliOptions
     <$> strOption (long "utxo-db"
                               <> short 'd'
                               <> metavar "FILENAME"
-                              <> help "Path to the marconi SQLite database.")
+                              <> help "Path to the utxo SQLite database.")
      <*> multiString (long "addresses-to-index"
-                        <> help ("Becch32 Shelley addresses to index."
+                        <> help ("Bech32 Shelley addresses to index."
                                  <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
 
 main :: IO ()
@@ -52,7 +53,7 @@ main = do
 -- Effectively we are going to query SQLite only
 mocUtxoIndexer :: FilePath -> DBQueryEnv -> IO ()
 mocUtxoIndexer dbpath env =
-        open dbpath (Depth 4) >>= atomically . (putTMVar utxoIndexer) >> innerLoop
+        open dbpath (Depth 4) >>= atomically . (writeTMVar utxoIndexer) >> innerLoop
     where
         utxoIndexer = unUtxoIndex $ env ^. queryTMVar
         innerLoop = threadDelay 1000000 >> innerLoop -- create some latency

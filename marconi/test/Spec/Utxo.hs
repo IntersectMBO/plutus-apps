@@ -1,10 +1,5 @@
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Spec.Utxo (tests) where
 
@@ -15,9 +10,8 @@ import Control.Monad.IO.Class (liftIO)
 import Data.List (nub)
 import Data.List.NonEmpty (nonEmpty, toList)
 import Data.Maybe (catMaybes, fromJust)
-import Database.SQLite.Simple qualified as SQLite
 
-import Hedgehog (Gen, Property, diff, forAll, property, (===))
+import Hedgehog (Gen, Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -27,25 +21,25 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 import Cardano.Api qualified as C
 import Gen.Cardano.Api.Typed qualified as CGen
 import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Indexers (uTxo, uTxoEvents)
+import Marconi.Indexers (getUtxoEvents, getUtxos)
 import Marconi.Types (CurrentEra, TargetAddresses)
 import RewindableIndex.Index.VSplit qualified as Ix
 
 tests :: TestTree
 tests = testGroup "Marconi.Index.Specs" $
-    [testPropertyNamed "marconi-index utxos event builder" "Spec. Utxo from Cardano.Api.Tx with targetAddresses"
+    [testPropertyNamed
+     "marconi-index utxos event builder" "Spec. Utxo from Cardano.Api.Tx with targetAddresses"
      txToUtxoTest
-    , testPropertyNamed "marconi-index utxos event at address" "Spec. Filter UtxoEvents for an address"
+    , testPropertyNamed
+      "marconi-index utxos event at address" "Spec. Filter UtxoEvents for an address"
       addressFilteredEventsTest
-    , testPropertyNamed "marconi-index utxos storage" "Spec. Save and retreive UtxoEvents"
+    , testPropertyNamed "marconi-index utxos in-memory store" "Spec. Save and retreive UtxoEvents"
       utxoStorageTest
-    , testPropertyNamed "marconi-index utxos in-memory store" "Spec. Save and retreive UtxoEvents from hot-store only"
-      hotstoreUtxoEventTest
     ]
 
 addressFilteredEventsTest :: Property
 addressFilteredEventsTest = property $ do
-    event <- forAll $ genEvents -- force db flush
+    event <- forAll $ genEvents
     let (addresses :: [C.AddressAny]) = nub( event ^. Utxo.utxoEventUtxos ^.. folded . Utxo.utxoAddress)
         event' =  Utxo.eventAtAddress (head addresses) event
     Hedgehog.assert ((null event') == False)
@@ -55,7 +49,7 @@ txToUtxoTest ::  Property
 txToUtxoTest = property $ do
     t@(C.Tx (C.TxBody C.TxBodyContent{C.txOuts}) _)  <- forAll $ CGen.genTx C.BabbageEra
     let (targetAddresses :: Maybe TargetAddresses ) = addressesFromTxOuts txOuts
-    let (utxos :: [Utxo.Utxo]) = uTxo targetAddresses t
+    let (utxos :: [Utxo.Utxo]) = getUtxos targetAddresses t
     case targetAddresses of
         Nothing         ->  (length utxos) === (length txOuts)
         Just targets    ->
@@ -72,27 +66,13 @@ genEvents = do
     slotNo <- CGen.genSlotNo
     blockNo  <- genBlockNo
     txs <- Gen.list (Range.linear 2 5)(CGen.genTx C.ShelleyEra)
-    pure . fromJust $ uTxoEvents Nothing slotNo blockNo txs
-
-hotstoreUtxoEventTest :: Property
-hotstoreUtxoEventTest  = property $ do
-    event <- forAll $ genEvents
-    let (rows :: [Utxo.UtxoRow]) = Utxo.toRows event
-        (addresses :: [C.AddressAny]) = nub . fmap (\r -> r ^. Utxo.utxoRowUtxo . Utxo.utxoAddress ) $ rows
-    ndx <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 2196) -- no db writes, test memory only
-    ix <- liftIO $ Ix.insert event ndx
-    storeResults <- liftIO $ ( forM addresses (\addr -> Utxo.queryPlusVolatile ix addr) :: IO [Utxo.Result ] )
-    let (fromQuery  :: [Utxo.UtxoRow] ) = concat . catMaybes $ storeResults
-    let conn =  ix ^. Ix.handle
-    liftIO $ SQLite.close conn
-    Hedgehog.diff (length rows) (==) (length fromQuery)
-    rows === fromQuery
-
+    pure . fromJust $ getUtxoEvents Nothing slotNo blockNo txs
 
 utxoStorageTest :: Property
-utxoStorageTest  = property $ do
-    ndx <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 2) -- force storage to use sqlite + buffer + volatile
-    events <- forAll $ Gen.list (Range.linear 2 4) genEvents -- force db flush
+utxoStorageTest = property $ do
+    depth <- forAll $ Gen.int (Range.linear 1  5) -- force DB writes
+    ndx <- liftIO $ Utxo.open ":memory:" (Utxo.Depth depth)
+    events <- forAll $ Gen.list (Range.linear 1 10) genEvents
     let (rows :: [Utxo.UtxoRow]) = nub . concatMap Utxo.toRows $ events
         (addresses :: [C.AddressAny]) = nub . fmap (\r -> r ^. Utxo.utxoRowUtxo . Utxo.utxoAddress ) $ rows
     ix <- liftIO $ Ix.insertL (events) ndx
