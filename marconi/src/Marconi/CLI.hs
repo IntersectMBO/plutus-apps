@@ -138,13 +138,13 @@ optAddressesParser :: Opt.Mod Opt.OptionFields [CardanoAddress] -> Opt.Parser (M
 optAddressesParser =  optional . multiString
 
 utxoDbName :: FilePath
-utxoDbName = "utxodb"
+utxoDbName = "utxo.db"
 
 datumDbName :: FilePath
-datumDbName = "datumdb"
+datumDbName = "datum.db"
 
 scriptTxDbName :: FilePath
-scriptTxDbName = "scripttxdb"
+scriptTxDbName = "scripttx.db"
 
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
