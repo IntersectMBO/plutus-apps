@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: nixbuild/nix-quick-install-action@v19
-      - run: nix-instantiate release.nix --arg supportedSystems '[ builtins.currentSystem ]' --restrict-eval -I . --allowed-uris 'https://github.com/NixOS/nixpkgs https://github.com/input-output-hk https://github.com/NixOS/nixpkgs-channels' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://iohk.cachix.org https://cache.nixos.org/" --show-trace
+      - run: nix-instantiate release.nix --arg supportedSystems '[ builtins.currentSystem ]' --restrict-eval -I . --allowed-uris 'https://github.com/NixOS/nixpkgs https://github.com/input-output-hk https://github.com/NixOS/nixpkgs-channels' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://cache.iog.io https://iohk.cachix.org https://cache.nixos.org/" --show-trace
   nix-tests:
     strategy:
       matrix:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: nixbuild/nix-quick-install-action@v19
-      - run: nix-build -A tests.nixpkgsFmt -A tests.cabalFmt -A tests.purs-tidy -A tests.pngOptimization -A tests.shellcheck -A tests.stylishHaskell --arg supportedSystems '[ builtins.currentSystem ]' --restrict-eval -I . --allowed-uris 'https://github.com/NixOS/nixpkgs https://github.com/input-output-hk https://github.com/NixOS/nixpkgs-channels' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://iohk.cachix.org https://cache.nixos.org/"
+      - run: nix-build -A tests.nixpkgsFmt -A tests.cabalFmt -A tests.purs-tidy -A tests.pngOptimization -A tests.shellcheck -A tests.stylishHaskell --arg supportedSystems '[ builtins.currentSystem ]' --restrict-eval -I . --allowed-uris 'https://github.com/NixOS/nixpkgs https://github.com/input-output-hk https://github.com/NixOS/nixpkgs-channels' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://cache.iog.io https://iohk.cachix.org https://cache.nixos.org/"
   check-for-updates:
     strategy:
       matrix:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: nixbuild/nix-quick-install-action@v19
       - run: |
-          nix --extra-experimental-features 'nix-command flakes' --extra-experimental-features flakes flake lock --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://iohk.cachix.org https://cache.nixos.org/"
+          nix --extra-experimental-features 'nix-command flakes' --extra-experimental-features flakes flake lock --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://cache.iog.io https://iohk.cachix.org https://cache.nixos.org/"
           # Disabled until we can find a way to run it only for Linux
-          # nix-shell --command "updateMaterialized" --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://iohk.cachix.org https://cache.nixos.org/"
+          # nix-shell --command "updateMaterialized" --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://cache.iog.io https://iohk.cachix.org https://cache.nixos.org/"
           git diff --exit-code
