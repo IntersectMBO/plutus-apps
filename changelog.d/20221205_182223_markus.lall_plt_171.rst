@@ -1,0 +1,4 @@
+Added
+-----
+
+- Add epoch stakepool size indexer; the data indexed is roughly equivalent to the `epoch_stake` table in dbsync.
