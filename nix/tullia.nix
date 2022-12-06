@@ -1,55 +1,58 @@
-self: system:
+/*
+This file defines tullia tasks and cicero actions.
+Tullia is a sandboxed multi-runtime DAG task runner with Cicero support.
+Tasks can be written in different languages and are compiled for each runtime using Nix.
+It comes with essential building blocks for typical CI/CD scenarios.
+Learn more: https://github.com/input-output-hk/tullia
+Cicero is an if-this-then-that machine on HashiCorp Nomad.
+It can run any event-and-state-driven automation actions
+and hence CI/CD pipelines are a natural fit.
+In tandem with Tullia, an action could be described as
+the rule that describes when a Tullia task is to be invoked.
+Learn more: https://github.com/input-output-hk/cicero
+*/
 
 let
-  inherit (self.inputs.tullia.inputs.nixpkgs) lib;
-
   ciInputName = "GitHub event";
+  repository = "input-output-hk/plutus-apps";
+  ciTaskTopAttr = "ciJobs";
+
 in
 rec {
-  tasks =
-    let
-      inherit (self.inputs.tullia) flakeOutputTasks taskSequence;
 
-      common =
-        { config
-        , ...
-        }: {
-          preset = {
-            # needed on top-level task to set runtime options
-            nix.enable = true;
+  tasks.ci = { config, lib, ... }: {
+    preset = {
+      nix.enable = true;
 
-            github-ci = {
-              # Tullia tasks can run locally or on Cicero.
-              # When no facts are present we know that we are running locally and vice versa.
-              # When running locally, the current directory is already bind-mounted
-              # into the container, so we don't need to fetch the source from GitHub
-              # and we don't want to report a GitHub status.
-              enable = config.actionRun.facts != { };
-              repo = "input-output-hk/plutus-apps";
-              sha = config.preset.github-ci.lib.getRevision ciInputName null;
-            };
-          };
-        };
-
-      ciTasks = __mapAttrs
-        (_: flakeOutputTask: { ... }: {
-          imports = [ common flakeOutputTask ];
-
-          memory = 1024 * 8;
-          nomad.resources.cpu = 10000;
-        })
-        (flakeOutputTasks [ "ciJobs" system ] self);
-
-      ciTasksSeq = taskSequence "ci/" ciTasks (__attrNames ciTasks);
-    in
-    ciTasks // # for running tasks separately
-    ciTasksSeq // # for running in an arbitrary sequence
-    {
-      "ci" = { lib, ... }: {
-        imports = [ common ];
-        after = __attrNames ciTasksSeq;
+      github.status = {
+        enable = config.actionRun.facts != { };
+        inherit repository;
+        revision = config.preset.github.lib.readRevision ciInputName null;
       };
     };
+
+    command.text =
+      let
+        flakeUrl = ''github:${repository}/"$(${lib.escapeShellArg config.preset.github.status.revision})"'';
+      in
+      config.preset.github.status.lib.reportBulk {
+        bulk.text = ''
+          nix eval .#ciJobs --apply __attrNames --json | # all systems the flake declares
+          nix-systems -i | # figure out which the current machine is able to build
+          jq 'with_entries(select(.value))' # only keep those we can build
+        '';
+        each.text = ''nix build -L ${flakeUrl}#${lib.escapeShellArg ciTaskTopAttr}."$1".required'';
+        skippedDescription = lib.escapeShellArg "No nix builder available for this platform";
+      };
+
+    # some hydra jobs run NixOS tests
+    env.NIX_CONFIG = ''
+      extra-system-features = kvm
+    '';
+
+    memory = 1024 * 32;
+    nomad.resources.cpu = 10000;
+  };
 
   actions = {
     "plutus-apps/ci" = {

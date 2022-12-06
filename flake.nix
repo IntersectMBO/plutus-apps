@@ -110,7 +110,7 @@
           sources = inputs;
         };
       } //
-      tullia.fromSimple system (import ./nix/tullia.nix self system)
+      tullia.fromSimple system (import ./nix/tullia.nix)
     ));
 
   nixConfig = {
