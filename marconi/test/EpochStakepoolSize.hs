@@ -81,8 +81,8 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
   let stakedLovelace = 50_000_000
       stakedLovelace2 = 70_000_000
       totalStakedLovelace = stakedLovelace + stakedLovelace2
-  TN.submitAwaitTx con =<< TN.transferTx networkId con genesisAddress paymentAddress [C.WitnessGenesisUTxOKey genesisSKey] stakedLovelace
-  TN.submitAwaitTx con =<< TN.transferTx networkId con genesisAddress paymentAddress2 [C.WitnessGenesisUTxOKey genesisSKey] stakedLovelace2
+  TN.submitAwaitTx con =<< TN.mkTransferTx networkId con genesisAddress paymentAddress [C.WitnessGenesisUTxOKey genesisSKey] stakedLovelace
+  TN.submitAwaitTx con =<< TN.mkTransferTx networkId con genesisAddress paymentAddress2 [C.WitnessGenesisUTxOKey genesisSKey] stakedLovelace2
 
   -- Register stake addresses
   TN.submitAwaitTx con =<< registerStakeAddress networkId con pparams genesisAddress genesisSKey stakeCredential
@@ -203,7 +203,7 @@ registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredentia
     dummyFee = 0
     tx0 = (TN.emptyTxBodyContent dummyFee pparams)
       { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-      , C.txOuts = [TN.outAddress payerAddress $ totalLovelace - dummyFee]
+      , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
       , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra [stakeAddressRegCert] (C.BuildTxWith mempty)
       }
     keyWitnesses = [C.WitnessGenesisUTxOKey payerSKey]
@@ -211,7 +211,7 @@ registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredentia
   let
     feeLovelace = TN.calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses) networkId txBody0 :: C.Lovelace
     fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
-    tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.outAddress payerAddress $ totalLovelace - feeLovelace] }
+    tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - feeLovelace] }
 
   txBody <- HE.leftFail $ C.makeTransactionBody tx1
   let tx = C.signShelleyTransaction txBody keyWitnesses
@@ -270,7 +270,7 @@ registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials p
        dummyFee = 0
        tx0 = (TN.emptyTxBodyContent dummyFee pparams)
          { C.txIns = (map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns)
-         , C.txOuts = [TN.outAddress payerAddress $ totalLovelace - dummyFee]
+         , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
          , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra
            ([poolRegistration] <> delegationCertificates)
            (C.BuildTxWith mempty) -- BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
@@ -280,7 +280,7 @@ registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials p
        -- cardano-cli transaction calculate-min-fee
        feeLovelace = TN.calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses') networkId txBody0 :: C.Lovelace
        fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
-       tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.outAddress payerAddress $ totalLovelace - feeLovelace] }
+       tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - feeLovelace] }
 
      txBody :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx1
      let tx = C.signShelleyTransaction txBody keyWitnesses'
