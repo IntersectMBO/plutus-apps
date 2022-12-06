@@ -101,9 +101,10 @@
         legacyPackages = topLevel;
 
         # Exported to generate tullia tasks from
-        ciJobs = import ./ci.nix {
+        ciJobs = import ./release.nix {
+          inherit system;
           supportedSystems = [ system ];
-          plutus-apps-commit = {
+          plutus-apps = {
             outPath = self;
             rev = self.rev;
           };
@@ -116,7 +117,6 @@
   nixConfig = {
     extra-substituters = [
       "https://cache.iog.io"
-      "https://hydra.iohk.io"
     ];
     extra-trusted-public-keys = [
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="

@@ -1,11 +1,12 @@
 { supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
+, system ? builtins.currentSystem
 , rootsOnly ? false
 , sourcesOverride ? { }
 , sources ? import ./nix/sources.nix { system = builtins.currentSystem; } // sourcesOverride
 , plutus-apps ? { outPath = ./.; rev = "abcdef"; }
 }:
 let
-  pkgs = import sources.nixpkgs { system = builtins.currentSystem; };
+  pkgs = import sources.nixpkgs { inherit system; };
 
   traceNames = prefix: builtins.mapAttrs (n: v:
     if builtins.isAttrs v
