@@ -90,8 +90,7 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, uses, view, (%=), (&), (.=), (.~), (<>=),
-                     (^.), (^?))
+import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, uses, view, (%=), (.=), (<>=), (^.), (^?))
 import Control.Lens.Extras (is)
 import Control.Monad (forM_, guard)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
@@ -110,7 +109,7 @@ import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
+import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
@@ -121,12 +120,12 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Ledger.Crypto (pubKeyHash)
-import Ledger.Index (minAdaTxOut)
+import Ledger.Index (adjustTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (PParams, Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
-                  Versioned (Versioned), txOutValue)
+                  Versioned (Versioned))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
@@ -562,21 +561,6 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 -- restriction on the real Cardano network).
 adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxOut params)
-
--- | Adjust a single transaction output so it contains at least the minimum amount of Ada
--- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: PParams -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
-adjustTxOut params txOut = do
-    -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
-    let txOutEstimate = txOut & outValue .~ withMinAdaValue
-        minAdaTxOutEstimated' = minAdaTxOut params txOutEstimate
-        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
-    if missingLovelace > 0
-    then do
-      adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
-      pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
-    else pure ([], txOut)
 
 
 updateUtxoIndex
