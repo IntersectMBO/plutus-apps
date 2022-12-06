@@ -9,7 +9,7 @@ module Cardano.Streaming
   , CS.mkConnectInfo
   , CS.mkLocalNodeConnectInfo
 
-  -- * Stream blokcs and ledger states
+  -- * Stream blocks and ledger states
   , blocks
   , blocksPipelined
   , ledgerStates
