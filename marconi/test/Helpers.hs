@@ -223,7 +223,6 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
   ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
   H.annotate $ "Workspace: " <> ws
-  -- liftIO $ IO.writeFile (ws <> "/module") callerModuleName
   f ws
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
