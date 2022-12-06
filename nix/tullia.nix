@@ -1,15 +1,15 @@
 /*
-This file defines tullia tasks and cicero actions.
-Tullia is a sandboxed multi-runtime DAG task runner with Cicero support.
-Tasks can be written in different languages and are compiled for each runtime using Nix.
-It comes with essential building blocks for typical CI/CD scenarios.
-Learn more: https://github.com/input-output-hk/tullia
-Cicero is an if-this-then-that machine on HashiCorp Nomad.
-It can run any event-and-state-driven automation actions
-and hence CI/CD pipelines are a natural fit.
-In tandem with Tullia, an action could be described as
-the rule that describes when a Tullia task is to be invoked.
-Learn more: https://github.com/input-output-hk/cicero
+  This file defines tullia tasks and cicero actions.
+  Tullia is a sandboxed multi-runtime DAG task runner with Cicero support.
+  Tasks can be written in different languages and are compiled for each runtime using Nix.
+  It comes with essential building blocks for typical CI/CD scenarios.
+  Learn more: https://github.com/input-output-hk/tullia
+  Cicero is an if-this-then-that machine on HashiCorp Nomad.
+  It can run any event-and-state-driven automation actions
+  and hence CI/CD pipelines are a natural fit.
+  In tandem with Tullia, an action could be described as
+  the rule that describes when a Tullia task is to be invoked.
+  Learn more: https://github.com/input-output-hk/cicero
 */
 
 let
