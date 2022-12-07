@@ -100,16 +100,8 @@
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
 
-        # Exported to generate tullia tasks from
-        ciJobs = import ./release.nix {
-          inherit system;
-          supportedSystems = [ system ];
-          plutus-apps = {
-            outPath = self;
-            rev = self.rev;
-          };
-          sources = inputs;
-        };
+        ciJobs = import ./ciJobs.nix { inherit system; };
+
       } //
       tullia.fromSimple system (import ./nix/tullia.nix)
     ));
