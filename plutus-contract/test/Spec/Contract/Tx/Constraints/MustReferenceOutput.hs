@@ -22,7 +22,6 @@ import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Text qualified as Text
 import Data.Void (Void)
-import GHC.Base (undefined)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Cons

@@ -11,7 +11,6 @@ module Spec.Contract.Tx.Constraints.MustIncludeDatum(tests) where
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Monad (void)
-import Data.Text qualified as T
 import Data.Void (Void)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -54,9 +53,6 @@ tests =
           -- no offchain constraint, onchain (minting policy) expects no datum
           -- when there's no spending script to witness.
         , withoutOffChainConstraintDatumIsNotIncludedInTxBodyByDefault
-          -- offchain uses optional datum without datum hash at output, onchain
-          -- expects no datums in witness set
-        , mustIncludeDatumInTxForOptionalDatumWithoutOutputDoesNotIncludeDatum
           -- offchain uses optional datum being sent to pubkey address instead
           -- of script address (no required datum), onchain expects optional
           -- datum only
@@ -192,37 +188,6 @@ withoutOffChainConstraintDatumIsNotIncludedInTxBodyByDefault =
 
     in checkPredicate
     "Successful use of onchain mustIncludeDatumInTx (no offchain constraint) to assert that datum is not redundantly included in txbody when sending funds to script but not to witness spending from script"
-    (assertValidatedTransactionCount 1)
-    (void $ trace contract)
-
--- | Offchain constraint attempts to include optional datum without an output
--- to hold its hash. Onchain constraint expects only the required datum.
-mustIncludeDatumInTxForOptionalDatumWithoutOutputDoesNotIncludeDatum :: TestTree
-mustIncludeDatumInTxForOptionalDatumWithoutOutputDoesNotIncludeDatum =
-    let offChainConstraintDatum = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData ("otherDatum" :: P.BuiltinByteString)
-        onChainConstraintDatums = [validatorDatum]
-        contract = do
-            let lookups1 = Constraints.typedValidatorLookups typedValidator
-                tx1 = Constraints.mustPayToTheScriptWithDatumInTx
-                        validatorDatumBs
-                        (Ada.lovelaceValueOf 25_000_000)
-            ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
-            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-
-            utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash typedValidator)
-            let lookups2 =
-                    Constraints.typedValidatorLookups typedValidator
-                    <> Constraints.unspentOutputs utxos
-                tx2 =
-                    Constraints.collectFromTheScript utxos onChainConstraintDatums
-                    <> Constraints.mustIncludeDatumInTx offChainConstraintDatum -- without producing any outputs with datum hash
-            handleError (\err -> logError $ "Caught error: " ++ T.unpack err) $ do
-                -- Should fail with error 'DatumNotFoundInTx'
-                ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
-                awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
-
-    in checkPredicate
-    "Use of offchain mustIncludeDatumInTx without an output to hold the hash results in only the required datum being included in the witness set"
     (assertValidatedTransactionCount 1)
     (void $ trace contract)
 
