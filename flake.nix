@@ -101,7 +101,7 @@
         legacyPackages = topLevel;
 
         # Exported to generate tullia tasks from
-        ciJobs = import ./release.nix {
+        oldCiJobs = import ./release.nix {
           inherit system;
           supportedSystems = [ system ];
           plutus-apps = {
@@ -110,7 +110,7 @@
           };
           sources = inputs;
         };
-        # ciJobs = import ./ciJobs.nix { inherit system; };
+        ciJobs = import ./ciJobs.nix { inherit system; };
 
       } //
       tullia.fromSimple system (import ./nix/tullia.nix)
