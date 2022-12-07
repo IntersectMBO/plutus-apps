@@ -3,8 +3,8 @@ module Plutus.Contract.Test.MissingLovelace
   ( calculateDelta
   ) where
 
-import Ledger.Ada qualified as Ada
-import Ledger.Value (Value, noAdaValue)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value, noAdaValue)
 import PlutusTx.Prelude qualified as P
 
 -- | Returns the calculated delta between initial and final values. Might be false positive.

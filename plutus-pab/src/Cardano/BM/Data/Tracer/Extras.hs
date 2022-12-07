@@ -25,12 +25,12 @@ import Data.Text (Text)
 import Data.UUID (UUID)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Ledger.Tx (Tx)
-import Ledger.Value qualified as V
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Resumable (Response (..))
 import Plutus.Contract.State (ContractRequest)
 import Plutus.PAB.Events.Contract (ContractInstanceId, IterationID)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..))
+import Plutus.Script.Utils.Value qualified as V
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text qualified as Render
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)

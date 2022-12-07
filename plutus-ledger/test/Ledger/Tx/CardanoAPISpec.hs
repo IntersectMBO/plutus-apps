@@ -18,9 +18,9 @@ import Ledger.Tx (Language (PlutusV1), Tx (txMint), Versioned (Versioned), addMi
 import Ledger.Tx.CardanoAPI (fromCardanoAssetId, fromCardanoAssetName, fromCardanoPolicyId, fromCardanoValue,
                              makeTransactionBody, toCardanoAddressInEra, toCardanoAssetId, toCardanoAssetName,
                              toCardanoPolicyId, toCardanoTxBodyContent, toCardanoValue)
-import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
 
 import Data.Default (def)

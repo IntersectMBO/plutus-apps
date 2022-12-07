@@ -21,10 +21,10 @@ import Control.Lens
 import Control.Monad
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Ledger.Ada qualified as Ada
-import Ledger.Value (TokenName)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel as ContractModel
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName)
 
 import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty

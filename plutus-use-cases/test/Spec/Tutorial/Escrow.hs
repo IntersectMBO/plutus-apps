@@ -23,12 +23,13 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 
 import Ledger (minAdaTxOutEstimated)
-import Ledger.Ada qualified as Ada
-import Ledger.Value
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
+import Plutus.Contract.Test.Coverage
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value
 import Plutus.V1.Ledger.Api (Datum)
 
 import Plutus.Contracts.Tutorial.Escrow hiding (Action (..))

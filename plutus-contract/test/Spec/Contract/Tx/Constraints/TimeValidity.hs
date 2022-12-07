@@ -17,7 +17,6 @@ import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger (POSIXTimeRange)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
@@ -27,6 +26,7 @@ import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P

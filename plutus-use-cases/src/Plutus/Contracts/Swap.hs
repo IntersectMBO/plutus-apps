@@ -17,12 +17,12 @@ module Plutus.Contracts.Swap(
     ) where
 
 import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Ada (Ada)
-import Ledger.Ada qualified as Ada
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value)
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle
+import Plutus.Script.Utils.Ada (Ada)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Contexts qualified as PV1
 import PlutusTx qualified

@@ -21,7 +21,6 @@ import Data.Map as M
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified as L
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain qualified as Cons (_NoMatchingOutputFound, _TxOutRefWrongType, mintingPolicy,
                                                       otherScript, plutusV2OtherScript, typedValidatorLookups,
@@ -42,6 +41,7 @@ import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someCardanoAddressV
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as TxCons
 import Numeric.Natural (Natural)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Prelude hiding (not)
 
 import Data.Default (Default (def))

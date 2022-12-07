@@ -49,14 +49,14 @@ import Data.Set qualified as Set
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOutRef (TxOutRef))
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Value (Value)
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOut (..), ChainIndexTxOutputs (..),
                              OutputDatum (NoOutputDatum), ReferenceScript (ReferenceScriptNone), txOutRefs)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -64,6 +64,9 @@ import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (BlockId (BlockId), BlockNumber (BlockNumber),
                                 Tip (Tip, tipBlockId, tipBlockNo, tipSlot), TxIdState, TxOutBalance, TxUtxoBalance)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 
 -- | Generate a random tx id

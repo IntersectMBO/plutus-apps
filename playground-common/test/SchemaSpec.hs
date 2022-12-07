@@ -13,9 +13,9 @@ module SchemaSpec
 import Data.Functor.Foldable (Fix (Fix))
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger.Ada (lovelaceValueOf)
-import Ledger.Value (Value)
 import Playground.Types (PayToWalletParams (PayToWalletParams), payTo, value)
+import Plutus.Script.Utils.Ada (lovelaceValueOf)
+import Plutus.Script.Utils.Value (Value)
 import Schema (FormArgument,
                FormArgumentF (FormArrayF, FormBoolF, FormIntF, FormIntegerF, FormObjectF, FormRadioF, FormStringF, FormValueF),
                FormSchema (FormSchemaArray, FormSchemaBool, FormSchemaInt, FormSchemaInteger, FormSchemaMaybe, FormSchemaObject, FormSchemaRadio, FormSchemaString, FormSchemaTuple),

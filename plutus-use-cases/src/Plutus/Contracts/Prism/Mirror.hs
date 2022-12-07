@@ -21,17 +21,17 @@ import Control.Lens
 import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (TokenName)
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError (..), SMContractError, StateMachineTransition (..))
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
 import Plutus.Contracts.Prism.Credential qualified as Credential
 import Plutus.Contracts.Prism.StateMachine as StateMachine
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName)
 import Schema (ToSchema)
 import Wallet.Emulator (mockWalletPaymentPubKeyHash)
 import Wallet.Emulator.Wallet (Wallet)

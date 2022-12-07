@@ -39,13 +39,13 @@ import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPu
                Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Value,
                Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs,
                mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
-import Ledger.Ada qualified as Ada
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoAddressInEra, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
-import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Contexts (ScriptContext)

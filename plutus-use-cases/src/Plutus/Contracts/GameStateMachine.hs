@@ -45,17 +45,17 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, ScriptContext, TokenName, Value)
-import Ledger.Ada qualified as Ada
 import Ledger.Address.Orphans ()
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value qualified as V
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, Promise, endpoint,
                         selectList, type (.\/))
 import Plutus.Contract.Secrets (SecretArgument, escape_sha2_256, extractSecret)
 import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as V
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), check, sha2_256, toBuiltin,

@@ -32,7 +32,6 @@ import Ledger (Address, BlockId, CardanoTx, Certificate, DatumFromQuery, Decorat
                PaymentPubKeyHash, PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash,
                Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase,
                Withdrawal)
-import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
 import Ledger.DCert (DCert)
@@ -42,7 +41,6 @@ import Ledger.Scripts (ScriptError)
 import Ledger.Slot (Slot)
 import Ledger.Tx qualified as Tx (Language, Versioned)
 import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
-import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
 import Ouroboros.Network.Magic (NetworkMagic)
 import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
@@ -57,7 +55,9 @@ import Plutus.Contract.Effects (ActiveEndpoint, BalanceTxResponse, ChainIndexQue
                                 WriteBalancedTxResponse)
 import Plutus.Contract.Error (AssertionError, ContractError, MatchingError)
 import Plutus.Contract.Resumable (IterationID, Request, RequestID, Response)
+import Plutus.Script.Utils.Ada (Ada)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
+import Plutus.Script.Utils.Value (AssetClass, CurrencySymbol, TokenName, Value)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, ContractInstanceTag, EmulatorRuntimeError,
                                     UserThreadMsg)
 import Plutus.Trace.Scheduler (Priority, SchedulerLog, ThreadEvent, ThreadId)

@@ -12,10 +12,10 @@ import Control.Monad (void)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Value)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
 import Plutus.Contract.Test
 import Plutus.Contracts.SimpleEscrow
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Trace.Emulator qualified as Trace
 

@@ -15,7 +15,6 @@ import Test.Tasty (TestTree, testGroup)
 import Cardano.Node.Emulator.Generators (someTokenValue)
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
@@ -30,6 +29,7 @@ import Plutus.Contract.Error (AsContractError (_TxConstraintResolutionContractEr
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig,
                              mockWalletAddress, w1, w6, (.&&.))
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import Plutus.V1.Ledger.Value qualified as Value

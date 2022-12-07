@@ -35,14 +35,14 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxId, TxIn (TxIn), TxInType (..), TxOut,
                TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txOutValue)
-import Ledger.Ada (Ada (Lovelace))
-import Ledger.Ada qualified as Ada
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
                        Versioned (Versioned), unValidatorScript)
 import Ledger.Tx qualified as Tx
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada (Ada (Lovelace))
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx

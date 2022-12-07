@@ -94,15 +94,14 @@ import Ledger (Ada, AssetClass, CardanoTx (EmulatorTx), CurrencySymbol, Datum, I
                TxOutRef (TxOutRef), ValidationErrorInPhase, Validator, Value, Versioned, addCardanoTxSignature,
                addMintingPolicy, getValidator, maxFee, minAdaTxOutEstimated, pubKeyTxOut, scriptHash, txData,
                txOutValue, txScripts, validatorHash)
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index.Internal qualified as Index (UtxoIndex (UtxoIndex))
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromPlutusIndex)
-import Ledger.Value qualified as Value
 import Numeric.Natural (Natural)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts (Versioned (Versioned), datumHash)
 import Plutus.Script.Utils.V1.Generators as ScriptGen
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
 import PlutusTx.Prelude qualified as PlutusTx

@@ -12,7 +12,6 @@ module Ledger (
     ) where
 
 import Cardano.Api (NetworkId)
-import Ledger.Ada (Ada)
 import Ledger.Address as Export
 import Ledger.Blockchain as Export
 import Ledger.Crypto as Export
@@ -21,7 +20,8 @@ import Ledger.Orphans ()
 import Ledger.Scripts as Export
 import Ledger.Slot as Export
 import Ledger.Tx as Export
-import Ledger.Value as Export (noAdaValue)
+import Plutus.Script.Utils.Ada (Ada)
+import Plutus.Script.Utils.Value as Export (noAdaValue)
 import Plutus.V1.Ledger.Api (Credential, DCert)
 import Plutus.V1.Ledger.Contexts as Export hiding (TxOut (..))
 import Plutus.V1.Ledger.Credential (StakingCredential)

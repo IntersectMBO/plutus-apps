@@ -15,7 +15,6 @@ import Test.Tasty (TestTree, testGroup)
 
 
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
@@ -26,6 +25,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicate, defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace

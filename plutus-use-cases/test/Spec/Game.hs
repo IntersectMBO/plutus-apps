@@ -26,14 +26,14 @@ import Test.Tasty.HUnit qualified as HUnit
 
 import Cardano.Node.Emulator.Params (testnet)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Ledger.Ada qualified as Ada
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value)
 import Plutus.Contract.Test (checkPredicate, goldenPir, mockWalletPaymentPubKeyHash, reasonable', valueAtAddress, w1,
                              w2, walletFundsChange, (.&&.))
 import Plutus.Contracts.Game (GuessArgs (GuessArgs, guessArgsGameParam, guessArgsSecret),
                               LockArgs (LockArgs, lockArgsGameParam, lockArgsSecret, lockArgsValue))
 import Plutus.Contracts.Game qualified as G
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx qualified

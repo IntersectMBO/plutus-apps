@@ -13,7 +13,7 @@ import Plutus.ChainIndex.Tx (ChainIndexTxOut (ChainIndexTxOut, citoValue), txOut
 
 import Generators qualified as Gen
 import Hedgehog (Property, forAll, property, (===))
-import Ledger.Ada qualified as Ada
+import Plutus.Script.Utils.Ada qualified as Ada
 import Test.Tasty
 import Test.Tasty.Hedgehog (testPropertyNamed)
 

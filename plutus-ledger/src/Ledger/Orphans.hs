@@ -30,10 +30,10 @@ import Data.Scientific (floatingOrInteger, scientific)
 import Data.Text qualified as Text
 import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Generics (Generic)
-import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Scripts (Language, Versioned)
 import Ledger.Slot (Slot (Slot))
+import Plutus.Script.Utils.Ada (Ada (Lovelace))
 import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), DCert, Extended, Interval, LedgerBytes (LedgerBytes),
                              LowerBound, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
                              POSIXTime (POSIXTime), Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script,

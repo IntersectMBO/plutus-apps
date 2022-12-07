@@ -34,12 +34,12 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash, TxId, TxOutRef, cardanoAddressCredential)
-import Ledger.Ada qualified as Ada
 import Ledger.Credential (Credential)
 import Ledger.Tx (Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
                              txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 -- | Set of transaction output references for each address.

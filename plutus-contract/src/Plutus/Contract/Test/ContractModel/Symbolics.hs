@@ -2,8 +2,9 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Plutus.Contract.Test.ContractModel.Symbolics where
 
-import Ledger.Ada qualified as Ada
-import Ledger.Value (AssetClass, Value, assetClass, assetClassValue, assetClassValueOf, flattenValue, isZero, leq)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (AssetClass, Value, assetClass, assetClassValue, assetClassValueOf, flattenValue,
+                                  isZero, leq)
 import PlutusTx.Monoid qualified as PlutusTx
 
 import Data.Aeson qualified as JSON

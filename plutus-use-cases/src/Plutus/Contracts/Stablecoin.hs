@@ -84,20 +84,20 @@ import Control.Monad (forever, guard)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity (Identity (..))
 import GHC.Generics (Generic)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
 import Ledger.Scripts (MintingPolicyHash)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (AssetClass, TokenName, Value)
-import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.Oracle
 import Plutus.Contract.StateMachine (AsSMContractError, SMContractError, State (..), StateMachine,
                                      StateMachineClient (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (AssetClass, TokenName, Value)
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude
 import PlutusTx.Ratio qualified as R

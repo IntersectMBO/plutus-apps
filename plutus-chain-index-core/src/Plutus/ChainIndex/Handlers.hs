@@ -48,8 +48,6 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
 import Ledger qualified as L
-import Ledger.Ada qualified as Ada
-import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -64,7 +62,9 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..
                                 TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.V2.Ledger.Api (Credential (..))
 import PlutusTx.Builtins.Internal (emptyByteString)
 

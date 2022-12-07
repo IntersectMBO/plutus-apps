@@ -19,7 +19,7 @@ import Data.Row
 import Test.Tasty
 
 import Cardano.Node.Emulator.Params (pNetworkId)
-import Ledger.Ada qualified as Ada
+import Plutus.Script.Utils.Ada qualified as Ada
 import Ledger.Constraints (collectFromTheScript, mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx)
 import Ledger.Tx (getCardanoTxId)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)

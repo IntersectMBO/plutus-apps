@@ -32,13 +32,13 @@ import Data.Text (Text)
 
 import Data.Default (Default (def))
 import Data.Text.Encoding qualified as Text
-import Ledger.Value (Value)
 import Playground.Types (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet), EvaluationResult,
                          Expression, FunctionSchema (FunctionSchema), PlaygroundError (JsonDecodingError, OtherError),
                          SimulatorWallet (SimulatorWallet), amount, argument, argumentValues, caller, decodingError,
                          endpointDescription, expected, input, recipient, sender, simulatorWalletWallet)
 import Playground.Types qualified
 import Plutus.Contract (Contract)
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace (ContractConstraints, ContractInstanceTag)
 import Plutus.Trace.Emulator.Types (EmulatorRuntimeError (EmulatorJSONDecodingError), _ContractLog,
                                     _ReceiveEndpointCall, cilMessage)

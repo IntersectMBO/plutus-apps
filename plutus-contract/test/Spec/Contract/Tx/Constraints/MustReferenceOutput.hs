@@ -24,7 +24,6 @@ import Data.Set qualified as S
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified as L
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Cons
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
@@ -39,6 +38,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicate, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, valueAtAddress, w1, walletFundsChange, (.&&.))
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts qualified as PSU
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PSU.V1

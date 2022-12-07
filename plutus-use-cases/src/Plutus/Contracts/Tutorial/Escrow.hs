@@ -57,7 +57,7 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value, geq, lt)
+import Plutus.Script.Utils.Value (Value, geq, lt)
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInfo (..))
 

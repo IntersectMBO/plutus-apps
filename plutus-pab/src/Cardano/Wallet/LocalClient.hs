@@ -47,10 +47,10 @@ import Data.Quantity (Quantity (Quantity))
 import Data.Text (Text, pack)
 import Data.Text.Class (fromText)
 import Ledger (CardanoAddress, CardanoTx (..))
-import Ledger.Ada qualified as Ada
+import Plutus.Script.Utils.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError, toCardanoTxBody)
-import Ledger.Value (Value (Value), currencySymbol, tokenName)
+import Plutus.Script.Utils.Value (Value (Value), currencySymbol, tokenName)
 import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Monitoring.PABLogMsg (WalletClientMsg (BalanceTxError, WalletClientError))
 import PlutusTx.AssocMap qualified as Map

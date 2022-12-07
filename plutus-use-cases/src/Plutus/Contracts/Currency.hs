@@ -41,11 +41,11 @@ import Ledger (CardanoAddress, CurrencySymbol, TxId, TxOutRef (..), getCardanoTx
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (TokenName, Value)
-import Ledger.Value qualified as Value
 import Plutus.Contract as Contract
 import Plutus.Contract.Wallet (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.Value (TokenName, Value)
+import Plutus.Script.Utils.Value qualified as Value
 import Schema (ToSchema)
 
 import Prelude (Semigroup (..))

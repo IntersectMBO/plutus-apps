@@ -76,8 +76,13 @@ import Ledger.Address
 import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
-import Plutus.Contract (ContractInstanceId)
+import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
+import Plutus.Contract.Schema (Input)
 import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.ContractModel.Symbolics
+import Plutus.Contract.Test.Coverage
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (AssetClass)
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, EmulatorEffects, EmulatorTrace, activateContract,
                                        freezeContractInstance, waitNSlots)

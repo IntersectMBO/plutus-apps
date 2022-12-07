@@ -10,10 +10,10 @@ import Control.Monad (void)
 import Control.Monad.Freer (run)
 import Control.Monad.Freer.Error (runError)
 import Data.Default (Default (..))
-import Ledger.Ada qualified as Ada
-import Ledger.Value (TokenName, Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Test
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName, Value)
 import Streaming.Prelude qualified as S
 import Wallet.Emulator.Stream (foldEmulatorStreamM, takeUntilSlot)
 

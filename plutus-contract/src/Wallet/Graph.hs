@@ -23,12 +23,12 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
-import Ledger.Ada qualified as Ada
 import Ledger.Address
 import Ledger.Blockchain
 import Ledger.Credential (Credential (..))
 import Ledger.Crypto
 import Ledger.Tx
+import Plutus.Script.Utils.Ada qualified as Ada
 
 -- | The owner of an unspent transaction output.
 data UtxOwner

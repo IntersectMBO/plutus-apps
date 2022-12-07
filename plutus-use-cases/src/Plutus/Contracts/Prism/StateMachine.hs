@@ -23,11 +23,11 @@ import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (TokenName, Value)
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient (..), Void)
 import Plutus.Contract.StateMachine qualified as StateMachine
 import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
 import Plutus.Contracts.Prism.Credential qualified as Credential
+import Plutus.Script.Utils.Value (TokenName, Value)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell

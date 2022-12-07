@@ -120,13 +120,11 @@ import Cardano.Node.Emulator.Generators (GeneratorModel, Mockchain (..))
 import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Tx (Tx, onCardanoTx)
-import Ledger.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
@@ -135,6 +133,8 @@ import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
 import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)

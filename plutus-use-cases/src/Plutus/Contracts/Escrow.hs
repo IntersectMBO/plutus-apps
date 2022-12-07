@@ -68,9 +68,9 @@ import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value, geq, lt)
 import Plutus.Contract
 import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Value (Value, geq, lt)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 
 import Prelude (Semigroup (..), foldMap)

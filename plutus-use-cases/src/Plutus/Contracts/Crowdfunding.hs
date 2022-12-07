@@ -58,12 +58,12 @@ import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (Extended (NegInf), Interval (Interval), LowerBound (LowerBound))
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)

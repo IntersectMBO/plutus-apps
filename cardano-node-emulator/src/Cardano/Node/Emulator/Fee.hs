@@ -34,8 +34,6 @@ import Data.Map qualified as Map
 import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
-import Ledger.Ada (lovelaceValueOf)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
 import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (TxOutRefNotFound), ValidationPhase (Phase1), adjustTxOut,
                      minAdaTxOutEstimated)
@@ -44,8 +42,10 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
                              toCardanoReturnCollateral, toCardanoTotalCollateral, toCardanoTxBodyContent)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Value (Value)
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada (lovelaceValueOf)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 
 estimateTransactionFee

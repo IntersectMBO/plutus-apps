@@ -31,8 +31,8 @@ import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Coverage
 
 import Ledger qualified as Ledger
-import Ledger.Ada qualified as Ada
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 
 import Data.Coerce
 import Data.Foldable

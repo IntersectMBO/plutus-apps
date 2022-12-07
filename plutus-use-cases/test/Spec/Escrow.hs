@@ -27,13 +27,13 @@ import Data.Map qualified as Map
 
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), minAdaTxOutEstimated)
-import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value
 
 import Plutus.Contracts.Escrow hiding (Action (..))
 import Plutus.Trace.Emulator qualified as Trace

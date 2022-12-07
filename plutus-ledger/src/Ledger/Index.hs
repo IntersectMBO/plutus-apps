@@ -48,8 +48,6 @@ import Control.Lens (Fold, folding, (&), (.~))
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
-import Ledger.Ada (Ada, fromValue, lovelaceOf, toValue)
-import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
@@ -57,6 +55,8 @@ import Ledger.Tx (CardanoTx (..), ToCardanoError, Tx, TxIn (TxIn, txInType),
                   TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut (getTxOut), TxOutRef, outValue, txOutValue,
                   updateUtxoCollateral)
 import Ledger.Tx.CardanoAPI (toCardanoTxOutValue)
+import Plutus.Script.Utils.Ada (Ada, fromValue, lovelaceOf, toValue)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx.Lattice ((\/))

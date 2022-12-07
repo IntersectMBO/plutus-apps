@@ -69,8 +69,8 @@ import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Trace.RequestHandler (RequestHandler, RequestHandlerLogMsg, generalise)
 import Plutus.Contract.Trace.RequestHandler qualified as RequestHandler
 
-import Ledger.Ada qualified as Ada
-import Ledger.Value (Value)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Wallet.Effects (NodeClientEffect, WalletEffect)

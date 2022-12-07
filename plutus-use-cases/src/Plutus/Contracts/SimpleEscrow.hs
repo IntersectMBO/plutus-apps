@@ -33,7 +33,7 @@ import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ScriptContextV1)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value, geq)
+import Plutus.Script.Utils.Value (Value, geq)
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
 
 import Plutus.Contract

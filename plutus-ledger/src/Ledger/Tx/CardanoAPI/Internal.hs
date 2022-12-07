@@ -121,12 +121,12 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Ledger.Ada qualified as Ada
-import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Ada qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1

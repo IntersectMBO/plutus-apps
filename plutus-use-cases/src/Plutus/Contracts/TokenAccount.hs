@@ -57,11 +57,11 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (CardanoTx)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
-import Ledger.Value (TokenName, Value)
-import Ledger.Value qualified as Value
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.V1.Ledger.Api (ValidatorHash)
+import Plutus.Script.Utils.Value (TokenName, Value)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Contexts qualified as PV1
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))

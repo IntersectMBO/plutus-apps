@@ -48,15 +48,15 @@ import GHC.Generics (Generic)
 import Ledger (DCert, Redeemer, StakingCredential, toPlutusAddress, txRedeemers)
 import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx), mustPayToAddress)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
-import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_OtherContractError))
 import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (currencyMPSHash)
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified

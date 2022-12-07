@@ -35,17 +35,17 @@ import Data.Monoid (Last (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
 import Ledger (Ada, Address, POSIXTime, Value, toPlutusAddress)
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,
                                      WaitingResult (..))
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Util (loopM)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage

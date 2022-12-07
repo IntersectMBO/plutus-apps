@@ -106,12 +106,10 @@ import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
 import Ledger (Blockchain, CardanoAddress, CardanoTx, PaymentPubKeyHash, TxId, getCardanoTxFee, getCardanoTxId,
                txOutAddress, txOutValue, unOnChain)
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as UtxoIndex
 import Ledger.Slot (Slot)
-import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
                                    ChainIndexQueryEffect (..), TxOutStatus, TxStatus, getTip)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
@@ -127,6 +125,8 @@ import Plutus.PAB.Effects.TimeEffect (TimeEffect)
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (EmulatorMsg, UserLog, WalletBalancingMsg))
 import Plutus.PAB.Types (PABError (ContractInstanceNotFound, WalletError, WalletNotFound))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value, flattenValue)
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
 import Plutus.V1.Ledger.Tx (TxOutRef)
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)

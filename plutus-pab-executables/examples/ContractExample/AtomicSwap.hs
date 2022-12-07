@@ -23,11 +23,11 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
 import Ledger (CurrencySymbol, POSIXTime, PaymentPubKeyHash, TokenName, Value)
-import Ledger.Value qualified as Value
 import Plutus.Contract (AsContractError (_ContractError), ContractError, Endpoint, Promise, awaitTxConfirmed, endpoint,
                         mapError, ownFirstPaymentPubKeyHash, throwError)
 import Plutus.Contracts.Escrow (EscrowParams (..))
 import Plutus.Contracts.Escrow qualified as Escrow
+import Plutus.Script.Utils.Value qualified as Value
 import Schema (ToSchema)
 import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
 

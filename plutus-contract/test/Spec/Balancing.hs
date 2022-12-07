@@ -15,17 +15,17 @@ import Test.Tasty (TestName, TestTree, testGroup)
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as L.Constraints
 import Ledger.Test
 import Ledger.Tx.Constraints qualified as Tx.Constraints
-import Ledger.Value qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,
                              checkPredicate, checkPredicateOptions, defaultCheckOptions, w1, w2)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as TypedScripts
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified

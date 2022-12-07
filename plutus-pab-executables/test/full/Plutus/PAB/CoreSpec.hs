@@ -52,11 +52,8 @@ import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), cardanoPubKeyHa
                getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress, txId, txOutAddress, txOutRefId,
                txOutRefs, txOutputs)
 import Ledger qualified
-import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
-import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Value (valueOf)
 import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
                           TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
 import Plutus.Contract.State (ContractResponse (ContractResponse, hooks))
@@ -78,6 +75,9 @@ import Plutus.PAB.Simulator qualified as Simulator
 import Plutus.PAB.Simulator.Test qualified as Simulator
 import Plutus.PAB.Types (PABError (OtherError), chainOverviewBlockchain, mkChainOverview)
 import Plutus.PAB.Webserver.WebSocket qualified as WS
+import Plutus.Script.Utils.Ada (adaSymbol, adaToken, lovelaceValueOf)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (valueOf)
 import PlutusTx.Monoid (Group (inv))
 import Test.QuickCheck.Instances.UUID ()
 import Test.Tasty (TestTree, defaultMain, testGroup)

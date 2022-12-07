@@ -23,7 +23,6 @@ import Data.Map as M
 import Data.Maybe (fromJust)
 import Ledger qualified as L
 import Ledger qualified as PSU
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints qualified as Cons
 import Ledger.Constraints.OffChain qualified as OffCon
@@ -37,6 +36,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertUnbalancedTx, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicateOptions, defaultCheckOptions,
                              emulatorConfig, mockWalletAddress, w1, w2, (.&&.))
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2

@@ -21,13 +21,13 @@ import Cardano.Node.Emulator.Generators (TxInputWitnessed (TxInputWitnessed))
 import Cardano.Node.Emulator.Generators qualified as Generators
 import Cardano.Node.Emulator.Params (Params (pSlotConfig))
 import Cardano.Node.Emulator.Validation qualified as Validation
-import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index (UtxoIndex (..))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Plutus.Script.Utils.Ada qualified as Ada
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada

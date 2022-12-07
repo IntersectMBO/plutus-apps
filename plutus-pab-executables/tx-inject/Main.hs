@@ -37,12 +37,12 @@ import Cardano.Node.Emulator.Params (Params (..), testnet)
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
 import Data.Either (fromRight)
-import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx (..))
 import Plutus.PAB.Types (Config (..))
+import Plutus.Script.Utils.Ada qualified as Ada
 import TxInject.RandomTx (generateTx)
 import Wallet.Emulator (chainState, mockWalletPaymentPubKeyHash, txPool)
 import Wallet.Emulator.MultiAgent (emulatorStateInitialDist)

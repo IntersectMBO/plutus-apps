@@ -115,7 +115,6 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
@@ -133,6 +132,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
                              ValidatorTypes (DatumType, RedeemerType), validatorAddress)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,

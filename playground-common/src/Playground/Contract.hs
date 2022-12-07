@@ -65,7 +65,6 @@ import Ledger.Constraints (modifiesUtxoSet)
 import Ledger.Interval (interval)
 import Ledger.Scripts (ValidatorHash (ValidatorHash))
 import Ledger.Tx (Tx, TxOutRef (TxOutRef), txOutRefId)
-import Ledger.Value (TokenName (TokenName))
 import Playground.Interpreter.Util
 import Playground.Schema (endpointsToSchemas)
 import Playground.TH (ensureKnownCurrencies, mkFunction, mkFunctions, mkKnownCurrencies, mkSchemaDefinitions)
@@ -74,6 +73,7 @@ import Plutus.Contract (AsContractError, Contract, Endpoint, awaitSlot, endpoint
                         ownFirstPaymentPubKeyHash, ownPaymentPubKeyHash, ownPaymentPubKeyHashes, submitTx, type (.\/),
                         utxosAt, watchAddressUntilSlot)
 import Plutus.Contract.Trace (TraceError (..))
+import Plutus.Script.Utils.Value (TokenName (TokenName))
 import Schema (FormSchema, ToArgument, ToSchema)
 import Wallet.Emulator.Types (Wallet (..))
 

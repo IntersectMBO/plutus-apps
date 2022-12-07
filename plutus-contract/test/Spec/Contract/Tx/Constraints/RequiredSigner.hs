@@ -15,7 +15,6 @@ import Test.Tasty (TestTree, testGroup)
 import Cardano.Node.Emulator.Params qualified as Params
 import Data.Maybe (fromJust)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSignatories)
 import Ledger.Constraints.OnChain.V2 qualified as Constraints
@@ -26,6 +25,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash,
                              w1, w2)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
 import Plutus.Trace qualified as Trace

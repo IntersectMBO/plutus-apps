@@ -26,12 +26,12 @@ import GHC.Generics (Generic)
 import Language.Haskell.Interpreter (CompilationError, SourceCode)
 import Language.Haskell.Interpreter qualified as HI
 import Ledger (PaymentPubKeyHash, fromSymbol)
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Scripts (ValidatorHash)
 import Ledger.Slot (Slot)
-import Ledger.Value (TokenName)
-import Ledger.Value qualified as V
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName)
+import Plutus.Script.Utils.Value qualified as V
 import Schema (FormArgumentF, FormSchema, ToArgument, ToSchema)
 import Wallet.Emulator.Types (EmulatorEvent, WalletNumber)
 import Wallet.Rollup.Types (AnnotatedTx)

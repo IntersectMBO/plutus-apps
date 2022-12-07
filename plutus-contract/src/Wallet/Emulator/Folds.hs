@@ -65,19 +65,19 @@ import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger (Block, CardanoAddress, OnChainTx (Invalid, Valid), TxId)
-import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError, ValidationPhase (Phase1, Phase2))
 import Ledger.Tx (CardanoTx, getCardanoTxFee, txOutValue)
-import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Resumable (Request, Response)
 import Plutus.Contract.Resumable qualified as State
 import Plutus.Contract.Types (ResumableResult (_finalState, _observableState, _requests))
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventInstanceState, emptyInstanceState,
                                                instContractState, instEvents, instHandlersHistory)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,

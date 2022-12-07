@@ -21,8 +21,8 @@ module Plutus.Contracts.Uniswap.Types
 import Data.Data
 import Data.OpenApi.Schema qualified as OpenApi
 import Ledger
-import Ledger.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
 import Playground.Contract (FromJSON, Generic, ToJSON, ToSchema)
+import Plutus.Script.Utils.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
