@@ -40,6 +40,7 @@ import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.Typed qualified as Scripts
@@ -143,7 +144,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
           Hedgehog.failure
       Right utx -> do
           let outputs = txOutputs (view OC.tx utx)
-          let stakingCreds = mapMaybe (addressStakingCredential . txOutAddress) outputs
+          let stakingCreds = mapMaybe (addressStakingCredential . fromCardanoAddressInEra . txOutAddress) outputs
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) sc)
 
@@ -159,7 +160,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
           Hedgehog.failure
       Right utx -> do
           let outputs = txOutputs (view OC.tx utx)
-          let stakingCreds = mapMaybe (addressStakingCredential . txOutAddress) outputs
+          let stakingCreds = mapMaybe (addressStakingCredential . fromCardanoAddressInEra . txOutAddress) outputs
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) sc)
 

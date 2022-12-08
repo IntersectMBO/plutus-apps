@@ -37,4 +37,4 @@ tests = testGroup "currency"
 theContract :: Contract () EmptySchema Cur.CurrencyError OneShotCurrency
 theContract =
     let amounts = [("my currency", 1000), ("my token", 1)] in
-    Cur.mintContract (mockWalletAddress w1) amounts
+    Cur.mintContract (mockWalletCardanoAddress w1) amounts

@@ -92,8 +92,8 @@ instance Scripts.ValidatorTypes Escrow where
     type instance RedeemerType Escrow = Action
     type instance DatumType    Escrow = EscrowParams
 
-escrowAddress :: Ledger.Address
-escrowAddress = Scripts.validatorAddress escrowInstance
+escrowAddress :: Ledger.CardanoAddress
+escrowAddress = Scripts.validatorCardanoAddress Ledger.testnet escrowInstance
 
 escrowInstance :: Scripts.TypedValidator Escrow
 escrowInstance = Scripts.mkTypedValidator @Escrow

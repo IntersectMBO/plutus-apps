@@ -313,30 +313,35 @@ prop_CheckNoLockedFundsProof = checkNoLockedFundsProofWithOptions options noLock
 
 -- * Unit tests
 
+validatorAddress :: Ledger.CardanoAddress
+validatorAddress
+  = Scripts.validatorCardanoAddress Ledger.testnet
+  $ G.typedValidator gameParam
+
 tests :: TestTree
 tests =
     testGroup "game state machine with secret arguments tests"
     [ checkPredicateOptions options "run a successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 3 <> guessTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
+        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
         successTrace
 
     , checkPredicateOptions options "run a 2nd successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 3)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 0 ==)
+        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 0 ==)
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8))
         .&&. walletFundsChange w3 (Ada.adaValueOf 5 <> guessTokenVal))
         successTrace2
 
     , checkPredicateOptions options "run a successful game trace where we try to leave 1 Ada in the script address"
         (walletFundsChange w1 (Ada.toValue (-2_000_000) <> guessTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.toValue 2_000_000 ==))
+        .&&. valueAtAddress validatorAddress (Ada.toValue 2_000_000 ==))
         traceLeaveTwoAdaInScript
 
     , checkPredicateOptions options "run a failed trace"
         (walletFundsChange w2 (Ada.toValue 2_000_000 <> guessTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 8 ==)
+        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 8 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-2_000_000) <> Ada.adaValueOf (-8)))
         failTrace
 
@@ -379,14 +384,14 @@ runTestsWithCoverage = do
                          [ checkPredicateCoverageOptions options "run a successful game trace"
                             ref
                             (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 3 <> guessTokenVal)
-                            .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
+                            .&&. valueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
                             .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8)))
                             successTrace
 
                         , checkPredicateCoverageOptions options "run a 2nd successful game trace"
                             ref
                             (walletFundsChange w2 (Ada.adaValueOf 3)
-                            .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 0 ==)
+                            .&&. valueAtAddress validatorAddress (Ada.adaValueOf 0 ==)
                             .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8))
                             .&&. walletFundsChange w3 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 5 <> guessTokenVal))
                             successTrace2
@@ -488,6 +493,6 @@ certification = defaultCertification {
     unitTest ref =
       checkPredicateCoverageOptions options "run a successful game trace" ref
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 3 <> guessTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
+        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8)))
         successTrace

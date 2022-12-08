@@ -33,7 +33,7 @@ import Wallet.Emulator.Wallet (Wallet (Wallet, getWalletId), WalletId)
 createWallet :: Maybe Integer -> ClientM WalletInfo
 submitTxn :: Wallet -> CardanoTx -> ClientM ()
 ownPaymentPubKeyHash :: Wallet -> ClientM PaymentPubKeyHash
-ownAddresses :: Wallet -> ClientM (NonEmpty Address)
+ownAddresses :: Wallet -> ClientM (NonEmpty CardanoAddress)
 balanceTx :: Wallet -> UnbalancedTx -> ClientM (Either WalletAPIError CardanoTx)
 totalFunds :: Wallet -> ClientM Value
 sign :: Wallet -> CardanoTx -> ClientM CardanoTx

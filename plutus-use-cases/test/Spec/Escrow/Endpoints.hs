@@ -12,7 +12,7 @@ import Data.Text (unpack)
 import Control.Lens (_1, has, only)
 import Control.Monad (void)
 
-import Ledger (PaymentPubKeyHash)
+import Ledger (PaymentPubKeyHash, pNetworkId)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (from)
 import Ledger.Tx qualified as Tx
@@ -47,7 +47,8 @@ badRefund ::
     -> PaymentPubKeyHash
     -> Contract w s EscrowError ()
 badRefund inst pk = do
-    unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
+    networkId <- pNetworkId <$> getParams
+    unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
     current <- snd <$> currentNodeClientTimeRange
     let pkh = Ledger.datumHash $ Datum $ PlutusTx.toBuiltinData pk
         flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut

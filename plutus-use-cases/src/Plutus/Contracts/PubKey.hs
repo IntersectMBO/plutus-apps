@@ -71,8 +71,9 @@ pubKeyContract
     -> Value
     -> Contract w s e (TxOutRef, Maybe DecoratedTxOut, TypedValidator PubKeyContract)
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
+    networkId <- pNetworkId <$> getParams
     let inst = typedValidator pk
-        address = Scripts.validatorAddress inst
+        address = Scripts.validatorCardanoAddress networkId inst
         tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
 
     ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx

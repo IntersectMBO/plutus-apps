@@ -30,7 +30,7 @@ tests = testGroup "token account"
         .&&. walletFundsChange w1 theToken)
         $ do
             hdl <- Trace.activateContractWallet w1 contract
-            Trace.callEndpoint @"new-account" hdl (tokenName, mockWalletAddress w1)
+            Trace.callEndpoint @"new-account" hdl (tokenName, mockWalletCardanoAddress w1)
             void $ Trace.waitNSlots 2
 
     , checkPredicate "Pay into the account"
@@ -39,7 +39,7 @@ tests = testGroup "token account"
         .&&. walletFundsChange w1 (Ada.adaValueOf (-10) <> theToken))
         $ do
             hdl <- Trace.activateContractWallet w1 contract
-            Trace.callEndpoint @"new-account" hdl (tokenName, mockWalletAddress w1)
+            Trace.callEndpoint @"new-account" hdl (tokenName, mockWalletCardanoAddress w1)
             _ <- Trace.waitNSlots 3
             Trace.callEndpoint @"pay" hdl (account, Ada.adaValueOf 10)
             void $ Trace.waitNSlots 1
@@ -62,7 +62,7 @@ contract = tokenAccountContract
 
 account :: Account
 account =
-    let con = Accounts.newAccount @() @TokenAccountSchema @TokenAccountError tokenName (mockWalletAddress w1)
+    let con = Accounts.newAccount @() @TokenAccountSchema @TokenAccountError tokenName (mockWalletCardanoAddress w1)
         fld = Folds.instanceOutcome @() con (Trace.walletInstanceTag w1)
         trace = Trace.activateContractWallet @_ @() w1 (void con) >> Trace.waitNSlots 2
         getOutcome (Done a) = a
@@ -89,11 +89,11 @@ tokenAccountTrace :: Trace.EmulatorTrace ()
 tokenAccountTrace = do
     hdl <- Trace.activateContractWallet w1 contract
     hdl2 <- Trace.activateContractWallet w2 contract
-    Trace.callEndpoint @"new-account" hdl (tokenName, mockWalletAddress w1)
+    Trace.callEndpoint @"new-account" hdl (tokenName, mockWalletCardanoAddress w1)
     _ <- Trace.waitNSlots 3
     Trace.callEndpoint @"pay" hdl (account, Ada.adaValueOf 10)
     _ <- Trace.waitNSlots 2
     _ <- Trace.payToWallet w1 w2 theToken
     _ <- Trace.waitNSlots 1
-    Trace.callEndpoint @"redeem" hdl2 (account, mockWalletAddress w2)
+    Trace.callEndpoint @"redeem" hdl2 (account, mockWalletCardanoAddress w2)
     void $ Trace.waitNSlots 1

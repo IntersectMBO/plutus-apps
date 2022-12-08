@@ -22,6 +22,7 @@ import Data.Void (Void)
 import Ledger
 import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Constraints hiding (adjustUnbalancedTx)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Value qualified as Value
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contracts.Currency qualified as Currency
@@ -29,7 +30,7 @@ import Plutus.Contracts.Uniswap.OffChain as OffChain
 import Plutus.Contracts.Uniswap.Types as Types
 import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Emulator
-import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletAddress)
+import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletCardanoAddress)
 
 -- | Set up a liquidity pool and call the "add" endpoint
 uniswapTrace :: EmulatorTrace ()
@@ -71,9 +72,9 @@ setupTokens = do
         v  = mconcat [Value.singleton cs tn amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
-        let addr = mockWalletAddress w
+        let addr = mockWalletCardanoAddress w
         when (addr /= ownAddr) $ do
-            mkTxConstraints @Void mempty (mustPayToAddress addr v)
+            mkTxConstraints @Void mempty (mustPayToAddress (fromCardanoAddressInEra addr) v)
               >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur

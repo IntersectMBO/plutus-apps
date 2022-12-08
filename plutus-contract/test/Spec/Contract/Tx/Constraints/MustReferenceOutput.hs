@@ -29,7 +29,6 @@ import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidatorHash)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Tx.Constraints qualified as Tx.Cons
 import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts

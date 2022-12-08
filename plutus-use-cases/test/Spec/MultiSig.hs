@@ -40,8 +40,8 @@ failingTrace :: EmulatorTrace ()
 failingTrace = do
     hdl <- Trace.activateContractWallet w1 theContract
     Trace.callEndpoint @"lock" hdl (multiSig, Ada.lovelaceValueOf 10)
-    _ <- Trace.waitNSlots 1
-    Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2)])
+    void $ Trace.waitNSlots 1
+    Trace.setSigningProcess w1 (Just $ signPrivateKeys $ CW.paymentPrivateKey . CW.knownMockWallet <$> [1,2])
     Trace.callEndpoint @"unlock" hdl (multiSig, fmap mockWalletPaymentPubKeyHash [w1, w2])
     void $ Trace.waitNSlots 1
 
@@ -51,8 +51,8 @@ succeedingTrace :: EmulatorTrace ()
 succeedingTrace = do
     hdl <- Trace.activateContractWallet w1 theContract
     Trace.callEndpoint @"lock" hdl (multiSig, Ada.lovelaceValueOf 10)
-    _ <- Trace.waitNSlots 1
-    Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2), CW.paymentPrivateKey (CW.knownMockWallet 3)])
+    void $ Trace.waitNSlots 1
+    Trace.setSigningProcess w1 (Just $ signPrivateKeys $ CW.paymentPrivateKey . CW.knownMockWallet <$> [1,2,3])
     Trace.callEndpoint @"unlock" hdl (multiSig, fmap mockWalletPaymentPubKeyHash [w1, w2, w3])
     void $ Trace.waitNSlots 1
 

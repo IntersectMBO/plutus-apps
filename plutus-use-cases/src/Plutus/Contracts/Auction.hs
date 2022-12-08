@@ -39,6 +39,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract
@@ -218,7 +219,7 @@ auctionSeller :: Value -> POSIXTime -> Contract AuctionOutput SellerSchema Aucti
 auctionSeller value time = do
     threadToken <- SM.getThreadToken
     tell $ threadTokenOut threadToken
-    self <- ownAddress
+    self <- fromCardanoAddressInEra <$> ownAddress
     let params       = AuctionParams{apOwner = self, apAsset = value, apEndTime = time }
         inst         = typedValidator (threadToken, params)
         client       = machineClient inst threadToken params
@@ -331,7 +332,7 @@ handleEvent client lastHighestBid change =
         AuctionIsOver s -> tell (auctionStateOut $ Finished s) >> stop
         SubmitOwnBid ada -> do
             logInfo @Haskell.String "Submitting bid"
-            self <- ownAddress
+            self <- fromCardanoAddressInEra <$> ownAddress
             logInfo @Haskell.String "Received address"
             r <- SM.runStep client Bid{newBid = ada, newBidder = self}
             logInfo @Haskell.String "SM: runStep done"

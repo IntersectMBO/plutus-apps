@@ -216,7 +216,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
-    utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
+    utxo <- watchAddressUntilTime (Scripts.validatorCardanoAddress Ledger.testnet inst) $ campaignCollectionDeadline cmp
 
     -- 'utxo' is the set of unspent outputs at the campaign address at the
     -- collection deadline. If 'utxo' still contains our own contribution
@@ -247,7 +247,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
     logInfo @Text "Campaign started. Waiting for campaign deadline to collect funds."
 
     _ <- awaitTime $ campaignDeadline cmp
-    unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
+    unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress Ledger.testnet inst)
 
     let tx = Constraints.collectFromTheScript unspentOutputs Collect
             <> Constraints.mustBeSignedBy (campaignOwner cmp)

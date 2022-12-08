@@ -27,22 +27,27 @@ import Plutus.Trace.Emulator qualified as Trace
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit
 
+validatorAddress :: Ledger.CardanoAddress
+validatorAddress
+  = Scripts.validatorCardanoAddress Ledger.testnet
+  $ Gov.typedValidator params
+
 tests :: TestTree
 tests =
     testGroup "governance tests"
     [ checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "vote all in favor, 2 rounds - SUCCESS"
         (assertNoFailedTransactions
-        .&&. dataAtAddress (Scripts.validatorAddress $ Gov.typedValidator params) (maybe False ((== lawv3) . Gov.law) . listToMaybe))
+        .&&. dataAtAddress validatorAddress (maybe False ((== lawv3) . Gov.law) . listToMaybe))
         (doVoting 10 0 2)
 
     , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "vote 60/40, accepted - SUCCESS"
         (assertNoFailedTransactions
-        .&&. dataAtAddress (Scripts.validatorAddress $ Gov.typedValidator params) (maybe False ((== lawv2) . Gov.law) . listToMaybe))
+        .&&. dataAtAddress validatorAddress (maybe False ((== lawv2) . Gov.law) . listToMaybe))
         (doVoting 6 4 1)
 
     , checkPredicateOptions (defaultCheckOptions & increaseTransactionLimits) "vote 50/50, rejected - SUCCESS"
         (assertNoFailedTransactions
-        .&&. dataAtAddress (Scripts.validatorAddress $ Gov.typedValidator params) (maybe False ((== lawv1) . Gov.law) . listToMaybe ))
+        .&&. dataAtAddress validatorAddress (maybe False ((== lawv1) . Gov.law) . listToMaybe ))
         (doVoting 5 5 1)
 
     -- TODO: turn this on again when reproducibility issue in core is fixed

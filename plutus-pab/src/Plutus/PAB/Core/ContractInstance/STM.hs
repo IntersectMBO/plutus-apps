@@ -63,7 +63,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
-import Ledger (Address, Params (pSlotConfig), Slot, TxId, TxOutRef)
+import Ledger (CardanoAddress, Params (pSlotConfig), Slot, TxId, TxOutRef)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (BlockNumber), ChainIndexTx, TxIdState, TxOutBalance, TxOutStatus, TxStatus,
@@ -145,7 +145,7 @@ data OpenTxOutSpentRequest =
 
 data OpenTxOutProducedRequest =
     OpenTxOutProducedRequest
-        { otxAddress       :: Address -- ^ 'Address' that the contract instance is watching (TODO: Should be ViewAddress -- SCP-2628)
+        { otxAddress       :: CardanoAddress -- ^ 'Address' that the contract instance is watching (TODO: Should be ViewAddress -- SCP-2628)
         , otxProducingTxns :: TMVar (NonEmpty ChainIndexTx) -- ^ A place to write the producing transactions to
         }
 
@@ -243,7 +243,7 @@ emptyInstanceState =
 --   block without any additional information)
 data InstanceClientEnv = InstanceClientEnv
   { ceUtxoSpentRequests    :: Map TxOutRef [OpenTxOutSpentRequest]
-  , ceUtxoProducedRequests :: Map Address [OpenTxOutProducedRequest] -- TODO: ViewAddress
+  , ceUtxoProducedRequests :: Map CardanoAddress [OpenTxOutProducedRequest] -- TODO: ViewAddress
   }
 
 instance Semigroup InstanceClientEnv where
@@ -299,12 +299,12 @@ waitForUtxoSpent Request{rqID, itID} InstanceState{issTxOutRefs} = do
 
 -- | Add a new 'OpenTxOutProducedRequest' to the instance's list of
 --   utxo produced requests
-addUtxoProducedReq :: Request Address -> InstanceState -> STM ()
+addUtxoProducedReq :: Request CardanoAddress -> InstanceState -> STM ()
 addUtxoProducedReq Request{rqID, itID, rqRequest} InstanceState{issAddressRefs} = do
     request <- OpenTxOutProducedRequest rqRequest <$> STM.newEmptyTMVar
     STM.modifyTVar issAddressRefs (Map.insert (rqID, itID) request)
 
-waitForUtxoProduced :: Request Address -> InstanceState -> STM (NonEmpty ChainIndexTx)
+waitForUtxoProduced :: Request CardanoAddress -> InstanceState -> STM (NonEmpty ChainIndexTx)
 waitForUtxoProduced Request{rqID, itID} InstanceState{issAddressRefs} = do
     theMap <- STM.readTVar issAddressRefs
     case Map.lookup (rqID, itID) theMap of
