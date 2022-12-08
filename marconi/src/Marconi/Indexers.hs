@@ -1,12 +1,10 @@
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE NamedFieldPuns         #-}
-{-# LANGUAGE PackageImports         #-}
-{-# LANGUAGE PatternSynonyms        #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE PackageImports        #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE TupleSections         #-}
 
 module Marconi.Indexers where
 
@@ -27,7 +25,7 @@ import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
-                    SlotNo, Tx (Tx), chainPointToSlotNo)
+                    SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as Byron
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
@@ -42,6 +40,7 @@ import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types (TargetAddresses, TxOutRef, pattern CurrentEra, txOutRef)
 
 import RewindableIndex.Index.VSplit qualified as Ix
+import RewindableIndex.Storable qualified as Storable
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
@@ -212,30 +211,32 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
               Ix.rewind offset index
 
 scriptTxWorker_
-  :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
+  :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> ScriptTx.Depth
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), ScriptTx.ScriptTxIndex)
+  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), ScriptTx.ScriptTxIndexer)
 scriptTxWorker_ onInsert depth Coordinator{_barrier} ch path = do
-  indexer <- ScriptTx.open onInsert path depth
+  indexer <- ScriptTx.open path depth
   pure (loop indexer, indexer)
   where
-    loop :: ScriptTx.ScriptTxIndex -> IO ()
+    loop :: ScriptTx.ScriptTxIndexer -> IO ()
     loop index = do
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs :: Block era) _ :: BlockInMode CardanoMode) _ct -> do
-          Ix.insert (ScriptTx.toUpdate txs slotNo) index >>= loop
+          let u = ScriptTx.toUpdate txs slotNo
+          index' <- Storable.insert u index
+          void $ onInsert u
+          loop index'
+
         RollBackward cp _ct -> do
-          events <- Ix.getEvents (index ^. Ix.storage)
-          loop $
-            fromMaybe index $ do
-              slot   <- chainPointToSlotNo cp
-              offset <- findIndex  (\u -> ScriptTx.slotNo u < slot) events
-              Ix.rewind offset index
+          let sn = case cp of
+                     C.ChainPoint sn' _    -> sn'
+                     C.ChainPointAtGenesis -> SlotNo 0
+          Storable.rewind sn index >>= loop . fromMaybe index
 
 scriptTxWorker
-  :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
+  :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> Worker
 scriptTxWorker onInsert coordinator ch path = do
   (loop, _) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator ch path
@@ -257,7 +258,7 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIn
         [
             (utxoWorker maybeTargetAddresses, utxoPath)
             , (datumWorker, datumPath)
-            , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
+            , (scriptTxWorker (\_ -> pure []), scriptTxPath)
         ]
     remainingIndexers = mapMaybe liftMaybe pairs
 
