@@ -45,5 +45,9 @@ The general process for creating an ADR is:
    0013-tx-validity-time-range-fix
    0014-marconi-query-interface
    0015-time-conversion
+<<<<<<< HEAD
    0016-cardano-node-emulator
    0017- end-to-end testing-strategy
+=======
+   0016- end-to-end-testing-strategy
+>>>>>>> 3890b4592 (Refine ADR 16 inline with style guide, and see to review comments)
