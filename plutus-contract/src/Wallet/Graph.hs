@@ -30,6 +30,7 @@ import Ledger.Blockchain
 import Ledger.Credential (Credential (..))
 import Ledger.Crypto
 import Ledger.Tx
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 
 -- | The owner of an unspent transaction output.
 data UtxOwner
@@ -45,7 +46,7 @@ data UtxOwner
 owner :: Set.Set PubKey -> TxOut -> UtxOwner
 owner keys tx =
   let hashMap = foldMap (\pk -> Map.singleton (pubKeyHash pk) pk) keys
-  in case addressCredential (txOutAddress tx) of
+  in case addressCredential (fromCardanoAddressInEra $ txOutAddress tx) of
     ScriptCredential{}                                       -> ScriptOwner
     PubKeyCredential pkh | Just pk <- Map.lookup pkh hashMap -> PubKeyOwner pk
     _                                                        -> OtherOwner

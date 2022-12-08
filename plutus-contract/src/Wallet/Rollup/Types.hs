@@ -15,6 +15,7 @@ import Data.Map (Map)
 import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics
 import Ledger (CardanoTx, PaymentPubKeyHash (PaymentPubKeyHash), TxIn, TxOut, txOutAddress)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.V1.Ledger.Api (Address (addressCredential), Credential (PubKeyCredential, ScriptCredential), TxId,
                              ValidatorHash, Value)
 import Prettyprinter (Pretty, pretty, viaShow)
@@ -65,7 +66,7 @@ data BeneficialOwner
 
 toBeneficialOwner :: TxOut -> BeneficialOwner
 toBeneficialOwner txOut =
-    case addressCredential (txOutAddress txOut) of
+    case addressCredential (fromCardanoAddressInEra $ txOutAddress txOut) of
         PubKeyCredential pkh -> OwnedByPaymentPubKey (PaymentPubKeyHash pkh)
         ScriptCredential vh  -> OwnedByScript vh
 

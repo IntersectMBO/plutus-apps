@@ -327,7 +327,7 @@ txConstraintsTxBuildFailWhenUsingV1Script :: TestTree
 txConstraintsTxBuildFailWhenUsingV1Script =
     checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
         (walletFundsChange w1 (Ada.adaValueOf (-5))
-        .&&. valueAtAddress (fromCardanoAddressInEra mustReferenceOutputV1ValidatorAddress) (== Ada.adaValueOf 5)
+        .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
         .&&. assertValidatedTransactionCountOfTotal 1 2
         ) $ do
             void $ Trace.activateContract w1 mustReferenceOutputTxV1Contract tag
@@ -381,7 +381,7 @@ txConstraintsCanUnlockFundsWithV2Script :: TestTree
 txConstraintsCanUnlockFundsWithV2Script =
     checkPredicate "Tx.Constraints.mustReferenceOutput can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Ada.adaValueOf 0)
-        .&&. valueAtAddress (fromCardanoAddressInEra mustReferenceOutputV2ValidatorAddress) (== Ada.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ Trace.activateContract w1 mustReferenceOutputTxV2Contract tag

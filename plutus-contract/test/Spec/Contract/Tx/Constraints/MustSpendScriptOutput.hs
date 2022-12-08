@@ -36,7 +36,7 @@ import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMi
                                                            mustSpendScriptOutputWithMatchingDatumAndValue,
                                                            mustSpendScriptOutputWithReference,
                                                            mustUseOutputAsCollateral)
-import Ledger.Test (asDatum, asRedeemer, someAddress, someCardanoAddress, someCardanoAddressV2, someTypedValidator,
+import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someCardanoAddressV2, someTypedValidator,
                     someTypedValidatorV2, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
@@ -313,7 +313,7 @@ validUseOfMustSpendScriptOutputUsingAllScriptOutputs :: PSU.Language -> TestTree
 validUseOfMustSpendScriptOutputUsingAllScriptOutputs l =
     checkPredicate
     "Successful use of mustSpendScriptOutput for all script's UtxOs"
-    (valueAtAddress someAddress (== Ada.lovelaceValueOf 0)
+    (valueAtAddress (someCardanoAddress L.testnet) (== Ada.lovelaceValueOf 0)
     .&&. assertValidatedTransactionCount 2)
     (void $ trace $ mustSpendScriptOutputsContract l 5 5)
 
@@ -323,7 +323,7 @@ validUseOfMustSpendScriptOutputUsingSomeScriptOutputs :: PSU.Language -> TestTre
 validUseOfMustSpendScriptOutputUsingSomeScriptOutputs l =
     checkPredicate
     "Successful use of mustSpendScriptOutput for some of the script's UtxOs"
-    (valueAtAddress someAddress (== V.scale 2 utxoValue)
+    (valueAtAddress (someCardanoAddress L.testnet) (== V.scale 2 utxoValue)
     .&&. assertValidatedTransactionCount 2)
     (void $ trace $ mustSpendScriptOutputsContract l 5 3)
 
@@ -337,7 +337,7 @@ validUseOfReferenceScript l = let
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
-            .&&. valueAtAddress (fromCardanoAddressInEra $ scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -352,7 +352,7 @@ validMultipleUseOfTheSameReferenceScript l = let
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of several mustSpendScriptOutputWithReference with the same reference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
-            .&&. valueAtAddress (fromCardanoAddressInEra $ scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -366,7 +366,7 @@ validUseOfReferenceScriptDespiteLookup l = let
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference (ignore lookups) to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (Ada.adaValueOf 0)
-            .&&. valueAtAddress (fromCardanoAddressInEra $ scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -440,7 +440,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputUsesWrongRedeemerWithV2Script l =
         PlutusV1 ->
             checkPredicate
                 "No phase-2 validation failure when V1 script using onchain mustSpendScriptOutput constraint expects a different redeemer"
-                ( valueAtAddress someAddress (== utxoValue)
+                ( valueAtAddress (someCardanoAddress L.testnet) (== utxoValue)
                 .&&. assertValidatedTransactionCount 2
                 )
                 $ void $ trace $ mustSpendScriptOutputsContract' l 7 6 False
@@ -459,7 +459,7 @@ validUseOfMustSpendScriptOutputWithMatchingDatumAndValue l =
     in checkPredicateOptions
         defaultCheckOptions
         "Successful use of mustSpendScriptOutputWithMatchingDatumAndValue to spend a UTxO locked by the script with matching datum and value"
-        (valueAtAddress someAddress (== V.scale 4 utxoValue)
+        (valueAtAddress (someCardanoAddress L.testnet) (== V.scale 4 utxoValue)
         .&&. assertValidatedTransactionCount 2)
         $ void
         $ trace
@@ -547,7 +547,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeem
             PlutusV1 ->
                 checkPredicate
                 "No phase-2 validation failure when V1 script using onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different redeemer"
-                (valueAtAddress someAddress (== V.scale 4 utxoValue)
+                (valueAtAddress (someCardanoAddress L.testnet) (== V.scale 4 utxoValue)
                 .&&. assertValidatedTransactionCount 2)
             PlutusV2 ->
                 checkPredicate
@@ -795,7 +795,7 @@ txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script =
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
         "Tx.Constraints.mustSpendScriptOutputWithReference can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Ada.adaValueOf 0)
-        .&&. valueAtAddress (fromCardanoAddressInEra mustReferenceOutputV2ValidatorAddress) (== Ada.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ Trace.activateContract w1 mustSpendScriptOutputWithReferenceTxV2ConTest tag

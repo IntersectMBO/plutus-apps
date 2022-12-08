@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia        #-}
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -14,7 +15,7 @@ import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Hashes qualified as Hashes
 import Cardano.Ledger.SafeHash qualified as C
-import Codec.Serialise.Class (Serialise)
+import Codec.Serialise.Class (Serialise (..))
 import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
 import Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
@@ -70,6 +71,27 @@ instance BA.ByteArrayAccess TxId where
 deriving instance Data C.NetworkMagic
 deriving instance Data C.NetworkId
 deriving instance Generic C.NetworkId
+
+instance Serialise (C.AddressInEra C.BabbageEra) where
+  encode = encode . C.serialiseToRawBytes
+  decode = do
+    bs <- decode
+    maybe (fail "Can get back Address")
+      pure
+      $ C.deserialiseFromRawBytes (C.AsAddressInEra C.AsBabbageEra) bs
+
+instance Ord (C.AddressInEra C.BabbageEra) where
+  compare (C.AddressInEra C.ByronAddressInAnyEra addr1)
+       (C.AddressInEra C.ByronAddressInAnyEra addr2) = compare addr1 addr2
+
+  compare (C.AddressInEra C.ShelleyAddressInEra{} addr1)
+       (C.AddressInEra C.ShelleyAddressInEra{} addr2) = compare addr1 addr2
+
+  compare (C.AddressInEra C.ByronAddressInAnyEra _)
+       (C.AddressInEra C.ShelleyAddressInEra{} _) = LT
+
+  compare (C.AddressInEra C.ShelleyAddressInEra{} _)
+       (C.AddressInEra C.ByronAddressInAnyEra _) = GT
 
 instance OpenApi.ToSchema C.ScriptHash where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptHash") mempty

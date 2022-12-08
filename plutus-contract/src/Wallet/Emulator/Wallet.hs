@@ -59,6 +59,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee qualified as Fee
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation (getRequiredSigners)
 import Plutus.ChainIndex (PageQuery)
@@ -485,4 +486,4 @@ balances state wallets = foldl' f Map.empty . getIndex . _index $ state
     ws :: Map.Map PaymentPubKeyHash Wallet
     ws = walletPaymentPubKeyHashes wallets
 
-    f m o = Map.insertWith (<>) (toEntity $ Ledger.txOutAddress o) (Ledger.txOutValue o) m
+    f m o = Map.insertWith (<>) (toEntity $ fromCardanoAddressInEra $ Ledger.txOutAddress o) (Ledger.txOutValue o) m

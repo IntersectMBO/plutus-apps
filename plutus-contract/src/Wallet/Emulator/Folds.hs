@@ -62,7 +62,7 @@ import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Ledger (Block, OnChainTx (Invalid, Valid), TxId)
+import Ledger (Block, CardanoAddress, OnChainTx (Invalid, Valid), TxId)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
@@ -80,7 +80,6 @@ import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventIn
                                                instContractState, instEvents, instHandlersHistory)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,
                                     UserThreadMsg, _HandledRequest, cilMessage, cilTag, toInstanceState)
-import Plutus.V1.Ledger.Address (Address)
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
@@ -88,7 +87,7 @@ import Wallet.Emulator.LogMessages (_AdjustingUnbalancedTx, _BalancingUnbalanced
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,
                                    userThreadEvent, walletClientEvent, walletEvent')
 import Wallet.Emulator.NodeClient (_TxSubmit)
-import Wallet.Emulator.Wallet (Wallet, _RequestHandlerLog, _TxBalanceLog, mockWalletAddress)
+import Wallet.Emulator.Wallet (Wallet, _RequestHandlerLog, _TxBalanceLog, mockWalletCardanoAddress)
 import Wallet.Rollup qualified as Rollup
 import Wallet.Rollup.Types (AnnotatedTx)
 
@@ -239,7 +238,7 @@ instanceOutcome con =
     fmap (maybe NotDone (fromResumableResult . instContractState)) . instanceState con
 
 -- | Unspent outputs at an address
-utxoAtAddress :: Address -> EmulatorEventFold UtxoMap
+utxoAtAddress :: CardanoAddress -> EmulatorEventFold UtxoMap
 utxoAtAddress addr =
     preMapMaybe (preview (eteEvent . chainEvent))
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
@@ -250,12 +249,12 @@ utxoAtAddress addr =
             _                                    -> id
 
 -- | The total value of unspent outputs at an address
-valueAtAddress :: Address -> EmulatorEventFold Value
+valueAtAddress :: CardanoAddress -> EmulatorEventFold Value
 valueAtAddress = fmap (foldMap (txOutValue . snd)) . utxoAtAddress
 
 -- | The funds belonging to a wallet
 walletFunds :: Wallet -> EmulatorEventFold Value
-walletFunds = valueAtAddress . mockWalletAddress
+walletFunds = valueAtAddress . mockWalletCardanoAddress
 
 -- | The fees paid by a wallet
 walletFees :: Wallet -> EmulatorEventFold Value

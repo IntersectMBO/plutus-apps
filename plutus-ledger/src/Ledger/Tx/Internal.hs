@@ -38,6 +38,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
+
+import Ledger.Address (CardanoAddress)
 import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
@@ -47,9 +49,9 @@ import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOutD
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
+
 import Plutus.Script.Utils.Scripts
 import Plutus.V1.Ledger.Address (toPubKeyHash)
-import Plutus.V1.Ledger.Address qualified as V1
 import Plutus.V1.Ledger.Api (Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash), dataToBuiltinData)
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
@@ -59,6 +61,7 @@ import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Lattice
 import PlutusTx.Prelude (BuiltinByteString)
 import PlutusTx.Prelude qualified as PlutusTx
+
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
@@ -475,10 +478,10 @@ txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
 txOutPubKey :: TxOut -> Maybe PubKeyHash
 txOutPubKey (TxOut (C.TxOut aie _ _ _)) = toPubKeyHash $ fromCardanoAddressInEra aie
 
-txOutAddress :: TxOut -> V1.Address
-txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = fromCardanoAddressInEra aie
+txOutAddress :: TxOut -> CardanoAddress
+txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = aie
 
-outAddress :: L.Lens TxOut TxOut V1.Address (C.AddressInEra C.BabbageEra)
+outAddress :: L.Lens' TxOut (C.AddressInEra C.BabbageEra)
 outAddress = L.lens
   txOutAddress
   (\(TxOut (C.TxOut _ tov tod rs)) aie -> TxOut (C.TxOut aie tov tod rs))

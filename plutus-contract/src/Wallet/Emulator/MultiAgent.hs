@@ -259,7 +259,7 @@ fundsDistribution st =
     let fullState = view chainUtxo st
         wallets = st ^.. walletStates . to Map.keys . folded
         walletFunds = flip fmap wallets $ \w ->
-            (w, foldMap (txOutValue . snd) $ view (AM.fundsAt (Wallet.mockWalletAddress w)) fullState)
+            (w, foldMap (txOutValue . snd) $ view (AM.fundsAt (Wallet.mockWalletCardanoAddress w)) fullState)
     in Map.fromList walletFunds
 
 -- | Get the emulator log.
@@ -415,7 +415,7 @@ assert (OwnFundsEqual wallet value) = ownFundsEqual wallet value
 ownFundsEqual :: (Members MultiAgentEffs effs) => Wallet -> Value -> Eff effs ()
 ownFundsEqual wallet value = do
     es <- get
-    let total = foldMap (txOutValue . snd) $ es ^. chainUtxo . AM.fundsAt (Wallet.mockWalletAddress wallet)
+    let total = foldMap (txOutValue . snd) $ es ^. chainUtxo . AM.fundsAt (Wallet.mockWalletCardanoAddress wallet)
     if value == total
     then pure ()
     else throwError $ GenericAssertion $ T.unwords ["Funds in wallet", tshow wallet, "were", tshow total, ". Expected:", tshow value]
