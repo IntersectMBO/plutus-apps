@@ -97,6 +97,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.String (fromString)
 import GHC.Generics (Generic)
+import Ledger.Address (CardanoAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
 import Ledger.Params (Params)
@@ -110,9 +111,9 @@ import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (Qu
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
-import Plutus.Contract.CardanoAPI (ToCardanoError)
-import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
-                             StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
+import Plutus.Contract.CardanoAPI (ToCardanoError, fromCardanoAddressInEra)
+import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+                             StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
 import Plutus.V1.Ledger.Value (AssetClass)
 import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
 import Wallet.Error (WalletAPIError)
@@ -124,7 +125,7 @@ data PABReq =
     | AwaitSlotReq Slot
     | AwaitTimeReq POSIXTime
     | AwaitUtxoSpentReq TxOutRef
-    | AwaitUtxoProducedReq Address
+    | AwaitUtxoProducedReq CardanoAddress
     | AwaitTxStatusChangeReq TxId
     | AwaitTxOutStatusChangeReq TxOutRef
     | CurrentNodeClientSlotReq
@@ -149,7 +150,7 @@ instance Pretty PABReq where
     AwaitSlotReq s                          -> "Await slot:" <+> pretty s
     AwaitTimeReq s                          -> "Await time:" <+> pretty s
     AwaitUtxoSpentReq utxo                  -> "Await utxo spent:" <+> pretty utxo
-    AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty a
+    AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty (fromCardanoAddressInEra a)
     CurrentNodeClientSlotReq                -> "Current node client slot"
     CurrentChainIndexSlotReq                -> "Current chain index slot"
     CurrentTimeReq                          -> "Current time"
@@ -181,7 +182,7 @@ data PABResp =
     | CurrentNodeClientTimeRangeResp (POSIXTime, POSIXTime)
     | GetParamsResp Params
     | OwnContractInstanceIdResp ContractInstanceId
-    | OwnAddressesResp (NonEmpty Address)
+    | OwnAddressesResp (NonEmpty CardanoAddress)
     | ChainIndexQueryResp ChainIndexResponse
     | BalanceTxResp BalanceTxResponse
     | WriteBalancedTxResp WriteBalancedTxResponse
@@ -206,7 +207,7 @@ instance Pretty PABResp where
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
     GetParamsResp params                     -> "Configured parameters:" <+> pretty params
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
-    OwnAddressesResp addrs                   -> "Own addresses:" <+> pretty addrs
+    OwnAddressesResp addrs                   -> "Own addresses:" <+> pretty (fromCardanoAddressInEra <$> addrs)
     ChainIndexQueryResp rsp                  -> pretty rsp
     BalanceTxResp r                          -> "Balance tx:" <+> pretty r
     WriteBalancedTxResp r                    -> "Write balanced tx:" <+> pretty r

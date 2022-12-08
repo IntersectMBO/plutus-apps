@@ -57,6 +57,7 @@ w2PubKey = mockWalletPaymentPubKeyHash w2
 
 mustBeSignedByContract :: Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustBeSignedByContract paymentPubKey signedPubKey = do
+    params <- getParams
     let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
@@ -64,7 +65,7 @@ mustBeSignedByContract paymentPubKey signedPubKey = do
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
+    utxos <- utxosAt $ Scripts.validatorCardanoAddress (Ledger.pNetworkId params) mustBeSignedByTypedValidator
     let lookups2 =
             Constraints.typedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
@@ -79,6 +80,7 @@ mustBeSignedByContract paymentPubKey signedPubKey = do
 
 withoutOffChainMustBeSignedByContract :: Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 withoutOffChainMustBeSignedByContract paymentPubKey signedPubKey = do
+    params <- getParams
     let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
@@ -86,7 +88,7 @@ withoutOffChainMustBeSignedByContract paymentPubKey signedPubKey = do
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
+    utxos <- utxosAt $ Scripts.validatorCardanoAddress (Ledger.pNetworkId params) mustBeSignedByTypedValidator
     let lookups2 =
             Constraints.typedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
@@ -171,6 +173,7 @@ cardanoTxOwnWalletContract
     -> Ledger.PaymentPubKeyHash
     -> Contract () EmptySchema ContractError ()
 cardanoTxOwnWalletContract paymentPubKey signedPubKey = do
+    params <- getParams
     let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @UnitTest def lookups constraints
 
     utxos <- ownUtxos
@@ -188,7 +191,7 @@ cardanoTxOwnWalletContract paymentPubKey signedPubKey = do
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash mustBeSignedByTypedValidator)
+    scriptUtxos <- utxosAt $ Scripts.validatorCardanoAddress (Ledger.pNetworkId params) mustBeSignedByTypedValidator
     utxos' <- ownUtxos
     let lookups2 =
             Constraints.typedValidatorLookups mustBeSignedByTypedValidator

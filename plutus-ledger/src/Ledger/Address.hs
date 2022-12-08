@@ -4,6 +4,7 @@
 
 module Ledger.Address
     ( module Export
+    , CardanoAddress
     , PaymentPrivateKey(..)
     , PaymentPubKey(..)
     , PaymentPubKeyHash(..)
@@ -22,6 +23,7 @@ module Ledger.Address
     , xprvToStakePubKeyHash
     ) where
 
+import Cardano.Api qualified as C
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
@@ -38,6 +40,8 @@ import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty)
+
+type CardanoAddress = C.AddressInEra C.BabbageEra
 
 newtype PaymentPrivateKey = PaymentPrivateKey { unPaymentPrivateKey :: Crypto.XPrv }
 

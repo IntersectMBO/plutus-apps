@@ -6,10 +6,14 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Ledger.Test where
 
+import Cardano.Api qualified as C
+
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed as PSU
+import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api (Address, Validator)
 import Plutus.V1.Ledger.Api qualified as PV1
@@ -30,6 +34,9 @@ someTypedValidator = Scripts.unsafeMkTypedValidator (Versioned someValidator Plu
 someValidatorHash :: PV1.ValidatorHash
 someValidatorHash = PV1.validatorHash someValidator
 
+someCardanoAddress :: C.NetworkId -> Ledger.CardanoAddress
+someCardanoAddress = flip PV1.mkValidatorCardanoAddress someValidator
+
 someAddress :: Address
 someAddress = Ledger.scriptValidatorHashAddress someValidatorHash Nothing
 
@@ -41,6 +48,9 @@ someTypedValidatorV2 = Scripts.unsafeMkTypedValidator (Versioned someValidator P
 
 someValidatorHashV2 :: PV2.ValidatorHash
 someValidatorHashV2 = PV2.validatorHash someValidatorV2
+
+someCardanoAddressV2 :: C.NetworkId -> Ledger.CardanoAddress
+someCardanoAddressV2 = flip PV2.mkValidatorCardanoAddress someValidatorV2
 
 someAddressV2 :: Address
 someAddressV2 = Ledger.scriptValidatorHashAddress someValidatorHashV2 Nothing

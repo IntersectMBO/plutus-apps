@@ -50,7 +50,7 @@ import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
 import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
-import Ledger.Address (Address (addressCredential), PaymentPrivateKey (..), PaymentPubKey,
+import Ledger.Address (Address (addressCredential), CardanoAddress, PaymentPrivateKey (..), PaymentPubKey,
                        PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
@@ -177,6 +177,10 @@ mockWalletPaymentPubKeyHash :: Wallet -> PaymentPubKeyHash
 mockWalletPaymentPubKeyHash = CW.paymentPubKeyHash . walletToMockWallet'
 
 -- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
+mockWalletCardanoAddress :: Wallet -> CardanoAddress
+mockWalletCardanoAddress = CW.mockWalletCardanoAddress . walletToMockWallet'
+
+-- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
 mockWalletAddress :: Wallet -> Address
 mockWalletAddress = CW.mockWalletAddress . walletToMockWallet'
 
@@ -251,10 +255,10 @@ handleWallet = \case
         logInfo $ SubmittingTx tx
         publishTx tx
 
-    ownAddressesH :: (Member (State WalletState) effs) => Eff effs (NonEmpty Address)
+    ownAddressesH :: (Member (State WalletState) effs) => Eff effs (NonEmpty CardanoAddress)
     ownAddressesH = do
         mw <- gets _mockWallet
-        pure $ NonEmpty.fromList [CW.mockWalletAddress mw]
+        pure $ NonEmpty.fromList [CW.mockWalletCardanoAddress mw]
 
     balanceTxH ::
         ( Member NodeClientEffect effs

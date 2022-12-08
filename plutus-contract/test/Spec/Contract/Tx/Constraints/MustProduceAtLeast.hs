@@ -22,15 +22,16 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
                                                                   mustPayToTheScriptWithDatumInTx, mustProduceAtLeast)
 import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
-                             w1, w6, (.&&.))
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions,
+                             mockWalletCardanoAddress, w1, w6, (.&&.))
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, setSigningProcess,
                                                  walletInstanceTag)
-import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import Plutus.V1.Ledger.Scripts (ScriptError)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -71,11 +72,11 @@ baseAdaValueLockedByScript = Ada.lovelaceValueOf baseLovelaceLockedByScript
 baseAdaAndTokenValueLockedByScript :: Value.Value
 baseAdaAndTokenValueLockedByScript = baseAdaValueLockedByScript <> someTokens 1
 
-w1Address :: Ledger.Address
-w1Address = mockWalletAddress w1
+w1Address :: Ledger.CardanoAddress
+w1Address = mockWalletCardanoAddress w1
 
 -- | Valid contract containing all required lookups. Uses mustProduceAtLeast constraint with provided on-chain and off-chain values.
-mustProduceAtLeastContract :: Value.Value -> Value.Value -> Value.Value -> Ledger.Address -> Contract () Empty ContractError ()
+mustProduceAtLeastContract :: Value.Value -> Value.Value -> Value.Value -> Ledger.CardanoAddress -> Contract () Empty ContractError ()
 mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx onAmt baseScriptValue
@@ -89,7 +90,10 @@ mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
             <> Constraints.unspentOutputs scriptUtxos
         tx2 =
             Constraints.collectFromTheScript scriptUtxos ()
-            <> Constraints.mustPayToAddressWithDatumInTx w1Address (Datum $ PlutusTx.toBuiltinData onAmt) offAmt
+            <> Constraints.mustPayToAddressWithDatumInTx
+                 (fromCardanoAddressInEra w1Address)
+                 (Datum $ PlutusTx.toBuiltinData onAmt)
+                 offAmt
             <> Constraints.mustProduceAtLeast offAmt
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -158,7 +162,7 @@ spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup =
 contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup :: TestTree
 contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup =
     let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
-        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript $ mockWalletAddress w6
+        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript $ mockWalletCardanoAddress w6
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (const amt) -- not enough funds remain for w1 to satisfy constraint
         traceWithW6Signing = do
@@ -234,8 +238,5 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
     where
         wrap = Scripts.mkUntypedValidator
 
-valHash :: ValidatorHash
-valHash = Scripts.validatorHash typedValidator
-
-scrAddress :: Ledger.Address
-scrAddress = Ledger.scriptHashAddress valHash
+scrAddress :: Ledger.CardanoAddress
+scrAddress = Scripts.validatorCardanoAddress Ledger.testnet typedValidator

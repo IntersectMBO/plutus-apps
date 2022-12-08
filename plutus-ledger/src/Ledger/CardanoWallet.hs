@@ -20,6 +20,7 @@ module Ledger.CardanoWallet(
     fromSeed',
     -- ** Keys
     mockWalletAddress,
+    mockWalletCardanoAddress,
     paymentPrivateKey,
     paymentPubKeyHash,
     paymentPubKey,
@@ -27,6 +28,7 @@ module Ledger.CardanoWallet(
     stakePubKeyHash,
     stakePubKey,
     knownAddresses,
+    knownCardanoAddresses,
     knownPaymentKeys,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys
@@ -39,19 +41,22 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Extras (encodeByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
+import Data.Either (fromRight)
 import Data.Hashable (Hashable (..))
 import Data.List (findIndex)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
-import Ledger.Address (PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
+import Ledger.Address (CardanoAddress, PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                        PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                        PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash),
                        StakePubKey (StakePubKey, unStakePubKey), StakePubKeyHash (StakePubKeyHash, unStakePubKeyHash),
                        stakePubKeyHashCredential)
 import Ledger.Crypto (PubKey (..))
 import Ledger.Crypto qualified as Crypto
+import Ledger.Params (testnet)
+import Ledger.Tx.CardanoAPI.Internal qualified as Tx
 import Plutus.V1.Ledger.Api (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
 import Plutus.V1.Ledger.Bytes (LedgerBytes (getLedgerBytes))
 import Servant.API (FromHttpApiData, ToHttpApiData)
@@ -126,6 +131,14 @@ mockWalletAddress mw =
     Address (PubKeyCredential $ unPaymentPubKeyHash $ paymentPubKeyHash mw)
             (StakingHash . PubKeyCredential . unStakePubKeyHash <$> stakePubKeyHash mw)
 
+{- | A mock cardano address for the 'Params.testnet' network.
+ -}
+mockWalletCardanoAddress :: MockWallet -> CardanoAddress
+mockWalletCardanoAddress =
+    fromRight (error "mock wallet is invalid")
+       . Tx.toCardanoAddressInEra testnet
+       . mockWalletAddress
+
 -- | Mock wallet's private key
 paymentPrivateKey :: MockWallet -> PaymentPrivateKey
 paymentPrivateKey = PaymentPrivateKey . unMockPrivateKey . mwPaymentKey
@@ -163,3 +176,6 @@ knownPaymentPrivateKeys = paymentPrivateKey <$> knownMockWallets
 
 knownAddresses :: [Address]
 knownAddresses = mockWalletAddress <$> knownMockWallets
+
+knownCardanoAddresses :: [CardanoAddress]
+knownCardanoAddresses = mockWalletCardanoAddress <$> knownMockWallets

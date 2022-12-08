@@ -17,7 +17,6 @@ import Test.Tasty (TestTree, testGroup)
 
 import Data.List as L
 import Data.Map as M
-import Data.Maybe (fromJust)
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified as L
@@ -37,16 +36,17 @@ import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMi
                                                            mustSpendScriptOutputWithMatchingDatumAndValue,
                                                            mustSpendScriptOutputWithReference,
                                                            mustUseOutputAsCollateral)
-import Ledger.Test (asDatum, asRedeemer, someAddress, someAddressV2, someTypedValidator, someTypedValidatorV2,
-                    someValidatorHash)
+import Ledger.Test (asDatum, asRedeemer, someAddress, someCardanoAddress, someCardanoAddressV2, someTypedValidator,
+                    someTypedValidatorV2, someValidatorHash)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Tx.Constraints qualified as TxCons
 import Numeric.Natural (Natural)
 import Prelude hiding (not)
 
 import Data.Default (Default (def))
 import Plutus.Contract as Cont (Contract, ContractError, Empty, EmptySchema, _ConstraintResolutionContractError,
-                                awaitTxConfirmed, ownAddress, ownUtxos, submitTxConstraintsWith, utxosAt)
+                                awaitTxConfirmed, getParams, ownAddress, ownUtxos, submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Request (submitTxConfirmed)
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, changeInitialWalletValue, checkPredicate,
@@ -67,7 +67,7 @@ import Plutus.V1.Ledger.Value qualified as V
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Wallet.Emulator.Wallet (mockWalletAddress)
+import Wallet.Emulator.Wallet (mockWalletCardanoAddress)
 
 makeClassyPrisms ''ScriptError
 
@@ -128,11 +128,12 @@ mustPayToTheScriptWithMultipleOutputsContract
     :: Integer
     -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.DecoratedTxOut)
 mustPayToTheScriptWithMultipleOutputsContract nScriptOutputs = do
+    params <- getParams
     let lookups = Cons.typedValidatorLookups someTypedValidator
         tx = mustPayToTheScriptWithMultipleOutputs nScriptOutputs
     ledgerTx <- submitTxConstraintsWith lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
-    utxosAt someAddress
+    utxosAt $ someCardanoAddress (L.pNetworkId params)
     where
         mustPayToTheScriptWithMultipleOutputs
             :: Integer
@@ -218,7 +219,7 @@ mustPayToOtherScriptWithMultipleOutputs
     :: Int
     -> Integer
     -> PSU.Versioned Validator
-    -> PV2.Address
+    -> L.CardanoAddress
     -> Contract () Empty ContractError (Map PV2.TxOutRef Tx.DecoratedTxOut)
 mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr = do
     utxos <- ownUtxos
@@ -233,7 +234,7 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr =
         tx = mconcat ( replicate nScriptOutputs
                      $ Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf $ fromIntegral value))
           <> Cons.mustSpendPubKeyOutput balanceUtxo
-          <> Cons.mustPayToAddressWithReferenceValidator payAddr vh Nothing (Ada.adaValueOf 30)
+          <> Cons.mustPayToAddressWithReferenceValidator (fromCardanoAddressInEra payAddr) vh Nothing (Ada.adaValueOf 30)
     ledgerTx <- submitTxConstraintsWith @Void lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
     utxosAt scriptAddr
@@ -242,9 +243,11 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr =
 -- constraint to spend some of the outputs
 mustSpendScriptOutputWithReferenceContract :: PSU.Language -> Int -> Bool -> Contract () Empty ContractError ()
 mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs validReference = do
+    params <- getParams
     utxos <- ownUtxos
     let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
-        mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
+        mustReferenceOutputValidatorAddress = scriptAddress (L.pNetworkId params)
+                                                MustReferenceOutputValidator policyVersion
         get2 (a:_:c:_) = (fst a, snd a, fst c)
         get2 _         = error "Spec.TxConstraints.MustSpendScriptOutput.get2: not enough inputs"
         (utxoRef, utxo, utxoRefForBalance2) = get2 $ M.toList utxos
@@ -273,9 +276,11 @@ mustSpendScriptOutputWithReferenceContract policyVersion nScriptOutputs validRef
 -- constraint to spend some of the outputs, if we try to pass the reference script both in lookups and as references
 mustIgnoreLookupsIfReferencScriptIsGiven :: PSU.Language -> Contract () Empty ContractError ()
 mustIgnoreLookupsIfReferencScriptIsGiven policyVersion = do
+    params <- getParams
     utxos <- ownUtxos
     let mustReferenceOutputValidatorVersioned = getVersionedScript MustReferenceOutputValidator policyVersion
-        mustReferenceOutputValidatorAddress = scriptAddress MustReferenceOutputValidator policyVersion
+        mustReferenceOutputValidatorAddress = scriptAddress (L.pNetworkId params)
+                                                MustReferenceOutputValidator policyVersion
         get3 (a:_:c:_) = (fst a, snd a, fst c)
         get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
         (utxoRef, utxo, utxoRefForBalance2) = get3 $ M.toList utxos
@@ -332,7 +337,7 @@ validUseOfReferenceScript l = let
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
-            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (fromCardanoAddressInEra $ scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -347,7 +352,7 @@ validMultipleUseOfTheSameReferenceScript l = let
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of several mustSpendScriptOutputWithReference with the same reference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
-            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (fromCardanoAddressInEra $ scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -361,7 +366,7 @@ validUseOfReferenceScriptDespiteLookup l = let
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference (ignore lookups) to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (Ada.adaValueOf 0)
-            .&&. valueAtAddress (scriptAddress MustReferenceOutputValidator l ) (== Ada.adaValueOf 0)
+            .&&. valueAtAddress (fromCardanoAddressInEra $ scriptAddress L.testnet MustReferenceOutputValidator l) (== Ada.adaValueOf 0)
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -373,7 +378,7 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef :: TestTree
 contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
     let contract :: Contract () Empty ContractError () = do
             scriptUtxos <- mustPayToTheScriptWithMultipleOutputsContract 3
-            w1Utxos <- utxosAt (mockWalletAddress w1)
+            w1Utxos <- utxosAt (mockWalletCardanoAddress w1)
             let w1Utxo = fst $ M.elemAt 2 w1Utxos
                 lookups = Cons.typedValidatorLookups someTypedValidator <>
                     Cons.unspentOutputs (scriptUtxos <> w1Utxos)
@@ -583,6 +588,7 @@ phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript 
 -- | Check that when spending an output with an inline datum, the transaction does not contain a witness for this datum.
 mustSpendScriptOutputsInlineDatumContract :: Bool -> Contract () Empty ContractError ()
 mustSpendScriptOutputsInlineDatumContract useInlineDatum = do
+    params <- getParams
     let versionedMintingPolicy = PSU.Versioned mustSpendScriptOutputWithDataLengthPolicyV2 PlutusV2
         lookups1 = Cons.typedValidatorLookups someTypedValidatorV2
         mkCons = if useInlineDatum then Cons.mustPayToTheScriptWithInlineDatum else Cons.mustPayToTheScriptWithDatumInTx
@@ -590,7 +596,7 @@ mustSpendScriptOutputsInlineDatumContract useInlineDatum = do
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    scriptUtxos <- utxosAt someAddressV2
+    scriptUtxos <- utxosAt $ someCardanoAddressV2 (L.pNetworkId params)
     let scriptUtxosToSpend = M.keys scriptUtxos
         expectedRedeemers = L.map asRedeemer scriptUtxosToSpend
         dataCount = if useInlineDatum then 0 else 1 :: Integer
@@ -689,10 +695,10 @@ mintingPolicyHash script = \case
 mintingPolicyCurrencySymbol :: Script MintingPolicy -> PSU.Language -> L.CurrencySymbol
 mintingPolicyCurrencySymbol script = V.mpsSymbol . mintingPolicyHash script
 
-scriptAddress :: Script Validator -> PSU.Language -> PV1.Address
-scriptAddress x = \case
-  PlutusV1 -> PSU.V1.mkValidatorAddress $ getScript x PlutusV1
-  PlutusV2 -> PSU.V2.mkValidatorAddress $ getScript x PlutusV2
+scriptAddress :: L.NetworkId -> Script Validator -> PSU.Language -> L.CardanoAddress
+scriptAddress networkId x = \case
+  PlutusV1 -> PSU.V1.mkValidatorCardanoAddress networkId $ getScript x PlutusV1
+  PlutusV2 -> PSU.V2.mkValidatorCardanoAddress networkId $ getScript x PlutusV2
 
 {-
     V1 Policies
@@ -779,9 +785,9 @@ mustReferenceOutputValidatorV2 = PV2.mkValidatorScript
 tag :: Trace.ContractInstanceTag
 tag = "instance 1"
 
-mustReferenceOutputV2ValidatorAddress :: L.Address
+mustReferenceOutputV2ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV2ValidatorAddress =
-    PSU.V2.mkValidatorAddress mustReferenceOutputValidatorV2
+    PSU.V2.mkValidatorCardanoAddress L.testnet mustReferenceOutputValidatorV2
 
 txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script :: TestTree
 txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script =
@@ -789,7 +795,7 @@ txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script =
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
         "Tx.Constraints.mustSpendScriptOutputWithReference can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Ada.adaValueOf 0)
-        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
+        .&&. valueAtAddress (fromCardanoAddressInEra mustReferenceOutputV2ValidatorAddress) (== Ada.adaValueOf 0)
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ Trace.activateContract w1 mustSpendScriptOutputWithReferenceTxV2ConTest tag
@@ -804,7 +810,7 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
     let get3 (a:b:c:_) = (a, b, c)
         get3 _         = error "Spec.Contract.TxConstraints.get3: not enough inputs"
         ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
-        vh = fromJust $ L.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        vh = PSU.V2.validatorHash mustReferenceOutputValidatorV2
         lookups1 = Cons.unspentOutputs utxos
                <> Cons.plutusV2OtherScript mustReferenceOutputValidatorV2
         tx1 = Cons.mustPayToOtherScriptWithDatumInTx
@@ -814,7 +820,7 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
           <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
           <> Cons.mustUseOutputAsCollateral utxoRefForBalance1
           <> Cons.mustPayToAddressWithReferenceValidator
-                myAddr
+                (fromCardanoAddressInEra myAddr)
                 vh
                 Nothing
                 (Ada.adaValueOf 30)

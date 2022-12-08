@@ -28,14 +28,14 @@ import Ledger.Constraints qualified as Cons
 import Ledger.Constraints.OffChain qualified as OffCon
 import Ledger.Constraints.OnChain.V1 qualified as Cons
 import Ledger.Constraints.OnChain.V2 qualified as V2.Cons
-import Ledger.Test (asRedeemer, someAddressV2, someTypedValidatorV2)
+import Ledger.Test (asRedeemer, someCardanoAddressV2, someTypedValidatorV2)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Cons
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertUnbalancedTx, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicateOptions, defaultCheckOptions,
-                             emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2, (.&&.))
+                             emulatorConfig, mockWalletCardanoAddress, w1, w2, (.&&.))
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
@@ -89,11 +89,11 @@ tknValueOf x tc = Value.singleton (mustUseOutputAsCollateralPolicyCurrencySymbol
 tknValue :: PSU.Language -> Value.Value
 tknValue = tknValueOf tknAmount
 
-w1PaymentPubKeyHash :: L.PaymentPubKeyHash
-w1PaymentPubKeyHash = mockWalletPaymentPubKeyHash w1
+w1Address :: L.CardanoAddress
+w1Address = mockWalletCardanoAddress w1
 
-w2PaymentPubKeyHash :: L.PaymentPubKeyHash
-w2PaymentPubKeyHash = mockWalletPaymentPubKeyHash w2
+w2Address :: L.CardanoAddress
+w2Address = mockWalletCardanoAddress w2
 
 maximumCollateralInputs :: Integer
 maximumCollateralInputs = fromIntegral $ fromJust $ protocolParamMaxCollateralInputs $ def
@@ -106,9 +106,9 @@ trace contract = do
 -- | Contract with a single transaction using mustUseOutputAsCollateral offchain constraint and
 -- mint with policy using matching onchain constraint.
 mustUseOutputAsCollateralContract :: SubmitTx -> PSU.Language -> Integer ->
-                                     L.PaymentPubKeyHash -> Contract () Empty ContractError ()
-mustUseOutputAsCollateralContract submitTxFromConstraints lc numberOfCollateralInputs pkh = do
-    pubKeyUtxos <- utxosAt $ L.pubKeyHashAddress pkh Nothing
+                                     L.CardanoAddress -> Contract () Empty ContractError ()
+mustUseOutputAsCollateralContract submitTxFromConstraints lc numberOfCollateralInputs addr = do
+    pubKeyUtxos <- utxosAt addr
     let collateralUtxos = M.keys $ M.take (fromIntegral numberOfCollateralInputs) pubKeyUtxos
         lookups1 = Cons.unspentOutputs pubKeyUtxos
                 <> mintingPolicy lc (mustUseOutputAsCollateralPolicy lc)
@@ -123,7 +123,7 @@ mustUseOutputAsCollateralContract submitTxFromConstraints lc numberOfCollateralI
 -- a specific utxo to use as collateral input
 singleUseOfMustUseOutputAsCollateral :: SubmitTx -> PSU.Language -> TestTree
 singleUseOfMustUseOutputAsCollateral submitTxFromConstraints lc =
-    let contract = mustUseOutputAsCollateralContract submitTxFromConstraints lc 1 w1PaymentPubKeyHash
+    let contract = mustUseOutputAsCollateralContract submitTxFromConstraints lc 1 w1Address
     in checkPredicateOptions defaultCheckOptions
       ("Successful use of offchain and onchain mustUseOutputAsCollateral for a single " ++
        "collateral input")
@@ -139,7 +139,7 @@ singleUseOfMustUseOutputAsCollateral submitTxFromConstraints lc =
 multipleUseOfMustUseOutputAsCollateral :: SubmitTx -> PSU.Language -> TestTree
 multipleUseOfMustUseOutputAsCollateral submitTxFromConstraints lc =
     let contract = mustUseOutputAsCollateralContract submitTxFromConstraints
-                  lc maximumCollateralInputs w1PaymentPubKeyHash
+                  lc maximumCollateralInputs w1Address
     in checkPredicateOptions defaultCheckOptions
       ("Successful use of offchain and onchain mustUseOutputAsCollateral for the maximum " ++
        "number of allowed collateral inputs")
@@ -161,7 +161,7 @@ usingMustUseOutputAsCollateralWithOtherWalletUtxo
 usingMustUseOutputAsCollateralWithOtherWalletUtxo submitTxFromConstraints lc =
     let numberOfCollateralInputs = 2
         contract = mustUseOutputAsCollateralContract submitTxFromConstraints lc
-                    numberOfCollateralInputs w1PaymentPubKeyHash
+                    numberOfCollateralInputs w1Address
         traceWithW2Signing = do
             Trace.setSigningProcess w1 (Just $ signPrivateKeys
                 [paymentPrivateKey $ walletToMockWallet' w1,
@@ -185,8 +185,9 @@ useOfMustUseOutputAsCollateralWithoutPlutusScript :: SubmitTx -> PSU.Language ->
 useOfMustUseOutputAsCollateralWithoutPlutusScript submitTxFromConstraints _ =
     let numberOfCollateralInputs = 1
         contract = do
+            ownAddr <- ownAddress
             ownPkh <- ownPaymentPubKeyHash
-            pubKeyUtxos <- utxosAt $ L.pubKeyHashAddress ownPkh Nothing
+            pubKeyUtxos <- utxosAt ownAddr
             let utxo = head $ (M.keys $ M.take numberOfCollateralInputs pubKeyUtxos)
                 lookups1 = Cons.unspentOutputs pubKeyUtxos
                 tx1 = Cons.mustUseOutputAsCollateral utxo
@@ -212,14 +213,16 @@ ledgerValidationErrorWhenUsingMustUseOutputAsCollateralWithScriptUtxo submitTxFr
     let numberOfCollateralInputs = 1
         contract :: Contract () Empty ContractError ()
         contract = do
+            params <- getParams
             let lookups1 = Cons.typedValidatorLookups someTypedValidatorV2
                 tx1 = Cons.mustPayToTheScriptWithDatumInTx (PlutusTx.toBuiltinData ()) utxoValue
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
             ownPkh <- ownPaymentPubKeyHash
-            pubKeyUtxos <- utxosAt $ L.pubKeyHashAddress ownPkh Nothing
-            scriptUtxos <- utxosAt someAddressV2
+            ownAddr <- ownAddress
+            pubKeyUtxos <- utxosAt ownAddr
+            scriptUtxos <- utxosAt $ someCardanoAddressV2 (L.pNetworkId params)
             let collaterealUtxo = head $ (M.keys $ M.take numberOfCollateralInputs scriptUtxos)
                 lookups2 = Cons.typedValidatorLookups someTypedValidatorV2
                         <> Cons.unspentOutputs scriptUtxos
@@ -252,7 +255,7 @@ ledgerValidationErrorWhenMustUseOutputAsCollateralExceedsMaximumCollateralInputs
 ledgerValidationErrorWhenMustUseOutputAsCollateralExceedsMaximumCollateralInputs submitTxFromConstraints lc =
     let moreThanMaximumCollateralInputs = (succ maximumCollateralInputs)
         contract = mustUseOutputAsCollateralContract submitTxFromConstraints lc
-                    moreThanMaximumCollateralInputs w1PaymentPubKeyHash
+                    moreThanMaximumCollateralInputs w1Address
     in checkPredicateOptions defaultCheckOptions
     ("Ledger error when offchain mustUseOutputAsCollateralToSatisfyAllCollateral is used more " ++
      "than maximum number of allowed collateral inputs (TooManyCollateralInputs)")

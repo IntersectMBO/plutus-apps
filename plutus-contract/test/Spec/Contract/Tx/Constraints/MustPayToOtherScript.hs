@@ -20,7 +20,7 @@ import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (Redeemer, ScriptError (EvaluationError))
-import Ledger.Test (asDatum, asRedeemer, someValidator, someValidatorHash)
+import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -254,6 +254,7 @@ successfulUseOfMustPayToOtherScriptWithDatumInTxWithScriptsExactTokenBalance sub
         onChainConstraint = asRedeemer $ MustPayToOtherScriptWithDatumInTx someValidatorHash someDatum otherTokenValue
         options = defaultCheckOptions & changeInitialWalletValue w1 (otherTokenValue <>)
         contract = do
+            networkId <- Ledger.pNetworkId <$> getParams
             let lookups1 = Constraints.plutusV1OtherScript someValidator
                 tx1 =
                     Constraints.mustPayToOtherScriptWithDatumInTx
@@ -263,7 +264,7 @@ successfulUseOfMustPayToOtherScriptWithDatumInTxWithScriptsExactTokenBalance sub
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-            scriptUtxos <- utxosAt $ Ledger.scriptHashAddress someValidatorHash
+            scriptUtxos <- utxosAt $ someCardanoAddress networkId
             let lookups2 = Constraints.plutusV1OtherScript someValidator
                         <> Constraints.unspentOutputs scriptUtxos
                         <> mintingPolicy lc (mustPayToOtherScriptPolicy lc)

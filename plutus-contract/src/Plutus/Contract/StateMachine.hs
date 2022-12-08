@@ -64,13 +64,15 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, Slot, TxOutRef, Value)
+import Ledger (POSIXTime, Slot, TxOutRef, Value, testnet)
 import Ledger qualified
+import Ledger.Address (CardanoAddress)
 import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
                            mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
                            mustSpendPubKeyOutput, plutusV1MintingPolicy)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
@@ -216,6 +218,9 @@ mkStateMachineClient inst =
         , scChooser
         }
 
+machineCardanoAddress :: StateMachineInstance s i -> CardanoAddress
+machineCardanoAddress = either (error "invalid address") id . Tx.toCardanoAddressInEra testnet . SM.machineAddress
+
 {-| Get the current on-chain state of the state machine instance.
     Return Nothing if there is no state on chain.
     Throws an @SMContractError@ if the number of outputs at the machine address is greater than one.
@@ -228,7 +233,7 @@ getOnChainState ::
     => StateMachineClient state i
     -> Contract w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.DecoratedTxOut))
 getOnChainState StateMachineClient{scInstance, scChooser} = mapError (review _SMContractError) $ do
-    utxoTx <- utxosAt (SM.machineAddress scInstance)
+    utxoTx <- utxosAt (machineCardanoAddress scInstance)
     let states = getStates scInstance utxoTx
     case states of
         [] -> pure Nothing
@@ -323,7 +328,7 @@ waitForUpdateTimeout client@StateMachineClient{scInstance, scChooser} timeout = 
                         -- There is no on-chain state, so we wait for an output to appear
                         -- at the address. Any output that appears needs to be checked
                         -- with scChooser'
-                        let addr = Scripts.validatorAddress $ typedValidator scInstance in
+                        let addr = machineCardanoAddress scInstance in
                         promiseBind (utxoIsProduced addr) $ \txns -> do
                             outRefMaps <- traverse utxosTxOutTxFromTx txns
                             let produced = getStates @state @i scInstance (Map.fromList $ map projectFst $ concat outRefMaps)

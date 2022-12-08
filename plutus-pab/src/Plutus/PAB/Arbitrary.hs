@@ -12,6 +12,7 @@
 -- across to the test suite.
 module Plutus.PAB.Arbitrary where
 
+import Cardano.Api qualified as C
 import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
@@ -27,7 +28,7 @@ import Ledger.Params (testnet)
 import Ledger.Slot (Slot)
 import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)
-import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoTxOut)
+import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoAddressInEra, toCardanoTxOut)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
@@ -330,6 +331,9 @@ instance Arbitrary PABReq where
 
 instance Arbitrary Address where
     arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, mkValidatorAddress <$> arbitrary]
+
+instance Arbitrary (C.AddressInEra C.BabbageEra) where
+    arbitrary = fmap (toCardanoAddressInEra testnet) genericArbitrary `suchThatMap` rightToMaybe
 
 instance Arbitrary ValidatorHash where
     arbitrary = ValidatorHash <$> arbitrary

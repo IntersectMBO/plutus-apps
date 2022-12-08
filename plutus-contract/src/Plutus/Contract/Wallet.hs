@@ -49,6 +49,7 @@ import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx), mustPayToAddress)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
@@ -110,7 +111,7 @@ handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
 getUnspentOutput = do
     addr <- Contract.ownAddress
-    let constraints = mustPayToAddress addr (Ada.lovelaceValueOf 1)
+    let constraints = mustPayToAddress (fromCardanoAddressInEra addr) (Ada.lovelaceValueOf 1)
     utx <- Contract.mkTxConstraints @Void mempty constraints
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of

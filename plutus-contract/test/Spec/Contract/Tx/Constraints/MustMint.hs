@@ -28,12 +28,14 @@ import Ledger.Scripts (ScriptHash (ScriptHash), unitRedeemer)
 import Ledger.Test (asRedeemer, coinMintingPolicy, coinMintingPolicyCurrencySymbol, coinMintingPolicyHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions,
                              emulatorConfig, w1, walletFundsAssetClassChange, (.&&.))
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
@@ -170,7 +172,7 @@ mustMintValueWithReferenceContract submitTxFromConstraints lang failPhase2 = do
         MintingPolicyHash mph = coinMintingPolicyHash lang
         lookups0 = Constraints.mintingPolicy (coinMintingPolicy lang)
         tx0 = Constraints.mustPayToAddressWithReferenceScript
-                myAddr
+                (fromCardanoAddressInEra myAddr)
                 (ScriptHash mph)
                 Nothing
                 (Ada.adaValueOf 35)
@@ -196,7 +198,7 @@ mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang = do
         MintingPolicyHash mph = coinMintingPolicyHash lang
         lookups0 = Constraints.mintingPolicy (coinMintingPolicy lang)
         tx0 = Constraints.mustPayToAddressWithReferenceScript
-                myAddr
+                (fromCardanoAddressInEra myAddr)
                 (ScriptHash mph)
                 Nothing
                 (Ada.adaValueOf 30)
@@ -299,12 +301,13 @@ mustMintCurrencyWithRedeemerPhase2Failure submitTxFromConstraints lang =
 -- | Contract without the required minting policy lookup. Uses mustMintCurrencyWithRedeemer constraint.
 mustMintCurrencyWithRedeemerMissingPolicyContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
 mustMintCurrencyWithRedeemerMissingPolicyContract submitTxFromConstraints lang = do
+    networkId <- Ledger.pNetworkId <$> getParams
     let lookups1 = Constraints.typedValidatorLookups $ mustMintCurrencyWithRedeemerTypedValidator tknName
         tx1 = Constraints.mustPayToTheScriptWithDatumHash () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash $ mustMintCurrencyWithRedeemerTypedValidator tknName)
+    utxos <- utxosAt (Typed.validatorCardanoAddress networkId $ mustMintCurrencyWithRedeemerTypedValidator tknName)
     let lookups2 =
             Constraints.typedValidatorLookups (mustMintCurrencyWithRedeemerTypedValidator tknName) <>
             Constraints.unspentOutputs utxos

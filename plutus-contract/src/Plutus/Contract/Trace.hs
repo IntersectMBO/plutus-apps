@@ -46,6 +46,7 @@ module Plutus.Contract.Trace
     -- * Wallets
     , EM.Wallet(..)
     , EM.mockWalletAddress
+    , EM.mockWalletCardanoAddress
     , EM.mockWalletPaymentPubKey
     , EM.mockWalletPaymentPubKeyHash
     , EM.knownWallets

@@ -48,7 +48,6 @@ data ChainIndexConfig = ChainIndexConfig
 
 -- | For some reason these are not defined anywhere, and these are the
 --   reason for the -Wno-orphans option.
-deriving stock instance Generic NetworkId
 deriving anyclass instance FromJSON NetworkId
 deriving anyclass instance ToJSON NetworkId
 deriving anyclass instance FromJSON NetworkMagic

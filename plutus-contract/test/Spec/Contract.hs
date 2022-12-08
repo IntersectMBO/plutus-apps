@@ -39,18 +39,18 @@ import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, a
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
                                     ContractInstanceState (ContractInstanceState, instContractState),
                                     UserThreadMsg (UserLog))
-import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, Validator)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator)
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.Wallet (mockWalletAddress)
+import Wallet.Emulator.Wallet (mockWalletCardanoAddress)
 
 import Plutus.ChainIndex.Types (RollbackState (Committed), TxOutState (Spent, Unspent), TxOutStatus, TxStatus,
                                 TxValidity (TxValid))
@@ -171,7 +171,7 @@ tests =
             (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
         , let theContract :: Contract () Schema ContractError () =
-                  void $ awaitUtxoProduced (mockWalletAddress w2)
+                  void $ awaitUtxoProduced (mockWalletCardanoAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -181,7 +181,7 @@ tests =
             )
 
         , let theContract :: Contract () Schema ContractError () =
-                  void ( utxosAt (mockWalletAddress w1)
+                  void ( utxosAt (mockWalletCardanoAddress w1)
                      >>= awaitUtxoSpent . fst . head . Map.toList
                        )
           in run "await txout spent"
@@ -423,8 +423,8 @@ errorContract = do
                       $ \_ -> throwError (OtherContractError "something went wrong"))
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
-someAddress :: Address
-someAddress = mkValidatorAddress someValidator
+someAddress :: Ledger.CardanoAddress
+someAddress = mkValidatorCardanoAddress Ledger.testnet someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])

@@ -22,6 +22,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
@@ -45,6 +46,7 @@ scriptBalance = 25_000_000
 
 mustSpendAtLeastContract :: Integer -> Integer -> Contract () Empty ContractError ()
 mustSpendAtLeastContract offAmt onAmt = do
+    params <- getParams
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 onAmt
@@ -52,7 +54,7 @@ mustSpendAtLeastContract offAmt onAmt = do
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt scrAddress
+    utxos <- utxosAt $ scrAddress (Ledger.pNetworkId params)
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
         tx2 =
@@ -129,5 +131,5 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash typedValidator
 
-scrAddress :: Ledger.Address
-scrAddress = Ledger.scriptHashAddress valHash
+scrAddress :: Ledger.NetworkId -> Ledger.CardanoAddress
+scrAddress = flip Typed.validatorCardanoAddress typedValidator

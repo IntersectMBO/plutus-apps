@@ -18,6 +18,7 @@ import Data.Data
 import Data.Row
 import Test.Tasty
 
+import Ledger (pNetworkId)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (collectFromTheScript, mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx)
 import Ledger.Tx (getCardanoTxId)
@@ -25,7 +26,6 @@ import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract as Contract
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Scripts (validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.Validators hiding (validatorHash)
 import Plutus.Trace.Emulator as Trace
@@ -130,7 +130,8 @@ contract :: Contract () Schema ContractError ()
 contract = selectList [failFalseC, failHeadNilC, divZeroC, successC]
   where
     run validator = void $ do
-      let addr = mkValidatorAddress (validatorScript validator)
+      params <- getParams
+      let addr = Scripts.validatorCardanoAddress (pNetworkId params) validator
           hash = validatorHash (validatorScript validator)
           datum = Datum $ toBuiltinData ()
           tx = mustPayToOtherScriptWithDatumInTx hash datum (Ada.adaValueOf 10)

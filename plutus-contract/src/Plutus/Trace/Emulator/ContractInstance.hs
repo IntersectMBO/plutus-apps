@@ -54,6 +54,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
 import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
                           ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
                           TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), citxInputs, fromOnChainTx,
@@ -377,7 +378,7 @@ updateTxOutProduced IndexedBlock{ibUtxoProduced} = do
     -- Check whether the contract instance is waiting for address changes
     hks <- mapMaybe (traverse (preview E._AwaitUtxoProducedReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=addr} =
-            case Map.lookup addr ibUtxoProduced of
+            case Map.lookup (fromCardanoAddressInEra addr) ibUtxoProduced of
                 Nothing      -> Nothing
                 Just newTxns -> Just Response{rspRqID=rqID, rspItID=itID, rspResponse=E.AwaitUtxoProducedResp newTxns}
         utxoResp = listToMaybe $ mapMaybe mpReq hks

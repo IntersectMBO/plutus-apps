@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -21,6 +22,7 @@ import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Types qualified as JSON
 import Data.Bifunctor (bimap)
 import Data.ByteArray qualified as BA
+import Data.Data (Data)
 import Data.Hashable (Hashable)
 import Data.OpenApi qualified as OpenApi
 import Data.Scientific (floatingOrInteger, scientific)
@@ -64,6 +66,10 @@ instance BA.ByteArrayAccess TxId where
   withByteArray (TxId bis) = BA.withByteArray bis
 
 -- | OpenApi instances for swagger support
+
+deriving instance Data C.NetworkMagic
+deriving instance Data C.NetworkId
+deriving instance Generic C.NetworkId
 
 instance OpenApi.ToSchema C.ScriptHash where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptHash") mempty

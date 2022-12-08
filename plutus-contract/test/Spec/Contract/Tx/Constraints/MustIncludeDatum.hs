@@ -21,6 +21,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicate,
                              mockWalletPaymentPubKeyHash, w1)
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), Redeemer (Redeemer),
@@ -73,6 +74,7 @@ tknValue = Value.singleton mustIncludeDatumInTxPolicyCurrencySymbol "mint-me" 1
 
 mustIncludeDatumInTxWhenPayingToScriptContract :: [Datum] -> [Datum] -> Contract () Empty ContractError ()
 mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
+    params <- getParams
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 validatorDatumBs
@@ -80,7 +82,7 @@ mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash typedValidator)
+    utxos <- utxosAt (Typed.validatorCardanoAddress (Ledger.pNetworkId params) typedValidator)
     let lookups2 =
             Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
@@ -121,6 +123,7 @@ mustIncludeDatumInTxCalledBeforeOtherConstraints =
         (void $ trace contract)
  where
     contract = do
+        params <- getParams
         let otherDatumBs = Datum
                          $ PlutusTx.dataToBuiltinData
                          $ PlutusTx.toData ("otherDatum" :: P.BuiltinByteString)
@@ -131,7 +134,7 @@ mustIncludeDatumInTxCalledBeforeOtherConstraints =
         ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
         awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-        utxos <- utxosAt (Ledger.scriptHashAddress $ Scripts.validatorHash typedValidator)
+        utxos <- utxosAt (Typed.validatorCardanoAddress (Ledger.pNetworkId params) typedValidator)
         let lookups2 =
                 Constraints.typedValidatorLookups typedValidator
                 <> Constraints.unspentOutputs utxos
