@@ -38,7 +38,7 @@ rec {
       config.preset.github.status.lib.reportBulk {
         # nix eval ${flakeUrl}#ciJobs --apply __attrNames --json | # all systems the flake declares
         bulk.text = ''
-          echo '[ "x86_64-linux" ]'
+          echo '[ "x86_64-linux" ]' |
           nix-systems -i | # figure out which the current machine is able to build
           jq 'with_entries(select(.value))' # only keep those we can build
         '';
