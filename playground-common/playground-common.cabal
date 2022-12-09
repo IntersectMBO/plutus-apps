@@ -125,9 +125,10 @@ test-suite playground-common-test
   -- Local components
   --------------------
   build-depends:
-      playground-common  >=1.0.0
-    , plutus-contract    >=1.0.0
-    , plutus-ledger      >=1.0.0
+      playground-common    >=1.0.0
+    , plutus-contract      >=1.0.0
+    , plutus-ledger        >=1.0.0
+    , plutus-script-utils  >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies

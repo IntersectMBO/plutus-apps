@@ -33,26 +33,26 @@ tests =
     testGroup "multi sig state machine tests"
     [ checkPredicate "lock, propose, sign 3x, pay - SUCCESS"
         (assertNoFailedTransactions
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.adaValueOf 5))
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChangePlutus w2 (Ada.adaValueOf 5))
         (lockProposeSignPay 3 1)
 
     , checkPredicate "lock, propose, sign 2x, pay - FAILURE"
         (assertNotDone (MS.contract  @MS.MultiSigError params) (Trace.walletInstanceTag w1) "contract should proceed after invalid transition"
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
-        .&&. walletFundsChange w2 mempty)
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChangePlutus w2 mempty)
         (lockProposeSignPay 2 1)
 
     , checkPredicate "lock, propose, sign 3x, pay x2 - SUCCESS"
         (assertNoFailedTransactions
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.adaValueOf 10))
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChangePlutus w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 2)
 
     , checkPredicate "lock, propose, sign 3x, pay x3 - FAILURE"
         (assertNotDone (MS.contract  @MS.MultiSigError params) (Trace.walletInstanceTag w2) "contract should proceed after invalid transition"
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.adaValueOf 10))
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChangePlutus w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 3)
 
     -- TODO: turn this on again when reproducibility issue in core is fixed

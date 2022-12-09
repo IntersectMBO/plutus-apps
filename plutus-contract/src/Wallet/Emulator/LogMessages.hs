@@ -13,6 +13,7 @@ module Wallet.Emulator.LogMessages(
   , _ValidationFailed
   ) where
 
+import Cardano.Api qualified as C
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
@@ -21,8 +22,6 @@ import Ledger (Address, CardanoTx, TxId, getCardanoTxId)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError, ValidationPhase)
 import Ledger.Slot (Slot)
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (Value)
 import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 import Wallet.Emulator.Error (WalletAPIError)
 
@@ -31,7 +30,7 @@ data RequestHandlerLogMsg =
     | StartWatchingContractAddresses
     | HandleTxFailed WalletAPIError
     | UtxoAtFailed Address
-    | AdjustingUnbalancedTx [Ada.Ada]
+    | AdjustingUnbalancedTx [C.Lovelace]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -56,7 +55,7 @@ data TxBalanceMsg =
         TxId
         CardanoTx
         ValidationError
-        Value -- ^ The amount of collateral stored in the transaction.
+        C.Value -- ^ The amount of collateral stored in the transaction.
         [Text]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)

@@ -84,6 +84,8 @@ module Ledger.Tx
     , txBodyContentOuts
     -- * Hashing transactions
     , txId
+    -- * Utility
+    , decoratedTxOutPlutusValue
     ) where
 
 import Cardano.Api qualified as C
@@ -95,8 +97,8 @@ import Cardano.Ledger.Alonzo.TxWitness (txwitsVKey)
 
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
-import Control.DeepSeq (NFData)
-import Control.Lens (At (at), Getter, Lens', Traversal', lens, makeLenses, makePrisms, to, views, (&), (?~), (^.), (^?))
+import Control.Lens (At (at), Getter, Lens', Traversal', lens, makeLenses, makePrisms, to, view, views, (&), (?~), (^.),
+                     (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Proxy (Proxy))
 import Data.Map (Map)
@@ -127,13 +129,14 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, outAddress,
                                       outValue, pubKeyTxIn, pubKeyTxIns, scriptTxIn, scriptTxIns, txOutPubKey)
+import Plutus.V1.Ledger.Value (Value)
 
 -- | A datum in a transaction output that comes from a chain index query.
 data DatumFromQuery
     = DatumUnknown
     | DatumInline V2.Datum
     | DatumInBody V2.Datum
-    deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, NFData, OpenApi.ToSchema)
+    deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 makePrisms ''DatumFromQuery
 
@@ -150,7 +153,7 @@ data DecoratedTxOut =
       -- | The staking credential of the transaction address, if any
       _decoratedTxOutStakingCredential :: Maybe V1.StakingCredential,
       -- | Value of the transaction output.
-      _decoratedTxOutValue             :: V2.Value,
+      _decoratedTxOutValue             :: C.Value,
       -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
       _decoratedTxOutPubKeyDatum       :: Maybe (V2.DatumHash, DatumFromQuery),
       -- | Value of the transaction output.
@@ -162,7 +165,7 @@ data DecoratedTxOut =
       -- | The staking credential of the transaction address, if any
       _decoratedTxOutStakingCredential :: Maybe V1.StakingCredential,
       -- | Value of the transaction output.
-      _decoratedTxOutValue             :: V2.Value,
+      _decoratedTxOutValue             :: C.Value,
       -- | Datum attached to the transaction output, either in full (inline datum or datum in transaction body) or as a
       -- hash reference. A transaction output protected by a Plutus script
       -- is guardateed to have an associated datum.
@@ -173,14 +176,14 @@ data DecoratedTxOut =
       -- | Full version of the validator protecting the transaction output
       _decoratedTxOutValidator         :: Maybe (Versioned V1.Validator)
   }
-  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, NFData, OpenApi.ToSchema)
+  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 makeLenses ''DecoratedTxOut
 makePrisms ''DecoratedTxOut
 
 
 mkDecoratedTxOut
-    :: CardanoAddress -> V2.Value -> (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    :: CardanoAddress -> C.Value -> (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
     -> DecoratedTxOut
 mkDecoratedTxOut a v dat rs = let
   sc = cardanoStakingCredential a
@@ -189,7 +192,7 @@ mkDecoratedTxOut a v dat rs = let
   (V2.ScriptCredential c) -> ScriptDecoratedTxOut c sc v dat rs Nothing
 
 mkPubkeyDecoratedTxOut
-    :: CardanoAddress -> V2.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
     -> Maybe DecoratedTxOut
 mkPubkeyDecoratedTxOut a v dat rs = let
   sc = cardanoStakingCredential a
@@ -199,7 +202,7 @@ mkPubkeyDecoratedTxOut a v dat rs = let
 
 mkScriptDecoratedTxOut
     :: CardanoAddress
-    -> V2.Value
+    -> C.Value
     -> (V2.DatumHash, DatumFromQuery)
     -> Maybe (Versioned V1.Script)
     -> Maybe (Versioned V1.Validator)
@@ -229,7 +232,7 @@ toTxOut :: C.NetworkId -> DecoratedTxOut -> Either ToCardanoError TxOut
 toTxOut networkId p =
   TxOut <$> (C.TxOut
     <$> CardanoAPI.toCardanoAddressInEra networkId (p ^. decoratedTxOutAddress)
-    <*> CardanoAPI.toCardanoTxOutValue (p ^. decoratedTxOutValue)
+    <*> pure (CardanoAPI.toCardanoTxOutValue (p ^. decoratedTxOutValue))
     <*> (toTxOutDatum $ p ^? decoratedTxOutDatum)
     <*> CardanoAPI.toCardanoReferenceScript (p ^. decoratedTxOutReferenceScript))
 
@@ -244,7 +247,7 @@ toTxOutDatum = CardanoAPI.toCardanoTxOutDatum . toPlutusOutputDatum
 -- 'DecoratedTxOut' to 'TxOut' and back is therefore lossy.
 toTxInfoTxOut :: DecoratedTxOut -> V2.Tx.TxOut
 toTxInfoTxOut p =
-    V2.Tx.TxOut (p ^. decoratedTxOutAddress) (p ^. decoratedTxOutValue)
+    V2.Tx.TxOut (p ^. decoratedTxOutAddress) (CardanoAPI.fromCardanoValue $ p ^. decoratedTxOutValue)
                 (toPlutusOutputDatum $ p ^? decoratedTxOutDatum)
                 (views decoratedTxOutReferenceScript (fmap scriptHash) p)
 
@@ -390,17 +393,17 @@ getCardanoTxProducedReturnCollateral :: CardanoTx -> Map V1.Tx.TxOutRef TxOut
 getCardanoTxProducedReturnCollateral tx = maybe Map.empty (Map.singleton (V1.TxOutRef (getCardanoTxId tx) 0)) $
     getCardanoTxReturnCollateral tx
 
-getCardanoTxTotalCollateral :: CardanoTx -> Maybe V1.Value
-getCardanoTxTotalCollateral = onCardanoTx txTotalCollateral
+getCardanoTxTotalCollateral :: CardanoTx -> Maybe C.Lovelace
+getCardanoTxTotalCollateral = onCardanoTx (undefined . txTotalCollateral)
     (\(CardanoApiEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) -> CardanoAPI.fromCardanoTotalCollateral txTotalCollateral)
 
-getCardanoTxFee :: CardanoTx -> V1.Value
-getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
+getCardanoTxFee :: CardanoTx -> C.Lovelace
+getCardanoTxFee = onCardanoTx (undefined . txFee) (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
 
-getCardanoTxMint :: CardanoTx -> V1.Value
-getCardanoTxMint = onCardanoTx txMint (getTxBodyContentMint . getTxBodyContent)
+getCardanoTxMint :: CardanoTx -> C.Value
+getCardanoTxMint = onCardanoTx (undefined . txMint) (getTxBodyContentMint . getTxBodyContent)
 
-getTxBodyContentMint :: C.TxBodyContent ctx era -> V1.Value
+getTxBodyContentMint :: C.TxBodyContent ctx era -> C.Value
 getTxBodyContentMint C.TxBodyContent {..} = CardanoAPI.fromCardanoMintValue txMintValue
 
 getCardanoTxValidityRange :: CardanoTx -> SlotRange
@@ -498,11 +501,10 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
     f (idx, o) = (V1.Tx.TxOutRef (txId t) idx, o)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
-pubKeyTxOut :: V1.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut
+pubKeyTxOut :: C.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut
 pubKeyTxOut v pk sk = do
   aie <- CardanoAPI.toCardanoAddressInEra (C.Testnet $ C.NetworkMagic 1) $ pubKeyAddress pk sk
-  txov <- CardanoAPI.toCardanoValue v
-  pure $ TxOut $ C.TxOut aie (C.TxOutValue C.MultiAssetInBabbageEra txov) C.TxOutDatumNone C.Api.ReferenceScriptNone
+  pure $ TxOut $ C.TxOut aie (CardanoAPI.toCardanoTxOutValue v) C.TxOutDatumNone C.Api.ReferenceScriptNone
 
 type PrivateKey = Crypto.XPrv
 
@@ -541,3 +543,7 @@ addSignature' :: PrivateKey -> Tx -> Tx
 addSignature' privK tx = tx & signatures . at pubK ?~ sig where
     sig = signTx' (txId tx) privK
     pubK = toPublicKey privK
+
+
+decoratedTxOutPlutusValue :: DecoratedTxOut -> Value
+decoratedTxOutPlutusValue = CardanoAPI.fromCardanoValue . view decoratedTxOutValue

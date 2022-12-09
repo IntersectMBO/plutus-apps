@@ -29,7 +29,6 @@ import Ledger (Slot (..), minAdaTxOutEstimated)
 import Plutus.Contract (Contract, selectList)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
-import Plutus.Contract.Test.Coverage
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value, geq)
 import Plutus.V1.Ledger.Api (Datum)

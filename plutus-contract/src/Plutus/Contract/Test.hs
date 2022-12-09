@@ -52,12 +52,14 @@ module Plutus.Contract.Test(
     , assertUnbalancedTx
     , anyUnbalancedTx
     , assertEvents
+    , walletFundsChangePlutus
     , walletFundsChange
     , walletFundsExactChange
     , walletFundsAssetClassChange
     , walletPaidFees
     , waitingForSlot
     , valueAtAddress
+    , plutusValueAtAddress
     , dataAtAddress
     , reasonable
     , reasonable'
@@ -115,6 +117,7 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainEvent)
 import Cardano.Node.Emulator.Generators (GeneratorModel, Mockchain (..))
 import Cardano.Node.Emulator.Generators qualified as Gen
@@ -125,6 +128,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Tx (Tx, onCardanoTx)
+import Ledger.Value.CardanoAPI (fromCardanoValue, toCardanoValue)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
@@ -133,15 +137,12 @@ import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
 import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Coverage
-import PlutusTx.Prelude qualified as P
 import Streaming qualified as S
 import Streaming.Prelude qualified as S
 import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
@@ -190,7 +191,7 @@ defaultCheckOptions =
         }
 
 -- | Modify the value assigned to the given wallet in the initial distribution.
-changeInitialWalletValue :: Wallet -> (Value -> Value) -> CheckOptions -> CheckOptions
+changeInitialWalletValue :: Wallet -> (C.Value -> C.Value) -> CheckOptions -> CheckOptions
 changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Left . ix wallet)
 
 -- | Set higher limits on transaction size and execution units.
@@ -401,7 +402,7 @@ assertEvents contract inst pr nm = TracePredicate $
         pure result
 
 -- | Check that the funds at an address meet some condition.
-valueAtAddress :: CardanoAddress -> (Value -> Bool) -> TracePredicate
+valueAtAddress :: CardanoAddress -> (C.Value -> Bool) -> TracePredicate
 valueAtAddress address check = TracePredicate $
     flip postMapM (L.generalize $ Folds.valueAtAddress address) $ \vl -> do
         let result = check vl
@@ -409,6 +410,8 @@ valueAtAddress address check = TracePredicate $
             tell @(Doc Void) ("Funds at address" <+> pretty (toPlutusAddress address) <+> "were" <+> pretty vl)
         pure result
 
+plutusValueAtAddress :: CardanoAddress -> (Ledger.Value -> Bool) -> TracePredicate
+plutusValueAtAddress addr p = valueAtAddress addr (p . fromCardanoValue)
 
 -- | Get a datum of a given type 'd' out of a Transaction Output.
 getTxOutDatum ::
@@ -598,46 +601,52 @@ assertOutcome contract inst p nm = TracePredicate $
                 ]
         pure result
 
+-- | Check that the funds in the wallet have changed by the given amount, exluding fees, using the Plutus `Value` type.
+walletFundsChangePlutus :: Wallet -> Ledger.Value -> TracePredicate
+walletFundsChangePlutus w v = case toCardanoValue v of
+    Left _   -> TracePredicate $ pure False
+    Right cv -> walletFundsChangeImpl False w cv
+
 -- | Check that the funds in the wallet have changed by the given amount, exluding fees.
-walletFundsChange :: Wallet -> Value -> TracePredicate
+walletFundsChange :: Wallet -> C.Value -> TracePredicate
 walletFundsChange = walletFundsChangeImpl False
 -- | Check that the funds in the wallet have changed by the given amount, including fees.
-walletFundsExactChange :: Wallet -> Value -> TracePredicate
+walletFundsExactChange :: Wallet -> C.Value -> TracePredicate
 walletFundsExactChange = walletFundsChangeImpl True
 
-walletFundsChangeImpl :: Bool -> Wallet -> Value -> TracePredicate
+walletFundsChangeImpl :: Bool -> Wallet -> C.Value -> TracePredicate
 walletFundsChangeImpl exact w dlt' =
     walletFundsCheck w $ \initialValue finalValue' fees allWalletsTxOutCosts ->
-        let finalValue = finalValue' P.+ if exact then mempty else fees
-            dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) allWalletsTxOutCosts
-            result = initialValue P.+ dlt == finalValue
+        let finalValue = finalValue' <> if exact then mempty else C.lovelaceToValue fees
+            dlt = calculateDelta dlt' (C.selectLovelace initialValue) (C.selectLovelace finalValue) allWalletsTxOutCosts
+            result = initialValue <> dlt == finalValue
         in if result then Nothing else Just $
             [ "Expected funds of" <+> pretty w <+> "to change by"
-            , " " <+> viaShow dlt] ++
-            (guard exact >> ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
+            , " " <+> pretty dlt] ++
+            (guard exact >> ["  (excluding" <+> pretty fees <+> "lovelace in fees)" ]) ++
             if initialValue == finalValue
             then ["but they did not change"]
-            else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
-                    "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
+            else ["but they changed by", " " <+> pretty (finalValue <> C.negateValue initialValue),
+                    "a discrepancy of",    " " <+> pretty (finalValue <> C.negateValue (initialValue <> dlt))]
 
-walletPaidFees :: Wallet -> Value -> TracePredicate
+walletPaidFees :: Wallet -> C.Lovelace -> TracePredicate
 walletPaidFees w val = walletFundsCheck w $ \_ _ fees _ -> do
     if fees == val then Nothing else Just
         [ "Expected" <+> pretty w <+> "to pay"
-        , " " <+> viaShow val
+        , " " <+> pretty val
         , "lovelace in fees, but they paid"
-        , " " <+> viaShow fees ]
+        , " " <+> pretty fees ]
 
-walletFundsAssetClassChange :: Wallet -> AssetClass -> Integer -> TracePredicate
+walletFundsAssetClassChange :: Wallet -> C.AssetId -> Integer -> TracePredicate
 walletFundsAssetClassChange w ac dlt =
     walletFundsCheck w $ \initialValue finalValue _ _ ->
-        let realDlt = (finalValue P.- initialValue) `assetClassValueOf` ac
+        let C.Quantity realDlt = (finalValue <> C.negateValue initialValue) `C.selectAsset` ac
         in if realDlt == dlt then Nothing else Just $
-            [ "Expected amount of" <+> pretty ac <+> "in" <+> pretty w <+> "to change by"
+            [ "Expected amount of" <+> viaShow ac <+> "in" <+> pretty w <+> "to change by"
             , " " <+> pretty dlt <+> " but they changed by"
             , " " <+> pretty realDlt ]
 
-walletFundsCheck :: Wallet -> (Value -> Value -> Value -> [Ada.Ada] -> Maybe [Doc Void]) -> TracePredicate
+walletFundsCheck :: Wallet -> (C.Value -> C.Value -> C.Lovelace -> [C.Lovelace] -> Maybe [Doc Void]) -> TracePredicate
 walletFundsCheck w check = TracePredicate $
     flip postMapM (L.generalize $ (,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents) $ \(finalValue, fees, allWalletsTxOutCosts) -> do
         dist <- ask @InitialDistribution

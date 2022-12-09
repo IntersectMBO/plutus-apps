@@ -51,10 +51,10 @@ import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOu
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value.CardanoAPI qualified as C
 import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
-import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed (ScriptContextV1)
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
@@ -171,7 +171,7 @@ guess :: AsContractError e => Promise () GameSchema e ()
 guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -> do
     -- Wait for script to have a UTxO of a least 1 lovelace
     logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
-    utxos <- fundsAtAddressGeq (gameAddress guessArgsGameParam) (Ada.lovelaceValueOf 1)
+    utxos <- fundsAtAddressGeq (gameAddress guessArgsGameParam) (C.lovelaceValueOf 1)
 
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos

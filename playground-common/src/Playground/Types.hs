@@ -15,6 +15,7 @@
 
 module Playground.Types where
 
+import Cardano.Api qualified as C
 import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
@@ -65,7 +66,7 @@ data PayToWalletParams =
 data SimulatorWallet =
     SimulatorWallet
         { simulatorWalletWallet  :: WalletNumber
-        , simulatorWalletBalance :: V.Value
+        , simulatorWalletBalance :: C.Value
         }
     deriving (Show, Generic, Eq)
     deriving anyclass (ToJSON, FromJSON)

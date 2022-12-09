@@ -25,10 +25,12 @@ import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKe
 import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Scripts (Language (..), Versioned (..))
 import Ledger.Slot (Slot)
 import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)
 import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoAddressInEra, toCardanoTxOut)
+import Ledger.Value.CardanoAPI (policyId)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
@@ -308,9 +310,30 @@ instance Arbitrary Ledger.Ada where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary C.Lovelace where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Ledger.Value where
     arbitrary = genericArbitrary
     shrink = genericShrink
+
+instance Arbitrary C.Value where
+    arbitrary = C.valueFromList <$> arbitrary
+
+instance Arbitrary C.AssetId where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary C.AssetName where
+    arbitrary = C.AssetName <$> arbitrary
+
+instance Arbitrary C.Quantity where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary C.PolicyId where
+    arbitrary = pure $ policyId (Versioned acceptingMintingPolicy PlutusV1)
 
 instance (Arbitrary k, Arbitrary v) => Arbitrary (AssocMap.Map k v) where
     arbitrary = AssocMap.fromList <$> arbitrary

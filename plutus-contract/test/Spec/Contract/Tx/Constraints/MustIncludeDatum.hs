@@ -21,8 +21,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicate,
                              mockWalletPaymentPubKeyHash, w1)
-import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), Redeemer (Redeemer),

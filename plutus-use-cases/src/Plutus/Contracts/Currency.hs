@@ -23,6 +23,7 @@ module Plutus.Contracts.Currency(
     , mintContract
     , mintedValue
     , currencySymbol
+    , currencyPolicyId
     -- * Simple minting policy currency
     , SimpleMPS(..)
     , mintCurrency
@@ -48,6 +49,7 @@ import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
 import Schema (ToSchema)
 
+import Ledger.Value.CardanoAPI qualified as V
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
 
@@ -128,6 +130,9 @@ mintedValue cur = currencyValue (currencySymbol cur) cur
 
 currencySymbol :: OneShotCurrency -> CurrencySymbol
 currencySymbol = PV1.scriptCurrencySymbol . curPolicy
+
+currencyPolicyId :: OneShotCurrency -> V.PolicyId
+currencyPolicyId = V.policyId . (`Versioned` PlutusV1) . curPolicy
 
 newtype CurrencyError =
     CurContractError ContractError

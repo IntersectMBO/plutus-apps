@@ -8,6 +8,7 @@ module Plutus.ChainIndex.ChainIndexError (ChainIndexError(..), InsertUtxoFailed(
 import Control.Monad.Freer.Extras.Beam (BeamError)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
+import Ledger.Tx.CardanoAPI.Internal (ToCardanoError)
 import Plutus.ChainIndex.Types (Point (..), Tip (..))
 import Prettyprinter (Pretty (..), colon, (<+>))
 
@@ -17,6 +18,7 @@ data ChainIndexError =
     | ResumeNotSupported
     | QueryFailedNoTip -- ^ Query failed because the chain index does not have a tip (not synchronised with node)
     | BeamEffectError BeamError
+    | ToCardanoError ToCardanoError
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
@@ -27,6 +29,7 @@ instance Pretty ChainIndexError where
     ResumeNotSupported  -> "Resume is not supported"
     QueryFailedNoTip    -> "Query failed" <> colon <+> "No tip."
     BeamEffectError err -> "Error during Beam operation" <> colon <+> pretty err
+    ToCardanoError err  -> pretty err
 
 
 -- | UTXO state could not be inserted into the chain index

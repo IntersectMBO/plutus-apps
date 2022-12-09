@@ -17,6 +17,7 @@ import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.Constraints qualified as L.Constraints
 import Ledger.Test
+import Ledger.Tx.CardanoAPI (toCardanoValue)
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,
@@ -47,8 +48,9 @@ balanceTxnMinAda :: TestTree
 balanceTxnMinAda =
     let ee = someTokenValue "ee" 1
         ff = someTokenValue "ff" 1
+        extraValue = either mempty id $ toCardanoValue $ Value.scale 1000 (ee <> ff)
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
+            & changeInitialWalletValue w1 (extraValue <>)
         vHash = Scripts.validatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()
@@ -93,8 +95,9 @@ balanceTxnMinAda2 =
         vB n = someTokenValue "B" n
         mps  = TypedScripts.mkForwardingMintingPolicy vHash
         vL n = Value.singleton (Value.mpsSymbol $ Scripts.mintingPolicyHash mps) "L" n
+        extraValue = either mempty id $ toCardanoValue $ vA 1 <> vB 2
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
+            & changeInitialWalletValue w1 (<> extraValue)
         vHash = Scripts.validatorHash someValidator
         payToWallet w = L.Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
         mkTx lookups constraints =
@@ -172,9 +175,10 @@ balanceTxnCollateralTest :: TestName -> Int -> Integer -> TestTree
 balanceTxnCollateralTest name count outputLovelace =
     let ee = someTokenValue "ee" 1
         ff = someTokenValue "ff" 1
+        initialValue = either mempty id $ toCardanoValue $ Value.scale 1000 (ee <> ff) <> Ada.lovelaceValueOf 3_900_000
         -- Make sure wallet 1 has only one utxo available.
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (const $ Value.scale 1000 (ee <> ff) <> Ada.lovelaceValueOf 3_900_000)
+            & changeInitialWalletValue w1 (const initialValue)
         vHash = Scripts.validatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()

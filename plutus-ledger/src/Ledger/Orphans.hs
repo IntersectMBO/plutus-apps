@@ -108,6 +108,9 @@ instance OpenApi.ToSchema C.AssetName where
         pure $ OpenApi.NamedSchema (Just "AssetName") OpenApi.byteSchema
 deriving instance Generic C.Quantity
 deriving anyclass instance OpenApi.ToSchema C.Quantity
+instance OpenApi.ToSchema C.Value where
+    declareNamedSchema _ =
+        pure $ OpenApi.NamedSchema (Just "Value") OpenApi.byteSchema -- TODO
 deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
 instance OpenApi.ToSchema Crypto.XPub where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "PubKey") mempty

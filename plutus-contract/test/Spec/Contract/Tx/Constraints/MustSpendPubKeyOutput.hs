@@ -27,12 +27,13 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
                              checkPredicate, mockWalletPaymentPubKeyHash, w1, w2, walletFundsChange, (.&&.))
-import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
 import PlutusTx qualified
@@ -144,7 +145,7 @@ mustSpendSingleUtxoFromOtherWallet =
             void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with a single txOutRef from other wallet"
-        (assertValidatedTransactionCount 2 .&&. walletFundsChange w2 (Ada.lovelaceValueOf $ negate lovelacePerInitialUtxo))
+        (assertValidatedTransactionCount 2 .&&. walletFundsChange w2 (Value.lovelaceValueOf $ negate lovelacePerInitialUtxo))
         (void trace)
 
 -- | Uses onchain and offchain constraint mustSpendPubKeyOutput to spend all utxos from other wallet
@@ -159,7 +160,7 @@ mustSpendAllUtxosFromOtherWallet =
             void Trace.nextSlot
 
     in checkPredicate "Successful use of mustSpendPubKeyOutput with all initial txOutRefs from other wallet"
-    (assertValidatedTransactionCount 2 .&&. walletFundsChange w2 (Ada.lovelaceValueOf $ negate initialLovelacePerWallet))
+    (assertValidatedTransactionCount 2 .&&. walletFundsChange w2 (Value.lovelaceValueOf $ negate initialLovelacePerWallet))
     (void trace)
 
 -- Contract error is thrown when mustSpendPubKeyOutput is expecting a txo that does not exist

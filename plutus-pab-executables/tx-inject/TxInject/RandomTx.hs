@@ -27,7 +27,7 @@ import Ledger.Index (UtxoIndex (..))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
-import Plutus.Script.Utils.Ada qualified as Ada
+import Ledger.Value.CardanoAPI (adaOnlyValue)
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -66,8 +66,7 @@ generateTx gen slot (UtxoIndex utxo) = do
         =
           filter
             (\(_, txOut ) ->
-                txOutValue txOut ==
-                  Ada.toValue (Ada.fromValue $ txOutValue txOut)) $
+                txOutValue txOut == adaOnlyValue (txOutValue txOut)) $
           filter
             (\(_, txOut) ->
                 txOutAddress txOut == sourceAddress) $

@@ -44,7 +44,7 @@ module Plutus.Contracts.Tutorial.Escrow(
     , covIdx
     ) where
 
-import Control.Lens (_1, has, makeClassyPrisms, only, review, view)
+import Control.Lens (_1, has, makeClassyPrisms, only, review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -273,7 +273,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     let
         tx = Constraints.collectFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
-    if foldMap (view Tx.decoratedTxOutValue) unspentOutputs `lt` targetTotal escrow
+    if foldMap Tx.decoratedTxOutPlutusValue unspentOutputs `lt` targetTotal escrow
        then throwing _RedeemFailed NotEnoughFundsAtAddress
        else do
          utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst

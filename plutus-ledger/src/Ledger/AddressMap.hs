@@ -41,10 +41,10 @@ import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
+import Cardano.Api qualified as C
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain (Blockchain, OnChainTx, consumableInputs, outputsProduced, unOnChain)
 import Ledger.Tx (CardanoTx, TxIn (..), TxOut (..), TxOutRef (..), txOutAddress, txOutValue)
-import Plutus.V1.Ledger.Value (Value)
 
 type UtxoMap = Map TxOutRef (CardanoTx, TxOut)
 
@@ -108,7 +108,7 @@ addAddresses :: [CardanoAddress] -> AddressMap -> AddressMap
 addAddresses = flip (foldr addAddress)
 
 -- | The total value of unspent outputs (which the map knows about) at an address.
-values :: AddressMap -> Map CardanoAddress Value
+values :: AddressMap -> Map CardanoAddress C.Value
 values = Map.map (fold . Map.map (txOutValue . snd)) . getAddressMap
 
 -- | Walk through the address map, applying an effectful function to each entry.

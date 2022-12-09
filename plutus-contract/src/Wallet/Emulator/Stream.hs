@@ -51,7 +51,6 @@ import Ledger.Slot (Slot)
 import Ledger.Tx (CardanoTx (CardanoApiTx), onCardanoTx)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Plutus.ChainIndex (ChainIndexError)
-import Plutus.Script.Utils.Value (Value)
 import Streaming (Stream)
 import Streaming qualified as S
 import Streaming.Prelude (Of)
@@ -63,6 +62,7 @@ import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTim
                                    MultiAgentEffect, chainEvent, eteEvent)
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Validation qualified as Validation
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
@@ -153,7 +153,7 @@ initialDist EmulatorConfig{..} = either id (walletFunds . map (Valid . signTx)) 
       (\t -> Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys)
       CardanoApiTx
     cUtxoIndex = either (error . show) id $ fromPlutusIndex mempty
-    walletFunds :: Block -> Map Wallet Value
+    walletFunds :: Block -> Map Wallet C.Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]
             getFunds wllt = fromMaybe mempty $ Map.lookup (mockWalletAddress wllt) values

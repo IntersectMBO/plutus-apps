@@ -99,6 +99,7 @@ test-suite cardano-node-emulator-test
   build-depends:
     , cardano-node-emulator  >=1.0.0
     , plutus-ledger          >=1.0.0
+    , plutus-script-utils    >=1.0.0
 
   --------------------------
   -- Other IOG dependencies

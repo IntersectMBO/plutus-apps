@@ -7,7 +7,7 @@ module Main(main) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Generators qualified as Gen hiding (someTokenValue)
 import Control.Lens (preview, toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
 import Control.Monad.IO.Class (MonadIO (liftIO))

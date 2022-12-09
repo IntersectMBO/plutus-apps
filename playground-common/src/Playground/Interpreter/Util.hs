@@ -14,6 +14,7 @@ module Playground.Interpreter.Util
     , renderInstanceTrace
     ) where
 
+import Cardano.Api qualified as C
 import Control.Foldl qualified as L
 import Control.Lens (Traversal', preview)
 import Control.Monad (void)
@@ -24,13 +25,12 @@ import Data.Aeson qualified as JSON
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy.Char8 qualified as BSL
+import Data.Default (Default (def))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Text (Text)
-
-import Data.Default (Default (def))
 import Data.Text.Encoding qualified as Text
 import Playground.Types (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet), EvaluationResult,
                          Expression, FunctionSchema (FunctionSchema), PlaygroundError (JsonDecodingError, OtherError),
@@ -38,7 +38,6 @@ import Playground.Types (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, 
                          endpointDescription, expected, input, recipient, sender, simulatorWalletWallet)
 import Playground.Types qualified
 import Plutus.Contract (Contract)
-import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace (ContractConstraints, ContractInstanceTag)
 import Plutus.Trace.Emulator.Types (EmulatorRuntimeError (EmulatorJSONDecodingError), _ContractLog,
                                     _ReceiveEndpointCall, cilMessage)
@@ -71,10 +70,10 @@ playgroundDecode expected input =
                  {expected, input = BSL.unpack input, decodingError = err}) $
     eitherDecode input
 
-funds :: [WalletNumber] -> EmulatorEventFoldM effs (Map WalletNumber Value)
+funds :: [WalletNumber] -> EmulatorEventFoldM effs (Map WalletNumber C.Value)
 funds = L.generalize . sequenceA . Map.fromList . fmap (\w -> (w, Folds.walletFunds (fromWalletNumber w)))
 
-fees :: [WalletNumber] -> EmulatorEventFoldM effs (Map WalletNumber Value)
+fees :: [WalletNumber] -> EmulatorEventFoldM effs (Map WalletNumber C.Lovelace)
 fees = L.generalize . sequenceA . Map.fromList . fmap (\w -> (w, Folds.walletFees (fromWalletNumber w)))
 
 renderInstanceTrace :: [ContractInstanceTag] -> EmulatorEventFoldM effs Text
@@ -100,7 +99,7 @@ evaluationResultFold wallets =
             <*> L.generalize (filter isInteresting <$> Folds.emulatorLog)
             <*> renderInstanceTrace (walletInstanceTag . fromWalletNumber <$> wallets)
             <*> fmap (fmap (uncurry SimulatorWallet) . Map.toList) (funds wallets)
-            <*> fmap (fmap (uncurry SimulatorWallet) . Map.toList) (fees wallets)
+            <*> fmap (fmap (uncurry SimulatorWallet) . Map.toList) (fmap C.lovelaceToValue <$> fees wallets)
             <*> pure (fmap pkh wallets)
 
 -- | Evaluate a JSON payload from the Playground frontend against a given contract schema.
@@ -131,7 +130,7 @@ stage contract programJson simulatorWalletsJson = do
         Left err     -> Left . OtherError . show $ err
         Right result -> Right (fst' result)
 
-toInitialDistribution :: [SimulatorWallet] -> Map Wallet Value
+toInitialDistribution :: [SimulatorWallet] -> Map Wallet C.Value
 toInitialDistribution = Map.fromList . fmap (\(SimulatorWallet w v) -> (fromWalletNumber w, v))
 
 expressionToTrace :: Expression -> PlaygroundTrace ()

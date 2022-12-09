@@ -38,7 +38,7 @@ module Plutus.Contracts.TokenAccount(
   ) where
 
 import Cardano.Node.Emulator.Params qualified as Params
-import Control.Lens (makeClassyPrisms, review, view)
+import Control.Lens (makeClassyPrisms, review)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
@@ -52,16 +52,15 @@ import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
 import Ledger (CardanoAddress, toPlutusAddress)
-import Ledger qualified
 import Ledger.Constraints qualified as Constraints
-import Ledger.Tx (CardanoTx)
+import Ledger.Tx (CardanoTx, decoratedTxOutPlutusValue)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.V1.Ledger.Api (ValidatorHash)
 import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
+import Plutus.V1.Ledger.Api (ValidatorHash)
 import Plutus.V1.Ledger.Contexts qualified as PV1
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
@@ -176,7 +175,7 @@ redeemTx :: forall w s e.
 redeemTx account addr = mapError (review _TAContractError) $ do
     let inst = typedValidator account
     utxos <- utxosAt (address account)
-    let totalVal = foldMap (view Ledger.decoratedTxOutValue) utxos
+    let totalVal = foldMap decoratedTxOutPlutusValue utxos
         numInputs = Map.size utxos
     logInfo @String
         $ "TokenAccount.redeemTx: Redeeming "
@@ -211,8 +210,7 @@ balance
     -> Contract w s e Value
 balance account = mapError (review _TAContractError) $ do
     utxos <- utxosAt (address account)
-    let inner = foldMap (view Ledger.decoratedTxOutValue) utxos
-    pure inner
+    pure $ foldMap decoratedTxOutPlutusValue utxos
 
 -- | Create a new token and return its 'Account' information.
 newAccount

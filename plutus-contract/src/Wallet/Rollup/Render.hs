@@ -15,6 +15,7 @@ module Wallet.Rollup.Render(
     , showBlockchainFold
     ) where
 
+import Cardano.Api qualified as C
 import Codec.Serialise.Class (Serialise, decode, encode)
 import Control.Lens.Combinators (itraverse)
 import Control.Monad.Except (MonadError, throwError)
@@ -205,6 +206,10 @@ deriving via RenderPretty String instance Render String
 deriving via RenderPretty Integer instance Render Integer
 
 deriving via RenderPretty Address instance Render Address
+
+deriving via RenderPretty C.Value instance Render C.Value
+
+deriving via RenderPretty C.Lovelace instance Render C.Lovelace
 
 instance Render Wallet where
     render (Wallet _ n) = pure $ "Wallet" <+> viaShow n

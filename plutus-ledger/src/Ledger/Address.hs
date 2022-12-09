@@ -27,6 +27,7 @@ module Ledger.Address
     , xprvToStakingCredential
     , xprvToStakePubKey
     , xprvToStakePubKeyHash
+    , mkValidatorCardanoAddress
     ) where
 
 import Cardano.Api qualified as C
@@ -42,7 +43,9 @@ import GHC.Generics (Generic)
 import Ledger.Address.Orphans as Export ()
 import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash, toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Scripts (StakeValidatorHash (..), ValidatorHash (..))
+import Ledger.Scripts (Language (..), StakeValidatorHash (..), Validator, ValidatorHash (..), Versioned (..))
+import Plutus.Script.Utils.V1.Address qualified as PV1
+import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import PlutusTx qualified
@@ -176,3 +179,7 @@ stakePubKeyHashCredential = StakingHash . PubKeyCredential . unStakePubKeyHash
 stakeValidatorHashCredential :: StakeValidatorHash -> StakingCredential
 stakeValidatorHashCredential (StakeValidatorHash h) = StakingHash . ScriptCredential . ValidatorHash $ h
 
+-- | Cardano address of a versioned 'Validator' script.
+mkValidatorCardanoAddress :: C.NetworkId -> Versioned Validator -> C.AddressInEra C.BabbageEra
+mkValidatorCardanoAddress networkId (Versioned val PlutusV1) = PV1.mkValidatorCardanoAddress networkId val
+mkValidatorCardanoAddress networkId (Versioned val PlutusV2) = PV2.mkValidatorCardanoAddress networkId val

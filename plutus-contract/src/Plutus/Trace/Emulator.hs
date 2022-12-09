@@ -76,6 +76,7 @@ module Plutus.Trace.Emulator(
     , interpretEmulatorTrace
     ) where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainControlEffect)
 import Cardano.Node.Emulator.Chain qualified as ChainState
 import Cardano.Node.Emulator.Params (Params (..))
@@ -116,7 +117,6 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog (Co
                                     UserThreadMsg (UserLog))
 import Plutus.Trace.Emulator.Types qualified
 import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
-import Plutus.V1.Ledger.Value (Value, flattenValue)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty)
 import Prettyprinter.Render.String (renderString)
 import Prettyprinter.Render.Text (renderStrict)
@@ -360,10 +360,8 @@ runPrintEffectIO hdl = runM . interpretM f
       PrintLn s -> hPutStrLn hdl s
 
 printBalances :: forall effs. Member PrintEffect effs
-              => Map.Map Entity Value
+              => Map.Map Entity C.Value
               -> Eff effs ()
 printBalances m = do
     forM_ (Map.toList m) $ \(e, v) -> do
-        printLn $ show e <> ": "
-        forM_ (flattenValue v) $ \(cs, tn, a) ->
-            printLn $ "    {" <> show cs <> ", " <> show tn <> "}: " <> show a
+        printLn $ show e <> ": " <> Text.unpack (C.renderValuePretty v)

@@ -24,6 +24,8 @@ import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
+import Ledger.Tx.CardanoAPI (fromCardanoAssetId)
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.ChainIndex (ChainIndexTxOut (citoValue), ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
                           RunRequirements (RunRequirements), Tip (Tip, TipAtGenesis),
                           TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks, citxTxId, runChainIndexEffects,
@@ -32,7 +34,7 @@ import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, getTip)
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 import Util (utxoSetFromBlockAddrs)
@@ -129,9 +131,9 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
   ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
 
   let assetClasses =
-        fmap (\(c, t, _) -> AssetClass (c, t))
-             $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
-             $ flattenValue
+        fmap (\(aid, _) -> fromCardanoAssetId aid)
+             $ filter (\(aid, _) -> aid /= Value.AdaAssetId)
+             $ Value.valueToList
              $ view (traverse . to txOuts . traverse . to citoValue) block
 
   utxoGroups <- runChainIndexTest $ do

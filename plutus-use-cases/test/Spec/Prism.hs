@@ -210,8 +210,8 @@ tests :: TestTree
 tests = testGroup "PRISM"
     [ checkPredicate "withdraw"
         (assertNotDone contract (Trace.walletInstanceTag user) "User stopped"
-        .&&. walletFundsChange issuer (Ada.lovelaceValueOf numTokens)
-        .&&. walletFundsChange user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
+        .&&. walletFundsChangePlutus issuer (Ada.lovelaceValueOf numTokens)
+        .&&. walletFundsChangePlutus user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
         )
         prismTrace
     , testProperty "QuickCheck property" prop_Prism

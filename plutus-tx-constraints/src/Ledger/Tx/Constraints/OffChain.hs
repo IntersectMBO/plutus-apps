@@ -75,7 +75,7 @@ import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
                                          TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V2.Ledger.Tx qualified as PV2
 
 import Ledger.Interval ()
@@ -303,7 +303,7 @@ processConstraint = \case
             pure $ txout ^. Tx.decoratedTxOutValue
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))]
-        P.valueSpentInputs <>= P.provided value
+        P.valueSpentInputs <>= P.provided (C.fromCardanoValue value)
 
     P.MustBeSignedBy pk -> do
         ekw <-  either (throwError . ToCardanoError) pure $ C.toCardanoPaymentKeyHash pk
@@ -385,7 +385,7 @@ processConstraint = \case
         refScript <- lookupScriptAsReferenceScript refScriptHashM
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId addr
-            <*> C.toCardanoTxOutValue vl
+            <*> fmap C.toCardanoTxOutValue (C.toCardanoValue vl)
             <*> pure (toTxOutDatum md)
             <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]

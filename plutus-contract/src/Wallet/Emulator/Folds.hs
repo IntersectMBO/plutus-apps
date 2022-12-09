@@ -49,6 +49,7 @@ module Wallet.Emulator.Folds (
     , mkTxLogs
     ) where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate,
                                     _TxnValidationFail)
 import Control.Applicative ((<|>))
@@ -76,8 +77,6 @@ import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Resumable (Request, Response)
 import Plutus.Contract.Resumable qualified as State
 import Plutus.Contract.Types (ResumableResult (_finalState, _observableState, _requests))
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventInstanceState, emptyInstanceState,
                                                instContractState, instEvents, instHandlersHistory)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,
@@ -98,7 +97,7 @@ type EmulatorEventFold a = Fold EmulatorEvent a
 type EmulatorEventFoldM effs a = FoldM (Eff effs) EmulatorEvent a
 
 -- | Transactions that failed to validate, in the given validation phase (if specified).
-failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, CardanoTx, ValidationError, Value, [Text])]
+failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, CardanoTx, ValidationError, C.Value, [Text])]
 failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
     where
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
@@ -115,7 +114,7 @@ walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
 walletTxBalanceEvents = preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
 
 -- | Min lovelace of 'txOut's from adjusted unbalanced transactions for all wallets
-walletsAdjustedTxEvents :: EmulatorEventFold [Ada.Ada]
+walletsAdjustedTxEvents :: EmulatorEventFold [C.Lovelace]
 walletsAdjustedTxEvents = Set.toList . Set.fromList . concat <$> preMapMaybe (preview (eteEvent . walletEvent' . _2 . _RequestHandlerLog . _AdjustingUnbalancedTx)) L.list
 
 mkTxLogs :: EmulatorEventFold [MkTxLog]
@@ -250,21 +249,21 @@ utxoAtAddress addr =
             _                                    -> id
 
 -- | The total value of unspent outputs at an address
-valueAtAddress :: CardanoAddress -> EmulatorEventFold Value
+valueAtAddress :: CardanoAddress -> EmulatorEventFold C.Value
 valueAtAddress = fmap (foldMap (txOutValue . snd)) . utxoAtAddress
 
 -- | The funds belonging to a wallet
-walletFunds :: Wallet -> EmulatorEventFold Value
+walletFunds :: Wallet -> EmulatorEventFold C.Value
 walletFunds = valueAtAddress . mockWalletAddress
 
 -- | The fees paid by a wallet
-walletFees :: Wallet -> EmulatorEventFold Value
+walletFees :: Wallet -> EmulatorEventFold C.Lovelace
 walletFees w = fees <$> walletSubmittedFees <*> validatedTransactions <*> failedTransactions (Just Phase2)
     where
         fees submitted txsV txsF =
             findFees (\(i, _, _) -> i) (\(_, tx, _) -> getCardanoTxFee tx) submitted txsV
             <>
-            findFees (\(i, _, _, _, _) -> i) (\(_, _, _, collateral, _) -> collateral) submitted txsF
+            findFees (\(i, _, _, _, _) -> i) (\(_, _, _, collateral, _) -> C.selectLovelace collateral) submitted txsF
         findFees getId getFees submitted = foldMap (\t -> if Map.member (getId t) submitted then getFees t else mempty)
         walletSubmittedFees = L.handles (eteEvent . walletClientEvent w . _TxSubmit) L.map
 

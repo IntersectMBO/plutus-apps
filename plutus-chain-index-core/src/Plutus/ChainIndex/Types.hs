@@ -92,7 +92,7 @@ import Ledger.Slot (Slot)
 import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Script, ScriptHash)
 import Plutus.V1.Ledger.Tx (Redeemers, TxId)
-import Plutus.V2.Ledger.Api (OutputDatum (..), Value (..))
+import Plutus.V2.Ledger.Api (OutputDatum (..))
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter
 import Prettyprinter.Extras (PrettyShow (..))
@@ -148,7 +148,7 @@ fromReferenceScript (ReferenceScriptInAnyLang sial) = fromCardanoScriptInAnyLang
 
 data ChainIndexTxOut = ChainIndexTxOut
   { citoAddress   :: CardanoAddress -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era
-  , citoValue     :: Value
+  , citoValue     :: C.Value
   , citoDatum     :: OutputDatum
   , citoRefScript :: ReferenceScript
   } deriving (Eq, Show, Generic, Serialise, OpenApi.ToSchema)

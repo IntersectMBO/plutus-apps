@@ -3,17 +3,16 @@
 module Plutus.Contract.Test.ContractModel.Symbolics where
 
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (AssetClass, Value, assetClass, assetClassValue, assetClassValueOf, flattenValue,
-                                  isZero, leq)
-import PlutusTx.Monoid qualified as PlutusTx
+import Plutus.Script.Utils.Value (AssetClass, Value, assetClassValue)
 
+import Cardano.Api qualified as C
 import Data.Aeson qualified as JSON
 import Data.Data
-import Data.Foldable
+import Data.Either (fromRight)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
-
+import Ledger.Value.CardanoAPI qualified as V
 import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, initialState, monitoring, nextState,
                                    perform, precondition, shrinkAction, stateAfter)
 
@@ -39,7 +38,7 @@ newtype AssetKey = AssetKey Int deriving (Ord, Eq, Show, Num, JSON.FromJSONKey, 
 data SymToken = SymToken { symVar :: Var AssetKey, symVarIdx :: String } deriving (Ord, Eq, Data)
 -- | A symbolic value is a combination of a real value and a value associating symbolic
 -- tokens with an amount
-data SymValue = SymValue { symValMap :: Map SymToken Integer, actualValPart :: Value } deriving (Show, Data)
+data SymValue = SymValue { symValMap :: Map SymToken Integer, actualValPart :: C.Value } deriving (Show)
 
 instance Show SymToken where
   show (SymToken (Var i) n) = "tok" ++ show i ++ "." ++ n
@@ -52,27 +51,27 @@ instance Eq SymValue where
                                      && v == v'
 -- | Check if a symbolic value is zero
 symIsZero :: SymValue -> Bool
-symIsZero (SymValue m v) = all (==0) m && isZero v
+symIsZero (SymValue m v) = all (==0) m && v == mempty
 
 -- | Check if one symbolic value is less than or equal to another
 symLeq :: SymValue -> SymValue -> Bool
-symLeq (SymValue m v) (SymValue m' v') = v `leq` v' && all (<=0) (Map.unionWith (+) m (negate <$> m'))
+symLeq (SymValue m v) (SymValue m' v') = v `V.valueLeq` v' && all (<=0) (Map.unionWith (+) m (negate <$> m'))
 
 -- | Using a semantics function for symbolic tokens, convert a SymValue to a Value
-toValue :: (SymToken -> AssetClass) -> SymValue -> Value
-toValue symTokenMap (SymValue m v) = v <> fold [ assetClassValue (symTokenMap t) v | (t, v) <- Map.toList m ]
+toValue :: (SymToken -> C.AssetId) -> SymValue -> C.Value
+toValue symTokenMap (SymValue m v) = v <> C.valueFromList [ (symTokenMap t, C.Quantity v) | (t, v) <- Map.toList m ]
 
 -- | Invert a sym token mapping to turn a Value into a SymValue,
 -- useful for error reporting
-toSymVal :: (AssetClass -> Maybe SymToken) -> Value -> SymValue
+toSymVal :: (C.AssetId -> Maybe SymToken) -> C.Value -> SymValue
 toSymVal invSymTokenMap v =
-  let acMap = [ (assetClass cs tn, i) | (cs, tn, i) <- flattenValue v ]
+  let acMap = [ (ac, i) | (ac, C.Quantity i) <- C.valueToList v ]
   in SymValue (Map.fromList [ (tn, i) | (ac, i) <- acMap, tn <- maybeToList $ invSymTokenMap ac ])
-              (fold [ assetClassValue ac i | (ac, i) <- acMap, invSymTokenMap ac == Nothing ])
+              (C.valueFromList [ (ac, C.Quantity i) | (ac, i) <- acMap, isNothing (invSymTokenMap ac) ])
 
 -- Negate a symbolic value
 inv :: SymValue -> SymValue
-inv (SymValue m v) = SymValue (negate <$> m) (PlutusTx.inv v)
+inv (SymValue m v) = SymValue (negate <$> m) (C.negateValue v)
 
 class SymValueLike v where
   toSymValue :: v -> SymValue
@@ -84,6 +83,9 @@ class TokenLike t where
   symAssetIdValue :: t -> Integer -> SymValue
 
 instance SymValueLike Value where
+  toSymValue = SymValue mempty . fromRight mempty . V.toCardanoValue
+
+instance SymValueLike C.Value where
   toSymValue = SymValue mempty
 
 instance SymValueLike SymValue where
@@ -92,6 +94,9 @@ instance SymValueLike SymValue where
 instance SymValueLike Ada.Ada where
   toSymValue = toSymValue . Ada.toValue
 
+instance SymValueLike C.Lovelace where
+  toSymValue = toSymValue . C.lovelaceToValue
+
 instance TokenLike SymToken where
   symAssetIdValueOf (SymValue svm _) t = sum $ Map.lookup t svm
 
@@ -99,5 +104,9 @@ instance TokenLike SymToken where
   symAssetIdValue t i = SymValue (Map.singleton t i) mempty
 
 instance TokenLike AssetClass where
-  symAssetIdValueOf (SymValue _ v) t = assetClassValueOf v t
+  symAssetIdValueOf (SymValue _ v) t = either (const 0) (\t' -> case C.selectAsset v t' of C.Quantity i -> i) $ V.toCardanoAssetId t
   symAssetIdValue t i = toSymValue $ assetClassValue t i
+
+instance TokenLike C.AssetId where
+  symAssetIdValueOf (SymValue _ v) t = case C.selectAsset v t of C.Quantity i -> i
+  symAssetIdValue t i = toSymValue (C.valueFromList [(t, C.Quantity i)])

@@ -21,7 +21,6 @@
 
 module Plutus.Contract.Test.Coverage.Analysis.Types where
 import Control.Arrow (first)
-import Control.DeepSeq
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -32,7 +31,7 @@ import Plutus.Contract.Test.Coverage.Analysis.Common
 
 infixl 5 :>
 data SnocList a = Nil | SnocList a :> a
-  deriving (Functor, Foldable, Traversable, Eq, Ord, Show, Generic, NFData)
+  deriving (Functor, Foldable, Traversable, Eq, Ord, Show, Generic)
 
 instance Semigroup (SnocList a) where
   xs <> Nil       = xs
@@ -50,17 +49,17 @@ zipWithSnoc f (xs :> x) (ys :> y) = zipWithSnoc f xs ys :> f x y
 -- *** Domain definitions
 -- data DCon ctx = DCon [DTyp ctx] deriving Show
 data DCon = DCon [DTyp]
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Generic)
 
 -- data DDat ctx = DDat (isRec : Bool) (x : NamedTyDeBruijn) (k : Kin) (pars : [NamedTyDeBruijn])
 --                      [DCon (ctx :> (if rec then Nil else x ::: k) :> (pars ::: _someKinds)]
 data DDat = DDat Bool NamedTyDeBruijn Kin [NamedTyDeBruijn] [DCon]
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Generic)
 
 data TyCtxEntry = NamedTyDeBruijn ::: Kin     -- db index always 0 (only used for the name for printing)
                 | TyCtxRecDat (SnocList DDat) -- (Mutually) recursive data types
                 | TyCtxDat DDat               -- Non-recursive data type
-    deriving (Show, Eq, Generic, NFData)
+    deriving (Show, Eq, Generic)
 
 -- Γ :> TyCtxRecDat ds  ==>  ds : Dat (Γ :> TyCtxRecDat ds)
 -- Γ :> TyCtxDat d      ==>  d  : Dat Γ
@@ -109,7 +108,7 @@ data Dom = DTop { ty         :: DTyp
 
          | DWeaken { wk    :: Weakening
                    , inner :: Dom }
-  deriving (Show, Generic, NFData)
+  deriving (Show, Generic)
 
 data DTyp = DTVar NamedTyDeBruijn [DTyp]
           | DTFun DTyp DTyp
@@ -117,7 +116,7 @@ data DTyp = DTVar NamedTyDeBruijn [DTyp]
           | DTForall { dtName :: NamedTyDeBruijn, dtKind :: Kin, dtBody :: DTyp }
           | DTWk { dtWk :: Weakening , dtBody :: DTyp }
           | DTyBuiltin Kin -- we don't care which
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Generic)
 
 data DArg = TyArg DTyp | DArg Dom
   deriving (Show)
@@ -125,7 +124,6 @@ data DArg = TyArg DTyp | DArg Dom
 -- strictness?
 newtype Weakening = Wk [(Index, Index)] -- increasing in k, (k, n) means weaken by n at index k (cumulative)
   deriving (Show, Eq, Generic)
-  deriving newtype NFData
 
 wkIndex :: HasCallStack => Weakening -> Index -> Index
 wkIndex (Wk w) i = i + sum [ n | (k, n) <- w, i >= k ]

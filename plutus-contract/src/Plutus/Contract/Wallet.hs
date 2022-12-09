@@ -273,7 +273,7 @@ mkInputs = traverse (uncurry toExportTxInput) . Map.toList
 
 toExportTxInput :: Plutus.TxOutRef -> P.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
 toExportTxInput Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = do
-    cardanoValue <- CardanoAPI.toCardanoValue (P.txOutValue txOut)
+    let cardanoValue = P.txOutValue txOut
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId

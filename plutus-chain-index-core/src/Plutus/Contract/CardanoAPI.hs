@@ -71,7 +71,7 @@ fromCardanoTxOut :: C.IsCardanoEra era => C.TxOut C.CtxTx era -> ChainIndexTxOut
 fromCardanoTxOut (C.TxOut addr val datum refScript) =
     ChainIndexTxOut
         (fromRight (error "BabbageEra should be the latest era") $ C.eraCast C.BabbageEra addr)
-        (fromCardanoValue $ C.txOutValueToValue val)
+        (C.txOutValueToValue val)
         (fromCardanoTxOutDatum datum)
         (fromCardanoTxOutRefScript refScript)
 

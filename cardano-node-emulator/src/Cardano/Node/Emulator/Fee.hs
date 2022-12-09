@@ -17,6 +17,7 @@ module Cardano.Node.Emulator.Fee(
   selectCoin
 ) where
 
+import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.BaseTypes (Globals (systemStart))
@@ -42,18 +43,14 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
                              toCardanoReturnCollateral, toCardanoTotalCollateral, toCardanoTxBodyContent)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Plutus.Script.Utils.Ada (lovelaceValueOf)
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (Value)
-import Plutus.Script.Utils.Value qualified as Value
-import PlutusTx.Prelude qualified as PlutusTx
+import Ledger.Value.CardanoAPI (split, valueGeq)
 
 estimateTransactionFee
   :: Params
   -> UTxO EmulatorEra
   -> [PaymentPubKeyHash]
   -> Tx
-  -> Either CardanoLedgerError Value
+  -> Either CardanoLedgerError C.Lovelace
 estimateTransactionFee params utxo requiredSigners tx = do
   txBodyContent <- first Right $ toCardanoTxBodyContent (pNetworkId params) (emulatorPParams params) requiredSigners tx
   estimateCardanoBuildTxFee params utxo txBodyContent
@@ -62,12 +59,11 @@ estimateCardanoBuildTxFee
   :: Params
   -> UTxO EmulatorEra
   -> CardanoBuildTx
-  -> Either CardanoLedgerError Value
+  -> Either CardanoLedgerError C.Lovelace
 estimateCardanoBuildTxFee params utxo txBodyContent = do
   let nkeys = C.Api.estimateTransactionKeyWitnessCount (getCardanoBuildTx txBodyContent)
   txBody <- makeTransactionBody params utxo txBodyContent
-  case evaluateTransactionFee (emulatorPParams params) txBody nkeys of
-    C.Api.Lovelace fee -> pure $ lovelaceValueOf fee
+  pure $ evaluateTransactionFee (emulatorPParams params) txBody nkeys
 
 -- | Creates a balanced transaction by calculating the execution units, the fees and the change,
 -- which is assigned to the given address. Only balances Ada.
@@ -118,7 +114,7 @@ makeAutoBalancedTransactionWithUtxoProvider
     => Params
     -> UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
     -> CardanoAddress -- ^ Change address
-    -> (Value -> m ([(TxOutRef, TxOut)], Value))
+    -> (C.Value -> m ([(TxOutRef, TxOut)], C.Value))
     -- ^ The utxo provider, it return outputs that cover at least the given value,
     -- and return the change, i.e. how much the outputs overshoot the given value.
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
@@ -126,7 +122,7 @@ makeAutoBalancedTransactionWithUtxoProvider
     -> m (C.Tx C.BabbageEra)
 makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) cChangeAddr utxoProvider errorReporter (CardanoBuildTx unbalancedBodyContent) = do
 
-    let initialFeeEstimate = Ada.lovelaceValueOf 300_000
+    let initialFeeEstimate = C.Lovelace 300_000
 
         calcFee n fee = do
 
@@ -139,7 +135,7 @@ makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) cChangeAdd
             if newFee /= fee
                 then if n == (0 :: Int)
                     -- If we don't reach a fixed point, pick the larger fee
-                    then pure (newFee PlutusTx.\/ fee)
+                    then pure (newFee `max` fee)
                     else calcFee (n - 1) newFee
                 else pure newFee
 
@@ -157,14 +153,14 @@ handleBalanceTx
     => Params
     -> Map.Map TxOutRef TxOut -- ^ Just the transaction inputs, not the entire 'UTxO'.
     -> C.AddressInEra C.BabbageEra -- ^ Change address
-    -> (Value -> m ([(TxOutRef, TxOut)], Value)) -- ^ The utxo provider
+    -> (C.Value -> m ([(TxOutRef, TxOut)], C.Value)) -- ^ The utxo provider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
-    -> Value -- ^ Estimated fee value to use.
+    -> C.Lovelace -- ^ Estimated fee value to use.
     -> C.TxBodyContent C.BuildTx C.BabbageEra
     -> m (C.TxBodyContent C.BuildTx C.BabbageEra, [(TxOutRef, TxOut)])
 handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = do
 
-    theFee <- either (errorReporter . Right) pure $ toCardanoFee fees
+    let theFee = toCardanoFee fees
 
     let filteredUnbalancedTxTx = removeEmptyOutputsBuildTx utx { C.txFee = theFee }
         txInputs = Tx.getTxBodyContentInputs filteredUnbalancedTxTx
@@ -178,25 +174,25 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
     inputValues <- traverse lookupValue txInputs
 
     let left = Tx.getTxBodyContentMint filteredUnbalancedTxTx <> fold inputValues
-        right = fees <> foldMap (Tx.txOutValue . Tx.TxOut) (C.txOuts filteredUnbalancedTxTx)
-        balance = left PlutusTx.- right
+        right = C.lovelaceToValue fees <> foldMap (Tx.txOutValue . Tx.TxOut) (C.txOuts filteredUnbalancedTxTx)
+        balance = left <> C.negateValue right
 
-    ((neg, newInputs), (pos, mNewTxOut)) <- calculateTxChanges params cChangeAddr utxoProvider errorReporter $ Value.split balance
+    ((neg, newInputs), (pos, mNewTxOut)) <- calculateTxChanges params cChangeAddr utxoProvider errorReporter $ split balance
 
     newTxIns <- traverse (either (errorReporter . Right) (pure . (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) . CardanoAPI.toCardanoTxIn . fst) newInputs
 
-    let txWithOutputsAdded = if Value.isZero pos
+    let txWithOutputsAdded = if pos == mempty
         then filteredUnbalancedTxTx
         else filteredUnbalancedTxTx & over Tx.txBodyContentOuts (++ toList mNewTxOut)
 
-    let txWithinputsAdded = if Value.isZero neg
+    let txWithinputsAdded = if neg == mempty
         then txWithOutputsAdded
         else txWithOutputsAdded & over Tx.txBodyContentIns (++ newTxIns)
 
     collateral <- traverse lookupValue (Tx.getTxBodyContentCollateralInputs txWithinputsAdded)
     let returnCollateral = Tx.getTxBodyContentReturnCollateral txWithinputsAdded
 
-    if Value.isZero (fold collateral)
+    if fold collateral == mempty
         && null (C.collectTxBodyScriptWitnesses txWithinputsAdded) -- every script has a redeemer, no redeemers -> no scripts
         && null returnCollateral then
         -- Don't add collateral if there are no plutus scripts that can fail
@@ -205,18 +201,18 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
     else do
         let collAddr = maybe cChangeAddr (\(Tx.TxOut (C.TxOut aie _tov _tod _rs)) -> aie) returnCollateral
             collateralPercent = maybe 100 fromIntegral (C.protocolParamCollateralPercent (pProtocolParams params))
-            collFees = Ada.toValue $ (Ada.fromValue fees * collateralPercent + 99 {- make sure to round up -}) `Ada.divide` 100
-            collBalance = fold collateral PlutusTx.- collFees
+            collFees = (fees * collateralPercent + 99 {- make sure to round up -}) `div` 100
+            collBalance = fold collateral <> C.lovelaceToValue (-collFees)
 
-        ((negColl, newColInputs), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ Value.split collBalance
+        ((negColl, newColInputs), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ split collBalance
 
         newTxInsColl <- traverse (either (errorReporter . Right) pure . CardanoAPI.toCardanoTxIn . fst) newColInputs
 
-        let txWithCollateralInputs = if Value.isZero negColl
+        let txWithCollateralInputs = if negColl == mempty
             then txWithinputsAdded
             else txWithinputsAdded & over Tx.txBodyContentCollateralIns (++ newTxInsColl)
 
-        totalCollateral <- either (errorReporter . Right) pure $ toCardanoTotalCollateral (Just collFees)
+        let totalCollateral = toCardanoTotalCollateral (Just collFees)
 
         pure (txWithCollateralInputs {
             C.txTotalCollateral = totalCollateral,
@@ -228,34 +224,33 @@ removeEmptyOutputsBuildTx bodyContent@C.TxBodyContent { C.txOuts } = bodyContent
     where
         txOuts' = filter (not . isEmpty' . Tx.TxOut) txOuts
         isEmpty' txOut =
-            null (Value.flattenValue (Tx.txOutValue txOut)) && isNothing (Tx.txOutDatumHash txOut)
+            Tx.txOutValue txOut == mempty && isNothing (Tx.txOutDatumHash txOut)
 
 calculateTxChanges
     :: Monad m
     => Params
     -> C.AddressInEra C.BabbageEra -- ^ The address for the change output
-    -> (Value -> m ([(TxOutRef, TxOut)], Value)) -- ^ The utxo provider
+    -> (C.Value -> m ([(TxOutRef, TxOut)], C.Value)) -- ^ The utxo provider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
-    -> (Value, Value) -- ^ The unbalanced tx's negative and positive balance.
-    -> m ((Value, [(TxOutRef, TxOut)]), (Value, Maybe TxOut))
+    -> (C.Value, C.Value) -- ^ The unbalanced tx's negative and positive balance.
+    -> m ((C.Value, [(TxOutRef, TxOut)]), (C.Value, Maybe TxOut))
 calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
     -- Calculate the change output with minimal ada
-    (newNeg, newPos, mExtraTxOut) <- either (errorReporter . Right) pure $ if Value.isZero pos
+    (newNeg, newPos, mExtraTxOut) <- either (errorReporter . Right) pure $ if pos == mempty
         then pure (neg, pos, Nothing)
         else do
-            txov <- CardanoAPI.toCardanoValue pos
-            let txOut = C.TxOut addr (C.TxOutValue C.MultiAssetInBabbageEra txov) C.TxOutDatumNone C.Api.ReferenceScriptNone
+            let txOut = C.TxOut addr (CardanoAPI.toCardanoTxOutValue pos) C.TxOutDatumNone C.Api.ReferenceScriptNone
             (missing, extraTxOut) <- adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
-            let missingValue = Ada.toValue (fold missing)
+            let missingValue = C.lovelaceToValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
 
     -- Calculate the extra inputs needed
-    (spend, change) <- if Value.isZero newNeg
+    (spend, change) <- if newNeg == mempty
         then pure ([], mempty)
         else utxoProvider newNeg
 
-    if Value.isZero change
+    if change == mempty
         then do
             -- No change, so the new inputs and outputs have balanced the transaction
             pure ((newNeg, spend), (newPos, mExtraTxOut))
@@ -263,7 +258,7 @@ calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
             -- which then will calculate a more exact set of inputs
-            then calculateTxChanges params addr utxoProvider errorReporter (neg <> Ada.toValue minAdaTxOutEstimated, Ada.toValue minAdaTxOutEstimated)
+            then calculateTxChanges params addr utxoProvider errorReporter (neg <> CardanoAPI.adaToCardanoValue minAdaTxOutEstimated, CardanoAPI.adaToCardanoValue minAdaTxOutEstimated)
             -- Else recalculate with the change added to both sides
             -- Ideally this creates the same inputs and outputs and then the change will be zero
             -- But possibly the minimal Ada increases and then we also want to compute a new set of inputs
@@ -271,7 +266,7 @@ calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
 
 
 data BalancingError
-    = InsufficientFunds { total :: Value, expected :: Value }
+    = InsufficientFunds { total :: C.Value, expected :: C.Value }
     -- ^ Not enough extra inputs available to balance a transaction.
     | CardanoLedgerError CardanoLedgerError
     deriving stock (Show, Eq, Generic)
@@ -282,8 +277,8 @@ utxoProviderFromWalletOutputs
     :: Map.Map TxOutRef TxOut
     -- ^ The unspent transaction outputs.
     -- Make sure that this doesn't contain any inputs from the transaction being balanced.
-    -> Value
-    -> Either BalancingError ([(TxOutRef, TxOut)], Value)
+    -> C.Value
+    -> Either BalancingError ([(TxOutRef, TxOut)], C.Value)
 utxoProviderFromWalletOutputs walletUtxos value =
     let outRefsWithValue = (\p -> (p, Tx.txOutValue (snd p))) <$> Map.toList walletUtxos
     in selectCoin outRefsWithValue value
@@ -292,46 +287,43 @@ utxoProviderFromWalletOutputs walletUtxos value =
 -- of @a@ such that their total value is greater than or equal to the target.
 selectCoin ::
     Eq a
-    => [(a, Value)] -- ^ Possible inputs to choose from
-    -> Value -- ^ The target value
-    -> Either BalancingError ([a], Value) -- ^ The chosen inputs and the change
+    => [(a, C.Value)] -- ^ Possible inputs to choose from
+    -> C.Value -- ^ The target value
+    -> Either BalancingError ([a], C.Value) -- ^ The chosen inputs and the change
 selectCoin fnds vl =
     let
         total = foldMap snd fnds
         err   = Left $ InsufficientFunds total vl
     -- Values are in a partial order: what we want to check is that the
     -- total available funds are bigger than (or equal to) the required value.
-    -- It is *not* correct to replace this condition with 'total `Value.lt` vl' -
-    -- consider what happens if the amounts are incomparable.
-    in  if not (total `Value.geq` vl)
+    in  if not (total `valueGeq` vl)
         then err
         else
             -- Select inputs per asset class, sorting so we do Ada last.
             -- We want to do the non-Ada asset classes first, because utxo's often contain
             -- extra Ada because of fees or minAda constraints. So when we are done with the
             -- non-Ada asset classes we probably already have picked some Ada too.
-            let (usedFinal, remainderFinal) = foldl' step ([], vl) (sortOn Down $ Value.flattenValue vl)
-                step (used, remainder) (cur, tok, _) =
-                    let (used', remainder') = selectCoinSingle cur tok (fnds \\ used) remainder
+            let (usedFinal, remainderFinal) = foldl' step ([], vl) (sortOn Down $ C.valueToList vl)
+                step (used, remainder) (assetId, _) =
+                    let (used', remainder') = selectCoinSingle assetId (fnds \\ used) remainder
                     in (used <> used', remainder')
-            in pure (map fst usedFinal, PlutusTx.negate remainderFinal)
+            in pure (map fst usedFinal, C.negateValue remainderFinal)
 
 selectCoinSingle
-    :: Value.CurrencySymbol
-    -> Value.TokenName
-    -> [(a, Value)] -- ^ Possible inputs to choose from
-    -> Value -- ^ The target value
-    -> ([(a, Value)], Value) -- ^ The chosen inputs and the remainder
-selectCoinSingle cur tok fnds' vl =
+    :: C.AssetId
+    -> [(a, C.Value)] -- ^ Possible inputs to choose from
+    -> C.Value -- ^ The target value
+    -> ([(a, C.Value)], C.Value) -- ^ The chosen inputs and the remainder
+selectCoinSingle assetId fnds' vl =
     let
         -- We only want the values that contain the given asset class,
         -- and want the single currency values first,
         -- so that we're picking inputs that contain *only* the given asset class when possible.
-        fnds = sortOn (length . Value.symbols . snd) $ filter (\(_, v) -> Value.valueOf v cur tok > 0) fnds'
+        fnds = sortOn (length . C.valueToList . snd) $ filter (\(_, v) -> C.selectAsset v assetId > 0) fnds'
         -- Given the funds of a wallet, we take enough just enough from
         -- the target value such that the asset class value of the remainder is <= 0.
-        fundsWithRemainder = zip fnds (drop 1 $ scanl (PlutusTx.-) vl $ fmap snd fnds)
-        fundsToSpend       = takeUntil (\(_, v) -> Value.valueOf v cur tok <= 0) fundsWithRemainder
+        fundsWithRemainder = zip fnds (drop 1 $ scanl (\l r -> l <> C.negateValue r) vl $ fmap snd fnds)
+        fundsToSpend       = takeUntil (\(_, v) -> C.selectAsset v assetId <= 0) fundsWithRemainder
         remainder          = maybe vl snd $ listToMaybe $ reverse fundsToSpend
     in (fst <$> fundsToSpend, remainder)
 

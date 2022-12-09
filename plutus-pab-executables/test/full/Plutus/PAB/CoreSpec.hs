@@ -54,6 +54,7 @@ import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), cardanoPubKeyHa
 import Ledger qualified
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
                           TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
 import Plutus.Contract.State (ContractResponse (ContractResponse, hooks))
@@ -297,7 +298,7 @@ valueAtTest = runScenario $ do
     void $ Core.waitForTxStatusChange $ getCardanoTxId tx
     finalValue <- Core.valueAt defaultWallet
     let difference = initialValue <> inv finalValue
-    assertEqual "defaultWallet should make a payment" difference (payment <> getCardanoTxFee tx)
+    assertEqual "defaultWallet should make a payment" difference (payment <> (CardanoAPI.fromCardanoValue $ CardanoAPI.lovelaceToValue $ getCardanoTxFee tx))
 
     -- Check that the funds are correctly registered in the newly created wallet
     vl2 <- Core.valueAt mockWallet
@@ -354,8 +355,8 @@ guessingGameTest =
                         balance <- Simulator.valueAt address
                         fees <- Simulator.walletFees defaultWallet
                         assertEqual msg
-                            (openingBalance + delta)
-                            (valueOf (balance <> fees) adaSymbol adaToken)
+                            (CardanoAPI.Lovelace $ openingBalance + delta)
+                            (CardanoAPI.selectLovelace (balance <> CardanoAPI.lovelaceToValue fees))
 
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
               let gameParam = Contracts.GameStateMachine.GameParam

@@ -19,7 +19,7 @@ module Plutus.Contracts.SimpleEscrow
   where
 
 import Cardano.Node.Emulator.Params qualified as Params
-import Control.Lens (makeClassyPrisms, view)
+import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -30,7 +30,6 @@ import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (after, before)
 import Ledger.Interval qualified as Interval
-import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ScriptContextV1)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Value (Value, geq)
@@ -148,7 +147,7 @@ redeemEp = endpoint @"redeem" redeem
       pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
-      let value = foldMap (view Tx.decoratedTxOutValue) unspentOutputs
+      let value = foldMap Ledger.decoratedTxOutPlutusValue unspentOutputs
           -- Correct validity interval should be:
           -- @
           --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ deadline params)

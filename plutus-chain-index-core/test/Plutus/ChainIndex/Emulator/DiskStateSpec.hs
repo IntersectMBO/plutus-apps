@@ -8,12 +8,12 @@ module Plutus.ChainIndex.Emulator.DiskStateSpec (tests) where
 
 import Control.Lens
 import Data.Set qualified as Set
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (ChainIndexTxOut (ChainIndexTxOut, citoValue), txOutsWithRef)
 
 import Generators qualified as Gen
 import Hedgehog (Property, forAll, property, (===))
-import Plutus.Script.Utils.Ada qualified as Ada
 import Test.Tasty
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
@@ -43,7 +43,7 @@ assetClassMapAndTxShouldShareTxOuts = property $ do
     let diskState = DiskState.fromTx chainIndexTx
         ciTxOutRefs = Set.fromList
                     $ fmap snd
-                    $ filter (\(ChainIndexTxOut{citoValue}, _) -> citoValue /= Ada.toValue (Ada.fromValue citoValue))
+                    $ filter (\(ChainIndexTxOut{citoValue}, _) -> Value.noAdaValue citoValue /= mempty)
                     $ txOutsWithRef chainIndexTx
         assetClassMapTxOutRefs =
           mconcat $ diskState ^.. DiskState.assetClassMap . DiskState.unAssetClassMap . folded

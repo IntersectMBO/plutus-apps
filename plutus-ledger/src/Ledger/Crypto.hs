@@ -28,7 +28,6 @@ module Ledger.Crypto
 
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.Serialise.Class (Serialise)
-import Control.DeepSeq (NFData)
 import Control.Newtype.Generics (Newtype)
 import Crypto.Hash qualified as Crypto
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, (.:))
@@ -59,7 +58,7 @@ instance Show Passphrase where
 -- | A message with a cryptographic signature.
 newtype Signature = Signature { getSignature :: PlutusTx.BuiltinByteString }
     deriving stock (Eq, Ord, Generic)
-    deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, NFData, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
+    deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving (Show, Pretty) via LedgerBytes
 makeLift ''Signature
 
@@ -83,7 +82,7 @@ instance FromJSON Signature where
 
 newtype PubKey = PubKey { getPubKey :: LedgerBytes }
     deriving stock (Eq, Ord, Generic)
-    deriving anyclass (Newtype, ToJSON, FromJSON, NFData)
+    deriving anyclass (Newtype, ToJSON, FromJSON)
     deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving IsString via LedgerBytes
     deriving (Show, Pretty) via LedgerBytes

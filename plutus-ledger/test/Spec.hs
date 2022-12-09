@@ -1,8 +1,7 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
-{-# LANGUAGE NumericUnderscores #-}
 module Main(main) where
 
 import Cardano.Api qualified as Api
@@ -22,7 +21,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value qualified as Value
+import Plutus.Script.Utils.Value qualified as Value hiding (scale)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Test.Tasty.HUnit qualified as HUnit

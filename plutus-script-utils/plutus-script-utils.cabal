@@ -98,7 +98,6 @@ library
     , aeson
     , base           >=4.9 && <5
     , bytestring
-    , deepseq
     , mtl
     , prettyprinter
     , serialise

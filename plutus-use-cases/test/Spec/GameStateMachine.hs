@@ -323,27 +323,27 @@ tests :: TestTree
 tests =
     testGroup "game state machine with secret arguments tests"
     [ checkPredicateOptions options "run a successful game trace"
-        (walletFundsChange w2 (Ada.adaValueOf 3 <> guessTokenVal)
-        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
+        (walletFundsChangePlutus w2 (Ada.adaValueOf 3 <> guessTokenVal)
+        .&&. plutusValueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf (-8)))
         successTrace
 
     , checkPredicateOptions options "run a 2nd successful game trace"
-        (walletFundsChange w2 (Ada.adaValueOf 3)
-        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 0 ==)
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-8))
-        .&&. walletFundsChange w3 (Ada.adaValueOf 5 <> guessTokenVal))
+        (walletFundsChangePlutus w2 (Ada.adaValueOf 3)
+        .&&. plutusValueAtAddress validatorAddress (Ada.adaValueOf 0 ==)
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf (-8))
+        .&&. walletFundsChangePlutus w3 (Ada.adaValueOf 5 <> guessTokenVal))
         successTrace2
 
     , checkPredicateOptions options "run a successful game trace where we try to leave 1 Ada in the script address"
-        (walletFundsChange w1 (Ada.toValue (-2_000_000) <> guessTokenVal)
-        .&&. valueAtAddress validatorAddress (Ada.toValue 2_000_000 ==))
+        (walletFundsChangePlutus w1 (Ada.toValue (-2_000_000) <> guessTokenVal)
+        .&&. plutusValueAtAddress validatorAddress (Ada.toValue 2_000_000 ==))
         traceLeaveTwoAdaInScript
 
     , checkPredicateOptions options "run a failed trace"
-        (walletFundsChange w2 (Ada.toValue 2_000_000 <> guessTokenVal)
-        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 8 ==)
-        .&&. walletFundsChange w1 (Ada.toValue (-2_000_000) <> Ada.adaValueOf (-8)))
+        (walletFundsChangePlutus w2 (Ada.toValue 2_000_000 <> guessTokenVal)
+        .&&. plutusValueAtAddress validatorAddress (Ada.adaValueOf 8 ==)
+        .&&. walletFundsChangePlutus w1 (Ada.toValue (-2_000_000) <> Ada.adaValueOf (-8)))
         failTrace
 
     -- TODO: turn this on again when reproducibility issue in core is fixed
@@ -384,17 +384,17 @@ runTestsWithCoverage = do
     coverageTests ref = testGroup "game state machine tests"
                          [ checkPredicateCoverageOptions options "run a successful game trace"
                             ref
-                            (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 3 <> guessTokenVal)
-                            .&&. valueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
-                            .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8)))
+                            (walletFundsChangePlutus w2 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 3 <> guessTokenVal)
+                            .&&. plutusValueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
+                            .&&. walletFundsChangePlutus w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8)))
                             successTrace
 
                         , checkPredicateCoverageOptions options "run a 2nd successful game trace"
                             ref
-                            (walletFundsChange w2 (Ada.adaValueOf 3)
-                            .&&. valueAtAddress validatorAddress (Ada.adaValueOf 0 ==)
-                            .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8))
-                            .&&. walletFundsChange w3 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 5 <> guessTokenVal))
+                            (walletFundsChangePlutus w2 (Ada.adaValueOf 3)
+                            .&&. plutusValueAtAddress validatorAddress (Ada.adaValueOf 0 ==)
+                            .&&. walletFundsChangePlutus w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8))
+                            .&&. walletFundsChangePlutus w3 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 5 <> guessTokenVal))
                             successTrace2
                         ]
 
@@ -493,7 +493,7 @@ certification = defaultCertification {
   where
     unitTest ref =
       checkPredicateCoverageOptions options "run a successful game trace" ref
-        (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 3 <> guessTokenVal)
-        .&&. valueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
-        .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8)))
+        (walletFundsChangePlutus w2 (Ada.toValue Ledger.minAdaTxOutEstimated <> Ada.adaValueOf 3 <> guessTokenVal)
+        .&&. plutusValueAtAddress validatorAddress (Ada.adaValueOf 5 ==)
+        .&&. walletFundsChangePlutus w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> Ada.adaValueOf (-8)))
         successTrace

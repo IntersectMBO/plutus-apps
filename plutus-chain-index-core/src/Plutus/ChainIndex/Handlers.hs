@@ -48,6 +48,7 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
 import Ledger qualified as L
+import Ledger.Tx.CardanoAPI (fromCardanoValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -607,7 +608,7 @@ fromTx tx = mempty
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))
                -- We don't store the 'AssetClass' when it is the Ada currency.
                $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
-               $ flattenValue citoValue
+               $ flattenValue $ fromCardanoValue citoValue
         fromMap
             :: (BeamableDb Sqlite t, HasDbType (k, v), DbType (k, v) ~ t Identity)
             => Lens' ChainIndexTx (Map.Map k v)
@@ -621,7 +622,7 @@ fromTx tx = mempty
 
         updateMapWithInlineDatum :: Map.Map DatumHash Datum -> [ChainIndex.ChainIndexTxOut] -> Map.Map DatumHash Datum
         updateMapWithInlineDatum witness [] = witness
-        updateMapWithInlineDatum witness ((ChainIndexTxOut{citoDatum=OutputDatum d}) : tl) =
+        updateMapWithInlineDatum witness (ChainIndexTxOut{citoDatum=OutputDatum d} : tl) =
           updateMapWithInlineDatum (Map.insert (datumHash d) d witness) tl
         updateMapWithInlineDatum witness (_ : tl) = updateMapWithInlineDatum witness tl
 

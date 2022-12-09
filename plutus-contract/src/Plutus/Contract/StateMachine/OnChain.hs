@@ -34,8 +34,8 @@ import Ledger.Constraints (TxConstraints (txOwnOutputs), mustPayToTheScriptWithD
 import Ledger.Constraints.OnChain.V1 (checkScriptContext)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorTypes, validatorCardanoAddress,
                              validatorHash)
-import Plutus.Script.Utils.Value (Value, isZero)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
+import Plutus.Script.Utils.Value (Value, isZero)
 import Plutus.V1.Ledger.Api (ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
 import Plutus.V1.Ledger.Tx qualified as PV1

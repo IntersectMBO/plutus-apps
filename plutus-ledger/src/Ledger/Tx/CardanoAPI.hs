@@ -73,13 +73,9 @@ toCardanoTxBodyContent networkId protocolParams sigs tx@P.Tx{..} = do
     txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateralInputs
     let txOuts = P.getTxOut <$> txOutputs
-    -- Workaround for missing export https://github.com/input-output-hk/cardano-node/pull/4496
-    (returnCollateral, totalCollateral) <- case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
-      Just txTotalAndReturnCollateralInBabbageEra ->
-        (maybe C.TxReturnCollateralNone (C.TxReturnCollateral txTotalAndReturnCollateralInBabbageEra . P.getTxOut) txReturnCollateral,)
-        <$> maybe (pure C.TxTotalCollateralNone) (fmap (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) . toCardanoLovelace) txTotalCollateral
-      Nothing -> pure (C.TxReturnCollateralNone, C.TxTotalCollateralNone)
-    txFee' <- toCardanoFee txFee
+    let returnCollateral = toCardanoReturnCollateral txReturnCollateral
+    let totalCollateral = toCardanoTotalCollateral txTotalCollateral
+    let txFee' = toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue tx
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse toCardanoPaymentKeyHash sigs
@@ -233,23 +229,21 @@ toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
 toCardanoMintValue :: P.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
 toCardanoMintValue tx@P.Tx{..} =
     let indexedMps = Map.assocs txMintingWitnesses
-    in C.TxMintValue C.MultiAssetInBabbageEra
-       <$> toCardanoValue txMint
-       <*> fmap (C.BuildTxWith . Map.fromList)
-             (traverse (\(mph, (rd, mTxOutRef)) ->
-                bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd mTxOutRef (P.lookupMintingPolicy (P.txScripts tx) mph)))
-                indexedMps)
+    in C.TxMintValue C.MultiAssetInBabbageEra txMint . C.BuildTxWith . Map.fromList <$>
+        traverse (\(mph, (rd, mTxOutRef)) ->
+            bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd mTxOutRef (P.lookupMintingPolicy (P.txScripts tx) mph)))
+            indexedMps
 
-fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe PV1.Value
+fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe C.Lovelace
 fromCardanoTotalCollateral C.TxTotalCollateralNone    = Nothing
-fromCardanoTotalCollateral (C.TxTotalCollateral _ lv) = Just $ fromCardanoLovelace lv
+fromCardanoTotalCollateral (C.TxTotalCollateral _ lv) = Just lv
 
-toCardanoTotalCollateral :: Maybe PV1.Value -> Either ToCardanoError (C.TxTotalCollateral C.BabbageEra)
+toCardanoTotalCollateral :: Maybe C.Lovelace -> C.TxTotalCollateral C.BabbageEra
 toCardanoTotalCollateral totalCollateral =
   case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
     Just txTotalAndReturnCollateralInBabbageEra ->
-      maybe (pure C.TxTotalCollateralNone) (fmap (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) . toCardanoLovelace) totalCollateral
-    Nothing -> pure C.TxTotalCollateralNone
+      maybe C.TxTotalCollateralNone (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) totalCollateral
+    Nothing -> C.TxTotalCollateralNone
 
 fromCardanoReturnCollateral :: C.TxReturnCollateral C.CtxTx C.BabbageEra -> Maybe P.TxOut
 fromCardanoReturnCollateral C.TxReturnCollateralNone       = Nothing

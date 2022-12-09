@@ -41,8 +41,8 @@ import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx (..))
+import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.PAB.Types (Config (..))
-import Plutus.Script.Utils.Ada qualified as Ada
 import TxInject.RandomTx (generateTx)
 import Wallet.Emulator (chainState, mockWalletPaymentPubKeyHash, txPool)
 import Wallet.Emulator.MultiAgent (emulatorStateInitialDist)
@@ -74,7 +74,7 @@ initialUtxoIndex :: Config -> UtxoIndex
 initialUtxoIndex config =
   let dist = Map.fromList $
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
-                   (repeat (Ada.adaValueOf 1000_000_000))
+                   (repeat (CardanoAPI.adaValueOf 1000_000_000))
       initialTxs =
         view (chainState . txPool) $ fromRight (error "cannot initialize chain state") $
         emulatorStateInitialDist (def {pNetworkId = testnet}) $

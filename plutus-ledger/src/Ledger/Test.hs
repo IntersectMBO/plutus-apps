@@ -7,9 +7,9 @@
 module Ledger.Test where
 
 import Cardano.Api qualified as C
-
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value.CardanoAPI (policyId)
 import Plutus.Script.Utils.Typed as PSU
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
@@ -106,3 +106,6 @@ asRedeemer a = Ledger.Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
 
 asDatum :: PlutusTx.ToData a => a -> Ledger.Datum
 asDatum a = Ledger.Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
+
+coinMintingPolicyId :: Language -> C.PolicyId
+coinMintingPolicyId = policyId . coinMintingPolicy

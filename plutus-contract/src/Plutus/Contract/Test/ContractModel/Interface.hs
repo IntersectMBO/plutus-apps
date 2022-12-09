@@ -170,11 +170,11 @@ import Data.Data
 import GHC.Generics hiding (to)
 
 import Cardano.Api qualified as CardanoAPI
-import Ledger.Ada qualified as Ada
 import Ledger.Slot
-import Ledger.Value
 import Plutus.Contract (Contract)
 import Plutus.Contract.Test hiding (not)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, waitNSlots)
 import PlutusTx.Builtins qualified as Builtins
 

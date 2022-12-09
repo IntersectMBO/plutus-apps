@@ -23,6 +23,7 @@ import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Time (POSIXTime)
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Script.Utils.Ada qualified as Ada
@@ -44,8 +45,8 @@ import Wallet.Emulator.Wallet qualified as Wallet
 -- | 'CheckOptions' that assigns 1000 Ada to Wallets 1 and 2.
 options :: CheckOptions
 options = defaultCheckOptions
-    & changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000)
-    & changeInitialWalletValue w2 (const $ Ada.adaValueOf 1000)
+    & changeInitialWalletValue w1 (const $ Value.adaValueOf 1000)
+    & changeInitialWalletValue w2 (const $ Value.adaValueOf 1000)
     & increaseTransactionLimits
 
 tests :: TestTree
@@ -57,12 +58,12 @@ tests =
         $ void F.setupTokensTrace
 
     , checkPredicateOptions options "can initialise and obtain tokens"
-        (    walletFundsChange w1 ( scale (-1) (F.initialMargin $ theFuture startTime)
-                                 <> F.tokenFor Short testAccounts
-                                  )
-        .&&. walletFundsChange w2 ( scale (-1) (F.initialMargin $ theFuture startTime)
-                                 <> F.tokenFor Long testAccounts
-                                  )
+        (    walletFundsChangePlutus w1 ( scale (-1) (F.initialMargin $ theFuture startTime)
+                                       <> F.tokenFor Short testAccounts
+                                        )
+        .&&. walletFundsChangePlutus w2 ( scale (-1) (F.initialMargin $ theFuture startTime)
+                                       <> F.tokenFor Long testAccounts
+                                        )
         )
         (void (initContract >> joinFuture))
 

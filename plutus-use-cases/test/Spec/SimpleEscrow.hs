@@ -9,14 +9,15 @@ module Spec.SimpleEscrow(tests) where
 import Control.Lens
 import Control.Monad (void)
 
+import Cardano.Node.Emulator.Generators (someTokenValue)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Time (POSIXTime)
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test
 import Plutus.Contracts.SimpleEscrow
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty
@@ -24,7 +25,7 @@ import Test.Tasty
 tests :: TestTree
 tests = testGroup "simple-escrow"
     [ checkPredicate "can lock some value in the contract"
-        ( walletFundsChange w1 (Ada.adaValueOf (-10))
+        ( walletFundsChange w1 (Value.adaValueOf (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do
@@ -39,7 +40,7 @@ tests = testGroup "simple-escrow"
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-            let params = mkEscrowParams startTime (token1 10) (token2 5)
+            let params = mkEscrowParams startTime (Value.fromCardanoValue $ token1 10) (Value.fromCardanoValue $ token2 5)
 
             hdl1 <- Trace.activateContractWallet w1 lockEp
             Trace.callEndpoint @"lock" hdl1 params
@@ -61,7 +62,7 @@ tests = testGroup "simple-escrow"
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl params
     , checkPredicate "only locking wallet can request refund"
-        ( walletFundsChange w1 (Ada.adaValueOf (-10))
+        ( walletFundsChange w1 (Value.adaValueOf (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do
@@ -75,14 +76,14 @@ tests = testGroup "simple-escrow"
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl2 params
     , checkPredicateOptions options "can't redeem if you can't pay"
-        ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> token1 (-10))
+        ( walletFundsChange w1 (Value.lovelaceToValue (-Ledger.minLovelaceTxOutEstimated) <> token1 (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
             -- 501 token1 is _just_ too much; we don't have enough ( our options
             -- allocate only 500 ).
-            let params = mkEscrowParams startTime (token1 10) (token2 501)
+            let params = mkEscrowParams startTime (Value.fromCardanoValue $ token1 10) (Value.fromCardanoValue $ token2 501)
 
             hdl1 <- Trace.activateContractWallet w1 lockEp
             Trace.callEndpoint @"lock" hdl1 params
@@ -92,10 +93,10 @@ tests = testGroup "simple-escrow"
             void $ Trace.callEndpoint @"redeem" hdl2 params
     ]
 
-token1 :: Integer -> Value
+token1 :: Integer -> Value.Value
 token1 = someTokenValue "Token1"
 
-token2 :: Integer -> Value
+token2 :: Integer -> Value.Value
 token2 = someTokenValue "Token2"
 
 options :: CheckOptions

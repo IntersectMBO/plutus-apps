@@ -110,6 +110,7 @@ import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as UtxoIndex
 import Ledger.Slot (Slot)
+import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
                                    ChainIndexQueryEffect (..), TxOutStatus, TxStatus, getTip)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
@@ -153,7 +154,7 @@ makeLensesFor [("_contractState", "contractState")] ''SimulatorContractInstanceS
 data AgentState t =
     AgentState
         { _walletState   :: Wallet.WalletState
-        , _submittedFees :: Map TxId Value
+        , _submittedFees :: Map TxId CardanoAPI.Lovelace
         }
 
 makeLenses ''AgentState
@@ -178,7 +179,7 @@ makeLensesFor [("_logMessages", "logMessages"), ("_instances", "instances")] ''S
 
 initialState :: forall t. IO (SimulatorState t)
 initialState = do
-    let initialDistribution = Map.fromList $ fmap (, Ada.adaValueOf 100_000) knownWallets
+    let initialDistribution = Map.fromList $ fmap (, CardanoAPI.adaValueOf 100_000) knownWallets
         Emulator.EmulatorState{Emulator._chainState} = Emulator.initialState (def & Emulator.initialChainState .~ Left initialDistribution)
         initialWallets = Map.fromList $ fmap (\w -> (Wallet.toMockWallet w, initialAgentState w)) CW.knownMockWallets
     STM.atomically $
@@ -214,7 +215,7 @@ mkSimulatorHandlers params handleContractEffect =
     EffectHandlers
         { initialiseEnvironment =
             (,,)
-                <$> liftIO (Instances.emptyInstancesState )
+                <$> liftIO Instances.emptyInstancesState
                 <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing params)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
@@ -701,7 +702,7 @@ activeContracts :: forall t. Simulation t (Set ContractInstanceId)
 activeContracts = Core.activeContracts
 
 -- | The total value currently at an address
-valueAtSTM :: forall t. CardanoAddress -> Simulation t (STM Value)
+valueAtSTM :: forall t. CardanoAddress -> Simulation t (STM CardanoAPI.Value)
 valueAtSTM address = do
     SimulatorState{_chainState} <- Core.askUserEnv @t @(SimulatorState t)
     pure $ do
@@ -709,16 +710,16 @@ valueAtSTM address = do
         pure $ foldMap txOutValue $ filter (\txout -> txOutAddress txout == address) $ fmap snd $ Map.toList mp
 
 -- | The total value currently at an address
-valueAt :: forall t. CardanoAddress -> Simulation t Value
+valueAt :: forall t. CardanoAddress -> Simulation t CardanoAPI.Value
 valueAt address = do
     stm <- valueAtSTM address
     liftIO $ STM.atomically stm
 
 -- | The fees paid by the wallet.
-walletFees :: forall t. Wallet -> Simulation t Value
+walletFees :: forall t. Wallet -> Simulation t CardanoAPI.Lovelace
 walletFees wallet = succeededFees <$> walletSubmittedFees <*> blockchain
     where
-        succeededFees :: Map TxId Value -> Blockchain -> Value
+        succeededFees :: Map TxId CardanoAPI.Lovelace -> Blockchain -> CardanoAPI.Lovelace
         succeededFees submitted = foldMap . foldMap $ fold . (submitted Map.!?) . getCardanoTxId . unOnChain
         walletSubmittedFees = do
             SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)
@@ -774,7 +775,7 @@ addWalletWith funds = do
     pure (Wallet.toMockWallet mockWallet, CW.paymentPubKeyHash mockWallet)
 
 -- | Retrieve the balances of all the entities in the simulator.
-currentBalances :: forall t. Simulation t (Map.Map Wallet.Entity Value)
+currentBalances :: forall t. Simulation t (Map.Map Wallet.Entity CardanoAPI.Value)
 currentBalances = do
   SimulatorState{_chainState, _agentStates} <- Core.askUserEnv @t @(SimulatorState t)
   liftIO $ STM.atomically $ do

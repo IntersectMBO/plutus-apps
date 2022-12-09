@@ -23,12 +23,12 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
+import Cardano.Api qualified as C
 import Ledger.Address
 import Ledger.Blockchain
 import Ledger.Credential (Credential (..))
 import Ledger.Crypto
 import Ledger.Tx
-import Plutus.Script.Utils.Ada qualified as Ada
 
 -- | The owner of an unspent transaction output.
 data UtxOwner
@@ -119,7 +119,7 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
       pure FlowLink
             { flowLinkSource = sourceRef
             , flowLinkTarget = tgtRef
-            , flowLinkValue = fromIntegral $ Ada.fromValue $ txOutValue src
+            , flowLinkValue = fromIntegral $ C.selectLovelace $ txOutValue src
             , flowLinkOwner = owner knownKeys src
             , flowLinkSourceLoc = sourceLoc
             , flowLinkTargetLoc = tgtLoc

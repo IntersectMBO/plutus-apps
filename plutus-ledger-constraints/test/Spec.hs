@@ -7,7 +7,7 @@
 
 module Main(main) where
 
-import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Generators qualified as Gen hiding (someTokenValue)
 import Cardano.Node.Emulator.Params (Params (pNetworkId))
 import Control.Lens (toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)

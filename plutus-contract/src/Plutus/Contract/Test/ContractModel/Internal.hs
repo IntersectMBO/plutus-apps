@@ -71,18 +71,12 @@ import Cardano.Api (AssetId, SlotNo (..))
 import Cardano.Api qualified as CardanoAPI
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Node.Emulator.Params ()
-import Ledger.Ada qualified as Ada
 import Ledger.Address
 import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
-import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
-import Plutus.Contract.Schema (Input)
+import Plutus.Contract (ContractInstanceId)
 import Plutus.Contract.Test hiding (not)
-import Plutus.Contract.Test.ContractModel.Symbolics
-import Plutus.Contract.Test.Coverage
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (AssetClass)
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, EmulatorEffects, EmulatorTrace, activateContract,
                                        freezeContractInstance, waitNSlots)
@@ -105,6 +99,7 @@ import Wallet.Emulator.MultiAgent (eteEvent)
 import Plutus.Trace.Effects.EmulatorControl qualified as EmulatorControl
 import Prettyprinter
 
+import Ledger.Value.CardanoAPI (lovelaceValueOf)
 import Plutus.Contract.Test.ContractModel.Internal.ContractInstance as Internal
 
 -- Drops StartContract from EmulatorEffects
@@ -308,7 +303,7 @@ defaultCoverageOptions = CoverageOptions
 -- to write `ContractModel`s that keep track of balances.
 defaultCheckOptionsContractModel :: CheckOptions
 defaultCheckOptionsContractModel =
-  let initialValue = Ada.lovelaceValueOf 100_000_000_000_000_000 in
+  let initialValue = lovelaceValueOf 100_000_000_000_000_000 in
   defaultCheckOptions & emulatorConfig
                       . initialChainState .~ (Left . Map.fromList $ zip knownWallets (repeat initialValue))
 

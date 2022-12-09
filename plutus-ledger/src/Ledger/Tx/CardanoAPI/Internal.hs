@@ -441,14 +441,14 @@ fromCardanoTxOutToPV1TxInfoTxOut :: C.TxOut C.CtxTx era -> PV1.TxOut
 fromCardanoTxOutToPV1TxInfoTxOut (C.TxOut addr value datumHash _) =
     PV1.TxOut
     (fromCardanoAddressInEra addr)
-    (fromCardanoTxOutValue value)
+    (fromCardanoValue $ fromCardanoTxOutValue value)
     (fromCardanoTxOutDatumHash datumHash)
 
 fromCardanoTxOutToPV2TxInfoTxOut :: C.TxOut C.CtxTx era -> PV2.TxOut
 fromCardanoTxOutToPV2TxInfoTxOut (C.TxOut addr value datum refScript) =
     PV2.TxOut
     (fromCardanoAddressInEra addr)
-    (fromCardanoTxOutValue value)
+    (fromCardanoValue $ fromCardanoTxOutValue value)
     (fromCardanoTxOutDatum datum)
     (refScriptToScriptHash refScript)
 
@@ -464,7 +464,7 @@ toCardanoTxOut
     -> Either ToCardanoError (C.TxOut C.CtxTx C.BabbageEra)
 toCardanoTxOut networkId (PV2.TxOut addr value datum _rsHash) =
     C.TxOut <$> toCardanoAddressInEra networkId addr
-            <*> toCardanoTxOutValue value
+            <*> (toCardanoTxOutValue <$> toCardanoValue value)
             <*> toCardanoTxOutDatum datum
             <*> pure C.ReferenceScriptNone -- Not possible from just a hash
 
@@ -548,12 +548,12 @@ fromCardanoStakeKeyHash stakeKeyHash = PV1.PubKeyHash $ PlutusTx.toBuiltin $ C.s
 toCardanoStakeKeyHash :: PV1.PubKeyHash -> Either ToCardanoError (C.Hash C.StakeKey)
 toCardanoStakeKeyHash (PV1.PubKeyHash bs) = tag "toCardanoStakeKeyHash" $ deserialiseFromRawBytes (C.AsHash C.AsStakeKey) (PlutusTx.fromBuiltin bs)
 
-fromCardanoTxOutValue :: C.TxOutValue era -> PV1.Value
-fromCardanoTxOutValue (C.TxOutAdaOnly _ lovelace) = fromCardanoLovelace lovelace
-fromCardanoTxOutValue (C.TxOutValue _ value)      = fromCardanoValue value
+fromCardanoTxOutValue :: C.TxOutValue era -> C.Value
+fromCardanoTxOutValue (C.TxOutAdaOnly _ lovelace) = C.lovelaceToValue lovelace
+fromCardanoTxOutValue (C.TxOutValue _ value)      = value
 
-toCardanoTxOutValue :: PV1.Value -> Either ToCardanoError (C.TxOutValue C.BabbageEra)
-toCardanoTxOutValue value = C.TxOutValue C.MultiAssetInBabbageEra <$> toCardanoValue value
+toCardanoTxOutValue :: C.Value -> C.TxOutValue C.BabbageEra
+toCardanoTxOutValue = C.TxOutValue C.MultiAssetInBabbageEra
 
 fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
 fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing
@@ -606,9 +606,9 @@ toCardanoScriptDataHash :: P.DatumHash -> Either ToCardanoError (C.Hash C.Script
 toCardanoScriptDataHash (P.DatumHash bs) =
     tag "toCardanoTxOutDatumHash" (deserialiseFromRawBytes (C.AsHash C.AsScriptData) (PlutusTx.fromBuiltin bs))
 
-fromCardanoMintValue :: C.TxMintValue build era -> PV1.Value
+fromCardanoMintValue :: C.TxMintValue build era -> C.Value
 fromCardanoMintValue C.TxMintNone              = mempty
-fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
+fromCardanoMintValue (C.TxMintValue _ value _) = value
 
 
 adaToCardanoValue :: P.Ada -> C.Value
@@ -662,12 +662,12 @@ toCardanoAssetId (Value.AssetClass (currencySymbol, tokenName))
             <$> toCardanoPolicyId (Value.currencyMPSHash currencySymbol)
             <*> toCardanoAssetName tokenName
 
-fromCardanoFee :: C.TxFee era -> PV1.Value
+fromCardanoFee :: C.TxFee era -> C.Lovelace
 fromCardanoFee (C.TxFeeImplicit _)          = mempty
-fromCardanoFee (C.TxFeeExplicit _ lovelace) = fromCardanoLovelace lovelace
+fromCardanoFee (C.TxFeeExplicit _ lovelace) = lovelace
 
-toCardanoFee :: PV1.Value -> Either ToCardanoError (C.TxFee C.BabbageEra)
-toCardanoFee value = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra <$> toCardanoLovelace value
+toCardanoFee :: C.Lovelace -> C.TxFee C.BabbageEra
+toCardanoFee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra
 
 fromCardanoLovelace :: C.Lovelace -> PV1.Value
 fromCardanoLovelace (C.lovelaceToQuantity -> C.Quantity lovelace) = Ada.lovelaceValueOf lovelace

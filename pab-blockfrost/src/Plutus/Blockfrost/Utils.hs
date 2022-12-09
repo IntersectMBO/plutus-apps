@@ -6,7 +6,7 @@
 
 module Plutus.Blockfrost.Utils where
 
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.String
 import Data.Text (Text, pack, unpack)
@@ -15,21 +15,21 @@ import Text.Hex (decodeHex, encodeHex)
 import Text.Read (readMaybe)
 
 import Blockfrost.Client as Blockfrost
-import Cardano.Api hiding (AssetId, Block, Value)
+import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Api
 import Ledger.Slot qualified as Ledger (Slot (..), SlotRange)
 import Ledger.Tx (TxOutRef (..))
 import Ledger.Tx qualified as LT (ScriptTag (..), TxId (TxId))
 import Ledger.Tx.CardanoAPI
+import Ledger.Value.CardanoAPI qualified as Value
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
 import Plutus.V1.Ledger.Address qualified as LA
-import Plutus.V1.Ledger.Api (Credential (..), fromBuiltin, toBuiltin)
+import Plutus.V1.Ledger.Api (Credential (..), fromBuiltin, toBuiltin, unCurrencySymbol, unTokenName)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
 import Plutus.V1.Ledger.Interval (always, from, interval, to)
 import Plutus.V1.Ledger.Scripts qualified as PS
-import Plutus.V1.Ledger.Value hiding (Value)
-import Plutus.V1.Ledger.Value qualified as Ledger (Value)
+import Plutus.V1.Ledger.Value (AssetClass, unAssetClass)
 
 
 class Show a => ToBlockfrostScriptHash a where
@@ -83,18 +83,18 @@ toPlutusScriptTag = \case
     Cert   -> LT.Cert
     Reward -> LT.Reward
 
-toCardanoAddress :: Blockfrost.Address -> Either String (AddressInEra BabbageEra)
+toCardanoAddress :: Blockfrost.Address -> Either String (C.AddressInEra C.BabbageEra)
 toCardanoAddress bAddr = case deserialized of
     Nothing  -> Left "Error deserializing the Address"
-    Just des -> Right $ shelleyAddressInEra des
+    Just des -> Right $ C.shelleyAddressInEra des
   where
-    deserialized :: Maybe (Api.Address ShelleyAddr)
-    deserialized = deserialiseAddress AsShelleyAddress (unAddress bAddr)
+    deserialized :: Maybe (Api.Address C.ShelleyAddr)
+    deserialized = C.deserialiseAddress C.AsShelleyAddress (unAddress bAddr)
 
-credentialToAddress :: NetworkId -> Credential -> Blockfrost.Address
+credentialToAddress :: C.NetworkId -> Credential -> Blockfrost.Address
 credentialToAddress netId c = case toCardanoAddressInEra netId pAddress of
     Left err   -> error $ show err
-    Right addr -> mkAddress $ serialiseAddress addr
+    Right addr -> mkAddress $ C.serialiseAddress addr
   where
     pAddress :: LA.Address
     pAddress = case c of
@@ -122,22 +122,22 @@ txoToRef txo = TxOutRef { txOutRefId=txoToTxId txo
 txoToTxId :: UtxoInput -> LT.TxId
 txoToTxId = txHashToTxId . _utxoInputTxHash
 
-amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
-amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)
+amountsToValue :: [Blockfrost.Amount] -> C.Value
+amountsToValue = foldMap blfAmountToValue
 
-blfAmountToValue :: Blockfrost.Amount -> Ledger.Value
+blfAmountToValue :: Blockfrost.Amount -> C.Value
 blfAmountToValue amt = case amt of
                           AdaAmount lov  -> lovelacesToValue lov
                           AssetAmount ds -> discreteCurrencyToValue ds
 
-discreteCurrencyToValue :: Money.SomeDiscrete -> Ledger.Value
-discreteCurrencyToValue sd = singleton pid tn quant
+discreteCurrencyToValue :: Money.SomeDiscrete -> C.Value
+discreteCurrencyToValue sd = Value.singleton pid an quant
   where
-    pid :: CurrencySymbol
+    pid :: C.PolicyId
     pid = fromString $ unpack $ Text.take 56 $ someDiscreteCurrency sd
 
-    tn :: TokenName
-    tn =  TokenName $ toBuiltin $ fromJust $ decodeHex $ Text.drop 56 $ someDiscreteCurrency sd
+    an :: C.AssetName
+    an =  C.AssetName $ fromJust $ decodeHex $ Text.drop 56 $ someDiscreteCurrency sd
 
     quant :: Integer
     quant = someDiscreteAmount sd
@@ -152,10 +152,8 @@ lovelaceConfig = Money.defaultDecimalConf
 lovelacesToMInt :: Lovelaces -> Maybe Integer
 lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceConfig Money.Round
 
-lovelacesToValue :: Lovelaces -> Ledger.Value
-lovelacesToValue lov = case lovelacesToMInt lov of
-  Nothing  -> singleton adaSymbol adaToken 0
-  Just int -> singleton adaSymbol adaToken int
+lovelacesToValue :: Lovelaces -> C.Value
+lovelacesToValue = Value.lovelaceValueOf . fromMaybe 0 . lovelacesToMInt
 
 textToSlot :: Text -> Ledger.Slot
 textToSlot = maybe (error "Failed to convert text to slot") Ledger.Slot . (readMaybe . unpack)

@@ -25,6 +25,7 @@ module Plutus.ChainIndex.Emulator.DiskState(
     , diagnostics
 ) where
 
+import Cardano.Api qualified as C
 import Control.Lens (At (..), Index, IxValue, Ixed (..), lens, makeLenses, view, (&), (.~), (^.))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map (Map)
@@ -39,8 +40,6 @@ import Ledger.Tx (Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
                              txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 -- | Set of transaction output references for each address.
 newtype CredentialMap = CredentialMap { _unCredentialMap :: Map Credential (Set TxOutRef) }
@@ -76,13 +75,13 @@ txCredentialMap  =
        . txOutsWithRef
 
 -- | Set of transaction output references for each asset class.
-newtype AssetClassMap = AssetClassMap { _unAssetClassMap :: Map AssetClass (Set TxOutRef) }
+newtype AssetClassMap = AssetClassMap { _unAssetClassMap :: Map C.AssetId (Set TxOutRef) }
     deriving stock (Eq, Show, Generic)
 
 makeLenses ''AssetClassMap
 
 type instance IxValue AssetClassMap = Set TxOutRef
-type instance Index AssetClassMap = AssetClass
+type instance Index AssetClassMap = C.AssetId
 
 instance Ixed AssetClassMap where
     ix ac f (AssetClassMap mp) = AssetClassMap <$> ix ac f mp
@@ -110,11 +109,11 @@ txAssetClassMap =
           fmap (, Set.singleton txOutRef) $ assetClassesOfTxOut txOut)
       . txOutsWithRef
   where
-    assetClassesOfTxOut :: ChainIndexTxOut -> [AssetClass]
+    assetClassesOfTxOut :: ChainIndexTxOut -> [C.AssetId]
     assetClassesOfTxOut ChainIndexTxOut{citoValue} =
-      fmap (\(c, t, _) -> AssetClass (c, t))
-           $ filter (\(c, t, _) -> not $ c == Ada.adaSymbol && t == Ada.adaToken)
-           $ flattenValue citoValue
+        filter (/= C.AdaAssetId)
+           $ fmap fst
+           $ C.valueToList citoValue
 
 -- | Data that we keep on disk. (This type is used for testing only - we need
 --   other structures for the disk-backed storage)

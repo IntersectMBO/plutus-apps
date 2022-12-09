@@ -29,12 +29,14 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isNothing)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Chain qualified as Chain
 import Cardano.Node.Emulator.Params (Params (..))
 import Cardano.Node.Emulator.Validation qualified as Validation
@@ -43,14 +45,11 @@ import Ledger hiding (to, value)
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
-import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoTxOut)
+import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
-import Plutus.V2.Ledger.Tx qualified as V2
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.NodeClient qualified as NC
@@ -60,7 +59,7 @@ import Wallet.Emulator.Wallet qualified as Wallet
 -- | Assertions which will be checked during execution of the emulator.
 data Assertion
   = IsValidated CardanoTx -- ^ Assert that the given transaction is validated.
-  | OwnFundsEqual Wallet Value -- ^ Assert that the funds belonging to a wallet's public-key address are equal to a value.
+  | OwnFundsEqual Wallet C.Value -- ^ Assert that the funds belonging to a wallet's public-key address are equal to a value.
 
 -- | An event with a timestamp measured in emulator time
 --   (currently: 'Slot')
@@ -226,7 +225,7 @@ assertion :: (Member MultiAgentControlEffect effs) => Assertion -> Eff effs ()
 assertion a = send (Assertion a)
 
 -- | Issue an assertion that the funds for a given wallet have the given value.
-assertOwnFundsEq :: (Member MultiAgentControlEffect effs) => Wallet -> Value -> Eff effs ()
+assertOwnFundsEq :: (Member MultiAgentControlEffect effs) => Wallet -> C.Value -> Eff effs ()
 assertOwnFundsEq wallet = assertion . OwnFundsEqual wallet
 
 -- | Issue an assertion that the given transaction has been validated.
@@ -255,7 +254,7 @@ chainUtxo :: Getter EmulatorState AM.AddressMap
 chainUtxo = chainState . Chain.chainNewestFirst . to AM.fromChain
 
 -- | Get a map with the total value of each wallet's "own funds".
-fundsDistribution :: EmulatorState -> Map Wallet Value
+fundsDistribution :: EmulatorState -> Map Wallet C.Value
 fundsDistribution st =
     let fullState = view chainUtxo st
         wallets = st ^.. walletStates . to Map.keys . folded
@@ -295,38 +294,40 @@ we create 10 Ada-only outputs per wallet here.
 
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
-emulatorStateInitialDist :: Params -> Map PaymentPubKeyHash Value -> Either ToCardanoError EmulatorState
+emulatorStateInitialDist :: Params -> Map PaymentPubKeyHash C.Value -> Either ToCardanoError EmulatorState
 emulatorStateInitialDist params mp = do
     minAdaEmptyTxOut <- mMinAdaTxOut
-    outs <- traverse (toCardanoTxOut $ pNetworkId params) $ Map.toList mp >>= mkOutputs minAdaEmptyTxOut
+    outs <- traverse (mkOutputs minAdaEmptyTxOut) (Map.toList mp)
     let tx = mempty
-           { txOutputs = TxOut <$> outs
+           { txOutputs = concat outs
            , txMint = fold mp
            , txValidRange = WAPI.defaultSlotRange
            }
-        cUtxoIndex = either (error . show) id $ fromPlutusIndex mempty
+        cUtxoIndex = either (error . show) id $ CardanoAPI.fromPlutusIndex mempty
         cTx = Validation.fromPlutusTxSigned def cUtxoIndex tx CW.knownPaymentKeys
     pure $ emulatorStatePool [cTx]
     where
-        -- we start with an empty TxOut and we adjust it to be sure that the containted Adas fit the size
+        -- we start with an empty TxOut and we adjust it to be sure that the contained Adas fit the size
         -- of the TxOut
         mMinAdaTxOut = do
           let k = fst $ head $ Map.toList mp
-          emptyTxOut <- toCardanoTxOut (pNetworkId params) $ mkOutput k mempty
-          pure $ minAdaTxOut (emulatorPParams params) (TxOut emptyTxOut)
+          emptyTxOut <- mkOutput k mempty
+          pure $ minAdaTxOut (emulatorPParams params) emptyTxOut
         -- See [Creating wallets with multiple outputs]
-        mkOutputs minAda (key, vl) = mkOutput key <$> splitInto10 vl minAda
+        mkOutputs minAda (key, vl) = traverse (mkOutput key) (splitInto10 vl minAda)
         splitInto10 vl minAda = if count <= 1
             then [vl]
-            else replicate (fromIntegral count) (Ada.toValue (ada `div` count)) ++ remainder
+            else replicate (fromIntegral count) (C.lovelaceToValue (ada `div` count)) ++ remainder
             where
-                ada = if Value.isAdaOnlyValue vl
-                    then Ada.fromValue vl
-                    else Ada.fromValue vl - minAda
+                ada = case C.valueToLovelace vl of
+                    Nothing       -> C.selectLovelace vl
+                    Just lovelace -> lovelace - minAda
                 -- Make sure we don't make the outputs too small
                 count = min 10 $ ada `div` minAda
-                remainder = [ vl <> Ada.toValue (-ada) | not (Value.isAdaOnlyValue vl) ]
-        mkOutput key vl = V2.pubKeyHashTxOut vl (unPaymentPubKeyHash key)
+                remainder = [ vl <> C.lovelaceToValue (-ada) | isNothing (C.valueToLovelace vl) ]
+        mkOutput key vl = do
+            addr <- CardanoAPI.toCardanoAddressInEra (pNetworkId params) (pubKeyHashAddress key Nothing)
+            pure $ TxOut $ C.TxOut addr (CardanoAPI.toCardanoTxOutValue vl) C.TxOutDatumNone C.ReferenceScriptNone
 
 type MultiAgentEffs =
     '[ State EmulatorState
@@ -413,7 +414,7 @@ assert (IsValidated txn)            = isValidated txn
 assert (OwnFundsEqual wallet value) = ownFundsEqual wallet value
 
 -- | Issue an assertion that the funds for a given wallet have the given value.
-ownFundsEqual :: (Members MultiAgentEffs effs) => Wallet -> Value -> Eff effs ()
+ownFundsEqual :: (Members MultiAgentEffs effs) => Wallet -> C.Value -> Eff effs ()
 ownFundsEqual wallet value = do
     es <- get
     let total = foldMap (txOutValue . snd) $ es ^. chainUtxo . AM.fundsAt (Wallet.mockWalletAddress wallet)

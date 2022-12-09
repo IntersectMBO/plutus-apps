@@ -29,8 +29,7 @@ module Ledger.Blockchain (
     datumTxo,
     updateUtxo,
     txOutPubKey,
-    pubKeyTxo,
-    validValuesTx
+    pubKeyTxo
     ) where
 
 import Codec.Serialise (Serialise)
@@ -51,13 +50,12 @@ import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (..), (<+>))
 
+import Cardano.Api qualified as C
 import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
                   getCardanoTxInputs, getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, spentOutputs,
-                  txOutDatumHash, txOutPubKey, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral,
-                  validValuesTx)
+                  txOutDatumHash, txOutPubKey, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral)
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Value (Value)
 
 -- | Block identifier (usually a hash)
 newtype BlockId = BlockId { getBlockId :: BS.ByteString }
@@ -127,7 +125,7 @@ out bc o = do
     Map.lookup o $ outputsProduced tx
 
 -- | Determine the unspent value that a transaction output refers to.
-value :: Blockchain -> TxOutRef -> Maybe Value
+value :: Blockchain -> TxOutRef -> Maybe C.Value
 value bc o = txOutValue <$> out bc o
 
 -- | Determine the data script that a transaction output refers to.

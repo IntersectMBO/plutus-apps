@@ -25,7 +25,6 @@ import Cardano.Ledger.Alonzo.Genesis ()
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
 import Control.Applicative (empty, (<|>))
-import Control.DeepSeq (NFData, rnf)
 import Control.Lens ((&), (.~), (?~))
 
 import Cardano.Ledger.Core qualified as Ledger (TxOut)
@@ -48,7 +47,7 @@ import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Slot
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxOutDatum, fromCardanoTxOutValue, fromCardanoValue)
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxOutDatum, fromCardanoTxOutValue)
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
@@ -75,7 +74,7 @@ data TxInType =
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 -- | A transaction input, consisting of a transaction output reference and an input type.
 data TxIn = TxIn {
@@ -83,7 +82,7 @@ data TxIn = TxIn {
     txInType :: Maybe TxInType
     }
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 
 instance Pretty TxIn where
@@ -112,7 +111,7 @@ data TxInputType =
     | TxConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | TxConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise)
 
 -- | A transaction input, consisting of a transaction output reference and an input type.
 -- Differs with TxIn by: TxIn *maybe* contains *full* data witnesses, TxInput always contains redeemer witness, but datum/validator hashes.
@@ -121,7 +120,7 @@ data TxInput = TxInput {
     txInputType :: !TxInputType
     }
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise)
 
 -- same as TxIn
 instance Pretty TxInput where
@@ -150,7 +149,7 @@ data Withdrawal = Withdrawal
   , withdrawalRedeemer   :: Maybe Redeemer  -- ^ redeemer for script credential
   }
   deriving stock (Show, Eq, Generic)
-  deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+  deriving anyclass (ToJSON, FromJSON, Serialise)
 
 instance Pretty Withdrawal where
     pretty = viaShow
@@ -160,7 +159,7 @@ data Certificate = Certificate
   , certificateRedeemer :: Maybe Redeemer           -- ^ redeemer for script credential
   }
   deriving stock (Show, Eq, Generic)
-  deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+  deriving anyclass (ToJSON, FromJSON, Serialise)
 
 instance Pretty Certificate where
     pretty = viaShow
@@ -222,9 +221,6 @@ instance Serialise TxOut where
   encode = C.toCBOR
   decode = C.fromCBOR
 
-instance NFData TxOut where
-  rnf (TxOut tx) = seq tx ()
-
 instance OpenApi.ToSchema TxOut where
     declareNamedSchema _ = do
       addressSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy (C.AddressInEra C.BabbageEra))
@@ -274,11 +270,11 @@ data Tx = Tx {
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
     txReturnCollateral :: Maybe TxOut,
     -- ^ The output of the remaining collateral after covering fees in case validation of the transaction fails.
-    txTotalCollateral  :: Maybe Value,
+    txTotalCollateral  :: Maybe C.Lovelace,
     -- ^ The total collateral to be paid in case validation of the transaction fails.
-    txMint             :: !Value,
+    txMint             :: !C.Value,
     -- ^ The 'Value' minted by this transaction.
-    txFee              :: !Value,
+    txFee              :: !C.Lovelace,
     -- ^ The fee for this transaction.
     txValidRange       :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
@@ -297,7 +293,7 @@ data Tx = Tx {
     txMetadata         :: Maybe BuiltinByteString
     -- ^ Metadata
     } deriving stock (Show, Eq, Generic)
-      deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+      deriving anyclass (ToJSON, FromJSON, Serialise)
 
 
 instance Semigroup Tx where
@@ -356,7 +352,7 @@ returnCollateral = L.lens g s where
     g = txReturnCollateral
     s tx o = tx { txReturnCollateral = o }
 
-totalCollateral :: L.Lens' Tx (Maybe Value)
+totalCollateral :: L.Lens' Tx (Maybe C.Lovelace)
 totalCollateral = L.lens g s where
     g = txTotalCollateral
     s tx o = tx { txTotalCollateral = o }
@@ -372,12 +368,12 @@ signatures = L.lens g s where
     g = txSignatures
     s tx sig = tx { txSignatures = sig }
 
-fee :: L.Lens' Tx Value
+fee :: L.Lens' Tx C.Lovelace
 fee = L.lens g s where
     g = txFee
     s tx v = tx { txFee = v }
 
-mint :: L.Lens' Tx Value
+mint :: L.Lens' Tx C.Value
 mint = L.lens g s where
     g = txMint
     s tx v = tx { txMint = v }
@@ -409,18 +405,11 @@ lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 lookupDatum :: Tx -> DatumHash -> Maybe Datum
 lookupDatum Tx{txData} h = Map.lookup h txData
 
--- | Check that all values in a transaction are non-negative.
-validValuesTx :: Tx -> Bool
-validValuesTx Tx{..}
-  = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
-    where
-      nonNegative i = V.geq i mempty
-
-txOutValue :: TxOut -> Value
+txOutValue :: TxOut -> C.Value
 txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
-  fromCardanoValue $ C.txOutValueToValue tov
+  C.txOutValueToValue tov
 
-outValue :: L.Lens TxOut TxOut Value (C.TxOutValue C.BabbageEra)
+outValue :: L.Lens TxOut TxOut C.Value (C.TxOutValue C.BabbageEra)
 outValue = L.lens
   txOutValue
   (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
@@ -438,9 +427,9 @@ data TxStripped = TxStripped {
     -- ^ The reference inputs to this transaction, as transaction output references only.
     txStrippedOutputs         :: [TxOut],
     -- ^ The outputs of this transation.
-    txStrippedMint            :: !Value,
+    txStrippedMint            :: !C.Value,
     -- ^ The 'Value' minted by this transaction.
-    txStrippedFee             :: !Value
+    txStrippedFee             :: !C.Lovelace
     -- ^ The fee for this transaction.
     } deriving (Show, Eq, Generic, Serialise)
 

@@ -139,6 +139,7 @@ executable plutus-pab-examples
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-use-cases           >=1.0.0
 
   ------------------------
@@ -175,10 +176,11 @@ executable plutus-uniswap
   -- Local components
   --------------------
   build-depends:
-    , plutus-contract   >=1.0.0
-    , plutus-ledger     >=1.0.0
-    , plutus-pab        >=1.0.0
-    , plutus-use-cases  >=1.0.0
+    , plutus-contract      >=1.0.0
+    , plutus-ledger        >=1.0.0
+    , plutus-pab           >=1.0.0
+    , plutus-script-utils  >=1.0.0
+    , plutus-use-cases     >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -223,6 +225,7 @@ executable plutus-pab-local-cluster
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-use-cases           >=1.0.0
 
   --------------------------
@@ -271,6 +274,7 @@ executable plutus-pab-test-psgenerator
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-use-cases           >=1.0.0
 
   --------------------------
@@ -331,6 +335,7 @@ test-suite plutus-pab-test-full
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-use-cases           >=1.0.0
 
   --------------------------
@@ -400,6 +405,7 @@ test-suite plutus-pab-test-full-long-running
     , plutus-ledger-constraints  >=1.0.0
     , plutus-pab                 >=1.0.0
     , plutus-pab-executables     >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-use-cases           >=1.0.0
 
   --------------------------
@@ -449,6 +455,7 @@ executable tx-inject
     , plutus-contract        >=1.0.0
     , plutus-ledger          >=1.0.0
     , plutus-pab             >=1.0.0
+    , plutus-script-utils    >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies

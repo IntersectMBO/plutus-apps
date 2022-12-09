@@ -499,7 +499,7 @@ instance ContractModel UniswapModel where
           Coin ac = liquidityCoin (fst . Value.unAssetClass . tokenSem $ us) c1 c2
       Trace.callEndpoint @"create" (h (WalletKey w)) $ CreateParams c1 c2 (Amount a1) (Amount a2)
       delay 5
-      when (not $ hasPool s t1 t2) $ do
+      unless (hasPool s t1 t2) $ do
         registerToken "Liquidity" ac
 
     AddLiquidity w t1 a1 t2 a2 -> do

@@ -12,6 +12,7 @@ import Control.Lens (review, (&), (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators (someTokenValue)
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
@@ -22,6 +23,7 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract (mapError, throwError)
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, submitUnbalancedTx, utxosAt)
@@ -29,10 +31,9 @@ import Plutus.Contract.Error (AsContractError (_TxConstraintResolutionContractEr
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig,
                              mockWalletAddress, w1, w6, (.&&.))
-import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
-import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V1.Ledger.Value qualified as Plutus
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
@@ -61,26 +62,26 @@ tests' sub =
   , phase2FailureWhenProducedTokenAmountIsNotSatisfied
   ] ?? sub
 
-someTokens :: Integer -> Value.Value
+someTokens :: Integer -> C.Value
 someTokens = someTokenValue "someToken"
 
 baseLovelaceLockedByScript :: Integer
 baseLovelaceLockedByScript = 25_000_000
 
-baseAdaValueLockedByScript :: Value.Value
-baseAdaValueLockedByScript = Ada.lovelaceValueOf baseLovelaceLockedByScript
+baseAdaValueLockedByScript :: C.Value
+baseAdaValueLockedByScript = Value.lovelaceValueOf baseLovelaceLockedByScript
 
-baseAdaAndTokenValueLockedByScript :: Value.Value
+baseAdaAndTokenValueLockedByScript :: C.Value
 baseAdaAndTokenValueLockedByScript = baseAdaValueLockedByScript <> someTokens 1
 
 w1Address :: Ledger.CardanoAddress
 w1Address = mockWalletAddress w1
 
 -- | Valid contract containing all required lookups. Uses mustProduceAtLeast constraint with provided on-chain and off-chain values.
-mustProduceAtLeastContract :: SubmitTx -> Value.Value -> Value.Value -> Value.Value -> Ledger.CardanoAddress -> Contract () Empty ContractError ()
+mustProduceAtLeastContract :: SubmitTx -> C.Value -> C.Value -> C.Value -> Ledger.CardanoAddress -> Contract () Empty ContractError ()
 mustProduceAtLeastContract submitTxFromConstraints offAmt onAmt baseScriptValue addr = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
-        tx1 = Constraints.mustPayToTheScriptWithDatumInTx onAmt baseScriptValue
+        tx1 = Constraints.mustPayToTheScriptWithDatumInTx (Value.fromCardanoValue onAmt) (Value.fromCardanoValue baseScriptValue)
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -93,9 +94,9 @@ mustProduceAtLeastContract submitTxFromConstraints offAmt onAmt baseScriptValue 
             Constraints.collectFromTheScript scriptUtxos ()
             <> Constraints.mustPayToAddressWithDatumInTx
                  (Ledger.toPlutusAddress w1Address)
-                 (Datum $ PlutusTx.toBuiltinData onAmt)
-                 offAmt
-            <> Constraints.mustProduceAtLeast offAmt
+                 (Datum $ PlutusTx.toBuiltinData $ Value.fromCardanoValue onAmt)
+                 (Value.fromCardanoValue offAmt)
+            <> Constraints.mustProduceAtLeast (Value.fromCardanoValue offAmt)
     ledgerTx2 <- submitTxFromConstraints lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
@@ -121,7 +122,7 @@ spendAtLeastTheScriptBalance sub =
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend less ada than is locked by the script
 spendLessThanScriptBalance :: SubmitTx -> TestTree
 spendLessThanScriptBalance sub =
-    let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript - 500)
+    let amt = Value.lovelaceValueOf (baseLovelaceLockedByScript - 500)
         contract = mustProduceAtLeastContract sub amt amt baseAdaValueLockedByScript w1Address
     in checkPredicateOptions
         defaultCheckOptions
@@ -149,7 +150,7 @@ spendTokenBalanceFromScript sub =
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend more than the ada balance locked by the script, excess is paid by own wallet.
 spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup :: SubmitTx -> TestTree
 spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup sub =
-    let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
+    let amt = Value.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
         contract = mustProduceAtLeastContract sub amt amt baseAdaValueLockedByScript w1Address
     in checkPredicateOptions
         defaultCheckOptions
@@ -162,7 +163,7 @@ spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup sub =
 -- be used to pay excess.
 contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup :: SubmitTx -> TestTree
 contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup sub =
-    let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
+    let amt = Value.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
         contract = mustProduceAtLeastContract sub amt amt baseAdaValueLockedByScript $ mockWalletAddress w6
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (const amt) -- not enough funds remain for w1 to satisfy constraint
@@ -197,10 +198,10 @@ phase2FailureWhenProducedAdaAmountIsNotSatisfied :: SubmitTx -> TestTree
 phase2FailureWhenProducedAdaAmountIsNotSatisfied sub =
     let w1StartingBalance = 100_000_000
         offAmt = baseAdaValueLockedByScript
-        onAmt  = Ada.lovelaceValueOf (baseLovelaceLockedByScript + w1StartingBalance) -- fees make this impossible to satisfy onchain
+        onAmt  = Value.lovelaceValueOf (baseLovelaceLockedByScript + w1StartingBalance) -- fees make this impossible to satisfy onchain
         contract = mustProduceAtLeastContract sub offAmt onAmt baseAdaValueLockedByScript w1Address
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (const $ Ada.lovelaceValueOf w1StartingBalance)
+            & changeInitialWalletValue w1 (const $ Value.lovelaceValueOf w1StartingBalance)
     in checkPredicateOptions
         options
         "Fail phase-2 validation when on-chain mustProduceAtLeast is greater than script's ada balance"
@@ -222,12 +223,12 @@ phase2FailureWhenProducedTokenAmountIsNotSatisfied sub =
         (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}
-mkValidator :: Value.Value -> () -> ScriptContext -> Bool
+mkValidator :: Plutus.Value -> () -> ScriptContext -> Bool
 mkValidator v _ ctx = P.traceIfFalse "mustProduceAtLeast not satisfied" (Constraints.checkScriptContext @() @() (Constraints.mustProduceAtLeast v) ctx)
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest where
-    type instance DatumType UnitTest = Value.Value
+    type instance DatumType UnitTest = Plutus.Value
     type instance RedeemerType UnitTest = ()
 
 typedValidator :: Scripts.TypedValidator UnitTest

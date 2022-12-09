@@ -217,20 +217,20 @@ tests =
     let con = vestingContract (vesting startTime) in
     testGroup "vesting"
     [ checkPredicate "secure some funds with the vesting script"
-        (walletFundsChange w2 (Numeric.negate $ totalAmount $ vesting startTime))
+        (walletFundsChangePlutus w2 (Numeric.negate $ totalAmount $ vesting startTime))
         $ do
             hdl <- Trace.activateContractWallet w2 con
             Trace.callEndpoint @"vest funds" hdl ()
             void $ Trace.waitNSlots 1
 
     , checkPredicate "retrieve some funds"
-        (walletFundsChange w2 (Numeric.negate $ totalAmount $ vesting startTime)
+        (walletFundsChangePlutus w2 (Numeric.negate $ totalAmount $ vesting startTime)
         .&&. assertNoFailedTransactions
-        .&&. walletFundsChange w1 (Ada.adaValueOf 10))
+        .&&. walletFundsChangePlutus w1 (Ada.adaValueOf 10))
         retrieveFundsTrace
 
     , checkPredicate "cannot retrieve more than allowed"
-        (walletFundsChange w1 mempty
+        (walletFundsChangePlutus w1 mempty
         .&&. assertContractError con (Trace.walletInstanceTag w1) (== expectedError) "error should match")
         $ do
             hdl1 <- Trace.activateContractWallet w1 con
@@ -241,7 +241,7 @@ tests =
             void $ Trace.waitNSlots 1
 
     , checkPredicate "can retrieve everything at the end"
-        (walletFundsChange w1 (totalAmount $ vesting startTime)
+        (walletFundsChangePlutus w1 (totalAmount $ vesting startTime)
         .&&. assertNoFailedTransactions
         .&&. assertDone con (Trace.walletInstanceTag w1) (const True) "should be done")
         $ do

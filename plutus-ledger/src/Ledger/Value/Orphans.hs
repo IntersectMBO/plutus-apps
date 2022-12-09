@@ -1,26 +1,28 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DerivingVia        #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Ledger.Value.Orphans where
 
-import PlutusTx.Prelude qualified as PlutusTx
-
-import Data.Aeson.Extras qualified as JSON
-
-import Codec.Serialise (Serialise)
+import Cardano.Api qualified as C
+import Codec.Serialise (Serialise (decode))
+import Codec.Serialise.Class (Serialise (encode))
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), (.:))
 import Data.Aeson qualified as JSON
+import Data.Aeson.Extras qualified as JSON
 import Data.ByteString qualified as BS
 import Data.Hashable (Hashable)
 import Data.String (IsString (fromString))
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as E
+import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Bytes qualified as Bytes
 import Plutus.V1.Ledger.Value
 import PlutusTx.AssocMap qualified as Map
+import PlutusTx.Prelude qualified as PlutusTx
+import Prettyprinter (Pretty (pretty), (<+>))
+import Prettyprinter.Extras (PrettyShow (PrettyShow))
+import Prettyprinter.Util (reflow)
 
 
 instance ToJSON CurrencySymbol where
@@ -99,3 +101,38 @@ instance (FromJSON v, FromJSON k) => FromJSON (Map.Map k v) where
 
 deriving anyclass instance (Hashable k, Hashable v) => Hashable (Map.Map k v)
 deriving anyclass instance (Serialise k, Serialise v) => Serialise (Map.Map k v)
+
+
+instance Pretty C.Lovelace where
+  pretty (C.Lovelace l) = pretty l <+> "lovelace"
+deriving newtype instance Serialise C.Lovelace
+
+deriving newtype instance Serialise C.Quantity
+
+instance Pretty C.Value where
+  pretty = reflow . C.renderValuePretty
+instance Serialise C.Value where
+  decode = C.valueFromList <$> decode
+  encode = encode . C.valueToList
+
+deriving stock instance Generic C.AssetId
+deriving anyclass instance FromJSON C.AssetId
+deriving anyclass instance ToJSON C.AssetId
+deriving anyclass instance Serialise C.AssetId
+deriving via (PrettyShow C.AssetId) instance Pretty C.AssetId
+
+instance Serialise C.PolicyId where
+  encode = encode . C.serialiseToRawBytes
+  decode = do
+    bs <- decode
+    maybe (fail "Can get back policy ID")
+      pure
+      $ C.deserialiseFromRawBytes C.AsPolicyId bs
+
+instance Serialise C.AssetName where
+  encode = encode . C.serialiseToRawBytes
+  decode = do
+    bs <- decode
+    maybe (fail "Can get back asset name")
+      pure
+      $ C.deserialiseFromRawBytes C.AsAssetName bs
