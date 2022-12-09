@@ -48,7 +48,7 @@ import Data.Tuple (swap)
 import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx (SomeTx), Tx (..),
                TxInput (txInputType), TxOut (getTxOut), TxOutRef (..), onCardanoTx, txCertifyingRedeemers, txId,
                txMintingRedeemers, txRewardingRedeemers)
-import Ledger.Address (Address)
+import Ledger.Address (CardanoAddress)
 import Ledger.Scripts (Redeemer, RedeemerHash)
 import Ledger.Tx (TxInputType (TxScriptAddress), fillTxInputWitnesses)
 import Plutus.ChainIndex.Types
@@ -77,7 +77,7 @@ txOutRefMap tx =
     fmap (, tx) $ Map.fromList $ fmap swap $ txOutsWithRef tx
 
 -- | Get 'Map' of tx outputs from tx for a specific address.
-txOutRefMapForAddr :: Address -> ChainIndexTx -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx)
+txOutRefMapForAddr :: CardanoAddress -> ChainIndexTx -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx)
 txOutRefMapForAddr addr tx =
     Map.filter ((==) addr . citoAddress . fst) $ txOutRefMap tx
 

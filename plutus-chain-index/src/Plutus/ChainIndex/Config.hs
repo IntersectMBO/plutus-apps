@@ -23,7 +23,7 @@ module Plutus.ChainIndex.Config(
   appendTransactionQueueSize
   ) where
 
-import Cardano.Api (BlockNo (BlockNo), NetworkId (Mainnet, Testnet))
+import Cardano.Api (BlockNo (BlockNo), NetworkId (Testnet))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)

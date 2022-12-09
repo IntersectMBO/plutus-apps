@@ -21,14 +21,14 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Ledger (Ada, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
-               valuePaidTo)
+               pNetworkId, valuePaidTo)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (Contract, Endpoint, Promise, endpoint, logInfo, selectList, submitTxConstraints,
+import Plutus.Contract (Contract, Endpoint, Promise, endpoint, getParams, logInfo, selectList, submitTxConstraints,
                         submitTxConstraintsSpending, type (.\/), utxosAt)
 import PlutusTx qualified
-import PlutusTx.Prelude (Bool, Semigroup ((<>)), ($), (&&), (-), (.), (>=))
+import PlutusTx.Prelude (Bool, Semigroup ((<>)), ($), (&&), (-), (.), (<$>), (>=))
 import Prelude qualified as Haskell
 import Schema (ToSchema)
 import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
@@ -113,7 +113,8 @@ lockFunds s@SplitData{amount} = do
 
 unlockFunds :: SplitData -> Contract () SplitSchema T.Text ()
 unlockFunds SplitData{recipient1, recipient2, amount} = do
-    let contractAddress = Scripts.validatorAddress splitValidator
+    networkId <- pNetworkId <$> getParams
+    let contractAddress = Scripts.validatorCardanoAddress networkId splitValidator
     utxos <- utxosAt contractAddress
     let half = Ada.divide amount 2
         tx =

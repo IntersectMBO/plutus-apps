@@ -37,7 +37,7 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import Ledger (Address, CardanoAddress, CurrencySymbol, TxId, TxOutRef (..), getCardanoTxId)
+import Ledger (CardanoAddress, CurrencySymbol, TxId, TxOutRef (..), getCardanoTxId)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts

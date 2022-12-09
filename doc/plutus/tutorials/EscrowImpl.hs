@@ -70,9 +70,9 @@ import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
 
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, Promise,
-                        adjustUnbalancedTx, awaitTime, currentNodeClientTimeRange, currentTime, endpoint, mapError,
-                        mkTxConstraints, ownFirstPaymentPubKeyHash, promiseMap, selectList, submitUnbalancedTx,
-                        type (.\/), utxosAt, waitNSlots)
+                        adjustUnbalancedTx, awaitTime, currentNodeClientTimeRange, currentTime, endpoint, getParams,
+                        mapError, mkTxConstraints, ownFirstPaymentPubKeyHash, promiseMap, selectList,
+                        submitUnbalancedTx, type (.\/), utxosAt, waitNSlots)
 import PlutusTx qualified
 {- START imports -}
 import PlutusTx.Code qualified as PlutusTx
@@ -298,7 +298,8 @@ redeem ::
     -> EscrowParams Datum
     -> Contract w s e RedeemSuccess
 redeem inst escrow = mapError (review _EscrowError) $ do
-    let addr = Scripts.validatorAddress inst
+    networkId <- Ledger.pNetworkId <$> getParams
+    let addr = Scripts.validatorCardanoAddress networkId inst
     current <- Haskell.snd <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let
@@ -337,7 +338,8 @@ refund ::
     -> Contract w s EscrowError RefundSuccess
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
-    unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
+    networkId <- Ledger.pNetworkId <$> getParams
+    unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
     let pkh = Scripts.datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
@@ -359,9 +361,10 @@ payRedeemRefund ::
     -> Value
     -> Contract w s EscrowError (Either RefundSuccess RedeemSuccess)
 payRedeemRefund params vl = do
+    networkId <- Ledger.pNetworkId <$> getParams
     let inst = typedValidator params
         go = do
-            cur <- utxosAt (Scripts.validatorAddress inst)
+            cur <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
             let presentVal = foldMap (view Tx.decoratedTxOutValue) cur
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params

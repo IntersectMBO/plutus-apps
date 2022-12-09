@@ -7,10 +7,10 @@ module Cardano.Wallet.Mock.API
 
 import Cardano.Wallet.Mock.Types (WalletInfo)
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (PaymentPubKeyHash)
+import Ledger (CardanoAddress, PaymentPubKeyHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx (CardanoTx)
-import Plutus.V1.Ledger.Api (Address, Value)
+import Plutus.V1.Ledger.Api (Value)
 import Servant.API (Capture, Get, JSON, NoContent, Post, QueryParam, ReqBody, (:<|>), (:>))
 import Wallet.Emulator.Error (WalletAPIError)
 
@@ -40,7 +40,7 @@ type API walletId -- see note [WalletID type in wallet API]
       :<|> Capture "walletId" walletId :> "submit-txn" :> ReqBody '[JSON] CardanoTx :> Post '[JSON] NoContent
       -- TODO: Should we removed in favor of 'own-addresses'. However, how do we deprecate an HTTP request?
       :<|> Capture "walletId" walletId :> "own-payment-public-key-hash" :> Get '[JSON] PaymentPubKeyHash
-      :<|> Capture "walletId" walletId :> "own-addresses" :> Get '[JSON] (NonEmpty Address)
+      :<|> Capture "walletId" walletId :> "own-addresses" :> Get '[JSON] (NonEmpty CardanoAddress)
       :<|> Capture "walletId" walletId :> "balance-tx" :> ReqBody '[JSON] UnbalancedTx :> Post '[JSON] (Either WalletAPIError CardanoTx)
       -- TODO: Should we removed as deprecated
       :<|> Capture "walletId" walletId :> "total-funds" :> Get '[JSON] Value

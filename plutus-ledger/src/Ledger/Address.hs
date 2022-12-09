@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE DerivingVia     #-}
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Ledger.Address
@@ -10,6 +11,7 @@ module Ledger.Address
     , PaymentPubKeyHash(..)
     , StakePubKey(..)
     , StakePubKeyHash(..)
+    , cardanoAddressCredential
     , paymentPubKeyHash
     , pubKeyHashAddress
     , pubKeyAddress
@@ -24,6 +26,9 @@ module Ledger.Address
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Byron qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.Chain.Common (addrToBase58)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
@@ -42,6 +47,25 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty)
 
 type CardanoAddress = C.AddressInEra C.BabbageEra
+
+cardanoAddressCredential :: CardanoAddress -> Credential
+cardanoAddressCredential (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address))
+  = PubKeyCredential
+  $ PubKeyHash
+  $ PlutusTx.toBuiltin
+  $ addrToBase58 address
+cardanoAddressCredential (C.AddressInEra _ (C.ShelleyAddress _ paymentCredential _))
+  = case C.fromShelleyPaymentCredential paymentCredential of
+      C.PaymentCredentialByKey paymentKeyHash ->
+          PubKeyCredential
+          $ PubKeyHash
+          $ PlutusTx.toBuiltin
+          $ C.serialiseToRawBytes paymentKeyHash
+      C.PaymentCredentialByScript scriptHash ->
+          ScriptCredential
+          $ ValidatorHash
+          $ PlutusTx.toBuiltin
+          $ C.serialiseToRawBytes scriptHash
 
 newtype PaymentPrivateKey = PaymentPrivateKey { unPaymentPrivateKey :: Crypto.XPrv }
 

@@ -52,6 +52,7 @@ import Data.Map qualified as Map
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Set qualified as Set
 import Data.Text qualified as T
+import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
 import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
 import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
@@ -378,7 +379,7 @@ updateTxOutProduced IndexedBlock{ibUtxoProduced} = do
     -- Check whether the contract instance is waiting for address changes
     hks <- mapMaybe (traverse (preview E._AwaitUtxoProducedReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=addr} =
-            case Map.lookup (fromCardanoAddressInEra addr) ibUtxoProduced of
+            case Map.lookup addr ibUtxoProduced of
                 Nothing      -> Nothing
                 Just newTxns -> Just Response{rspRqID=rqID, rspItID=itID, rspResponse=E.AwaitUtxoProducedResp newTxns}
         utxoResp = listToMaybe $ mapMaybe mpReq hks
@@ -516,7 +517,7 @@ logNewMessages = do
 data IndexedBlock =
   IndexedBlock
     { ibUtxoSpent    :: Map TxOutRef ChainIndexTx
-    , ibUtxoProduced :: Map Address (NonEmpty ChainIndexTx)
+    , ibUtxoProduced :: Map CardanoAddress (NonEmpty ChainIndexTx)
     }
 
 instance Semigroup IndexedBlock where

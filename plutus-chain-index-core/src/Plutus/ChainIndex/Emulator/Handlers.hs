@@ -40,6 +40,7 @@ import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
 import Ledger.Tx qualified as L (DatumFromQuery (..), DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutDatum,
                                  mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut)
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -141,16 +142,17 @@ makeChainIndexTxOut ::
   -> Eff effs (Maybe L.DecoratedTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
+  let plutusAddr = fromCardanoAddressInEra address
   -- The output might come from a public key address or a script address.
   -- We need to handle them differently.
-  case addressCredential $ citoAddress txout of
+  case addressCredential $ fromCardanoAddressInEra $ citoAddress txout of
     PubKeyCredential _ ->
-      pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
+      pure $ L.mkPubkeyDecoratedTxOut plutusAddr value datumWithHash script
     ScriptCredential (ValidatorHash h) -> do
       case datumWithHash of
         Just d -> do
           v <- getScriptFromHash (ScriptHash h)
-          pure $ L.mkScriptDecoratedTxOut address value d script (fmap Validator <$> v)
+          pure $ L.mkScriptDecoratedTxOut plutusAddr value d script (fmap Validator <$> v)
         Nothing -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout

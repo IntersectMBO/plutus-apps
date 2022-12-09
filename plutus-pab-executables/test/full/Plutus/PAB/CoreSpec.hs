@@ -54,6 +54,7 @@ import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Value (valueOf)
 import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
                           TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
@@ -237,12 +238,12 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We find the 'TxOutRef' from wallet 1
   let txOutRef1 = head
                 $ fmap snd
-                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
+                $ filter (\(txOut, txOutref) -> toPubKeyHash (fromCardanoAddressInEra $ txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
                 $ getCardanoTxOutRefs tx
   -- We find the 'TxOutRef' from wallet 2
   let txOutRef2 = head
                 $ fmap snd
-                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
+                $ filter (\(txOut, txOutref) -> toPubKeyHash (fromCardanoAddressInEra $ txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
                 $ getCardanoTxOutRefs tx
   txOutStatus1 <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"

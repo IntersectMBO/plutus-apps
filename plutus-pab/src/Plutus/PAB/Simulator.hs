@@ -100,8 +100,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, getCardanoTxFee, getCardanoTxId,
-               txOutAddress, txOutValue, unOnChain)
+import Ledger (Blockchain, CardanoAddress, CardanoTx, Params (..), PaymentPubKeyHash, TxId, getCardanoTxFee,
+               getCardanoTxId, txOutAddress, txOutValue, unOnChain)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -700,7 +700,7 @@ activeContracts :: forall t. Simulation t (Set ContractInstanceId)
 activeContracts = Core.activeContracts
 
 -- | The total value currently at an address
-valueAtSTM :: forall t. Address -> Simulation t (STM Value)
+valueAtSTM :: forall t. CardanoAddress -> Simulation t (STM Value)
 valueAtSTM address = do
     SimulatorState{_chainState} <- Core.askUserEnv @t @(SimulatorState t)
     pure $ do
@@ -708,7 +708,7 @@ valueAtSTM address = do
         pure $ foldMap txOutValue $ filter (\txout -> txOutAddress txout == address) $ fmap snd $ Map.toList mp
 
 -- | The total value currently at an address
-valueAt :: forall t. Address -> Simulation t Value
+valueAt :: forall t. CardanoAddress -> Simulation t Value
 valueAt address = do
     stm <- valueAtSTM address
     liftIO $ STM.atomically stm

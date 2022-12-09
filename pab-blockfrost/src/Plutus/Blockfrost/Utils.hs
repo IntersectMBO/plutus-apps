@@ -83,10 +83,10 @@ toPlutusScriptTag = \case
     Cert   -> LT.Cert
     Reward -> LT.Reward
 
-toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
-toPlutusAddress bAddr = case deserialized of
+toCardanoAddress :: Blockfrost.Address -> Either String (AddressInEra BabbageEra)
+toCardanoAddress bAddr = case deserialized of
     Nothing  -> Left "Error deserializing the Address"
-    Just des -> Right $ fromCardanoAddress des
+    Just des -> Right $ shelleyAddressInEra des
   where
     deserialized :: Maybe (Api.Address ShelleyAddr)
     deserialized = deserialiseAddress AsShelleyAddress (unAddress bAddr)

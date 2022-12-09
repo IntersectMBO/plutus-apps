@@ -135,7 +135,7 @@ handleMultiWallet params = \case
         let walletId = Wallet.WalletId . CWP.WalletId $ CW.mwWalletId mockWallet
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
             pkh = CW.paymentPubKeyHash mockWallet
-            addr = CW.mockWalletAddress mockWallet
+            addr = CW.mockWalletCardanoAddress mockWallet
         put wallets'
         -- For some reason this doesn't work with (Wallet 1)/privateKey1,
         -- works just fine with (Wallet 2)/privateKey2

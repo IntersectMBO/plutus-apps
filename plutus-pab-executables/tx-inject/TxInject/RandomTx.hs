@@ -18,8 +18,7 @@ import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
-import Ledger.Address qualified as Address
+import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Generators (TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Generators
@@ -55,10 +54,9 @@ generateTx
   -> UtxoIndex   -- ^ Used to generate new transactions.
   -> IO Tx
 generateTx gen slot (UtxoIndex utxo) = do
-  (_, sourcePubKey) <- pickNEL gen keyPairs
-  let sourceAddress = Address.pubKeyAddress sourcePubKey Nothing
+  sourceAddress <- pickNEL gen keyPairs
   -- outputs at the source address
-      sourceOutputs
+  let sourceOutputs
   -- we restrict ourselves to outputs that contain no currencies other than Ada,
   -- so that we can then split the total amount using 'Generators.splitVal'.
   --
@@ -98,11 +96,8 @@ generateTx gen slot (UtxoIndex utxo) = do
       Left _  -> pure tx
       Right _ -> generateTx gen slot (UtxoIndex utxo)
 
-keyPairs :: NonEmpty (PaymentPrivateKey, PaymentPubKey)
-keyPairs =
-    fmap
-        (\mockWallet -> (CW.paymentPrivateKey mockWallet, CW.paymentPubKey mockWallet))
-        (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
+keyPairs :: NonEmpty CardanoAddress
+keyPairs = fmap CW.mockWalletCardanoAddress (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
 
 -- | Pick a random element from a non-empty list
 pickNEL :: PrimMonad m => Gen (PrimState m) -> NonEmpty a -> m a
