@@ -50,8 +50,8 @@ import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
 import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
-import Ledger.Address (Address (addressCredential), CardanoAddress, PaymentPrivateKey (..), PaymentPubKey,
-                       PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Address (Address, CardanoAddress, PaymentPrivateKey (..), PaymentPubKey,
+                       PaymentPubKeyHash (PaymentPubKeyHash), cardanoAddressCredential)
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
@@ -59,7 +59,6 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee qualified as Fee
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation (getRequiredSigners)
 import Plutus.ChainIndex (PageQuery)
@@ -177,11 +176,11 @@ mockWalletPaymentPubKey = CW.paymentPubKey . walletToMockWallet'
 mockWalletPaymentPubKeyHash :: Wallet -> PaymentPubKeyHash
 mockWalletPaymentPubKeyHash = CW.paymentPubKeyHash . walletToMockWallet'
 
--- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
+-- | Get the cardano address of a mock wallet. (Fails if the wallet is not a mock wallet).
 mockWalletCardanoAddress :: Wallet -> CardanoAddress
 mockWalletCardanoAddress = CW.mockWalletCardanoAddress . walletToMockWallet'
 
--- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
+-- | Get the plutus address of a mock wallet. (Fails if the wallet is not a mock wallet).
 mockWalletAddress :: Wallet -> Address
 mockWalletAddress = CW.mockWalletAddress . walletToMockWallet'
 
@@ -222,7 +221,11 @@ ownPaymentPublicKey = CW.paymentPubKey . _mockWallet
 
 -- | Get the user's own payment public-key address.
 ownAddress :: WalletState -> Address
-ownAddress = flip Ledger.pubKeyAddress Nothing . ownPaymentPublicKey
+ownAddress = CW.mockWalletAddress . _mockWallet
+
+-- | Get the user's own payment public-key address.
+ownCardanoAddress :: WalletState -> CardanoAddress
+ownCardanoAddress = CW.mockWalletCardanoAddress . _mockWallet
 
 -- | An empty wallet using the given private key.
 -- for that wallet as the sole watched address.
@@ -379,14 +382,14 @@ ownOutputs WalletState{_mockWallet} = do
     refs <- allUtxoSet (Just def)
     Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
   where
-    addr :: Address
-    addr = CW.mockWalletAddress _mockWallet
+    addr :: CardanoAddress
+    addr = CW.mockWalletCardanoAddress _mockWallet
 
     -- Accumulate all unspent 'TxOutRef's from the resulting pages.
     allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]
     allUtxoSet Nothing = pure []
     allUtxoSet (Just pq) = do
-      refPage <- page <$> ChainIndex.utxoSetAtAddress pq (addressCredential addr)
+      refPage <- page <$> ChainIndex.utxoSetAtAddress pq (cardanoAddressCredential addr)
       nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
       pure $ ChainIndex.pageItems refPage ++ nextItems
 
@@ -474,9 +477,9 @@ walletPaymentPubKeyHashes = foldl' f Map.empty . Map.toList
 balances :: ChainState -> WalletSet -> Map.Map Entity Value
 balances state wallets = foldl' f Map.empty . getIndex . _index $ state
   where
-    toEntity :: Address -> Entity
+    toEntity :: CardanoAddress -> Entity
     toEntity a =
-        case addressCredential a of
+        case cardanoAddressCredential a of
             PubKeyCredential h ->
                 case Map.lookup (PaymentPubKeyHash h) ws of
                     Nothing -> PubKeyHashEntity h
@@ -486,4 +489,4 @@ balances state wallets = foldl' f Map.empty . getIndex . _index $ state
     ws :: Map.Map PaymentPubKeyHash Wallet
     ws = walletPaymentPubKeyHashes wallets
 
-    f m o = Map.insertWith (<>) (toEntity $ fromCardanoAddressInEra $ Ledger.txOutAddress o) (Ledger.txOutValue o) m
+    f m o = Map.insertWith (<>) (toEntity $ Ledger.txOutAddress o) (Ledger.txOutValue o) m

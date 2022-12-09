@@ -55,7 +55,6 @@ import Data.Text qualified as T
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
 import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
                           ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
                           TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), citxInputs, fromOnChainTx,
@@ -80,7 +79,6 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), Co
                                     addEventInstanceState, emptyInstanceState, instanceIdThreads, toInstanceState)
 import Plutus.Trace.Scheduler (MessageCall (Message, WaitForMessage), Priority (Frozen, Normal, Sleeping), ThreadId,
                                mkAgentSysCall)
-import Plutus.V1.Ledger.Address (Address)
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)

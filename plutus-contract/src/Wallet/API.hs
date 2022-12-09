@@ -73,11 +73,10 @@ import Data.Void (Void)
 import Ledger (Address, CardanoTx, Interval (Interval, ivFrom, ivTo), Params (..),
                PaymentPubKeyHash (PaymentPubKeyHash), PubKey (PubKey, getPubKey),
                PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after, always, before, contains,
-               interval, isEmpty, member, pubKeyHashAddress, singleton, width)
+               interval, isEmpty, member, pubKeyHashAddress, singleton, toPlutusAddress, width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (adjustUnbalancedTx)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.V1.Ledger.Address (toPubKeyHash)
 import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownAddresses,
                        publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
@@ -100,7 +99,7 @@ ownPaymentPubKeyHashes ::
     => Eff effs [PaymentPubKeyHash]
 ownPaymentPubKeyHashes = do
     addrs <- ownAddresses
-    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ fromCardanoAddressInEra <$> NonEmpty.toList addrs
+    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ toPlutusAddress <$> NonEmpty.toList addrs
 
 ownFirstPaymentPubKeyHash ::
     ( Member WalletEffect effs

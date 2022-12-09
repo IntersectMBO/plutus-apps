@@ -11,7 +11,10 @@ module Ledger.Address
     , PaymentPubKeyHash(..)
     , StakePubKey(..)
     , StakePubKeyHash(..)
+    , toPlutusAddress
     , cardanoAddressCredential
+    , cardanoPubKeyHash
+    , cardanoStakingCredential
     , paymentPubKeyHash
     , pubKeyHashAddress
     , pubKeyAddress
@@ -48,7 +51,7 @@ import Prettyprinter (Pretty)
 
 type CardanoAddress = C.AddressInEra C.BabbageEra
 
-cardanoAddressCredential :: CardanoAddress -> Credential
+cardanoAddressCredential :: C.AddressInEra era -> Credential
 cardanoAddressCredential (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address))
   = PubKeyCredential
   $ PubKeyHash
@@ -62,10 +65,35 @@ cardanoAddressCredential (C.AddressInEra _ (C.ShelleyAddress _ paymentCredential
           $ PlutusTx.toBuiltin
           $ C.serialiseToRawBytes paymentKeyHash
       C.PaymentCredentialByScript scriptHash ->
-          ScriptCredential
-          $ ValidatorHash
-          $ PlutusTx.toBuiltin
-          $ C.serialiseToRawBytes scriptHash
+          ScriptCredential $ scriptToValidatorHash scriptHash
+
+cardanoStakingCredential :: C.AddressInEra era -> Maybe StakingCredential
+cardanoStakingCredential (C.AddressInEra C.ByronAddressInAnyEra _) = Nothing
+cardanoStakingCredential (C.AddressInEra _ (C.ShelleyAddress _ _ stakeAddressReference))
+  = case C.fromShelleyStakeReference stakeAddressReference of
+         C.NoStakeAddress -> Nothing
+         (C.StakeAddressByValue stakeCredential) ->
+             Just (StakingHash $ fromCardanoStakeCredential stakeCredential)
+         C.StakeAddressByPointer{} -> Nothing -- Not supported
+  where
+    fromCardanoStakeCredential :: C.StakeCredential -> Credential
+    fromCardanoStakeCredential (C.StakeCredentialByKey stakeKeyHash)
+      = PubKeyCredential
+      $ PubKeyHash
+      $ PlutusTx.toBuiltin
+      $ C.serialiseToRawBytes stakeKeyHash
+    fromCardanoStakeCredential (C.StakeCredentialByScript scriptHash) = ScriptCredential (scriptToValidatorHash scriptHash)
+
+cardanoPubKeyHash :: C.AddressInEra era -> Maybe PubKeyHash
+cardanoPubKeyHash addr = case cardanoAddressCredential addr of
+  PubKeyCredential x -> Just x
+  _                  -> Nothing
+
+toPlutusAddress :: C.AddressInEra era -> Address
+toPlutusAddress address = Address (cardanoAddressCredential address) (cardanoStakingCredential address)
+
+scriptToValidatorHash :: C.ScriptHash -> ValidatorHash
+scriptToValidatorHash = ValidatorHash . PlutusTx.toBuiltin . C.serialiseToRawBytes
 
 newtype PaymentPrivateKey = PaymentPrivateKey { unPaymentPrivateKey :: Crypto.XPrv }
 

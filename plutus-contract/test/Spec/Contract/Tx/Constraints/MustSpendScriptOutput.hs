@@ -39,7 +39,6 @@ import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMi
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someCardanoAddressV2, someTypedValidator,
                     someTypedValidatorV2, someValidatorHash)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Tx.Constraints qualified as TxCons
 import Numeric.Natural (Natural)
 import Prelude hiding (not)
@@ -234,7 +233,7 @@ mustPayToOtherScriptWithMultipleOutputs nScriptOutputs value script scriptAddr =
         tx = mconcat ( replicate nScriptOutputs
                      $ Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf $ fromIntegral value))
           <> Cons.mustSpendPubKeyOutput balanceUtxo
-          <> Cons.mustPayToAddressWithReferenceValidator (fromCardanoAddressInEra payAddr) vh Nothing (Ada.adaValueOf 30)
+          <> Cons.mustPayToAddressWithReferenceValidator (L.toPlutusAddress payAddr) vh Nothing (Ada.adaValueOf 30)
     ledgerTx <- submitTxConstraintsWith @Void lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
     utxosAt scriptAddr
@@ -820,7 +819,7 @@ mustSpendScriptOutputWithReferenceTxV2ConTest = do
           <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
           <> Cons.mustUseOutputAsCollateral utxoRefForBalance1
           <> Cons.mustPayToAddressWithReferenceValidator
-                (fromCardanoAddressInEra myAddr)
+                (L.toPlutusAddress myAddr)
                 vh
                 Nothing
                 (Ada.adaValueOf 30)

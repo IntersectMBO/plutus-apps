@@ -50,11 +50,10 @@ import Plutus.Contract (AsContractError (_ContractError), Contract, ContractErro
 import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
-import Ledger (CardanoAddress)
+import Ledger (CardanoAddress, toPlutusAddress)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (CardanoTx)
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (TokenName, Value)
@@ -184,7 +183,7 @@ redeemTx account addr = mapError (review _TAContractError) $ do
             <> " outputs with a total value of "
             <> show totalVal
     let constraints = Constraints.collectFromTheScript utxos ()
-                <> Constraints.mustPayToAddress (fromCardanoAddressInEra addr) (accountToken account)
+                <> Constraints.mustPayToAddress (toPlutusAddress addr) (accountToken account)
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos
     pure (constraints, lookups)

@@ -28,7 +28,6 @@ import Ledger.Scripts (ScriptHash (ScriptHash), unitRedeemer)
 import Ledger.Test (asRedeemer, coinMintingPolicy, coinMintingPolicyCurrencySymbol, coinMintingPolicyHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
@@ -172,7 +171,7 @@ mustMintValueWithReferenceContract submitTxFromConstraints lang failPhase2 = do
         MintingPolicyHash mph = coinMintingPolicyHash lang
         lookups0 = Constraints.mintingPolicy (coinMintingPolicy lang)
         tx0 = Constraints.mustPayToAddressWithReferenceScript
-                (fromCardanoAddressInEra myAddr)
+                (Ledger.toPlutusAddress myAddr)
                 (ScriptHash mph)
                 Nothing
                 (Ada.adaValueOf 35)
@@ -198,7 +197,7 @@ mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang = do
         MintingPolicyHash mph = coinMintingPolicyHash lang
         lookups0 = Constraints.mintingPolicy (coinMintingPolicy lang)
         tx0 = Constraints.mustPayToAddressWithReferenceScript
-                (fromCardanoAddressInEra myAddr)
+                (Ledger.toPlutusAddress myAddr)
                 (ScriptHash mph)
                 Nothing
                 (Ada.adaValueOf 30)

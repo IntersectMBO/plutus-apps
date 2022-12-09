@@ -33,7 +33,6 @@ import PlutusTx.Coverage
 
 import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Value qualified as Value
 
 import Data.Data
@@ -151,7 +150,7 @@ setupTokens = do
         let addr = mockWalletCardanoAddress w
         when (addr /= ownAddr) $ do
             cs <- mkTxConstraints @Void mempty
-                    (mustPayToAddress (fromCardanoAddressInEra addr) v)
+                    (mustPayToAddress (Ledger.toPlutusAddress addr) v)
             Contract.adjustUnbalancedTx cs >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur

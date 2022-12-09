@@ -12,12 +12,13 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), AssetId (AdaAssetId, Asse
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
 import Gen.Cardano.Api.Typed (genAssetName, genScriptHash, genValueDefault)
 import Gen.Cardano.Api.Typed qualified as Gen
+import Ledger (toPlutusAddress)
 import Ledger.Generators (genAssetClass, genMintingPolicyHash, genTokenName, genValue)
 import Ledger.Test (someValidator)
 import Ledger.Tx (Language (PlutusV1), Tx (txMint), Versioned (Versioned), addMintingPolicy)
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra, fromCardanoAssetId, fromCardanoAssetName, fromCardanoPolicyId,
-                             fromCardanoValue, makeTransactionBody, toCardanoAddressInEra, toCardanoAssetId,
-                             toCardanoAssetName, toCardanoPolicyId, toCardanoTxBodyContent, toCardanoValue)
+import Ledger.Tx.CardanoAPI (fromCardanoAssetId, fromCardanoAssetName, fromCardanoPolicyId, fromCardanoValue,
+                             makeTransactionBody, toCardanoAddressInEra, toCardanoAssetId, toCardanoAssetName,
+                             toCardanoPolicyId, toCardanoTxBodyContent, toCardanoValue)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
@@ -117,7 +118,7 @@ addressRoundTripSpec = property $ do
     shelleyAddr <- shelleyAddressInEra
                <$> forAll (makeShelleyAddress networkId <$> genPaymentCredential
                                                         <*> genStakeAddressReference)
-    let plutusAddr = fromCardanoAddressInEra shelleyAddr
+    let plutusAddr = toPlutusAddress shelleyAddr
     case toCardanoAddressInEra networkId plutusAddr of
         Left _      -> Hedgehog.assert False
         Right cAddr -> cAddr === shelleyAddr

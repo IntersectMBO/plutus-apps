@@ -97,7 +97,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.String (fromString)
 import GHC.Generics (Generic)
-import Ledger.Address (CardanoAddress)
+import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
 import Ledger.Params (Params)
@@ -111,7 +111,7 @@ import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (Qu
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
-import Plutus.Contract.CardanoAPI (ToCardanoError, fromCardanoAddressInEra)
+import Plutus.Contract.CardanoAPI (ToCardanoError)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                              StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
 import Plutus.V1.Ledger.Value (AssetClass)
@@ -150,7 +150,7 @@ instance Pretty PABReq where
     AwaitSlotReq s                          -> "Await slot:" <+> pretty s
     AwaitTimeReq s                          -> "Await time:" <+> pretty s
     AwaitUtxoSpentReq utxo                  -> "Await utxo spent:" <+> pretty utxo
-    AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty (fromCardanoAddressInEra a)
+    AwaitUtxoProducedReq a                  -> "Await utxo produced:" <+> pretty (toPlutusAddress a)
     CurrentNodeClientSlotReq                -> "Current node client slot"
     CurrentChainIndexSlotReq                -> "Current chain index slot"
     CurrentTimeReq                          -> "Current time"
@@ -207,7 +207,7 @@ instance Pretty PABResp where
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
     GetParamsResp params                     -> "Configured parameters:" <+> pretty params
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
-    OwnAddressesResp addrs                   -> "Own addresses:" <+> pretty (fromCardanoAddressInEra <$> addrs)
+    OwnAddressesResp addrs                   -> "Own addresses:" <+> pretty (toPlutusAddress <$> addrs)
     ChainIndexQueryResp rsp                  -> pretty rsp
     BalanceTxResp r                          -> "Balance tx:" <+> pretty r
     WriteBalancedTxResp r                    -> "Write balanced tx:" <+> pretty r

@@ -32,12 +32,11 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
                              checkPredicate, mockWalletPaymentPubKeyHash, w1, w2, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Address (addressCredential), Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator,
-                             ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Wallet.Emulator.Wallet as Wallet (WalletState, chainIndexEmulatorState, ownAddress, signPrivateKeys,
+import Wallet.Emulator.Wallet as Wallet (WalletState, chainIndexEmulatorState, ownCardanoAddress, signPrivateKeys,
                                          walletToMockWallet')
 
 tests :: TestTree
@@ -100,7 +99,7 @@ mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
 
 txoRefsFromWalletState :: WalletState -> Set TxOutRef
 txoRefsFromWalletState w = let
-  pkCred = addressCredential $ Wallet.ownAddress w
+  pkCred = Ledger.cardanoAddressCredential $ Wallet.ownCardanoAddress w
   in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
 

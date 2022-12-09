@@ -110,7 +110,8 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
 
-import Ledger.Address (Address, PaymentPubKey, pubKeyAddress)
+import Ledger.Address (Address, CardanoAddress, PaymentPubKey, cardanoAddressCredential, cardanoStakingCredential,
+                       pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Params (EmulatorEra, Params (pNetworkId))
@@ -182,29 +183,35 @@ makePrisms ''DecoratedTxOut
 
 
 mkDecoratedTxOut
-    :: V1.Address -> V2.Value -> (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    :: CardanoAddress -> V2.Value -> (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
     -> DecoratedTxOut
-mkDecoratedTxOut a v dat rs = case a of
-  V2.Address (V2.PubKeyCredential c) sc -> PublicKeyDecoratedTxOut c sc v (Just dat) rs
-  V2.Address (V2.ScriptCredential c) sc -> ScriptDecoratedTxOut c sc v dat rs Nothing
+mkDecoratedTxOut a v dat rs = let
+  sc = cardanoStakingCredential a
+  in case cardanoAddressCredential a of
+  (V2.PubKeyCredential c) -> PublicKeyDecoratedTxOut c sc v (Just dat) rs
+  (V2.ScriptCredential c) -> ScriptDecoratedTxOut c sc v dat rs Nothing
 
 mkPubkeyDecoratedTxOut
-    :: V1.Address -> V2.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    :: CardanoAddress -> V2.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
     -> Maybe DecoratedTxOut
-mkPubkeyDecoratedTxOut a v dat rs = case a of
-  V2.Address (V2.PubKeyCredential c) sc -> Just $ PublicKeyDecoratedTxOut c sc v dat rs
-  _                                     -> Nothing
+mkPubkeyDecoratedTxOut a v dat rs = let
+  sc = cardanoStakingCredential a
+  in case cardanoAddressCredential a of
+  (V2.PubKeyCredential c) -> Just $ PublicKeyDecoratedTxOut c sc v dat rs
+  _                       -> Nothing
 
 mkScriptDecoratedTxOut
-    :: V1.Address
+    :: CardanoAddress
     -> V2.Value
     -> (V2.DatumHash, DatumFromQuery)
     -> Maybe (Versioned V1.Script)
     -> Maybe (Versioned V1.Validator)
     -> Maybe DecoratedTxOut
-mkScriptDecoratedTxOut a v dat rs val = case a of
-  V2.Address (V2.ScriptCredential c) sc -> Just $ ScriptDecoratedTxOut c sc v dat rs val
-  _                                     -> Nothing
+mkScriptDecoratedTxOut a v dat rs val = let
+  sc = cardanoStakingCredential a
+  in case cardanoAddressCredential a of
+  (V2.ScriptCredential c) -> pure $ ScriptDecoratedTxOut c sc v dat rs val
+  _                       -> Nothing
 
 _decoratedTxOutAddress :: DecoratedTxOut -> Address
 _decoratedTxOutAddress PublicKeyDecoratedTxOut{_decoratedTxOutPubKeyHash, _decoratedTxOutStakingCredential} =

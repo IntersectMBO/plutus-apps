@@ -113,6 +113,7 @@ import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
 import Ledger.Ada qualified as Ada
+import Ledger.Address (toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
@@ -133,7 +134,6 @@ import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef
 import Ledger.Tx (Tx, onCardanoTx)
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
@@ -390,7 +390,7 @@ valueAtAddress address check = TracePredicate $
     flip postMapM (L.generalize $ Folds.valueAtAddress address) $ \vl -> do
         let result = check vl
         unless result $ do
-            tell @(Doc Void) ("Funds at address" <+> pretty (fromCardanoAddressInEra address) <+> "were" <+> pretty vl)
+            tell @(Doc Void) ("Funds at address" <+> pretty (toPlutusAddress address) <+> "were" <+> pretty vl)
         pure result
 
 
@@ -412,7 +412,7 @@ dataAtAddress address check = TracePredicate $
         datums = mapMaybe (uncurry $ getTxOutDatum @d) $ toList utxo
         result = check datums
       unless result $ do
-          tell @(Doc Void) ("Data at address" <+> pretty (fromCardanoAddressInEra address) <+> "was"
+          tell @(Doc Void) ("Data at address" <+> pretty (toPlutusAddress address) <+> "was"
               <+> foldMap (foldMap pretty . Ledger.getCardanoTxData . fst) utxo)
       pure result
 

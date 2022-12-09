@@ -129,7 +129,7 @@ mustReferenceOutputContract submitTxFromConstraints l offChainTxoRefs onChainTxo
 
 txoRefsFromWalletState :: WalletState -> Set Tx.TxOutRef
 txoRefsFromWalletState w = let
-  pkCred = L.addressCredential $ Wallet.ownAddress w
+  pkCred = L.cardanoAddressCredential $ Wallet.ownCardanoAddress w
   in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
 -- | Ledger validation error occurs when attempting use of offchain mustReferenceOutput

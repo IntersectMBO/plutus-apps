@@ -22,7 +22,6 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
                                                                   mustPayToTheScriptWithDatumInTx, mustProduceAtLeast)
 import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, utxosAt)
@@ -91,7 +90,7 @@ mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
         tx2 =
             Constraints.collectFromTheScript scriptUtxos ()
             <> Constraints.mustPayToAddressWithDatumInTx
-                 (fromCardanoAddressInEra w1Address)
+                 (Ledger.toPlutusAddress w1Address)
                  (Datum $ PlutusTx.toBuiltinData onAmt)
                  offAmt
             <> Constraints.mustProduceAtLeast offAmt
@@ -101,7 +100,7 @@ mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
     void $ Trace.activateContractWallet w1 contract
-    void $ Trace.nextSlot
+    void Trace.nextSlot
 
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend entire ada balance locked by the script
 spendAtLeastTheScriptBalance :: TestTree

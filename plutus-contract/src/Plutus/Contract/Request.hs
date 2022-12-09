@@ -129,7 +129,7 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (AssetClass, CardanoAddress, DiffMilliSeconds, POSIXTime, Params, PaymentPubKeyHash (PaymentPubKeyHash),
-               Slot, TxId, TxOutRef, Value, addressCredential, fromMilliSeconds, txOutRefId)
+               Slot, TxId, TxOutRef, Value, cardanoAddressCredential, fromMilliSeconds, toPlutusAddress, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -137,8 +137,8 @@ import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, get
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
-import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
-                             StakeValidator, StakeValidatorHash, Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+                             StakeValidatorHash, Validator, ValidatorHash)
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
@@ -152,7 +152,6 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
 
 import Data.Foldable (fold)
 import Data.List.NonEmpty qualified as NonEmpty
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse, collectQueryResponse, paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
@@ -353,11 +352,11 @@ queryDatumsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [Datum])
 queryDatumsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.DatumsAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("DatumsAtResponse", r)
@@ -368,7 +367,7 @@ datumsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Contract w s e [Datum]
 datumsAt addr =
   concat <$> collectQueryResponse (queryDatumsAt addr)
@@ -476,10 +475,10 @@ utxoRefsAt ::
     ( AsContractError e
     )
     => PageQuery TxOutRef
-    -> Address
+    -> CardanoAddress
     -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetAtResponse r -> pure r
     r                     -> throwError $ review _ChainIndexContractError ("UtxoSetAtResponse", r)
@@ -513,7 +512,7 @@ queryUnspentTxOutsAt ::
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [(TxOutRef, DecoratedTxOut)])
 queryUnspentTxOutsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ addressCredential (fromCardanoAddressInEra addr)) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.UnspentTxOutsAtResponse r -> pure r
     r                           -> throwError $ review _ChainIndexContractError ("UnspentTxOutAtResponse", r)
@@ -579,7 +578,7 @@ foldTxoRefsAt ::
     )
     => (a -> Page TxOutRef -> Contract w s e a)
     -> a
-    -> Address
+    -> CardanoAddress
     -> Contract w s e a
 foldTxoRefsAt f ini addr = go ini (Just def)
   where
@@ -594,7 +593,7 @@ txsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Contract w s e [ChainIndexTx]
 txsAt addr = do
   foldTxoRefsAt f [] addr
@@ -611,10 +610,10 @@ txoRefsAt ::
     ( AsContractError e
     )
     => PageQuery TxOutRef
-    -> Address
+    -> CardanoAddress
     -> Contract w s e TxosResponse
 txoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.TxoSetAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("TxoSetAtAddress", r)
@@ -894,7 +893,7 @@ ownAddress = NonEmpty.head <$> ownAddresses
 ownPaymentPubKeyHashes :: forall w s e. (AsContractError e) => Contract w s e [PaymentPubKeyHash]
 ownPaymentPubKeyHashes = do
     addrs <- ownAddresses
-    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ NonEmpty.toList $ fromCardanoAddressInEra <$> addrs
+    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ NonEmpty.toList $ toPlutusAddress <$> addrs
 
 ownFirstPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
 ownFirstPaymentPubKeyHash = do

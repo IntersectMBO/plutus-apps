@@ -46,10 +46,9 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, i
                             update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
+import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
@@ -202,15 +201,14 @@ makeChainIndexTxOut ::
   -> Eff effs (Maybe L.DecoratedTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
-  let plutusAddr = fromCardanoAddressInEra address
-  case addressCredential plutusAddr of
+  case L.cardanoAddressCredential address of
     PubKeyCredential _ ->
-        pure $ L.mkPubkeyDecoratedTxOut plutusAddr value datumWithHash script
+        pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
     ScriptCredential vh ->
       case datumWithHash of
         Just d -> do
           v <- getScriptFromHash vh
-          pure $ L.mkScriptDecoratedTxOut plutusAddr value d script v
+          pure $ L.mkScriptDecoratedTxOut address value d script v
         Nothing -> do
           -- If the txout comes from a script address, the Datum should not be Nothing
           logWarn $ NoDatumScriptAddr txout
@@ -597,13 +595,13 @@ fromTx tx = mempty
     , scriptRows = fromMap citxScripts
     , redeemerRows = fromPairs (Map.toList . txRedeemersWithHash)
     , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
-    , addressRows = InsertRows . fmap toDbValue . (fmap credential . txOutsWithRef) $ tx
+    , addressRows = InsertRows . fmap (toDbValue . credential) . txOutsWithRef $ tx
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
     }
     where
         credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
         credential (ChainIndexTxOut{citoAddress,citoDatum}, ref) =
-          (addressCredential $ fromCardanoAddressInEra citoAddress, ref, getHashFromDatum citoDatum)
+          (cardanoAddressCredential citoAddress, ref, getHashFromDatum citoDatum)
         assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
         assetClasses (ChainIndexTxOut{citoValue}, ref) =
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))

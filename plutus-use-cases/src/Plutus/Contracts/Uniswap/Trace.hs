@@ -22,7 +22,6 @@ import Data.Void (Void)
 import Ledger
 import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Constraints hiding (adjustUnbalancedTx)
-import Ledger.Tx.CardanoAPI (fromCardanoAddressInEra)
 import Ledger.Value qualified as Value
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contracts.Currency qualified as Currency
@@ -74,7 +73,7 @@ setupTokens = do
     forM_ wallets $ \w -> do
         let addr = mockWalletCardanoAddress w
         when (addr /= ownAddr) $ do
-            mkTxConstraints @Void mempty (mustPayToAddress (fromCardanoAddressInEra addr) v)
+            mkTxConstraints @Void mempty (mustPayToAddress (Ledger.toPlutusAddress addr) v)
               >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur
