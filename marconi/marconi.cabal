@@ -36,6 +36,7 @@ common lang
     MultiParamTypeClasses
     ScopedTypeVariables
     StandaloneDeriving
+    TypeApplications
     TypeFamilies
 
   ghc-options:

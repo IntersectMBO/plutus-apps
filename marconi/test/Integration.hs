@@ -54,7 +54,6 @@ import Test.Base qualified as H
 import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
-import Hedgehog.Extras qualified as H
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Indexers qualified as M
 import Marconi.Logging ()
@@ -106,7 +105,7 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
       let chainPoint = C.ChainPointAtGenesis :: C.ChainPoint
       c <- defaultConfigStdout
       withTrace c "marconi" $ \trace -> let
-        indexerWorker = withChainSyncEventStream socketPathAbs networkId chainPoint $ S.mapM_ $
+        indexerWorker = withChainSyncEventStream socketPathAbs networkId [chainPoint] $ S.mapM_ $
           \chainSyncEvent -> IO.atomically $ IO.writeTChan ch chainSyncEvent
         handleException NoIntersectionFound = logError trace $ renderStrict $ layoutPretty defaultLayoutOptions $
           "No intersection found for chain point" <+> pretty chainPoint <> "."
@@ -311,20 +310,10 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
   plutusScriptHash === indexedScriptHash
   tx2 === indexedTx2
 
-  -- The query poll
   queriedTx2 :: C.Tx C.AlonzoEra <- do
-    let
-      queryLoop n = do
-        H.threadDelay 250_000 -- wait 250ms before querying
-        -- With the new indexer, this should pass right away (by finding the in-memory
-        -- transaction. However, because the indexer is not updated by the indexer thread
-        -- it's memory buffer will remain empty. So this will only test that the event
-        -- is present in the database.
-        ScriptTx.ScriptTxResult txCbors <- liftIO $ Storable.query Storable.QEverything indexer (ScriptTx.ScriptTxAddress plutusScriptHash)
-        case txCbors of
-          result : _ -> pure result
-          _          -> queryLoop (n + 1)
-    ScriptTx.TxCbor txCbor <- queryLoop (0 :: Integer)
+    ScriptTx.ScriptTxResult (ScriptTx.TxCbor txCbor : _) <- liftIO $ do
+      ix <- IO.readMVar indexer
+      Storable.query Storable.QEverything ix (ScriptTx.ScriptTxAddress plutusScriptHash)
     H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
 
   tx2 === queriedTx2

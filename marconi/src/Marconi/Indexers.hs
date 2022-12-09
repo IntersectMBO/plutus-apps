@@ -13,7 +13,7 @@
 
 module Marconi.Indexers where
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
@@ -25,8 +25,8 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Streaming.Prelude qualified as S
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
-                    SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo)
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
+                    ChainPoint (ChainPoint), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
@@ -87,21 +87,28 @@ initialCoordinator indexerCount =
               <*> newQSemN 0
               <*> pure indexerCount
 
-type Worker = Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO ()
+-- Currently this `a` should stand for [ChainPoint], but I think eventually it should
+-- be constrained to a set of indexer type classes viewed through an MVar. This will
+-- allow indexers to be shared and queried safely.
+type Worker = Coordinator -> FilePath -> IO [ChainPoint]
 
 datumWorker :: Worker
-datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >>= innerLoop
+datumWorker Coordinator{_barrier, _channel} path = do
+  ix <- Datum.open path (Datum.Depth 2160)
+  workerChannel <- atomically . dupTChan $ _channel
+  void . forkIO $ innerLoop workerChannel ix
+  pure undefined
   where
-    innerLoop :: DatumIndex -> IO ()
-    innerLoop index = do
+    innerLoop :: TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> DatumIndex -> IO ()
+    innerLoop ch index = do
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
         RollForward blk _ct ->
-          Ix.insert (getDatums blk) index >>= innerLoop
+          Ix.insert (getDatums blk) index >>= innerLoop ch
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
-          innerLoop $
+          innerLoop ch $
             fromMaybe index $ do
               slot   <- chainPointToSlotNo cp
               offset <- findIndex (any (\(s, _) -> s < slot)) events
@@ -120,22 +127,25 @@ utxoWorker
     :: (Utxo.UtxoIndex -> IO Utxo.UtxoIndex)    -- ^ CPS function used in the queryApi thread, needs to be non-blocking
     -> Maybe TargetAddresses                    -- ^ Target addresses to filter for
     -> Worker
-utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
-    Utxo.open path (Utxo.Depth 2160) >>= indexerCallback >>= innerLoop
+utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier, _channel} path = do
+    ix <- Utxo.open path (Utxo.Depth 2160)
+    workerChannel <- atomically . dupTChan $ _channel
+    void . forkIO $ innerLoop workerChannel ix
+    pure undefined
   where
-    innerLoop :: Utxo.UtxoIndex -> IO ()
-    innerLoop index = do
+    innerLoop :: TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> Utxo.UtxoIndex -> IO ()
+    innerLoop ch index = do
       signalQSemN _barrier 1
       void $ indexerCallback index -- refresh the query STM/CPS with new storage pointers/counters state
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ct ->
-            case (Utxo.getUtxoEvents maybeTargetAddresses slotNo blkNo txs) of
-                  Just us ->  Ix.insert (us) index  >>= innerLoop
-                  _       -> innerLoop index
+            case Utxo.getUtxoEvents maybeTargetAddresses slotNo blkNo txs of
+                  Just us ->  Ix.insert us index  >>= innerLoop ch
+                  _       -> innerLoop ch index
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
-          innerLoop $
+          innerLoop ch $
             fromMaybe index $ do
               slot   <- chainPointToSlotNo cp
               offset <- findIndex  (\u -> (u ^. Utxo.utxoEventSlotNo) < slot) events
@@ -144,34 +154,35 @@ utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
 scriptTxWorker_
   :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> ScriptTx.Depth
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), ScriptTx.ScriptTxIndexer)
+  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), MVar ScriptTx.ScriptTxIndexer)
 scriptTxWorker_ onInsert depth Coordinator{_barrier} ch path = do
   indexer <- ScriptTx.open path depth
-  pure (loop indexer, indexer)
+  mIndexer <- newMVar indexer
+  pure (loop mIndexer, mIndexer)
   where
-    loop :: ScriptTx.ScriptTxIndexer -> IO ()
+    loop :: MVar ScriptTx.ScriptTxIndexer -> IO ()
     loop index = do
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs :: Block era) _ :: BlockInMode CardanoMode) _ct -> do
-          let u = ScriptTx.toUpdate txs slotNo
-          index' <- Storable.insert u index
+        RollForward (BlockInMode (Block (BlockHeader slotNo hsh _) txs :: Block era) _ :: BlockInMode CardanoMode) _ct -> do
+          let u = ScriptTx.toUpdate txs (ChainPoint slotNo hsh)
+          modifyMVar_ index (Storable.insert u)
           void $ onInsert u
-          loop index'
+          loop index
 
         RollBackward cp _ct -> do
-          let sn = case cp of
-                     C.ChainPoint sn' _    -> sn'
-                     C.ChainPointAtGenesis -> SlotNo 0
-          Storable.rewind sn index >>= loop . fromMaybe index
+          modifyMVar_ index $ \ix -> fromMaybe ix <$> Storable.rewind cp ix
+          loop index
 
 scriptTxWorker
   :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> Worker
-scriptTxWorker onInsert coordinator ch path = do
-  (loop, _) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator ch path
-  loop
+scriptTxWorker onInsert coordinator path = do
+  workerChannel <- atomically . dupTChan $ _channel coordinator
+  (loop, _ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator workerChannel path
+  void . forkIO $ loop
+  pure undefined
 
 newtype UtxoQueryTMVar = UtxoQueryTMVar
     { unUtxoIndex  :: TMVar Utxo.UtxoIndex      -- ^ for query thread to access in-memory utxos
@@ -184,7 +195,8 @@ combinedIndexer
   -> Maybe TargetAddresses
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIndexers remainingIndexers
+combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses =
+  combineIndexers remainingIndexers
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
@@ -206,7 +218,7 @@ combineIndexers indexers = S.foldM_ step initial finish
     initial :: IO Coordinator
     initial = do
       coordinator <- initialCoordinator $ length indexers
-      mapM_ (uncurry (forkIndexer coordinator)) indexers
+      mapM_ (\(ix, fp) -> ix coordinator fp) indexers
       pure coordinator
 
     step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
@@ -217,8 +229,3 @@ combineIndexers indexers = S.foldM_ step initial finish
 
     finish :: Coordinator -> IO ()
     finish _ = pure ()
-
-forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
-forkIndexer coordinator worker path = do
-  ch <- atomically . dupTChan $ _channel coordinator
-  void . forkIO . worker coordinator ch $ path

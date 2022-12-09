@@ -40,11 +40,11 @@ withChainSyncEventStream ::
   FilePath ->
   NetworkId ->
   -- | The point on the chain to start streaming from
-  ChainPoint ->
+  [ChainPoint] ->
   -- | The stream consumer
   (Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r -> IO b) ->
   IO b
-withChainSyncEventStream socketPath networkId point consumer = do
+withChainSyncEventStream socketPath networkId points consumer = do
   -- The chain-sync client runs in a different thread passing the blocks it
   -- receives to the stream consumer through a MVar. The chain-sync client
   -- thread and the stream consumer will each block on each other and stay
@@ -64,7 +64,7 @@ withChainSyncEventStream socketPath networkId point consumer = do
   -- let's stick with a MVar now and revisit later.
   nextBlockVar <- newEmptyMVar
 
-  let client = chainSyncStreamingClient point nextBlockVar
+  let client = chainSyncStreamingClient points nextBlockVar
 
       localNodeClientProtocols =
         LocalNodeClientProtocols
@@ -103,16 +103,18 @@ withChainSyncEventStream socketPath networkId point consumer = do
 -- If the starting point is such that an intersection cannot be found, this
 -- client will throw a NoIntersectionFound exception.
 chainSyncStreamingClient ::
-  ChainPoint ->
+  [ChainPoint] ->
   MVar (ChainSyncEvent e) ->
   ChainSyncClient e ChainPoint ChainTip IO ()
-chainSyncStreamingClient point nextChainEventVar =
-  ChainSyncClient $ pure $ SendMsgFindIntersect [point] onIntersect
+chainSyncStreamingClient points nextChainEventVar =
+  ChainSyncClient $ pure $ SendMsgFindIntersect points onIntersect
   where
     onIntersect =
       ClientStIntersect
-        { recvMsgIntersectFound = \_ _ ->
-            ChainSyncClient sendRequestNext,
+        { recvMsgIntersectFound = \cp ct ->
+            ChainSyncClient $ do
+              putMVar nextChainEventVar (RollBackward cp ct)
+              sendRequestNext,
           recvMsgIntersectNotFound =
             -- There is nothing we can do here
             throw NoIntersectionFound

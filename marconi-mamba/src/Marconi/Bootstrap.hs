@@ -59,7 +59,7 @@ bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
             chainPoint = ChainPointAtGenesis
         c <- defaultConfigStdout
         withTrace c "marconi-mamba" $ \trace ->
-          withChainSyncEventStream socket networkId chainPoint indexers
+          withChainSyncEventStream socket networkId [chainPoint] indexers
           `catch` \NoIntersectionFound ->
             logError trace $
                 renderStrict $

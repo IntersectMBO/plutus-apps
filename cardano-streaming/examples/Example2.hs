@@ -19,7 +19,7 @@ import Streaming.Prelude qualified as S
 main :: IO ()
 main = do
   Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
+  withChainSyncEventStream optionsSocketPath optionsNetworkId [optionsChainPoint] $
     printJson . S.map (fmap extractData)
   where
     extractData (Cardano.Api.BlockInMode (Cardano.Api.Block _header txs) eim) =

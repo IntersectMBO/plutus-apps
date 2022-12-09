@@ -25,7 +25,7 @@ main = do
     withChainSyncEventStream
       (Cli.optionsSocketPath o)
       (Cli.optionsNetworkId o)
-      (Cli.optionsChainPoint o)
+      [Cli.optionsChainPoint o]
       (combinedIndexer (Cli.utxoDbPath o) (Cli.datumDbPath o) (Cli.scriptTxDbPath o) (Cli.optionsTargetAddresses o ) . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $
