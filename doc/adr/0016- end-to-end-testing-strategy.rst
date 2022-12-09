@@ -50,28 +50,28 @@ Decision
 --------
 
 * We will create a new end-to-end testing framework written in Haskell that'll live in a new
-  repository, see argument [1]_.
+  repository, see `argument 1`_.
 
 * We will use `cardano-testnet
   <https://github.com/input-output-hk/cardano-node/tree/master/cardano-testnet/>`_
-  for configuring and initialising its local test network environment, see argument [2]_.
+  for configuring and initialising local test network environments, see `argument 2`_.
 
 * We will initially use ``cardano-api`` for building and balancing transactions, and to submit
-  balanced transactions and for querying the ledger, see argument [3]_.
+  balanced transactions and for querying the ledger, see `argument 3`_.
 
 * When available, we will use ``cardano-ledger-api`` instead of ``cardano-api`` for building and
-  balancing transactions, see argument [4]_.
+  balancing transactions, see `argument 4`_.
 
 * When available, we will use ``cardando-node-client`` instead of ``cardano-api`` to submit balanced
-  transactions and for querying the ledger state to make test assertions, see argument [5]_.
+  transactions and for querying the ledger state to make test assertions, see `argument 5`_.
 
-* We will prioritise ``Plutus`` test coverage over ``cardano-node``, see argument [6]_
+* We will prioritise ``Plutus`` test coverage over ``cardano-node``, see `argument 6`_.
 
 * We will start by creating a few tests with the node/ledger apis without depending on `Plutus-apps
   <https://github.com/input-output-hk/Plutus-apps/>`_ and then assess whether we want to use the
-  Contract API and other offchain tooling going forwards, see argument [7]_.
+  Contract API and other offchain tooling going forwards, see `argument 7`_.
 
-* We will continue adding a subset of Plutus tests to ``cardano-node-tests``, see argument [8]_.
+* We will continue adding a subset of Plutus tests to ``cardano-node-tests``, see `argument 8`_.
 
 Types of Plutus tests for the Haskell framework
 -----------------------------------------------
@@ -104,38 +104,52 @@ Examples
 Argument
 --------
 
-.. [1] The primary aim is to satisfy all of ``Plutus`` (core) end-to-end testing requirements,
+.. _`argument 1`:
+
+1. The primary aim is to satisfy all of ``Plutus`` (core) end-to-end testing requirements,
    although, this is an oportunity to also get coverage of other packages being developed such as
    ``cardano-testnet``, ``cardano-ledger-api`` and ``cardano-node-client``.
    Seeing as packages from multiple repositories are being covered under test it makes sense to host
    the framework in a new separate repository.
 
-.. [2] There are a few options for configuring and starting a private testnet (see Notes section).
+.. _`argument 2`:
+
+2. There are a few options for configuring and starting a private testnet (see Notes section).
    We will use ``cardano-testnet`` to enable dynamic configuration in Haskell, which makes it easier
    to design tests that can also run in the emulated environment.
    Also, this is the approach officially supported by the node team.
 
-.. [3] The plan is to start building tests with ``cardano-api`` because neither ``cardano-ledger-api``
+.. _`argument 3`:
+
+3. The plan is to start building tests with ``cardano-api`` because neither ``cardano-ledger-api``
    or ``cardano-node-client`` are at the required stage of development. This allows us to immediately
    proceed with building out the framework and test suite.
 
-.. [4] The ambition of ``cardano-ledger-api`` is to be the go-to api for building transactions for
+.. _`argument 4`:
+
+4. The ambition of ``cardano-ledger-api`` is to be the go-to api for building transactions for
    application developers.
    The UX and overall quality of this component will benefit from being included in these end-to-end
    tests because of the high-level perspective applied during its design and development.
    When ready we will begin incorporating it as a replacement for ``cardano-api``.
 
-.. [5] ``cardano-node-client`` will eventually replace ``cardano-api`` as a interface with consensus.
+.. _`argument 5`:
+
+5. ``cardano-node-client`` will eventually replace ``cardano-api`` as a interface with consensus.
    As the expected means to submit and query for application developers, it is a vital we include it
    under test in this new framework.
    When ready we will begin incorporating it as a replacement for ``cardano-api``.
 
-.. [6] Although ``cardano-ledger-api`` and ``cardano-node-client`` are under test it isn't feasible
+.. _`argument 6`:
+
+6. Although ``cardano-ledger-api`` and ``cardano-node-client`` are under test it isn't feasible
    to expect thorough coverage of all ledger and node functionality, such as staking and update
    proposals, because the primary focus is to satisify end-to-end testing requirements for ``Plutus``.
    Fortunately, much of that functionality is already being covered by ``cardano-node-tests``.
 
-.. [7] Initially, a few tests will be created without depending on `Plutus-apps
+.. _`argument 7`:
+
+7. Initially, a few tests will be created without depending on `Plutus-apps
    <https://github.com/input-output-hk/Plutus-apps/>`_.
    This entails building transactions with ``cardano-ledger-api`` and waiting for on-chain events
    using ``cardano-node-client`` without use of the Contract api or the constraints library.
@@ -150,22 +164,24 @@ Argument
    It should also reduce the amount of boilerplate code and provide additional features such as
    trace logging.
 
-.. [8] There's value continuing to test ``cardano-cli`` with Plutus transactions for specific cli
+.. _`argument 8`:
+
+8. There's value continuing to test ``cardano-cli`` with Plutus transactions for specific cli
    flags and the cli's error handling with script evaluation.
    Some examples of tests that should be covered:
 
-   * Cli flags that require use of Plutus scripts E.g. tx-out-reference-script-file orcalculate-Plutus-script-cost
+   * Cli flags that require use of Plutus scripts E.g. tx-out-reference-script-file or 
+     calculate-plutus-script-cost
    * Cli behaviour when script evaluation passes. This could be displaying expected fee correctly.
    * Cli behaviour when script evaluation fails. This can be how different types errors are formatted. 
 
-At some point, we may wish to incorporate the `cardano-node-emulator
-<https://github.com/input-output-hk/Plutus-apps/pull/831>`_ as an alterntaive to ``cardano-testnet``.
-This would enable us to run property based tests due to the node being much faster without consensus.
-With CHaP, ``cardano-node-emulator`` would be released as a separate component, so no need to depend
-on ``Plutus-apps``.
+9. At some point, we may wish to incorporate the `cardano-node-emulator
+   <https://github.com/input-output-hk/Plutus-apps/pull/831>`_ as an alterntaive to ``cardano-testnet``.
+   This would enable us to run property based tests due to the node being much faster without consensus.
+   With CHaP, ``cardano-node-emulator`` would be released as a separate component, so no need to depend
+   on ``Plutus-apps``.
 
-There is also always the option of including additional packages to test from ``Plutus-apps`` at a
-later stage.
+10. We reseve the option of including additional packages to test from ``Plutus-apps`` at a later stage.
 
 Pros of building and maintaining our own test framework
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -232,11 +248,11 @@ Alternatives
 
 Instead of creating a new repository it is possible the end-to-end tests could live in ``Plutus-apps``.
 Although, because the componenets under test span other repositories it would be restrictive and
-additional work at the time when dependencies are updated in ``Plutus-apps``, see argument [1]_.
+additional work at the time when dependencies are updated in ``Plutus-apps``, see `argument 1`_.
 
 We could use bash scripts to spin up a local testnet, which is the approach teams such as Djed and
 Hydra took.
-Although, the decision is to use ``cardano-testnet``, see argument [2]_.
+Although, the decision is to use ``cardano-testnet``, see argument `argument 2`_.
 
 Notes
 -----
