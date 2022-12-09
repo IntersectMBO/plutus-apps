@@ -20,7 +20,6 @@ module Ledger.CardanoWallet(
     fromSeed',
     -- ** Keys
     mockWalletAddress,
-    mockWalletCardanoAddress,
     paymentPrivateKey,
     paymentPubKeyHash,
     paymentPubKey,
@@ -28,7 +27,6 @@ module Ledger.CardanoWallet(
     stakePubKeyHash,
     stakePubKey,
     knownAddresses,
-    knownCardanoAddresses,
     knownPaymentKeys,
     knownPaymentPublicKeys,
     knownPaymentPrivateKeys
@@ -126,18 +124,17 @@ knownMockWallets = fromWalletNumber . WalletNumber <$> [1..10]
 knownMockWallet :: Integer -> MockWallet
 knownMockWallet = (knownMockWallets !!) . pred . fromInteger
 
-mockWalletAddress :: MockWallet -> Address
-mockWalletAddress mw =
-    Address (PubKeyCredential $ unPaymentPubKeyHash $ paymentPubKeyHash mw)
-            (StakingHash . PubKeyCredential . unStakePubKeyHash <$> stakePubKeyHash mw)
-
 {- | A mock cardano address for the 'Params.testnet' network.
  -}
-mockWalletCardanoAddress :: MockWallet -> CardanoAddress
-mockWalletCardanoAddress =
+mockWalletAddress :: MockWallet -> CardanoAddress
+mockWalletAddress =
     fromRight (error "mock wallet is invalid")
        . Tx.toCardanoAddressInEra testnet
-       . mockWalletAddress
+       . plutusAddress
+    where
+    plutusAddress mw =
+        Address (PubKeyCredential $ unPaymentPubKeyHash $ paymentPubKeyHash mw)
+                (StakingHash . PubKeyCredential . unStakePubKeyHash <$> stakePubKeyHash mw)
 
 -- | Mock wallet's private key
 paymentPrivateKey :: MockWallet -> PaymentPrivateKey
@@ -174,8 +171,5 @@ knownPaymentKeys = Map.fromList $ map
 knownPaymentPrivateKeys :: [PaymentPrivateKey]
 knownPaymentPrivateKeys = paymentPrivateKey <$> knownMockWallets
 
-knownAddresses :: [Address]
+knownAddresses :: [CardanoAddress]
 knownAddresses = mockWalletAddress <$> knownMockWallets
-
-knownCardanoAddresses :: [CardanoAddress]
-knownCardanoAddresses = mockWalletCardanoAddress <$> knownMockWallets

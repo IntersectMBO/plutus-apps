@@ -97,7 +97,7 @@ generateTx gen slot (UtxoIndex utxo) = do
       Right _ -> generateTx gen slot (UtxoIndex utxo)
 
 keyPairs :: NonEmpty CardanoAddress
-keyPairs = fmap CW.mockWalletCardanoAddress (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
+keyPairs = fmap CW.mockWalletAddress (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
 
 -- | Pick a random element from a non-empty list
 pickNEL :: PrimMonad m => Gen (PrimState m) -> NonEmpty a -> m a

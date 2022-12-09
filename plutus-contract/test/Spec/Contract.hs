@@ -50,7 +50,7 @@ import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator)
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.Wallet (mockWalletCardanoAddress)
+import Wallet.Emulator.Wallet (mockWalletAddress)
 
 import Plutus.ChainIndex.Types (RollbackState (Committed), TxOutState (Spent, Unspent), TxOutStatus, TxStatus,
                                 TxValidity (TxValid))
@@ -171,7 +171,7 @@ tests =
             (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
         , let theContract :: Contract () Schema ContractError () =
-                  void $ awaitUtxoProduced (mockWalletCardanoAddress w2)
+                  void $ awaitUtxoProduced (mockWalletAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -181,7 +181,7 @@ tests =
             )
 
         , let theContract :: Contract () Schema ContractError () =
-                  void ( utxosAt (mockWalletCardanoAddress w1)
+                  void ( utxosAt (mockWalletAddress w1)
                      >>= awaitUtxoSpent . fst . head . Map.toList
                        )
           in run "await txout spent"

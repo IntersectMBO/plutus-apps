@@ -66,7 +66,7 @@ import Plutus.V1.Ledger.Value qualified as V
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Wallet.Emulator.Wallet (mockWalletCardanoAddress)
+import Wallet.Emulator.Wallet (mockWalletAddress)
 
 makeClassyPrisms ''ScriptError
 
@@ -377,7 +377,7 @@ contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef :: TestTree
 contractErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef =
     let contract :: Contract () Empty ContractError () = do
             scriptUtxos <- mustPayToTheScriptWithMultipleOutputsContract 3
-            w1Utxos <- utxosAt (mockWalletCardanoAddress w1)
+            w1Utxos <- utxosAt (mockWalletAddress w1)
             let w1Utxo = fst $ M.elemAt 2 w1Utxos
                 lookups = Cons.typedValidatorLookups someTypedValidator <>
                     Cons.unspentOutputs (scriptUtxos <> w1Utxos)

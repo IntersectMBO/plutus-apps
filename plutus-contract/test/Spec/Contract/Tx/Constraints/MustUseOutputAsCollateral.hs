@@ -35,7 +35,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertUnbalancedTx, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicateOptions, defaultCheckOptions,
-                             emulatorConfig, mockWalletCardanoAddress, w1, w2, (.&&.))
+                             emulatorConfig, mockWalletAddress, w1, w2, (.&&.))
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
@@ -90,10 +90,10 @@ tknValue :: PSU.Language -> Value.Value
 tknValue = tknValueOf tknAmount
 
 w1Address :: L.CardanoAddress
-w1Address = mockWalletCardanoAddress w1
+w1Address = mockWalletAddress w1
 
 w2Address :: L.CardanoAddress
-w2Address = mockWalletCardanoAddress w2
+w2Address = mockWalletAddress w2
 
 maximumCollateralInputs :: Integer
 maximumCollateralInputs = fromIntegral $ fromJust $ protocolParamMaxCollateralInputs $ def

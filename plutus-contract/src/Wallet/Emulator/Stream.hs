@@ -60,7 +60,7 @@ import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
 import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTimeEvent), MultiAgentControlEffect,
                                    MultiAgentEffect, chainEvent, eteEvent)
-import Wallet.Emulator.Wallet (Wallet, mockWalletCardanoAddress)
+import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
 import Ledger.Validation qualified as Validation
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
@@ -155,7 +155,7 @@ initialDist EmulatorConfig{..} = either id (walletFunds . map (Valid . signTx)) 
     walletFunds :: Block -> Map Wallet Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]
-            getFunds wllt = fromMaybe mempty $ Map.lookup (mockWalletCardanoAddress wllt) values
+            getFunds wllt = fromMaybe mempty $ Map.lookup (mockWalletAddress wllt) values
         in Map.fromSet getFunds (Set.fromList knownWallets)
 
 instance Default EmulatorConfig where

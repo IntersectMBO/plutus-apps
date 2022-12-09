@@ -137,8 +137,7 @@ import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.MultiAgent (EmulatorEvent' (WalletEvent), EmulatorTimeEvent (EmulatorTimeEvent))
-import Wallet.Emulator.Wallet (Wallet, WalletEvent (GenericLog, RequestHandlerLog, TxBalanceLog),
-                               mockWalletCardanoAddress)
+import Wallet.Emulator.Wallet (Wallet, WalletEvent (GenericLog, RequestHandlerLog, TxBalanceLog), mockWalletAddress)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId, EndpointDescription (EndpointDescription),
                      NotificationError)
 import Wallet.Types qualified as Wallet
@@ -643,7 +642,7 @@ valueAt wallet = do
     txOutsM <- ChainIndex.collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq cred)
     pure $ foldMap (view $ _2 . decoratedTxOutValue) $ concat txOutsM
   where
-    cred = cardanoAddressCredential $ mockWalletCardanoAddress wallet
+    cred = cardanoAddressCredential $ mockWalletAddress wallet
 
 -- | Wait until the contract is done, then return
 --   the error (if any)

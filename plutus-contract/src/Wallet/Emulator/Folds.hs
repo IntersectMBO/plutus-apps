@@ -87,7 +87,7 @@ import Wallet.Emulator.LogMessages (_AdjustingUnbalancedTx, _BalancingUnbalanced
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,
                                    userThreadEvent, walletClientEvent, walletEvent')
 import Wallet.Emulator.NodeClient (_TxSubmit)
-import Wallet.Emulator.Wallet (Wallet, _RequestHandlerLog, _TxBalanceLog, mockWalletCardanoAddress)
+import Wallet.Emulator.Wallet (Wallet, _RequestHandlerLog, _TxBalanceLog, mockWalletAddress)
 import Wallet.Rollup qualified as Rollup
 import Wallet.Rollup.Types (AnnotatedTx)
 
@@ -254,7 +254,7 @@ valueAtAddress = fmap (foldMap (txOutValue . snd)) . utxoAtAddress
 
 -- | The funds belonging to a wallet
 walletFunds :: Wallet -> EmulatorEventFold Value
-walletFunds = valueAtAddress . mockWalletCardanoAddress
+walletFunds = valueAtAddress . mockWalletAddress
 
 -- | The fees paid by a wallet
 walletFees :: Wallet -> EmulatorEventFold Value

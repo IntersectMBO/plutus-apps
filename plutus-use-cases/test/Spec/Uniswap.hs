@@ -147,7 +147,7 @@ setupTokens = do
         v  = mconcat [Value.singleton cs (fromString tn) amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
-        let addr = mockWalletCardanoAddress w
+        let addr = mockWalletAddress w
         when (addr /= ownAddr) $ do
             cs <- mkTxConstraints @Void mempty
                     (mustPayToAddress (Ledger.toPlutusAddress addr) v)

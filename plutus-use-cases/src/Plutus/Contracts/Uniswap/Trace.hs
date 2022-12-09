@@ -29,7 +29,7 @@ import Plutus.Contracts.Uniswap.OffChain as OffChain
 import Plutus.Contracts.Uniswap.Types as Types
 import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Emulator
-import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletCardanoAddress)
+import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletAddress)
 
 -- | Set up a liquidity pool and call the "add" endpoint
 uniswapTrace :: EmulatorTrace ()
@@ -71,7 +71,7 @@ setupTokens = do
         v  = mconcat [Value.singleton cs tn amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
-        let addr = mockWalletCardanoAddress w
+        let addr = mockWalletAddress w
         when (addr /= ownAddr) $ do
             mkTxConstraints @Void mempty (mustPayToAddress (Ledger.toPlutusAddress addr) v)
               >>= adjustUnbalancedTx >>= submitTxConfirmed

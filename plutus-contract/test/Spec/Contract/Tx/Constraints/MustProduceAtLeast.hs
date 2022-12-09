@@ -26,8 +26,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions,
-                             mockWalletCardanoAddress, w1, w6, (.&&.))
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
+                             w1, w6, (.&&.))
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, setSigningProcess,
                                                  walletInstanceTag)
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
@@ -72,7 +72,7 @@ baseAdaAndTokenValueLockedByScript :: Value.Value
 baseAdaAndTokenValueLockedByScript = baseAdaValueLockedByScript <> someTokens 1
 
 w1Address :: Ledger.CardanoAddress
-w1Address = mockWalletCardanoAddress w1
+w1Address = mockWalletAddress w1
 
 -- | Valid contract containing all required lookups. Uses mustProduceAtLeast constraint with provided on-chain and off-chain values.
 mustProduceAtLeastContract :: Value.Value -> Value.Value -> Value.Value -> Ledger.CardanoAddress -> Contract () Empty ContractError ()
@@ -161,7 +161,7 @@ spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup =
 contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup :: TestTree
 contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup =
     let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
-        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript $ mockWalletCardanoAddress w6
+        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript $ mockWalletAddress w6
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (const amt) -- not enough funds remain for w1 to satisfy constraint
         traceWithW6Signing = do

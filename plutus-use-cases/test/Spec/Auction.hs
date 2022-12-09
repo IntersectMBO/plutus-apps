@@ -35,6 +35,7 @@ import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
+import Ledger qualified
 import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
 import Plutus.Contract hiding (currentSlot)
@@ -63,7 +64,7 @@ slotCfg = def
 params :: AuctionParams
 params =
     AuctionParams
-        { apOwner   = mockWalletAddress w1
+        { apOwner   = Ledger.toPlutusAddress $ mockWalletAddress w1
         , apAsset   = theToken
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
@@ -131,7 +132,7 @@ trace1FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace1WinningBid
-            , highestBidder = mockWalletAddress w2
+            , highestBidder = Ledger.toPlutusAddress $ mockWalletAddress w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -141,7 +142,7 @@ trace2FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace2WinningBid
-            , highestBidder = mockWalletAddress w2
+            , highestBidder = Ledger.toPlutusAddress $ mockWalletAddress w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }

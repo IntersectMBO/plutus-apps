@@ -68,7 +68,7 @@ baseName = "TestLawToken"
 -- | A governance contract that requires 6 votes out of 10
 params :: Gov.Params
 params = Gov.Params
-    { Gov.initialHolders = EM.mockWalletAddress . knownWallet <$> [1..numberOfHolders]
+    { Gov.initialHolders = Ledger.toPlutusAddress . EM.mockWalletAddress . knownWallet <$> [1..numberOfHolders]
     , Gov.requiredVotes = 6
     , Gov.baseTokenName = baseName
     }
@@ -80,14 +80,14 @@ lawv3 = Gov.Law "Law v3"
 
 doVoting :: Int -> Int -> Integer -> EmulatorTrace ()
 doVoting ayes nays rounds = do
-    let activate wId = (mockWalletAddress w, Gov.mkTokenName baseName wId,)
+    let activate wId = (Ledger.toPlutusAddress $ mockWalletAddress w, Gov.mkTokenName baseName wId,)
                  <$> Trace.activateContractWallet w (Gov.contract @Gov.GovError params)
            where
                w = knownWallet wId
     namesAndHandles <- traverse activate [1..numberOfHolders]
     let handle1 = (\(_,_,h) -> h) (head namesAndHandles)
     let token2 = (\(_,t,_) -> t) (namesAndHandles !! 1)
-    let owner = mockWalletAddress w2
+    let owner = Ledger.toPlutusAddress $ mockWalletAddress w2
     void $ Trace.callEndpoint @"new-law" handle1 lawv1
     void $ Trace.waitNSlots 10
     slotCfg <- Trace.getSlotConfig

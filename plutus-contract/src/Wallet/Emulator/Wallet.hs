@@ -50,8 +50,8 @@ import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
 import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
-import Ledger.Address (Address, CardanoAddress, PaymentPrivateKey (..), PaymentPubKey,
-                       PaymentPubKeyHash (PaymentPubKeyHash), cardanoAddressCredential)
+import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, PaymentPubKeyHash (PaymentPubKeyHash),
+                       cardanoAddressCredential)
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
@@ -177,11 +177,7 @@ mockWalletPaymentPubKeyHash :: Wallet -> PaymentPubKeyHash
 mockWalletPaymentPubKeyHash = CW.paymentPubKeyHash . walletToMockWallet'
 
 -- | Get the cardano address of a mock wallet. (Fails if the wallet is not a mock wallet).
-mockWalletCardanoAddress :: Wallet -> CardanoAddress
-mockWalletCardanoAddress = CW.mockWalletCardanoAddress . walletToMockWallet'
-
--- | Get the plutus address of a mock wallet. (Fails if the wallet is not a mock wallet).
-mockWalletAddress :: Wallet -> Address
+mockWalletAddress :: Wallet -> CardanoAddress
 mockWalletAddress = CW.mockWalletAddress . walletToMockWallet'
 
 data WalletEvent =
@@ -220,12 +216,8 @@ ownPaymentPublicKey :: WalletState -> PaymentPubKey
 ownPaymentPublicKey = CW.paymentPubKey . _mockWallet
 
 -- | Get the user's own payment public-key address.
-ownAddress :: WalletState -> Address
+ownAddress :: WalletState -> CardanoAddress
 ownAddress = CW.mockWalletAddress . _mockWallet
-
--- | Get the user's own payment public-key address.
-ownCardanoAddress :: WalletState -> CardanoAddress
-ownCardanoAddress = CW.mockWalletCardanoAddress . _mockWallet
 
 -- | An empty wallet using the given private key.
 -- for that wallet as the sole watched address.
@@ -262,7 +254,7 @@ handleWallet = \case
     ownAddressesH :: (Member (State WalletState) effs) => Eff effs (NonEmpty CardanoAddress)
     ownAddressesH = do
         mw <- gets _mockWallet
-        pure $ NonEmpty.fromList [CW.mockWalletCardanoAddress mw]
+        pure $ NonEmpty.fromList [CW.mockWalletAddress mw]
 
     balanceTxH ::
         ( Member NodeClientEffect effs
@@ -383,7 +375,7 @@ ownOutputs WalletState{_mockWallet} = do
     Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
   where
     addr :: CardanoAddress
-    addr = CW.mockWalletCardanoAddress _mockWallet
+    addr = CW.mockWalletAddress _mockWallet
 
     -- Accumulate all unspent 'TxOutRef's from the resulting pages.
     allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]

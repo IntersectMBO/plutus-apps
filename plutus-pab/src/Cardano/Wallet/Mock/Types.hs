@@ -59,7 +59,7 @@ import Servant.Client.Internal.HttpClient (ClientEnv)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
-import Wallet.Emulator.Wallet (Wallet, WalletId, WalletState (WalletState, _mockWallet), mockWalletCardanoAddress,
+import Wallet.Emulator.Wallet (Wallet, WalletId, WalletState (WalletState, _mockWallet), mockWalletAddress,
                                mockWalletPaymentPubKeyHash, toMockWallet)
 
 -- | Information about an emulated wallet.
@@ -81,7 +81,7 @@ fromWalletState WalletState{_mockWallet} = WalletInfo{wiWallet, wiPaymentPubKeyH
  where
     wiWallet = toMockWallet _mockWallet
     wiPaymentPubKeyHash = mockWalletPaymentPubKeyHash wiWallet
-    wiAddresses = NonEmpty.fromList [mockWalletCardanoAddress wiWallet]
+    wiAddresses = NonEmpty.fromList [mockWalletAddress wiWallet]
 
 data MultiWalletEffect r where
     CreateWallet :: Maybe Ada -> MultiWalletEffect WalletInfo
