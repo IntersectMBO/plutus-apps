@@ -36,6 +36,7 @@ rec {
         flakeUrl = ''github:${repository}/"$(${lib.escapeShellArg config.preset.github.status.revision})"'';
       in
       config.preset.github.status.lib.reportBulk {
+        # Replace "echo '[ "x86_64-linux" ]' |" with the following line once darwin checks work on Cicero
         # nix eval ${flakeUrl}#ciJobs --apply __attrNames --json | # all systems the flake declares
         bulk.text = ''
           echo '[ "x86_64-linux" ]' |
