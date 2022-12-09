@@ -8,27 +8,28 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustProduceAtLeast(tests) where
 
-import Control.Lens ((&))
+import Control.Lens (review, (&), (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
-import Ledger.Constraints.OffChain qualified as Constraints (typedValidatorLookups, unspentOutputs)
-import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustPayToAddressWithDatumInTx,
-                                                                  mustPayToTheScriptWithDatumInTx, mustProduceAtLeast)
+import Ledger.Constraints.OffChain qualified as Constraints
+import Ledger.Constraints.OnChain.V1 qualified as Constraints
+import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Generators (someTokenValue)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Contract (mapError, throwError)
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
-                               submitTxConstraintsWith, utxosAt)
+                               submitTxConstraintsWith, submitUnbalancedTx, utxosAt)
+import Plutus.Contract.Error (AsContractError (_TxConstraintResolutionContractError))
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
-                             w1, w6, (.&&.))
-import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, setSigningProcess,
-                                                 walletInstanceTag)
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig,
+                             mockWalletAddress, w1, w6, (.&&.))
+import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -43,15 +44,21 @@ import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet')
 tests :: TestTree
 tests =
     testGroup "MustProduceAtLeast"
-        [ spendAtLeastTheScriptBalance
-        , spendLessThanScriptBalance
-        , spendTokenBalanceFromScript
-        , spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup
-        , contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup
-        , contractErrorWhenUnableToSpendMoreThanScriptTokenBalance
-        , phase2FailureWhenProducedAdaAmountIsNotSatisfied
-        , phase2FailureWhenProducedTokenAmountIsNotSatisfied
-        ]
+    [ testGroup "ledger constraints" $ tests' ledgerSubmitTx
+    , testGroup "cardano constraints" $ tests' cardanoSubmitTx
+    ]
+
+tests' :: SubmitTx -> [TestTree]
+tests' sub =
+  [ spendAtLeastTheScriptBalance
+  , spendLessThanScriptBalance
+  , spendTokenBalanceFromScript
+  , spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup
+  , contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup
+  , contractErrorWhenUnableToSpendMoreThanScriptTokenBalance
+  , phase2FailureWhenProducedAdaAmountIsNotSatisfied
+  , phase2FailureWhenProducedTokenAmountIsNotSatisfied
+  ] ?? sub
 
 someTokens :: Integer -> Value.Value
 someTokens = someTokenValue "someToken"
@@ -69,11 +76,11 @@ w1Address :: Ledger.CardanoAddress
 w1Address = mockWalletAddress w1
 
 -- | Valid contract containing all required lookups. Uses mustProduceAtLeast constraint with provided on-chain and off-chain values.
-mustProduceAtLeastContract :: Value.Value -> Value.Value -> Value.Value -> Ledger.CardanoAddress -> Contract () Empty ContractError ()
-mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
+mustProduceAtLeastContract :: SubmitTx -> Value.Value -> Value.Value -> Value.Value -> Ledger.CardanoAddress -> Contract () Empty ContractError ()
+mustProduceAtLeastContract submitTxFromConstraints offAmt onAmt baseScriptValue addr = do
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx onAmt baseScriptValue
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     pubKeyUtxos <- utxosAt addr
@@ -88,7 +95,7 @@ mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
                  (Datum $ PlutusTx.toBuiltinData onAmt)
                  offAmt
             <> Constraints.mustProduceAtLeast offAmt
-    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
+    ledgerTx2 <- submitTxFromConstraints lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
@@ -97,9 +104,9 @@ trace contract = do
     void Trace.nextSlot
 
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend entire ada balance locked by the script
-spendAtLeastTheScriptBalance :: TestTree
-spendAtLeastTheScriptBalance =
-    let contract = mustProduceAtLeastContract
+spendAtLeastTheScriptBalance :: SubmitTx -> TestTree
+spendAtLeastTheScriptBalance sub =
+    let contract = mustProduceAtLeastContract sub
                        baseAdaValueLockedByScript
                        baseAdaValueLockedByScript
                        baseAdaValueLockedByScript
@@ -111,10 +118,10 @@ spendAtLeastTheScriptBalance =
         (void $ trace contract)
 
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend less ada than is locked by the script
-spendLessThanScriptBalance :: TestTree
-spendLessThanScriptBalance =
+spendLessThanScriptBalance :: SubmitTx -> TestTree
+spendLessThanScriptBalance sub =
     let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript - 500)
-        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript w1Address
+        contract = mustProduceAtLeastContract sub amt amt baseAdaValueLockedByScript w1Address
     in checkPredicateOptions
         defaultCheckOptions
         "Successful use of mustProduceAtLeast below script's balance"
@@ -122,10 +129,10 @@ spendLessThanScriptBalance =
         (void $ trace contract )
 
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend entire token balance locked by the script
-spendTokenBalanceFromScript :: TestTree
-spendTokenBalanceFromScript =
+spendTokenBalanceFromScript :: SubmitTx -> TestTree
+spendTokenBalanceFromScript sub =
     let token = someTokens 1
-        contract = mustProduceAtLeastContract
+        contract = mustProduceAtLeastContract sub
                        (baseAdaValueLockedByScript <> token)
                        (baseAdaValueLockedByScript <> token)
                        baseAdaAndTokenValueLockedByScript
@@ -139,10 +146,10 @@ spendTokenBalanceFromScript =
         (void $ trace contract)
 
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend more than the ada balance locked by the script, excess is paid by own wallet.
-spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup :: TestTree
-spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup =
+spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup :: SubmitTx -> TestTree
+spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup sub =
     let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
-        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript w1Address
+        contract = mustProduceAtLeastContract sub amt amt baseAdaValueLockedByScript w1Address
     in checkPredicateOptions
         defaultCheckOptions
         "Validation pass when mustProduceAtLeast is greater than script's balance"
@@ -152,10 +159,10 @@ spendMoreThanScriptBalanceWithOwnWalletAsOwnPubkeyLookup =
 -- | Uses onchain and offchain constraint mustProduceAtLeast to spend more than the ada balance
 -- locked by the script and own wallet. Using setSigningProcess doesn't mean that other wallet can
 -- be used to pay excess.
-contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup :: TestTree
-contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup =
+contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup :: SubmitTx -> TestTree
+contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup sub =
     let amt = Ada.lovelaceValueOf (baseLovelaceLockedByScript + 5_000_000)
-        contract = mustProduceAtLeastContract amt amt baseAdaValueLockedByScript $ mockWalletAddress w6
+        contract = mustProduceAtLeastContract sub amt amt baseAdaValueLockedByScript $ mockWalletAddress w6
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (const amt) -- not enough funds remain for w1 to satisfy constraint
         traceWithW6Signing = do
@@ -170,11 +177,11 @@ contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup =
         (void traceWithW6Signing)
 
 -- Contract error is thrown when there are not enough tokens at the script and own wallet to satisfy mostProduceAtLeast constraint
-contractErrorWhenUnableToSpendMoreThanScriptTokenBalance :: TestTree
-contractErrorWhenUnableToSpendMoreThanScriptTokenBalance =
+contractErrorWhenUnableToSpendMoreThanScriptTokenBalance :: SubmitTx -> TestTree
+contractErrorWhenUnableToSpendMoreThanScriptTokenBalance sub =
     let offAmt = baseAdaValueLockedByScript <> someTokens 2
         onAmt  = baseAdaValueLockedByScript <> someTokens 2
-        contract = mustProduceAtLeastContract offAmt onAmt baseAdaAndTokenValueLockedByScript w1Address
+        contract = mustProduceAtLeastContract sub offAmt onAmt baseAdaAndTokenValueLockedByScript w1Address
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (someTokens 1 <>)
     in checkPredicateOptions
@@ -185,12 +192,12 @@ contractErrorWhenUnableToSpendMoreThanScriptTokenBalance =
         (void $ trace contract)
 
 -- Uses onchain and offchain constraint mustProduceAtLeast with a higher expected ada value onchain, asserts script evaluation error.
-phase2FailureWhenProducedAdaAmountIsNotSatisfied :: TestTree
-phase2FailureWhenProducedAdaAmountIsNotSatisfied =
+phase2FailureWhenProducedAdaAmountIsNotSatisfied :: SubmitTx -> TestTree
+phase2FailureWhenProducedAdaAmountIsNotSatisfied sub =
     let w1StartingBalance = 100_000_000
         offAmt = baseAdaValueLockedByScript
         onAmt  = Ada.lovelaceValueOf (baseLovelaceLockedByScript + w1StartingBalance) -- fees make this impossible to satisfy onchain
-        contract = mustProduceAtLeastContract offAmt onAmt baseAdaValueLockedByScript w1Address
+        contract = mustProduceAtLeastContract sub offAmt onAmt baseAdaValueLockedByScript w1Address
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (const $ Ada.lovelaceValueOf w1StartingBalance)
     in checkPredicateOptions
@@ -200,11 +207,11 @@ phase2FailureWhenProducedAdaAmountIsNotSatisfied =
         (void $ trace contract)
 
 -- Uses onchain and offchain constraint mustProduceAtLeast with a higher expected token value onchain, asserts script evaluation error.
-phase2FailureWhenProducedTokenAmountIsNotSatisfied :: TestTree
-phase2FailureWhenProducedTokenAmountIsNotSatisfied =
+phase2FailureWhenProducedTokenAmountIsNotSatisfied :: SubmitTx -> TestTree
+phase2FailureWhenProducedTokenAmountIsNotSatisfied sub =
     let offAmt = baseAdaValueLockedByScript <> someTokens 1
         onAmt  = baseAdaValueLockedByScript <> someTokens 2
-        contract = mustProduceAtLeastContract offAmt onAmt baseAdaAndTokenValueLockedByScript w1Address
+        contract = mustProduceAtLeastContract sub offAmt onAmt baseAdaAndTokenValueLockedByScript w1Address
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (someTokens 1 <>)
     in checkPredicateOptions
@@ -231,3 +238,18 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
 
 scrAddress :: Ledger.CardanoAddress
 scrAddress = Scripts.validatorCardanoAddress Ledger.testnet typedValidator
+
+type SubmitTx
+  =  Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
+
+cardanoSubmitTx :: SubmitTx
+cardanoSubmitTx lookups tx = let
+  p = defaultCheckOptions ^. emulatorConfig . Trace.params
+  tx' = Tx.Constraints.mkTx @UnitTest p lookups tx
+  in submitUnbalancedTx =<<
+    (mapError (review _TxConstraintResolutionContractError) $ either throwError pure tx')
+
+ledgerSubmitTx :: SubmitTx
+ledgerSubmitTx = submitTxConstraintsWith

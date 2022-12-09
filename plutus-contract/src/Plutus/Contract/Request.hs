@@ -905,7 +905,6 @@ ownFirstPaymentPubKeyHash = do
 --    of the final transaction when the transaction was submitted. Throws an
 --    error if balancing or signing failed.
 submitUnbalancedTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e CardanoTx
--- See Note [Injecting errors into the user's error type]
 submitUnbalancedTx utx = do
   tx <- balanceTx utx
   submitBalancedTx tx
@@ -913,7 +912,6 @@ submitUnbalancedTx utx = do
 -- | Send an unbalanced transaction to be balanced. Returns the balanced transaction.
 --    Throws an error if balancing failed.
 balanceTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e CardanoTx
--- See Note [Injecting errors into the user's error type]
 balanceTx t =
   let req = pabReq (BalanceTxReq t) E._BalanceTxResp in
   req >>= either (throwError . review _WalletContractError) pure . view E.balanceTxResponse
@@ -922,7 +920,6 @@ balanceTx t =
 --    of the final transaction when the transaction was submitted. Throws an
 --    error if signing failed.
 submitBalancedTx :: forall w s e. (AsContractError e) => CardanoTx -> Contract w s e CardanoTx
--- See Note [Injecting errors into the user's error type]
 submitBalancedTx t =
   let req = pabReq (WriteBalancedTxReq t) E._WriteBalancedTxResp in
   req >>= either (throwError . review _WalletContractError) pure . view E.writeBalancedTxResponse
