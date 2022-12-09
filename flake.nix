@@ -100,7 +100,6 @@
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
 
-
         # Exported to generate tullia tasks from
         oldCiJobs = import ./release.nix {
           inherit system;
