@@ -42,8 +42,8 @@ let
 
   final-jobset =
     # Darwin doesn't currently work in Cicero
-    # if pkgs.system == "x86_64-linux" || pkgs.system == "x86_64-darwin" then
-    if pkgs.system == "x86_64-linux" then
+    if pkgs.system == "x86_64-linux" || pkgs.system == "x86_64-darwin" then
+    # if pkgs.system == "x86_64-linux" then
       jobs // { required = required-job; }
     else { };
 

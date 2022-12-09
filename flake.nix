@@ -90,7 +90,6 @@
 
   outputs = { self, flake-utils, tullia, ... }@inputs:
     (flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
-      # (flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         topLevel = import ./. {
           inherit system;
