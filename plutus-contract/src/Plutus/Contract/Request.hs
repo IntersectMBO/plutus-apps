@@ -129,7 +129,7 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (AssetClass, CardanoAddress, DiffMilliSeconds, POSIXTime, Params, PaymentPubKeyHash (PaymentPubKeyHash),
-               Slot, TxId, TxOutRef, Value, cardanoAddressCredential, fromMilliSeconds, toPlutusAddress, txOutRefId)
+               Slot, TxId, TxOutRef, Value, cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -159,7 +159,6 @@ import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _Constr
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
-import Plutus.V1.Ledger.Address (toPubKeyHash)
 import Wallet.Emulator.Error (WalletAPIError (NoPaymentPubKeyHashError))
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
@@ -893,7 +892,7 @@ ownAddress = NonEmpty.head <$> ownAddresses
 ownPaymentPubKeyHashes :: forall w s e. (AsContractError e) => Contract w s e [PaymentPubKeyHash]
 ownPaymentPubKeyHashes = do
     addrs <- ownAddresses
-    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ NonEmpty.toList $ toPlutusAddress <$> addrs
+    pure $ fmap PaymentPubKeyHash $ mapMaybe cardanoPubKeyHash $ NonEmpty.toList $ addrs
 
 ownFirstPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
 ownFirstPaymentPubKeyHash = do
