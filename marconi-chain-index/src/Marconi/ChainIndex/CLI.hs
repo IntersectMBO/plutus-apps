@@ -13,6 +13,7 @@ module Marconi.ChainIndex.CLI
     , datumDbPath
     , scriptTxDbPath
     , epochStakepoolSizeDbPath
+    , mintBurnDbPath
     ) where
 
 import Control.Applicative (optional, some)
@@ -109,6 +110,7 @@ data Options = Options
     optionsDisableDatum         :: Bool,
     optionsDisableScript        :: Bool,
     optionsDisableStakepoolSize :: Bool,
+    optionsDisableMintBurn      :: Bool,
     optionsTargetAddresses      :: Maybe TargetAddresses,
     optionsNodeConfigPath       :: Maybe FilePath
   }
@@ -144,23 +146,21 @@ optionsParser =
                       <> Opt.help "Dirctory Path for SQLite database.")
     <*> Opt.switch (Opt.long "disable-utxo"
                       <> Opt.help "disable utxo indexers."
-                      <> Opt.showDefault
                      )
     <*> Opt.switch (Opt.long "disable-address-datum"
                       <> Opt.help "disable address->datum indexers."
-                      <> Opt.showDefault
                      )
     <*> Opt.switch (Opt.long "disable-datum"
                       <> Opt.help "disable datum indexers."
-                      <> Opt.showDefault
                      )
     <*> Opt.switch (Opt.long "disable-script-tx"
                       <> Opt.help "disable script-tx indexers."
-                      <> Opt.showDefault
                      )
     <*> Opt.switch (Opt.long "disable-epoch-stakepool-size"
                       <> Opt.help "disable epoch stakepool size indexers."
-                      <> Opt.showDefault
+                     )
+    <*> Opt.switch (Opt.long "disable-mintburn"
+                      <> Opt.help "disable mint/burn indexers."
                      )
     <*> optAddressesParser (Opt.long "addresses-to-index"
                             <> Opt.short 'a'
@@ -190,6 +190,9 @@ scriptTxDbName = "scripttx.db"
 epochStakepoolSizeDbName :: FilePath
 epochStakepoolSizeDbName = "epochstakepool.db"
 
+mintBurnDbName :: FilePath
+mintBurnDbName = "mintburn.db"
+
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
 
@@ -204,3 +207,6 @@ scriptTxDbPath o = if optionsDisableScript o then Nothing; else Just (optionsDbP
 
 epochStakepoolSizeDbPath :: Options -> Maybe FilePath
 epochStakepoolSizeDbPath o = if optionsDisableStakepoolSize o then Nothing else Just (optionsDbPath o </> epochStakepoolSizeDbName)
+
+mintBurnDbPath :: Options -> Maybe FilePath
+mintBurnDbPath o = if optionsDisableMintBurn o then Nothing else Just (optionsDbPath o </> mintBurnDbName)
