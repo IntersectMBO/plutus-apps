@@ -402,7 +402,7 @@ mustReferenceOutputTxV2Contract = do
     submitTxConfirmed $ mkTx lookups1 tx1
 
     -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt $ mustReferenceOutputV2ValidatorAddress
+    scriptUtxos <- utxosAt mustReferenceOutputV2ValidatorAddress
     let
         scriptUtxo = fst . head . M.toList $ scriptUtxos
         lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos)

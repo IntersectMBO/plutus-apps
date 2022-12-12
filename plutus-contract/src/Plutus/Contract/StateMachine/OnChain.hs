@@ -106,6 +106,8 @@ data StateMachineInstance s i = StateMachineInstance {
     typedValidator :: TypedValidator (StateMachine s i)
     }
 
+-- | TODO StateMachine can be use only on a testnet at the moment, to enable it on another network, we need to
+-- parametrise the networkId
 machineAddress :: StateMachineInstance s i -> CardanoAddress
 machineAddress = validatorCardanoAddress testnet . typedValidator
 

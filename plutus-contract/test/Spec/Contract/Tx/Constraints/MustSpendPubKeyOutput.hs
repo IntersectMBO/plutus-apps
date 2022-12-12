@@ -12,6 +12,7 @@ import Control.Lens (at, non, (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.Either (fromRight)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)
 import Ledger qualified
@@ -26,6 +27,7 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
+import Marconi.Api.Types (CliArgs (networkId))
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
@@ -74,16 +76,16 @@ mustSpendPubKeyOutputContract = mustSpendPubKeyOutputContract' []
 
 mustSpendPubKeyOutputContract' :: [Ledger.PaymentPubKeyHash] -> [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
-    params <- getParams
+    networkId <- Ledger.pNetworkId <$> getParams
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs (Ada.lovelaceValueOf baseLovelaceLockedByScript)
             <> foldMap Constraints.mustBeSignedBy keys
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    pubKeyUtxos <- utxosAt $ either (error "can't build address") id $ toCardanoAddressInEra (Ledger.pNetworkId params) $ Ledger.pubKeyHashAddress pkh Nothing
-    logInfo @String $ "pubKeyUtxos:: " ++ show pubKeyUtxos -- remove
-    scriptUtxos <- utxosAt $ scrAddress (Ledger.pNetworkId params)
+    pubKeyUtxos <- utxosAt $ fromRight (error "can't build address")
+                           $ toCardanoAddressInEra networkId $ Ledger.pubKeyHashAddress pkh Nothing
+    scriptUtxos <- utxosAt $ scrAddress networkId
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
