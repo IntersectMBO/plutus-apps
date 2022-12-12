@@ -346,7 +346,7 @@ fromPlutusTx params utxo requiredSigners tx = do
 
 getRequiredSigners :: C.Api.Tx C.Api.BabbageEra -> [P.PaymentPubKeyHash]
 getRequiredSigners (C.Api.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
-  foldMap (pure . P.PaymentPubKeyHash . P.fromCardanoPaymentKeyHash . C.Api.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
+  foldMap (pure . P.PaymentPubKeyHash . P.toPlutusPubKeyHash . C.Api.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
 
 fromPlutusIndex :: P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
 fromPlutusIndex (P.UtxoIndex m) =

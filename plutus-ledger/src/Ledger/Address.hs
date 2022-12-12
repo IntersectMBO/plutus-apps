@@ -12,6 +12,7 @@ module Ledger.Address
     , StakePubKey(..)
     , StakePubKeyHash(..)
     , toPlutusAddress
+    , toPlutusPubKeyHash
     , cardanoAddressCredential
     , cardanoPubKeyHash
     , cardanoStakingCredential
@@ -91,6 +92,9 @@ cardanoPubKeyHash addr = case cardanoAddressCredential addr of
 
 toPlutusAddress :: C.AddressInEra era -> Address
 toPlutusAddress address = Address (cardanoAddressCredential address) (cardanoStakingCredential address)
+
+toPlutusPubKeyHash :: C.Hash C.PaymentKey -> PubKeyHash
+toPlutusPubKeyHash paymentKeyHash = PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes paymentKeyHash
 
 scriptToValidatorHash :: C.ScriptHash -> ValidatorHash
 scriptToValidatorHash = ValidatorHash . PlutusTx.toBuiltin . C.serialiseToRawBytes
