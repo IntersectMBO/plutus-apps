@@ -27,7 +27,6 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
-import Marconi.Api.Types (CliArgs (networkId))
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
