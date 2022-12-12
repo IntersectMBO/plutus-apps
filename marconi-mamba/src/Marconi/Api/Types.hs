@@ -79,12 +79,8 @@ instance ToJSON UtxoTxOutReport where
 
 newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving (Eq, Ord, Show, Generic)
 
--- instance ToJSON AddressAny where toJSON = toJSON . anyAddressInShelleyBasedEra @CurrentEra
-
 instance ToJSON UtxoRowWrapper where
     toEncoding = genericToEncoding defaultOptions
-
--- instance ToJSON UtxoRow where toEncoding = genericToEncoding defaultOptions
 
 data QueryExceptions
     = AddressNotInListError QueryExceptions

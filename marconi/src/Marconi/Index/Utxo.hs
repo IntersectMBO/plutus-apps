@@ -324,7 +324,6 @@ query ix addr volatiles = do
        LEFT JOIN spent s ON u.txId = s.txId
             AND u.txIx = s.txIx
        WHERE u.address = ?|]
-        -- "SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash, u.value, u.inLineScriptHash, u.inLineScriptHash, u.slotNo, u.blockNo FROM unspent_transactions u LEFT JOIN spent s ON u.txId = s.txId AND u.txIx = s.txIx WHERE u.address = ?"
        (Only addr) :: IO[UtxoRow]
   buffered <- Ix.getBuffer $ ix ^. Ix.storage :: IO [UtxoEvent]
   let events = volatiles ++ buffered
