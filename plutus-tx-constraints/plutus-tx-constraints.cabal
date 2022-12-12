@@ -57,6 +57,7 @@ library
   build-depends:
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
 
   --------------------------
   -- Other IOG dependencies

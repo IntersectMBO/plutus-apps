@@ -388,7 +388,6 @@ ownOutputs WalletState{_mockWallet} = do
     txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, DecoratedTxOut))
     txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.unspentTxOutFromRef ref
 
-
 -- | The default signing process is 'signWallet'
 defaultSigningProcess :: MockWallet -> SigningProcess
 defaultSigningProcess = signWallet

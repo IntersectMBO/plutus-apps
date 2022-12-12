@@ -53,28 +53,43 @@ mkPolicy _ _ = True
 mkPolicyV2 :: () -> PV2.ScriptContext -> Bool
 mkPolicyV2 _ _ = True
 
-coinMintingPolicy :: Ledger.MintingPolicy
-coinMintingPolicy = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| PSU.mkUntypedMintingPolicy mkPolicy ||])
+coinMintingPolicy :: Language -> Versioned Ledger.MintingPolicy
+coinMintingPolicy lang = case lang of
+  PlutusV1 -> Versioned coinMintingPolicyV1 lang
+  PlutusV2 -> Versioned coinMintingPolicyV2 lang
 
-coinMintingPolicyHash :: Ledger.MintingPolicyHash
-coinMintingPolicyHash = PV1.mintingPolicyHash coinMintingPolicy
+coinMintingPolicyV1 :: Ledger.MintingPolicy
+coinMintingPolicyV1 = Ledger.mkMintingPolicyScript
+    $$(PlutusTx.compile [|| PSU.mkUntypedMintingPolicy mkPolicy ||])
 
 coinMintingPolicyV2 :: Ledger.MintingPolicy
 coinMintingPolicyV2 = Ledger.mkMintingPolicyScript
     $$(PlutusTx.compile [|| PSU.mkUntypedMintingPolicy mkPolicyV2 ||])
 
+coinMintingPolicyHash :: Language -> Ledger.MintingPolicyHash
+coinMintingPolicyHash lang = case lang of
+  PlutusV1 -> coinMintingPolicyHashV1
+  PlutusV2 -> coinMintingPolicyHashV2
+
+coinMintingPolicyHashV1 :: Ledger.MintingPolicyHash
+coinMintingPolicyHashV1 = PV1.mintingPolicyHash coinMintingPolicyV1
+
 coinMintingPolicyHashV2 :: Ledger.MintingPolicyHash
 coinMintingPolicyHashV2 = PV2.mintingPolicyHash coinMintingPolicyV2
 
-coinMintingPolicyCurrencySymbol :: Ledger.CurrencySymbol
-coinMintingPolicyCurrencySymbol = Value.mpsSymbol coinMintingPolicyHash
+coinMintingPolicyCurrencySymbol :: Language -> Ledger.CurrencySymbol
+coinMintingPolicyCurrencySymbol lang = case lang of
+  PlutusV1 -> coinMintingPolicyCurrencySymbolV1
+  PlutusV2 -> coinMintingPolicyCurrencySymbolV2
+
+coinMintingPolicyCurrencySymbolV1 :: Ledger.CurrencySymbol
+coinMintingPolicyCurrencySymbolV1 = Value.mpsSymbol $ coinMintingPolicyHash PlutusV1
 
 coinMintingPolicyCurrencySymbolV2 :: Ledger.CurrencySymbol
-coinMintingPolicyCurrencySymbolV2 = Value.mpsSymbol coinMintingPolicyHashV2
+coinMintingPolicyCurrencySymbolV2 = Value.mpsSymbol $ coinMintingPolicyHash PlutusV2
 
-someToken :: Ledger.Value
-someToken = Value.singleton coinMintingPolicyCurrencySymbol "someToken" 1
+someToken :: Language -> Ledger.Value
+someToken lang = Value.singleton (coinMintingPolicyCurrencySymbol lang) "someToken" 1
 
 asRedeemer :: PlutusTx.ToData a => a -> Ledger.Redeemer
 asRedeemer a = Ledger.Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
