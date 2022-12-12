@@ -325,7 +325,6 @@ processConstraint = \case
         unbalancedTx . tx . txInsReference <>= [ txIn ]
 
     P.MustMintValue mpsHash red tn i mref -> do
-        -- See note [Mint and Fee fields must have ada symbol].
         let value = Value.singleton (Value.mpsSymbol mpsHash) tn
 
         -- If i is negative we are burning tokens. The tokens burned must
@@ -366,45 +365,6 @@ processConstraint = \case
         unbalancedTx . tx . txOuts <>= [ out ]
 
     c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"
-
-{-
--- | Add a typed input, checking the type of the output it spends. Return the value
---   of the spent output.
-addOwnInput
-    :: ( MonadReader (P.ScriptLookups a) m
-       , MonadError MkTxError m
-       , MonadState P.ConstraintProcessingState m
-       , FromData (DatumType a)
-       , ToData (DatumType a)
-       , ToData (RedeemerType a)
-       )
-    => P.ScriptInputConstraint (RedeemerType a)
-    -> m ()
-addOwnInput P.ScriptInputConstraint{P.icRedeemer, P.icTxOutRef} = do
-    P.ScriptLookups{P.slTxOutputs, P.slTypedValidator} <- ask
-    inst <- maybe (throwError $ LedgerMkTxError P.TypedValidatorMissing) pure slTypedValidator
-    Typed.TypedScriptTxOutRef{Typed.tyTxOutRefRef, Typed.tyTxOutRefOut} <-
-      either (throwError . LedgerMkTxError . P.TypeCheckFailed) pure
-      $ runExcept @Typed.ConnectionError
-      $ do
-          (txOut, datum) <- maybe (throwError $ UnknownRef icTxOutRef) pure $ do
-                                ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.decoratedTxOutDatum . _2 . Tx.datumInDatumFromQuery
-                                pure (Tx.toTxInfoTxOut ciTxOut, datum)
-          Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
-    let vl = txOutValue $ Typed.tyTxOutTxOut tyTxOutRefOut
-    P.valueSpentInputs <>= P.provided vl
-    let datum = C.ScriptDatumForTxIn $ C.toCardanoScriptData $ toBuiltinData $ Typed.tyTxOutData tyTxOutRefOut
-    txIn <- either (throwError . ToCardanoError) pure $ C.toCardanoTxIn tyTxOutRefRef
-    mkWitness <- either (throwError . ToCardanoError) pure
-                     $ C.toCardanoTxInScriptWitnessHeader $ fmap getValidator $ Typed.vValidatorScript inst
-    let witIn = C.ScriptWitness
-                    C.ScriptWitnessForSpending
-                    $ mkWitness datum (C.toCardanoScriptData $ toBuiltinData icRedeemer) C.zeroExecutionUnits
-    unbalancedTx . tx .txIns <>= [(txIn, C.BuildTxWith witIn)]
-
-    pure ()
--}
 
 lookupTxOutRef
     :: Tx.TxOutRef

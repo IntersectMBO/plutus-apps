@@ -10,9 +10,7 @@ import Ledger qualified
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed as PSU
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS2
 import Plutus.V1.Ledger.Api (Address, Validator)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
