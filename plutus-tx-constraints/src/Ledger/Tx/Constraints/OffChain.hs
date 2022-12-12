@@ -52,21 +52,20 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (Lens', Traversal', _2, coerced, iso, lens, makeLensesFor, set, use, (%=), (.=), (<>=), (^.), (^?))
+import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), (<>=), (^.), (^?))
 import Control.Lens.Extras (is)
 import Control.Monad.Except (Except, MonadError, guard, lift, mapExcept, runExcept, throwError, withExcept)
-import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), mapReaderT)
+import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
 import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
+import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Datum (Datum), Language (PlutusV2), MintingPolicy, MintingPolicyHash, POSIXTimeRange, Params (..),
-               Redeemer (Redeemer), TxInput (TxInput), Versioned, decoratedTxOutReferenceScript, networkIdL,
-               pProtocolParams)
-import Ledger.Ada qualified as Ada
+import Ledger (Datum, Language (PlutusV2), MintingPolicy, MintingPolicyHash, POSIXTimeRange, Params (..), Versioned,
+               decoratedTxOutReferenceScript, networkIdL, pProtocolParams)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
@@ -80,10 +79,8 @@ import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), toCardanoMintWitness, toCardanoPolicyId)
 import Ledger.Tx.CardanoAPI qualified as C
-import Ledger.Typed.Scripts (ConnectionError (UnknownRef), ValidatorTypes (DatumType, RedeemerType))
+import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
-import Plutus.V2.Ledger.Api (Datum, ToData (toBuiltinData), TxOut (txOutValue))
 import PlutusTx (FromData, ToData)
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), MeetSemiLattice ((/\)))
 import Prettyprinter (Pretty (pretty), colon, (<+>))
@@ -226,14 +223,11 @@ prepareConstraints ownOutputs constraints = do
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
 processLookupsAndConstraints
-    :: ( FromData (DatumType a)
-       , ToData (DatumType a)
-       , ToData (RedeemerType a)
-       )
+    :: ToData (DatumType a)
     => P.ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> StateT P.ConstraintProcessingState (Except MkTxError) ()
-processLookupsAndConstraints lookups TxConstraints{txConstraints, P.txOwnInputs, txOwnOutputs} = do
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} = do
         flip runReaderT lookups $ do
             sortedConstraints <- prepareConstraints txOwnOutputs txConstraints
             traverse_ processConstraint (otherConstraints sortedConstraints)

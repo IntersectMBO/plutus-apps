@@ -475,7 +475,8 @@ mustMintPolicyV1 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
 mustMintPolicyV2 :: Scripts.MintingPolicy
 mustMintPolicyV2 = PV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
-        wrap = Scripts.mkUntypedMintingPolicy mkMustMintPolicyV2
+        checkedMkMustMintPolicy = mkMustMintPolicy TCV2.checkScriptContext
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustMintPolicy
 
 mustMintPolicy :: Ledger.Language -> Ledger.Versioned Scripts.MintingPolicy
 mustMintPolicy lang = case lang of

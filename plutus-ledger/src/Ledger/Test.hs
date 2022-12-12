@@ -62,11 +62,11 @@ coinMintingPolicy lang = case lang of
 
 coinMintingPolicyV1 :: Ledger.MintingPolicy
 coinMintingPolicyV1 = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS1.mkUntypedMintingPolicy mkPolicy ||])
+    $$(PlutusTx.compile [|| PSU.mkUntypedMintingPolicy mkPolicy ||])
 
 coinMintingPolicyV2 :: Ledger.MintingPolicy
 coinMintingPolicyV2 = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS2.mkUntypedMintingPolicy mkPolicyV2 ||])
+    $$(PlutusTx.compile [|| PSU.mkUntypedMintingPolicy mkPolicyV2 ||])
 
 coinMintingPolicyHash :: Language -> Ledger.MintingPolicyHash
 coinMintingPolicyHash lang = case lang of
