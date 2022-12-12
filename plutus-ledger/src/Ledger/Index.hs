@@ -25,6 +25,7 @@ module Ledger.Index(
     ValidationPhase(..),
     minFee,
     maxFee,
+    adjustTxOut,
     minAdaTxOut,
     minAdaTxOutEstimated,
     maxMinAdaTxOut,
@@ -40,7 +41,7 @@ import Prelude hiding (lookup)
 
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Control.Lens (Fold, folding, (.~))
+import Control.Lens (Fold, folding, (&), (.~))
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
@@ -50,8 +51,9 @@ import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
 import Ledger.Params (PParams)
-import Ledger.Tx (CardanoTx (..), Tx, TxIn (TxIn, txInType), TxInType (ConsumePublicKeyAddress, ScriptAddress),
-                  TxOut (getTxOut), TxOutRef, outValue, txOutValue, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx (..), ToCardanoError, Tx, TxIn (TxIn, txInType),
+                  TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut (getTxOut), TxOutRef, outValue, txOutValue,
+                  updateUtxoCollateral)
 import Ledger.Tx.CardanoAPI (toCardanoTxOutValue)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
@@ -95,6 +97,21 @@ Therefore 'checkMintingAuthorised' should not be applied to the first transactio
 the blockchain.
 
 -}
+
+-- | Adjust a single transaction output so it contains at least the minimum amount of Ada
+-- and return the adjustment (if any) and the updated TxOut.
+adjustTxOut :: PParams -> TxOut -> Either ToCardanoError ([Ada.Ada], TxOut)
+adjustTxOut params txOut = do
+    -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
+    withMinAdaValue <- toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
+    let txOutEstimate = txOut & outValue .~ withMinAdaValue
+        minAdaTxOutEstimated' = minAdaTxOut params txOutEstimate
+        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
+    if missingLovelace > 0
+    then do
+      adjustedLovelace <- toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
+      pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
+    else pure ([], txOut)
 
 -- | Exact computation of the mimimum Ada required for a given TxOut.
 -- TODO: Should be moved to cardano-api-extended once created

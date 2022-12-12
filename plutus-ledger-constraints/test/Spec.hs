@@ -213,7 +213,7 @@ mustSpendScriptOutputFailsWithDifferentReferenceScript = property $ do
 
 prepFromTxConstraints
     :: Constraints.TxConstraints Void Void
-    -> Either MkTxError ([Constraints.TxConstraint], [Constraints.TxConstraint])
+    -> Either MkTxError [Constraints.TxConstraint]
 prepFromTxConstraints txCons = runExcept $
         prepareConstraints @Void (Constraints.txOwnOutputs txCons) (Constraints.txConstraints txCons)
         `runReaderT` mempty

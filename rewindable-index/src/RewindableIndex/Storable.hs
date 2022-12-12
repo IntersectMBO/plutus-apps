@@ -2,7 +2,6 @@ module RewindableIndex.Storable
   ( -- * State
     Config
   , memoryBufferSize
-  , diskBufferSize
   , State
   , handle
   , config
@@ -18,6 +17,7 @@ module RewindableIndex.Storable
   , StorablePoint
   , StorableQuery
   , StorableResult
+  , StorableMonad
     -- * API
   , QueryInterval(..)
   , Buffered(..)
@@ -62,11 +62,13 @@ import GHC.Generics (Generic)
 -}
 data family StorableEvent h
 
-data family StorablePoint h
+type family StorablePoint h
 
 data family StorableQuery h
 
 data family StorableResult h
+
+type family StorableMonad h :: * -> *
 
 {-
    Query intervals are a necessary tool to make the queries a little safer. As we can
@@ -89,7 +91,7 @@ data QueryInterval p =
 
    |e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|e|                                     |
    |-------------------|---------------|-------------------------------------|
-   |  memory/buffer    |  disk/events  |     disk/aggregate (optional)     |
+   |   memory/buffer   |  disk/events  |       disk/aggregate (optional)     |
 
    When the buffer is filled with events, they all get flushed to disk. We need this
    operation for performance reasons. Most databases will have significantly improved
@@ -111,14 +113,14 @@ data QueryInterval p =
      3) We can always extend the interface to include direct support for this pattern
         if there is a demand from the users of the API.
 -}
-class Buffered h m where
+class Buffered h where
   -- This function persists the memory/buffer events to disk.
-  persistToStorage :: Foldable f => f (StorableEvent h) -> h -> m h
+  persistToStorage :: Foldable f => f (StorableEvent h) -> h -> StorableMonad h h
   {- This function retrieves the events from the disk/events area.
      If the user chooses to only store events, without accumulating them, this function
      is expected to return the events over which rollbacks can occur in order to keep
      things performant -}
-  getStoredEvents :: h -> m [StorableEvent h]
+  getStoredEvents :: h -> StorableMonad h [StorableEvent h]
 
 {-
    All information from indexers should be made accessible through queries. Queries
@@ -130,14 +132,14 @@ class Buffered h m where
    interval, the returned result should specify that. It is also recommended that the result
    includes the slot number at which the query was ran.
 -}
-class Queryable h m where
+class Queryable h where
   queryStorage
     :: Foldable f
     => QueryInterval (StorablePoint h)
     -> f (StorableEvent h)
     -> h
     -> StorableQuery h
-    -> m (StorableResult h)
+    -> StorableMonad h (StorableResult h)
 
 {-
    One of the reasons why indexers were born was to solve one of the issues very specific
@@ -147,8 +149,8 @@ class Queryable h m where
 
    This is what the next class is meant to do.
 -}
-class Rewindable h m where
-  rewindStorage :: StorablePoint h -> h -> m (Maybe h)
+class Rewindable h where
+  rewindStorage :: StorablePoint h -> h -> StorableMonad h (Maybe h)
 
 {-
    Another feature of indexers is the ability to resume from a previously stored event.
@@ -163,8 +165,8 @@ class Rewindable h m where
    so there will be no duplication. This may be implemented later if the API users
    request it.
 -}
-class Resumable h m where
-  resumeFromStorage :: h -> m [StorablePoint h]
+class Resumable h where
+  resumeFromStorage :: h -> StorableMonad h [StorablePoint h]
 
 {-
    The next class is witnessing the fact that events contain enough information to
@@ -179,35 +181,32 @@ class HasPoint e p where
    to allocated and when to flush the memory buffer or roll the disk events into
    an aggregate database structure.
 -}
-data Config = Config
+newtype Config = Config
   { _memoryBufferSize :: Int
-  , _diskBufferSize   :: Int
   } deriving (Show, Eq)
 $(Lens.makeLenses ''Config)
 
-data Storage h m = Storage
-  { _events :: VM.MVector (PrimState m) (StorableEvent h)
+data Storage h = Storage
+  { _events :: VM.MVector (PrimState (StorableMonad h)) (StorableEvent h)
   , _cursor :: Int
   }
 $(Lens.makeLenses ''Storage)
 
-data State h m = State
+data State h = State
   { _config  :: Config
-  , _storage :: Storage h m
+  , _storage :: Storage h
   , _handle  :: h
   }
 $(Lens.makeLenses ''State)
 
 emptyState
-  :: PrimMonad m
+  :: PrimMonad (StorableMonad h)
   => Int
-  -> Int
   -> h
-  -> m (State h m)
-emptyState memBuf dskBuf hdl = do
+  -> StorableMonad h (State h)
+emptyState memBuf hdl = do
   v <- VM.new memBuf
   pure $ State { _config = Config { _memoryBufferSize = memBuf
-                                  , _diskBufferSize   = dskBuf
                                   }
                , _storage = Storage { _events = v
                                     , _cursor = 0
@@ -217,16 +216,16 @@ emptyState memBuf dskBuf hdl = do
 
 -- Get events from the memory buffer.
 getMemoryEvents
-  :: Storage h m
-  -> V.MVector (PrimState m) (StorableEvent h)
+  :: Storage h
+  -> V.MVector (PrimState (StorableMonad h)) (StorableEvent h)
 getMemoryEvents s = VM.slice 0 (s ^. cursor) (s ^. events)
 
 -- Get events from memory buffer and disk buffer.
 getEvents
-  :: Buffered h m
-  => PrimMonad m
-  => State h m
-  -> m [StorableEvent h]
+  :: Buffered h
+  => PrimMonad (StorableMonad h)
+  => State h
+  -> StorableMonad h [StorableEvent h]
 getEvents s = do
   memoryEs <- getMemoryEvents (s ^. storage)
               & V.freeze <&> V.toList
@@ -234,31 +233,31 @@ getEvents s = do
   pure $ diskEs ++ memoryEs
 
 insert
-  :: Buffered h m
-  => PrimMonad m
+  :: Buffered h
+  => PrimMonad (StorableMonad h)
   => StorableEvent h
-  -> State h m
-  -> m (State h m)
+  -> State h
+  -> StorableMonad h (State h)
 insert e s = do
   state'   <- flushBuffer s
   storage' <- appendEvent e (state' ^. storage)
   pure $ state' { _storage = storage' }
 
 appendEvent
-  :: PrimMonad m
+  :: PrimMonad (StorableMonad h)
   => StorableEvent h
-  -> Storage h m
-  -> m (Storage h m)
+  -> Storage h
+  -> StorableMonad h (Storage h)
 appendEvent e s = do
   let cr = s ^. cursor
   VM.write (s ^. events) cr e
   pure $ s & cursor %~ (+1)
 
 flushBuffer
-  :: Buffered h m
-  => PrimMonad m
-  => State h m
-  -> m (State h m)
+  :: Buffered h
+  => PrimMonad (StorableMonad h)
+  => State h
+  -> StorableMonad h (State h)
 flushBuffer s = do
   let cr = s ^. storage . cursor
       es = getMemoryEvents $ s ^. storage
@@ -273,23 +272,23 @@ flushBuffer s = do
 
 insertMany
   :: Foldable f
-  => Buffered h m
-  => PrimMonad m
+  => Buffered h
+  => PrimMonad (StorableMonad h)
   => f (StorableEvent h)
-  -> State h m
-  -> m (State h m)
+  -> State h
+  -> StorableMonad h (State h)
 insertMany es s =
   foldlM (\s' e -> insert e s') s es
 
 rewind
-  :: forall h m.
-     Rewindable h m
+  :: forall h.
+     Rewindable h
   => HasPoint (StorableEvent h) (StorablePoint h)
-  => PrimMonad m
+  => PrimMonad (StorableMonad h)
   => Eq (StorablePoint h)
   => StorablePoint h
-  -> State h m
-  -> m (Maybe (State h m))
+  -> State h
+  -> StorableMonad h (Maybe (State h))
 rewind p s = do
   m' <- rewindMemory
   h' <- rewindStorage p (s ^. handle)
@@ -298,21 +297,21 @@ rewind p s = do
   -- on disk, then the memory needs to be reset.
   pure $ m' <|> resetMemory s <$> h'
   where
-    rewindMemory :: m (Maybe (State h m))
+    rewindMemory :: StorableMonad h (Maybe (State h))
     rewindMemory = do
       v <- V.freeze $ VM.slice 0 (s ^. storage . cursor) (s ^. storage . events)
       pure $ do
         ix   <- VG.findIndex (\e -> getPoint e == p) v
         pure $ s & storage . cursor .~ (ix + 1)
-    resetMemory :: State h m -> h -> State h m
+    resetMemory :: State h -> h -> State h
     resetMemory s' h =
       s' & handle  .~ h
          & storage . cursor .~ 0
 
 resume
-  :: Resumable h m
-  => State h m
-  -> m [StorablePoint h]
+  :: Resumable h
+  => State h
+  -> StorableMonad h [StorablePoint h]
 resume s = resumeFromStorage (s ^. handle)
 
 {-
@@ -347,12 +346,12 @@ filterWithQueryInterval (QInterval start end) es =
 query
   :: HasPoint (StorableEvent h) (StorablePoint h)
   => Ord (StorablePoint h)
-  => Queryable h m
-  => PrimMonad m
+  => Queryable h
+  => PrimMonad (StorableMonad h)
   => QueryInterval (StorablePoint h)
-  -> State h m
+  -> State h
   -> StorableQuery h
-  -> m (StorableResult h)
+  -> StorableMonad h (StorableResult h)
 query qi s q = do
   es  <- getMemoryEvents (s ^. storage) & V.freeze <&> V.toList
   queryStorage qi (filterWithQueryInterval qi es) (s ^. handle) q

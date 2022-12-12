@@ -52,7 +52,7 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Control.Lens (Lens', Traversal', coerced, iso, lens, makeLensesFor, set, use, (%=), (.=), (<>=), (^.))
+import Control.Lens (Lens', Traversal', coerced, iso, makeLensesFor, use, (.=), (<>=), (^.))
 import Control.Lens.Extras (is)
 import Control.Monad.Except (Except, MonadError, guard, lift, mapExcept, runExcept, throwError, withExcept)
 import Control.Monad.Reader (ReaderT (runReaderT), mapReaderT)
@@ -72,7 +72,7 @@ import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Ledger.Interval ()
 import Ledger.Orphans ()
-import Ledger.Scripts (ScriptHash, getDatum, getRedeemer, getValidator)
+import Ledger.Scripts (ScriptHash, getRedeemer, getValidator)
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
@@ -187,9 +187,8 @@ mkSomeTx params xs =
 
 data SortedConstraints
    = MkSortedConstraints
-   { rangeConstraints        :: [POSIXTimeRange]
-   , includeDatumConstraints :: [TxConstraint]
-   , otherConstraints        :: [TxConstraint]
+   { rangeConstraints :: [POSIXTimeRange]
+   , otherConstraints :: [TxConstraint]
    }
 
 prepareConstraints
@@ -203,8 +202,8 @@ prepareConstraints ownOutputs constraints = do
         P.MustValidateIn range -> Left range
         other                  -> Right other
       (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> constraints
-    (other, verification) <- mapLedgerMkTxError $ P.prepareConstraints ownOutputs nonRangeConstraints
-    pure $ MkSortedConstraints ranges verification other
+    other <- mapLedgerMkTxError $ P.prepareConstraints ownOutputs nonRangeConstraints
+    pure $ MkSortedConstraints ranges other
 
 
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
@@ -224,7 +223,6 @@ processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnOutputs} 
             -- traverse_ P.processConstraintFun txCnsFuns
             -- traverse_ P.addOwnInput txOwnInputs
             -- P.addMintingRedeemers
-            traverse_ processConstraint (includeDatumConstraints sortedConstraints)
             mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
             lift $ setValidityRange (rangeConstraints sortedConstraints)
 
@@ -257,14 +255,6 @@ mkTx params lookups txc = mkSomeTx params [P.SomeLookupsAndConstraints lookups t
 throwLeft :: (MonadState s m, MonadError err m) => (b -> err) -> Either b r -> m r
 throwLeft f = either (throwError . f) pure
 
--- | The address of a transaction output.
-txOutDatum :: Lens' (C.TxOut ctx era) (C.TxOutDatum ctx era)
-txOutDatum = lens getTxOutDatum s
- where
-    s txOut a = setTxOutDatum txOut a
-    getTxOutDatum (C.TxOut _ _ d _) = d
-    setTxOutDatum (C.TxOut a v _ r) d = C.TxOut a v d r
-
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
@@ -272,16 +262,8 @@ processConstraint
     :: TxConstraint
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) ()
 processConstraint = \case
-    P.MustIncludeDatumInTx d -> do
-        -- We map to all known transaction outputs and change the datum to also
-        -- be included in the transaction body. The current behavior is
-        -- sensitive to the order of the constraints.
-        -- @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@ and
-        -- @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@ yield a
-        -- different result.
-        let datumInTx = C.TxOutDatumInTx C.ScriptDataInBabbageEra (C.toCardanoScriptData (getDatum d))
-        unbalancedTx . tx . txOuts %=
-            \outs -> fmap (set txOutDatum datumInTx) outs
+    P.MustIncludeDatumInTxWithHash _ _ -> pure () -- always succeeds
+    P.MustIncludeDatumInTx _ -> pure () -- always succeeds
     P.MustSpendPubKeyOutput txo -> do
         txout <- lookupTxOutRef txo
         maybe (throwError (LedgerMkTxError $ P.TxOutRefWrongType txo)) pure

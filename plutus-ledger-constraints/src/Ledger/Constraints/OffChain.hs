@@ -54,7 +54,6 @@ module Ledger.Constraints.OffChain(
     , _TxOutRefWrongType
     , _TxOutRefNoReferenceScript
     , _DatumNotFound
-    , _DatumNotFoundInTx
     , _MintingPolicyNotFound
     , _ScriptHashNotFound
     , _TypedValidatorMissing
@@ -90,8 +89,7 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, uses, view, (%=), (&), (.=), (.~), (<>=),
-                     (^.), (^?))
+import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, uses, view, (%=), (.=), (<>=), (^.), (^?))
 import Control.Lens.Extras (is)
 import Control.Monad (forM_, guard)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
@@ -110,7 +108,7 @@ import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript, outValue)
+import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
@@ -121,12 +119,12 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Ledger.Crypto (pubKeyHash)
-import Ledger.Index (minAdaTxOut)
+import Ledger.Index (adjustTxOut)
 import Ledger.Orphans ()
 import Ledger.Params (PParams, Params (pNetworkId, pSlotConfig))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
-                  Versioned (Versioned), txOutValue)
+                  Versioned (Versioned))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
@@ -474,23 +472,11 @@ prepareConstraints
        )
     => [ScriptOutputConstraint (DatumType a)]
     -> [TxConstraint]
-    -> m ([TxConstraint], [TxConstraint])
+    -> m [TxConstraint]
 prepareConstraints ownOutputs constraints = do
-    let
-      -- This is done so that the 'MustIncludeDatumInTxWithHash' and
-      -- 'MustIncludeDatumInTx' are not sensitive to the order of the
-      -- constraints. @mustPayToOtherScriptWithDatumHash ... <> mustIncludeDatumInTx ...@
-      -- and @mustIncludeDatumInTx ... <> mustPayToOtherScriptWithDatumHash ...@
-      -- must yield the same behavior.
-      isVerificationConstraints = \case
-        MustIncludeDatumInTxWithHash {} -> True
-        MustIncludeDatumInTx {}         -> True
-        _                               -> False
-      (verificationConstraints, otherConstraints) =
-          List.partition isVerificationConstraints constraints
     ownOutputConstraints <- concat <$> traverse addOwnOutput ownOutputs
-    cleantConstraints <- cleaningMustSpendConstraints otherConstraints
-    pure (cleantConstraints <> ownOutputConstraints, verificationConstraints)
+    cleanedConstraints <- cleaningMustSpendConstraints constraints
+    pure (cleanedConstraints <> ownOutputConstraints)
 
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
@@ -506,11 +492,10 @@ processLookupsAndConstraints
     -> m ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
     flip runReaderT lookups $ do
-         (constraints, verificationConstraints) <- prepareConstraints txOwnOutputs txConstraints
+         constraints <- prepareConstraints txOwnOutputs txConstraints
          traverse_ processConstraint constraints
          traverse_ processConstraintFun txCnsFuns
          traverse_ addOwnInput txOwnInputs
-         traverse_ processConstraint verificationConstraints
          checkValueSpent
          updateUtxoIndex
 
@@ -562,21 +547,6 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 -- restriction on the real Cardano network).
 adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxOut params)
-
--- | Adjust a single transaction output so it contains at least the minimum amount of Ada
--- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: PParams -> TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
-adjustTxOut params txOut = do
-    -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    withMinAdaValue <- C.toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
-    let txOutEstimate = txOut & outValue .~ withMinAdaValue
-        minAdaTxOutEstimated' = minAdaTxOut params txOutEstimate
-        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
-    if missingLovelace > 0
-    then do
-      adjustedLovelace <- C.toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
-      pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
-    else pure ([], txOut)
 
 
 updateUtxoIndex
@@ -707,18 +677,8 @@ processConstraint
     => TxConstraint
     -> m ()
 processConstraint = \case
-    MustIncludeDatumInTxWithHash dvh dv -> do
-        let dvHash = P.datumHash dv
-        unless (dvHash == dvh)
-            (throwError $ DatumWrongHash dvh dv)
-        datums <- gets $ view (unbalancedTx . tx . Tx.datumWitnesses)
-        unless (dvHash `elem` Map.keys datums)
-            (throwError $ DatumNotFoundInTx dvHash)
-    MustIncludeDatumInTx dv -> do
-        datums <- gets $ view (unbalancedTx . tx . Tx.datumWitnesses)
-        let dvHash = P.datumHash dv
-        unless (dvHash `elem` Map.keys datums)
-            (throwError $ DatumNotFoundInTx dvHash)
+    MustIncludeDatumInTxWithHash _ _ -> pure () -- always succeeds
+    MustIncludeDatumInTx _ -> pure () -- always succeeds
     MustValidateIn timeRange -> do
         slotRange <-
             gets ( flip posixTimeRangeToContainedSlotRange timeRange
@@ -931,7 +891,6 @@ data MkTxError =
     | TxOutRefWrongType TxOutRef
     | TxOutRefNoReferenceScript TxOutRef
     | DatumNotFound DatumHash
-    | DatumNotFoundInTx DatumHash
     | DeclaredInputMismatch Value
     | DeclaredOutputMismatch Value
     | MintingPolicyNotFound MintingPolicyHash
@@ -955,7 +914,6 @@ instance Pretty MkTxError where
         TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
         TxOutRefNoReferenceScript t    -> "Tx out reference does not contain a reference script:" <+> pretty t
         DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found in lookups value"
-        DatumNotFoundInTx h            -> "No datum with hash" <+> pretty h <+> "was found in the transaction body"
         DeclaredInputMismatch v        -> "Discrepancy of" <+> pretty v <+> "inputs"
         DeclaredOutputMismatch v       -> "Discrepancy of" <+> pretty v <+> "outputs"
         MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"

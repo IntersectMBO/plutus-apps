@@ -19,9 +19,13 @@ module Ledger.Tx.CardanoAPI(
   , CardanoBuildTx(..)
   , SomeCardanoApiTx(..)
   , fromCardanoTxInsCollateral
+  , fromCardanoTotalCollateral
+  , fromCardanoReturnCollateral
   , toCardanoTxBody
   , toCardanoTxBodyContent
   , toCardanoTxInsCollateral
+  , toCardanoTotalCollateral
+  , toCardanoReturnCollateral
   , toCardanoTxInWitness
   , toCardanoDatumWitness
   , toCardanoTxInReferenceWitnessHeader
@@ -220,3 +224,25 @@ toCardanoMintValue tx@P.Tx{..} =
              (traverse (\(mph, (rd, mTxOutRef)) ->
                 bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd mTxOutRef (P.lookupMintingPolicy (P.txScripts tx) mph)))
                 indexedMps)
+
+fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe PV1.Value
+fromCardanoTotalCollateral C.TxTotalCollateralNone    = Nothing
+fromCardanoTotalCollateral (C.TxTotalCollateral _ lv) = Just $ fromCardanoLovelace lv
+
+toCardanoTotalCollateral :: Maybe PV1.Value -> Either ToCardanoError (C.TxTotalCollateral C.BabbageEra)
+toCardanoTotalCollateral totalCollateral =
+  case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+    Just txTotalAndReturnCollateralInBabbageEra ->
+      maybe (pure C.TxTotalCollateralNone) (fmap (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) . toCardanoLovelace) totalCollateral
+    Nothing -> pure C.TxTotalCollateralNone
+
+fromCardanoReturnCollateral :: C.TxReturnCollateral C.CtxTx C.BabbageEra -> Maybe P.TxOut
+fromCardanoReturnCollateral C.TxReturnCollateralNone       = Nothing
+fromCardanoReturnCollateral (C.TxReturnCollateral _ txOut) = Just $ P.TxOut txOut
+
+toCardanoReturnCollateral :: Maybe P.TxOut -> C.TxReturnCollateral C.CtxTx C.BabbageEra
+toCardanoReturnCollateral returnCollateral =
+  case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+    Just txTotalAndReturnCollateralInBabbageEra ->
+      maybe C.TxReturnCollateralNone (C.TxReturnCollateral txTotalAndReturnCollateralInBabbageEra . P.getTxOut) returnCollateral
+    Nothing -> C.TxReturnCollateralNone
