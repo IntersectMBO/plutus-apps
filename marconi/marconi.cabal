@@ -80,6 +80,7 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , async
     , base
     , bytestring
     , containers
@@ -87,7 +88,9 @@ library
     , lens
     , mwc-random
     , optparse-applicative
+    , parsec
     , prettyprinter
+    , raw-strings-qq
     , serialise
     , sqlite-simple
     , stm
@@ -126,7 +129,9 @@ test-suite marconi-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Integration
+  other-modules:
+    Integration
+    Spec.Utxo
 
   --------------------
   -- Local components
@@ -152,17 +157,25 @@ test-suite marconi-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base             >=4.9 && <5
+    , base                  >=4.9 && <5
     , bytestring
     , containers
     , directory
     , filepath
     , hedgehog
     , hedgehog-extras
+    , lens
+    , optparse-applicative
     , prettyprinter
     , serialise
+    , sqlite-simple
     , stm
     , streaming
     , tasty
+    , tasty-golden
     , tasty-hedgehog
+    , tasty-hunit
     , temporary
+    , text
+
+-- , aeson

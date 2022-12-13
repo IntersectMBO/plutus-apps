@@ -21,7 +21,6 @@ module Marconi.Api.Types
     (TargetAddresses
     , RpcPortNumber
     , CliArgs (..)
-    , DBConfig (..)
     , DBQueryEnv (..)
     , HasDBQueryEnv (..)
     , JsonRpcEnv (..)
@@ -31,18 +30,20 @@ module Marconi.Api.Types
     , UtxoQueryTMVar (..)
     , QueryExceptions (..)
                          )  where
-import Cardano.Api (AddressAny, NetworkId, anyAddressInShelleyBasedEra)
 import Control.Exception (Exception)
 import Control.Lens (makeClassy)
 import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
-import Data.Set (Set)
-import Data.Text (Text)
-import Database.SQLite.Simple (Connection)
+import Data.Aeson qualified
+import Data.ByteString (ByteString)
+import Data.Text (Text, pack)
+import Data.Text.Encoding (decodeLatin1)
 import GHC.Generics (Generic)
-import Marconi.Index.Utxo (UtxoRow (UtxoRow))
-import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
-import Marconi.Types as Export (CurrentEra, TargetAddresses, TxOutRef)
 import Network.Wai.Handler.Warp (Settings)
+
+import Cardano.Api qualified as C
+import Marconi.Index.Utxo (Utxo, UtxoRow)
+import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
+import Marconi.Types as Export (TargetAddresses)
 
 -- | Type represents http port for JSON-RPC
 type RpcPortNumber = Int
@@ -51,52 +52,34 @@ data CliArgs = CliArgs
   { socket          :: FilePath             -- ^ POSIX socket file to communicate with cardano node
   , dbPath          :: FilePath             -- ^ filepath to local sqlite for utxo index table
   , httpPort        :: Maybe Int            -- ^ optional tcp/ip port number for JSON-RPC http server
-  , networkId       :: NetworkId            -- ^ cardano network id
+  , networkId       :: C.NetworkId          -- ^ cardano network id
   , targetAddresses :: TargetAddresses      -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
 
-newtype DBConfig = DBConfig {
-    utxoConn ::  Connection
-    }
-
 data DBQueryEnv = DBQueryEnv
-    { _DbConf         :: DBConfig               -- ^ path to dqlite db
-    , _QueryTMVar     :: UtxoQueryTMVar
-    , _QueryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
-    , _Network        :: Cardano.Api.NetworkId  -- ^ cardano network id
+    { _queryTMVar     :: UtxoQueryTMVar
+    , _queryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
     }
 makeClassy ''DBQueryEnv
 
 -- | JSON-RPC configuration
 data JsonRpcEnv = JsonRpcEnv
-    { _HttpSettings :: Settings               -- ^ HTTP server setting
-    , _QueryEnv     :: DBQueryEnv             -- ^ used for query sqlite
+    { _httpSettings :: Settings               -- ^ HTTP server setting
+    , _queryEnv     :: DBQueryEnv             -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
 
 data UtxoTxOutReport = UtxoTxOutReport
     { bech32Address :: Text
-    , txOutRefs     :: Set TxOutRef
+    , utxoReport    :: [UtxoRow]
     } deriving (Eq, Ord, Generic)
 
 instance ToJSON UtxoTxOutReport where
     toEncoding = genericToEncoding defaultOptions
 
-newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving Generic
-
-instance Ord UtxoRowWrapper where
-    compare (UtxoRowWrapper (UtxoRow a _) ) ( UtxoRowWrapper (UtxoRow b _)) =  compare a b
-
-instance Eq UtxoRowWrapper where
-    (UtxoRowWrapper  (UtxoRow a1 t1) ) == ( UtxoRowWrapper (UtxoRow a2 t2) ) = a1 == a2 &&  t1 == t2
-
-instance ToJSON AddressAny where
-  toJSON = toJSON . anyAddressInShelleyBasedEra @CurrentEra
+newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving (Eq, Ord, Show, Generic)
 
 instance ToJSON UtxoRowWrapper where
-    toEncoding = genericToEncoding defaultOptions
-
-instance ToJSON UtxoRow where
     toEncoding = genericToEncoding defaultOptions
 
 data QueryExceptions
@@ -106,3 +89,18 @@ data QueryExceptions
     | QueryError String
     deriving stock Show
     deriving anyclass  Exception
+
+instance ToJSON C.AddressAny where
+    toJSON = Data.Aeson.String . C.serialiseAddress
+
+instance ToJSON C.ScriptData where
+    toJSON = Data.Aeson.String . pack . show
+
+instance ToJSON ByteString where
+    toJSON = Data.Aeson.String . decodeLatin1
+
+instance ToJSON Utxo
+
+instance ToJSON C.BlockNo
+
+instance ToJSON UtxoRow

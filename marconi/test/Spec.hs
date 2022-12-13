@@ -17,9 +17,9 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 import Gen.Cardano.Api.Typed qualified as CGen
 
-import Marconi.Index.ScriptTx qualified as ScriptTx
-
 import Integration qualified
+import Marconi.Index.ScriptTx qualified as ScriptTx
+import Spec.Utxo qualified
 
 main :: IO ()
 main = defaultMain tests
@@ -27,6 +27,7 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "Marconi"
   [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
+  , Spec.Utxo.tests
   , Integration.tests
   ]
 

@@ -70,6 +70,7 @@ library
     Marconi.Api.Types
     Marconi.Api.UtxoIndexersQuery
     Marconi.Bootstrap
+    Marconi.MambaCli
 
   --------------------
   -- Local components
@@ -78,7 +79,6 @@ library
     , cardano-streaming
     , json-rpc
     , marconi
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -93,14 +93,14 @@ library
   build-depends:
     , aeson
     , async
-    , base            >=4.9 && <5
-    , containers
+    , base                  >=4.9 && <5
+    , bytestring
     , lens
+    , optparse-applicative
     , prettyprinter
     , servant
     , servant-server
-    , sqlite-simple
-    , stm
+    , stm                   >=2.5
     , text
     , time
     , warp
@@ -113,17 +113,14 @@ executable marconi-mamba
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , marconi
-    , marconi-mamba
+  build-depends:  marconi-mamba
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
     , async
-    , base                  >=4.9 && <5
-    , optparse-applicative
+    , base   >=4.9 && <5
 
 executable examples-json-rpc-server
   import:         lang
@@ -136,11 +133,6 @@ executable examples-json-rpc-server
   build-depends:
     , marconi
     , marconi-mamba
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:  cardano-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -178,11 +170,6 @@ library db-utils
   hs-source-dirs:  db-utils/src
   exposed-modules: Marconi.DB.SqlUtils
 
-  --------------------
-  -- Local components
-  --------------------
-  build-depends:   marconi-mamba
-
   --------------------------
   -- Other IOG dependencies
   --------------------------
@@ -193,8 +180,8 @@ library db-utils
   ------------------------
   build-depends:
     , async
-    , base           >=4.9 && <5
-    , lens
+    , base            >=4.9 && <5
+    , raw-strings-qq
     , sqlite-simple
     , text
     , time
@@ -207,15 +194,7 @@ executable db-utils-exe
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , db-utils
-    , marconi
-    , marconi-mamba
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:  cardano-api
+  build-depends:  db-utils
 
   ------------------------
   -- Non-IOG dependencies
@@ -223,3 +202,57 @@ executable db-utils-exe
   build-depends:
     , base                  >=4.9 && <5
     , optparse-applicative
+
+test-suite marconi-mamba-test
+  import:         lang
+  ghc-options:    -Wno-unused-packages
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+  other-modules:  Spec.UtxoIndexersQuery
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , marconi
+    , marconi-mamba
+    , rewindable-index
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}
+    , cardano-testnet
+    , iohk-monitoring
+    , ouroboros-network
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , bytestring
+    , containers
+    , directory
+    , filepath
+    , hedgehog
+    , hedgehog-extras
+    , lens
+    , optparse-applicative
+    , prettyprinter
+    , serialise
+    , sqlite-simple
+    , stm
+    , streaming
+    , tasty
+    , tasty-golden
+    , tasty-hedgehog
+    , tasty-hunit
+    , temporary
+    , text

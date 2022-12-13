@@ -1,0 +1,7 @@
+Invalid option `--socket'
+
+Usage: marconi (-s|--socket-path ARG) (--mainnet | --testnet-magic NATURAL) 
+               [(-n|--slot-no SLOT-NO) (-b|--block-hash BLOCK-HASH)]
+               (-d|--database-directory-path ARG) [--disable-utxo] 
+               [--disable-datum] [--disable-script-tx] 
+               [(-a|--addresses-to-index ARG)]

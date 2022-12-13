@@ -6,6 +6,7 @@ module Marconi.CLI
     , parseCardanoAddresses
     , pNetworkId
     , Options (..)
+    , optionsParser
     , parseOptions
     , utxoDbPath
     , datumDbPath
@@ -20,7 +21,7 @@ import Data.List (nub)
 import Data.List.NonEmpty (fromList)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (pack)
-import Marconi.Types (CardanoAddress, TargetAddresses)
+import Marconi.Types (TargetAddresses)
 import Options.Applicative qualified as Opt
 import System.FilePath ((</>))
 
@@ -69,12 +70,12 @@ pTestnetMagic = C.NetworkMagic <$> Opt.option Opt.auto
 
 -- | parses CLI params to valid NonEmpty list of Shelley addresses
 -- We error out if there are any invalid addresses
-multiString :: Opt.Mod Opt.OptionFields [CardanoAddress] -> Opt.Parser TargetAddresses
+multiString :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser TargetAddresses
 multiString desc = fromList . concat <$> some single
   where
     single = Opt.option (Opt.str >>= (pure . parseCardanoAddresses)) desc
 
-parseCardanoAddresses :: String -> [CardanoAddress]
+parseCardanoAddresses :: String -> [C.Address C.ShelleyAddr]
 parseCardanoAddresses =  nub
     . fromJustWithError
     . traverse (deserializeToCardano . pack)
@@ -134,7 +135,7 @@ optionsParser =
                             <> Opt.help ("Becch32 Shelley addresses to index."
                                    <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
 
-optAddressesParser :: Opt.Mod Opt.OptionFields [CardanoAddress] -> Opt.Parser (Maybe TargetAddresses)
+optAddressesParser :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser (Maybe TargetAddresses)
 optAddressesParser =  optional . multiString
 
 utxoDbName :: FilePath
