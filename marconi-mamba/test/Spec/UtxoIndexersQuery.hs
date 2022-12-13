@@ -28,7 +28,6 @@ import Marconi.Api.Types (DBQueryEnv (DBQueryEnv), UtxoQueryTMVar (UtxoQueryTMVa
 import Marconi.Api.UtxoIndexersQuery qualified as QApi
 import Marconi.Index.Utxo (Depth (Depth), open)
 import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Indexers (getUtxoEvents)
 import Marconi.Types ()
 import RewindableIndex.Index.VSplit qualified as Ix
 
@@ -96,7 +95,7 @@ genEvents = do
     slotNo <- CGen.genSlotNo
     blockNo  <- genBlockNo
     txs <- Gen.list (Range.linear 3 10)(CGen.genTx C.ShelleyEra)
-    pure . fromJust $ getUtxoEvents Nothing slotNo blockNo txs
+    pure . fromJust $ Utxo.getUtxoEvents Nothing slotNo blockNo txs
 
 addressAnyToShelley :: C.AddressAny -> Maybe (C.Address C.ShelleyAddr)
 addressAnyToShelley  (C.AddressShelley a )=Just a

@@ -21,7 +21,6 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 import Cardano.Api qualified as C
 import Gen.Cardano.Api.Typed qualified as CGen
 import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Indexers (getUtxoEvents, getUtxos)
 import Marconi.Types (CurrentEra, TargetAddresses)
 import RewindableIndex.Index.VSplit qualified as Ix
 
@@ -49,7 +48,7 @@ txToUtxoTest ::  Property
 txToUtxoTest = property $ do
     t@(C.Tx (C.TxBody C.TxBodyContent{C.txOuts}) _)  <- forAll $ CGen.genTx C.BabbageEra
     let (targetAddresses :: Maybe TargetAddresses ) = addressesFromTxOuts txOuts
-    let (utxos :: [Utxo.Utxo]) = getUtxos targetAddresses t
+    let (utxos :: [Utxo.Utxo]) = Utxo.getUtxos targetAddresses t
     case targetAddresses of
         Nothing         ->  (length utxos) === (length txOuts)
         Just targets    ->
@@ -66,7 +65,7 @@ genEvents = do
     slotNo <- CGen.genSlotNo
     blockNo  <- genBlockNo
     txs <- Gen.list (Range.linear 2 5)(CGen.genTx C.ShelleyEra)
-    pure . fromJust $ getUtxoEvents Nothing slotNo blockNo txs
+    pure . fromJust $ Utxo.getUtxoEvents Nothing slotNo blockNo txs
 
 utxoStorageTest :: Property
 utxoStorageTest = property $ do

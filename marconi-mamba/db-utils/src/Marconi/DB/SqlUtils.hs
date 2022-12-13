@@ -30,8 +30,6 @@ import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
 import Text.RawString.QQ (r)
 
--- | Represents Shelley type addresses with most utxo transactions
---
 newtype DBEnv = DBEnv { unConn :: Connection}
 
 bootstrap :: FilePath -> IO DBEnv
@@ -93,12 +91,12 @@ freqShelleyTable env = do
     let addresses = catMaybes . fmap toShelley $ addressFreq
 
     withQueryAction env ( \conn -> (
-        -- execute_ conn "BEGIN TRANSACTION"
+        execute_ conn "BEGIN TRANSACTION" >>
         forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
                                       (execute conn
                                        "insert into shelleyaddresses (address, frequency) values (?, ?)"
                                        (a, f))))
-        -- >> execute_ conn "COMMIT"
+        >> execute_ conn "COMMIT"
         )
     pure . fmap _sAddress $ addresses
 

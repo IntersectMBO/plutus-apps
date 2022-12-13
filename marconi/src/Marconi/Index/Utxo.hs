@@ -29,41 +29,45 @@
 
 -}
 module Marconi.Index.Utxo
-    ( eventAtAddress
-    , Utxo (..)
-    , utxoAddress
-    , utxoEventSlotNo
-    , UtxoEvent (..)
-    , utxoEventUtxos
-    , UtxoRow (..)
-    , utxoRowUtxo
-    , C.BlockNo (..)
-    , C.SlotNo (..)
+    (addressFilteredRows
     , Depth (..)
-    , Result
-    , toRows
-    , addressFilteredRows
-    , toAddr
-    , UtxoIndex
+    , eventAtAddress
+    , getUtxos
+    , getUtxoEvents
     , open
     , query
     , queryPlusVolatile
+    , Result
+    , toRows
+    , toAddr
+    , utxoAddress
+    , utxoEventSlotNo
+    , utxoEventUtxos
+    , utxoRowUtxo
+    , Utxo (..)
+    , UtxoEvent (..)
+    , UtxoRow (..)
+    , UtxoIndex
+    , C.BlockNo (..)
+    , C.SlotNo (..)
     ) where
 
-import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
 import Codec.Serialise.Class (Serialise (decode))
 import Control.Concurrent.Async (concurrently_)
 import Control.Exception (bracket_)
 import Control.Lens (filtered, folded, traversed)
+import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((%~), (&), (^.), (^..))
 import Control.Lens.TH (makeLenses)
 import Control.Monad (unless, when)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (toStrict)
+import Data.Foldable (foldl')
 import Data.List (union)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (Proxy))
+import Data.Set (Set)
 import Data.Set qualified as Set
 import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
 import Database.SQLite.Simple qualified as SQL
@@ -77,7 +81,9 @@ import Text.ParserCombinators.Parsec (parse)
 import Text.RawString.QQ (r)
 
 import Cardano.Api qualified as C
-import Marconi.Types (CurrentEra)
+import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Cardano.Binary (fromCBOR, toCBOR)
+import Marconi.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
 import RewindableIndex.Index.VSqlite (SqliteIndex)
 import RewindableIndex.Index.VSqlite qualified as Ix
 
@@ -102,7 +108,7 @@ instance Ord Utxo where
 
 data UtxoEvent          = UtxoEvent
     { _utxoEventUtxos   :: [Utxo]
-    , _utxoEventInputs  :: !(Set.Set C.TxIn)
+    , _utxoEventInputs  :: !(Set C.TxIn)
     , _utxoEventSlotNo  :: !C.SlotNo
     , _utxoEventBlockNo :: !C.BlockNo
     } deriving (Show, Eq)
@@ -284,9 +290,9 @@ rmSpentUtxos :: UtxoEvent -> UtxoEvent
 rmSpentUtxos event =
     event & utxoEventUtxos %~ (f (event ^. utxoEventInputs) )
     where
-        f :: (Set.Set C.TxIn) -> [Utxo] -> [Utxo]
+        f :: (Set C.TxIn) -> [Utxo] -> [Utxo]
         f txIns utxos = filter (not . isUtxoSpent txIns) utxos
-        isUtxoSpent :: (Set.Set C.TxIn) -> Utxo -> Bool
+        isUtxoSpent :: (Set C.TxIn) -> Utxo -> Bool
         isUtxoSpent txIns u = ( C.TxIn (u ^. utxoTxId)(u ^. utxoTxIx)) `Set.member` txIns
 
 -- | convert utoEvents to utxoRows
@@ -324,7 +330,6 @@ query ix addr volatiles = do
        LEFT JOIN spent s ON u.txId = s.txId
             AND u.txIx = s.txIx
        WHERE u.address = ?|]
-        -- "SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash, u.value, u.inLineScriptHash, u.inLineScriptHash, u.slotNo, u.blockNo FROM unspent_transactions u LEFT JOIN spent s ON u.txId = s.txId AND u.txIx = s.txIx WHERE u.address = ?"
        (Only addr) :: IO[UtxoRow]
   buffered <- Ix.getBuffer $ ix ^. Ix.storage :: IO [UtxoEvent]
   let events = volatiles ++ buffered
@@ -376,3 +381,99 @@ store ix = do
 toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
 toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
 toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
+
+-- UtxoIndexer
+getUtxos
+  :: (C.IsCardanoEra era)
+  => Maybe TargetAddresses
+  -> C.Tx era
+  -> [Utxo]
+getUtxos maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
+    either (const []) addressDiscriminator (getUtxos' txOuts)
+    where
+        addressDiscriminator :: [Utxo] -> [Utxo]
+        addressDiscriminator = case maybeTargetAddresses of
+            Just targetAddresses -> filter ( isAddressInTarget targetAddresses)
+            _                    -> id
+
+        getUtxos' :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxo]
+        getUtxos' = fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
+
+        txoutToUtxo :: Int -> TxOut -> Utxo
+        txoutToUtxo  ix out =
+            let
+                _utxoTxIx = C.TxIx $ fromIntegral ix
+                _utxoTxId = C.getTxId txBody
+                (C.TxOut address' value' datum' refScript ) = out
+                _utxoAddress = toAddr address'
+                _utxoValue = C.txOutValueToValue value'
+                _utxoDatumHash = case datum' of
+                    (C.TxOutDatumHash _ d ) -> Just d
+                    _                       ->  Nothing
+                _utxoDatum = case datum' of
+                    (C.TxOutDatumInline _ d ) -> Just d
+                    _                         ->  Nothing
+                (_utxoInlineScript, _utxoInlineScriptHash) = case refScript of
+                    Shelley.ReferenceScriptNone -> (Nothing, Nothing)
+                    Shelley.ReferenceScript _
+                        (Shelley.ScriptInAnyLang
+                            (C.SimpleScriptLanguage (C.SimpleScriptV1) )
+                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
+                    Shelley.ReferenceScript _
+                        (Shelley.ScriptInAnyLang
+                            (C.SimpleScriptLanguage (C.SimpleScriptV2) )
+                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
+                    Shelley.ReferenceScript _
+                        (Shelley.ScriptInAnyLang
+                            (C.PlutusScriptLanguage (C.PlutusScriptV1) )
+                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
+                    Shelley.ReferenceScript _
+                        (Shelley.ScriptInAnyLang
+                            (C.PlutusScriptLanguage (C.PlutusScriptV2) )
+                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
+            in
+                Utxo {..}
+getUtxoEvents
+  :: C.IsCardanoEra era
+  => Maybe TargetAddresses              -- ^ target addresses to filter for
+  -> C.SlotNo
+  -> C.BlockNo
+  -> [C.Tx era]
+  -> Maybe UtxoEvent               -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
+getUtxoEvents maybeTargetAddresses slotNo blkNo txs =
+    let
+        utxos = (concat . fmap (getUtxos maybeTargetAddresses) $ txs )
+        ins  = foldl' Set.union Set.empty $ getInputs <$> txs
+    in
+        if null utxos then
+            Nothing
+        else
+            Just (UtxoEvent utxos ins slotNo blkNo)
+
+getInputs
+  :: C.Tx era
+  -> Set C.TxIn
+getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCollateral}) _) =
+  let inputs = case txScriptValidityToScriptValidity txScriptValidity of
+        C.ScriptValid -> fst <$> txIns
+        C.ScriptInvalid -> case txInsCollateral of
+                                C.TxInsCollateralNone     -> []
+                                C.TxInsCollateral _ txins -> txins
+  in Set.fromList inputs
+
+-- | Duplicated from cardano-api (not exposed in cardano-api)
+-- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
+-- https://github.com/input-output-hk/cardano-node/pull/4569
+txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
+txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
+txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
+
+-- | does the transaction contain a targetAddress
+isAddressInTarget
+    :: TargetAddresses
+    -> Utxo
+    -> Bool
+isAddressInTarget targetAddresses utxo =
+    case (utxo ^. utxoAddress) of
+        C.AddressByron _      -> False
+        C.AddressShelley addr -> addr `elem` targetAddresses

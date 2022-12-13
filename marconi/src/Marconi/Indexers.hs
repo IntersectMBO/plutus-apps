@@ -17,16 +17,12 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
-import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((^.))
 import Control.Monad (void)
-import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Set (Set)
-import Data.Set qualified as Set
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, Hash, ScriptData,
@@ -40,7 +36,7 @@ import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Types (TargetAddresses, TxOut, pattern CurrentEra)
+import Marconi.Types (TargetAddresses)
 
 import RewindableIndex.Index.VSplit qualified as Ix
 import RewindableIndex.Storable qualified as Storable
@@ -67,86 +63,6 @@ scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ d
       . Map.elems
       $ xs
 scriptDataFromCardanoTxBody _ = mempty
-
--- UtxoIndexer
-getUtxos
-  :: (C.IsCardanoEra era)
-  => Maybe TargetAddresses
-  -> C.Tx era
-  -> [Utxo.Utxo]
-getUtxos maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
-    either (const []) addressDiscriminator (getUtxos' txOuts)
-    where
-        addressDiscriminator :: [Utxo.Utxo] -> [Utxo.Utxo]
-        addressDiscriminator = case maybeTargetAddresses of
-            Just targetAddresses -> filter ( isAddressInTarget targetAddresses)
-            _                    -> id
-
-        getUtxos' :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxo.Utxo]
-        getUtxos' = fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
-
-        txoutToUtxo :: Int -> TxOut -> Utxo.Utxo
-        txoutToUtxo  ix out =
-            let
-                _utxoTxIx = C.TxIx $ fromIntegral ix
-                _utxoTxId = C.getTxId txBody
-                (C.TxOut address' value' datum' refScript ) = out
-                _utxoAddress = Utxo.toAddr address'
-                _utxoValue = C.txOutValueToValue value'
-                _utxoDatumHash = case datum' of
-                    (C.TxOutDatumHash _ d ) -> Just d
-                    _                       ->  Nothing
-                _utxoDatum = case datum' of
-                    (C.TxOutDatumInline _ d ) -> Just d
-                    _                         ->  Nothing
-                (_utxoInlineScript, _utxoInlineScriptHash) = case refScript of
-                    Shelley.ReferenceScriptNone -> (Nothing, Nothing)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.SimpleScriptLanguage (C.SimpleScriptV1) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.SimpleScriptLanguage (C.SimpleScriptV2) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.PlutusScriptLanguage (C.PlutusScriptV1) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.PlutusScriptLanguage (C.PlutusScriptV2) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-            in
-                Utxo.Utxo {..}
-
-getUtxoEvents
-  :: C.IsCardanoEra era
-  => Maybe TargetAddresses              -- ^ target addresses to filter for
-  -> C.SlotNo
-  -> C.BlockNo
-  -> [C.Tx era]
-  -> Maybe Utxo.UtxoEvent               -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
-getUtxoEvents maybeTargetAddresses slotNo blkNo txs =
-    let
-        utxos = (concat . fmap (getUtxos maybeTargetAddresses) $ txs )
-        ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-    in
-        if null utxos then
-            Nothing
-        else
-            Just (Utxo.UtxoEvent utxos ins slotNo blkNo)
-
-getInputs
-  :: C.Tx era
-  -> Set C.TxIn
-getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCollateral}) _) =
-  let inputs = case txScriptValidityToScriptValidity txScriptValidity of
-        C.ScriptValid -> fst <$> txIns
-        C.ScriptInvalid -> case txInsCollateral of
-                                C.TxInsCollateralNone     -> []
-                                C.TxInsCollateral _ txins -> txins
-  in Set.fromList inputs
 
 {- | The way we synchronise channel consumption is by waiting on a QSemN for each
      of the spawn indexers to finish processing the current event.
@@ -193,22 +109,12 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
 
 -- | does the transaction contain a targetAddress
 isInTargetTxOut
-    :: TargetAddresses        -- ^ non empty list of target addres
+    :: TargetAddresses        -- ^ non empty list of target address
     -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
     -> Bool
 isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
-
--- | does the transaction contain a targetAddress
-isAddressInTarget
-    :: TargetAddresses
-    -> Utxo.Utxo
-    -> Bool
-isAddressInTarget targetAddresses utxo =
-    case (utxo ^. Utxo.utxoAddress) of
-        C.AddressByron _      -> False
-        C.AddressShelley addr -> addr `elem` targetAddresses
 
 utxoWorker
     :: (Utxo.UtxoIndex -> IO Utxo.UtxoIndex)    -- ^ CPS function used in the queryApi thread, needs to be non-blocking
@@ -224,7 +130,7 @@ utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier} ch path =
       event <- atomically $ readTChan ch
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ct ->
-            case (getUtxoEvents maybeTargetAddresses slotNo blkNo txs) of
+            case (Utxo.getUtxoEvents maybeTargetAddresses slotNo blkNo txs) of
                   Just us ->  Ix.insert (us) index  >>= innerLoop
                   _       -> innerLoop index
         RollBackward cp _ct -> do
@@ -316,10 +222,3 @@ forkIndexer :: Coordinator -> Worker -> FilePath -> IO ()
 forkIndexer coordinator worker path = do
   ch <- atomically . dupTChan $ _channel coordinator
   void . forkIO . worker coordinator ch $ path
-
--- | Duplicated from cardano-api (not exposed in cardano-api)
--- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
--- https://github.com/input-output-hk/cardano-node/pull/4569
-txScriptValidityToScriptValidity :: C.TxScriptValidity era -> C.ScriptValidity
-txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.ScriptValid
-txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
