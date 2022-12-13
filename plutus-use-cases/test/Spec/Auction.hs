@@ -36,7 +36,6 @@ import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
 import Ledger qualified
-import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
