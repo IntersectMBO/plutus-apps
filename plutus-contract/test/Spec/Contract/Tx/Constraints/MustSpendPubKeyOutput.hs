@@ -10,7 +10,7 @@ module Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput(tests) where
 
 import Control.Lens (at, non, (^.))
 import Control.Monad (void)
-import Spec.Contract.Error (evaluationError, txOutRefNotFound)
+import Spec.Contract.Error (txOutRefNotFound)
 import Test.Tasty (TestTree, testGroup)
 
 import Data.Either (fromRight)
@@ -29,7 +29,7 @@ import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
+import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
                              checkPredicate, mockWalletPaymentPubKeyHash, w1, w2, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
@@ -185,7 +185,7 @@ phase2FailureWhenTxoIsNotSpent =
             void Trace.nextSlot
 
     in checkPredicate "Fail phase-2 validation when txo expected by on-chain mustSpendPubKeyOutput does not exist"
-        (assertFailedTransaction (const $ evaluationError "L7"))
+        (assertEvaluationError "L7")
         (void trace)
 
 {-# INLINEABLE mkValidator #-}

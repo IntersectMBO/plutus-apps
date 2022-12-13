@@ -24,9 +24,9 @@ import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, utxosAt)
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
-                             w1, w6, (.&&.))
+import Plutus.Contract.Test (assertContractError, assertEvaluationError,
+                             assertValidatedTransactionCount, changeInitialWalletValue, checkPredicateOptions,
+                             defaultCheckOptions, mockWalletAddress, w1, w6, (.&&.))
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, setSigningProcess,
                                                  walletInstanceTag)
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
@@ -34,7 +34,7 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
-import Spec.Contract.Error (evaluationError, insufficientFundsError)
+import Spec.Contract.Error (insufficientFundsError)
 import Wallet.Emulator.Error (WalletAPIError (InsufficientFunds))
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet')
 
@@ -196,7 +196,7 @@ phase2FailureWhenProducedAdaAmountIsNotSatisfied =
     in checkPredicateOptions
         options
         "Fail phase-2 validation when on-chain mustProduceAtLeast is greater than script's ada balance"
-        (assertFailedTransaction $ const $ evaluationError "L6")
+        (assertEvaluationError "L6")
         (void $ trace contract)
 
 -- Uses onchain and offchain constraint mustProduceAtLeast with a higher expected token value onchain, asserts script evaluation error.
@@ -210,7 +210,7 @@ phase2FailureWhenProducedTokenAmountIsNotSatisfied =
     in checkPredicateOptions
         options
         "Fail phase-2 validation when on-chain mustProduceAtLeast is greater than script's token balance"
-        (assertFailedTransaction $ const $ evaluationError "L6")
+        (assertEvaluationError "L6")
         (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}

@@ -35,7 +35,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Emulator (diskState)
 import Plutus.ChainIndex.Emulator.DiskState (addressMap, unCredentialMap)
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount,
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicate, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, valueAtAddress, w1, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Scripts qualified as PSU
@@ -51,7 +51,7 @@ import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Spec.Contract.Error (cardanoLedgerErrorContaining, evaluationError)
+import Spec.Contract.Error (cardanoLedgerErrorContaining)
 import Wallet.Emulator.Wallet (WalletState, chainIndexEmulatorState)
 import Wallet.Emulator.Wallet qualified as Wallet
 
@@ -167,7 +167,7 @@ phase2FailureWithMustReferenceOutput testDescription submitTxFromConstraints l =
 
     in checkPredicateOptions defaultCheckOptions
     testDescription
-    (assertFailedTransaction $ const $ evaluationError "Lf")
+    (assertEvaluationError "Lf")
     (void $ defTrace contractWithoutOffchainConstraint)
 
 -- | Valid scenario using offchain and onchain constraint

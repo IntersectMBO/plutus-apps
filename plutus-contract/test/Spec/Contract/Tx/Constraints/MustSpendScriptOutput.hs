@@ -13,7 +13,6 @@ module Spec.Contract.Tx.Constraints.MustSpendScriptOutput(tests) where
 
 import Control.Lens (_1, _Just, _head, filtered, has, makeClassyPrisms, (&), (.~), (??))
 import Control.Monad (void)
-import Spec.Contract.Error (evaluationError)
 import Test.Tasty (TestTree, testGroup)
 
 import Data.List as L
@@ -48,9 +47,10 @@ import Data.Default (Default (def))
 import Plutus.Contract as Cont (Contract, ContractError, Empty, EmptySchema, _ConstraintResolutionContractError,
                                 awaitTxConfirmed, getParams, ownAddress, ownUtxos, submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Request (submitTxConfirmed)
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             assertValidatedTransactionCountOfTotal, changeInitialWalletValue, checkPredicate,
-                             checkPredicateOptions, defaultCheckOptions, valueAtAddress, w1, walletFundsChange, (.&&.))
+import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertFailedTransaction,
+                             assertValidatedTransactionCount, assertValidatedTransactionCountOfTotal,
+                             changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions,
+                             valueAtAddress, w1, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Scripts (Language (..))
 import Plutus.Script.Utils.Scripts qualified as PSU
 import Plutus.Script.Utils.Typed (Any)
@@ -426,7 +426,7 @@ phase2ErrorWhenMustSpendScriptOutputUsesWrongTxoOutRef l =
 
     in checkPredicate
         "Phase-2 validation failure when onchain mustSpendScriptOutput constraint expects a different TxOutRef"
-        (assertFailedTransaction $ const $ evaluationError "L8")
+        (assertEvaluationError "L8")
         $ void $ trace contract
 
 -- | Phase-2 validation failure only when V2 script using onchain mustSpendScriptOutput constraint
@@ -444,7 +444,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputUsesWrongRedeemerWithV2Script l =
         PlutusV2 ->
              checkPredicate
                  "Phase-2 validation failure when V2 script using onchain mustSpendScriptOutput constraint expects a different redeemer"
-                 (assertFailedTransaction $ const $ evaluationError "L8")
+                 (assertEvaluationError "L8")
                  $ void $ trace $ mustSpendScriptOutputsContract' l 5 5 False
 
 -- | Uses onchain and offchain constraint mustSpendScriptOutputWithMatchingDatumAndValue to spend a
@@ -511,7 +511,7 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongDatum l =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different TxOutRef"
-        (assertFailedTransaction $ const $ evaluationError "Le")
+        (assertEvaluationError "Le")
         $ void
         $ trace
         $ mustSpendScriptOutputWithMatchingDatumAndValueContract
@@ -529,7 +529,7 @@ phase2ErrorWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongValue l =
     in checkPredicateOptions
         defaultCheckOptions
         "Phase-2 validation failure when onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different TxOutRef"
-        (assertFailedTransaction $ const $ evaluationError "Le")
+        (assertEvaluationError "Le")
         $ void $ trace
         $ mustSpendScriptOutputWithMatchingDatumAndValueContract
               l nScriptOutputs
@@ -549,7 +549,7 @@ phase2ErrorOnlyWhenMustSpendScriptOutputWithMatchingDatumAndValueUsesWrongRedeem
             PlutusV2 ->
                 checkPredicate
                 "Phase-2 validation failure when V2 script using onchain mustSpendScriptOutputWithMatchingDatumAndValue constraint expects a different redeemer"
-                (assertFailedTransaction $ const $ evaluationError "Le")
+                (assertEvaluationError "Le")
         nScriptOutputs  = 5
         scriptOutputIdx = nScriptOutputs - 1
     in check
@@ -579,7 +579,7 @@ phase2ErrorWhenMustSpendScriptOutputWithReferenceScriptFailsToValidateItsScript 
             checkPredicateOptions
             (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
             "Phase2 validation error when the reference script is not satisfied"
-            (assertFailedTransaction $ const $ evaluationError "L8")
+            (assertEvaluationError "L8")
     in check $ traceN 3 contract
 
 -- | Check that when spending an output with an inline datum, the transaction does not contain a witness for this datum.

@@ -38,6 +38,7 @@ module Plutus.Contract.Test(
     , assertValidatedTransactionCount
     , assertValidatedTransactionCountOfTotal
     , assertFailedTransaction
+    , assertEvaluationError
     , assertHooks
     , assertResponses
     , assertUserLog
@@ -83,7 +84,7 @@ import Control.Applicative (liftA2)
 import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
-import Control.Lens (_Left, at, ix, makeLenses, over, preview, (&), (.~), (^.))
+import Control.Lens (_1, _Left, anyOf, at, folded, ix, makeLenses, makePrisms, over, preview, (&), (.~), (^.))
 import Control.Monad (guard, unless)
 import Control.Monad.Freer (Eff, interpretM, runM)
 import Control.Monad.Freer.Error (Error, runError)
@@ -145,9 +146,13 @@ import Streaming qualified as S
 import Streaming.Prelude qualified as S
 import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
 import Wallet.Emulator.Chain (ChainEvent)
+import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream (filterLogLevel, foldEmulatorStreamM, initialChainState, initialDist)
+
+makePrisms ''Ledger.ScriptError
+makePrisms ''WalletAPIError
 
 type TestEffects = '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void), Writer CoverageData]
 newtype TracePredicateF a = TracePredicate (forall effs. Members TestEffects effs => FoldM (Eff effs) EmulatorEvent a)
@@ -666,6 +671,14 @@ assertFailedTransaction predicate = TracePredicate $
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
         xs -> pure (all (\(_, t, e, _, _) -> onCardanoTx (\t' -> predicate t' e) (const True) t) xs)
+
+-- | Assert that at least one transaction failed to validate with an EvaluationError
+-- containing the given text.
+assertEvaluationError :: Text.Text -> TracePredicate
+assertEvaluationError errCode =
+  assertFailedTransaction
+    (const $ anyOf (Ledger._ScriptFailure . _EvaluationError . _1 . folded) (== errCode))
+
 
 -- | Assert that no transaction failed to validate.
 assertNoFailedTransactions :: TracePredicate

@@ -8,8 +8,6 @@ module Spec.MultiSig(tests, failingTrace, succeedingTrace) where
 import Control.Monad (void)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Index (ValidationError (ScriptFailure))
-import Ledger.Scripts (ScriptError (EvaluationError))
 import Plutus.Contract (Contract, ContractError)
 import Plutus.Contract.Test
 import Plutus.Contracts.MultiSig as MS
@@ -24,7 +22,7 @@ tests :: TestTree
 tests = testGroup "multisig"
     [
     checkPredicate "2 out of 5"
-        (assertFailedTransaction (\_ err -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
+        (assertEvaluationError "not enough signatures")
         failingTrace
 
     , checkPredicate "3 out of 5"

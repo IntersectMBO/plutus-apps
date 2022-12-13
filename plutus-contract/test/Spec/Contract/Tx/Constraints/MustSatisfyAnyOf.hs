@@ -17,7 +17,6 @@ module Spec.Contract.Tx.Constraints.MustSatisfyAnyOf(tests) where
 
 import Control.Lens ((??), (^.))
 import Control.Monad (void)
-import Spec.Contract.Error
 import Test.Tasty (TestTree, testGroup)
 
 import Data.Default (Default (def))
@@ -41,7 +40,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
+import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
@@ -261,7 +260,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
         in checkPredicateOptions defaultCheckOptions
             ("Phase 2 failure when onchain mustSatisfyAnyOf expects a validity interval " ++
             "with a closer end boundary")
-            (assertFailedTransaction (const $ evaluationError "L3"))
+            (assertEvaluationError "L3")
             (void $ trace contract)
     ,
         let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue,
@@ -272,7 +271,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
         in checkPredicateOptions defaultCheckOptions
             ("Phase 2 failure when onchain mustSatisfyAnyOf uses mustValidateIn but offchain " ++
             "constraint does not")
-            (assertFailedTransaction (const $ evaluationError "L3"))
+            (assertEvaluationError "L3")
             (void $ trace contract)
     ]
 

@@ -19,7 +19,7 @@ import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicate,
+import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicate,
                              mockWalletPaymentPubKeyHash, w1)
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
@@ -30,7 +30,6 @@ import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), Red
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Spec.Contract.Error (evaluationError)
 
 tests :: TestTree
 tests =
@@ -232,7 +231,7 @@ phase2FailureWhenDatumIsNotInWitnessSet =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain constraints checks for datum that is not in the witness set"
-    (assertFailedTransaction (const $ evaluationError "L2"))
+    (assertEvaluationError "L2")
     (void $ trace contract)
 
 -----

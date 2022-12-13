@@ -11,7 +11,6 @@ module Spec.Contract.Tx.Constraints.MustPayToPubKeyAddress(tests) where
 
 import Control.Lens (has, (??), (^.))
 import Control.Monad (void)
-import Spec.Contract.Error (evaluationError)
 import Test.Tasty (TestTree, testGroup)
 
 
@@ -25,8 +24,8 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicate,
-                             defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
+                             checkPredicate, defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
@@ -246,7 +245,7 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected PaymentPubkeyHash"
-    (assertFailedTransaction $ const $ evaluationError "La")
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the Datum"
@@ -262,7 +261,7 @@ phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected Datum"
-    (assertFailedTransaction $ const $ evaluationError "La")
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the Value"
@@ -278,7 +277,7 @@ phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected Value"
-    (assertFailedTransaction $ const $ evaluationError "La")
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 

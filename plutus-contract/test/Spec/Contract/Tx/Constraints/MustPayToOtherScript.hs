@@ -11,7 +11,7 @@ module Spec.Contract.Tx.Constraints.MustPayToOtherScript(tests) where
 
 import Control.Lens ((&), (??), (^.))
 import Control.Monad (void)
-import Spec.Contract.Error (cardanoLedgerErrorContaining, evaluationError, insufficientFundsError)
+import Spec.Contract.Error (cardanoLedgerErrorContaining, insufficientFundsError)
 import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
@@ -26,8 +26,9 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
+import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertFailedTransaction,
+                             assertValidatedTransactionCount, changeInitialWalletValue, checkPredicateOptions,
+                             defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedValidatorHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
@@ -416,7 +417,7 @@ phase2ErrorWhenExpectingMoreThanValue submitTxFromConstraints lc =
 
     in checkPredicateOptions defaultCheckOptions
     "Phase-2 validation failure when when token amount sent to other script is lower than actual value"
-    (assertFailedTransaction (const $ evaluationError "La"))
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 

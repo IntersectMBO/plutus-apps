@@ -28,10 +28,10 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint),
-               TxInType (ScriptAddress), TxOut (TxOut), Validator, Value, Versioned (Versioned, unversioned),
-               cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs, mkValidatorScript, onCardanoTx, outputs,
-               txOutValue, unitDatum, unitRedeemer, unspentOutputs)
+import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, ScriptError (EvaluationError),
+               Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Value,
+               Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs,
+               mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Fee (selectCoin)
 import Ledger.Generators (Mockchain (Mockchain))
@@ -50,7 +50,6 @@ import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
-import Spec.Contract.Error (evaluationError)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.Hedgehog (testPropertyNamed)
@@ -239,8 +238,8 @@ invalidScript = property $ do
 
     Hedgehog.annotateShow signedInvalidTxn
     Hedgehog.assert (case signedInvalidTxn of
-      Left (Left (Index.Phase2 , reason)) -> evaluationError "I always fail everything" reason
-      _                                   -> False
+      Left (Left (Index.Phase2, Index.ScriptFailure (EvaluationError msgs _))) -> elem "I always fail everything" msgs
+      _                                                                        -> False
       )
     where
         failValidator :: Versioned Validator

@@ -2,7 +2,7 @@
 -- | This module provides a few helper to ease the inspection of contract and tx validation errors
 module Spec.Contract.Error where
 
-import Control.Lens (_1, anyOf, folded, has, makeClassyPrisms)
+import Control.Lens (anyOf, has, makeClassyPrisms)
 import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -12,9 +12,6 @@ import Wallet qualified
 
 makeClassyPrisms ''Ledger.ScriptError
 makeClassyPrisms ''Wallet.WalletAPIError
-
-evaluationError :: Text.Text -> Ledger.ValidationError -> Bool
-evaluationError errCode = anyOf (Ledger._ScriptFailure . _EvaluationError . _1 . folded) (== errCode)
 
 cardanoLedgerErrorContaining :: Text.Text -> Ledger.ValidationError -> Bool
 cardanoLedgerErrorContaining msg = anyOf Ledger._CardanoLedgerValidationError (Text.isInfixOf msg)

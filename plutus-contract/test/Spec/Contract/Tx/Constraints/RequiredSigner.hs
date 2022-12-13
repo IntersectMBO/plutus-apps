@@ -23,8 +23,9 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as TxCons
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
-                             checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions,
+                             mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
 import Plutus.Trace qualified as Trace
@@ -32,7 +33,7 @@ import Plutus.V1.Ledger.Scripts (unitDatum)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude
-import Spec.Contract.Error (cardanoLedgerErrorContaining, evaluationError)
+import Spec.Contract.Error (cardanoLedgerErrorContaining)
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
 
 tests :: TestTree
@@ -130,7 +131,7 @@ withoutOffChainMustBeSignedBy =
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint required signer is not included in txbody so phase-2 validation fails"
-    (assertFailedTransaction (const $ evaluationError "L4"))
+    (assertEvaluationError "L4")
     (void trace)
 
 phase2FailureMustBeSignedBy :: TestTree
@@ -139,7 +140,7 @@ phase2FailureMustBeSignedBy =
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain mustBeSignedBy constraint validation"
-    (assertFailedTransaction (const $ evaluationError "L4"))
+    (assertEvaluationError "L4")
     (void trace)
 
 {-

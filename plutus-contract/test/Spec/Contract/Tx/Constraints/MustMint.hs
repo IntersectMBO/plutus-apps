@@ -10,7 +10,7 @@
 module Spec.Contract.Tx.Constraints.MustMint(tests) where
 
 import Control.Monad (void)
-import Spec.Contract.Error (cardanoLedgerErrorContaining, evaluationError, insufficientFundsError)
+import Spec.Contract.Error (cardanoLedgerErrorContaining, insufficientFundsError)
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Lens (_Just, has, (&), (??), (^.))
@@ -31,8 +31,9 @@ import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions,
+import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertFailedTransaction,
+                             assertValidatedTransactionCount, changeInitialWalletValue,
+                             checkPredicate, checkPredicateOptions, defaultCheckOptions,
                              emulatorConfig, w1, walletFundsAssetClassChange, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
@@ -292,7 +293,7 @@ mustMintCurrencyWithRedeemerPhase2Failure :: SubmitTx -> Ledger.Language -> Test
 mustMintCurrencyWithRedeemerPhase2Failure submitTxFromConstraints lang =
     checkPredicate
     "Phase 2 failure when policy mints with unexpected token name"
-    (assertFailedTransaction (const $ evaluationError "L9"))
+    (assertEvaluationError "L9")
     (void $ trace $ mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang tknAmount $ TokenName "WrongToken")
 
 -- | Contract without the required minting policy lookup. Uses mustMintCurrencyWithRedeemer constraint.
@@ -382,7 +383,7 @@ mustMintWithReferencePhase2Failure submitTxFromConstraints lang =
     checkPredicateOptions
     defaultCheckOptions
     "MustMintValue with reference fails phase 2 validation error"
-    (assertFailedTransaction (const $ evaluationError "L9"))
+    (assertEvaluationError "L9")
     (void $ trace $ mustMintValueWithReferenceContract submitTxFromConstraints lang True)
 
 mustMintWithReferenceSuccessful :: SubmitTx -> Ledger.Language -> TestTree
