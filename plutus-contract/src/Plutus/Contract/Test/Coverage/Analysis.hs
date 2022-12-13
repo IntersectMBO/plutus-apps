@@ -1,7 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Plutus.Contract.Test.Coverage.Analysis
   ( computeRefinedCoverageIndex
+  , refinedCoverageIndex
   ) where
 
 import Control.Lens
@@ -14,6 +16,24 @@ import PlutusTx.Code
 import PlutusTx.Coverage
 
 import Plutus.Contract.Test.Coverage.Analysis.Interpreter
+
+import Language.Haskell.TH
+
+unsafeIgnoreLocationInCoverageIndex :: String -> Int -> CoverageIndex -> CoverageIndex
+unsafeIgnoreLocationInCoverageIndex file line =
+  over coverageMetadata $ Map.filterWithKey (\k _ -> not $ ignore k)
+  where
+    ignore (CoverLocation loc') = ignoreLoc loc'
+    ignore (CoverBool loc' _)   = ignoreLoc loc'
+    ignoreLoc loc = view covLocFile loc == file
+                 && view covLocStartLine loc `elem` map (+ line) [-1, 0, 1]
+
+refinedCoverageIndex :: Q Exp
+refinedCoverageIndex = do
+  loc <- location
+  let fn = loc_filename loc
+      st = fst $ loc_start loc
+  [| unsafeIgnoreLocationInCoverageIndex fn st . computeRefinedCoverageIndex |]
 
 computeRefinedCoverageIndex :: CompiledCodeIn DefaultUni DefaultFun a -> CoverageIndex
 computeRefinedCoverageIndex cc =

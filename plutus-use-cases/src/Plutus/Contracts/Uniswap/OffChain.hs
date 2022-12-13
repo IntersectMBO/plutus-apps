@@ -55,11 +55,10 @@ import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
-import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer),
-                             ScriptContext, Validator, Value)
+import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), Validator,
+                             Value)
 import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
-import PlutusTx.Code
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
 import Prelude as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show, (^))
@@ -127,17 +126,8 @@ liquidityPolicy us = mkMintingPolicyScript $
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode poolStateTokenName
 
-cc :: CompiledCode
-        (Uniswap
-         -> Coin PoolState
-         -> UniswapDatum
-         -> UniswapAction
-         -> ScriptContext
-         -> ())
-cc = $$(PlutusTx.compile [|| \u s r d c -> check $ mkUniswapValidator u s r d c ||])
-
 covIdx :: CoverageIndex
-covIdx = computeRefinedCoverageIndex cc
+covIdx = $refinedCoverageIndex $$(PlutusTx.compile [|| \u s r d c -> check $ mkUniswapValidator u s r d c ||])
 
 liquidityCurrency :: Uniswap -> CurrencySymbol
 liquidityCurrency = scriptCurrencySymbol . liquidityPolicy
