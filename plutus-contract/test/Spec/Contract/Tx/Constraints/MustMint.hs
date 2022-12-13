@@ -10,11 +10,11 @@
 module Spec.Contract.Tx.Constraints.MustMint(tests) where
 
 import Control.Monad (void)
+import Spec.Contract.Error (cardanoLedgerErrorContaining, evaluationError, insufficientFundsError)
 import Test.Tasty (TestTree, testGroup)
 
 import Control.Lens (_Just, has, (&), (??), (^.))
 import Data.Map qualified as Map
-import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -41,12 +41,10 @@ import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Address, MintingPolicyHash (MintingPolicyHash), Redeemer, TxOutRef)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude hiding (not)
-import Wallet (WalletAPIError (InsufficientFunds))
 
 tests :: TestTree
 tests = testGroup "MustMint"
@@ -264,7 +262,7 @@ mustMintCurrencyWithRedeemerBurnTooMuch submitTxFromConstraints lang =
     in checkPredicateOptions
        options
        "Contract error when burning more than total amount of tokens in wallet balance"
-       (assertContractError contract (Trace.walletInstanceTag w1) (\case WalletContractError (InsufficientFunds _) -> True; _ -> False) "failed to throw error"
+       (assertContractError contract (Trace.walletInstanceTag w1) insufficientFundsError "failed to throw error"
        .&&. assertValidatedTransactionCount 0)
        (void $ trace contract)
 
@@ -294,7 +292,7 @@ mustMintCurrencyWithRedeemerPhase2Failure :: SubmitTx -> Ledger.Language -> Test
 mustMintCurrencyWithRedeemerPhase2Failure submitTxFromConstraints lang =
     checkPredicate
     "Phase 2 failure when policy mints with unexpected token name"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (const $ evaluationError "L9"))
     (void $ trace $ mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang tknAmount $ TokenName "WrongToken")
 
 -- | Contract without the required minting policy lookup. Uses mustMintCurrencyWithRedeemer constraint.
@@ -376,7 +374,7 @@ mustMintWithReferenceV1Failure submitTxFromConstraints lang =
     checkPredicateOptions
     defaultCheckOptions
     "MustMintValue with reference fails because v1 is not supported"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isPrefixOf "ReferenceInputsNotSupported" msg; _ -> False }))
+    (assertFailedTransaction (const $ cardanoLedgerErrorContaining "ReferenceInputsNotSupported"))
     (void $ trace $ mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang)
 
 mustMintWithReferencePhase2Failure :: SubmitTx -> Ledger.Language -> TestTree
@@ -384,7 +382,7 @@ mustMintWithReferencePhase2Failure submitTxFromConstraints lang =
     checkPredicateOptions
     defaultCheckOptions
     "MustMintValue with reference fails phase 2 validation error"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L9":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (const $ evaluationError "L9"))
     (void $ trace $ mustMintValueWithReferenceContract submitTxFromConstraints lang True)
 
 mustMintWithReferenceSuccessful :: SubmitTx -> Ledger.Language -> TestTree

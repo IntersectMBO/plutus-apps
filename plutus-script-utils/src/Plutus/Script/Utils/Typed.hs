@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving  #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeFamilies       #-}
 module Plutus.Script.Utils.Typed (
   UntypedValidator
@@ -40,8 +41,7 @@ import Plutus.Script.Utils.V2.Address qualified as PSU.PV2
 import Plutus.V1.Ledger.Address qualified as PV1
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V2.Ledger.Api qualified as PV2
-import PlutusTx.Builtins (BuiltinData)
-import PlutusTx.Prelude (check)
+import PlutusTx.Prelude (BuiltinData, BuiltinString, check, trace)
 
 type UntypedValidator = BuiltinData -> BuiltinData -> BuiltinData -> ()
 type UntypedMintingPolicy = BuiltinData -> BuiltinData -> ()
@@ -132,6 +132,11 @@ vForwardingMintingPolicy = tvForwardingMPS
 forwardingMintingPolicyHash :: TypedValidator a -> PV1.MintingPolicyHash
 forwardingMintingPolicyHash = tvForwardingMPSHash
 
+{-# INLINABLE tracedUnsafeFrom #-}
+tracedUnsafeFrom :: forall a. PV1.UnsafeFromData a => BuiltinString -> BuiltinData -> a
+tracedUnsafeFrom label d = trace label $ PV1.unsafeFromBuiltinData d
+
+
 class PV1.UnsafeFromData sc => IsScriptContext sc where
     {-# INLINABLE mkUntypedValidator #-}
     -- | Converts a custom datum and redeemer from a validator function to an
@@ -187,7 +192,9 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
         -> UntypedValidator
     -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
     mkUntypedValidator f d r p =
-      check $ f (PV1.unsafeFromBuiltinData d) (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
+        check $ f (tracedUnsafeFrom "Data decoded successfully" d)
+                  (tracedUnsafeFrom "Redeemer decoded successfully" r)
+                  (tracedUnsafeFrom "Script context decoded successfully" p)
 
     {-# INLINABLE mkUntypedStakeValidator #-}
     -- | Converts a custom redeemer from a stake validator function to an
@@ -217,7 +224,8 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
         => (r -> sc -> Bool)
         -> UntypedStakeValidator
     mkUntypedStakeValidator f r p =
-        check $ f (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
+        check $ f (tracedUnsafeFrom "Redeemer decoded successfully" r)
+                  (tracedUnsafeFrom "Script context decoded successfully" p)
 
     {-# INLINABLE mkUntypedMintingPolicy #-}
     -- | Converts a custom redeemer from a minting policy function to an
@@ -248,8 +256,8 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
         -> UntypedMintingPolicy
     -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
     mkUntypedMintingPolicy f r p =
-        check $ f (PV1.unsafeFromBuiltinData r) (PV1.unsafeFromBuiltinData p)
-
+        check $ f (tracedUnsafeFrom "Redeemer decoded successfully" r)
+                  (tracedUnsafeFrom "Script context decoded successfully" p)
 
 type ScriptContextV1 = PV1.ScriptContext
 type ScriptContextV2 = PV2.ScriptContext

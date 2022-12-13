@@ -11,6 +11,7 @@ module Spec.Contract.Tx.Constraints.MustPayToOtherScript(tests) where
 
 import Control.Lens ((&), (??), (^.))
 import Control.Monad (void)
+import Spec.Contract.Error (cardanoLedgerErrorContaining, evaluationError, insufficientFundsError)
 import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
@@ -19,7 +20,7 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Generators (someTokenValue)
-import Ledger.Scripts (Redeemer, ScriptError (EvaluationError))
+import Ledger.Scripts (Redeemer)
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
@@ -34,7 +35,6 @@ import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-import Wallet (WalletAPIError (InsufficientFunds))
 
 -- Constraint's functions should soon be changed to use Address instead of PaymentPubKeyHash and StakeKeyHash
 tests :: TestTree
@@ -367,7 +367,7 @@ contractErrorWhenAttemptingToSpendMoreThanAdaBalance submitTxFromConstraints lc 
 
     in checkPredicateOptions defaultCheckOptions
     "Contract error when ada amount to send to other script is greater than wallet balance"
-    (assertContractError contract (Trace.walletInstanceTag w1) (\case WalletContractError (InsufficientFunds _) -> True; _ -> False) "failed to throw error")
+    (assertContractError contract (Trace.walletInstanceTag w1) insufficientFundsError "failed to throw error")
     (void $ trace contract)
 
 -- | Contract error when token amount to send to other script is greater than wallet balance
@@ -385,7 +385,7 @@ contractErrorWhenAttemptingToSpendMoreThanTokenBalance submitTxFromConstraints l
 
     in checkPredicateOptions defaultCheckOptions
     "Contract error when token amount to send to other script is greater than wallet balance"
-    (assertContractError contract (Trace.walletInstanceTag w1) (\case WalletContractError (InsufficientFunds _) -> True; _ -> False) "failed to throw error")
+    (assertContractError contract (Trace.walletInstanceTag w1) insufficientFundsError "failed to throw error")
     (void $ trace contract)
 
 -- | Phase-1 failure when mustPayToOtherScriptWithDatumHash in a V1 script use inline datum
@@ -396,7 +396,7 @@ phase1FailureWhenPayToOtherScriptV1ScriptUseInlineDatum submitTxFromConstraints 
 
     in checkPredicateOptions defaultCheckOptions
     "Phase-1 failure when mustPayToOtherScriptWithDatumHash in a V1 script use inline datum"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError _ -> True; _ -> False }))
+    (assertFailedTransaction (const $ cardanoLedgerErrorContaining ""))
     (void $ trace contract)
 
 
@@ -416,7 +416,7 @@ phase2ErrorWhenExpectingMoreThanValue submitTxFromConstraints lc =
 
     in checkPredicateOptions defaultCheckOptions
     "Phase-2 validation failure when when token amount sent to other script is lower than actual value"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("La":_) _) -> True; _ -> False }))
+    (assertFailedTransaction (const $ evaluationError "La"))
     (void $ trace contract)
 
 

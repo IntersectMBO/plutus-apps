@@ -11,8 +11,9 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendScriptOutput(tests) where
 
-import Control.Lens (_1, _Just, _head, filtered, has, makeClassyPrisms, only, (&), (.~), (??))
+import Control.Lens (_1, _Just, _head, filtered, has, makeClassyPrisms, (&), (.~), (??))
 import Control.Monad (void)
+import Spec.Contract.Error (evaluationError)
 import Test.Tasty (TestTree, testGroup)
 
 import Data.List as L
@@ -141,9 +142,6 @@ mustPayToTheScriptWithMultipleOutputsContract nScriptOutputs = do
             go x = Cons.mustPayToTheScriptWithDatumInTx (PlutusTx.toBuiltinData x) utxoValue
             in foldMap go [0 .. n-1]
 
-
-evaluationError :: Text.Text -> L.ValidationError -> Bool
-evaluationError errCode = has $ L._ScriptFailure . _EvaluationError . _1 . _head . only errCode
 
 -- | Contract to create multiple outputs at script address and then uses mustSpendScriptOutputs
 -- constraint to spend some of the outputs each with unique datum

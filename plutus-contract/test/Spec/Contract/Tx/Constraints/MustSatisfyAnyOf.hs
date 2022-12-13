@@ -17,12 +17,13 @@ module Spec.Contract.Tx.Constraints.MustSatisfyAnyOf(tests) where
 
 import Control.Lens ((??), (^.))
 import Control.Monad (void)
+import Spec.Contract.Error
 import Test.Tasty (TestTree, testGroup)
 
 import Data.Default (Default (def))
 import Data.Maybe (isJust)
 import GHC.Generics (Generic)
-import Ledger (ScriptError (EvaluationError), unitDatum)
+import Ledger (unitDatum)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, mintingPolicy, plutusV1MintingPolicy,
@@ -260,8 +261,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
         in checkPredicateOptions defaultCheckOptions
             ("Phase 2 failure when onchain mustSatisfyAnyOf expects a validity interval " ++
             "with a closer end boundary")
-            (assertFailedTransaction (\_ err ->
-                case err of {L.ScriptFailure (EvaluationError ("L3":_) _) -> True; _ -> False }))
+            (assertFailedTransaction (const $ evaluationError "L3"))
             (void $ trace contract)
     ,
         let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue,
@@ -272,8 +272,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
         in checkPredicateOptions defaultCheckOptions
             ("Phase 2 failure when onchain mustSatisfyAnyOf uses mustValidateIn but offchain " ++
             "constraint does not")
-            (assertFailedTransaction (\_ err ->
-                case err of {L.ScriptFailure (EvaluationError ("L3":_) _) -> True; _ -> False }))
+            (assertFailedTransaction (const $ evaluationError "L3"))
             (void $ trace contract)
     ]
 

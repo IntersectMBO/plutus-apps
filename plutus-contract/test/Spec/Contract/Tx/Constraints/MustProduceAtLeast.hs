@@ -8,15 +8,14 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustProduceAtLeast(tests) where
 
-import Control.Lens (_1, _head, has, makeClassyPrisms, only, (&))
+import Control.Lens ((&))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError, typedValidatorLookups, unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Constraints (typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustPayToAddressWithDatumInTx,
                                                                   mustPayToTheScriptWithDatumInTx, mustProduceAtLeast)
@@ -31,20 +30,15 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, setSigningProcess,
                                                  walletInstanceTag)
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
-import Plutus.V1.Ledger.Scripts (ScriptError)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
+import Spec.Contract.Error (evaluationError, insufficientFundsError)
 import Wallet.Emulator.Error (WalletAPIError (InsufficientFunds))
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet')
 
-makeClassyPrisms ''Constraints.MkTxError
-makeClassyPrisms ''ScriptError
-
-evaluationError :: Text.Text -> Ledger.ValidationError -> Bool
-evaluationError errCode = has $ Ledger._ScriptFailure . _EvaluationError . _1 . _head . only errCode
-
+--
 -- TODO include these tests to the main suite in the test-suite when we'll be able to validate the contract
 tests :: TestTree
 tests =
@@ -171,9 +165,7 @@ contractErrorWhenSpendMoreThanScriptBalanceWithOtherWalletAsOwnPubkeyLookup =
     in checkPredicateOptions
         options
         "Fail validation when there are not enough ada in own wallet to satisfy mustProduceAtLeast constraint. Other wallet is not used."
-        (assertContractError contract (Trace.walletInstanceTag w1) (\case
-            WalletContractError (InsufficientFunds _) -> True
-            _                                         -> False) "failed to throw error"
+        (assertContractError contract (Trace.walletInstanceTag w1) insufficientFundsError "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         (void traceWithW6Signing)
 

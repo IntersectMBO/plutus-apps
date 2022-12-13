@@ -10,6 +10,7 @@ module Spec.Contract.Tx.Constraints.MustSpendPubKeyOutput(tests) where
 
 import Control.Lens (at, non, (^.))
 import Control.Monad (void)
+import Spec.Contract.Error (evaluationError, txOutRefNotFound)
 import Test.Tasty (TestTree, testGroup)
 
 import Data.Either (fromRight)
@@ -18,8 +19,7 @@ import Data.Set qualified as S (elemAt, elems)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), typedValidatorLookups,
-                                                             unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Constraints (typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
                                                                   mustIncludeDatumInTx, mustPayToTheScriptWithDatumInTx,
@@ -34,7 +34,6 @@ import Plutus.Contract.Test (assertContractError, assertFailedTransaction, asser
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Wallet as Wallet (WalletState, chainIndexEmulatorState, ownAddress, signPrivateKeys,
@@ -171,7 +170,7 @@ contractErrorWhenAttemptingToSpendNonExistentOutput =
             void Trace.nextSlot
 
     in checkPredicate "Fail validation when mustSpendPubKeyOutput constraint expects a non-existing txo"
-        (assertContractError contract (Trace.walletInstanceTag w1) (\case { ConstraintResolutionContractError ( Constraints.TxOutRefNotFound txoRefInError) -> txoRefInError == nonExistentTxoRef; _ -> False }) "failed to throw error"
+        (assertContractError contract (Trace.walletInstanceTag w1) (txOutRefNotFound nonExistentTxoRef) "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         (void trace)
 
@@ -186,7 +185,7 @@ phase2FailureWhenTxoIsNotSpent =
             void Trace.nextSlot
 
     in checkPredicate "Fail phase-2 validation when txo expected by on-chain mustSpendPubKeyOutput does not exist"
-        (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L7":_) _) -> True; _ -> False }))
+        (assertFailedTransaction (const $ evaluationError "L7"))
         (void trace)
 
 {-# INLINEABLE mkValidator #-}
