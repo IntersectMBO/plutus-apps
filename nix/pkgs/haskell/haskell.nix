@@ -109,6 +109,11 @@ let
             };
           }
         )
+        (lib.mkIf (pkgs.stdenv.hostPlatform.isDarwin) {
+          packages = {
+            plutus-pab-executables.components.tests.plutus-pab-test-full-long-running.buildable = lib.mkForce false;
+          };
+        })
         ({ pkgs, config, ... }: {
           packages = {
             marconi.doHaddock = deferPluginErrors;
@@ -163,10 +168,6 @@ let
 
             # Relies on cabal-doctest, just turn it off in the Nix build
             prettyprinter-configurable.components.tests.prettyprinter-configurable-doctest.buildable = lib.mkForce false;
-
-            plutus-pab-executables.components.tests.plutus-pab-test-full-long-running = {
-              platforms = lib.platforms.linux;
-            };
 
             # Broken due to warnings, unclear why the setting that fixes this for the build doesn't work here.
             iohk-monitoring.doHaddock = false;
