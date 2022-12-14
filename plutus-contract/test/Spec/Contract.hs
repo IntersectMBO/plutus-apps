@@ -39,14 +39,14 @@ import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, a
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
                                     ContractInstanceState (ContractInstanceState, instContractState),
                                     UserThreadMsg (UserLog))
-import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, Validator)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator)
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -423,8 +423,8 @@ errorContract = do
                       $ \_ -> throwError (OtherContractError "something went wrong"))
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
-someAddress :: Address
-someAddress = mkValidatorAddress someValidator
+someAddress :: Ledger.CardanoAddress
+someAddress = mkValidatorCardanoAddress Ledger.testnet someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])

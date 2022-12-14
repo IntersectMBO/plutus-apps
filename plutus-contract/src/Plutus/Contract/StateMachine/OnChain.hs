@@ -28,12 +28,14 @@ module Plutus.Contract.StateMachine.OnChain(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Ledger (CardanoAddress, testnet)
 import Ledger.Constraints (TxConstraints (txOwnOutputs), mustPayToTheScriptWithDatumInTx)
 import Ledger.Constraints.OnChain.V1 (checkScriptContext)
-import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorTypes, validatorAddress, validatorHash)
+import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorTypes, validatorCardanoAddress,
+                             validatorHash)
 import Ledger.Value (Value, isZero)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
-import Plutus.V1.Ledger.Api (Address, ValidatorHash)
+import Plutus.V1.Ledger.Api (ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
 import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusTx qualified
@@ -104,8 +106,10 @@ data StateMachineInstance s i = StateMachineInstance {
     typedValidator :: TypedValidator (StateMachine s i)
     }
 
-machineAddress :: StateMachineInstance s i -> Address
-machineAddress = validatorAddress . typedValidator
+-- | TODO StateMachine can be use only on a testnet at the moment, to enable it on another network, we need to
+-- parametrise the networkId
+machineAddress :: StateMachineInstance s i -> CardanoAddress
+machineAddress = validatorCardanoAddress testnet . typedValidator
 
 {-# INLINABLE mkValidator #-}
 -- | Turn a state machine into a validator script.

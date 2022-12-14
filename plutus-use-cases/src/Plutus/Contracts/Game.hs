@@ -46,7 +46,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
+import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value, testnet)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)
@@ -55,7 +55,7 @@ import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
 import Plutus.Script.Utils.Typed (ScriptContextV1)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)
@@ -94,8 +94,8 @@ instance Scripts.ValidatorTypes Game where
     type instance DatumType Game = HashedString
 
 -- | The address of the game (the hash of its validator script)
-gameAddress :: GameParam -> Address
-gameAddress = mkValidatorAddress . gameValidator
+gameAddress :: GameParam -> CardanoAddress
+gameAddress = mkValidatorCardanoAddress testnet . gameValidator
 
 -- | The validator script of the game.
 gameValidator :: GameParam -> Validator

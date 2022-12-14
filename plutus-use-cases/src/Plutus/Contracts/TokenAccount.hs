@@ -50,6 +50,7 @@ import Plutus.Contract (AsContractError (_ContractError), Contract, ContractErro
 import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
+import Ledger (CardanoAddress, toPlutusAddress)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (CardanoTx)
@@ -59,7 +60,7 @@ import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.V1.Ledger.Api (Address, ValidatorHash)
+import Plutus.V1.Ledger.Api (ValidatorHash)
 import Plutus.V1.Ledger.Contexts qualified as PV1
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
@@ -76,14 +77,14 @@ instance ValidatorTypes TokenAccount where
     type DatumType TokenAccount = ()
 
 type TokenAccountSchema =
-        Endpoint "redeem" (Account, Address)
+        Endpoint "redeem" (Account, CardanoAddress)
         .\/ Endpoint "pay" (Account, Value)
-        .\/ Endpoint "new-account" (TokenName, Address)
+        .\/ Endpoint "new-account" (TokenName, CardanoAddress)
 
 type HasTokenAccountSchema s =
-    ( HasEndpoint "redeem" (Account, Address) s
+    ( HasEndpoint "redeem" (Account, CardanoAddress) s
     , HasEndpoint "pay" (Account, Value) s
-    , HasEndpoint "new-account" (TokenName, Address) s
+    , HasEndpoint "new-account" (TokenName, CardanoAddress) s
     )
 
 data TokenAccountError =
@@ -108,7 +109,7 @@ tokenAccountContract
        )
     => Contract w s e ()
 tokenAccountContract = mapError (review _TokenAccountError) (selectList [redeem_, pay_, newAccount_]) where
-    redeem_ = endpoint @"redeem" @(Account, Address) @w @s $ \(accountOwner, destination) -> do
+    redeem_ = endpoint @"redeem" @(Account, CardanoAddress) @w @s $ \(accountOwner, destination) -> do
         void $ redeem destination accountOwner
         tokenAccountContract
     pay_ = endpoint @"pay" @_ @w @s $ \(accountOwner, value) -> do
@@ -133,8 +134,8 @@ typedValidator = Scripts.mkTypedValidatorParam @TokenAccount
     where
         wrap = Scripts.mkUntypedValidator
 
-address :: Account -> Address
-address = Scripts.validatorAddress . typedValidator
+address :: Account -> CardanoAddress
+address = Scripts.validatorCardanoAddress Ledger.testnet . typedValidator
 
 validatorHash :: Account -> ValidatorHash
 validatorHash = PV1.validatorHash . Scripts.validatorScript . typedValidator
@@ -169,7 +170,7 @@ redeemTx :: forall w s e.
     ( AsTokenAccountError e
     )
     => Account
-    -> Address
+    -> CardanoAddress
     -> Contract w s e (TxConstraints () (), ScriptLookups TokenAccount)
 redeemTx account addr = mapError (review _TAContractError) $ do
     let inst = typedValidator account
@@ -182,7 +183,7 @@ redeemTx account addr = mapError (review _TAContractError) $ do
             <> " outputs with a total value of "
             <> show totalVal
     let constraints = Constraints.collectFromTheScript utxos ()
-                <> Constraints.mustPayToAddress addr (accountToken account)
+                <> Constraints.mustPayToAddress (toPlutusAddress addr) (accountToken account)
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos
     pure (constraints, lookups)
@@ -191,7 +192,7 @@ redeemTx account addr = mapError (review _TAContractError) $ do
 redeem
   :: ( AsTokenAccountError e
      )
-  => Address
+  => CardanoAddress
   -- ^ Where the token should go after the transaction
   -> Account
   -- ^ The token account
@@ -218,7 +219,7 @@ newAccount
     (AsTokenAccountError e)
     => TokenName
     -- ^ Name of the token
-    -> Address
+    -> CardanoAddress
     -- ^ Address of the token's initial owner
     -> Contract w s e Account
 newAccount tokenName addr = mapError (review _TokenAccountError) $ do

@@ -113,6 +113,7 @@ import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
 import Ledger.Ada qualified as Ada
+import Ledger.Address (toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
@@ -123,7 +124,7 @@ import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Prelude qualified as P
 
 import Ledger qualified
-import Ledger.Address (Address)
+import Ledger.Address (CardanoAddress)
 import Ledger.Generators (GeneratorModel, Mockchain (..))
 import Ledger.Generators qualified as Gen
 import Ledger.Index (ValidationError)
@@ -384,12 +385,12 @@ assertEvents contract inst pr nm = TracePredicate $
         pure result
 
 -- | Check that the funds at an address meet some condition.
-valueAtAddress :: Address -> (Value -> Bool) -> TracePredicate
+valueAtAddress :: CardanoAddress -> (Value -> Bool) -> TracePredicate
 valueAtAddress address check = TracePredicate $
     flip postMapM (L.generalize $ Folds.valueAtAddress address) $ \vl -> do
         let result = check vl
         unless result $ do
-            tell @(Doc Void) ("Funds at address" <+> pretty address <+> "were" <+> pretty vl)
+            tell @(Doc Void) ("Funds at address" <+> pretty (toPlutusAddress address) <+> "were" <+> pretty vl)
         pure result
 
 
@@ -404,14 +405,14 @@ getTxOutDatum tx' txOut = Ledger.txOutDatumHash txOut >>= go
     where
         go datumHash = Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
-dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
+dataAtAddress :: forall d . FromData d => CardanoAddress -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $
     flip postMapM (L.generalize $ Folds.utxoAtAddress address) $ \utxo -> do
       let
         datums = mapMaybe (uncurry $ getTxOutDatum @d) $ toList utxo
         result = check datums
       unless result $ do
-          tell @(Doc Void) ("Data at address" <+> pretty address <+> "was"
+          tell @(Doc Void) ("Data at address" <+> pretty (toPlutusAddress address) <+> "was"
               <+> foldMap (foldMap pretty . Ledger.getCardanoTxData . fst) utxo)
       pure result
 

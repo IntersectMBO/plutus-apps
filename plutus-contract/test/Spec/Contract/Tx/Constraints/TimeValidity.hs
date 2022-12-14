@@ -21,11 +21,10 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed, currentNodeClientSlot,
-                               currentNodeClientTimeRange, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
+                               currentNodeClientTimeRange, getParams, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
                                submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, w1)
-import Plutus.Script.Utils.V1.Scripts (ValidatorHash)
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
@@ -58,6 +57,7 @@ tests = testGroup "time validitity constraint"
 
 contract :: Contract () Empty ContractError ()
 contract = do
+    p <- getParams
     now <- snd <$> Con.currentNodeClientTimeRange
     logInfo @String $ "now: " ++ show now
     let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
@@ -66,7 +66,7 @@ contract = do
                 (Ada.lovelaceValueOf 25000000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-    utxos <- utxosAt scrAddress
+    utxos <- utxosAt $ scrAddress (Ledger.pNetworkId p)
     let orefs = fst <$> Map.toList utxos
         lookups2 =
             Constraints.otherScript (validatorScript deadline)
@@ -210,11 +210,8 @@ typedValidator = Scripts.mkTypedValidatorParam @UnitTest
 validatorScript :: P.POSIXTime -> Tx.Versioned Validator
 validatorScript = Scripts.vValidatorScript . typedValidator
 
-valHash :: ValidatorHash
-valHash = Scripts.validatorHash $ typedValidator deadline
-
-scrAddress :: Ledger.Address
-scrAddress = Ledger.scriptHashAddress valHash
+scrAddress :: Ledger.NetworkId -> Ledger.CardanoAddress
+scrAddress networkId = Scripts.validatorCardanoAddress networkId $ typedValidator deadline
 
 head' :: [a] -> a
 head' (x:_) = x

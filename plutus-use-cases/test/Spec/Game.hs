@@ -25,6 +25,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit
 
 import Ledger.Ada qualified as Ada
+import Ledger.Params (testnet)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
@@ -47,13 +48,13 @@ tests =
     testGroup "game with secret arguments tests"
     [ checkPredicate "run a successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 8)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 0 ==)
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Ada.adaValueOf 0 ==)
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
         successTrace
 
     , checkPredicate "run a failed trace"
         (walletFundsChange w2 mempty
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
         failTrace
 

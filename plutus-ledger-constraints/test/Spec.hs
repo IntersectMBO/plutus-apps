@@ -23,7 +23,7 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
 import Ledger qualified (DatumFromQuery (DatumInBody), DecoratedTxOut (ScriptDecoratedTxOut), inputs, paymentPubKeyHash,
-                         scriptTxInputs, toTxOut, txInputRef, unitDatum, unitRedeemer)
+                         scriptTxInputs, toPlutusAddress, toTxOut, txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, stakeValidatorHashCredential,
                        xprvToPaymentPubKeyHash, xprvToStakingCredential)
@@ -143,7 +143,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
           Hedgehog.failure
       Right utx -> do
           let outputs = txOutputs (view OC.tx utx)
-          let stakingCreds = mapMaybe (addressStakingCredential . txOutAddress) outputs
+          let stakingCreds = mapMaybe (addressStakingCredential . Ledger.toPlutusAddress . txOutAddress) outputs
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) sc)
 
@@ -159,7 +159,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
           Hedgehog.failure
       Right utx -> do
           let outputs = txOutputs (view OC.tx utx)
-          let stakingCreds = mapMaybe (addressStakingCredential . txOutAddress) outputs
+          let stakingCreds = mapMaybe (addressStakingCredential . Ledger.toPlutusAddress . txOutAddress) outputs
           Hedgehog.assert $ not $ null stakingCreds
           forM_ stakingCreds ((===) sc)
 

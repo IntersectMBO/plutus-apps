@@ -32,13 +32,13 @@ import Text.Hex (decodeHex)
 import Blockfrost.Client
 import Cardano.Api hiding (Block, Script, ScriptDatum, ScriptHash, TxIn, TxOut)
 import Cardano.Api.Shelley qualified as Shelley
+import Ledger.Address qualified as Ledger (CardanoAddress, cardanoAddressCredential)
 import Ledger.Slot qualified as Ledger (Slot)
 import Ledger.Tx (DatumFromQuery (DatumUnknown), DecoratedTxOut (..), Language (PlutusV1), RedeemerPtr (..), TxIn (..),
                   TxOutRef (..), Versioned (Versioned, unversioned), mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut,
                   pubKeyTxIn, scriptTxIn)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
-import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Api (BuiltinByteString, PubKeyHash)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, Redeemer, StakeValidator, Validator (..), ValidatorHash (..))
@@ -115,20 +115,20 @@ processUnspentTxOut Nothing = pure Nothing
 processUnspentTxOut (Just utxo) = buildResponse utxo
   where
     buildResponse :: UtxoOutput -> IO (Maybe DecoratedTxOut)
-    buildResponse utxoOut = case toPlutusAddress (_utxoOutputAddress utxoOut) of
+    buildResponse utxoOut = case toCardanoAddress (_utxoOutputAddress utxoOut) of
               Left err   -> ioError (userError err)
-              Right addr -> case Ledger.addressCredential addr of
+              Right addr -> case Ledger.cardanoAddressCredential addr of
                     PubKeyCredential _ -> pure $ buildPublicKeyTxOut addr utxoOut
                     ScriptCredential _ -> pure $ buildScriptTxOut addr utxoOut
 
-    buildScriptTxOut :: Ledger.Address -> UtxoOutput -> Maybe DecoratedTxOut
+    buildScriptTxOut :: Ledger.CardanoAddress -> UtxoOutput -> Maybe DecoratedTxOut
     buildScriptTxOut addr utxoOut = mkScriptDecoratedTxOut addr
                                                           (utxoValue utxoOut)
                                                           (utxoDatumHash utxoOut, DatumUnknown)
                                                           Nothing
                                                           Nothing
 
-    buildPublicKeyTxOut :: Ledger.Address -> UtxoOutput -> Maybe DecoratedTxOut
+    buildPublicKeyTxOut :: Ledger.CardanoAddress -> UtxoOutput -> Maybe DecoratedTxOut
     buildPublicKeyTxOut addr utxoOut = mkPubkeyDecoratedTxOut addr (utxoValue utxoOut) Nothing Nothing
 
     utxoValue :: UtxoOutput -> Ledger.Value
@@ -245,7 +245,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
 
     utxoOutputToTxOut :: UtxoOutput -> IO CI.ChainIndexTxOut
     utxoOutputToTxOut utxo = do
-        addr <- either (ioError . userError) return (toPlutusAddress $ _utxoOutputAddress utxo)
+        addr <- either (ioError . userError) pure (toCardanoAddress $ _utxoOutputAddress utxo)
         pure $ CI.ChainIndexTxOut
           { CI.citoAddress = addr
           , CI.citoValue     = amountsToValue $ _utxoOutputAmount utxo
@@ -290,7 +290,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
                             PubKeyCredential _                    -> pubKeyTxIn $ txoToRef utxoIn
 
         addr :: UtxoInput -> Credential
-        addr utxoIn = either (error "processTxIn: Error decoding address") Ledger.addressCredential (toPlutusAddress $ _utxoInputAddress utxoIn)
+        addr utxoIn = either (error "processTxIn: Error decoding address") Ledger.cardanoAddressCredential (toCardanoAddress $ _utxoInputAddress utxoIn)
 
         red :: Integer -> Redeemer
         red idx = case find (\(RedeemerPtr _ i, _) -> idx == i) (Map.toList redeemers) of

@@ -52,7 +52,7 @@ import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
 
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (POSIXTime, POSIXTimeRange, Params (..), Slot (..), SlotRange)
+import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, Params (..), Slot (..), SlotRange)
 import Ledger.Constraints.OffChain (UnbalancedTx, adjustUnbalancedTx)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx)
@@ -62,7 +62,6 @@ import Plutus.ChainIndex.Effects qualified as ChainIndexEff
 import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))
 import Plutus.Contract.Wallet qualified as Wallet
-import Plutus.V1.Ledger.Api (Address)
 import Wallet.API (WalletAPIError)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Effects qualified
@@ -124,7 +123,7 @@ handleOwnAddresses ::
     ( Member WalletEffect effs
     , Member (LogObserve (LogMessage Text)) effs
     )
-    => RequestHandler effs a (NonEmpty Address)
+    => RequestHandler effs a (NonEmpty CardanoAddress)
 handleOwnAddresses =
     RequestHandler $ \_ ->
         surroundDebug @Text "handleOwnAddresses" Wallet.Effects.ownAddresses

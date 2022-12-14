@@ -46,7 +46,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, i
                             update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
+import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
@@ -201,7 +201,7 @@ makeChainIndexTxOut ::
   -> Eff effs (Maybe L.DecoratedTxOut)
 makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
-  case addressCredential address of
+  case L.cardanoAddressCredential address of
     PubKeyCredential _ ->
         pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
     ScriptCredential vh ->
@@ -595,13 +595,13 @@ fromTx tx = mempty
     , scriptRows = fromMap citxScripts
     , redeemerRows = fromPairs (Map.toList . txRedeemersWithHash)
     , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
-    , addressRows = InsertRows . fmap toDbValue . (fmap credential . txOutsWithRef) $ tx
+    , addressRows = InsertRows . fmap (toDbValue . credential) . txOutsWithRef $ tx
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
     }
     where
         credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
-        credential (ChainIndexTxOut{citoAddress=Address{addressCredential},citoDatum}, ref) =
-          (addressCredential, ref, getHashFromDatum citoDatum)
+        credential (ChainIndexTxOut{citoAddress,citoDatum}, ref) =
+          (cardanoAddressCredential citoAddress, ref, getHashFromDatum citoDatum)
         assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
         assetClasses (ChainIndexTxOut{citoValue}, ref) =
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))

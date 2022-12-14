@@ -149,7 +149,8 @@ setupTokens = do
     forM_ wallets $ \w -> do
         let addr = mockWalletAddress w
         when (addr /= ownAddr) $ do
-            cs <- mkTxConstraints @Void mempty (mustPayToAddress addr v)
+            cs <- mkTxConstraints @Void mempty
+                    (mustPayToAddress (Ledger.toPlutusAddress addr) v)
             Contract.adjustUnbalancedTx cs >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur

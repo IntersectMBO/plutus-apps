@@ -12,6 +12,7 @@ import Control.Lens (at, non, (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Data.Either (fromRight)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)
 import Ledger qualified
@@ -24,14 +25,15 @@ import Ledger.Constraints.TxConstraints qualified as Constraints (collectFromThe
                                                                   mustIncludeDatumInTx, mustPayToTheScriptWithDatumInTx,
                                                                   mustSpendPubKeyOutput)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicate, mockWalletPaymentPubKeyHash, w1, w2, walletFundsChange, (.&&.))
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Address (addressCredential), Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator,
-                             ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -73,15 +75,16 @@ mustSpendPubKeyOutputContract = mustSpendPubKeyOutputContract' []
 
 mustSpendPubKeyOutputContract' :: [Ledger.PaymentPubKeyHash] -> [TxOutRef] -> [TxOutRef] -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
 mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
+    networkId <- Ledger.pNetworkId <$> getParams
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx onChainTxOutRefs (Ada.lovelaceValueOf baseLovelaceLockedByScript)
             <> foldMap Constraints.mustBeSignedBy keys
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    pubKeyUtxos <- utxosAt $ Ledger.pubKeyHashAddress pkh Nothing
-    logInfo @String $ "pubKeyUtxos:: " ++ show pubKeyUtxos -- remove
-    scriptUtxos <- utxosAt scrAddress
+    pubKeyUtxos <- utxosAt $ fromRight (error "can't build address")
+                           $ toCardanoAddressInEra networkId $ Ledger.pubKeyHashAddress pkh Nothing
+    scriptUtxos <- utxosAt $ scrAddress networkId
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
@@ -97,7 +100,7 @@ mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
 
 txoRefsFromWalletState :: WalletState -> Set TxOutRef
 txoRefsFromWalletState w = let
-  pkCred = addressCredential $ Wallet.ownAddress w
+  pkCred = Ledger.cardanoAddressCredential $ Wallet.ownAddress w
   in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
 
@@ -210,5 +213,5 @@ validatorScript = Scripts.validatorScript typedValidator
 valHash :: ValidatorHash
 valHash = Scripts.validatorHash typedValidator
 
-scrAddress :: Ledger.Address
-scrAddress = Ledger.scriptHashAddress valHash
+scrAddress :: Ledger.NetworkId -> Ledger.CardanoAddress
+scrAddress = flip Typed.validatorCardanoAddress typedValidator

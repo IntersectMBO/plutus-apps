@@ -52,6 +52,7 @@ balanceTxnMinAda =
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
+            params <- getParams
             let constraints1 =
                     L.Constraints.mustPayToOtherScriptWithDatumInTx
                         vHash
@@ -60,7 +61,7 @@ balanceTxnMinAda =
                  <> L.Constraints.mustIncludeDatumInTx unitDatum
             utx1 <- mkTxConstraints @Void mempty constraints1
             submitTxConfirmed utx1
-            utxo <- utxosAt someAddress
+            utxo <- utxosAt $ someCardanoAddress (Ledger.pNetworkId params)
             let txOutRef = head (Map.keys utxo)
                 constraints2 =
                     L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
@@ -117,7 +118,8 @@ balanceTxnMinAda2 =
 
         wallet2Contract :: Contract () EmptySchema ContractError ()
         wallet2Contract = do
-            utxos <- utxosAt someAddress
+            params <- getParams
+            utxos <- utxosAt $ someCardanoAddress (Ledger.pNetworkId params)
             let txOutRef = case Map.keys utxos of
                              (x:_) -> x
                              []    -> error $ "there's no utxo at the address " <> show someAddress

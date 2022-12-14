@@ -48,11 +48,13 @@ import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), pubKeyAddress)
+import Ledger.Address (CardanoAddress, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
+import Ledger.Params (testnet)
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOutRef (TxOutRef))
+import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOut (..), ChainIndexTxOutputs (..),
@@ -91,8 +93,10 @@ genSlot :: MonadGen m => m Slot
 genSlot = Slot <$> Gen.integral (Range.linear 0 100000000)
 
 -- | Generate a public key address
-genAddress :: MonadGen m => m Address
-genAddress = Gen.element
+genAddress :: MonadGen m => m CardanoAddress
+genAddress = Gen.mapMaybeT
+           (either (const Nothing) Just . toCardanoAddressInEra testnet)
+           $ Gen.element
            $ pubKeyAddress <$> (PaymentPubKey <$> ["000fff", "aabbcc", "123123"])
                            <*> pure Nothing
 

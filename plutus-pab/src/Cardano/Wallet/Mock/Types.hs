@@ -47,12 +47,11 @@ import Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (PaymentPubKeyHash)
+import Ledger (CardanoAddress, PaymentPubKeyHash)
 import Ledger.Ada (Ada)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Types (PABError)
-import Plutus.V1.Ledger.Api (Address)
 import Prettyprinter (Pretty (pretty), (<+>))
 import Servant (ServerError)
 import Servant.Client (ClientError)
@@ -70,7 +69,7 @@ data WalletInfo =
         , wiPaymentPubKeyHash :: PaymentPubKeyHash
         -- ^ Hash of the wallet's public key, serving as wallet ID.
         -- TODO Remove eventually as it is replaced by 'wiAddresses'.
-        , wiAddresses         :: NonEmpty Address -- ^ Wallet's addresses
+        , wiAddresses         :: NonEmpty CardanoAddress -- ^ Wallet's addresses
         }
     deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)

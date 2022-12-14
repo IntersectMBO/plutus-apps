@@ -22,6 +22,7 @@ module Plutus.Script.Utils.V2.Scripts
     , scriptHash
     -- * Script utilities
     , scriptCurrencySymbol
+    , toCardanoApiScript
     ) where
 
 import Cardano.Api qualified as Script

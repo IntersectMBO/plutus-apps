@@ -33,15 +33,15 @@ import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (Address, PaymentPubKeyHash)
+import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
 import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (TxOutRefNotFound), ValidationPhase (Phase1), adjustTxOut,
                      minAdaTxOutEstimated)
-import Ledger.Params (EmulatorEra, PParams, Params (emulatorPParams, pNetworkId), emulatorEraHistory, emulatorGlobals,
+import Ledger.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory, emulatorGlobals,
                       pProtocolParams)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx, TxOut, TxOutRef)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoFee,
-                             toCardanoReturnCollateral, toCardanoTotalCollateral, toCardanoTxBodyContent)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoFee, toCardanoReturnCollateral,
+                             toCardanoTotalCollateral, toCardanoTxBodyContent)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation (CardanoLedgerError, UTxO (..), fromPlutusIndex, makeTransactionBody)
 import Ledger.Value (Value)
@@ -75,15 +75,14 @@ makeAutoBalancedTransaction
   :: Params
   -> UTxO EmulatorEra -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoBuildTx
-  -> Address -- ^ Change address
+  -> CardanoAddress -- ^ Change address
   -> Either CardanoLedgerError (C.Api.Tx C.Api.BabbageEra)
-makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
-  cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
+makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) cChangeAddr = first Right $ do
   -- Compute the change.
-  C.Api.BalancedTxBody _ change _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr []
+  C.Api.BalancedTxBody _ change _ <- first (TxBodyError . C.Api.displayError) $ balance []
   let
     -- Recompute execution units with full set of UTxOs, including change.
-    trial = balance cChangeAddr [change]
+    trial = balance [change]
     -- Correct for a negative balance in cases where execution units, and hence fees, have increased.
     change' =
       case (change, trial) of
@@ -91,13 +90,13 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) pChangeAd
           C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> C.Api.lovelaceToValue delta) datum _referenceScript
         _ -> change
   -- Construct the body with correct execution units and fees.
-  C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance cChangeAddr [change']
+  C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance [change']
   pure $ C.Api.makeSignedTransaction [] txBody
   where
     eh = emulatorEraHistory params
     ss = systemStart $ emulatorGlobals params
     utxo' = fromLedgerUTxO utxo
-    balance cChangeAddr extraOuts = C.Api.makeTransactionBodyAutoBalance
+    balance extraOuts = C.Api.makeTransactionBodyAutoBalance
       C.Api.BabbageEraInCardanoMode
       ss
       eh
@@ -118,16 +117,14 @@ makeAutoBalancedTransactionWithUtxoProvider
     :: Monad m
     => Params
     -> UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
-    -> Address -- ^ Change address
+    -> CardanoAddress -- ^ Change address
     -> (Value -> m ([(TxOutRef, TxOut)], Value))
     -- ^ The utxo provider, it return outputs that cover at least the given value,
     -- and return the change, i.e. how much the outputs overshoot the given value.
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> CardanoBuildTx
     -> m (C.Tx C.BabbageEra)
-makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) pChangeAddr utxoProvider errorReporter (CardanoBuildTx unbalancedBodyContent) = do
-
-    cChangeAddr <- either (errorReporter . Right) pure $ toCardanoAddressInEra (pNetworkId params) pChangeAddr
+makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) cChangeAddr utxoProvider errorReporter (CardanoBuildTx unbalancedBodyContent) = do
 
     let initialFeeEstimate = Ada.lovelaceValueOf 300_000
 

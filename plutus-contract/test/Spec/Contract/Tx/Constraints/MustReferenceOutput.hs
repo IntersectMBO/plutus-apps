@@ -17,7 +17,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import Data.Default (Default (def))
 import Data.Map qualified as M
-import Data.Maybe (catMaybes, fromJust)
+import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Text qualified as Text
@@ -27,7 +27,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Cons
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Test (asDatum, asRedeemer, someAddress, someValidatorHash)
+import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Cons
 import Ledger.Tx.Constraints qualified as TxCons
@@ -41,8 +41,10 @@ import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransaction
 import Plutus.Script.Utils.Scripts qualified as PSU
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PSU.V1
-import Plutus.Script.Utils.V1.Typed.Scripts qualified as PSU.V1
+import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.V2.Address qualified as PSU.V2
+import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
@@ -127,7 +129,7 @@ mustReferenceOutputContract submitTxFromConstraints l offChainTxoRefs onChainTxo
 
 txoRefsFromWalletState :: WalletState -> Set Tx.TxOutRef
 txoRefsFromWalletState w = let
-  pkCred = L.addressCredential $ Wallet.ownAddress w
+  pkCred = L.cardanoAddressCredential $ Wallet.ownAddress w
   in w ^. chainIndexEmulatorState . diskState . addressMap . unCredentialMap . at pkCred . non mempty
 
 -- | Ledger validation error occurs when attempting use of offchain mustReferenceOutput
@@ -215,12 +217,13 @@ mustReferenceOutputWithMultiplePubkeyOutputs submitTxFromConstraints l =
 mustReferenceOutputWithSingleScriptOutput :: SubmitTx -> PSU.Language -> TestTree
 mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
     let contractWithScriptOutput = do
+            params <- getParams
             let tx1 = Cons.mustPayToOtherScriptWithDatumHash someValidatorHash
                       (asDatum $ PlutusTx.toBuiltinData ()) (Ada.lovelaceValueOf 2_000_000)
             ledgerTx1 <- submitTx tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-            scriptUtxos <- utxosAt someAddress
+            scriptUtxos <- utxosAt $ someCardanoAddress $ L.pNetworkId params
             let scriptUtxo = head $ M.keys scriptUtxos
                 lookups2 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
                         <> Cons.unspentOutputs scriptUtxos
@@ -313,11 +316,11 @@ mustReferenceOutputV1Validator :: PV1.Validator
 mustReferenceOutputV1Validator = PV1.mkValidatorScript
     $$(PlutusTx.compile [|| wrap ||])
  where
-     wrap = PSU.V1.mkUntypedValidator mkMustReferenceOutputV1Validator
+     wrap = Typed.mkUntypedValidator mkMustReferenceOutputV1Validator
 
-mustReferenceOutputV1ValidatorAddress :: L.Address
+mustReferenceOutputV1ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV1ValidatorAddress =
-    PSU.V1.mkValidatorAddress mustReferenceOutputV1Validator
+    PSU.V1.mkValidatorCardanoAddress L.testnet mustReferenceOutputV1Validator
 
 txConstraintsTxBuildFailWhenUsingV1Script :: TestTree
 txConstraintsTxBuildFailWhenUsingV1Script =
@@ -335,7 +338,7 @@ mustReferenceOutputTxV1Contract = do
 
     utxos <- ownUtxos
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
-        vh = fromJust $ L.toValidatorHash mustReferenceOutputV1ValidatorAddress
+        vh = PSU.V1.validatorHash mustReferenceOutputV1Validator
         lookups1 = Cons.unspentOutputs utxos
         datum = PV1.Datum $ PlutusTx.toBuiltinData utxoRef
         tx1 = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
@@ -345,7 +348,7 @@ mustReferenceOutputTxV1Contract = do
     submitTxConfirmed $ mkTx lookups1 tx1
 
     -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt mustReferenceOutputV1ValidatorAddress
+    scriptUtxos <- utxosAt $ mustReferenceOutputV1ValidatorAddress
     let
         scriptUtxo = fst . head . M.toList $ scriptUtxos
         lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos)
@@ -369,9 +372,9 @@ mustReferenceOutputV2Validator = PV2.mkValidatorScript
  where
      wrap = Scripts.mkUntypedValidator mkMustReferenceOutputV2Validator
 
-mustReferenceOutputV2ValidatorAddress :: L.Address
+mustReferenceOutputV2ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV2ValidatorAddress =
-    PSU.V2.mkValidatorAddress mustReferenceOutputV2Validator
+    PSU.V2.mkValidatorCardanoAddress L.testnet mustReferenceOutputV2Validator
 
 txConstraintsCanUnlockFundsWithV2Script :: TestTree
 txConstraintsCanUnlockFundsWithV2Script =
@@ -389,7 +392,7 @@ mustReferenceOutputTxV2Contract = do
 
     utxos <- ownUtxos
     let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
-        vh = fromJust $ L.toValidatorHash mustReferenceOutputV2ValidatorAddress
+        vh = PSU.V2.validatorHash mustReferenceOutputV2Validator
         lookups1 = Cons.unspentOutputs utxos
         datum = L.Datum $ PlutusTx.toBuiltinData utxoRef
         tx1 = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)

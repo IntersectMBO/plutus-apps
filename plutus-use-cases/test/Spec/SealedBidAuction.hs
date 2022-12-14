@@ -17,6 +17,7 @@ import Data.Data
 import Data.Default (Default (def))
 
 import Ledger (Slot (..), Value)
+import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Secrets
@@ -81,7 +82,7 @@ instance ContractModel AuctionModel where
 
     startInstances _ (Init (Slot ebS) (Slot pS)) =
       let params =  AuctionParams
-            { apOwner      = mockWalletAddress w1
+            { apOwner      = Ledger.toPlutusAddress $ mockWalletAddress w1
             , apAsset      = theToken
             , apEndTime    = TimeSlot.scSlotZeroTime def + fromInteger (ebS*1000)
             , apPayoutTime = TimeSlot.scSlotZeroTime def + fromInteger (pS*1000)

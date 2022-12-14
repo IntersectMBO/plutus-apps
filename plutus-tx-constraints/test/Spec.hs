@@ -98,9 +98,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             forM_ stakingCreds ((===) sc)
     where
         stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.BabbageEra -> Maybe StakingCredential
-        stakePaymentPubKeyHash (C.TxOut addr _ _ _) = do
-            let txOutAddress = C.fromCardanoAddressInEra addr
-            addressStakingCredential txOutAddress
+        stakePaymentPubKeyHash (C.TxOut addr _ _ _) = Ledger.cardanoStakingCredential addr
 
 
 -- txOut0 :: Ledger.ChainIndexTxOut

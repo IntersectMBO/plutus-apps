@@ -33,7 +33,7 @@ import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), pNetworkId, testnet)
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
@@ -153,8 +153,8 @@ typedValidator = Scripts.mkTypedValidatorParam @Vesting
     where
         wrap = Scripts.mkUntypedValidator
 
-contractAddress :: VestingParams -> Address
-contractAddress = Scripts.validatorAddress . typedValidator
+contractAddress :: VestingParams -> CardanoAddress
+contractAddress = Scripts.validatorCardanoAddress testnet . typedValidator
 
 data VestingError =
     VContractError ContractError
@@ -199,8 +199,9 @@ retrieveFundsC
     -> Value
     -> Contract w s e Liveness
 retrieveFundsC vesting payment = mapError (review _VestingError) $ do
+    networkId <- pNetworkId <$> getParams
     let inst = typedValidator vesting
-        addr = Scripts.validatorAddress inst
+        addr = Scripts.validatorCardanoAddress networkId inst
     now <- fst <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let

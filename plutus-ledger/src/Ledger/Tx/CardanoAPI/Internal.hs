@@ -458,10 +458,11 @@ toCardanoTxOut networkId (PV2.TxOut addr value datum _rsHash) =
             <*> toCardanoTxOutDatum datum
             <*> pure C.ReferenceScriptNone -- Not possible from just a hash
 
+{-# DEPRECATED fromCardanoAddressInEra "we now use Cardano address internally, if you need a plutus address use 'Ledger.Adrress.toPlutusAddress' "#-}
 fromCardanoAddressInEra :: C.AddressInEra era -> P.Address
-fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
-fromCardanoAddressInEra (C.AddressInEra _ address)                      = fromCardanoAddress address
+fromCardanoAddressInEra = P.toPlutusAddress
 
+{-# DEPRECATED fromCardanoAddress "Shouldn't be used as we use Cardano address internally now" #-}
 fromCardanoAddress :: C.Address addrtype -> P.Address
 fromCardanoAddress (C.ByronAddress address) =
     P.Address plutusCredential Nothing
@@ -483,6 +484,7 @@ toCardanoAddressInEra networkId (P.Address addressCredential addressStakingCrede
             <$> toCardanoPaymentCredential addressCredential
             <*> toCardanoStakeAddressReference addressStakingCredential)
 
+{-# DEPRECATED fromCardanoPaymentCredential "Shouldn't be used as we use Cardano address internally now" #-}
 fromCardanoPaymentCredential :: C.PaymentCredential -> Credential.Credential
 fromCardanoPaymentCredential (C.PaymentCredentialByKey paymentKeyHash) = Credential.PubKeyCredential (fromCardanoPaymentKeyHash paymentKeyHash)
 fromCardanoPaymentCredential (C.PaymentCredentialByScript scriptHash) = Credential.ScriptCredential (fromCardanoScriptHash scriptHash)
@@ -491,6 +493,7 @@ toCardanoPaymentCredential :: Credential.Credential -> Either ToCardanoError C.P
 toCardanoPaymentCredential (Credential.PubKeyCredential pubKeyHash) = C.PaymentCredentialByKey <$> toCardanoPaymentKeyHash (P.PaymentPubKeyHash pubKeyHash)
 toCardanoPaymentCredential (Credential.ScriptCredential validatorHash) = C.PaymentCredentialByScript <$> toCardanoScriptHash validatorHash
 
+{-# DEPRECATED fromCardanoPaymentKeyHash "Shouldn't be used as we use Cardano address internally now" #-}
 fromCardanoPaymentKeyHash :: C.Hash C.PaymentKey -> PV1.PubKeyHash
 fromCardanoPaymentKeyHash paymentKeyHash = PV1.PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes paymentKeyHash
 
@@ -500,12 +503,14 @@ toCardanoPaymentKeyHash (P.PaymentPubKeyHash (PV1.PubKeyHash bs)) =
         tg = "toCardanoPaymentKeyHash (" <> show (BS.length bsx) <> " bytes)"
     in tag tg $ deserialiseFromRawBytes (C.AsHash C.AsPaymentKey) bsx
 
+{-# DEPRECATED fromCardanoScriptHash "Shouldn't be used as we use Cardano address internally now" #-}
 fromCardanoScriptHash :: C.ScriptHash -> P.ValidatorHash
 fromCardanoScriptHash scriptHash = P.ValidatorHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes scriptHash
 
 toCardanoScriptHash :: P.ValidatorHash -> Either ToCardanoError C.ScriptHash
 toCardanoScriptHash (P.ValidatorHash bs) = tag "toCardanoScriptHash" $ deserialiseFromRawBytes C.AsScriptHash $ PlutusTx.fromBuiltin bs
 
+{-# DEPRECATED fromCardanoStakeAddressReference "Shouldn't be used as we use Cardano address internally now" #-}
 fromCardanoStakeAddressReference :: C.StakeAddressReference -> Maybe Credential.StakingCredential
 fromCardanoStakeAddressReference C.NoStakeAddress = Nothing
 fromCardanoStakeAddressReference (C.StakeAddressByValue stakeCredential) =
@@ -518,6 +523,7 @@ toCardanoStakeAddressReference (Just (Credential.StakingHash credential)) =
     C.StakeAddressByValue <$> toCardanoStakeCredential credential
 toCardanoStakeAddressReference (Just Credential.StakingPtr{}) = Left StakingPointersNotSupported
 
+{-# DEPRECATED fromCardanoStakeCredential "Shouldn't be used as we use Cardano address internally now" #-}
 fromCardanoStakeCredential :: C.StakeCredential -> Credential.Credential
 fromCardanoStakeCredential (C.StakeCredentialByKey stakeKeyHash) = Credential.PubKeyCredential (fromCardanoStakeKeyHash stakeKeyHash)
 fromCardanoStakeCredential (C.StakeCredentialByScript scriptHash) = Credential.ScriptCredential (fromCardanoScriptHash scriptHash)

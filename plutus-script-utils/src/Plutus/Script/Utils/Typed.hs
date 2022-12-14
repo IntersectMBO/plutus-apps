@@ -11,6 +11,7 @@ module Plutus.Script.Utils.Typed (
   , ValidatorTypes (..)
   , TypedValidator (..)
   , validatorHash
+  , validatorCardanoAddress
   , validatorAddress
   , validatorScript
   , vValidatorScript
@@ -27,12 +28,15 @@ module Plutus.Script.Utils.Typed (
   , ScriptContextV2
 ) where
 
+import Cardano.Api qualified as C
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version))
+import Plutus.Script.Utils.V1.Address qualified as PSU.PV1
+import Plutus.Script.Utils.V2.Address qualified as PSU.PV2
 import Plutus.V1.Ledger.Address qualified as PV1
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V2.Ledger.Api qualified as PV2
@@ -86,6 +90,14 @@ validatorHash = tvValidatorHash
 -- | The address of the validator.
 validatorAddress :: TypedValidator a -> PV1.Address
 validatorAddress = PV1.scriptHashAddress . tvValidatorHash
+
+-- | The address of the validator.
+validatorCardanoAddress :: C.NetworkId -> TypedValidator a -> C.AddressInEra C.BabbageEra
+validatorCardanoAddress networkId tv =
+  let validator = tvValidator tv
+  in case version validator of
+          PlutusV1 -> PSU.PV1.mkValidatorCardanoAddress networkId $ unversioned validator
+          PlutusV2 -> PSU.PV2.mkValidatorCardanoAddress networkId $ unversioned validator
 
 -- | The unversioned validator script itself.
 validatorScript :: TypedValidator a -> PV1.Validator

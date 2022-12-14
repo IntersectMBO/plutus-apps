@@ -38,18 +38,18 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
+
+import Ledger.Address (CardanoAddress, cardanoPubKeyHash, toPlutusAddress)
 import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Slot
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoAddressInEra, fromCardanoTxOutDatum, fromCardanoTxOutValue,
-                                      fromCardanoValue)
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxOutDatum, fromCardanoTxOutValue, fromCardanoValue)
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
+
 import Plutus.Script.Utils.Scripts
-import Plutus.V1.Ledger.Address (toPubKeyHash)
-import Plutus.V1.Ledger.Address qualified as V1
 import Plutus.V1.Ledger.Api (Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash), dataToBuiltinData)
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
@@ -59,6 +59,7 @@ import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Lattice
 import PlutusTx.Prelude (BuiltinByteString)
 import PlutusTx.Prelude qualified as PlutusTx
+
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input.
@@ -240,7 +241,7 @@ instance Pretty TxOut where
   pretty (TxOut (C.TxOut addr v d rs)) =
     hang 2 $ vsep $
       ["-" <+> pretty (fromCardanoTxOutValue v) <+> "addressed to"
-      , pretty (fromCardanoAddressInEra addr)
+      , pretty (toPlutusAddress addr)
       ]
       <> case fromCardanoTxOutDatum d of
           PV2.NoOutputDatum      -> []
@@ -473,12 +474,12 @@ txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
       Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
 
 txOutPubKey :: TxOut -> Maybe PubKeyHash
-txOutPubKey (TxOut (C.TxOut aie _ _ _)) = toPubKeyHash $ fromCardanoAddressInEra aie
+txOutPubKey (TxOut (C.TxOut aie _ _ _)) = cardanoPubKeyHash aie
 
-txOutAddress :: TxOut -> V1.Address
-txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = fromCardanoAddressInEra aie
+txOutAddress :: TxOut -> CardanoAddress
+txOutAddress (TxOut (C.TxOut aie _tov _tod _rs)) = aie
 
-outAddress :: L.Lens TxOut TxOut V1.Address (C.AddressInEra C.BabbageEra)
+outAddress :: L.Lens' TxOut (C.AddressInEra C.BabbageEra)
 outAddress = L.lens
   txOutAddress
   (\(TxOut (C.TxOut _ tov tod rs)) aie -> TxOut (C.TxOut aie tov tod rs))

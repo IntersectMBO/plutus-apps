@@ -70,7 +70,6 @@ data Params = Params
   }
   deriving (Eq, Show, Generic)
 
-deriving instance Generic NetworkId
 deriving instance ToJSON NetworkId
 instance FromJSON NetworkId
 

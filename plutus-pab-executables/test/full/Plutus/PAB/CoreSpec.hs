@@ -46,9 +46,9 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
-import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxFee, getCardanoTxId, getCardanoTxOutRefs,
-               pubKeyAddress, pubKeyHash, pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs,
-               txOutputs)
+import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), cardanoPubKeyHash, getCardanoTxFee, getCardanoTxId,
+               getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress, txId, txOutAddress, txOutRefId,
+               txOutRefs, txOutputs)
 import Ledger qualified
 import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
 import Ledger.Ada qualified as Ada
@@ -117,7 +117,7 @@ defaultWallet :: Wallet
 defaultWallet = knownWallet 1
 
 defaultWalletAddress :: Address
-defaultWalletAddress = mockWalletAddress defaultWallet
+defaultWalletAddress = Ledger.toPlutusAddress $ mockWalletAddress defaultWallet
 
 activateContractTests :: TestTree
 activateContractTests =
@@ -237,12 +237,12 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We find the 'TxOutRef' from wallet 1
   let txOutRef1 = head
                 $ fmap snd
-                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
+                $ filter (\(txOut, txOutref) -> cardanoPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
                 $ getCardanoTxOutRefs tx
   -- We find the 'TxOutRef' from wallet 2
   let txOutRef2 = head
                 $ fmap snd
-                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
+                $ filter (\(txOut, txOutref) -> cardanoPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
                 $ getCardanoTxOutRefs tx
   txOutStatus1 <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -357,7 +357,9 @@ guessingGameTest =
                             (valueOf (balance <> fees) adaSymbol adaToken)
 
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
-              let gameParam = Contracts.GameStateMachine.GameParam (mockWalletAddress defaultWallet) (TimeSlot.scSlotZeroTime def)
+              let gameParam = Contracts.GameStateMachine.GameParam
+                   (Ledger.toPlutusAddress $ mockWalletAddress defaultWallet)
+                   (TimeSlot.scSlotZeroTime def)
 
               initialTxCounts <- Simulator.txCounts
               pubKeyHashFundsChange instanceId "Check our opening balance." 0
@@ -383,7 +385,7 @@ guessingGameTest =
                   game1Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
-                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletAddress defaultWallet
+                      , Contracts.GameStateMachine.guessTokenTarget   = Ledger.toPlutusAddress $ mockWalletAddress defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount
@@ -399,7 +401,7 @@ guessingGameTest =
                   game2Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
-                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletAddress defaultWallet
+                      , Contracts.GameStateMachine.guessTokenTarget   = Ledger.toPlutusAddress $ mockWalletAddress defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "password"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "password"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount

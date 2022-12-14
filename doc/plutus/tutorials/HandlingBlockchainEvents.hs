@@ -2,7 +2,7 @@
 module HandlingBlockchainEvents() where
 
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (Address, TxId, TxOutRef)
+import Ledger (CardanoAddress, TxId, TxOutRef)
 import Plutus.ChainIndex (ChainIndexTx, TxStatus)
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
@@ -13,7 +13,7 @@ import Plutus.Contract qualified as Contract
 awaitUtxoProduced ::
   forall w s e .
   (AsContractError e)
-  => Address
+  => CardanoAddress
   -> Contract w s e (NonEmpty ChainIndexTx)
 -- BLOCK1
 awaitUtxoProduced = Contract.awaitUtxoProduced
