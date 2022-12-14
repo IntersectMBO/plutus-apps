@@ -436,6 +436,7 @@ domApp ctx d arg = addLocations (topLevelLocations arg) $ case d of
     DTop (pushWeakenTy -> ty) depth alocs
       | DTVar{} <- ty
       , dat@(DDat False nm _ _ constrs) <- lookupDat ctx d
+      , not $ null constrs
       , depth >= cost dat ->
          -- We are matching on datatype `C` and the argument is `T[C p0 ... pn]`
          traceDoc Med ("domApp - lookupDat" <?> vcat ["ctx =" <+> pretty ctx, "d =" <+> pretty d]) $
