@@ -30,6 +30,7 @@ packages: cardano-node-emulator
           plutus-chain-index-core
           plutus-contract
           plutus-contract-certification
+          plutus-e2e-tests
           plutus-example
           plutus-ledger
           plutus-ledger-constraints
