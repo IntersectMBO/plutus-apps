@@ -35,7 +35,7 @@ let
     other-jobs;
 
   # Hydra doesn't like these attributes hanging around in "jobsets": it thinks they're jobs!
-  filtered-jobs = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations") jobs;
+  filtered-jobs = pkgs.lib.filterAttrsRecursive (n: _: n != "recurseForDerivations") jobs;
 
   required-job = pkgs.releaseTools.aggregate {
     name = "required-plutus";
