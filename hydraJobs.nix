@@ -34,16 +34,18 @@ let
     pkgs.lib.optionalAttrs (system == "x86_64-linux") { mingwW64 = windows-plutus-apps-jobs; } //
     other-jobs;
 
+  # Hydra doesn't like these attributes hanging around in "jobsets": it thinks they're jobs!
+  filtered-jobs = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations") jobs;
+
   required-job = pkgs.releaseTools.aggregate {
     name = "required-plutus";
     meta.description = "All jobs required to pass CI";
-    constituents = pkgs.lib.collect pkgs.lib.isDerivation jobs;
+    constituents = pkgs.lib.collect pkgs.lib.isDerivation filtered-jobs;
   };
 
   final-jobset =
-    # Darwin doesn't currently work in Cicero
     if pkgs.system == "x86_64-linux" || pkgs.system == "x86_64-darwin" then
-      jobs // { required = required-job; }
+      filtered-jobs // { required = required-job; }
     else { };
 
 in
