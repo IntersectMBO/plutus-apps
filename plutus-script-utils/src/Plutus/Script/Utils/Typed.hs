@@ -185,6 +185,13 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --    where
     --       wrap = mkUntypedValidator
     -- @
+    --
+    -- For debugging purpose, it may be of interest to know that in the default implementation,
+    -- the parameters are decoded in their apparition order
+    -- (data, redeemer and then script context).
+    -- A log trace is generated after each successfully decoded parameter.
+    -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as
+    -- successfully decoded in the log trace.
     mkUntypedValidator
         :: forall d r
         . (PV1.UnsafeFromData d, PV1.UnsafeFromData r)
@@ -219,6 +226,13 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --    where
     --       wrap = mkUntypedStakeValidator mkStakeValidator
     -- @
+    --
+    -- For debugging purpose, it may be of interest to know that in the default implementation,
+    -- the parameters are decoded in their apparition order
+    -- (redeemer and then script context).
+    -- A log trace is generated after each successfully decoded parameter.
+    -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as
+    -- successfully decoded in the log trace.
     mkUntypedStakeValidator
         :: PV1.UnsafeFromData r
         => (r -> sc -> Bool)
@@ -250,6 +264,13 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --    where
     --       wrap = mkUntypedMintingPolicy mkMintingPolicy
     -- @
+    --
+    -- For debugging purpose, it may be of interest to know that in the default implementation,
+    -- the parameters are decoded in their apparition order
+    -- (redeemer and then script context).
+    -- A log trace is generated after each successfully decoded parameter.
+    -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as
+    -- successfully decoded in the log trace.
     mkUntypedMintingPolicy
         :: PV1.UnsafeFromData r
         => (r -> sc -> Bool)
