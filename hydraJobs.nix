@@ -26,7 +26,7 @@ let
 
   windows-plutus-apps-jobs = make-haskell-jobs plutus-project.projectCross.mingwW64;
 
-  other-jobs = { inherit (top-level) docs tests plutus-use-cases; };
+  other-jobs = { inherit (top-level) tests docs plutus-use-cases; };
 
   jobs =
     { native = native-plutus-apps-jobs; } //
