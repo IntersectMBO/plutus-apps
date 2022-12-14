@@ -8,25 +8,38 @@ import Control.Exception (catch)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
+import Cardano.Api qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Marconi.CLI qualified as Cli
-import Marconi.Indexers (combinedIndexer)
+import Marconi.Indexers (filterIndexers, mkIndexerStream, startIndexers)
 import Marconi.Logging (logging)
 import System.Directory (createDirectoryIfMissing)
+
 main :: IO ()
 main = do
   o <- Cli.parseOptions
   createDirectoryIfMissing True (Cli.optionsDbPath o)
   c <- defaultConfigStdout
-  withTrace c "marconi" $ \trace ->
+  withTrace c "marconi" $ \trace -> do
+    let indexers = filterIndexers (Cli.utxoDbPath o)
+                                  (Cli.datumDbPath o)
+                                  (Cli.scriptTxDbPath o)
+                                  (Cli.optionsTargetAddresses o)
+    (cp, coordinator) <- startIndexers indexers
+    let preferredChainPoint =
+          -- If the user specifies the chain point then use that,
+          -- otherwise use what the indexers provide.
+          if Cli.optionsChainPoint o == C.ChainPointAtGenesis
+             then cp
+             else Cli.optionsChainPoint o
     withChainSyncEventStream
       (Cli.optionsSocketPath o)
       (Cli.optionsNetworkId o)
-      [Cli.optionsChainPoint o]
-      (combinedIndexer (Cli.utxoDbPath o) (Cli.datumDbPath o) (Cli.scriptTxDbPath o) (Cli.optionsTargetAddresses o ) . logging trace)
+      [preferredChainPoint]
+      (mkIndexerStream coordinator . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $

@@ -35,8 +35,9 @@ import Cardano.Ledger.ShelleyMA.Timelocks qualified as Timelock
 
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
-                                 Rewindable (rewindStorage), StorableEvent, StorableMonad, StorablePoint, StorableQuery,
-                                 StorableResult, emptyState, filterWithQueryInterval)
+                                 Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent,
+                                 StorableMonad, StorablePoint, StorableQuery, StorableResult, emptyState,
+                                 filterWithQueryInterval)
 import RewindableIndex.Storable qualified as Storable
 
 {- The first thing that we need to define for a new indexer is the `handler` data
@@ -215,7 +216,7 @@ instance Buffered ScriptTxHandle where
                            , txSlot        = sn
                            , blockHash     = hsh
                            }
-      flatten _ = error "TODO: Should we special-case the genesis block?"
+      flatten _ = error "There should be no scripts in the genesis block."
 
   {- We want to potentially store data in two formats. The first one is similar (if
      not identical) to the format of data stored in memory; it should contain information
@@ -232,12 +233,14 @@ instance Buffered ScriptTxHandle where
      function is called, and we know that there is a point after which we will not
      see any rollbacks. -}
 
-  -- TODO: getStoredPoints (?)
   getStoredEvents
     :: ScriptTxHandle
     -> IO [StorableEvent ScriptTxHandle]
   getStoredEvents (ScriptTxHandle c sz) = do
-    [[sn]] <- SQL.query c "SELECT MIN(slotNo) FROM script_transactions GROUP BY slotNo ORDER BY slotNo LIMIT ?" (SQL.Only sz)
+    sns :: [[Integer]] <-
+      SQL.query c "SELECT slotNo FROM script_transactions GROUP BY slotNo ORDER BY slotNo DESC LIMIT ?" (SQL.Only sz)
+    -- Take the slot number of the sz'th slot
+    let sn = head . last $ take sz sns
     es <- SQL.query c "SELECT scriptAddress, txCbor, slotNo, blockHash FROM script_transactions WHERE slotNo >= ? ORDER BY slotNo DESC, txCbor, scriptAddress" (SQL.Only (sn :: Integer))
     pure $ asEvents es
 
@@ -305,6 +308,16 @@ instance Rewindable ScriptTxHandle where
      SQL.execute_ c "DELETE FROM script_transactions"
      pure $ Just h
 
+
+-- For resuming we need to provide a list of points where we can resume from.
+
+instance Resumable ScriptTxHandle where
+  resumeFromStorage h = do
+    es <- Storable.getStoredEvents h
+    pure $ if null es
+              then [ChainPointAtGenesis]
+              else map chainPoint es
+
 open :: FilePath -> Depth -> IO ScriptTxIndexer
 open dbPath (Depth k) = do
   c <- SQL.open dbPath
@@ -312,7 +325,7 @@ open dbPath (Depth k) = do
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address ON script_transactions (scriptAddress)"
   -- Add this index for interval queries.
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address_slot ON script_transactions (scriptAddress, slotNo)"
-  emptyState k (ScriptTxHandle c (k * 2))
+  emptyState k (ScriptTxHandle c k)
 
 -- * Copy-paste
 --

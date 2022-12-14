@@ -1,32 +1,29 @@
-{-# LANGUAGE AllowAmbiguousTypes    #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE NamedFieldPuns         #-}
-{-# LANGUAGE PackageImports         #-}
-{-# LANGUAGE PatternSynonyms        #-}
-{-# LANGUAGE RecordWildCards        #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE PackageImports        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 
 module Marconi.Indexers where
 
-import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar)
+import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar, readMVar)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
+import Control.Lens (view)
 import Control.Lens.Operators ((^.))
 import Control.Monad (void)
-import Data.List (findIndex)
+import Data.List (findIndex, foldl1')
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Streaming.Prelude qualified as S
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    ChainPoint (ChainPoint), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
+                    ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
@@ -90,14 +87,14 @@ initialCoordinator indexerCount =
 -- Currently this `a` should stand for [ChainPoint], but I think eventually it should
 -- be constrained to a set of indexer type classes viewed through an MVar. This will
 -- allow indexers to be shared and queried safely.
-type Worker = Coordinator -> FilePath -> IO [ChainPoint]
+type Worker = Coordinator -> FilePath -> IO [Storable.StorablePoint ScriptTx.ScriptTxHandle]
 
 datumWorker :: Worker
 datumWorker Coordinator{_barrier, _channel} path = do
   ix <- Datum.open path (Datum.Depth 2160)
   workerChannel <- atomically . dupTChan $ _channel
   void . forkIO $ innerLoop workerChannel ix
-  pure undefined
+  pure [ChainPointAtGenesis]
   where
     innerLoop :: TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> DatumIndex -> IO ()
     innerLoop ch index = do
@@ -131,7 +128,7 @@ utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier, _channel} 
     ix <- Utxo.open path (Utxo.Depth 2160)
     workerChannel <- atomically . dupTChan $ _channel
     void . forkIO $ innerLoop workerChannel ix
-    pure undefined
+    pure [ChainPointAtGenesis]
   where
     innerLoop :: TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> Utxo.UtxoIndex -> IO ()
     innerLoop ch index = do
@@ -180,46 +177,49 @@ scriptTxWorker
   -> Worker
 scriptTxWorker onInsert coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
-  (loop, _ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator workerChannel path
+  (loop, ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator workerChannel path
   void . forkIO $ loop
-  pure undefined
+  readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
 newtype UtxoQueryTMVar = UtxoQueryTMVar
     { unUtxoIndex  :: TMVar Utxo.UtxoIndex      -- ^ for query thread to access in-memory utxos
     }
 
-combinedIndexer
+filterIndexers
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
   -> Maybe TargetAddresses
-  -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
-  -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses =
-  combineIndexers remainingIndexers
+  -> [(Worker, FilePath)]
+filterIndexers utxoPath datumPath scriptTxPath maybeTargetAddresses =
+  mapMaybe liftMaybe pairs
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
       _         -> Nothing
     pairs =
-        [
-            (utxoWorker pure maybeTargetAddresses, utxoPath)
-            , (datumWorker, datumPath)
-            , (scriptTxWorker (\_ -> pure []), scriptTxPath)
+        [ (utxoWorker pure maybeTargetAddresses, utxoPath)
+        , (datumWorker, datumPath)
+        , (scriptTxWorker (\_ -> pure []), scriptTxPath)
         ]
-    remainingIndexers = mapMaybe liftMaybe pairs
 
-combineIndexers
+startIndexers
   :: [(Worker, FilePath)]
+  -> IO (ChainPoint, Coordinator)
+startIndexers indexers = do
+  coordinator <- initialCoordinator $ length indexers
+  startingPoint <- mapM (\(ix, fp) -> ix coordinator fp) indexers
+  -- We want to use the minimum value across all indexers.
+  pure (foldl1' min $ concat startingPoint, coordinator)
+
+mkIndexerStream
+  :: Coordinator
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combineIndexers indexers = S.foldM_ step initial finish
+mkIndexerStream coordinator = S.foldM_ step initial finish
   where
     initial :: IO Coordinator
-    initial = do
-      coordinator <- initialCoordinator $ length indexers
-      mapM_ (\(ix, fp) -> ix coordinator fp) indexers
-      pure coordinator
+    initial = pure coordinator
 
     step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
     step c@Coordinator{_barrier, _indexerCount, _channel} event = do

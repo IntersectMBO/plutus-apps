@@ -151,7 +151,7 @@ utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
 
 datumDbPath :: Options -> Maybe FilePath
-datumDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> datumDbName)
+datumDbPath o = if optionsDisableDatum o then Nothing; else Just (optionsDbPath o </> datumDbName)
 
 scriptTxDbPath :: Options -> Maybe FilePath
-scriptTxDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> scriptTxDbName)
+scriptTxDbPath o = if optionsDisableScript o then Nothing; else Just (optionsDbPath o </> scriptTxDbName)
