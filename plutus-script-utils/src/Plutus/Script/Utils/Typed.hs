@@ -93,11 +93,11 @@ validatorAddress = PV1.scriptHashAddress . tvValidatorHash
 
 -- | The address of the validator.
 validatorCardanoAddress :: C.NetworkId -> TypedValidator a -> C.AddressInEra C.BabbageEra
-validatorCardanoAddress networkId tv = let
-  validator = tvValidator tv
+validatorCardanoAddress networkId tv =
+  let validator = tvValidator tv
   in case version validator of
-  PlutusV1 -> PSU.PV1.mkValidatorCardanoAddress networkId $ unversioned validator
-  PlutusV2 -> PSU.PV2.mkValidatorCardanoAddress networkId $ unversioned validator
+          PlutusV1 -> PSU.PV1.mkValidatorCardanoAddress networkId $ unversioned validator
+          PlutusV2 -> PSU.PV2.mkValidatorCardanoAddress networkId $ unversioned validator
 
 -- | The unversioned validator script itself.
 validatorScript :: TypedValidator a -> PV1.Validator

@@ -458,7 +458,7 @@ toCardanoTxOut networkId (PV2.TxOut addr value datum _rsHash) =
             <*> toCardanoTxOutDatum datum
             <*> pure C.ReferenceScriptNone -- Not possible from just a hash
 
-{-# DEPRECATED fromCardanoAddressInEra "we now use Cardano address internally, if you need a plutus address use 'Ldeger.Adrress.toPlutusAddress' "#-}
+{-# DEPRECATED fromCardanoAddressInEra "we now use Cardano address internally, if you need a plutus address use 'Ledger.Adrress.toPlutusAddress' "#-}
 fromCardanoAddressInEra :: C.AddressInEra era -> P.Address
 fromCardanoAddressInEra = P.toPlutusAddress
 
