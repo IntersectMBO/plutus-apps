@@ -44,9 +44,9 @@ rec {
     }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator start-backend;
   };
 
-  plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {
+  plutus-use-cases = pkgs.callPackage ./plutus-use-cases {
     inherit haskell;
-  });
+  };
 
   pab-cli = plutus-apps.haskell.packages.plutus-pab-executables.components.exes.pab-cli;
 
