@@ -9,11 +9,11 @@
 {-# LANGUAGE TypeApplications    #-}
 module Spec.Contract.Tx.Constraints.MustPayToPubKeyAddress(tests) where
 
-import Control.Lens (_1, _head, has, makeClassyPrisms, only, (??), (^.))
+import Control.Lens (has, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Data.Text qualified as Text
+
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
@@ -24,16 +24,14 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicate,
-                             defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
+                             checkPredicate, defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
-
-makeClassyPrisms ''Ledger.ScriptError
 
 -- Constraint's functions should soon be changed to use Address instead of PaymentPubKeyHash and StakeKeyHash
 tests :: TestTree
@@ -78,9 +76,6 @@ v2FeaturesNotAvailableTests :: SubmitTx -> LanguageContext -> TestTree
 v2FeaturesNotAvailableTests sub t = testGroup "Plutus V2 features" $
     [ phase1FailureWhenUsingInlineDatumWithV1
     ] ?? sub ?? t
-
-evaluationError :: Text.Text -> Ledger.ValidationError -> Bool
-evaluationError errCode = has $ Ledger._ScriptFailure . _EvaluationError . _1 . _head . only errCode
 
 someDatum :: Ledger.Datum
 someDatum = asDatum @P.BuiltinByteString "datum"
@@ -250,7 +245,7 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected PaymentPubkeyHash"
-    (assertFailedTransaction $ const $ evaluationError "La")
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the Datum"
@@ -266,7 +261,7 @@ phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected Datum"
-    (assertFailedTransaction $ const $ evaluationError "La")
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 -- | Phase-2 failure when onchain mustPayToPubKeyAddressWithDatumInTx constraint cannot verify the Value"
@@ -282,7 +277,7 @@ phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
 
     in checkPredicate
     "Phase-2 validation failure occurs when onchain mustPayToPubKeyAddressWithDatumInTx constraint sees an unexpected Value"
-    (assertFailedTransaction $ const $ evaluationError "La")
+    (assertEvaluationError "La")
     (void $ trace contract)
 
 

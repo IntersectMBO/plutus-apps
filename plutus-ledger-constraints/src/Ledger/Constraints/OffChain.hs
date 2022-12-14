@@ -54,6 +54,7 @@ module Ledger.Constraints.OffChain(
     , _TxOutRefWrongType
     , _TxOutRefNoReferenceScript
     , _DatumNotFound
+    , _DeclaredInputMismatch
     , _MintingPolicyNotFound
     , _ScriptHashNotFound
     , _TypedValidatorMissing

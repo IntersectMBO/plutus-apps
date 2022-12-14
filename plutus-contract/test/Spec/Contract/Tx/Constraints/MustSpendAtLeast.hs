@@ -8,7 +8,6 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendAtLeast(tests) where
 
-import Control.Lens (has, makeClassyPrisms)
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -20,17 +19,15 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
+import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
-
-makeClassyPrisms ''Constraints.MkTxError
+import Spec.Contract.Error (declaredInputMismatchError)
 
 tests :: TestTree
 tests =
@@ -96,7 +93,7 @@ higherThanScriptBalance =
             defaultCheckOptions
             "Validation pass when mustSpendAtLeast is greater than script's balance and wallet's pubkey is included in the lookup"
             (assertContractError contract (Trace.walletInstanceTag w1)
-              (has $ _ConstraintResolutionContractError . _DeclaredInputMismatch)
+              declaredInputMismatchError
               "failed to throw error"
             .&&. assertValidatedTransactionCount 1)
             (void $ trace contract)
@@ -109,7 +106,7 @@ phase2Failure =
     in  checkPredicateOptions
             defaultCheckOptions
             "Fail phase-2 validation when on-chain mustSpendAtLeast is greater than script's balance"
-            (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L5":_) _) -> True; _ -> False }))
+            (assertEvaluationError "L5")
             (void $ trace contract)
 
 {-# INLINEABLE mkValidator #-}

@@ -14,7 +14,6 @@ import Test.Tasty (TestTree, testGroup)
 import Data.Default (Default (def))
 import Data.Map as M
 import Data.Maybe (fromJust)
-import Data.Text qualified as Text
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -24,15 +23,17 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as TxCons
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
-                             checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions,
+                             mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum)
+import Plutus.V1.Ledger.Scripts (unitDatum)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import Prelude
+import Spec.Contract.Error (cardanoLedgerErrorContaining)
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
 
 tests :: TestTree
@@ -121,7 +122,7 @@ otherWalletNoSigningProcess =
             void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without Trace.setSigningProcess fails phase-1 validation"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
+    (assertFailedTransaction (const $ cardanoLedgerErrorContaining "MissingRequiredSigners"))
     (void trace)
 
 withoutOffChainMustBeSignedBy :: TestTree -- there's no "required signer" in the txbody logs but still passes phase-2 so it must be there. Raised https://github.com/input-output-hk/plutus-apps/issues/645. It'd be good to check log output for expected required signer pubkey in these tests.
@@ -130,7 +131,7 @@ withoutOffChainMustBeSignedBy =
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint required signer is not included in txbody so phase-2 validation fails"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
+    (assertEvaluationError "L4")
     (void trace)
 
 phase2FailureMustBeSignedBy :: TestTree
@@ -139,7 +140,7 @@ phase2FailureMustBeSignedBy =
             void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain mustBeSignedBy constraint validation"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("L4":_) _) -> True; _ -> False  }))
+    (assertEvaluationError "L4")
     (void trace)
 
 {-
@@ -227,5 +228,5 @@ cardanoTxOtherWalletNoSigningProcess =
         -- We may remove it once PLT-321
         (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
         "without Trace.setSigningProcess fails phase-1 validation"
-        (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
+        (assertFailedTransaction (const $ cardanoLedgerErrorContaining "MissingRequiredSigners"))
         (void trace)

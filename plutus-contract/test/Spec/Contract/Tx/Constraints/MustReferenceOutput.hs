@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustReferenceOutput(tests) where
 
-import Control.Lens (At (at), _1, _head, filtered, has, makeClassyPrisms, non, only, (??), (^.))
+import Control.Lens (At (at), filtered, has, makeClassyPrisms, non, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -35,7 +35,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Emulator (diskState)
 import Plutus.ChainIndex.Emulator.DiskState (addressMap, unCredentialMap)
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount,
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicate, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, valueAtAddress, w1, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Scripts qualified as PSU
@@ -51,6 +51,7 @@ import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
+import Spec.Contract.Error (cardanoLedgerErrorContaining)
 import Wallet.Emulator.Wallet (WalletState, chainIndexEmulatorState)
 import Wallet.Emulator.Wallet qualified as Wallet
 
@@ -91,9 +92,6 @@ v2FeaturesTests sub t = testGroup "Plutus V2 features" $
     , ledgerValidationErrorWhenReferencingNonExistingTxo
     , phase2FailureWhenUsingV2Script
     ] ?? sub ?? t
-
-evaluationError :: Text.Text -> L.ValidationError -> Bool
-evaluationError errCode = has $ L._ScriptFailure . _EvaluationError . _1 . _head . only errCode
 
 tknValue :: PSU.Language -> Value.Value
 tknValue l = Value.singleton (PSU.scriptCurrencySymbol $ getVersionedScript MustReferenceOutputPolicy l) "mint-me" 1
@@ -142,9 +140,7 @@ ledgerValidationtErrorWhenUsingV1Script submitTxFromConstraints l =
     in checkPredicateOptions defaultCheckOptions
     ("Ledger validation error occurs when attempting use of offchain mustReferenceOutput " ++
      "constraint with V1 script")
-    (assertFailedTransaction (\_ err ->
-        case err of {L.CardanoLedgerValidationError msg ->
-            Text.isInfixOf "ReferenceInputsNotSupported" msg; _ -> False  }))
+    (assertFailedTransaction (const $ cardanoLedgerErrorContaining "ReferenceInputsNotSupported"))
     (void $ defTrace contract)
 
 -- | Phase-2 validation error occurs when attempting to use onchain mustReferenceOutput
@@ -171,7 +167,7 @@ phase2FailureWithMustReferenceOutput testDescription submitTxFromConstraints l =
 
     in checkPredicateOptions defaultCheckOptions
     testDescription
-    (assertFailedTransaction $ const $ evaluationError "Lf")
+    (assertEvaluationError "Lf")
     (void $ defTrace contractWithoutOffchainConstraint)
 
 -- | Valid scenario using offchain and onchain constraint

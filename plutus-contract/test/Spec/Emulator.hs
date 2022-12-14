@@ -237,16 +237,9 @@ invalidScript = property $ do
           invalidTxn
 
     Hedgehog.annotateShow signedInvalidTxn
-    Hedgehog.assert (signedInvalidTxn ==
-      Left (
-        Left ( Index.Phase2
-             , Index.ScriptFailure
-               ( EvaluationError
-                   ["I always fail everything"]
-                   "CekEvaluationFailure: An error has occurred:  User error:\nThe machine terminated because of an error, either from a built-in function or from an explicit use of 'error'."
-                )
-              )
-            )
+    Hedgehog.assert (case signedInvalidTxn of
+      Left (Left (Index.Phase2, Index.ScriptFailure (EvaluationError msgs _))) -> elem "I always fail everything" msgs
+      _                                                                        -> False
       )
     where
         failValidator :: Versioned Validator
