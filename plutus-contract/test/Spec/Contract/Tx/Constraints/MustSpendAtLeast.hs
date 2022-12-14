@@ -19,8 +19,7 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertContractError, assertEvaluationError,
-                             assertValidatedTransactionCount,
+import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace

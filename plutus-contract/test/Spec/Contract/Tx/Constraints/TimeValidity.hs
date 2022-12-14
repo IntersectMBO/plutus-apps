@@ -23,9 +23,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed, currentNodeClientSlot,
                                currentNodeClientTimeRange, getParams, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
                                submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
-import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction,
-                             assertValidatedTransactionCount, checkPredicateOptions,
-                             defaultCheckOptions, emulatorConfig, w1)
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
+                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P

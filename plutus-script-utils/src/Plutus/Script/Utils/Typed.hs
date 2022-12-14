@@ -187,7 +187,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     -- @
     --
     -- For debugging purpose, it may be of interest to know that in the default implementation,
-    -- the parameters are decoded in their apparition order
+    -- the parameters are decoded in the order they appear
     -- (data, redeemer and then script context).
     -- A log trace is generated after each successfully decoded parameter.
     -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as
@@ -228,7 +228,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     -- @
     --
     -- For debugging purpose, it may be of interest to know that in the default implementation,
-    -- the parameters are decoded in their apparition order
+    -- the parameters are decoded in the order they appear
     -- (redeemer and then script context).
     -- A log trace is generated after each successfully decoded parameter.
     -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as
@@ -266,7 +266,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     -- @
     --
     -- For debugging purpose, it may be of interest to know that in the default implementation,
-    -- the parameters are decoded in their apparition order
+    -- the parameters are decoded in the order they appear
     -- (redeemer and then script context).
     -- A log trace is generated after each successfully decoded parameter.
     -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as

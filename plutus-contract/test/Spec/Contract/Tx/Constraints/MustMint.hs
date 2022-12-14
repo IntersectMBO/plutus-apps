@@ -32,9 +32,9 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertFailedTransaction,
-                             assertValidatedTransactionCount, changeInitialWalletValue,
-                             checkPredicate, checkPredicateOptions, defaultCheckOptions,
-                             emulatorConfig, w1, walletFundsAssetClassChange, (.&&.))
+                             assertValidatedTransactionCount, changeInitialWalletValue, checkPredicate,
+                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1,
+                             walletFundsAssetClassChange, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
