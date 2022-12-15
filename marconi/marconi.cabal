@@ -83,9 +83,9 @@ library
   ------------------------
   build-depends:
     , async
+    , aeson
     , base
     , bytestring
-    , cardano-crypto-class
     , containers
     , filepath
     , lens
@@ -93,7 +93,6 @@ library
     , optparse-applicative
     , ouroboros-consensus-cardano
     , ouroboros-consensus-shelley
-    , parsec
     , prettyprinter
     , raw-strings-qq
     , serialise
@@ -181,11 +180,10 @@ test-suite marconi-test
     , optparse-applicative
     , prettyprinter
     , serialise
-    , sqlite-simple
+    -- , sqlite-simple
     , stm
     , streaming
     , tasty
-    , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
     , temporary

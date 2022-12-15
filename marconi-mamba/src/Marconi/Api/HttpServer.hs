@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
+
 module Marconi.Api.HttpServer(
     bootstrap
     ) where
@@ -20,9 +21,9 @@ import Servant.Server (Handler, Server, serve)
 
 import Cardano.Api ()
 import Marconi.Api.Routes (API)
-import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, QueryExceptions,
-                          UtxoTxOutReport)
-import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findAll, findByAddress, reportBech32Addresses)
+import Marconi.Api.Types (HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, QueryExceptions, UtxoIndexerEnv,
+                          UtxoReport)
+import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
 
@@ -32,11 +33,10 @@ bootstrap env =  runSettings
         (env ^. httpSettings)
         (serve (Proxy @API) (server (env ^. queryEnv ) ) )
 
-server :: DBQueryEnv -> Server API
+server :: UtxoIndexerEnv -> Server API
 server env
     = ( echo
-        :<|> utxoTxOutReport env
-        :<|> utxoTxOutReports env
+        :<|> utxoJsonReport env
         :<|> targetAddressesReport env
         :<|> printMessage env )
       :<|> (getTime
@@ -46,7 +46,7 @@ server env
 -- | prints message to console
 --  Used for testing the server from console
 printMessage
-    :: DBQueryEnv               -- ^ database configuration
+    :: UtxoIndexerEnv               -- ^ database configuration
     -> String
     -> Handler NoContent
 printMessage env msg = NoContent <$  (
@@ -71,29 +71,20 @@ getTime = timeString <$> liftIO getCurrentTime
     timeString = formatTime defaultTimeLocale "%T"
 
 getTargetAddresses
-    :: DBQueryEnv               -- ^ database configuration
-    ->  Handler [Text]
+    :: UtxoIndexerEnv               -- ^ database configuration
+    -> Handler [Text]
 getTargetAddresses =  pure . Q.Utxo.reportBech32Addresses
 
 -- | Retrieves a set of TxOutRef
-utxoTxOutReport
-    :: DBQueryEnv               -- ^ database configuration
+utxoJsonReport
+    :: UtxoIndexerEnv               -- ^ database configuration
     -> String                   -- ^ bech32 addressCredential
-    -> Handler (Either (JsonRpcErr String) UtxoTxOutReport )
-utxoTxOutReport env address = liftIO $
+    -> Handler (Either (JsonRpcErr String) UtxoReport )
+utxoJsonReport env address = liftIO $
     first toRpcErr <$> (Q.Utxo.findByAddress env . pack $ address)
 
--- | Retrieves a set of TxOutRef
--- TODO convert this to stream
-utxoTxOutReports
-    :: DBQueryEnv                   -- ^ database configuration
-    -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) [UtxoTxOutReport])
-utxoTxOutReports env _ =
-    liftIO $ Right <$> Q.Utxo.findAll env
-
 targetAddressesReport
-    :: DBQueryEnv                   -- ^ database configuration
+    :: UtxoIndexerEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
     -> Handler (Either (JsonRpcErr String) [Text] )
 targetAddressesReport env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env

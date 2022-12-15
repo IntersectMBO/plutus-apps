@@ -79,6 +79,7 @@ library
     , cardano-streaming
     , json-rpc
     , marconi
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -94,7 +95,6 @@ library
     , aeson
     , async
     , base                  >=4.9 && <5
-    , bytestring
     , lens
     , optparse-applicative
     , prettyprinter
@@ -224,20 +224,14 @@ test-suite marconi-mamba-test
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}
-    , cardano-testnet
     , iohk-monitoring
-    , ouroboros-network
-    , plutus-ledger-api
-    , plutus-tx
-    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
+    -- , aeson
     , base                  >=4.9 && <5
-    , bytestring
     , containers
     , directory
     , filepath

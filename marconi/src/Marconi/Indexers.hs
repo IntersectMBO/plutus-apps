@@ -82,6 +82,8 @@ data Coordinator = Coordinator
   , _indexerCount :: Int
   }
 
+
+
 initialCoordinator :: Int -> IO Coordinator
 initialCoordinator indexerCount =
   Coordinator <$> newBroadcastTChanIO
@@ -124,33 +126,43 @@ isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
     (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
     _                                                -> False
 
-utxoWorker
-    :: (Utxo.UtxoIndex -> IO Utxo.UtxoIndex)    -- ^ CPS function used in the queryApi thread, needs to be non-blocking
-    -> Maybe TargetAddresses                    -- ^ Target addresses to filter for
-    -> Worker
-utxoWorker indexerCallback maybeTargetAddresses Coordinator{_barrier, _channel} path = do
-    ix <- Utxo.open path (Utxo.Depth 2160)
-    workerChannel <- atomically . dupTChan $ _channel
-    void . forkIO $ innerLoop workerChannel ix
-    pure [ChainPointAtGenesis]
+utxoWorker_
+  :: (Utxo.UtxoIndexer -> IO ())  -- ^ CPS function used in the queryApi thread, needs to be non-blocking
+  -> Utxo.Depth
+  -> Maybe TargetAddresses                       -- ^ Target addresses to filter for
+  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), MVar Utxo.UtxoIndexer)
+utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = do
+  ix <- Utxo.open path depth
+  mIndexer <- newMVar ix
+  pure (loop mIndexer, mIndexer)
   where
-    innerLoop :: TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> Utxo.UtxoIndex -> IO ()
-    innerLoop ch index = do
+    loop :: MVar Utxo.UtxoIndexer -> IO ()
+    loop index = do
       signalQSemN _barrier 1
-      void $ indexerCallback index -- refresh the query STM/CPS with new storage pointers/counters state
-      event <- atomically $ readTChan ch
+      readMVar index >>= callback -- refresh the query STM/CPS with new storage pointers/counters state
+      event <- atomically . readTChan $ ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo _ blkNo) txs) _) _ct ->
-            case Utxo.getUtxoEvents maybeTargetAddresses slotNo blkNo txs of
-                  Just us ->  Ix.insert us index  >>= innerLoop ch
-                  _       -> innerLoop ch index
+        RollForward (BlockInMode (Block (BlockHeader slotNo hsh blkNo) txs) _) _ct ->
+            case Utxo.getUtxoEvents maybeTargetAddresses txs blkNo (C.ChainPoint slotNo hsh) of
+              Just u -> do
+                modifyMVar_ index (Storable.insert u)
+                loop index
+              _      -> loop index
+
         RollBackward cp _ct -> do
-          events <- Ix.getEvents (index ^. Ix.storage)
-          innerLoop ch $
-            fromMaybe index $ do
-              slot   <- chainPointToSlotNo cp
-              offset <- findIndex  (\u -> (u ^. Utxo.utxoEventSlotNo) < slot) events
-              Ix.rewind offset index
+          modifyMVar_ index $ \ix -> fromMaybe ix <$> Storable.rewind cp ix
+          loop index
+
+utxoWorker
+  :: (Utxo.UtxoIndexer -> IO ())  -- ^ CPS function used in the queryApi thread, needs to be non-blocking
+  -> Maybe TargetAddresses                       -- ^ Target addresses to filter for
+  -> Worker
+utxoWorker callback maybeTargetAddresses coordinator path = do
+  workerChannel <- atomically . dupTChan $ _channel coordinator
+  (loop, ix) <- utxoWorker_ callback (Utxo.Depth 2160) maybeTargetAddresses coordinator workerChannel path
+  void . forkIO $ loop
+  readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
+
 
 scriptTxWorker_
   :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
@@ -186,7 +198,7 @@ scriptTxWorker onInsert coordinator path = do
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
 newtype UtxoQueryTMVar = UtxoQueryTMVar
-    { unUtxoIndex  :: TMVar Utxo.UtxoIndex      -- ^ for query thread to access in-memory utxos
+    { unUtxoIndex  :: TMVar Utxo.UtxoIndexer      -- ^ for query thread to access in-memory utxos
     }
 
 epochStakepoolSizeWorker :: FilePath -> Worker
@@ -211,7 +223,6 @@ epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
   void . forkIO $ S.effects indexer
   pure [ChainPointAtGenesis]
 
-
 filterIndexers
   :: Maybe FilePath
   -> Maybe FilePath
@@ -231,10 +242,10 @@ filterIndexers utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTarge
       _               -> []
 
     pairs =
-        [ (utxoWorker pure maybeTargetAddresses, utxoPath)
-        , (datumWorker, datumPath)
-        , (scriptTxWorker (\_ -> pure []), scriptTxPath)
-        ] <> epochStakepoolSizeIndexer
+      [(utxoWorker (\_ -> pure ()) maybeTargetAddresses, utxoPath)
+      , (datumWorker, datumPath)
+      , (scriptTxWorker (\_ -> pure []), scriptTxPath)
+      ] <> epochStakepoolSizeIndexer
 
 startIndexers
   :: [(Worker, FilePath)]

@@ -19,7 +19,7 @@ import Cardano.Api qualified as C
 import Control.Concurrent.Async (forConcurrently_)
 import Control.Exception (bracket_)
 import Control.Monad (void)
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Time.Clock (getCurrentTime)
 import Database.SQLite.Simple (Connection, execute, execute_, open, query_)
@@ -33,7 +33,7 @@ import Text.RawString.QQ (r)
 newtype DBEnv = DBEnv { unConn :: Connection}
 
 bootstrap :: FilePath -> IO DBEnv
-bootstrap = (fmap DBEnv) . open
+bootstrap = fmap DBEnv . open
 
 data ShelleyFrequencyTable a = ShelleyFrequencyTable
     { _sAddress   :: !a
@@ -62,6 +62,7 @@ freqUtxoTable env =
         >> execute_ conn [r|CREATE TABLE frequtxos AS
                                SELECT address, count (address)
                                AS frequency FROM unspent_transactions
+                               WHERE inlineScript IS NOT NULL
                                GROUP BY address
                                ORDER BY frequency DESC|]
         >> execute_ conn "delete from frequtxos where frequency < 50" -- we only want `intersing` data
@@ -86,16 +87,16 @@ withQueryAction env action =
 --
 freqShelleyTable :: DBEnv -> IO [Text]
 freqShelleyTable env = do
-    addressFreq <- withQueryAction env( \conn -> (query_ conn
-                                "SELECT address, frequency FROM frequtxos") :: IO [ShelleyFrequencyTable C.AddressAny])
-    let addresses = catMaybes . fmap toShelley $ addressFreq
+    addressFreq <- withQueryAction env( \conn -> query_ conn
+                                "SELECT address, frequency FROM frequtxos" :: IO [ShelleyFrequencyTable C.AddressAny])
+    let addresses = mapMaybe toShelley addressFreq
 
     withQueryAction env ( \conn -> (
         execute_ conn "BEGIN TRANSACTION" >>
         forConcurrently_  addresses ( \(ShelleyFrequencyTable a f) ->
-                                      (execute conn
+                                      execute conn
                                        "insert into shelleyaddresses (address, frequency) values (?, ?)"
-                                       (a, f))))
+                                       (a, f)))
         >> execute_ conn "COMMIT"
         )
     pure . fmap _sAddress $ addresses

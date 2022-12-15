@@ -2,64 +2,65 @@
 # If you don't know how to use this script, see: https://github.com/pashky/restclient.el for instruction
 
 #
-# should echo
-POST http://localhost:3000/json-rpc
-Content-Type: application/json-rpc
-{"jsonrpc": "2.0", "method": "echo", "params": "plutus-apps rocks", "id": 0}
 #
-# should fail. `add` method is unknown
+# should generate error, Unknown method
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
 #
-# should print message on the console
+# should print addresses to index on the console as JSON array
 POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
-{"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
+{"jsonrpc": "2.0", "method": "print", "params": "this param is ignored", "id": 0}
+# should echo
+POST http://localhost:3000/json-rpc
+Content-Type: application/json-rpc
+{
+"jsonrpc": "2.0", "method": "echo", "params": "hello world", "id": 0}
 #
-#
-# lookup fot txoutrefs , should return result, low
+# lookup, should return JSON-RPC error with cause of the error:
+# generated error: Bech32DecodingError (StringToDecodeContainsInvalidChars [])
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReport"
-, "params": "addr_test1qqwh05w69g95065zlr4fef4yfpjkv8r3dr9h3pu0egy5n7pwhxp4f95svdjr9dmtqumqcs6v49s6pe7ap4h2nv8rcaasgrkndk"
-, "id": 91
+, "method": "utxoJsonReport"
+, "params": "xxx_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0"
+, "id": 2
 }
 #
-# lookup fot txoutrefs , should return result, high
+# lookup, should return result with datum not null
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReport"
-, "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"
+, "method": "utxoJsonReport"
+, "params": "addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0"
 , "id": 92
 }
 #
-# lookup fot txoutrefs, should generate error if the address is not in the target list
+# lookup, should return results with scriptData not null
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReport"
-, "params": "addr1q86naxdettc4r8rhls2xqs97kpkd79tvkplrv5lf8e6tfyygy9uwd947cp8mqh8kl04pazxjs9tmyystyv0nhpmc852srht88w"
-, "id":19
+, "method": "utxoJsonReport"
+, "params": "addr_test1wrpn0ad8rj3pgfpzae5tghpf325nyvh94zfkj3kzgvxzvcc2zuac6"
+, "id":21
 }
 #
-# fetch 100 rows from sqlite
-# Note: this may break the applicaiton depending on how large the database is
-# We have a todo item to convert this endpoint to streams
-# This version of marconi-mamba simply ignores `100` and returns all rows from database. This is a todo item for next release
-POST http://localhost:3000/json-rpc
-Content-Type: application/json
-{
-"jsonrpc": "2.0"
-, "method": "utxoTxOutReports"
-, "params": 100
-, "id": 14
-}
+# addresses with non null scriptDataum from preview network
+#
+# addr_test1wqnp362vmvr8jtc946d3a3utqgclfdl5y9d3kn849e359hst7hkqk
+# addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj
+# addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0
+#
+# addresses with datum non null from preview network
+#
+#addr_test1wqnp362vmvr8jtc946d3a3utqgclfdl5y9d3kn849e359hst7hkqk
+#addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj
+#addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0
+
 #
 # fetch plutus converted addresses the user had provided
 # This version of marconi-mamba simply ignores `100` and returns all rows from database. This is a todo item for next release
@@ -72,16 +73,6 @@ Content-Type: application/json
 , "id": 11
 }
 #
-#
-# get the top 100 utxos, sorted by ledger.Address
-POST http://localhost:3000/json-rpc
-Content-Type: application/json
-{
-"jsonrpc": "2.0"
-, "method": "utxosReport"
-, "params": 100
-, "id": 14
-}
 #
 ####  REST calls ####
 #
