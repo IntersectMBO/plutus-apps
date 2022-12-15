@@ -103,6 +103,7 @@
         hydraJobs = import ./hydraJobs.nix { inherit system; };
 
       } //
+
       tullia.fromSimple system (import ./nix/tullia.nix)
     ));
 
