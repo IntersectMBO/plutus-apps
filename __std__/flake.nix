@@ -88,7 +88,7 @@
         packages = inputs.std.harvest inputs.self [ "plutus-apps" "packages" ];
       }
       {
-        ciJobs = inputs.std.harvest inputs.self [ "automation" "ciJobs" ];
+        hydraJobs = inputs.std.harvest inputs.self [ "automation" "ciJobs" ];
       };
 
   nixConfig = {
