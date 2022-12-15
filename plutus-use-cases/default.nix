@@ -13,6 +13,4 @@ let
   '';
 
 in
-{
-  inherit generated-puc-scripts-output;
-}
+generated-puc-scripts-output
