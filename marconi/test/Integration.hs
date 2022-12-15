@@ -79,8 +79,7 @@ tests = testGroup "Integration"
       the indexer to see if it was indexed properly
 -}
 testIndex :: Property
-testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBasePath' -> do
-
+testIndex = H.integration $ (liftIO setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "chairman" $ \tempAbsBasePath' -> do
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
   (socketPathAbs, networkId, tempAbsPath) <- startTestnet base tempAbsBasePath'
 
@@ -364,17 +363,5 @@ headM :: (MonadTest m, GHC.HasCallStack) => [a] -> m a
 headM (a:_) = return a
 headM []    = GHC.withFrozenCallStack $ H.failMessage GHC.callStack "Cannot take head of empty list"
 
-workspace :: (MonadTest m, MonadIO m, GHC.HasCallStack) => FilePath -> (FilePath -> m ()) -> m ()
-workspace prefixPath f = GHC.withFrozenCallStack $ do
-  systemTemp <- case IO.os of
-    "darwin" -> pure "/tmp"
-    _        -> H.evalIO IO.getCanonicalTemporaryDirectory
-  maybeKeepWorkspace <- H.evalIO $ IO.lookupEnv "KEEP_WORKSPACE"
-  let systemPrefixPath = systemTemp <> "/" <> prefixPath
-  H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
-  ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
-  H.annotate $ "Workspace: " <> ws
-  -- liftIO $ IO.writeFile (ws <> "/module") callerModuleName
-  f ws
-  when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
-    H.evalIO $ IO.removeDirectoryRecursive ws
+setDarwinTmpdir :: IO ()
+setDarwinTmpdir = when (IO.os == "darwin") $ IO.setEnv "TMPDIR" "/tmp"
