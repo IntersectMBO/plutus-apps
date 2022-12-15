@@ -1,35 +1,39 @@
-############################################################################
-# Builds Haskell packages with Haskell.nix
-############################################################################
-{ lib
-, haskell-nix
-, gitignore-nix
-, z3
-, libsodium-vrf
-, libsecp256k1
-, compiler-nix-name
-, enableHaskellProfiling
-  # Whether to set the `defer-plugin-errors` flag on those packages that need
-  # it. If set to true, we will also build the haddocks for those packages.
-, deferPluginErrors
-, CHaP
+{ inputs, cell }:
+
+# Whether to set the `defer-plugin-errors` flag on those packages that need
+# it. If set to true, we will also build the haddocks for those packages.
+{ deferPluginErrors ? false
+
+, enableHaskellProfiling ? false
 }:
+
 let
-  project = haskell-nix.cabalProject' ({ pkgs, config, ... }: {
-    inherit compiler-nix-name;
-    # This is incredibly difficult to get right, almost everything goes wrong, see https://github.com/input-output-hk/haskell.nix/issues/496
-    src = let root = ../../../.; in
-      haskell-nix.haskellLib.cleanSourceWith {
-        filter = gitignore-nix.gitignoreFilter root;
-        src = root;
-        # Otherwise this depends on the name in the parent directory, which reduces caching, and is
-        # particularly bad on Hercules, see https://github.com/hercules-ci/support/issues/40
-        name = "plutus-apps";
-      };
-    sha256map = import ./sha256map.nix;
-    inputMap = {
-      "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+  project = cell.library.pkgs.haskell-nix.cabalProject' ({ pkgs, config, lib, ... }: {
+
+    compiler-nix-name = cell.library.ghc-compiler-nix-name;
+
+    src = cell.library.pkgs.haskell-nix.haskellLib.cleanSourceWith {
+      src = inputs.self.outPath;
+      name = "plutus-apps";
     };
+
+    shell.withHoogle = false;
+
+    sha256map = {
+      "https://github.com/input-output-hk/cardano-addresses"."b7273a5d3c21f1a003595ebf1e1f79c28cd72513" = "129r5kyiw10n2021bkdvnr270aiiwyq58h472d151ph0r7wpslgp";
+      "https://github.com/input-output-hk/cardano-config"."1646e9167fab36c0bff82317743b96efa2d3adaa" = "sha256-TNbpnR7llUgBN2WY7CryMxNVupBIUH01h1hRNHoxboY=";
+      "https://github.com/input-output-hk/cardano-ledger"."da3e9ae10cf9ef0b805a046c84745f06643583c2" = "sha256-3VUZKkLu1R43GUk9IwgsGQ55O0rnu8NrCkFX9gqA4ck=";
+      "https://github.com/input-output-hk/cardano-wallet"."18a931648550246695c790578d4a55ee2f10463e" = "0i40hp1mdbljjcj4pn3n6zahblkb2jmpm8l4wnb36bya1pzf66fx";
+      "https://github.com/input-output-hk/purescript-bridge"."47a1f11825a0f9445e0f98792f79172efef66c00" = "0da1vn2l6iyfxcjk58qal1l4755v92zi6yppmjmqvxf1gacyf9px";
+      "https://github.com/input-output-hk/quickcheck-dynamic"."c272906361471d684440f76c297e29ab760f6a1e" = "sha256-TioJQASNrQX6B3n2Cv43X2olyT67//CFQqcpvNW7N60=";
+      "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "10pb0yfp80jhb9ryn65a4rha2lxzsn2vlhcc6xphrrkf4x5lhzqc";
+      "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
+    };
+
+    inputMap = {
+      "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
+    };
+
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
     # after cabal has been configured.
@@ -84,7 +88,7 @@ let
             # of the components with we are going to run.
             # We should try to find a way to automate this will in haskell.nix.
             symlinkDlls = ''
-              ln -s ${libsodium-vrf}/bin/libsodium-23.dll $out/bin/libsodium-23.dll
+              ln -s ${pkgs.libsodium-vrf}/bin/libsodium-23.dll $out/bin/libsodium-23.dll
               ln -s ${pkgs.buildPackages.gcc.cc}/x86_64-w64-mingw32/lib/libgcc_s_seh-1.dll $out/bin/libgcc_s_seh-1.dll
               ln -s ${pkgs.buildPackages.gcc.cc}/x86_64-w64-mingw32/lib/libstdc++-6.dll $out/bin/libstdc++-6.dll
               ln -s ${pkgs.windows.mcfgthreads}/bin/mcfgthread-12.dll $out/bin/mcfgthread-12.dll
@@ -201,8 +205,8 @@ let
             ieee.components.library.libs = lib.mkForce [ ];
 
             # See https://github.com/input-output-hk/iohk-nix/pull/488
-            cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
-            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf libsecp256k1 ] ];
+            cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
+            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
           };
         })
       ] ++ lib.optional enableHaskellProfiling {
