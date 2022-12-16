@@ -49,8 +49,9 @@ import Cardano.Protocol.Socket.Type
 
 import Cardano.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel, currentSlot, getChannel,
                       getTip, handleControlChain, tip, txPool)
-import Ledger (Block, CardanoTx (..), Params, Slot (..), Tx (..))
-import Wallet.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Params (Params)
+import Ledger (Block, CardanoTx (..), Slot (..), Tx (..))
 
 data CommandChannel = CommandChannel
   { ccCommand  :: TQueue ServerCommand

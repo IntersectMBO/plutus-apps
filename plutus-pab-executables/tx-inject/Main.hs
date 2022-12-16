@@ -33,10 +33,10 @@ import System.Random.MWC (GenIO, createSystemRandom)
 import System.Signal (installHandler, sigINT)
 import Text.Pretty.Simple (pPrint)
 
+import Cardano.Node.Emulator.Params (Params (..), testnet)
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
 import Data.Either (fromRight)
-import Ledger (Params (pNetworkId), testnet)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)

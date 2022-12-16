@@ -37,6 +37,7 @@ module Plutus.Contracts.TokenAccount(
   , typedValidator
   ) where
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Lens (makeClassyPrisms, review, view)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
@@ -135,7 +136,7 @@ typedValidator = Scripts.mkTypedValidatorParam @TokenAccount
         wrap = Scripts.mkUntypedValidator
 
 address :: Account -> CardanoAddress
-address = Scripts.validatorCardanoAddress Ledger.testnet . typedValidator
+address = Scripts.validatorCardanoAddress Params.testnet . typedValidator
 
 validatorHash :: Account -> ValidatorHash
 validatorHash = PV1.validatorHash . Scripts.validatorScript . typedValidator

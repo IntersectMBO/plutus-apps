@@ -18,7 +18,6 @@ import Ledger.Blockchain as Export
 import Ledger.Crypto as Export
 import Ledger.Index as Export
 import Ledger.Orphans ()
-import Ledger.Params as Export
 import Ledger.Scripts as Export
 import Ledger.Slot as Export
 import Ledger.Tx as Export

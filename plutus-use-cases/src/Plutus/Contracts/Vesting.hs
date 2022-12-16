@@ -32,8 +32,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
+import Cardano.Node.Emulator.Params (pNetworkId, testnet)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), pNetworkId, testnet)
+import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval

@@ -8,6 +8,8 @@
 module Spec.Contract.Tx.Constraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
+import Cardano.Node.Emulator.Params (Params, protocolParamsL)
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
 import Data.Map qualified as Map
@@ -66,7 +68,7 @@ contract = do
                 (Ada.lovelaceValueOf 25000000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-    utxos <- utxosAt $ scrAddress (Ledger.pNetworkId p)
+    utxos <- utxosAt $ scrAddress (Params.pNetworkId p)
     let orefs = fst <$> Map.toList utxos
         lookups2 =
             Constraints.otherScript (validatorScript deadline)
@@ -88,14 +90,14 @@ trace = do
 
 protocolV5 :: TestTree
 protocolV5 = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
+    (defaultCheckOptions & over (emulatorConfig . params . protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
     "tx valid time interval is not supported in protocol v5"
     (assertEvaluationError "Invalid range")
     (void trace)
 
 protocolV6 :: TestTree
 protocolV6 = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
+    (defaultCheckOptions & over (emulatorConfig . params . protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
     "tx valid time interval is supported in protocol v6"
     (assertValidatedTransactionCount 2)
     (void trace)
@@ -112,7 +114,7 @@ traceCardano c = do
     void $ Trace.activateContractWallet w1 c
     void $ Trace.waitNSlots 4
 
-contractCardano :: (POSIXTime -> POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
+contractCardano :: (POSIXTime -> POSIXTimeRange) -> Params -> Contract () Empty ContractError ()
 contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
@@ -135,18 +137,18 @@ contractCardano f p = do
 
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
-validContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+validContractCardano :: Params -> Contract () Empty ContractError ()
 validContractCardano = contractCardano $ from . (+ 1000)
 
-pastTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+pastTxContractCardano :: Params -> Contract () Empty ContractError ()
 pastTxContractCardano = contractCardano I.to
 
-futureTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+futureTxContractCardano :: Params -> Contract () Empty ContractError ()
 futureTxContractCardano = contractCardano $ from . (+ 4000)
 
 protocolV6Cardano :: TestTree
 protocolV6Cardano =
-    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) })
+    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) })
     in checkPredicateOptions
     checkOptions
     "tx valid time interval is supported in protocol v6"

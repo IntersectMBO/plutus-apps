@@ -24,11 +24,11 @@ module Plutus.ChainIndex.Config(
   ) where
 
 import Cardano.Api (BlockNo (BlockNo), NetworkId (Testnet))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Numeric.Natural (Natural)
 import Ouroboros.Network.Magic (NetworkMagic (NetworkMagic))
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))

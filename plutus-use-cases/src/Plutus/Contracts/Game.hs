@@ -39,6 +39,7 @@ module Plutus.Contracts.Game
     , covIdx
     ) where
 
+import Cardano.Node.Emulator.Params (testnet)
 import Control.Lens (_2, (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
@@ -46,7 +47,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value, testnet)
+import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)

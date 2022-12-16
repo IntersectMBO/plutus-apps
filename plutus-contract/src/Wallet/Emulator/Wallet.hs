@@ -24,6 +24,9 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api (makeSignedTransaction)
+import Cardano.Node.Emulator.Chain (ChainState (_index))
+import Cardano.Node.Emulator.Fee qualified as Fee
+import Cardano.Node.Emulator.Params (Params (..))
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, view)
 import Control.Monad (foldM, (<=<))
@@ -48,7 +51,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, TxOutRef, UtxoIndex (..), Value)
+import Ledger (CardanoTx, DecoratedTxOut, PubKeyHash, TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
 import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, PaymentPubKeyHash (PaymentPubKeyHash),
                        cardanoAddressCredential)
@@ -57,10 +60,9 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Ledger.Fee qualified as Fee
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (getRequiredSigners)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Validation (getRequiredSigners)
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (UtxosResponse (page))
@@ -71,9 +73,7 @@ import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
-                       publishTx)
-import Wallet.Effects qualified as WAPI
-import Wallet.Emulator.Chain (ChainState (_index))
+                       getClientParams, publishTx)
 import Wallet.Emulator.Error qualified as WAPI (WalletAPIError (InsufficientFunds, PaymentPrivateKeyNotFound, ToCardanoError, ValidationError))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx, ValidationFailed))
@@ -308,12 +308,12 @@ handleBalance ::
     => UnbalancedTx
     -> Eff effs CardanoTx
 handleBalance utx = do
-    params@Params { pNetworkId } <- WAPI.getClientParams
+    params@Params { pNetworkId, emulatorPParams } <- getClientParams
     utxo <- get >>= ownOutputs
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure $ traverse (Tx.toTxOut pNetworkId) utxo
     let eitherTx = U.unBalancedTxTx utx
         requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-    unbalancedBodyContent <- either pure (handleError eitherTx . first Right . CardanoAPI.toCardanoTxBodyContent params requiredSigners) eitherTx
+    unbalancedBodyContent <- either pure (handleError eitherTx . first Right . CardanoAPI.toCardanoTxBodyContent pNetworkId emulatorPParams requiredSigners) eitherTx
     ownAddr <- gets ownAddress
     -- filter out inputs from utxo that are already in unBalancedTx
     let inputsOutRefs = map Tx.txInRef $ Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent

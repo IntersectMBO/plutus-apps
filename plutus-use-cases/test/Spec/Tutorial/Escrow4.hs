@@ -24,9 +24,9 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (..))
 import Ledger (Slot (..), minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
-import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Value (Value, geq)
 import Plutus.Contract (Contract, selectList)
 import Plutus.Contract.Test

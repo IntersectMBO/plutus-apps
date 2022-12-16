@@ -12,6 +12,7 @@ import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Data.Maybe (fromJust)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -67,7 +68,7 @@ mustBeSignedByContract submitTxFromConstraints paymentPubKey signedPubKey = do
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt $ Scripts.validatorCardanoAddress (Ledger.pNetworkId params) mustBeSignedByTypedValidator
+    utxos <- utxosAt $ Scripts.validatorCardanoAddress (Params.pNetworkId params) mustBeSignedByTypedValidator
     let lookups2 =
             Constraints.typedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos
@@ -90,7 +91,7 @@ withoutOffChainMustBeSignedByContract submitTxFromConstraints paymentPubKey sign
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-    utxos <- utxosAt $ Scripts.validatorCardanoAddress (Ledger.pNetworkId params) mustBeSignedByTypedValidator
+    utxos <- utxosAt $ Scripts.validatorCardanoAddress (Params.pNetworkId params) mustBeSignedByTypedValidator
     let lookups2 =
             Constraints.typedValidatorLookups mustBeSignedByTypedValidator
             <> Constraints.unspentOutputs utxos

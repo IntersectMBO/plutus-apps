@@ -93,6 +93,8 @@ module Ledger.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Params (PParams, Params (pNetworkId, pSlotConfig))
+import Cardano.Node.Emulator.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Control.Lens (_2, alaf, at, makeClassyPrisms, makeLensesFor, preview, uses, view, (%=), (.=), (<>=), (^.), (^?))
 import Control.Lens.Extras (is)
 import Control.Monad (forM_, guard)
@@ -125,8 +127,6 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (adjustTxOut)
 import Ledger.Orphans ()
-import Ledger.Params (PParams, Params (pNetworkId, pSlotConfig))
-import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (DecoratedTxOut, Language (PlutusV1, PlutusV2), ReferenceScript, TxOut (TxOut), TxOutRef,
                   Versioned (Versioned))
 import Ledger.Tx qualified as Tx

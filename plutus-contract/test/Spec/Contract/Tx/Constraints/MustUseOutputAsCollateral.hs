@@ -17,6 +17,7 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Api.Shelley (protocolParamMaxCollateralInputs)
+import Cardano.Node.Emulator.Params qualified as Params
 import Data.Default (Default (def))
 import Data.Map as M
 import Data.Maybe (fromJust)
@@ -222,7 +223,7 @@ ledgerValidationErrorWhenUsingMustUseOutputAsCollateralWithScriptUtxo submitTxFr
             ownPkh <- ownPaymentPubKeyHash
             ownAddr <- ownAddress
             pubKeyUtxos <- utxosAt ownAddr
-            scriptUtxos <- utxosAt $ someCardanoAddressV2 (L.pNetworkId params)
+            scriptUtxos <- utxosAt $ someCardanoAddressV2 (Params.pNetworkId params)
             let collaterealUtxo = head $ (M.keys $ M.take numberOfCollateralInputs scriptUtxos)
                 lookups2 = Cons.typedValidatorLookups someTypedValidatorV2
                         <> Cons.unspentOutputs scriptUtxos

@@ -91,6 +91,11 @@ import Cardano.Chain.Common (addrToBase58)
 import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
+
+import Cardano.Ledger.Babbage qualified as Babbage
+import Cardano.Ledger.Babbage.PParams qualified as Babbage
+import Cardano.Ledger.Crypto (StandardCrypto)
+
 import Cardano.Ledger.Core qualified as Ledger
 import Codec.Serialise (Serialise, deserialiseOrFail)
 import Codec.Serialise qualified as Codec
@@ -119,7 +124,6 @@ import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
-import Ledger.Params (PParams)
 import Ledger.Scripts qualified as P
 import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
@@ -404,7 +408,7 @@ fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
    in either (const Nothing) Just script
 
 makeTransactionBody
-    :: Maybe PParams
+    :: Maybe (Babbage.PParams (Babbage.BabbageEra StandardCrypto))
     -> Map Alonzo.RdmrPtr Alonzo.ExUnits
     -> CardanoBuildTx
     -> Either ToCardanoError (C.TxBody C.BabbageEra)

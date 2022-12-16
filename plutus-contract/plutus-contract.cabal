@@ -97,7 +97,6 @@ library
     Wallet.API
     Wallet.Effects
     Wallet.Emulator
-    Wallet.Emulator.Chain
     Wallet.Emulator.Error
     Wallet.Emulator.Folds
     Wallet.Emulator.LogMessages
@@ -119,6 +118,7 @@ library
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , freer-extras               >=1.0.0
     , plutus-chain-index-core    >=1.0.0
     , plutus-ledger              >=1.0.0
@@ -265,6 +265,7 @@ test-suite plutus-contract-test
   -- Local components
   --------------------
   build-depends:
+    , cardano-node-emulator      >=1.0.0
     , freer-extras               >=1.0.0
     , plutus-chain-index-core    >=1.0.0
     , plutus-contract            >=1.0.0

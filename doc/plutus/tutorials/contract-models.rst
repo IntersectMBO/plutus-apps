@@ -1680,7 +1680,7 @@ contract under test.
 
 To do so, we need to know when slot 0 happens in POSIX time, and how
 long the duration of each slot is. These are defined in a
-:hsobj:`Ledger.TimeSlot.SlotConfig`, a type defined in :hsmod:`Ledger.TimeSlot`. In principle
+:hsobj:`Cardano.Node.Emulator.TimeSlot.SlotConfig`, a type defined in :hsmod:`Cardano.Node.Emulator.TimeSlot`. In principle
 the slot configuration might vary, but we will use the default values
 for testing (by using |def|_ from |Data.Default|_ as our
 configuration. Putting all this together, we can add a deadline to our

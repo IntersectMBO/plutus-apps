@@ -15,6 +15,7 @@ module Wallet.Rollup
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Chain (ChainEvent (..))
 import Control.Lens (assign, ifoldr, over, set, use, view, (&), (^.))
 import Control.Lens.Combinators (itraverse)
 import Control.Monad.State (StateT, evalStateT, runState)
@@ -24,7 +25,6 @@ import Data.Map qualified as Map
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut, ValidationPhase (..), Value, consumableInputs,
                onChainTxIsValid, outputsProduced, txInRef, txOutRefId, txOutRefIdx, txOutValue, unOnChain)
 import Ledger.Tx qualified as Tx
-import Wallet.Emulator.Chain (ChainEvent (..))
 import Wallet.Rollup.Types
 
 ------------------------------------------------------------

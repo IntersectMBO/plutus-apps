@@ -69,6 +69,7 @@ import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, Promise,
                         adjustUnbalancedTx, awaitTime, currentNodeClientTimeRange, currentTime, endpoint, getParams,
                         mapError, mkTxConstraints, ownFirstPaymentPubKeyHash, promiseMap, selectList,
@@ -298,7 +299,7 @@ redeem ::
     -> EscrowParams Datum
     -> Contract w s e RedeemSuccess
 redeem inst escrow = mapError (review _EscrowError) $ do
-    networkId <- Ledger.pNetworkId <$> getParams
+    networkId <- Params.pNetworkId <$> getParams
     let addr = Scripts.validatorCardanoAddress networkId inst
     current <- Haskell.snd <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
@@ -338,7 +339,7 @@ refund ::
     -> Contract w s EscrowError RefundSuccess
 refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
-    networkId <- Ledger.pNetworkId <$> getParams
+    networkId <- Params.pNetworkId <$> getParams
     unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
     let pkh = Scripts.datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
@@ -361,7 +362,7 @@ payRedeemRefund ::
     -> Value
     -> Contract w s EscrowError (Either RefundSuccess RedeemSuccess)
 payRedeemRefund params vl = do
-    networkId <- Ledger.pNetworkId <$> getParams
+    networkId <- Params.pNetworkId <$> getParams
     let inst = typedValidator params
         go = do
             cur <- utxosAt (Scripts.validatorCardanoAddress networkId inst)

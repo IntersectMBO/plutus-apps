@@ -23,7 +23,6 @@ import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger.Blockchain
 import Ledger.Orphans ()
 import Ledger.Tx.Internal (TxOut)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
@@ -36,10 +35,6 @@ newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef TxOut }
     deriving stock (Show, Generic)
     deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON, NFData)
-
--- | Create an index of all UTxOs on the chain.
-initialise :: Blockchain -> UtxoIndex
-initialise = UtxoIndex . unspentOutputs
 
 -- | A reason why a transaction is invalid.
 data ValidationError =

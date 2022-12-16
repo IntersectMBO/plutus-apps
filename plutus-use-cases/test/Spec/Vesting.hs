@@ -22,11 +22,11 @@ import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Slot
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel

@@ -108,6 +108,7 @@ module Plutus.Contract.Request(
     , MkTxLog(..)
     ) where
 
+import Cardano.Node.Emulator.Params (Params)
 import Control.Lens (Prism', preview, review, view)
 import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Trans.State.Strict (StateT (..), evalStateT)
@@ -128,8 +129,8 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
-import Ledger (AssetClass, CardanoAddress, DiffMilliSeconds, POSIXTime, Params, PaymentPubKeyHash (PaymentPubKeyHash),
-               Slot, TxId, TxOutRef, Value, cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
+import Ledger (AssetClass, CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot,
+               TxId, TxOutRef, Value, cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints

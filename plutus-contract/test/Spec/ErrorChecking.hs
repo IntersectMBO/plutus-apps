@@ -18,7 +18,7 @@ import Data.Data
 import Data.Row
 import Test.Tasty
 
-import Ledger (pNetworkId)
+import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (collectFromTheScript, mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx)
 import Ledger.Tx (getCardanoTxId)

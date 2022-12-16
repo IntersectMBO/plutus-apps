@@ -7,6 +7,8 @@
 
 module Main(main) where
 
+import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Params (Params (pNetworkId))
 import Control.Lens (toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
 import Control.Monad.Except (runExcept)
@@ -34,9 +36,7 @@ import Ledger.Constraints.OffChain qualified as OC
 import Ledger.Constraints.OnChain.V2 qualified as ConstraintsV2
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
-import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Ledger
-import Ledger.Params (Params (pNetworkId))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)

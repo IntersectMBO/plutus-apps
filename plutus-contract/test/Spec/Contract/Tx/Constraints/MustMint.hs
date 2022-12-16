@@ -13,6 +13,7 @@ import Control.Monad (void)
 import Spec.Contract.Error (cardanoLedgerErrorContaining, insufficientFundsError)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Lens (_Just, has, (&), (??), (^.))
 import Data.Map qualified as Map
 import Data.Void (Void)
@@ -299,7 +300,7 @@ mustMintCurrencyWithRedeemerPhase2Failure submitTxFromConstraints lang =
 -- | Contract without the required minting policy lookup. Uses mustMintCurrencyWithRedeemer constraint.
 mustMintCurrencyWithRedeemerMissingPolicyContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
 mustMintCurrencyWithRedeemerMissingPolicyContract submitTxFromConstraints lang = do
-    networkId <- Ledger.pNetworkId <$> getParams
+    networkId <- Params.pNetworkId <$> getParams
     let lookups1 = Constraints.typedValidatorLookups $ mustMintCurrencyWithRedeemerTypedValidator tknName
         tx1 = Constraints.mustPayToTheScriptWithDatumHash () (Ada.lovelaceValueOf 25_000_000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1

@@ -88,6 +88,7 @@ module Plutus.PAB.Core
     , timed
     ) where
 
+import Cardano.Node.Emulator.Params (Params)
 import Control.Applicative (empty, (<|>))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
@@ -107,7 +108,7 @@ import Data.Maybe (isJust)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
-import Ledger (Params, TxOutRef)
+import Ledger (TxOutRef)
 import Ledger.Address (Address, PaymentPubKeyHash, cardanoAddressCredential, pubKeyHashAddress)
 import Ledger.Tx (CardanoTx, TxId, decoratedTxOutValue)
 import Ledger.Value (Value)

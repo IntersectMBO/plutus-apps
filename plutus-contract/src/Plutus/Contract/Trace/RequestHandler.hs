@@ -50,11 +50,12 @@ import Data.Traversable (forM)
 import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
                                   Response (Response, rspItID, rspResponse, rspRqID))
 
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, Params (..), Slot (..), SlotRange)
+import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, Slot (..), SlotRange)
 import Ledger.Constraints.OffChain (UnbalancedTx, adjustUnbalancedTx)
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
@@ -63,7 +64,7 @@ import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))
 import Plutus.Contract.Wallet qualified as Wallet
 import Wallet.API (WalletAPIError)
-import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Effects (NodeClientEffect, WalletEffect, getClientParams, getClientSlot)
 import Wallet.Effects qualified
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (AdjustingUnbalancedTx, HandleTxFailed, SlotNoticationTargetVsCurrent))
 import Wallet.Types (ContractInstanceId)
@@ -138,7 +139,7 @@ handleSlotNotifications ::
 handleSlotNotifications =
     RequestHandler $ \targetSlot_ ->
         surroundDebug @Text "handleSlotNotifications" $ do
-            currentSlot <- Wallet.Effects.getClientSlot
+            currentSlot <- getClientSlot
             logDebug $ SlotNoticationTargetVsCurrent targetSlot_ currentSlot
             guard (currentSlot >= targetSlot_)
             pure currentSlot
@@ -153,8 +154,8 @@ handleTimeNotifications ::
 handleTimeNotifications =
     RequestHandler $ \targetTime_ ->
         surroundDebug @Text "handleTimeNotifications" $ do
-            currentSlot <- Wallet.Effects.getClientSlot
-            Params { pSlotConfig } <- Wallet.Effects.getClientParams
+            currentSlot <- getClientSlot
+            Params { pSlotConfig } <- getClientParams
             let targetSlot_ = TimeSlot.posixTimeToEnclosingSlot pSlotConfig targetTime_
             logDebug $ SlotNoticationTargetVsCurrent targetSlot_ currentSlot
             guard (currentSlot >= targetSlot_)
@@ -169,7 +170,7 @@ handleCurrentNodeClientSlot ::
 handleCurrentNodeClientSlot =
     RequestHandler $ \_ ->
         surroundDebug @Text "handleCurrentNodeClientSlot" $ do
-            Wallet.Effects.getClientSlot
+            getClientSlot
 
 handleCurrentChainIndexSlot ::
     forall effs a.
@@ -194,8 +195,8 @@ handleCurrentTime ::
 handleCurrentTime =
     RequestHandler $ \_ ->
         surroundDebug @Text "handleCurrentTime" $ do
-            Params { pSlotConfig }  <- Wallet.Effects.getClientParams
-            TimeSlot.slotToEndPOSIXTime pSlotConfig <$> Wallet.Effects.getClientSlot
+            Params { pSlotConfig }  <- getClientParams
+            TimeSlot.slotToEndPOSIXTime pSlotConfig <$> getClientSlot
 
 handleCurrentNodeClientTimeRange ::
     forall effs a.
@@ -206,8 +207,8 @@ handleCurrentNodeClientTimeRange ::
 handleCurrentNodeClientTimeRange =
     RequestHandler $ \_ ->
         surroundDebug @Text "handleCurrentNodeClientTimeRange" $ do
-            Params { pSlotConfig }  <- Wallet.Effects.getClientParams
-            nodeClientSlot <- Wallet.Effects.getClientSlot
+            Params { pSlotConfig }  <- getClientParams
+            nodeClientSlot <- getClientSlot
             pure ( TimeSlot.slotToBeginPOSIXTime pSlotConfig nodeClientSlot
                  , TimeSlot.slotToEndPOSIXTime pSlotConfig nodeClientSlot
                  )
@@ -221,7 +222,7 @@ handleTimeToSlotConversions ::
 handleTimeToSlotConversions =
     RequestHandler $ \poxisTimeRange ->
         surroundDebug @Text "handleTimeToSlotConversions" $ do
-            Params { pSlotConfig }  <- Wallet.Effects.getClientParams
+            Params { pSlotConfig }  <- getClientParams
             pure $ TimeSlot.posixTimeRangeToContainedSlotRange pSlotConfig poxisTimeRange
 
 handleUnbalancedTransactions ::
@@ -305,7 +306,7 @@ handleAdjustUnbalancedTx ::
 handleAdjustUnbalancedTx =
     RequestHandler $ \utx ->
         surroundDebug @Text "handleAdjustUnbalancedTx" $ do
-            params <- Wallet.Effects.getClientParams
+            params <- getClientParams
             forM (adjustUnbalancedTx (emulatorPParams params) utx) $ \(missingAdaCosts, adjusted) -> do
                 logDebug $ AdjustingUnbalancedTx missingAdaCosts
                 pure adjusted
@@ -319,4 +320,4 @@ handleGetParams ::
 handleGetParams =
     RequestHandler $ \_ ->
         surroundDebug @Text "handleGetParams" $ do
-            Wallet.Effects.getClientParams
+            getClientParams

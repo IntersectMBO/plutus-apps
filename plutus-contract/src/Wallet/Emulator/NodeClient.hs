@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeOperators         #-}
 module Wallet.Emulator.NodeClient where
 
+import Cardano.Node.Emulator.Chain
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logInfo)
@@ -25,7 +26,6 @@ import Ledger
 import Ledger.AddressMap qualified as AM
 import Prettyprinter hiding (annotate)
 import Wallet.Effects (NodeClientEffect (..))
-import Wallet.Emulator.Chain
 
 data NodeClientEvent =
     TxSubmit TxId Value

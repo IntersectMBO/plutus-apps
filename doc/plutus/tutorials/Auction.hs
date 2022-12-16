@@ -33,18 +33,18 @@ import Data.Data
 import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
+import Cardano.Node.Emulator.Generators (someTokenValue)
 import Ledger (Ada, Slot (..), Value)
 import Ledger.Ada qualified as Ada
-import Ledger.Generators (someTokenValue)
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
 import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream qualified as Stream
 
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
-import Ledger.TimeSlot (SlotConfig)
-import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.ContractModel.Symbolics (toSymValue)

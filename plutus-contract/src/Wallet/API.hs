@@ -62,6 +62,8 @@ module Wallet.API(
     Wallet.Error.throwOtherError,
     ) where
 
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Monad (unless, void)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
@@ -70,13 +72,12 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
-import Ledger (Address, CardanoTx, Interval (Interval, ivFrom, ivTo), Params (..),
-               PaymentPubKeyHash (PaymentPubKeyHash), PubKey (PubKey, getPubKey),
-               PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after, always, before, cardanoPubKeyHash,
-               contains, interval, isEmpty, member, pubKeyHashAddress, singleton, width)
+import Ledger (Address, CardanoTx, Interval (Interval, ivFrom, ivTo), PaymentPubKeyHash (PaymentPubKeyHash),
+               PubKey (PubKey, getPubKey), PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after,
+               always, before, cardanoPubKeyHash, contains, interval, isEmpty, member, pubKeyHashAddress, singleton,
+               width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (adjustUnbalancedTx)
-import Ledger.TimeSlot qualified as TimeSlot
 import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownAddresses,
                        publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (AdjustingUnbalancedTx))

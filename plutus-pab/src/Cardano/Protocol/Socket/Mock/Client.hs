@@ -25,7 +25,7 @@ import Ouroboros.Network.Block (Point (..))
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
 import Ouroboros.Network.Protocol.LocalTxSubmission.Client qualified as TxSubmission
 
-import Ledger.TimeSlot (SlotConfig, currentSlot)
+import Cardano.Node.Emulator.TimeSlot (SlotConfig, currentSlot)
 import Ouroboros.Network.IOManager
 import Ouroboros.Network.Mux
 import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), connectTo, versionedNodeToClientProtocols)

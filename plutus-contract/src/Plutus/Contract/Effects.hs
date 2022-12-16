@@ -90,6 +90,8 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     ActiveEndpoint(..),
     ) where
 
+import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.TimeSlot (SlotConversionError)
 import Control.Lens (Iso', Prism', iso, makePrisms, prism')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
@@ -100,11 +102,9 @@ import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
-import Ledger.Params (Params)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
-import Ledger.TimeSlot (SlotConversionError)
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, getCardanoTxId, onCardanoTx)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),

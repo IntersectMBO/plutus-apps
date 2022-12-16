@@ -44,8 +44,8 @@ import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream qualified as Stream
 
-import Ledger.TimeSlot (SlotConfig)
-import Ledger.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage

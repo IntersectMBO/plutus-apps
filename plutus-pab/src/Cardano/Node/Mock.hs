@@ -28,14 +28,15 @@ import Servant (NoContent (NoContent))
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Chain (handleChain, handleControlChain)
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength), currentSlot)
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Server qualified as Server
-import Ledger (Params (..), Tx)
-import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength), currentSlot)
+import Ledger (Tx)
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Wallet.Emulator.Chain qualified as Chain
 
 healthcheck :: Monad m => m NoContent
 healthcheck = pure NoContent

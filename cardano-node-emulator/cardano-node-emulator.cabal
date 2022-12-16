@@ -1,0 +1,116 @@
+cabal-version: 3.0
+name:          cardano-node-emulator
+version:       1.0.0.0
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    LambdaCase
+    NamedFieldPuns
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  ghc-options:
+    -Wall -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wnoncanonical-monad-instances
+    -Wredundant-constraints -Wunused-packages
+
+library
+  import:          lang
+  hs-source-dirs:  src
+  exposed-modules:
+    Cardano.Node.Emulator
+    Cardano.Node.Emulator.Chain
+    Cardano.Node.Emulator.Fee
+    Cardano.Node.Emulator.Generators
+    Cardano.Node.Emulator.Params
+    Cardano.Node.Emulator.TimeSlot
+    Cardano.Node.Emulator.Validation
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , freer-extras         >=1.0.0
+    , plutus-ledger        >=1.0.0
+    , plutus-script-utils  >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-crypto
+    , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , cardano-slotting
+    , ouroboros-consensus
+    , plutus-core                     >=1.0.0
+    , plutus-ledger-api               >=1.0.0
+    , plutus-tx                       >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson              >=1.5.2
+    , array
+    , base               >=4.9     && <5
+    , bytestring
+    , containers
+    , data-default
+    , deepseq
+    , either
+    , freer-simple
+    , hedgehog
+    , lens
+    , mtl
+    , openapi3
+    , prettyprinter      >=1.1.0.1
+    , serialise
+    , strict-containers
+    , text
+    , time
+
+test-suite cardano-node-emulator-test
+  import:             lang
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  other-modules:      Cardano.Node.Emulator.GeneratorsSpec
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , cardano-node-emulator  >=1.0.0
+    , plutus-ledger          >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:      plutus-tx >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base            >=4.9 && <5
+    , hedgehog
+    , tasty
+    , tasty-hedgehog

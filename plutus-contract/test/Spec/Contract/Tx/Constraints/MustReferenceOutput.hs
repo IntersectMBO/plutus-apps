@@ -15,6 +15,7 @@ import Control.Lens (At (at), filtered, has, makeClassyPrisms, non, (??), (^.))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Data.Default (Default (def))
 import Data.Map qualified as M
 import Data.Maybe (catMaybes)
@@ -219,7 +220,7 @@ mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
             ledgerTx1 <- submitTx tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-            scriptUtxos <- utxosAt $ someCardanoAddress $ L.pNetworkId params
+            scriptUtxos <- utxosAt $ someCardanoAddress $ Params.pNetworkId params
             let scriptUtxo = head $ M.keys scriptUtxos
                 lookups2 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
                         <> Cons.unspentOutputs scriptUtxos
@@ -316,7 +317,7 @@ mustReferenceOutputV1Validator = PV1.mkValidatorScript
 
 mustReferenceOutputV1ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV1ValidatorAddress =
-    PSU.V1.mkValidatorCardanoAddress L.testnet mustReferenceOutputV1Validator
+    PSU.V1.mkValidatorCardanoAddress Params.testnet mustReferenceOutputV1Validator
 
 txConstraintsTxBuildFailWhenUsingV1Script :: TestTree
 txConstraintsTxBuildFailWhenUsingV1Script =
@@ -370,7 +371,7 @@ mustReferenceOutputV2Validator = PV2.mkValidatorScript
 
 mustReferenceOutputV2ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV2ValidatorAddress =
-    PSU.V2.mkValidatorCardanoAddress L.testnet mustReferenceOutputV2Validator
+    PSU.V2.mkValidatorCardanoAddress Params.testnet mustReferenceOutputV2Validator
 
 txConstraintsCanUnlockFundsWithV2Script :: TestTree
 txConstraintsCanUnlockFundsWithV2Script =

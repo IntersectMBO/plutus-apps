@@ -26,10 +26,10 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value
 import Plutus.Contract hiding (currentSlot)

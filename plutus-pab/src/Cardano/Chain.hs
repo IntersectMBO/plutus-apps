@@ -12,6 +12,8 @@
 
 module Cardano.Chain where
 
+import Cardano.Node.Emulator.Chain qualified as EC
+import Cardano.Node.Emulator.Params (Params)
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens hiding (index)
@@ -23,9 +25,8 @@ import Data.Foldable (traverse_)
 import Data.Functor (void)
 import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
-import Ledger (Block, CardanoTx, Params, Slot (..))
+import Ledger (Block, CardanoTx, Slot (..))
 import Ledger.Index qualified as Index
-import Wallet.Emulator.Chain qualified as EC
 
 type TxPool = [CardanoTx]
 
@@ -57,14 +58,14 @@ getChannel mv = liftIO (readMVar mv) <&> view channel
 
 -- | Build a PAB ChainState from a emulator ChainState
 fromEmulatorChainState :: MonadIO m => EC.ChainState -> m MockNodeServerChainState
-fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._currentSlot, EC._chainNewestFirst} = do
+fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._chainCurrentSlot, EC._chainNewestFirst} = do
     ch <- liftIO $ atomically newTChan
     void $ liftIO $
         mapM_ (atomically . writeTChan ch) _chainNewestFirst
     pure $ MockNodeServerChainState { _channel     = ch
                       , _txPool      = _txPool
                       , _index       = _index
-                      , _currentSlot = _currentSlot
+                      , _currentSlot = _chainCurrentSlot
                       , _tip         = listToMaybe _chainNewestFirst
                       }
 

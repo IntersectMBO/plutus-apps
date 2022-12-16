@@ -32,6 +32,7 @@ module Ledger.CardanoWallet(
     knownPaymentPrivateKeys
     ) where
 
+import Cardano.Api.Shelley (NetworkId (..), NetworkMagic (..))
 import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.Serialise (serialise)
 import Crypto.Hash qualified as Crypto
@@ -53,7 +54,6 @@ import Ledger.Address (CardanoAddress, PaymentPrivateKey (PaymentPrivateKey, unP
                        stakePubKeyHashCredential)
 import Ledger.Crypto (PubKey (..))
 import Ledger.Crypto qualified as Crypto
-import Ledger.Params (testnet)
 import Ledger.Tx.CardanoAPI.Internal qualified as Tx
 import Plutus.V1.Ledger.Api (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
 import Plutus.V1.Ledger.Bytes (LedgerBytes (getLedgerBytes))
@@ -124,12 +124,12 @@ knownMockWallets = fromWalletNumber . WalletNumber <$> [1..10]
 knownMockWallet :: Integer -> MockWallet
 knownMockWallet = (knownMockWallets !!) . pred . fromInteger
 
-{- | A mock cardano address for the 'Params.testnet' network.
+{- | A mock cardano address for the 'Testnet $ NetworkMagic 1' network.
  -}
 mockWalletAddress :: MockWallet -> CardanoAddress
 mockWalletAddress =
     fromRight (error "mock wallet is invalid")
-       . Tx.toCardanoAddressInEra testnet
+       . Tx.toCardanoAddressInEra (Testnet $ NetworkMagic 1)
        . plutusAddress
     where
     plutusAddress mw =

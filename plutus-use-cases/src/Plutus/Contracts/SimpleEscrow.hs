@@ -18,6 +18,7 @@
 module Plutus.Contracts.SimpleEscrow
   where
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Lens (makeClassyPrisms, view)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
@@ -93,7 +94,7 @@ instance Scripts.ValidatorTypes Escrow where
     type instance DatumType    Escrow = EscrowParams
 
 escrowAddress :: Ledger.CardanoAddress
-escrowAddress = Scripts.validatorCardanoAddress Ledger.testnet escrowInstance
+escrowAddress = Scripts.validatorCardanoAddress Params.testnet escrowInstance
 
 escrowInstance :: Scripts.TypedValidator Escrow
 escrowInstance = Scripts.mkTypedValidator @Escrow

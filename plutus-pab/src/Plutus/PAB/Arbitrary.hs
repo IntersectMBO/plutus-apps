@@ -13,6 +13,7 @@
 module Plutus.PAB.Arbitrary where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Params (testnet)
 import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
@@ -24,7 +25,6 @@ import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKe
 import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
-import Ledger.Params (testnet)
 import Ledger.Slot (Slot)
 import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)

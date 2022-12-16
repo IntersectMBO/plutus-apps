@@ -26,9 +26,10 @@ module Wallet.Effects(
     , getClientParams
     ) where
 
+import Cardano.Node.Emulator.Params (Params)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (CardanoAddress, CardanoTx, Params, Slot, Value)
+import Ledger (CardanoAddress, CardanoTx, Slot, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Wallet.Error (WalletAPIError)
 

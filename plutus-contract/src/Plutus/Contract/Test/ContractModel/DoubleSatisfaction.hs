@@ -45,18 +45,19 @@ import Data.Maybe
 
 import Data.Either.Combinators (leftToMaybe)
 
+import Cardano.Node.Emulator.Generators
+import Cardano.Node.Emulator.Params (EmulatorEra, Params, testnet)
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto
-import Ledger.Generators
 import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (mint)
-import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut, toCardanoAddressInEra,
-                             toCardanoTxOutDatumInTx, toCardanoTxOutDatumInline)
-import Ledger.Validation qualified as Validation
+import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut, fromPlutusIndex,
+                             toCardanoAddressInEra, toCardanoTxOutDatumInTx, toCardanoTxOutDatumInline)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
@@ -70,7 +71,7 @@ import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbi
                                    nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
 import Test.QuickCheck.StateModel qualified as StateModel
 
-import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
+import Cardano.Node.Emulator.Chain hiding (_chainCurrentSlot, chainCurrentSlot)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), eteEvent)
 import Wallet.Emulator.Stream (EmulatorConfig (_params), EmulatorErr)
 
@@ -87,7 +88,7 @@ data WrappedTx = WrappedTx
   , _dsTx        :: Tx
   , _dsUtxoIndex :: UtxoIndex
   , _dsSlot      :: Slot
-  , _dsParams    :: P.Params
+  , _dsParams    :: Params
   } deriving Show
 makeLenses ''WrappedTx
 
@@ -185,7 +186,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
 --      potentially be stolen
 --    * the list of actual counterexamples, i.e. if this is non-empty a vulnerability has been
 --      discovered.
-getDSCounterexamples :: P.Params -> [ChainEvent] -> ( [WrappedTx]
+getDSCounterexamples :: Params -> [ChainEvent] -> ( [WrappedTx]
                                         , [DoubleSatisfactionCounterexample]
                                         , [DoubleSatisfactionCounterexample]
                                         )
@@ -196,7 +197,7 @@ getDSCounterexamples params = go 0 mempty
       SlotAdd slot' -> go slot' idx es
       TxnValidate _ txn _ ->
           let
-              cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
+              cUtxoIndex = either (error . show) id $ fromPlutusIndex idx
               e' = Validation.validateCardanoTx params slot cUtxoIndex txn
               idx' = case e' of
                   Left (Index.Phase1, _) -> idx
@@ -217,7 +218,7 @@ getDSCounterexamples params = go 0 mempty
 
 -- | Take a chain event and wrap it up as a `WrappedTx` if it was a transaction
 --   validation event.
-doubleSatisfactionCandidates :: P.Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
+doubleSatisfactionCandidates :: Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
   TxnValidate txid (EmulatorTx tx) _ -> [WrappedTx txid tx idx slot params]
   _                                  -> []
@@ -227,7 +228,7 @@ doubleSatisfactionCandidates params slot idx event = case event of
 validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsUtxoIndex
+    cUtxoIndex = either (error . show) id $ fromPlutusIndex _dsUtxoIndex
     signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
     e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
   in leftToMaybe e'
@@ -238,7 +239,7 @@ validateWrappedTx = isNothing . validateWrappedTx'
 
 -- | Actual counterexamples showing a double satisfaction vulnerability for the given chain event.
 checkForDoubleSatisfactionVulnerability ::
-    P.Params ->
+    Params ->
     Slot ->
     UtxoIndex ->
     ChainEvent ->
@@ -341,9 +342,9 @@ doubleSatisfactionCounterexamples dsc = do
       filter (\(w, _) -> P.unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
              (zip knownWallets (P.unPaymentPrivateKey <$> knownPaymentPrivateKeys))
    let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
-       stealerCardanoAddress =  fromRight (error "invalid address") (toCardanoAddressInEra P.testnet stealerAddr)
+       stealerCardanoAddress =  fromRight (error "invalid address") (toCardanoAddressInEra testnet stealerAddr)
        scriptCardanoAddress = fromRight (error "invalid address")
-          (toCardanoAddressInEra P.testnet $ P.scriptValidatorHashAddress (validatorHash alwaysOkValidator) Nothing)
+          (toCardanoAddressInEra testnet $ P.scriptValidatorHashAddress (validatorHash alwaysOkValidator) Nothing)
    -- The output going to the original recipient but with a datum
        datum         = Datum . mkB $ "<this is a unique string>"
        datumEmpty    = Datum . mkB $ ""
@@ -384,5 +385,5 @@ doubleSatisfactionCounterexamples dsc = do
       , dsceStealerWallet       = stealerWallet
       }
 
-toCardanoUtxoIndex :: UtxoIndex -> Validation.UTxO P.EmulatorEra
-toCardanoUtxoIndex idx = either (error . show) id $ Validation.fromPlutusIndex idx
+toCardanoUtxoIndex :: UtxoIndex -> Validation.UTxO EmulatorEra
+toCardanoUtxoIndex idx = either (error . show) id $ fromPlutusIndex idx

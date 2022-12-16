@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 
+import Cardano.Ledger.Babbage qualified as Babbage
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Babbage.Tx qualified as Babbage
 import Cardano.Ledger.Babbage.TxBody qualified as Babbage
@@ -42,10 +43,9 @@ import Cardano.Ledger.ShelleyMA.TxBody qualified as Allegra
 import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Shelley.Tx qualified as Shelley
 import Cardano.Ledger.Shelley.TxBody qualified as Shelley
-import Ledger.Params (PParams)
 
 makeTransactionBody'
-    :: Maybe PParams
+    :: Maybe (Babbage.PParams (Babbage.BabbageEra StandardCrypto))
     -> Map.Map Alonzo.RdmrPtr Alonzo.ExUnits
     -> TxBodyContent BuildTx BabbageEra
     -> Either TxBodyError (TxBody BabbageEra)

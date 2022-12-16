@@ -15,8 +15,10 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Wallet.Emulator.Chain where
+module Cardano.Node.Emulator.Chain where
 
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
@@ -32,12 +34,12 @@ import Data.Monoid (Ap (Ap))
 import Data.Text (Text)
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef), Value,
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), TxId, TxIn (txInRef), Value,
                getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxTotalCollateral,
                getCardanoTxValidityRange, txOutValue, unOnChain)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
-import Ledger.Validation qualified as Validation
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Prettyprinter
 
@@ -64,7 +66,7 @@ data ChainState = ChainState {
     _chainNewestFirst :: Blockchain, -- ^ The current chain, with the newest transactions first in the list.
     _txPool           :: TxPool, -- ^ The pool of pending transactions.
     _index            :: Index.UtxoIndex, -- ^ The UTxO index, used for validation.
-    _currentSlot      :: Slot -- ^ The current slot number
+    _chainCurrentSlot :: Slot -- ^ The current slot number
 } deriving (Show, Generic)
 
 emptyChainState :: ChainState
@@ -104,7 +106,7 @@ handleControlChain :: Members ChainEffs effs => Params -> ChainControlEffect ~> 
 handleControlChain params = \case
     ProcessBlock -> do
         pool  <- gets $ view txPool
-        slot  <- gets $ view currentSlot
+        slot  <- gets $ view chainCurrentSlot
         idx   <- gets $ view index
 
         let ValidatedBlock block events idx' =
@@ -117,7 +119,7 @@ handleControlChain params = \case
         traverse_ logEvent events
         pure block
 
-    ModifySlot f -> modify @ChainState (over currentSlot f) >> gets (view currentSlot)
+    ModifySlot f -> modify @ChainState (over chainCurrentSlot f) >> gets (view chainCurrentSlot)
 
 logEvent :: Member (LogMsg ChainEvent) effs => ChainEvent -> Eff effs ()
 logEvent e = case e of
@@ -128,7 +130,7 @@ logEvent e = case e of
 handleChain :: (Members ChainEffs effs) => Params -> ChainEffect ~> Eff effs
 handleChain params = \case
     QueueTx tx     -> modify $ over txPool (addTxToPool tx)
-    GetCurrentSlot -> gets _currentSlot
+    GetCurrentSlot -> gets _chainCurrentSlot
     GetParams      -> pure params
 
 -- | The result of validating a block.
@@ -199,7 +201,7 @@ validateEm
 validateEm h txn = do
     ctx@(ValidationCtx idx params) <- S.get
     let
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
+        cUtxoIndex = either (error . show) id $ fromPlutusIndex idx
         e = Validation.validateCardanoTx params h cUtxoIndex txn
         idx' = case e of
             Left (Index.Phase1, _) -> idx

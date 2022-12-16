@@ -27,6 +27,7 @@ module Wallet.Emulator.Stream(
     , foldEmulatorStreamM
     ) where
 
+import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
 import Control.Foldl qualified as L
 import Control.Lens (filtered, makeLenses, preview, view)
 import Control.Monad.Freer (Eff, Member, interpret, reinterpret, run, subsume, type (~>))
@@ -48,6 +49,7 @@ import Ledger.Blockchain (Block, OnChainTx (Valid))
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Slot (Slot)
 import Ledger.Tx (CardanoTx (CardanoApiTx), onCardanoTx)
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexError)
 import Streaming (Stream)
@@ -57,12 +59,11 @@ import Streaming.Prelude qualified as S
 import Wallet.API (Params, WalletAPIError)
 import Wallet.Emulator (EmulatorEvent, EmulatorEvent')
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
 import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTimeEvent), MultiAgentControlEffect,
                                    MultiAgentEffect, chainEvent, eteEvent)
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
-import Ledger.Validation qualified as Validation
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 
@@ -151,7 +152,7 @@ initialDist EmulatorConfig{..} = either id (walletFunds . map (Valid . signTx)) 
     signTx = onCardanoTx
       (\t -> Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys)
       CardanoApiTx
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
+    cUtxoIndex = either (error . show) id $ fromPlutusIndex mempty
     walletFunds :: Block -> Map Wallet Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]
@@ -173,7 +174,7 @@ initialState EmulatorConfig{..} = let
     signTx = onCardanoTx
           (\t -> Validation.fromPlutusTxSigned _params cUtxoIndex t CW.knownPaymentKeys)
           CardanoApiTx
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex mempty
+    cUtxoIndex = either (error . show) id $ fromPlutusIndex mempty
     in either withInitialWalletValues (EM.emulatorStatePool . map signTx) _initialChainState
 
 
@@ -203,7 +204,7 @@ mkTimedLogs = mapMLog f where
     f :: a -> Eff effs (EmulatorTimeEvent a)
     f a =
         EmulatorTimeEvent
-            <$> gets (view $ EM.chainState . EM.currentSlot)
+            <$> gets (view $ EM.chainState . EM.chainCurrentSlot)
             <*> pure a
 
 makeLenses ''EmulatorConfig

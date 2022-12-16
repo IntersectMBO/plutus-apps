@@ -40,6 +40,9 @@ module Ledger.Index(
 import Prelude hiding (lookup)
 
 import Cardano.Api.Shelley qualified as C.Api
+import Cardano.Ledger.Babbage qualified as Babbage
+import Cardano.Ledger.Babbage.PParams qualified as Babbage
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Lens (Fold, folding, (&), (.~))
 import Control.Monad.Except (MonadError (..))
@@ -50,7 +53,6 @@ import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Params (PParams)
 import Ledger.Tx (CardanoTx (..), ToCardanoError, Tx, TxIn (TxIn, txInType),
                   TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut (getTxOut), TxOutRef, outValue, txOutValue,
                   updateUtxoCollateral)
@@ -58,6 +60,10 @@ import Ledger.Tx.CardanoAPI (toCardanoTxOutValue)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx.Lattice ((\/))
+
+-- | Create an index of all UTxOs on the chain.
+initialise :: Blockchain -> UtxoIndex
+initialise = UtxoIndex . unspentOutputs
 
 -- | Update the index for the addition of a transaction.
 insert :: CardanoTx -> UtxoIndex -> UtxoIndex
@@ -100,7 +106,7 @@ the blockchain.
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: PParams -> TxOut -> Either ToCardanoError ([Ada.Ada], TxOut)
+adjustTxOut :: (Babbage.PParams (Babbage.BabbageEra StandardCrypto)) -> TxOut -> Either ToCardanoError ([Ada.Ada], TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
     withMinAdaValue <- toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
@@ -115,7 +121,7 @@ adjustTxOut params txOut = do
 
 -- | Exact computation of the mimimum Ada required for a given TxOut.
 -- TODO: Should be moved to cardano-api-extended once created
-minAdaTxOut :: PParams -> TxOut -> Ada
+minAdaTxOut :: (Babbage.PParams (Babbage.BabbageEra StandardCrypto)) -> TxOut -> Ada
 minAdaTxOut params txOut = let
   toAda = lovelaceOf . C.Ledger.unCoin
   initialValue = txOutValue txOut

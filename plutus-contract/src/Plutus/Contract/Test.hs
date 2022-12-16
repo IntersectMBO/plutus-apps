@@ -94,6 +94,7 @@ import Control.Monad.Freer.Writer (Writer (..), tell)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Default (Default (..))
 import Data.Foldable (fold, toList, traverse_)
+import Data.IORef
 import Data.Map qualified as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.OpenUnion
@@ -113,39 +114,36 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
+import Cardano.Node.Emulator.Chain (ChainEvent)
+import Cardano.Node.Emulator.Generators (GeneratorModel, Mockchain (..))
+import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Params qualified as Params
+import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (toPlutusAddress)
+import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Index (ValidationError)
+import Ledger.Slot (Slot)
+import Ledger.Tx (Tx, onCardanoTx)
+import Ledger.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
 import Plutus.Contract.Resumable qualified as State
-import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
-import PlutusTx (CompiledCode, FromData (..), getPir)
-import PlutusTx.Prelude qualified as P
-
-import Ledger qualified
-import Ledger.Address (CardanoAddress)
-import Ledger.Generators (GeneratorModel, Mockchain (..))
-import Ledger.Generators qualified as Gen
-import Ledger.Index (ValidationError)
-import Ledger.Slot (Slot)
-import Ledger.Value (AssetClass, Value, assetClassValueOf)
-import Plutus.V1.Ledger.Scripts qualified as PV1
-
-import Data.IORef
-import Ledger.Tx (Tx, onCardanoTx)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
+import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)
+import Plutus.V1.Ledger.Scripts qualified as PV1
+import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Coverage
+import PlutusTx.Prelude qualified as P
 import Streaming qualified as S
 import Streaming.Prelude qualified as S
 import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
-import Wallet.Emulator.Chain (ChainEvent)
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
 import Wallet.Emulator.Folds qualified as Folds
@@ -198,7 +196,7 @@ changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Le
 -- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
 -- Note that if you need this your Plutus script will probably not validate on Mainnet.
 increaseTransactionLimits :: CheckOptions -> CheckOptions
-increaseTransactionLimits = over (emulatorConfig . params) Ledger.increaseTransactionLimits
+increaseTransactionLimits = over (emulatorConfig . params) Params.increaseTransactionLimits
 
 -- | Check if the emulator trace meets the condition
 checkPredicate ::
