@@ -6,39 +6,50 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
+
 module BasicApps where
 
 -- BLOCK0
 
-import Control.Monad (void)
+import Control.Monad (forever, void)
+import Control.Monad.Freer.Extras.Log (LogLevel (Debug, Info))
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Text qualified as T
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
-import Ledger (Ada, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
-               pNetworkId, valuePaidTo)
+import Ledger (Ada, CardanoAddress, Params (pNetworkId), PaymentPubKeyHash (unPaymentPubKeyHash), toPlutusAddress)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Endpoint, Promise, endpoint, getParams, logInfo, selectList, submitTxConstraints,
                         submitTxConstraintsSpending, type (.\/), utxosAt)
+import Plutus.Contract.Test (w1, w2)
+import Plutus.Trace.Emulator qualified as Trace
+import Plutus.V1.Ledger.Api (Address, ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoOutputs),
+                             TxOut (TxOut, txOutAddress, txOutValue), Value)
 import PlutusTx qualified
-import PlutusTx.Prelude (Bool, Semigroup ((<>)), ($), (&&), (-), (.), (<$>), (>=))
+import PlutusTx.Prelude (Bool, Maybe (Just, Nothing), Semigroup ((<>)), mapMaybe, mconcat, ($), (&&), (-), (.), (==),
+                         (>=))
+import Prelude (IO, (<$>), (>>))
 import Prelude qualified as Haskell
 import Schema (ToSchema)
-import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
+import Wallet.Emulator.Stream (filterLogLevel)
+import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
 -- BLOCK1
 
 data SplitData =
     SplitData
-        { recipient1 :: PaymentPubKeyHash -- ^ First recipient of the funds
-        , recipient2 :: PaymentPubKeyHash -- ^ Second recipient of the funds
+        { recipient1 :: Address -- ^ First recipient of the funds
+        , recipient2 :: Address -- ^ Second recipient of the funds
         , amount     :: Ada -- ^ How much Ada we want to lock
         }
     deriving stock (Haskell.Show, Generic)
@@ -51,9 +62,17 @@ PlutusTx.makeLift ''SplitData
 
 validateSplit :: SplitData -> () -> ScriptContext -> Bool
 validateSplit SplitData{recipient1, recipient2, amount} _ ScriptContext{scriptContextTxInfo} =
-    let half = Ada.divide amount 2 in
-    Ada.fromValue (valuePaidTo scriptContextTxInfo (unPaymentPubKeyHash recipient1)) >= half &&
-    Ada.fromValue (valuePaidTo scriptContextTxInfo (unPaymentPubKeyHash recipient2)) >= (amount - half)
+    let half = Ada.divide amount 2
+        outputs = txInfoOutputs scriptContextTxInfo
+     in
+     Ada.fromValue (valuePaidToAddr outputs recipient1) >= half &&
+     Ada.fromValue (valuePaidToAddr outputs recipient2) >= (amount - half)
+ where
+     valuePaidToAddr :: [TxOut] -> Address -> Value
+     valuePaidToAddr outs addr =
+         let flt TxOut{txOutAddress, txOutValue} | txOutAddress == addr = Just txOutValue
+             flt _ = Nothing
+         in mconcat $ mapMaybe flt outs
 
 -- BLOCK3
 
@@ -72,12 +91,12 @@ splitValidator = Scripts.mkTypedValidator @Split
 
 data LockArgs =
         LockArgs
-            { recipient1Wallet :: Wallet
-            , recipient2Wallet :: Wallet
-            , totalAda         :: Ada
+            { recipient1Address :: CardanoAddress
+            , recipient2Address :: CardanoAddress
+            , totalAda          :: Ada
             }
     deriving stock (Haskell.Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 type SplitSchema =
         Endpoint "lock" LockArgs
@@ -94,10 +113,10 @@ unlock = endpoint @"unlock" (unlockFunds . mkSplitData)
 -- BLOCK6
 
 mkSplitData :: LockArgs -> SplitData
-mkSplitData LockArgs{recipient1Wallet, recipient2Wallet, totalAda} =
+mkSplitData LockArgs{recipient1Address, recipient2Address, totalAda} =
     SplitData
-        { recipient1 = mockWalletPaymentPubKeyHash recipient1Wallet
-        , recipient2 = mockWalletPaymentPubKeyHash recipient2Wallet
+        { recipient1 = toPlutusAddress recipient1Address
+        , recipient2 = toPlutusAddress recipient2Address
         , amount = totalAda
         }
 
@@ -106,8 +125,8 @@ mkSplitData LockArgs{recipient1Wallet, recipient2Wallet, totalAda} =
 lockFunds :: SplitData -> Contract () SplitSchema T.Text ()
 lockFunds s@SplitData{amount} = do
     logInfo $ "Locking " <> Haskell.show amount
-    let constraints = Constraints.mustPayToTheScriptWithDatumHash s (Ada.toValue amount)
-    void $ submitTxConstraints splitValidator constraints
+    let tx = Constraints.mustPayToTheScriptWithDatumInTx s (Ada.toValue amount)
+    void $ submitTxConstraints splitValidator tx
 
 -- BLOCK8
 
@@ -119,15 +138,28 @@ unlockFunds SplitData{recipient1, recipient2, amount} = do
     let half = Ada.divide amount 2
         tx =
             Constraints.collectFromTheScript utxos ()
-            <> Constraints.mustPayToPubKey recipient1 (Ada.toValue half)
-            <> Constraints.mustPayToPubKey recipient2 (Ada.toValue $ amount - half)
+            <> Constraints.mustPayToAddress recipient1 (Ada.toValue half)
+            <> Constraints.mustPayToAddress recipient2 (Ada.toValue $ amount - half)
     void $ submitTxConstraintsSpending splitValidator utxos tx
 
 -- BLOCK9
 
-endpoints :: Contract () SplitSchema T.Text ()
+splitPlutusApp :: Contract () SplitSchema T.Text ()
 -- BLOCK10
 
-endpoints = selectList [lock, unlock]
+splitPlutusApp = forever $ selectList [lock, unlock]
 
 -- BLOCK11
+
+runSplitDataEmulatorTrace :: IO ()
+runSplitDataEmulatorTrace = do
+    -- w1, w2, w3, ... are predefined mock wallets used for testing
+    let w1Addr = mockWalletAddress w1
+    let w2Addr = mockWalletAddress w2
+    Trace.runEmulatorTraceIO $ do
+        h <- Trace.activateContractWallet w1 splitPlutusApp
+        Trace.callEndpoint @"lock" h $ LockArgs w1Addr w2Addr 10_000_000
+        void Trace.nextSlot
+        Trace.callEndpoint @"unlock" h $ LockArgs w1Addr w2Addr 10_000_000
+
+-- BLOCK12

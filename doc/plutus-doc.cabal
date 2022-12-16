@@ -44,8 +44,8 @@ common lang
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints -Widentities
-    -Wmissing-import-lists -fobject-code -fno-ignore-interface-pragmas
-    -fno-omit-interface-pragmas
+    -Wmissing-import-lists -Wno-unused-imports -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
   if flag(defer-plugin-errors)
 
@@ -57,7 +57,6 @@ executable doc-doctests
 
   hs-source-dirs:     plutus/tutorials plutus/howtos
   main-is:            Main.hs
-  ghc-options:        -Wno-unused-imports
   build-tool-depends: doctest:doctest
   other-modules:
     BasicAppConstraints
@@ -85,7 +84,6 @@ executable doc-doctests
     , plutus-ledger              >=1.0.0
     , plutus-ledger-constraints  >=1.0.0
     , plutus-script-utils        >=1.0.0
-    , plutus-tx-constraints      >=1.0.0
     , plutus-use-cases           >=1.0.0
 
   --------------------------
@@ -106,15 +104,60 @@ executable doc-doctests
   build-depends:
     , aeson
     , base              >=4.9      && <5
-    , bytestring
     , containers
     , data-default
-    , flat
     , lens
     , QuickCheck
     , random
-    , serialise
     , tasty
     , tasty-quickcheck
+    , template-haskell  >=2.13.0.0
+    , text
+
+test-suite basic-app
+  import:         lang
+
+  if (impl(ghcjs) || os(windows))
+    buildable: False
+
+  hs-source-dirs: plutus/tutorials
+  main-is:        BasicAppsSpec.hs
+  type:           exitcode-stdio-1.0
+  other-modules:  BasicApps
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , freer-extras               >=1.0.0
+    , playground-common          >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , plutus-core        >=1.0.0
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base              >=4.9      && <5
+    , bytestring
+    , containers
+    , data-default
+    , freer-simple
+    , tasty
+    , tasty-golden
     , template-haskell  >=2.13.0.0
     , text
