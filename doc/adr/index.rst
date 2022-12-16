@@ -45,3 +45,4 @@ The general process for creating an ADR is:
    0013-tx-validity-time-range-fix
    0014-marconi-query-interface
    0015-time-conversion
+   0016-cardano-node-emulator
