@@ -29,16 +29,16 @@ main = do
                                   (Cli.scriptTxDbPath o)
                                   (Cli.optionsTargetAddresses o)
     (cp, coordinator) <- startIndexers indexers
-    let preferredChainPoint =
+    let preferredChainPoints =
           -- If the user specifies the chain point then use that,
           -- otherwise use what the indexers provide.
           if Cli.optionsChainPoint o == C.ChainPointAtGenesis
              then cp
-             else Cli.optionsChainPoint o
+             else [Cli.optionsChainPoint o]
     withChainSyncEventStream
       (Cli.optionsSocketPath o)
       (Cli.optionsNetworkId o)
-      [preferredChainPoint]
+      preferredChainPoints
       (mkIndexerStream coordinator . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $

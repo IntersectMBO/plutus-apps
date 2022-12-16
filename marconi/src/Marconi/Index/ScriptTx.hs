@@ -159,7 +159,7 @@ instance Ord ChainPoint where
 
 -- * Indexer
 
-type Query = StorableQuery ScriptTxHandle
+type Query  = StorableQuery  ScriptTxHandle
 type Result = StorableResult ScriptTxHandle
 
 toUpdate
@@ -316,9 +316,10 @@ instance Rewindable ScriptTxHandle where
 instance Resumable ScriptTxHandle where
   resumeFromStorage h = do
     es <- Storable.getStoredEvents h
-    pure $ if null es
-              then [ChainPointAtGenesis]
-              else map chainPoint es
+    -- The ordering here matters. The node will try to find the first point in the
+    -- ledger, then move to the next and so on, so we will send the latest point
+    -- first.
+    pure $ map chainPoint es ++ [ChainPointAtGenesis]
 
 open :: FilePath -> Depth -> IO ScriptTxIndexer
 open dbPath (Depth k) = do

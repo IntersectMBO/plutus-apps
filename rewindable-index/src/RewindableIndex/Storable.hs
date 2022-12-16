@@ -116,6 +116,7 @@ data QueryInterval p =
 class Buffered h where
   -- This function persists the memory/buffer events to disk.
   persistToStorage :: Foldable f => f (StorableEvent h) -> h -> StorableMonad h h
+
   {- This function retrieves the events from the disk/events area.
      If the user chooses to only store events, without accumulating them, this function
      is expected to return the events over which rollbacks can occur in order to keep

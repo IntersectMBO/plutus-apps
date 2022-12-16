@@ -205,12 +205,12 @@ filterIndexers utxoPath datumPath scriptTxPath maybeTargetAddresses =
 
 startIndexers
   :: [(Worker, FilePath)]
-  -> IO (ChainPoint, Coordinator)
+  -> IO ([ChainPoint], Coordinator)
 startIndexers indexers = do
   coordinator <- initialCoordinator $ length indexers
   startingPoint <- mapM (\(ix, fp) -> ix coordinator fp) indexers
   -- We want to use the minimum value across all indexers.
-  pure ( foldl1' max $ foldl1' intersect startingPoint
+  pure ( foldl1' intersect startingPoint
        , coordinator )
 
 mkIndexerStream
