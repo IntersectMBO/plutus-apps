@@ -108,6 +108,7 @@ module Plutus.Contract.Request(
     , MkTxLog(..)
     ) where
 
+import Cardano.Node.Emulator.Params (Params)
 import Control.Lens (Prism', preview, review, view)
 import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Trans.State.Strict (StateT (..), evalStateT)
@@ -128,8 +129,8 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
-import Ledger (AssetClass, DiffMilliSeconds, POSIXTime, Params, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId,
-               TxOutRef, Value, addressCredential, fromMilliSeconds, txOutRefId)
+import Ledger (AssetClass, CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot,
+               TxId, TxOutRef, Value, cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -137,8 +138,8 @@ import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, get
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
-import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
-                             StakeValidator, StakeValidatorHash, Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+                             StakeValidatorHash, Validator, ValidatorHash)
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
@@ -159,7 +160,6 @@ import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _Constr
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
-import Plutus.V1.Ledger.Address (toPubKeyHash)
 import Wallet.Emulator.Error (WalletAPIError (NoPaymentPubKeyHashError))
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
@@ -352,11 +352,11 @@ queryDatumsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [Datum])
 queryDatumsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.DatumsAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("DatumsAtResponse", r)
@@ -367,7 +367,7 @@ datumsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Contract w s e [Datum]
 datumsAt addr =
   concat <$> collectQueryResponse (queryDatumsAt addr)
@@ -475,10 +475,10 @@ utxoRefsAt ::
     ( AsContractError e
     )
     => PageQuery TxOutRef
-    -> Address
+    -> CardanoAddress
     -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetAtResponse r -> pure r
     r                     -> throwError $ review _ChainIndexContractError ("UtxoSetAtResponse", r)
@@ -508,11 +508,11 @@ queryUnspentTxOutsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [(TxOutRef, DecoratedTxOut)])
 queryUnspentTxOutsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.UnspentTxOutsAtResponse r -> pure r
     r                           -> throwError $ review _ChainIndexContractError ("UnspentTxOutAtResponse", r)
@@ -522,7 +522,7 @@ utxosAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Contract w s e (Map TxOutRef DecoratedTxOut)
 utxosAt addr =
   Map.fromList . concat <$> collectQueryResponse (queryUnspentTxOutsAt addr)
@@ -532,7 +532,7 @@ utxosTxOutTxAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Contract w s e (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
 utxosTxOutTxAt addr = do
   utxos <- utxosAt addr
@@ -578,7 +578,7 @@ foldTxoRefsAt ::
     )
     => (a -> Page TxOutRef -> Contract w s e a)
     -> a
-    -> Address
+    -> CardanoAddress
     -> Contract w s e a
 foldTxoRefsAt f ini addr = go ini (Just def)
   where
@@ -593,7 +593,7 @@ txsAt ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Contract w s e [ChainIndexTx]
 txsAt addr = do
   foldTxoRefsAt f [] addr
@@ -610,10 +610,10 @@ txoRefsAt ::
     ( AsContractError e
     )
     => PageQuery TxOutRef
-    -> Address
+    -> CardanoAddress
     -> Contract w s e TxosResponse
 txoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.TxoSetAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("TxoSetAtAddress", r)
@@ -648,7 +648,7 @@ watchAddressUntilSlot ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> Slot
     -> Contract w s e (Map TxOutRef DecoratedTxOut)
 watchAddressUntilSlot a slot = awaitSlot slot >> utxosAt a
@@ -659,7 +659,7 @@ watchAddressUntilTime ::
     forall w s e.
     ( AsContractError e
     )
-    => Address
+    => CardanoAddress
     -> POSIXTime
     -> Contract w s e (Map TxOutRef DecoratedTxOut)
 watchAddressUntilTime a time = awaitTime time >> utxosAt a
@@ -690,7 +690,7 @@ awaitUtxoProduced ::
   forall w s e .
   ( AsContractError e
   )
-  => Address
+  => CardanoAddress
   -> Contract w s e (NonEmpty ChainIndexTx)
 awaitUtxoProduced address =
   pabReq (AwaitUtxoProducedReq address) E._AwaitUtxoProducedResp
@@ -701,7 +701,7 @@ utxoIsProduced ::
   forall w s e .
   ( AsContractError e
   )
-  => Address
+  => CardanoAddress
   -> Promise w s e (NonEmpty ChainIndexTx)
 utxoIsProduced = Promise . awaitUtxoProduced
 
@@ -712,7 +712,7 @@ fundsAtAddressGt
     :: forall w s e.
        ( AsContractError e
        )
-    => Address
+    => CardanoAddress
     -> Value
     -> Contract w s e (Map TxOutRef DecoratedTxOut)
 fundsAtAddressGt addr vl =
@@ -723,7 +723,7 @@ fundsAtAddressCondition
        ( AsContractError e
        )
     => (Value -> Bool)
-    -> Address
+    -> CardanoAddress
     -> Contract w s e (Map TxOutRef DecoratedTxOut)
 fundsAtAddressCondition condition addr = loopM go () where
     go () = do
@@ -740,7 +740,7 @@ fundsAtAddressGeq
     :: forall w s e.
        ( AsContractError e
        )
-    => Address
+    => CardanoAddress
     -> Value
     -> Contract w s e (Map TxOutRef DecoratedTxOut)
 fundsAtAddressGeq addr vl =
@@ -883,17 +883,17 @@ ownPaymentPubKeyHash = ownFirstPaymentPubKeyHash
 --     'requiredSignatures' field of 'Tx'.
 --   * There is a 1-n relationship between wallets and addresses (although in
 --     the mockchain n=1)
-ownAddresses :: forall w s e. (AsContractError e) => Contract w s e (NonEmpty Address)
+ownAddresses :: forall w s e. (AsContractError e) => Contract w s e (NonEmpty CardanoAddress)
 ownAddresses = pabReq OwnAddressesReq E._OwnAddressesResp
 
 -- | Get the first address of the wallet that runs this contract.
-ownAddress :: forall w s e. (AsContractError e) => Contract w s e Address
+ownAddress :: forall w s e. (AsContractError e) => Contract w s e CardanoAddress
 ownAddress = NonEmpty.head <$> ownAddresses
 
 ownPaymentPubKeyHashes :: forall w s e. (AsContractError e) => Contract w s e [PaymentPubKeyHash]
 ownPaymentPubKeyHashes = do
     addrs <- ownAddresses
-    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ NonEmpty.toList addrs
+    pure $ fmap PaymentPubKeyHash $ mapMaybe cardanoPubKeyHash $ NonEmpty.toList $ addrs
 
 ownFirstPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
 ownFirstPaymentPubKeyHash = do
@@ -906,7 +906,6 @@ ownFirstPaymentPubKeyHash = do
 --    of the final transaction when the transaction was submitted. Throws an
 --    error if balancing or signing failed.
 submitUnbalancedTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e CardanoTx
--- See Note [Injecting errors into the user's error type]
 submitUnbalancedTx utx = do
   tx <- balanceTx utx
   submitBalancedTx tx
@@ -914,7 +913,6 @@ submitUnbalancedTx utx = do
 -- | Send an unbalanced transaction to be balanced. Returns the balanced transaction.
 --    Throws an error if balancing failed.
 balanceTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e CardanoTx
--- See Note [Injecting errors into the user's error type]
 balanceTx t =
   let req = pabReq (BalanceTxReq t) E._BalanceTxResp in
   req >>= either (throwError . review _WalletContractError) pure . view E.balanceTxResponse
@@ -923,7 +921,6 @@ balanceTx t =
 --    of the final transaction when the transaction was submitted. Throws an
 --    error if signing failed.
 submitBalancedTx :: forall w s e. (AsContractError e) => CardanoTx -> Contract w s e CardanoTx
--- See Note [Injecting errors into the user's error type]
 submitBalancedTx t =
   let req = pabReq (WriteBalancedTxReq t) E._WriteBalancedTxResp in
   req >>= either (throwError . review _WalletContractError) pure . view E.writeBalancedTxResponse

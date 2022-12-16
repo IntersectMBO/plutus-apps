@@ -8,23 +8,23 @@ module Marconi.Api.HttpServer(
     bootstrap
     ) where
 
-import Cardano.Api ()
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
-import Data.Set (Set)
 import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
+import Network.Wai.Handler.Warp (runSettings)
+import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
+import Servant.Server (Handler, Server, serve)
+
+import Cardano.Api ()
 import Marconi.Api.Routes (API)
 import Marconi.Api.Types (DBQueryEnv, HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, QueryExceptions,
                           UtxoTxOutReport)
 import Marconi.Api.UtxoIndexersQuery qualified as Q.Utxo (findAll, findByAddress, reportBech32Addresses)
 import Marconi.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 import Marconi.Server.Types ()
-import Network.Wai.Handler.Warp (runSettings)
-import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
-import Servant.Server (Handler, Server, serve)
 
 -- | bootstraps the he http server
 bootstrap :: JsonRpcEnv -> IO ()
@@ -72,7 +72,7 @@ getTime = timeString <$> liftIO getCurrentTime
 
 getTargetAddresses
     :: DBQueryEnv               -- ^ database configuration
-    ->  Handler (Set Text)
+    ->  Handler [Text]
 getTargetAddresses =  pure . Q.Utxo.reportBech32Addresses
 
 -- | Retrieves a set of TxOutRef
@@ -88,14 +88,14 @@ utxoTxOutReport env address = liftIO $
 utxoTxOutReports
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) (Set UtxoTxOutReport))
+    -> Handler (Either (JsonRpcErr String) [UtxoTxOutReport])
 utxoTxOutReports env _ =
     liftIO $ Right <$> Q.Utxo.findAll env
 
 targetAddressesReport
     :: DBQueryEnv                   -- ^ database configuration
     -> Int                          -- ^ limit, for now we are ignoring this param and return 100
-    -> Handler (Either (JsonRpcErr String) (Set Text) )
+    -> Handler (Either (JsonRpcErr String) [Text] )
 targetAddressesReport env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env
 
 -- | convert form to jsonrpc protocal error

@@ -48,20 +48,20 @@ module Plutus.Contracts.Crowdfunding (
     , successfulCampaign
     ) where
 
+import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Applicative (Applicative (..))
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
-
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (Extended (NegInf), Interval (Interval), LowerBound (LowerBound))
 import Ledger.Interval qualified as Interval
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
@@ -216,7 +216,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
-    utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
+    utxo <- watchAddressUntilTime (Scripts.validatorCardanoAddress Params.testnet inst) $ campaignCollectionDeadline cmp
 
     -- 'utxo' is the set of unspent outputs at the campaign address at the
     -- collection deadline. If 'utxo' still contains our own contribution
@@ -247,7 +247,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
     logInfo @Text "Campaign started. Waiting for campaign deadline to collect funds."
 
     _ <- awaitTime $ campaignDeadline cmp
-    unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
+    unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress Params.testnet inst)
 
     let tx = Constraints.collectFromTheScript unspentOutputs Collect
             <> Constraints.mustBeSignedBy (campaignOwner cmp)

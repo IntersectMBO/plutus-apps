@@ -6,17 +6,18 @@ module Ledger (
     Value,
     Ada,
     DCert,
+    NetworkId,
     Credential,
     StakingCredential,
     ) where
 
+import Cardano.Api (NetworkId)
 import Ledger.Ada (Ada)
 import Ledger.Address as Export
 import Ledger.Blockchain as Export
 import Ledger.Crypto as Export
 import Ledger.Index as Export
 import Ledger.Orphans ()
-import Ledger.Params as Export
 import Ledger.Scripts as Export
 import Ledger.Slot as Export
 import Ledger.Tx as Export

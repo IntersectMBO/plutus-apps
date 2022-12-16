@@ -48,6 +48,8 @@ module Cardano.Node.Types
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.BM.Data.Tracer.Extras (Tagged (Tagged), mkObjectStr)
 import Cardano.Chain (MockNodeServerChainState, fromEmulatorChainState)
+import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent)
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Lens (makeLenses, makePrisms, view)
@@ -67,18 +69,16 @@ import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
 import Ledger (Block, Tx, txId)
 import Ledger.CardanoWallet (WalletNumber)
-import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Trace qualified as Trace
 import Prettyprinter (Pretty, pretty, viaShow, vsep, (<+>))
 import Servant.Client (BaseUrl (BaseUrl, baseUrlPort), Scheme (Http))
 import Wallet.Emulator (Wallet, WalletNumber (WalletNumber))
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent)
 import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper), testnetNetworkId)
 import Cardano.BM.Tracing (toObject)
-import Ledger.Params (testnet)
+import Cardano.Node.Emulator.Params (pNetworkId, testnet)
 import Plutus.PAB.Arbitrary ()
 
 -- Configuration ------------------------------------------------------------------------------------------------------
@@ -256,7 +256,7 @@ initialAppState wallets = do
 initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
 initialChainState =
     fromEmulatorChainState . view EM.chainState . fromRight (error "Can't initialise chain state") .
-    MultiAgent.emulatorStateInitialDist testnet . Map.mapKeys EM.mockWalletPaymentPubKeyHash
+    MultiAgent.emulatorStateInitialDist (def {pNetworkId = testnet}) . Map.mapKeys EM.mockWalletPaymentPubKeyHash
 
 -- Effects -------------------------------------------------------------------------------------------------------------
 

@@ -16,13 +16,15 @@ module BasicAppConstraints where
 
 -- BLOCK0
 
-import BasicApps (SplitData (SplitData, amount, recipient1, recipient2), SplitSchema, mkSplitData)
-import Ledger (Ada, ChainIndexTxOut, PaymentPubKeyHash, ScriptContext, TxOutRef)
+import BasicApps (Split, SplitData (SplitData, amount, recipient1, recipient2), SplitSchema, mkSplitData)
+import Cardano.Node.Emulator.Params (pNetworkId)
+import Ledger (Ada, PaymentPubKeyHash, ScriptContext, TxOutRef)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (MkTxError, TxConstraints, UnbalancedTx)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (Contract, Promise, collectFromScript, endpoint, submitTxConstraintsSpending, utxosAt)
+import Plutus.Contract (Contract, Promise, endpoint, getParams, submitTxConstraintsSpending, utxosAt)
 
 import Control.Monad (void)
 import Data.Either (Either)
@@ -33,7 +35,7 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool, mappend, ($), (-), (.))
-import Prelude (Show, flip, (<>))
+import Prelude (Show, flip, (<$>), (<>))
 
 -- BLOCK1
 
@@ -45,8 +47,8 @@ import Prelude (Show, flip, (<>))
 {-# INLINABLE splitDataConstraints #-}
 splitDataConstraints :: SplitData -> TxConstraints () SplitData
 splitDataConstraints SplitData{recipient1, recipient2, amount} =
-            Constraints.mustPayToPubKey recipient1 (Ada.toValue half)
-  `mappend` Constraints.mustPayToPubKey recipient2 (Ada.toValue $ amount - half)
+            Constraints.mustPayToAddress recipient1 (Ada.toValue half)
+  `mappend` Constraints.mustPayToAddress recipient2 (Ada.toValue $ amount - half)
  where
      half = Ada.divide amount 2
 
@@ -65,7 +67,7 @@ splitValidator :: Scripts.TypedValidator Split
 splitValidator = Scripts.mkTypedValidator @Split
     $$(PlutusTx.compile [|| validateSplit ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.mkUntypedValidator @SplitData @()
+        wrap = Scripts.mkUntypedValidator @ScriptContext @SplitData @()
 
 -- BLOCK4
 
@@ -76,13 +78,14 @@ unlock = endpoint @"unlock" (unlockFunds . mkSplitData)
 -- sums the value of the scripts outputs and splits it between two payment keys.
 unlockFunds :: SplitData -> Contract () SplitSchema T.Text ()
 unlockFunds splitData = do
+    networkId <- pNetworkId <$> getParams
     -- Get the address of the Split validator
-    let contractAddress = Scripts.validatorAddress splitValidator
+    let contractAddress = Scripts.validatorCardanoAddress networkId splitValidator
     -- Get all utxos that are locked by the Split validator
     utxos <- utxosAt contractAddress
     -- Generate constraints which will spend all utxos locked by the Split
     -- validator and split the value evenly between the two payment keys.
-    let constraints = collectFromScript utxos ()
+    let constraints = Constraints.collectFromTheScript utxos ()
                       <> splitDataConstraints splitData
     -- Create, Balance and submit the transaction
     void $ submitTxConstraintsSpending splitValidator utxos constraints

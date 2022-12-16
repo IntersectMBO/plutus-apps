@@ -24,8 +24,9 @@ import Data.Text (Text)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit
 
+import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger.Ada qualified as Ada
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Plutus.Contract.Test (checkPredicate, goldenPir, mockWalletPaymentPubKeyHash, reasonable', valueAtAddress, w1,
@@ -47,13 +48,13 @@ tests =
     testGroup "game with secret arguments tests"
     [ checkPredicate "run a successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 8)
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 0 ==)
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Ada.adaValueOf 0 ==)
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
         successTrace
 
     , checkPredicate "run a failed trace"
         (walletFundsChange w2 mempty
-        .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
         .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
         failTrace
 
@@ -75,12 +76,12 @@ successTrace = do
                                             , lockArgsValue = Ada.adaValueOf 8
                                             }
     -- One slot for sending the Ada to the script.
-    _ <- Trace.waitNSlots 1
+    void $ Trace.nextSlot
     hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
     Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                , guessArgsSecret = "hello"
                                                }
-    void $ Trace.waitNSlots 1
+    void $ Trace.nextSlot
 
 -- | Wallet 1 locks some funds, and Wallet 2 makes a wrong guess.
 failTrace :: EmulatorTrace ()
@@ -90,9 +91,9 @@ failTrace = do
                                             , lockArgsSecret = "hello"
                                             , lockArgsValue = Ada.adaValueOf 8
                                             }
-    _ <- Trace.waitNSlots 1
+    void $ Trace.nextSlot
     hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
     _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
                                                     , guessArgsSecret = "hola"
                                                     }
-    void $ Trace.waitNSlots 1
+    void $ Trace.nextSlot

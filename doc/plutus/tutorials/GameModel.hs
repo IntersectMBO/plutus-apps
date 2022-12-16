@@ -46,6 +46,7 @@ import Plutus.Contracts.GameStateMachine qualified as G
 
 -- START import Ada
 import Ledger.Ada qualified as Ada
+import Ledger.Address qualified as Address
 import Ledger.Value qualified as Value
 -- END import Ada
 
@@ -62,7 +63,7 @@ import Plutus.Contract.Secrets (secretArg)
 -- END import Contract.Security
 
 -- START import TimeSlot
-import Ledger.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 -- END import TimeSlot
 
 -- START import Data.Default
@@ -71,7 +72,7 @@ import Data.Default (Default (def))
 
 -- START gameParam
 gameParam :: G.GameParam
-gameParam = G.GameParam (mockWalletAddress w1) (TimeSlot.scSlotZeroTime def)
+gameParam = G.GameParam (Address.toPlutusAddress $ mockWalletAddress w1) (TimeSlot.scSlotZeroTime def)
 -- END gameParam
 
 -- * QuickCheck model
@@ -133,7 +134,7 @@ instance CM.ContractModel GameModel where
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 G.GuessArgs
                     { G.guessArgsGameParam     = gameParam
-                    , G.guessTokenTarget       = mockWalletAddress w
+                    , G.guessTokenTarget       = Address.toPlutusAddress $ mockWalletAddress w
                     , G.guessArgsOldSecret     = old
                     , G.guessArgsNewSecret     = secretArg new
                     , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
@@ -423,7 +424,7 @@ v1_model = ()
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
                 G.GuessArgs
                     { G.guessArgsGameParam = gameParam
-                    , G.guessTokenTarget   = mockWalletAddress w
+                    , G.guessTokenTarget   = Address.toPlutusAddress $ mockWalletAddress w
                     , G.guessArgsOldSecret = old
                     , G.guessArgsNewSecret = secretArg new
                     , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val

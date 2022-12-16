@@ -27,7 +27,7 @@ module Wallet.Emulator.Types(
     Ledger.CardanoWallet.toWalletNumber,
     Wallet.Emulator.Wallet.fromWalletNumber,
     Ledger.CardanoWallet.MockWallet(..),
-    Wallet.Emulator.Chain.TxPool,
+    Cardano.Node.Emulator.Chain.TxPool,
     -- * Emulator
     EmulatorEffs,
     Wallet.Emulator.MultiAgent.Assertion(OwnFundsEqual, IsValidated),
@@ -55,15 +55,14 @@ module Wallet.Emulator.Types(
     Wallet.Emulator.MultiAgent.emulatorState,
     Wallet.Emulator.MultiAgent.emulatorStatePool,
     Wallet.Emulator.MultiAgent.emulatorStateInitialDist,
-    Wallet.Emulator.Chain.txPool,
+    Cardano.Node.Emulator.Chain.txPool,
     Wallet.Emulator.MultiAgent.walletStates,
-    Wallet.Emulator.Chain.index,
+    Cardano.Node.Emulator.Chain.index,
     Wallet.Emulator.MultiAgent.chainState,
-    Wallet.Emulator.Chain.currentSlot,
+    Cardano.Node.Emulator.Chain.chainCurrentSlot,
     processEmulated,
     Wallet.Emulator.MultiAgent.fundsDistribution,
-    Wallet.Emulator.MultiAgent.emLog,
-    Wallet.Emulator.Wallet.selectCoin
+    Wallet.Emulator.MultiAgent.emLog
     ) where
 
 import Cardano.Crypto.Wallet qualified as Crypto
@@ -74,15 +73,17 @@ import Control.Monad.Freer.Extras qualified as Eff
 import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
 import Control.Monad.Freer.State (State)
 
-import Ledger (Params, addSignature)
+import Cardano.Node.Emulator.Params (Params)
+import Ledger (addSignature)
 import Plutus.ChainIndex (ChainIndexError)
 import Wallet.API (WalletAPIError)
 
+import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent, ChainState, handleChain,
+                                    handleControlChain)
+import Cardano.Node.Emulator.Chain qualified
 import Ledger.CardanoWallet qualified
 import Plutus.Contract.Error (AssertionError)
 import Plutus.Contract.Error qualified
-import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent, ChainState, handleChain, handleControlChain)
-import Wallet.Emulator.Chain qualified
 import Wallet.Emulator.MultiAgent (EmulatorEvent', EmulatorState, MultiAgentControlEffect, MultiAgentEffect, chainEvent,
                                    chainState, handleMultiAgent, handleMultiAgentControl)
 import Wallet.Emulator.MultiAgent qualified

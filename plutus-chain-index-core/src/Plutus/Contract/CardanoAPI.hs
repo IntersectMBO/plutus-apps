@@ -20,6 +20,7 @@ module Plutus.Contract.CardanoAPI(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Either (fromRight)
 import Data.List (sort)
 import Ledger qualified as P
 import Ledger.Tx.CardanoAPI as Export
@@ -66,10 +67,10 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) =
             , _citxCardanoTx = Just $ SomeTx tx eraInMode
             }
 
-fromCardanoTxOut :: C.TxOut C.CtxTx era -> ChainIndexTxOut
+fromCardanoTxOut :: C.IsCardanoEra era => C.TxOut C.CtxTx era -> ChainIndexTxOut
 fromCardanoTxOut (C.TxOut addr val datum refScript) =
     ChainIndexTxOut
-        (fromCardanoAddressInEra addr)
+        (fromRight (error "BabbageEra should be the latest era") $ C.eraCast C.BabbageEra addr)
         (fromCardanoValue $ C.txOutValueToValue val)
         (fromCardanoTxOutDatum datum)
         (fromCardanoTxOutRefScript refScript)

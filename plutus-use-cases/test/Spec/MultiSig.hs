@@ -8,8 +8,6 @@ module Spec.MultiSig(tests, failingTrace, succeedingTrace) where
 import Control.Monad (void)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Index (ValidationError (ScriptFailure))
-import Ledger.Scripts (ScriptError (EvaluationError))
 import Plutus.Contract (Contract, ContractError)
 import Plutus.Contract.Test
 import Plutus.Contracts.MultiSig as MS
@@ -24,7 +22,7 @@ tests :: TestTree
 tests = testGroup "multisig"
     [
     checkPredicate "2 out of 5"
-        (assertFailedTransaction (\_ err -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
+        (assertEvaluationError "not enough signatures")
         failingTrace
 
     , checkPredicate "3 out of 5"
@@ -40,8 +38,8 @@ failingTrace :: EmulatorTrace ()
 failingTrace = do
     hdl <- Trace.activateContractWallet w1 theContract
     Trace.callEndpoint @"lock" hdl (multiSig, Ada.lovelaceValueOf 10)
-    _ <- Trace.waitNSlots 1
-    Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2)])
+    void $ Trace.waitNSlots 1
+    Trace.setSigningProcess w1 (Just $ signPrivateKeys $ CW.paymentPrivateKey . CW.knownMockWallet <$> [1,2])
     Trace.callEndpoint @"unlock" hdl (multiSig, fmap mockWalletPaymentPubKeyHash [w1, w2])
     void $ Trace.waitNSlots 1
 
@@ -51,8 +49,8 @@ succeedingTrace :: EmulatorTrace ()
 succeedingTrace = do
     hdl <- Trace.activateContractWallet w1 theContract
     Trace.callEndpoint @"lock" hdl (multiSig, Ada.lovelaceValueOf 10)
-    _ <- Trace.waitNSlots 1
-    Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2), CW.paymentPrivateKey (CW.knownMockWallet 3)])
+    void $ Trace.waitNSlots 1
+    Trace.setSigningProcess w1 (Just $ signPrivateKeys $ CW.paymentPrivateKey . CW.knownMockWallet <$> [1,2,3])
     Trace.callEndpoint @"unlock" hdl (multiSig, fmap mockWalletPaymentPubKeyHash [w1, w2, w3])
     void $ Trace.waitNSlots 1
 

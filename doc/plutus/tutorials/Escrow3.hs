@@ -23,7 +23,7 @@ import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (minAdaTxOut)
+import Ledger (minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract, selectList)
@@ -103,12 +103,12 @@ instance CM.ContractModel EscrowModel where
 
   precondition s a = case a of
     Init tgts   -> currentPhase == Initial
-                && and [Ada.adaValueOf (fromInteger n) `Value.geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+                && and [Ada.adaValueOf (fromInteger n) `Value.geq` Ada.toValue minAdaTxOutEstimated | (_,n) <- tgts]
     Redeem _    -> currentPhase == Running
                 && fold (s ^. CM.contractState . contributions) `Value.geq` fold (s ^. CM.contractState . targets)
              --   && fold (s ^. contractState . contributions) == fold (s ^. contractState . targets)
     Pay _ v     -> currentPhase == Running
-                && Ada.adaValueOf (fromInteger v) `Value.geq` Ada.toValue minAdaTxOut
+                && Ada.adaValueOf (fromInteger v) `Value.geq` Ada.toValue minAdaTxOutEstimated
     Refund w    -> currentPhase == Running
                 && w `Map.member` (s ^. CM.contractState . contributions)
     where currentPhase = s ^. CM.contractState . phase
@@ -230,7 +230,7 @@ finishingStrategy w = do
       currentContribs <- viewContractState contributions
       let deficit = fold currentTargets <> inv (fold currentContribs)
       when (deficit `gt` Ada.adaValueOf 0) $
-        action $ Pay w $ round $ Ada.getAda $ max minAdaTxOut $ Ada.fromValue deficit
+        action $ Pay w $ round $ Ada.getAda $ max minAdaTxOutEstimated $ Ada.fromValue deficit
       action $ Redeem w
 {- END finishingStrategy -}
 

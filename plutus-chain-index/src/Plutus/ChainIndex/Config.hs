@@ -23,12 +23,12 @@ module Plutus.ChainIndex.Config(
   appendTransactionQueueSize
   ) where
 
-import Cardano.Api (BlockNo (BlockNo), NetworkId (Mainnet, Testnet))
+import Cardano.Api (BlockNo (BlockNo), NetworkId (Testnet))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Numeric.Natural (Natural)
 import Ouroboros.Network.Magic (NetworkMagic (NetworkMagic))
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
@@ -48,7 +48,6 @@ data ChainIndexConfig = ChainIndexConfig
 
 -- | For some reason these are not defined anywhere, and these are the
 --   reason for the -Wno-orphans option.
-deriving stock instance Generic NetworkId
 deriving anyclass instance FromJSON NetworkId
 deriving anyclass instance ToJSON NetworkId
 deriving anyclass instance FromJSON NetworkMagic

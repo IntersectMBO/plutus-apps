@@ -53,6 +53,7 @@ let
           packages = {
             # Things that need plutus-tx-plugin
             freer-extras.package.buildable = false;
+            cardano-node-emulator.package.buildable = false;
             cardano-streaming.package.buildable = false;
             marconi.package.buildable = false;
             pab-blockfrost.package.buildable = false;
@@ -109,6 +110,14 @@ let
             };
           }
         )
+        (lib.mkIf (pkgs.stdenv.hostPlatform.isDarwin) {
+          packages = {
+            plutus-pab-executables.components.tests.plutus-pab-test-full-long-running.buildable = lib.mkForce false;
+            # TODO disabled temporarely until we fix
+            # /tmp/chairman/test-55543321c4d24d29: createDirectory: permission denied (Permission denied)
+            marconi.components.tests.marconi-test.buildable = lib.mkForce false;
+          };
+        })
         ({ pkgs, config, ... }: {
           packages = {
             marconi.doHaddock = deferPluginErrors;
@@ -163,10 +172,6 @@ let
 
             # Relies on cabal-doctest, just turn it off in the Nix build
             prettyprinter-configurable.components.tests.prettyprinter-configurable-doctest.buildable = lib.mkForce false;
-
-            plutus-pab-executables.components.tests.plutus-pab-test-full-long-running = {
-              platforms = lib.platforms.linux;
-            };
 
             # Broken due to warnings, unclear why the setting that fixes this for the build doesn't work here.
             iohk-monitoring.doHaddock = false;

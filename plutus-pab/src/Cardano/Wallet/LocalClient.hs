@@ -11,7 +11,9 @@
 
 module Cardano.Wallet.LocalClient where
 
+import Cardano.Api (shelleyAddressInEra)
 import Cardano.Api qualified
+import Cardano.Node.Emulator.Params (Params (..))
 import Cardano.Node.Types (PABServerConfig (pscPassphrase))
 import Cardano.Wallet.Api qualified as C
 import Cardano.Wallet.Api.Client qualified as C
@@ -44,14 +46,13 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Quantity (Quantity (Quantity))
 import Data.Text (Text, pack)
 import Data.Text.Class (fromText)
-import Ledger (CardanoTx (..), Params (..))
+import Ledger (CardanoAddress, CardanoTx (..))
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError, fromCardanoAddress, toCardanoTxBody)
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError, toCardanoTxBody)
 import Ledger.Value (Value (Value), currencySymbol, tokenName)
 import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Monitoring.PABLogMsg (WalletClientMsg (BalanceTxError, WalletClientError))
-import Plutus.V1.Ledger.Api (Address)
 import PlutusTx.AssocMap qualified as Map
 import Prettyprinter (Pretty (pretty))
 import Servant ((:<|>) ((:<|>)), (:>))
@@ -105,7 +106,7 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
             sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx params tx
             void . runClient $ C.postExternalTransaction C.transactionClient (C.ApiBytesT (C.SerialisedTx $ C.serialisedTx sealedTx))
 
-        ownAddressesH :: Eff effs (NonEmpty Address)
+        ownAddressesH :: Eff effs (NonEmpty CardanoAddress)
         ownAddressesH = do
             addressValues <- runClient $ C.listAddresses  C.addressClient (C.ApiT walletId) Nothing
             pure $ NonEmpty.fromList $ mapMaybe (decodeApiAddress >=> fromApiAddress) addressValues
@@ -113,11 +114,11 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
              decodeApiAddress :: Aeson.Value -> Maybe Text
              decodeApiAddress v = parseMaybe (Aeson.withObject "ApiAddress" (\o -> o .: "id")) v
 
-             fromApiAddress :: Text -> Maybe Address
+             fromApiAddress :: Text -> Maybe CardanoAddress
              fromApiAddress addrBech32 = do
                  case Cardano.Api.deserialiseFromBech32 (Cardano.Api.AsAddress Cardano.Api.AsShelleyAddr) addrBech32 of
                    Left _         -> Nothing
-                   Right addrCApi -> Just $ fromCardanoAddress addrCApi
+                   Right addrCApi -> Just $ shelleyAddressInEra addrCApi
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do
@@ -182,7 +183,7 @@ toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.AllegraEraInCardanoMode)) = Ri
 toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.MaryEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.MaryEra tx
 toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.AlonzoEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AlonzoEra tx
 toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.BabbageEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.BabbageEra tx
-toSealedTx params (EmulatorTx tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody params [] tx
+toSealedTx params (EmulatorTx tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody (pNetworkId params) (emulatorPParams params) [] tx
 
 throwOtherError :: (Member (Error WalletAPIError) effs, Show err) => err -> Eff effs a
 throwOtherError = throwError . OtherError . pack . show

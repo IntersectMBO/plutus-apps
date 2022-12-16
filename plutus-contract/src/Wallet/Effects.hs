@@ -26,9 +26,10 @@ module Wallet.Effects(
     , getClientParams
     ) where
 
+import Cardano.Node.Emulator.Params (Params)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.List.NonEmpty (NonEmpty)
-import Ledger (Address, CardanoTx, Params, Slot, Value)
+import Ledger (CardanoAddress, CardanoTx, Slot, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Wallet.Error (WalletAPIError)
 
@@ -36,7 +37,7 @@ import Wallet.Error (WalletAPIError)
 
 data WalletEffect r where
     SubmitTxn :: CardanoTx -> WalletEffect ()
-    OwnAddresses :: WalletEffect (NonEmpty Address)
+    OwnAddresses :: WalletEffect (NonEmpty CardanoAddress)
     BalanceTx :: UnbalancedTx -> WalletEffect (Either WalletAPIError CardanoTx)
     TotalFunds :: WalletEffect Value -- ^ Total of all funds that are in the wallet (incl. tokens)
     WalletAddSignature :: CardanoTx -> WalletEffect CardanoTx

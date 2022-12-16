@@ -323,7 +323,7 @@ waitForUpdateTimeout client@StateMachineClient{scInstance, scChooser} timeout = 
                         -- There is no on-chain state, so we wait for an output to appear
                         -- at the address. Any output that appears needs to be checked
                         -- with scChooser'
-                        let addr = Scripts.validatorAddress $ typedValidator scInstance in
+                        let addr = SM.machineAddress scInstance in
                         promiseBind (utxoIsProduced addr) $ \txns -> do
                             outRefMaps <- traverse utxosTxOutTxFromTx txns
                             let produced = getStates @state @i scInstance (Map.fromList $ map projectFst $ concat outRefMaps)

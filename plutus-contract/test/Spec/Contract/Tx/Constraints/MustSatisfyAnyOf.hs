@@ -22,7 +22,7 @@ import Test.Tasty (TestTree, testGroup)
 import Data.Default (Default (def))
 import Data.Maybe (isJust)
 import GHC.Generics (Generic)
-import Ledger (ScriptError (EvaluationError), unitDatum)
+import Ledger (unitDatum)
 import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, mintingPolicy, plutusV1MintingPolicy,
@@ -40,12 +40,11 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
+import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2.Scripts
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, params, waitNSlots)
 import Plutus.V1.Ledger.Api (to)
 import Plutus.V1.Ledger.Value
@@ -261,8 +260,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
         in checkPredicateOptions defaultCheckOptions
             ("Phase 2 failure when onchain mustSatisfyAnyOf expects a validity interval " ++
             "with a closer end boundary")
-            (assertFailedTransaction (\_ err ->
-                case err of {L.ScriptFailure (EvaluationError ("L3":_) _) -> True; _ -> False }))
+            (assertEvaluationError "L3")
             (void $ trace contract)
     ,
         let offChainConstraints = def { mustMintValue = Just $ MustMintValue otherTokenValue,
@@ -273,8 +271,7 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
         in checkPredicateOptions defaultCheckOptions
             ("Phase 2 failure when onchain mustSatisfyAnyOf uses mustValidateIn but offchain " ++
             "constraint does not")
-            (assertFailedTransaction (\_ err ->
-                case err of {L.ScriptFailure (EvaluationError ("L3":_) _) -> True; _ -> False }))
+            (assertEvaluationError "L3")
             (void $ trace contract)
     ]
 
@@ -296,7 +293,7 @@ mustSatisfyAnyOfPolicyV2 :: L.MintingPolicy
 mustSatisfyAnyOfPolicyV2 = L.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
     where
         checkedMkMustPayToOtherScriptPolicy = mkMustSatisfyAnyOfPolicy Cons.V2.checkScriptContext
-        wrap = V2.Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
+        wrap = Scripts.mkUntypedMintingPolicy checkedMkMustPayToOtherScriptPolicy
 
 data LanguageContext
    = LanguageContext

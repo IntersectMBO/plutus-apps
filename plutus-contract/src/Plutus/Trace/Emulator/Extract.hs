@@ -12,6 +12,7 @@ module Plutus.Trace.Emulator.Extract(
 ) where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Params (Params (..), networkIdL, protocolParamsL)
 import Control.Foldl qualified as L
 import Control.Lens ((&), (.~))
 import Control.Monad.Freer (run)
@@ -22,7 +23,6 @@ import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
-import Ledger.Params (Params (..), networkIdL, protocolParamsL)
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)

@@ -23,7 +23,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (minAdaTxOut)
+import Ledger (minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Value
 import Plutus.Contract
@@ -98,11 +98,11 @@ instance ContractModel EscrowModel where
 
   precondition s a = case a of
     Init tgts   -> currentPhase == Initial
-                && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+                && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOutEstimated | (_,n) <- tgts]
     Redeem _    -> currentPhase == Running
                 && fold (s ^. contractState . contributions) `geq` fold (s ^. contractState . targets)
     Pay _ v     -> currentPhase == Running
-                && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
+                && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOutEstimated
     Refund w    -> currentPhase == Running
                 && w `Map.member` (s ^. contractState . contributions)
     where currentPhase = s ^. contractState . phase
@@ -180,7 +180,7 @@ finishingStrategy w = do
       currentContribs <- viewContractState contributions
       let deficit = fold currentTargets <> inv (fold currentContribs)
       when (deficit `gt` Ada.adaValueOf 0) $
-        action $ Pay w $ round $ Ada.getAda $ max minAdaTxOut $ Ada.fromValue deficit
+        action $ Pay w $ round $ Ada.getAda $ max minAdaTxOutEstimated $ Ada.fromValue deficit
       action $ Redeem w
 
 -- This unilateral strategy fails.

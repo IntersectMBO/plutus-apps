@@ -35,6 +35,7 @@ module Plutus.Contracts.Uniswap.OffChain
     , calculateRemoval, funds
     ) where
 
+import Cardano.Node.Emulator.Params (testnet)
 import Control.Lens (view, (^?))
 import Control.Monad hiding (fmap)
 import Data.Map qualified as Map
@@ -42,7 +43,7 @@ import Data.Monoid (Last (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
-import Ledger (DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutScriptDatum, decoratedTxOutValue, pubKeyHashAddress)
+import Ledger (CardanoAddress, DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutScriptDatum, decoratedTxOutValue)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
@@ -52,9 +53,9 @@ import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
-import Plutus.V1.Ledger.Api (Address, CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer),
+import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer),
                              ScriptContext, Validator, Value)
 import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
@@ -109,13 +110,13 @@ uniswapInstance us = Scripts.mkTypedValidator @Uniswapping
     c :: Coin PoolState
     c = poolStateCoin us
 
-    wrap = Scripts.mkUntypedValidator @UniswapDatum @UniswapAction
+    wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @UniswapDatum @UniswapAction
 
 uniswapScript :: Uniswap -> Validator
 uniswapScript = Scripts.validatorScript . uniswapInstance
 
-uniswapAddress :: Uniswap -> Address
-uniswapAddress = mkValidatorAddress . uniswapScript
+uniswapAddress :: Uniswap -> CardanoAddress
+uniswapAddress = mkValidatorCardanoAddress testnet . uniswapScript
 
 uniswap :: CurrencySymbol -> Uniswap
 uniswap cs = Uniswap $ mkCoin cs uniswapTokenName
@@ -415,8 +416,8 @@ pools us = do
 -- | Gets the caller's funds.
 funds :: forall w s. Contract w s Text Value
 funds = do
-    pkh <- Contract.ownFirstPaymentPubKeyHash
-    os  <- map snd . Map.toList <$> utxosAt (pubKeyHashAddress pkh Nothing)
+    addr <- Contract.ownAddress
+    os  <- map snd . Map.toList <$> utxosAt addr
     return $ mconcat [view decoratedTxOutValue o | o <- os]
 
 getUniswapDatum :: DecoratedTxOut -> Contract w s Text UniswapDatum

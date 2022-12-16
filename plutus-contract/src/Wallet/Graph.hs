@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
@@ -45,7 +44,7 @@ data UtxOwner
 owner :: Set.Set PubKey -> TxOut -> UtxOwner
 owner keys tx =
   let hashMap = foldMap (\pk -> Map.singleton (pubKeyHash pk) pk) keys
-  in case addressCredential (txOutAddress tx) of
+  in case cardanoAddressCredential (txOutAddress tx) of
     ScriptCredential{}                                       -> ScriptOwner
     PubKeyCredential pkh | Just pk <- Map.lookup pkh hashMap -> PubKeyOwner pk
     _                                                        -> OtherOwner

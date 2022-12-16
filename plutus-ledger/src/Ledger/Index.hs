@@ -25,7 +25,9 @@ module Ledger.Index(
     ValidationPhase(..),
     minFee,
     maxFee,
+    adjustTxOut,
     minAdaTxOut,
+    minAdaTxOutEstimated,
     maxMinAdaTxOut,
     pubKeyTxIns,
     scriptTxIns,
@@ -37,19 +39,31 @@ module Ledger.Index(
 
 import Prelude hiding (lookup)
 
-import Control.Lens (Fold, folding)
+import Cardano.Api.Shelley qualified as C.Api
+import Cardano.Ledger.Babbage qualified as Babbage
+import Cardano.Ledger.Babbage.PParams qualified as Babbage
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
+import Control.Lens (Fold, folding, (&), (.~))
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
-import Ledger.Ada (Ada)
+import Ledger.Ada (Ada, fromValue, lovelaceOf, toValue)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), Tx, TxIn (TxIn, txInType), TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut,
-                  TxOutRef, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx (..), ToCardanoError, Tx, TxIn (TxIn, txInType),
+                  TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut (getTxOut), TxOutRef, outValue, txOutValue,
+                  updateUtxoCollateral)
+import Ledger.Tx.CardanoAPI (toCardanoTxOutValue)
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Value qualified as V
+import PlutusTx.Lattice ((\/))
+
+-- | Create an index of all UTxOs on the chain.
+initialise :: Blockchain -> UtxoIndex
+initialise = UtxoIndex . unspentOutputs
 
 -- | Update the index for the addition of a transaction.
 insert :: CardanoTx -> UtxoIndex -> UtxoIndex
@@ -90,12 +104,55 @@ the blockchain.
 
 -}
 
-{-# INLINABLE minAdaTxOut #-}
--- An estimate of the minimum required Ada for each tx output.
---
--- TODO: Should be removed.
-minAdaTxOut :: Ada
-minAdaTxOut = Ada.lovelaceOf minTxOut
+-- | Adjust a single transaction output so it contains at least the minimum amount of Ada
+-- and return the adjustment (if any) and the updated TxOut.
+adjustTxOut :: (Babbage.PParams (Babbage.BabbageEra StandardCrypto)) -> TxOut -> Either ToCardanoError ([Ada.Ada], TxOut)
+adjustTxOut params txOut = do
+    -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
+    withMinAdaValue <- toCardanoTxOutValue $ txOutValue txOut \/ Ada.toValue (minAdaTxOut params txOut)
+    let txOutEstimate = txOut & outValue .~ withMinAdaValue
+        minAdaTxOutEstimated' = minAdaTxOut params txOutEstimate
+        missingLovelace = minAdaTxOutEstimated' - Ada.fromValue (txOutValue txOut)
+    if missingLovelace > 0
+    then do
+      adjustedLovelace <- toCardanoTxOutValue $ txOutValue txOut <> Ada.toValue missingLovelace
+      pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
+    else pure ([], txOut)
+
+-- | Exact computation of the mimimum Ada required for a given TxOut.
+-- TODO: Should be moved to cardano-api-extended once created
+minAdaTxOut :: (Babbage.PParams (Babbage.BabbageEra StandardCrypto)) -> TxOut -> Ada
+minAdaTxOut params txOut = let
+  toAda = lovelaceOf . C.Ledger.unCoin
+  initialValue = txOutValue txOut
+  fromPlutusTxOut = C.Api.toShelleyTxOut C.Api.ShelleyBasedEraBabbage . C.Api.toCtxUTxOTxOut . getTxOut
+  firstEstimate = toAda . C.Ledger.evaluateMinLovelaceOutput params $ fromPlutusTxOut txOut
+  in -- if the estimate is above the initialValue, we run minAdaAgain, just to be sure that the
+     -- new amount didn't change the TxOut size and requires more ada.
+     if firstEstimate > fromValue initialValue
+     then either
+            (const firstEstimate)
+            (minAdaTxOut params . flip (outValue .~) txOut)
+            $ toCardanoTxOutValue $ toValue firstEstimate \/ initialValue
+     else firstEstimate
+
+-- minAdaTxOutParams
+
+{-# INLINABLE minAdaTxOutEstimated #-}
+{- | Provide a reasonable estimate of the mimimum of Ada required for a TxOut.
+
+   An exact estimate of the the mimimum of Ada in a TxOut is determined by two things:
+     - the `PParams`, more precisely its 'coinPerUTxOWord' parameter.
+     - the size of the 'TxOut'.
+ In many situations though, we need to determine a plausible value for the minimum of Ada needed for a TxOut
+ without knowing much of the 'TxOut'.
+ This function provides a value big enough to balance UTxOs without
+ a large inlined data (larger than a hash) nor a complex val with a lot of minted values.
+ It's superior to the lowest minimum needed for an UTxO, as the lowest value require no datum.
+ An estimate of the minimum required Ada for each tx output.
+-}
+minAdaTxOutEstimated :: Ada
+minAdaTxOutEstimated = Ada.lovelaceOf minTxOut
 
 {-# INLINABLE minTxOut #-}
 minTxOut :: Integer

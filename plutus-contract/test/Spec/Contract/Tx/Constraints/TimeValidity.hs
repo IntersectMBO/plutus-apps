@@ -8,6 +8,8 @@
 module Spec.Contract.Tx.Constraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
+import Cardano.Node.Emulator.Params (Params, protocolParamsL)
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
 import Data.Map qualified as Map
@@ -21,17 +23,16 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed, currentNodeClientSlot,
-                               currentNodeClientTimeRange, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
+                               currentNodeClientTimeRange, getParams, logInfo, ownFirstPaymentPubKeyHash, ownUtxos,
                                submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
-import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
-                             defaultCheckOptions, emulatorConfig, w1)
-import Plutus.Script.Utils.V1.Scripts (ValidatorHash)
+import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
+                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Interval (contains, from)
 import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Scripts (unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
@@ -58,6 +59,7 @@ tests = testGroup "time validitity constraint"
 
 contract :: Contract () Empty ContractError ()
 contract = do
+    p <- getParams
     now <- snd <$> Con.currentNodeClientTimeRange
     logInfo @String $ "now: " ++ show now
     let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
@@ -66,7 +68,7 @@ contract = do
                 (Ada.lovelaceValueOf 25000000)
     ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-    utxos <- utxosAt scrAddress
+    utxos <- utxosAt $ scrAddress (Params.pNetworkId p)
     let orefs = fst <$> Map.toList utxos
         lookups2 =
             Constraints.otherScript (validatorScript deadline)
@@ -88,14 +90,14 @@ trace = do
 
 protocolV5 :: TestTree
 protocolV5 = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
+    (defaultCheckOptions & over (emulatorConfig . params . protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
     "tx valid time interval is not supported in protocol v5"
-    (assertFailedTransaction (\_ err -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
+    (assertEvaluationError "Invalid range")
     (void trace)
 
 protocolV6 :: TestTree
 protocolV6 = checkPredicateOptions
-    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
+    (defaultCheckOptions & over (emulatorConfig . params . protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
     "tx valid time interval is supported in protocol v6"
     (assertValidatedTransactionCount 2)
     (void trace)
@@ -112,7 +114,7 @@ traceCardano c = do
     void $ Trace.activateContractWallet w1 c
     void $ Trace.waitNSlots 4
 
-contractCardano :: (POSIXTime -> POSIXTimeRange) -> Ledger.Params -> Contract () Empty ContractError ()
+contractCardano :: (POSIXTime -> POSIXTimeRange) -> Params -> Contract () Empty ContractError ()
 contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
@@ -121,7 +123,7 @@ contractCardano f p = do
     logInfo @String $ "now: " ++ show now
     let utxoRef = fst $ head' $ Map.toList utxos
         lookups = Tx.Constraints.unspentOutputs utxos
-        tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+        tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOutEstimated)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
             <> Tx.Constraints.mustValidateIn (f now)
     void $ waitNSlots 2
@@ -135,18 +137,18 @@ contractCardano f p = do
 
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
-validContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+validContractCardano :: Params -> Contract () Empty ContractError ()
 validContractCardano = contractCardano $ from . (+ 1000)
 
-pastTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+pastTxContractCardano :: Params -> Contract () Empty ContractError ()
 pastTxContractCardano = contractCardano I.to
 
-futureTxContractCardano :: Ledger.Params -> Contract () Empty ContractError ()
+futureTxContractCardano :: Params -> Contract () Empty ContractError ()
 futureTxContractCardano = contractCardano $ from . (+ 4000)
 
 protocolV6Cardano :: TestTree
 protocolV6Cardano =
-    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) })
+    let checkOptions = defaultCheckOptions & over (emulatorConfig . params . protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) })
     in checkPredicateOptions
     checkOptions
     "tx valid time interval is supported in protocol v6"
@@ -210,11 +212,8 @@ typedValidator = Scripts.mkTypedValidatorParam @UnitTest
 validatorScript :: P.POSIXTime -> Tx.Versioned Validator
 validatorScript = Scripts.vValidatorScript . typedValidator
 
-valHash :: ValidatorHash
-valHash = Scripts.validatorHash $ typedValidator deadline
-
-scrAddress :: Ledger.Address
-scrAddress = Ledger.scriptHashAddress valHash
+scrAddress :: Ledger.NetworkId -> Ledger.CardanoAddress
+scrAddress networkId = Scripts.validatorCardanoAddress networkId $ typedValidator deadline
 
 head' :: [a] -> a
 head' (x:_) = x

@@ -36,12 +36,12 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Slot (Slot (..))
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract hiding (currentSlot, runError)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
@@ -282,7 +282,7 @@ instance ContractModel CrowdfundingModel where
     CContribute w v -> w `notElem` Map.keys (s ^. contractState . contributions)
                     && w /= (s ^. contractState . ownerWallet)
                     && s ^. currentSlot < s ^. contractState . endSlot
-                    && Ada.fromValue v >= Ledger.minAdaTxOut
+                    && Ada.fromValue v >= Ledger.minAdaTxOutEstimated
     CStart          -> Prelude.not (s ^. contractState . ownerOnline || s ^. contractState . ownerContractDone)
 
   -- To generate a random test case we need to know how to generate a random

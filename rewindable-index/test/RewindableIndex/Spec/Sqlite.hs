@@ -23,7 +23,7 @@ import RewindableIndex.Model qualified as Ix
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
                                  Resumable (resumeFromStorage), Rewindable (rewindStorage), State, StorableEvent,
-                                 StorablePoint, StorableQuery, StorableResult, config, emptyState,
+                                 StorableMonad, StorablePoint, StorableQuery, StorableResult, config, emptyState,
                                  filterWithQueryInterval, memoryBufferSize)
 import RewindableIndex.Storable qualified as Storable
 
@@ -42,14 +42,21 @@ import RewindableIndex.Storable qualified as Storable
 -- in the handler type, that they need to implement the storable interface.
 newtype Handle = Handle Sql.Connection
 
--- StorablePoints can be either Point (intergers) or the Genesis block.
-data instance StorablePoint Handle =
+-- This point for this test will be representated by a point on some blockchain where
+-- slot numbers are identified by integers.
+data Point =
     Point Int
   | Genesis
   deriving (Eq, Show, Generic)
 
+-- StorablePoints can be either Point (intergers) or the Genesis block.
+type instance StorablePoint Handle = Point
+
+-- Since we use sqlite we'll run everything in IO
+type instance StorableMonad Handle = IO
+
 -- We should be able to order points.
-instance Ord (StorablePoint Handle) where
+instance Ord Point where
   Genesis   <= _         = True
   (Point x) <= (Point y) = x <= y
   _         <= _         = False
@@ -79,11 +86,11 @@ newtype instance StorableResult Handle = Result
   deriving newtype (Eq, Ord)
 
 -- We can extract points from events in the expected way.
-instance HasPoint (StorableEvent Handle) (StorablePoint Handle) where
+instance HasPoint (StorableEvent Handle) Point where
   getPoint (Event point _) = point
 
 data Config = Config
-  { _state :: State Handle IO
+  { _state :: State Handle
   , _fn    :: TestFn
   }
 $(Lens.makeLenses ''Config)
@@ -104,7 +111,7 @@ instance ToRow (StorableEvent Handle) where
 instance FromRow (StorableEvent Handle) where
   fromRow = Event <$> field <*> field
 
-instance FromField (StorablePoint Handle) where
+instance FromField Point where
   fromField f =
     fromField f <&> \p ->
       -- encode -1 as the genesis block.
@@ -112,7 +119,7 @@ instance FromField (StorablePoint Handle) where
          then Genesis
          else Point p
 
-instance ToField (StorablePoint Handle) where
+instance ToField Point where
   -- encode -1 as the genesis block.
   toField Genesis   = toField (-1 :: Int)
   toField (Point p) = toField p
@@ -128,12 +135,11 @@ stateId = 1
 newSqliteIndexer
   :: TestFn
   -> Word
-  -> Word
   -> Int
   -> IO (Maybe Config)
-newSqliteIndexer accFn memBuf diskBuf ag0 = do
+newSqliteIndexer accFn memBuf ag0 = do
   h <- Sql.open ":memory:"
-  c <- emptyState (fromIntegral memBuf) (fromIntegral diskBuf) (Handle h)
+  c <- emptyState (fromIntegral memBuf)  (Handle h)
   Sql.execute_ h "DROP TABLE IF EXISTS index_property_tests"
   -- On-disk cache
   Sql.execute_ h "CREATE TABLE index_property_cache (point INTEGER PRIMARY KEY, event INTEGER)"
@@ -143,7 +149,7 @@ newSqliteIndexer accFn memBuf diskBuf ag0 = do
   Sql.execute  h "INSERT INTO index_property_tests (id, accumulator) VALUES (?, ?)" (stateId, ag0)
   pure . Just $ Config c accFn
 
-instance Buffered Handle IO where
+instance Buffered Handle where
   persistToStorage :: Foldable f => f (StorableEvent Handle) -> Handle -> IO Handle
   persistToStorage es (Handle h) = do
     -- Append events to cache
@@ -168,7 +174,7 @@ indexedFn f (Result ag0) (Event _ e) =
   let (r, m) = f ag0 e in
     (Result r, m)
 
-instance Queryable Handle IO where
+instance Queryable Handle where
   queryStorage
     :: Foldable f
     => QueryInterval (StorablePoint Handle)
@@ -199,13 +205,13 @@ instance Queryable Handle IO where
     -- Run a fold computing the final result.
     pure $ foldl' ((fst .) . indexedFn f) aggregate es''
 
-instance Rewindable Handle IO where
+instance Rewindable Handle where
   rewindStorage :: StorablePoint Handle -> Handle -> IO (Maybe Handle)
   rewindStorage pt (Handle h) = do
     Sql.execute h "DELETE FROM index_property_cache WHERE point > ?" (Sql.Only pt)
     pure . Just $ Handle h
 
-instance Resumable Handle IO where
+instance Resumable Handle where
   resumeFromStorage :: Handle -> IO [StorablePoint Handle]
   resumeFromStorage (Handle h) = do
     es' :: [StorableEvent Handle] <-
@@ -332,7 +338,7 @@ run (Ix.New f depth ag0)
       let d = fromIntegral depth
       -- In the model the K value is always `depth` - 1 to make place for the accumulator.
       -- The second parameter is not really that important.
-      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ((d + 1) * 2) ag0
+      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ag0
       -- On creation the slot number will always be 0.
       pure $ (,0) <$> indexer
 run (Ix.Insert e ix) = do

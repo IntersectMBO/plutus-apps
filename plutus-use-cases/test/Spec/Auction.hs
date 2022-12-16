@@ -35,7 +35,7 @@ import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
-import Ledger qualified as Ledger
+import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
@@ -44,8 +44,8 @@ import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream qualified as Stream
 
-import Ledger.TimeSlot (SlotConfig)
-import Ledger.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
@@ -63,7 +63,7 @@ slotCfg = def
 params :: AuctionParams
 params =
     AuctionParams
-        { apOwner   = mockWalletAddress w1
+        { apOwner   = Ledger.toPlutusAddress $ mockWalletAddress w1
         , apAsset   = theToken
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
@@ -131,7 +131,7 @@ trace1FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace1WinningBid
-            , highestBidder = mockWalletAddress w2
+            , highestBidder = Ledger.toPlutusAddress $ mockWalletAddress w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -141,7 +141,7 @@ trace2FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace2WinningBid
-            , highestBidder = mockWalletAddress w2
+            , highestBidder = Ledger.toPlutusAddress $ mockWalletAddress w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -275,7 +275,7 @@ instance ContractModel AuctionModel where
     shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
 
     monitoring _ (Bid _ bid) =
-      classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOut <> Ledger.maxFee))
+      classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOutEstimated <> Ledger.maxFee))
         "Maximum bid reached"
     monitoring _ _ = id
 

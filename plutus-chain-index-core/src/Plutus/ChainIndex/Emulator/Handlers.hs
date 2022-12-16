@@ -35,7 +35,7 @@ import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger.Address (Address (addressCredential))
+import Ledger.Address (cardanoAddressCredential)
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
 import Ledger.Tx qualified as L (DatumFromQuery (..), DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutDatum,
@@ -143,9 +143,8 @@ makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   datumWithHash <- getDatumWithHash datum
   -- The output might come from a public key address or a script address.
   -- We need to handle them differently.
-  case addressCredential $ citoAddress txout of
-    PubKeyCredential _ ->
-      pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
+  case cardanoAddressCredential $ citoAddress txout of
+    PubKeyCredential _ -> pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
     ScriptCredential (ValidatorHash h) -> do
       case datumWithHash of
         Just d -> do

@@ -12,6 +12,7 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestName, TestTree, testGroup)
 
+import Cardano.Node.Emulator.Params qualified as Params
 import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
@@ -52,15 +53,16 @@ balanceTxnMinAda =
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
+            params <- getParams
             let constraints1 =
                     L.Constraints.mustPayToOtherScriptWithDatumInTx
                         vHash
                         unitDatum
-                        (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
+                        (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOutEstimated)
                  <> L.Constraints.mustIncludeDatumInTx unitDatum
             utx1 <- mkTxConstraints @Void mempty constraints1
             submitTxConfirmed utx1
-            utxo <- utxosAt someAddress
+            utxo <- utxosAt $ someCardanoAddress (Params.pNetworkId params)
             let txOutRef = head (Map.keys utxo)
                 constraints2 =
                     L.Constraints.mustSpendScriptOutput txOutRef unitRedeemer
@@ -105,7 +107,7 @@ balanceTxnMinAda2 =
               =<< mkTx mempty
                        (payToWallet w2 ( vA 1
                                       <> vB 1
-                                      <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)
+                                      <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOutEstimated)
                                        ))
             -- Make sure there is a UTxO with 1 B and datum () at the script
             submitTxConfirmed
@@ -117,7 +119,8 @@ balanceTxnMinAda2 =
 
         wallet2Contract :: Contract () EmptySchema ContractError ()
         wallet2Contract = do
-            utxos <- utxosAt someAddress
+            params <- getParams
+            utxos <- utxosAt $ someCardanoAddress (Params.pNetworkId params)
             let txOutRef = case Map.keys utxos of
                              (x:_) -> x
                              []    -> error $ "there's no utxo at the address " <> show someAddress
@@ -143,7 +146,7 @@ balanceTxnMinAda2 =
 
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =
-    let vL n = Value.singleton (Scripts.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
+    let vL n = Value.singleton (Scripts.scriptCurrencySymbol coinMintingPolicyV1) "coinToken" n
         mkTx lookups constraints = mkTxConstraints @Void lookups constraints
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
@@ -151,9 +154,9 @@ balanceTxnNoExtraOutput =
             pkh <- Con.ownFirstPaymentPubKeyHash
 
             let val = vL 200
-                lookups = L.Constraints.plutusV1MintingPolicy coinMintingPolicy
+                lookups = L.Constraints.plutusV1MintingPolicy coinMintingPolicyV1
                 constraints = L.Constraints.mustMintValue val
-                    <> L.Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOut)
+                    <> L.Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOutEstimated)
 
             tx <- submitUnbalancedTx =<< mkTx lookups constraints
             tell [length $ Ledger.getCardanoTxOutRefs tx]
@@ -207,7 +210,7 @@ balanceCardanoTx =
             pkh <- Con.ownFirstPaymentPubKeyHash
             utxos <- Con.ownUtxos
 
-            let constraints = Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+            let constraints = Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOutEstimated)
                     <> Tx.Constraints.mustSpendPubKeyOutput (fst . head . Map.toList $ utxos)
                 lookups = Tx.Constraints.unspentOutputs utxos
 

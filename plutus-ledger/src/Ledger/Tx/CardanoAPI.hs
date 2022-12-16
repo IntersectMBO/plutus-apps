@@ -19,25 +19,42 @@ module Ledger.Tx.CardanoAPI(
   , CardanoBuildTx(..)
   , SomeCardanoApiTx(..)
   , fromCardanoTxInsCollateral
+  , fromCardanoTotalCollateral
+  , fromCardanoReturnCollateral
   , toCardanoTxBody
   , toCardanoTxBodyContent
   , toCardanoTxInsCollateral
+  , toCardanoTotalCollateral
+  , toCardanoReturnCollateral
   , toCardanoTxInWitness
   , toCardanoDatumWitness
   , toCardanoTxInReferenceWitnessHeader
   , toCardanoTxInScriptWitnessHeader
   , toCardanoMintValue
+  , toCardanoMintWitness
   , ToCardanoError(..)
   , FromCardanoError(..)
+  , getRequiredSigners
+  -- * Conversion from Plutus types
+  , fromPlutusIndex
+  , fromPlutusTxOut
+  , fromPlutusTxOutRef
 ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Data.Bitraversable (bisequence)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Babbage qualified as Babbage
+import Cardano.Ledger.Babbage.PParams qualified as Babbage
+import Cardano.Ledger.Babbage.TxBody (TxBody (TxBody, reqSignerHashes))
+import Cardano.Ledger.BaseTypes (mkTxIxPartial)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
+import Data.Bifunctor (Bifunctor (..))
+import Data.Bitraversable (bisequence, bitraverse)
 import Data.Map qualified as Map
 import Ledger.Address qualified as P
-import Ledger.Params (Params (emulatorPParams))
-import Ledger.Params qualified as P
+import Ledger.Index.Internal qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPI.Internal
 import Ledger.Tx.Internal qualified as P
@@ -45,11 +62,12 @@ import Plutus.V1.Ledger.Api qualified as PV1
 
 
 toCardanoTxBodyContent
-    :: P.Params
+    :: C.NetworkId
+    -> Babbage.PParams (Babbage.BabbageEra StandardCrypto)
     -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent p@P.Params{P.pNetworkId} sigs tx@P.Tx{..} = do
+toCardanoTxBodyContent networkId protocolParams sigs tx@P.Tx{..} = do
     -- TODO: translate all fields
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
@@ -65,7 +83,7 @@ toCardanoTxBodyContent p@P.Params{P.pNetworkId} sigs tx@P.Tx{..} = do
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue tx
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse toCardanoPaymentKeyHash sigs
-    withdrawals <- toWithdrawals txScripts pNetworkId txWithdrawals
+    withdrawals <- toWithdrawals txScripts networkId txWithdrawals
     pure $ CardanoBuildTx $ C.TxBodyContent
         { txIns = txIns
         , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
@@ -76,7 +94,7 @@ toCardanoTxBodyContent p@P.Params{P.pNetworkId} sigs tx@P.Tx{..} = do
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith $ Just $ P.pProtocolParams p
+        , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage protocolParams
         , txScriptValidity = C.TxScriptValidityNone
         , txExtraKeyWits
         -- unused:
@@ -124,13 +142,13 @@ toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
       C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
           <$> (case scriptOrRef of
             Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> (toCardanoTxIn ref)
+            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
           )
     P.PlutusV2 ->
       C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
           <$> (case scriptOrRef of
             Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> (toCardanoTxIn ref)
+            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
           )
   ) <*> pure datum
     <*> pure (C.fromPlutusData $ PV1.toData redeemer)
@@ -148,13 +166,14 @@ toCardanoStakingCredential (PV1.ScriptCredential validatorHash) = C.StakeCredent
 
 
 toCardanoTxBody ::
-    P.Params -- ^ Parameters to use.
+    C.NetworkId
+    -> Babbage.PParams (Babbage.BabbageEra StandardCrypto)
     -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError (C.TxBody C.BabbageEra)
-toCardanoTxBody params sigs tx = do
-    txBodyContent <- toCardanoTxBodyContent params sigs tx
-    makeTransactionBody (Just $ emulatorPParams params) mempty txBodyContent
+toCardanoTxBody networkId params sigs tx = do
+    txBodyContent <- toCardanoTxBodyContent networkId params sigs tx
+    makeTransactionBody (Just params) mempty txBodyContent
 
 toCardanoTxInBuild :: P.Tx -> P.TxInput -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
 toCardanoTxInBuild tx (P.TxInput txInRef txInType) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness tx txInType)
@@ -220,3 +239,42 @@ toCardanoMintValue tx@P.Tx{..} =
              (traverse (\(mph, (rd, mTxOutRef)) ->
                 bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd mTxOutRef (P.lookupMintingPolicy (P.txScripts tx) mph)))
                 indexedMps)
+
+fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe PV1.Value
+fromCardanoTotalCollateral C.TxTotalCollateralNone    = Nothing
+fromCardanoTotalCollateral (C.TxTotalCollateral _ lv) = Just $ fromCardanoLovelace lv
+
+toCardanoTotalCollateral :: Maybe PV1.Value -> Either ToCardanoError (C.TxTotalCollateral C.BabbageEra)
+toCardanoTotalCollateral totalCollateral =
+  case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+    Just txTotalAndReturnCollateralInBabbageEra ->
+      maybe (pure C.TxTotalCollateralNone) (fmap (C.TxTotalCollateral txTotalAndReturnCollateralInBabbageEra) . toCardanoLovelace) totalCollateral
+    Nothing -> pure C.TxTotalCollateralNone
+
+fromCardanoReturnCollateral :: C.TxReturnCollateral C.CtxTx C.BabbageEra -> Maybe P.TxOut
+fromCardanoReturnCollateral C.TxReturnCollateralNone       = Nothing
+fromCardanoReturnCollateral (C.TxReturnCollateral _ txOut) = Just $ P.TxOut txOut
+
+toCardanoReturnCollateral :: Maybe P.TxOut -> C.TxReturnCollateral C.CtxTx C.BabbageEra
+toCardanoReturnCollateral returnCollateral =
+  case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+    Just txTotalAndReturnCollateralInBabbageEra ->
+      maybe C.TxReturnCollateralNone (C.TxReturnCollateral txTotalAndReturnCollateralInBabbageEra . P.getTxOut) returnCollateral
+    Nothing -> C.TxReturnCollateralNone
+
+getRequiredSigners :: C.Tx C.BabbageEra -> [P.PaymentPubKeyHash]
+getRequiredSigners (C.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
+  foldMap (pure . P.PaymentPubKeyHash . P.toPlutusPubKeyHash . C.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
+
+fromPlutusIndex :: P.UtxoIndex -> Either (Either P.ValidationErrorInPhase ToCardanoError) (C.Ledger.UTxO (Babbage.BabbageEra StandardCrypto))
+fromPlutusIndex (P.UtxoIndex m) =
+  first Right $ C.Ledger.UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (pure . fromPlutusTxOut)) (Map.toList m)
+
+fromPlutusTxOutRef :: P.TxOutRef -> Either ToCardanoError (C.Ledger.TxIn StandardCrypto)
+fromPlutusTxOutRef (P.TxOutRef txId i) = C.Ledger.TxIn <$> fromPlutusTxId txId <*> pure (mkTxIxPartial i)
+
+fromPlutusTxId :: PV1.TxId -> Either ToCardanoError (C.Ledger.TxId StandardCrypto)
+fromPlutusTxId = fmap C.toShelleyTxId . toCardanoTxId
+
+fromPlutusTxOut :: P.TxOut -> Babbage.TxOut (Babbage.BabbageEra StandardCrypto)
+fromPlutusTxOut = C.toShelleyTxOut C.ShelleyBasedEraBabbage . C.toCtxUTxOTxOut . P.getTxOut

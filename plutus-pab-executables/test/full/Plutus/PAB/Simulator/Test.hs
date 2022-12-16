@@ -7,10 +7,10 @@ A 'Simulator' for the test contracts
 -}
 module Plutus.PAB.Simulator.Test(runSimulation, runSimulationWithParams) where
 
+import Cardano.Node.Emulator.Params (Params (pSlotConfig), increaseTransactionLimits)
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (..))
 import Control.Monad.Freer (interpret)
 import Data.Default (Default (def))
-import Ledger.Params (Params (pSlotConfig), increaseTransactionLimits)
-import Ledger.TimeSlot (SlotConfig (..))
 import Plutus.PAB.Core (EffectHandlers)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (contractHandler), handleBuiltin)
 import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (..))

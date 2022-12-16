@@ -23,6 +23,7 @@ module Plutus.Contracts.MultiSig
     , validate
     ) where
 
+import Cardano.Node.Emulator.Params (pNetworkId)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
@@ -86,8 +87,9 @@ lock = endpoint @"lock" $ \(ms, vl) -> do
 --   of signatures.
 unlock :: AsContractError e => Promise () MultiSigSchema e ()
 unlock = endpoint @"unlock" $ \(ms, pks) -> do
+    networkId <- pNetworkId <$> getParams
     let inst = typedValidator ms
-    utx <- utxosAt (Scripts.validatorAddress inst)
+    utx <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
     let tx = Constraints.collectFromTheScript utx ()
                 <> foldMap Constraints.mustBeSignedBy pks
         lookups = Constraints.typedValidatorLookups inst

@@ -9,7 +9,6 @@
 
 module Plutus.Script.Utils.V2.Typed.Scripts.Validators
     ( UntypedValidator
-    , mkUntypedValidator
     ---
     , ValidatorTypes (..)
     , ValidatorType
@@ -38,64 +37,7 @@ import Plutus.Script.Utils.V2.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusCore.Default (DefaultUni)
-import PlutusTx (CompiledCode, Lift, UnsafeFromData (unsafeFromBuiltinData), applyCode, liftCode)
-import PlutusTx.Prelude (check)
-
-{-# INLINABLE mkUntypedValidator #-}
--- | Converts a custom datum and redeemer from a validator function to an
--- untyped validator function. See Note [Scripts returning Bool].
---
--- Here's an example of how this function can be used:
---
--- @
---   import PlutusTx qualified
---   import Plutus.V2.Ledger.Scripts qualified as Plutus
---   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
---
---   newtype MyCustomDatum = MyCustomDatum Integer
---   PlutusTx.unstableMakeIsData ''MyCustomDatum
---   newtype MyCustomRedeemer = MyCustomRedeemer Integer
---   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
---
---   mkValidator :: MyCustomDatum -> MyCustomRedeemer -> Plutus.ScriptContext -> Bool
---   mkValidator _ _ _ = True
---
---   validator :: Plutus.Validator
---   validator = Plutus.mkValidatorScript
---       $$(PlutusTx.compile [|| wrap ||])
---    where
---       wrap = mkUntypedValidator mkValidator
--- @
---
--- Here's an example using a parameterized validator:
---
--- @
---   import PlutusTx qualified
---   import Plutus.V2.Ledger.Scripts qualified as Plutus
---   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
---
---   newtype MyCustomDatum = MyCustomDatum Integer
---   PlutusTx.unstableMakeIsData ''MyCustomDatum
---   newtype MyCustomRedeemer = MyCustomRedeemer Integer
---   PlutusTx.unstableMakeIsData ''MyCustomRedeemer
---
---   mkValidator :: Int -> MyCustomDatum -> MyCustomRedeemer -> Plutus.ScriptContext -> Bool
---   mkValidator _ _ _ _ = True
---
---   validator :: Int -> Plutus.Validator
---   validator i = Plutus.mkValidatorScript
---       $$(PlutusTx.compile [|| wrap . mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode i
---    where
---       wrap = mkUntypedValidator
--- @
-mkUntypedValidator
-    :: forall d r
-    . (UnsafeFromData d, UnsafeFromData r)
-    => (d -> r -> PV2.ScriptContext -> Bool)
-    -> UntypedValidator
--- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
-mkUntypedValidator f d r p =
-    check $ f (unsafeFromBuiltinData d) (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
+import PlutusTx (CompiledCode, Lift, applyCode, liftCode)
 
 -- | The type of validators for the given connection type.
 type ValidatorType (a :: Type) = DatumType a -> RedeemerType a -> PV2.ScriptContext -> Bool

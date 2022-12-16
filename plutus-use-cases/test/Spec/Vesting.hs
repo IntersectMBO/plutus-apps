@@ -22,11 +22,11 @@ import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Slot
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
@@ -120,8 +120,8 @@ instance ContractModel VestingModel where
     when ( enoughValueLeft slot s v
          && v `leq` amount
          && mockWalletPaymentPubKeyHash w == vestingOwner params
-         && Ada.fromValue v >= Ledger.minAdaTxOut
-         && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)) $ do
+         && Ada.fromValue v >= Ledger.minAdaTxOutEstimated
+         && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOutEstimated)) $ do
       deposit w v
       vestedAmount .= newAmount
     wait 2
@@ -135,8 +135,8 @@ instance ContractModel VestingModel where
 
   precondition s (Retrieve w v) = enoughValueLeft slot (s ^. contractState) v
                                 && mockWalletPaymentPubKeyHash w == vestingOwner params
-                                && Ada.fromValue v >= Ledger.minAdaTxOut
-                                && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)
+                                && Ada.fromValue v >= Ledger.minAdaTxOutEstimated
+                                && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOutEstimated)
     where
       slot   = s ^. currentSlot
       amount = s ^. contractState . vestedAmount
@@ -145,7 +145,7 @@ instance ContractModel VestingModel where
   arbitraryAction s = frequency [ (1, Vest <$> genWallet)
                                 , (1, Retrieve <$> genWallet
                                                <*> (Ada.lovelaceValueOf
-                                                   <$> choose (Ada.getLovelace Ledger.minAdaTxOut, valueOf amount Ada.adaSymbol Ada.adaToken)
+                                                   <$> choose (Ada.getLovelace Ledger.minAdaTxOutEstimated, valueOf amount Ada.adaSymbol Ada.adaToken)
                                                    )
                                   )
                                 ]
@@ -183,7 +183,7 @@ genWallet :: Gen Wallet
 genWallet = elements wallets
 
 shrinkValue :: Value -> [Value]
-shrinkValue v = Ada.lovelaceValueOf <$> filter (\val -> val >= Ada.getLovelace Ledger.minAdaTxOut) (shrink (valueOf v Ada.adaSymbol Ada.adaToken))
+shrinkValue v = Ada.lovelaceValueOf <$> filter (\val -> val >= Ada.getLovelace Ledger.minAdaTxOutEstimated) (shrink (valueOf v Ada.adaSymbol Ada.adaToken))
 
 prop_Vesting :: Actions VestingModel -> Property
 prop_Vesting = propRunActions_

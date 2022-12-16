@@ -211,9 +211,9 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 
+import Cardano.Node.Emulator.Params ()
 import Ledger.Ada qualified as Ada
 import Ledger.Index as Index
-import Ledger.Params ()
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Value (AssetClass)
@@ -241,7 +241,7 @@ import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Monadic (PropertyM, monadic)
 import Test.QuickCheck.Monadic qualified as QC
 
-import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
+import Cardano.Node.Emulator.Chain hiding (_chainCurrentSlot, chainCurrentSlot)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, eteEvent)
 import Wallet.Emulator.Stream (EmulatorErr)
 

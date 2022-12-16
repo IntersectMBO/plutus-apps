@@ -85,7 +85,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (Address, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..), Versioned)
+import Ledger (CardanoAddress, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..), Versioned, toPlutusAddress)
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
@@ -147,7 +147,7 @@ fromReferenceScript ReferenceScriptNone             = Nothing
 fromReferenceScript (ReferenceScriptInAnyLang sial) = fromCardanoScriptInAnyLang sial
 
 data ChainIndexTxOut = ChainIndexTxOut
-  { citoAddress   :: Address -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era
+  { citoAddress   :: CardanoAddress -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era
   , citoValue     :: Value
   , citoDatum     :: OutputDatum
   , citoRefScript :: ReferenceScript
@@ -172,7 +172,7 @@ instance FromJSON ChainIndexTxOut where
 
 instance Pretty ChainIndexTxOut where
     pretty ChainIndexTxOut {citoAddress, citoValue} =
-        hang 2 $ vsep ["-" <+> pretty citoValue <+> "addressed to", pretty citoAddress]
+        hang 2 $ vsep ["-" <+> pretty citoValue <+> "addressed to", pretty (toPlutusAddress citoAddress)]
 
 -- | List of outputs of a transaction. There is only an optional collateral output
 -- if the transaction is invalid.

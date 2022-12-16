@@ -26,6 +26,8 @@ module Plutus.Contract.Wallet(
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Params (Params (emulatorPParams, pNetworkId))
+import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
 import Control.Applicative ((<|>))
 import Control.Monad ((>=>))
 import Control.Monad.Error.Lens (throwing)
@@ -43,13 +45,13 @@ import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
+import Ledger (DCert, Redeemer, StakingCredential, toPlutusAddress, txRedeemers)
 import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx), mustPayToAddress)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
-import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_OtherContractError))
@@ -110,7 +112,7 @@ handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
 getUnspentOutput = do
     addr <- Contract.ownAddress
-    let constraints = mustPayToAddress addr (Ada.lovelaceValueOf 1)
+    let constraints = mustPayToAddress (toPlutusAddress addr) (Ada.lovelaceValueOf 1)
     utx <- Contract.mkTxConstraints @Void mempty constraints
     tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of
@@ -248,14 +250,14 @@ instance ToJSON ExportTxInput where
             ]
 
 export
-    :: P.Params
+    :: Params
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
 export params (UnbalancedEmulatorTx tx sigs utxos) =
     let requiredSigners = Set.toList sigs
      in ExportTx
-        <$> bimap Right (C.makeSignedTransaction []) (CardanoAPI.toCardanoTxBody params requiredSigners tx)
-        <*> first Right (mkInputs (P.pNetworkId params) utxos)
+        <$> bimap Right (C.makeSignedTransaction []) (CardanoAPI.toCardanoTxBody (pNetworkId params) (emulatorPParams params) requiredSigners tx)
+        <*> first Right (mkInputs utxos)
         <*> pure (mkRedeemers tx)
 export params (UnbalancedCardanoTx tx utxos) =
     let fromCardanoTx ctx = do
@@ -263,20 +265,20 @@ export params (UnbalancedCardanoTx tx utxos) =
             makeTransactionBody params utxo ctx
      in ExportTx
         <$> fmap (C.makeSignedTransaction []) (fromCardanoTx tx)
-        <*> first Right (mkInputs (P.pNetworkId params) utxos)
+        <*> first Right (mkInputs utxos)
         <*> pure []
 
-mkInputs :: C.NetworkId -> Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
-mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
+mkInputs :: Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
+mkInputs = traverse (uncurry toExportTxInput) . Map.toList
 
-toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> P.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
-toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = do
+toExportTxInput :: Plutus.TxOutRef -> P.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
+toExportTxInput Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = do
     cardanoValue <- CardanoAPI.toCardanoValue (P.txOutValue txOut)
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId
         <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> CardanoAPI.toCardanoAddressInEra networkId (P.txOutAddress txOut)
+        <*> pure (P.txOutAddress txOut)
         <*> pure (C.selectLovelace cardanoValue)
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> P.txOutDatumHash txOut)
         <*> pure otherQuantities

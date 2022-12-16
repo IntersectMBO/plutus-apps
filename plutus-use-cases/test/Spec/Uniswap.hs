@@ -149,7 +149,8 @@ setupTokens = do
     forM_ wallets $ \w -> do
         let addr = mockWalletAddress w
         when (addr /= ownAddr) $ do
-            cs <- mkTxConstraints @Void mempty (mustPayToAddress addr v)
+            cs <- mkTxConstraints @Void mempty
+                    (mustPayToAddress (Ledger.toPlutusAddress addr) v)
             Contract.adjustUnbalancedTx cs >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur
@@ -326,8 +327,8 @@ instance ContractModel UniswapModel where
     SetupTokens -> do
       -- Give 1000000 A, B, C, and D token to w1, w2, w3, w4
       -- The tokens will be given to each wallet in a UTxO that needs
-      -- to have minAdaTxOut
-      withdraw w1 $ Ada.toValue ((fromInteger . toInteger . length $ wallets) * Ledger.minAdaTxOut)
+      -- to have minAdaTxOutEstimated
+      withdraw w1 $ Ada.toValue ((fromInteger . toInteger . length $ wallets) * Ledger.minAdaTxOutEstimated)
       -- Create the tokens
       ts <- forM tokenNames $ \t -> do
         tok <- createToken t
@@ -335,7 +336,7 @@ instance ContractModel UniswapModel where
         return tok
       -- Give the tokens to the wallets
       forM_ wallets $ \ w -> do
-        deposit w $ Ada.toValue Ledger.minAdaTxOut
+        deposit w $ Ada.toValue Ledger.minAdaTxOutEstimated
         deposit w $ mconcat [ symAssetClassValue t 1000000 | t <- ts ]
       exchangeableTokens %= (Set.fromList ts <>)
       wait 21
@@ -345,7 +346,7 @@ instance ContractModel UniswapModel where
       us <- createToken "Uniswap"
       uniswapToken .= Just us
       -- Pay to the UTxO for the uniswap factory
-      withdraw w1 (Ada.toValue Ledger.minAdaTxOut)
+      withdraw w1 (Ada.toValue Ledger.minAdaTxOutEstimated)
       wait 6
 
     CreatePool w t1 a1 t2 a2 -> do
@@ -368,7 +369,7 @@ instance ContractModel UniswapModel where
         deposit w liqVal
         mint liqVal
         -- Pay to the pool
-        withdraw w $ Ada.toValue Ledger.minAdaTxOut
+        withdraw w $ Ada.toValue Ledger.minAdaTxOutEstimated
         withdraw w $ symAssetClassValue t1 a1
                   <> symAssetClassValue t2 a2
       wait 5
@@ -470,7 +471,7 @@ instance ContractModel UniswapModel where
       withdraw w liqVal
       mint $ inv liqVal
       -- Return the 2 ada at the script to the wallet
-      deposit w $ Ada.toValue Ledger.minAdaTxOut
+      deposit w $ Ada.toValue Ledger.minAdaTxOutEstimated
       wait 5
 
     Bad _ -> do
@@ -564,12 +565,12 @@ noLockProof :: NoLockedFundsProof UniswapModel
 noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
       nlfpWalletStrategy = walletStrat,
-      nlfpOverhead       = const $ toSymValue Ledger.minAdaTxOut,
+      nlfpOverhead       = const $ toSymValue Ledger.minAdaTxOutEstimated,
       nlfpErrorMargin    = wiggle }
     where
         wiggle s = fold [symAssetClassValue t1 (toInteger m) <>
                          symAssetClassValue t2 (toInteger m) <>
-                         toSymValue Ledger.minAdaTxOut
+                         toSymValue Ledger.minAdaTxOutEstimated
                         | (PoolIndex t1 t2, p) <- Map.toList (s ^. contractState . pools)
                         , let numLiqs = length $ p ^. liquidities
                               m = max 0 (numLiqs - 1) ]

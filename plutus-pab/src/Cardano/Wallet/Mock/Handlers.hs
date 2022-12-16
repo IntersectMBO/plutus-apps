@@ -19,6 +19,7 @@ module Cardano.Wallet.Mock.Handlers
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Client qualified as NodeClient
+import Cardano.Node.Emulator.Params (Params)
 import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
@@ -51,7 +52,6 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Params (Params)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Client qualified as ChainIndex

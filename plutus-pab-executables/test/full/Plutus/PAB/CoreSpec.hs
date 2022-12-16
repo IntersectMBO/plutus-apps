@@ -18,6 +18,7 @@ module Plutus.PAB.CoreSpec
     , assertEqual
     ) where
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Concurrent.STM.Extras.Stream (readN, readOne)
 import Control.Lens ((&), (+~), (^.))
 import Control.Monad (replicateM, replicateM_, unless, void)
@@ -30,8 +31,9 @@ import Control.Monad.Freer.State (State)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (fold, traverse_)
-import Ledger.TimeSlot qualified as TimeSlot
 
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Params qualified as Params
 import Control.Concurrent.STM qualified as STM
 import Data.Aeson.Types qualified as JSON
 import Data.Default (def)
@@ -46,9 +48,9 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
-import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxFee, getCardanoTxId, getCardanoTxOutRefs,
-               pubKeyAddress, pubKeyHash, pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs,
-               txOutputs)
+import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), cardanoPubKeyHash, getCardanoTxFee, getCardanoTxId,
+               getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress, txId, txOutAddress, txOutRefId,
+               txOutRefs, txOutputs)
 import Ledger qualified
 import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
 import Ledger.Ada qualified as Ada
@@ -82,7 +84,6 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Wallet.API (WalletAPIError, ownAddresses)
 import Wallet.API qualified as WAPI
-import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
 import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Rollup (doAnnotateBlockchain)
@@ -107,7 +108,7 @@ runScenario sim = do
 -- To run scenarios with the slot's length to 1s to make the awaiting tests stable
 runScenarioWithSecondSlot :: Simulation (Builtin TestContracts) a -> IO ()
 runScenarioWithSecondSlot sim = do
-    let params = Ledger.increaseTransactionLimits def
+    let params = Params.increaseTransactionLimits def
     result <- Simulator.runSimulationWithParams params sim
     case result of
         Left err -> error (show err)
@@ -117,7 +118,7 @@ defaultWallet :: Wallet
 defaultWallet = knownWallet 1
 
 defaultWalletAddress :: Address
-defaultWalletAddress = mockWalletAddress defaultWallet
+defaultWalletAddress = Ledger.toPlutusAddress $ mockWalletAddress defaultWallet
 
 activateContractTests :: TestTree
 activateContractTests =
@@ -204,7 +205,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+  void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
   Simulator.waitNSlots 1
   txStatus' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 2"
@@ -214,7 +215,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ (n - 1) $ do
-    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
     Simulator.waitNSlots 1
 
   txStatus'' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
@@ -237,12 +238,12 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We find the 'TxOutRef' from wallet 1
   let txOutRef1 = head
                 $ fmap snd
-                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
+                $ filter (\(txOut, txOutref) -> cardanoPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
                 $ getCardanoTxOutRefs tx
   -- We find the 'TxOutRef' from wallet 2
   let txOutRef2 = head
                 $ fmap snd
-                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
+                $ filter (\(txOut, txOutref) -> cardanoPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
                 $ getCardanoTxOutRefs tx
   txOutStatus1 <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -255,7 +256,7 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+  tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
   Simulator.waitNSlots 1
   txOutStatus1' <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -269,7 +270,7 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ n $ do
-    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
     Simulator.waitNSlots 1
 
   txOutStatus1'' <- Simulator.waitForTxOutStatusChange txOutRef1
@@ -357,7 +358,9 @@ guessingGameTest =
                             (valueOf (balance <> fees) adaSymbol adaToken)
 
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
-              let gameParam = Contracts.GameStateMachine.GameParam (mockWalletAddress defaultWallet) (TimeSlot.scSlotZeroTime def)
+              let gameParam = Contracts.GameStateMachine.GameParam
+                   (Ledger.toPlutusAddress $ mockWalletAddress defaultWallet)
+                   (TimeSlot.scSlotZeroTime def)
 
               initialTxCounts <- Simulator.txCounts
               pubKeyHashFundsChange instanceId "Check our opening balance." 0
@@ -383,7 +386,7 @@ guessingGameTest =
                   game1Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
-                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletAddress defaultWallet
+                      , Contracts.GameStateMachine.guessTokenTarget   = Ledger.toPlutusAddress $ mockWalletAddress defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount
@@ -399,7 +402,7 @@ guessingGameTest =
                   game2Id
                   Contracts.GameStateMachine.GuessArgs
                       { Contracts.GameStateMachine.guessArgsGameParam = gameParam
-                      , Contracts.GameStateMachine.guessTokenTarget   = mockWalletAddress defaultWallet
+                      , Contracts.GameStateMachine.guessTokenTarget   = Ledger.toPlutusAddress $ mockWalletAddress defaultWallet
                       , Contracts.GameStateMachine.guessArgsNewSecret = "password"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "password"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount

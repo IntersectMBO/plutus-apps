@@ -17,13 +17,13 @@ module Plutus.Trace.Emulator.System
   , appendNewTipBlock
   ) where
 
+import Cardano.Node.Emulator.Chain (ChainControlEffect, modifySlot, processBlock)
 import Control.Monad (forM_, void)
 import Control.Monad.Freer
 import Control.Monad.Freer.Coroutine
 import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Maybe (maybeToList)
-import Wallet.Emulator.Chain (ChainControlEffect, modifySlot, processBlock)
 import Wallet.Emulator.MultiAgent (MultiAgentControlEffect, MultiAgentEffect, walletAction, walletControlAction)
 
 import Data.String (IsString (..))

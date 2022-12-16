@@ -57,6 +57,7 @@ import PlutusTx.Code
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
+import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, interval, scriptOutputsAt,
                txSignedBy, valuePaidTo)
 import Ledger qualified
@@ -291,7 +292,8 @@ redeem ::
     -> EscrowParams Datum
     -> Contract w s e RedeemSuccess
 redeem inst escrow = mapError (review _EscrowError) $ do
-    let addr = Scripts.validatorAddress inst
+    networkId <- pNetworkId <$> getParams
+    let addr = Scripts.validatorCardanoAddress networkId inst
     unspentOutputs <- utxosAt addr
     current <- snd <$> currentNodeClientTimeRange
     if current >= escrowDeadline escrow
@@ -335,8 +337,10 @@ refund ::
     -> EscrowParams Datum
     -> Contract w s EscrowError RefundSuccess
 refund inst escrow = do
+    networkId <- pNetworkId <$> getParams
+    let addr = Scripts.validatorCardanoAddress networkId inst
+    unspentOutputs <- utxosAt addr
     pk <- ownFirstPaymentPubKeyHash
-    unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let pkh = datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
@@ -362,7 +366,8 @@ payRedeemRefund ::
 payRedeemRefund params vl = do
     let inst = typedValidator params
         go = do
-            cur <- utxosAt (Scripts.validatorAddress inst)
+            networkId <- pNetworkId <$> getParams
+            cur <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
             let presentVal = foldMap (view Tx.decoratedTxOutValue) cur
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params

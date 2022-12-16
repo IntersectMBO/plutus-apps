@@ -73,6 +73,10 @@ module Plutus.PAB.Simulator(
     , waitForValidatedTxCount
     ) where
 
+import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainState)
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Cardano.Wallet.Mock.Handlers qualified as MockWallet
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (STM, TQueue, TVar)
@@ -100,14 +104,13 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, Params (..), PaymentPubKeyHash, TxId, getCardanoTxFee, getCardanoTxId,
+import Ledger (Blockchain, CardanoAddress, CardanoTx, PaymentPubKeyHash, TxId, getCardanoTxFee, getCardanoTxId,
                txOutAddress, txOutValue, unOnChain)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as UtxoIndex
 import Ledger.Slot (Slot)
-import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
                                    ChainIndexQueryEffect (..), TxOutStatus, TxStatus, getTip)
@@ -131,8 +134,6 @@ import Prettyprinter.Render.Text qualified as Render
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect (GetClientParams, GetClientSlot, PublishTx), WalletEffect)
 import Wallet.Emulator qualified as Emulator
-import Wallet.Emulator.Chain (ChainControlEffect, ChainState)
-import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Emulator.MultiAgent (EmulatorEvent' (ChainEvent, ChainIndexEvent), _singleton)
 import Wallet.Emulator.Stream qualified as Emulator
@@ -700,7 +701,7 @@ activeContracts :: forall t. Simulation t (Set ContractInstanceId)
 activeContracts = Core.activeContracts
 
 -- | The total value currently at an address
-valueAtSTM :: forall t. Address -> Simulation t (STM Value)
+valueAtSTM :: forall t. CardanoAddress -> Simulation t (STM Value)
 valueAtSTM address = do
     SimulatorState{_chainState} <- Core.askUserEnv @t @(SimulatorState t)
     pure $ do
@@ -708,7 +709,7 @@ valueAtSTM address = do
         pure $ foldMap txOutValue $ filter (\txout -> txOutAddress txout == address) $ fmap snd $ Map.toList mp
 
 -- | The total value currently at an address
-valueAt :: forall t. Address -> Simulation t Value
+valueAt :: forall t. CardanoAddress -> Simulation t Value
 valueAt address = do
     stm <- valueAtSTM address
     liftIO $ STM.atomically stm

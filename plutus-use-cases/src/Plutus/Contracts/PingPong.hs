@@ -40,6 +40,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.Typed (ScriptContextV1)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), check)
 
@@ -106,7 +107,7 @@ typedValidator = Scripts.mkTypedValidator @(SM.StateMachine PingPongState Input)
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.mkUntypedValidator @PingPongState @Input
+        wrap = Scripts.mkUntypedValidator @ScriptContextV1 @PingPongState @Input
 
 machineInstance :: SM.StateMachineInstance PingPongState Input
 machineInstance = SM.StateMachineInstance machine typedValidator

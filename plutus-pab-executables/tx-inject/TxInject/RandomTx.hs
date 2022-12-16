@@ -17,17 +17,17 @@ import Data.Maybe (fromMaybe)
 import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
+import Cardano.Node.Emulator.Generators (TxInputWitnessed (TxInputWitnessed))
+import Cardano.Node.Emulator.Generators qualified as Generators
+import Cardano.Node.Emulator.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.Validation qualified as Validation
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
-import Ledger.Address qualified as Address
+import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Generators (TxInputWitnessed (TxInputWitnessed))
-import Ledger.Generators qualified as Generators
 import Ledger.Index (UtxoIndex (..))
-import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
-import Ledger.Validation qualified as Validation
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -55,10 +55,9 @@ generateTx
   -> UtxoIndex   -- ^ Used to generate new transactions.
   -> IO Tx
 generateTx gen slot (UtxoIndex utxo) = do
-  (_, sourcePubKey) <- pickNEL gen keyPairs
-  let sourceAddress = Address.pubKeyAddress sourcePubKey Nothing
+  sourceAddress <- pickNEL gen keyPairs
   -- outputs at the source address
-      sourceOutputs
+  let sourceOutputs
   -- we restrict ourselves to outputs that contain no currencies other than Ada,
   -- so that we can then split the total amount using 'Generators.splitVal'.
   --
@@ -91,18 +90,15 @@ generateTx gen slot (UtxoIndex utxo) = do
     slotCfg <- Gen.sample Generators.genSlotConfig
     let
       params = def { pSlotConfig = slotCfg }
-      utxoIndex = either (error . show) id $ Validation.fromPlutusIndex $ UtxoIndex utxo
+      utxoIndex = either (error . show) id $ fromPlutusIndex $ UtxoIndex utxo
       txn = Validation.fromPlutusTxSigned params utxoIndex tx CW.knownPaymentKeys
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
       Left _  -> pure tx
       Right _ -> generateTx gen slot (UtxoIndex utxo)
 
-keyPairs :: NonEmpty (PaymentPrivateKey, PaymentPubKey)
-keyPairs =
-    fmap
-        (\mockWallet -> (CW.paymentPrivateKey mockWallet, CW.paymentPubKey mockWallet))
-        (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
+keyPairs :: NonEmpty CardanoAddress
+keyPairs = fmap CW.mockWalletAddress (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
 
 -- | Pick a random element from a non-empty list
 pickNEL :: PrimMonad m => Gen (PrimState m) -> NonEmpty a -> m a

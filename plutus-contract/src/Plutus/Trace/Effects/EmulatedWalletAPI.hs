@@ -20,6 +20,7 @@ import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Default (def)
 import Data.Text (Text)
+import Ledger qualified
 import Ledger.Tx (TxId, getCardanoTxId)
 import Ledger.Value (Value)
 import Wallet.API (WalletAPIError, defaultSlotRange, payToAddress)
@@ -45,7 +46,7 @@ payToWallet ::
     -> Eff effs TxId
 payToWallet source target amount = do
     ctx <- liftWallet source
-         $ payToAddress def defaultSlotRange amount (EM.mockWalletAddress target)
+         $ payToAddress def defaultSlotRange amount (Ledger.toPlutusAddress $ EM.mockWalletAddress target)
     pure $ getCardanoTxId ctx
 
 -- | Handle the 'EmulatedWalletAPI' effect using the emulator's

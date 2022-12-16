@@ -9,11 +9,11 @@ module Spec.SimpleEscrow(tests) where
 import Control.Lens
 import Control.Monad (void)
 
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
-import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test
 import Plutus.Contracts.SimpleEscrow
 import Plutus.Script.Utils.V1.Generators (someTokenValue)
@@ -75,7 +75,7 @@ tests = testGroup "simple-escrow"
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl2 params
     , checkPredicateOptions options "can't redeem if you can't pay"
-        ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> token1 (-10))
+        ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOutEstimated) <> token1 (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do

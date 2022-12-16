@@ -39,6 +39,7 @@ module Plutus.Contracts.Game
     , covIdx
     ) where
 
+import Cardano.Node.Emulator.Params (testnet)
 import Control.Lens (_2, (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
@@ -46,7 +47,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
+import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)
@@ -54,7 +55,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.Typed (ScriptContextV1)
+import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)
@@ -93,8 +95,8 @@ instance Scripts.ValidatorTypes Game where
     type instance DatumType Game = HashedString
 
 -- | The address of the game (the hash of its validator script)
-gameAddress :: GameParam -> Address
-gameAddress = mkValidatorAddress . gameValidator
+gameAddress :: GameParam -> CardanoAddress
+gameAddress = mkValidatorCardanoAddress testnet . gameValidator
 
 -- | The validator script of the game.
 gameValidator :: GameParam -> Validator
@@ -104,7 +106,7 @@ gameInstance :: GameParam -> Scripts.TypedValidator Game
 gameInstance = Scripts.mkTypedValidatorParam @Game
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.mkUntypedValidator @HashedString @ClearString
+        wrap = Scripts.mkUntypedValidator @ScriptContextV1 @HashedString @ClearString
 
 -- | The validation function (Datum -> Redeemer -> ScriptContext -> Bool)
 --

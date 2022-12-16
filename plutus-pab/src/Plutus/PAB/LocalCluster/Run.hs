@@ -23,6 +23,8 @@ import Cardano.CLI (LogOutput (LogToFile, LogToStdStreams), Port, ekgEnabled, ge
 import Cardano.ChainIndex.Types qualified as PAB.CI
 import Cardano.Launcher.Node (nodeSocketFile)
 import Cardano.Mnemonic (SomeMnemonic (SomeMnemonic))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig))
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Cardano.Node.Types (NodeMode (AlonzoNode),
                            PABServerConfig (pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Startup (installSignalHandlers, setDefaultFilePermissions, withUtf8Encoding)
@@ -69,8 +71,6 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Class (ToText (toText))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
-import Ledger.TimeSlot (SlotConfig (SlotConfig))
-import Ledger.TimeSlot qualified as TimeSlot
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Ouroboros.Network.Client.Wallet (tunedForMainnetPipeliningStrategy)
 import Plutus.ChainIndex.App qualified as ChainIndex

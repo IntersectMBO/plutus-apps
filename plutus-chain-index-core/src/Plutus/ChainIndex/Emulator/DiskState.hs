@@ -33,7 +33,7 @@ import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Address (..), Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash, TxId, TxOutRef)
+import Ledger (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash, TxId, TxOutRef, cardanoAddressCredential)
 import Ledger.Ada qualified as Ada
 import Ledger.Credential (Credential)
 import Ledger.Tx (Versioned)
@@ -69,7 +69,7 @@ instance Monoid CredentialMap where
 -- | Convert the outputs of the transaction into a 'CredentialMap'.
 txCredentialMap :: ChainIndexTx -> CredentialMap
 txCredentialMap  =
-    let credential ChainIndexTxOut{citoAddress=Address{addressCredential}} = addressCredential
+    let credential ChainIndexTxOut{citoAddress} = cardanoAddressCredential citoAddress
     in CredentialMap
        . Map.fromListWith (<>)
        . fmap (bimap credential Set.singleton)

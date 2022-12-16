@@ -32,7 +32,7 @@ import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (POSIXTime (POSIXTime), Slot (Slot, getSlot), minAdaTxOut)
+import Ledger (POSIXTime (POSIXTime), Slot (Slot, getSlot), minAdaTxOutEstimated)
 import Ledger.Ada qualified as Ada
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract, selectList)
@@ -43,8 +43,8 @@ import Plutus.V1.Ledger.Api (Datum)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
 
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (scSlotLength), scSlotZeroTime)
 import Data.Default (Default (def))
-import Ledger.TimeSlot (SlotConfig (scSlotLength), scSlotZeroTime)
 import Plutus.Contract.Test.ContractModel (SomeContractInstanceKey (Key), coverageIndex, currentSlot,
                                            defaultCheckOptionsContractModel, defaultCoverageOptions,
                                            propRunActionsWithOptions, quickCheckWithCoverage)
@@ -127,11 +127,11 @@ instance CM.ContractModel EscrowModel where
   precondition s a = case a of
     Init s tgts -> currentPhase == Initial
                 && s > 1
-                && and [Ada.adaValueOf (fromInteger n) `Value.geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+                && and [Ada.adaValueOf (fromInteger n) `Value.geq` Ada.toValue minAdaTxOutEstimated | (_,n) <- tgts]
     Redeem _    -> currentPhase == Running
                 && fold (s ^. CM.contractState . contributions) `Value.geq` fold (s ^. CM.contractState . targets)
     Pay _ v     -> currentPhase == Running
-                && Ada.adaValueOf (fromInteger v) `Value.geq` Ada.toValue minAdaTxOut
+                && Ada.adaValueOf (fromInteger v) `Value.geq` Ada.toValue minAdaTxOutEstimated
     Refund w    -> currentPhase == Refunding
                 && w `Map.member` (s ^. CM.contractState . contributions)
     where currentPhase = s ^. CM.contractState . phase

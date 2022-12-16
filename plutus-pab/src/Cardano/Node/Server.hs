@@ -10,6 +10,8 @@ module Cardano.Node.Server
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.API (API)
+import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Cardano.Node.Mock
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types
@@ -27,8 +29,6 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Units (Millisecond, Second)
 import Ledger.Ada qualified as Ada
-import Ledger.Params (Params (..))
-import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
