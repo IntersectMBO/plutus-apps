@@ -13,13 +13,15 @@ import Codec.Serialise (serialise)
 import Control.Lens hiding ((.>))
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.ByteString (ByteString)
+import Data.ByteString as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Data.Either
 import Data.Map qualified as Map
 import Data.Void (Void)
 import Plutus.Script.Utils.Typed as PSU
-import Plutus.V1.Ledger.Scripts qualified as Plutus
+import Plutus.V1.Ledger.Api qualified as PlutusV1
+import Plutus.V1.Ledger.Bytes as P
 import Plutus.V2.Ledger.Api qualified as PlutusV2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as BI
@@ -44,6 +46,25 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 import Helpers qualified as TN
 import Testnet.Babbage qualified as TN
 
+import Cardano.Ledger.Alonzo.Scripts as LScripts
+import Cardano.Ledger.Alonzo.TxInfo as TxInfo
+import Cardano.Ledger.BaseTypes as BTs
+
+data Secp256Params = Secp256Params
+    { vkey :: P.BuiltinByteString,
+      msg  :: P.BuiltinByteString,
+      sig  :: P.BuiltinByteString
+    }
+PlutusTx.unstableMakeIsData ''Secp256Params
+
+-- move to helpers
+bytesFromHex :: ByteString -> ByteString
+bytesFromHex b = bytes $ unsafeFromEither $ P.fromHex b
+    where
+        unsafeFromEither :: Either String a -> a
+        unsafeFromEither (Left err)    = error err
+        unsafeFromEither (Right value) = value
+
 tests :: TestTree
 tests = testGroup "SECP256k1"
   [ testPropertyNamed "schnorr verify builtin" "testSchnorr" testSchnorr
@@ -65,90 +86,25 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
   (localNodeConnectInfo, conf, runtime) <- TN.startTestnet TN.defaultTestnetOptions base tempAbsPath
   let networkId = TN.getNetworkId runtime
-  --socketPathAbs <- TN.getSocketPathAbs conf runtime
 
 -- 2: create a minting policy
 
--- Create an always succeeding validator script
-
--- THESE WORK
--- 1:
   let
     {-# INLINABLE mkPolicy #-}
-    mkPolicy :: BI.BuiltinData -> BI.BuiltinData -> ()
-    mkPolicy _ _ = ()
+    mkPolicy :: (BI.BuiltinByteString, BI.BuiltinByteString, BI.BuiltinByteString) -> PlutusV2.ScriptContext -> Bool
+    mkPolicy (vkey, msg, sig) _sc = BI.verifySchnorrSecp256k1Signature vkey msg sig
 
-    policy :: Plutus.MintingPolicy
-    policy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [|| mkPolicy ||])
+    policy :: PlutusV2.MintingPolicy
+    policy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+      where
+          wrap = PSU.mkUntypedMintingPolicy mkPolicy
 
     serialisedPolicyScript :: C.PlutusScript C.PlutusScriptV2
     serialisedPolicyScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ PlutusV2.unMintingPolicyScript policy
 
     policyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 serialisedPolicyScript :: C.PolicyId
 
--- 2:
---   let
---     serialisedPolicyScript :: C.PlutusScript C.PlutusScriptV2
---     serialisedPolicyScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ PlutusV2.unMintingPolicyScript policy
---       where
---         policy :: Plutus.MintingPolicy
---         policy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
-
---     policyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 serialisedPolicyScript :: C.PolicyId
-
--- THESE DO NOT WORK (MalformedScriptWitnesses)
--- 1:
---   let
---     {-# INLINABLE mkPolicy #-}
---     mkPolicy :: BI.BuiltinData -> PlutusV2.ScriptContext -> Bool
---     mkPolicy _ _ = True
-
---     policy :: Plutus.MintingPolicy
---     policy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [|| wrap ||])
---          where
---              wrap = PSU.mkUntypedMintingPolicy mkPolicy
-
---     serialisedPolicyScript :: C.PlutusScript C.PlutusScriptV2
---     serialisedPolicyScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ PlutusV2.unMintingPolicyScript policy
-
---     policyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 serialisedPolicyScript :: C.PolicyId
-
--- 2:
---   let
---     {-# INLINABLE mkPolicy #-}
---     mkPolicy :: BI.BuiltinData -> BI.BuiltinData -> ()
---     mkPolicy red _ =
---       case PlutusV2.fromBuiltinData red of
---         Nothing -> P.traceError "Trace error: Invalid redeemer"
---         Just (vkey, msg, sig) ->
---           if BI.verifySchnorrSecp256k1Signature vkey msg sig
---             then ()
---             else P.traceError "Trace error: Schnorr validation failed"
-
---     policy :: Plutus.MintingPolicy
---     policy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [|| mkPolicy ||])
-
---     serialisedPolicyScript :: C.PlutusScript C.PlutusScriptV2
---     serialisedPolicyScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ PlutusV2.unMintingPolicyScript policy
-
---     policyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 serialisedPolicyScript :: C.PolicyId
-
--- 3:
---   let
---     {-# INLINABLE mkPolicy #-}
---     mkPolicy :: (BI.BuiltinByteString, BI.BuiltinByteString, BI.BuiltinByteString) -> PlutusV2.ScriptContext -> Bool
---     mkPolicy (vkey, msg, sig) _ = BI.verifySchnorrSecp256k1Signature vkey msg sig
-
---     policy :: Plutus.MintingPolicy
---     policy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
---       where
---           wrap = PSU.mkUntypedMintingPolicy mkPolicy
-
---     serialisedPolicyScript :: C.PlutusScript C.PlutusScriptV2
---     serialisedPolicyScript = C.PlutusScriptSerialised $ SBS.toShort . LBS.toStrict $ serialise $ PlutusV2.unMintingPolicyScript policy
-
---     policyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 serialisedPolicyScript :: C.PolicyId
-
+  H.annotateShow serialisedPolicyScript -- remove
   H.annotateShow policyId -- remove
 
 -- 3: build a transaction
@@ -177,17 +133,30 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
   pparams <- TN.getBabbageProtocolParams localNodeConnectInfo
 
 
+
   let tokenA = C.AssetId policyId (C.AssetName "A")
       tokenAValue = C.valueFromList [(tokenA, 666)]
 
-      executionUnits = C.ExecutionUnits {C.executionSteps = 500_000, C.executionMemory = 10_000 }
+      -- TODO: Use evaluateTransactionExecutionUnits?
+
+      executionUnits = C.ExecutionUnits {C.executionSteps = 1_000_000_000, C.executionMemory = 500_000 } -- TODO: optimize. max cpu 10_000_000_000 , mem 16_000_000
 
       tx1Fee = 1_000_000 :: C.Lovelace
       amountPaid = totalLovelace - tx1Fee :: C.Lovelace
-      --amountReturned = totalLovelace - amountPaid - tx1Fee :: C.Lovelace
 
-      redeemer = C.ScriptDataNumber 555
-        --C.ScriptDataConstructor 0 [C.ScriptDataBytes "ab", C.ScriptDataBytes "cd", C.ScriptDataBytes "ef"]
+      secp256Params = Secp256Params
+         {
+            vkey = BI.toBuiltin $ bytesFromHex "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b",
+            msg  = BI.toBuiltin $ bytesFromHex "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+            sig  = BI.toBuiltin $ bytesFromHex "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
+         }
+
+      redeemer = C.fromPlutusData $ PlutusV2.toData secp256Params
+
+    --   redeemer = C.ScriptDataConstructor 0 -- schnorr
+    --      [C.ScriptDataBytes (bytesFromHex "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"),
+    --      C.ScriptDataBytes (bytesFromHex "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"),
+    --      C.ScriptDataBytes (bytesFromHex "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b")]
 
       scriptWitness :: C.ScriptWitness C.WitCtxMint C.BabbageEra
       scriptWitness = C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
@@ -206,6 +175,7 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
         , C.txInsCollateral = collateral
         , C.txOuts = [txOut1]
         , C.txMintValue = C.TxMintValue C.MultiAssetInBabbageEra tokenAValue (C.BuildTxWith $ Map.singleton policyId scriptWitness)
+        , C.txScriptValidity = C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra C.ScriptValid -- may not need
         , C.txProtocolParams   = C.BuildTxWith $ Just pparams
         }
   tx1body :: C.TxBody C.BabbageEra <- H.leftFail $ C.makeTransactionBody txBodyContent
@@ -227,4 +197,3 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
 -- 4: submit transaction to mint
 
 -- 5. query and assert successful mint
-

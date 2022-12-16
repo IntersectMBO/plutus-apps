@@ -200,3 +200,10 @@ source-repository-package
       libs/small-steps
       libs/small-steps-test
       libs/non-integral
+
+source-repository-package
+    type: git
+    location: https://github.com/james-iohk/cardano-node
+    tag: eb44c868fa4af3cbc9024421393880b6bef49811
+    subdir:
+      cardano-testnet
