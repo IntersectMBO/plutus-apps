@@ -240,7 +240,9 @@ instance Buffered ScriptTxHandle where
     sns :: [[Integer]] <-
       SQL.query c "SELECT slotNo FROM script_transactions GROUP BY slotNo ORDER BY slotNo DESC LIMIT ?" (SQL.Only sz)
     -- Take the slot number of the sz'th slot
-    let sn = head . last $ take sz sns
+    let sn = if null sns
+                then 0
+                else head . last $ take sz sns
     es <- SQL.query c "SELECT scriptAddress, txCbor, slotNo, blockHash FROM script_transactions WHERE slotNo >= ? ORDER BY slotNo DESC, txCbor, scriptAddress" (SQL.Only (sn :: Integer))
     pure $ asEvents es
 

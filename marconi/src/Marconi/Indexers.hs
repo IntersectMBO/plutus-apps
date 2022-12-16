@@ -16,7 +16,7 @@ import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readT
 import Control.Lens (view)
 import Control.Lens.Operators ((^.))
 import Control.Monad (void)
-import Data.List (findIndex, foldl1')
+import Data.List (findIndex, foldl1', intersect)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -210,7 +210,8 @@ startIndexers indexers = do
   coordinator <- initialCoordinator $ length indexers
   startingPoint <- mapM (\(ix, fp) -> ix coordinator fp) indexers
   -- We want to use the minimum value across all indexers.
-  pure (foldl1' min $ concat startingPoint, coordinator)
+  pure ( foldl1' max $ foldl1' intersect startingPoint
+       , coordinator )
 
 mkIndexerStream
   :: Coordinator
