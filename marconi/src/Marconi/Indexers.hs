@@ -84,9 +84,9 @@ initialCoordinator indexerCount =
               <*> newQSemN 0
               <*> pure indexerCount
 
--- Currently this `a` should stand for [ChainPoint], but I think eventually it should
--- be constrained to a set of indexer type classes viewed through an MVar. This will
--- allow indexers to be shared and queried safely.
+-- The points should/could provide shared access to the indexers themselves. The result
+-- is a list of points (rather than just one) since it offers more resume possibilities
+-- to the node (in the unlikely case there were some rollbacks during downtime).
 type Worker = Coordinator -> FilePath -> IO [Storable.StorablePoint ScriptTx.ScriptTxHandle]
 
 datumWorker :: Worker
@@ -208,9 +208,10 @@ startIndexers
   -> IO ([ChainPoint], Coordinator)
 startIndexers indexers = do
   coordinator <- initialCoordinator $ length indexers
-  startingPoint <- mapM (\(ix, fp) -> ix coordinator fp) indexers
-  -- We want to use the minimum value across all indexers.
-  pure ( foldl1' intersect startingPoint
+  startingPoints <- mapM (\(ix, fp) -> ix coordinator fp) indexers
+  -- We want to use the set of points that are common to all indexers
+  -- giving priority to recent ones.
+  pure ( foldl1' intersect startingPoints
        , coordinator )
 
 mkIndexerStream

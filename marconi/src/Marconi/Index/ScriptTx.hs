@@ -9,7 +9,7 @@
 module Marconi.Index.ScriptTx where
 
 import Data.ByteString qualified as BS
-import Data.Foldable (foldl', forM_, toList)
+import Data.Foldable (foldl', toList)
 import Data.Functor ((<&>))
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Proxy (Proxy (Proxy))
@@ -50,7 +50,7 @@ import RewindableIndex.Storable qualified as Storable
 
 data ScriptTxHandle = ScriptTxHandle
   { hdlConnection :: SQL.Connection
-  , hdlDiskStore  :: Int
+  , hdlDepth      :: Int
   }
 
 {- The next step is to define the data types that make up the indexer. There are
@@ -200,10 +200,8 @@ instance Buffered ScriptTxHandle where
   persistToStorage es h = do
     let rows = foldl' (\ea e -> ea ++ flatten e) [] es
         c    = hdlConnection h
-    SQL.execute_ c "BEGIN"
-    forM_ rows $
-      SQL.execute c "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo, blockHash) VALUES (?, ?, ?, ?)"
-    SQL.execute_ c "COMMIT"
+    SQL.executeMany c
+      "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo, blockHash) VALUES (?, ?, ?, ?)" rows
     pure h
 
     where
@@ -325,9 +323,12 @@ open :: FilePath -> Depth -> IO ScriptTxIndexer
 open dbPath (Depth k) = do
   c <- SQL.open dbPath
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL, slotNo INT NOT NULL, blockHash BLOB NOT NULL)"
+  -- Add this index for normal queries.
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address ON script_transactions (scriptAddress)"
   -- Add this index for interval queries.
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address_slot ON script_transactions (scriptAddress, slotNo)"
+  -- This index helps with group by
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_grp ON script_transactions (slotNo)"
   emptyState k (ScriptTxHandle c k)
 
 -- * Copy-paste
