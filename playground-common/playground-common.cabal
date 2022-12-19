@@ -65,7 +65,7 @@ library
   build-depends:
       aeson
     , aeson-casing
-    , base                >=4.7  && <5
+    , base               >=4.7  && <5
     , bytestring
     , containers
     , cookie
@@ -87,12 +87,10 @@ library
     , openapi3
     , prettyprinter
     , process
-    , purescript-bridge
-    , recursion-schemes   <5.2
+    , recursion-schemes  <5.2
     , row-types
-    , servant             >=0.16
+    , servant            >=0.16
     , servant-client
-    , servant-purescript
     , servant-server
     , streaming
     , template-haskell
@@ -102,6 +100,64 @@ library
     , time-units
     , transformers
     , uuid
+
+  --------------------------------
+  -- purescript-bridge (vendored)
+  --------------------------------
+
+  exposed-modules:
+    Language.PureScript.Bridge
+    Language.PureScript.Bridge.Builder
+    Language.PureScript.Bridge.CodeGenSwitches
+    Language.PureScript.Bridge.Primitives
+    Language.PureScript.Bridge.Printer
+    Language.PureScript.Bridge.PSTypes
+    Language.PureScript.Bridge.SumType
+    Language.PureScript.Bridge.Tuple
+    Language.PureScript.Bridge.TypeInfo
+    Language.PureScript.Bridge.TypeParameters
+
+  build-depends:
+      base              >=4.8 && <6.0
+    , containers
+    , directory
+    , filepath
+    , generic-deriving
+    , lens
+    , mtl
+    , text
+    , transformers
+    , wl-pprint-text
+
+  hs-source-dirs:     purescript-bridge/src
+
+  ---------------------------------
+  -- servant-purescript (vendored)
+  ---------------------------------
+
+  exposed-modules:
+    Servant.API.BrowserHeader
+    Servant.PureScript
+    Servant.PureScript.CodeGen
+    Servant.PureScript.Internal
+
+  build-depends:
+      aeson            >=0.11.2
+    , base             >=4.7    && <6.0
+    , bytestring
+    , containers
+    , directory
+    , filepath
+    , http-types
+    , lens
+    , mainland-pretty
+    , servant
+    , servant-foreign
+    , servant-server
+    , text
+    , wl-pprint-text
+
+  hs-source-dirs:     servant-purescript/src
 
 test-suite playground-common-test
   type:               exitcode-stdio-1.0

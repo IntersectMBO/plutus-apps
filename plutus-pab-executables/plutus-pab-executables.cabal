@@ -70,10 +70,8 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base                >=4.7 && <5
+    , base  >=4.7 && <5
     , lens
-    , purescript-bridge
-    , servant-purescript
     , text
 
 executable plutus-pab-setup
@@ -146,14 +144,13 @@ executable plutus-pab-examples
   ------------------------
   build-depends:
     , aeson
-    , base               >=4.9 && <5
+    , base           >=4.9 && <5
     , containers
     , data-default
     , freer-simple
     , lens
     , openapi3
     , prettyprinter
-    , purescript-bridge
     , row-types
     , text
 
@@ -235,14 +232,13 @@ executable plutus-pab-local-cluster
   ------------------------
   build-depends:
     , aeson
-    , base               >=4.9 && <5
+    , base           >=4.9 && <5
     , containers
     , data-default
     , freer-simple
     , lens
     , openapi3
     , prettyprinter
-    , purescript-bridge
     , row-types
     , text
 
@@ -284,7 +280,7 @@ executable plutus-pab-test-psgenerator
   build-depends:
     , aeson
     , aeson-pretty
-    , base                >=4.9 && <5
+    , base           >=4.9 && <5
     , bytestring
     , containers
     , data-default
@@ -293,9 +289,7 @@ executable plutus-pab-test-psgenerator
     , lens
     , mtl
     , prettyprinter
-    , purescript-bridge
     , row-types
-    , servant-purescript
     , text
 
 test-suite plutus-pab-test-full
@@ -356,7 +350,6 @@ test-suite plutus-pab-test-full
     , mtl
     , openapi3
     , prettyprinter
-    , purescript-bridge
     , quickcheck-instances
     , row-types
     , servant-client
@@ -415,7 +408,7 @@ test-suite plutus-pab-test-full-long-running
   build-depends:
     , aeson
     , async
-    , base               >=4.9 && <5
+    , base            >=4.9 && <5
     , containers
     , data-default
     , freer-simple
@@ -424,7 +417,6 @@ test-suite plutus-pab-test-full-long-running
     , mtl
     , openapi3
     , prettyprinter
-    , purescript-bridge
     , row-types
     , servant-client
     , servant-server
