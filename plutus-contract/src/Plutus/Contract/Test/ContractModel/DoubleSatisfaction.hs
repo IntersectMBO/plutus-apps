@@ -24,6 +24,7 @@
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints -fno-warn-name-shadowing #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 
 module Plutus.Contract.Test.ContractModel.DoubleSatisfaction
     ( checkDoubleSatisfaction
@@ -35,6 +36,12 @@ import PlutusTx.Builtins hiding (error)
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
+import Cardano.Ledger.Babbage.Tx qualified as Babbage
+import Cardano.Ledger.Keys qualified as Ledger
+import Cardano.Ledger.Serialization qualified as CBOR (mkSized)
+import Cardano.Ledger.Shelley.Address.Bootstrap qualified as Shelley
+
 import Control.Lens
 import Control.Monad.Cont
 import Control.Monad.Freer (Eff, run)
@@ -44,20 +51,21 @@ import Data.Map qualified as Map
 import Data.Maybe
 
 import Data.Either.Combinators (leftToMaybe)
+import Data.Sequence.Strict qualified as Seq
 
 import Cardano.Node.Emulator.Generators
 import Cardano.Node.Emulator.Params (EmulatorEra, Params, testnet)
 import Cardano.Node.Emulator.Validation qualified as Validation
 import Ledger qualified as P
 import Ledger.Ada qualified as Ada
-import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto
 import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
-import Ledger.Tx hiding (mint)
-import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut, fromPlutusIndex,
-                             toCardanoAddressInEra, toCardanoTxOutDatumInTx, toCardanoTxOutDatumInline)
+import Ledger.Tx hiding (isPubKeyOut, mint, txCollateralInputs, txInputs)
+import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromPlutusIndex,
+                             fromCardanoTxId, fromCardanoTxIn, toCardanoAddressInEra, toCardanoTxIn,
+                             toCardanoTxOutDatumInline, toShelleyTxOut)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
@@ -76,6 +84,7 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (ChainEvent), e
 import Wallet.Emulator.Stream (EmulatorConfig (_params), EmulatorErr)
 
 import Data.Either (fromRight)
+import Data.Set qualified as Set
 import Prettyprinter
 
 -- Double satisfaction magic
@@ -85,7 +94,7 @@ import Prettyprinter
 --   satisfaction test.
 data WrappedTx = WrappedTx
   { _dsTxId      :: TxId
-  , _dsTx        :: Tx
+  , _dsTx        :: C.Tx C.BabbageEra
   , _dsUtxoIndex :: UtxoIndex
   , _dsSlot      :: Slot
   , _dsParams    :: Params
@@ -220,8 +229,8 @@ getDSCounterexamples params = go 0 mempty
 --   validation event.
 doubleSatisfactionCandidates :: Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
-  TxnValidate txid (EmulatorTx tx) _ -> [WrappedTx txid tx idx slot params]
-  _                                  -> []
+  TxnValidate txid (CardanoApiTx (CardanoApiEmulatorEraTx tx)) _ -> [WrappedTx txid tx idx slot params]
+  _                                                              -> []
 
 -- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
 --   failed with error @err@.
@@ -229,8 +238,12 @@ validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
     cUtxoIndex = either (error . show) id $ fromPlutusIndex _dsUtxoIndex
-    signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
-    e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
+    -- signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
+    e' = Validation.validateCardanoTx
+            _dsParams
+            _dsSlot
+            cUtxoIndex
+            (CardanoApiTx (CardanoApiEmulatorEraTx _dsTx))
   in leftToMaybe e'
 
 -- | Run validation for a `WrappedTx`. Returns @True@ if successful.
@@ -274,11 +287,11 @@ showPretty cand = show . vcat $
   [ "=====Double Satisfaction Counterexample!====="
   , "The following transaction goes through:"
   , ""
-  , pretty $ cand ^. to dsceOriginalTransaction . dsTx
+  , pretty $ CardanoApiEmulatorEraTx $ cand ^. to dsceOriginalTransaction . dsTx
   , ""
   , "Whereas the following transaction fails:"
   , ""
-  , pretty $ cand ^. to dsceTargetMattersProof . dsTx
+  , pretty $ CardanoApiEmulatorEraTx $ cand ^. to dsceTargetMattersProof . dsTx
   , ""
   , "Showing that we can't simply re-direct UTxO"
   , ""
@@ -286,7 +299,7 @@ showPretty cand = show . vcat $
   , ""
   , "to wallet " <> pretty (dsceStealerWallet cand) <> ". However, the following transaction goes through:"
   , ""
-  , pretty $ cand ^. to dsceValueStolenProof . dsTx
+  , pretty $ CardanoApiEmulatorEraTx $ cand ^. to dsceValueStolenProof . dsTx
   , ""
   , "which demonstrates that when another script uses a datum on the following UTxO"
   , ""
@@ -297,19 +310,19 @@ showPretty cand = show . vcat $
   , ""
   , "For reference the UTxOs indices above correspond to:"
   ] ++
-  [ vcat [ pretty (ref ^. inRef)
-         , pretty . fromJust $ Map.lookup (ref ^. inRef)
+  [ vcat [ pretty (C.renderTxIn ref)
+         , pretty . fromJust $ Map.lookup (fromCardanoTxIn ref)
                          (cand ^. to dsceValueStolenProof . dsUtxoIndex . to getIndex)
          ]
   | let tx0 = cand ^. to dsceTargetMattersProof . dsTx
         tx1 = cand ^. to dsceValueStolenProof . dsTx
         tx2 = cand ^. to dsceOriginalTransaction . dsTx
-  , ref <- tx0 ^. inputs
-          <> tx1 ^. inputs
-          <> tx2 ^. inputs
-          <> tx0 ^. collateralInputs
-          <> tx1 ^. collateralInputs
-          <> tx2 ^. collateralInputs
+  , ref <- txInputs tx0
+          <> txInputs tx1
+          <> txInputs tx2
+          <> txCollateralInputs tx0
+          <> txCollateralInputs tx1
+          <> txCollateralInputs tx2
   ]
 
 isVulnerable :: DoubleSatisfactionCounterexample -> Bool
@@ -325,31 +338,35 @@ isVulnerable (DoubleSatisfactionCounterexample orig pre post _ _ _) =
 alwaysOkValidator :: Versioned Validator
 alwaysOkValidator = Versioned (mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])) PlutusV1
 
+
+
 doubleSatisfactionCounterexamples :: WrappedTx -> [DoubleSatisfactionCounterexample]
 doubleSatisfactionCounterexamples dsc = do
    -- For each output in the candidate tx
-   (idx, out) <- zip [0..] (dsc ^. dsTx . outputs)
+   (idx, out) <- zip [0..] (dsc ^. dsTx . outputsL)
    -- Is it a pubkeyout?
-   guard $ isPubKeyOut $ fromCardanoTxOutToPV1TxInfoTxOut $ P.getTxOut out
+   guard $ C.isKeyAddress $ txOutAddress out
    -- Whose key is not in the signatories?
    key <- maybeToList . txOutPubKey $ out
-   let signatories = dsc ^. dsTx . signatures . to Map.keys
-   guard $ key `notElem` map pubKeyHash signatories
+   let signatories = dsc ^. dsTx . to (fmap witnessToPubKeyHash . C.getTxWitnesses)
+   guard $ key `notElem`  signatories
    guard $ length signatories == 1
    -- Then stealerKey can try to steal it
    stealerKey <- signatories
    (stealerWallet, stealerPrivKey) <-
-      filter (\(w, _) -> P.unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == pubKeyHash stealerKey)
+      filter (\(w, _) -> P.unPaymentPubKeyHash (mockWalletPaymentPubKeyHash w) == stealerKey)
              (zip knownWallets (P.unPaymentPrivateKey <$> knownPaymentPrivateKeys))
-   let stealerAddr = pubKeyHashAddress . pubKeyHash $ stealerKey
+   let stealerAddr = pubKeyHashAddress stealerKey
+       signedByStealer tx = C.signShelleyTransaction
+                            (txTxBody $ tx ^. dsTx)
+                            [C.WitnessPaymentExtendedKey $ C.PaymentExtendedSigningKey stealerPrivKey]
        stealerCardanoAddress =  fromRight (error "invalid address") (toCardanoAddressInEra testnet stealerAddr)
        scriptCardanoAddress = fromRight (error "invalid address")
           (toCardanoAddressInEra testnet $ P.scriptValidatorHashAddress (validatorHash alwaysOkValidator) Nothing)
    -- The output going to the original recipient but with a datum
        datum         = Datum . mkB $ "<this is a unique string>"
        datumEmpty    = Datum . mkB $ ""
-       redeemerEmpty = Redeemer . mkB $ ""
-       withDatumOut = out & outDatumHash .~ toCardanoTxOutDatumInTx datum
+       withDatumOut = out & outDatumHash .~ toCardanoTxOutDatumInline datum
        -- Creating TxOut is ugly at the moment because we don't use Cardano addresses, values and datum in the
        -- emulator yet
        newFakeTxScriptOut = TxOut $ C.TxOut
@@ -360,21 +377,18 @@ doubleSatisfactionCounterexamples dsc = do
        newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"
                                   , txOutRefIdx = 1
                                   }
-       l = dsTx . outputs . ix idx
-   let targetMatters0 = dsc & l . outAddress .~ stealerCardanoAddress
-       tx             = addSignature' stealerPrivKey (targetMatters0 ^. dsTx & signatures .~ mempty)
-       targetMatters1 = targetMatters0 & dsTxId .~ txId tx
+   let targetMatters0 = dsc & dsTx %~ setStealerAddress idx stealerCardanoAddress
+       tx             = signedByStealer targetMatters0
+       targetMatters1 = targetMatters0 & dsTxId .~ (Alonzo.txInfoId $ C.toShelleyTxId $ C.getTxId $ txTxBody tx)
                                        & dsTx   .~ tx
-       valueStolen0 = dsc & l . outAddress .~ stealerCardanoAddress
-                          & dsTx . outputs %~ (withDatumOut:)
-                          & dsTx  %~ addScriptTxInput newFakeTxOutRef alwaysOkValidator redeemerEmpty (Just datumEmpty)
+       valueStolen0 = dsc & dsTx %~ setStealerAddress idx stealerCardanoAddress
+                          & dsTx . outputsL %~ (withDatumOut:)
+                          & dsTx  %~ addScriptTxInput' newFakeTxOutRef
                           & dsUtxoIndex %~
                              (\ (UtxoIndex m) -> UtxoIndex $ Map.insert newFakeTxOutRef
                                                                         newFakeTxScriptOut m)
-                          & dsTx . datumWitnesses . at (datumHash datum) ?~ datum
-                          & dsTx . datumWitnesses . at (datumHash datumEmpty) ?~ datumEmpty
-   let tx           = addSignature' stealerPrivKey (valueStolen0 ^. dsTx & signatures .~ mempty)
-       valueStolen1 = valueStolen0 & dsTxId .~ txId tx
+   let tx           = signedByStealer valueStolen0
+       valueStolen1 = valueStolen0 & dsTxId .~ fromCardanoTxId (C.getTxId (txTxBody tx))
                                    & dsTx   .~ tx
    pure $ DoubleSatisfactionCounterexample
       { dsceOriginalTransaction = dsc
@@ -384,6 +398,52 @@ doubleSatisfactionCounterexamples dsc = do
       , dsceDatumUTxO           = withDatumOut
       , dsceStealerWallet       = stealerWallet
       }
+
+addScriptTxInput' :: TxOutRef -> C.Tx C.BabbageEra -> C.Tx C.BabbageEra
+addScriptTxInput' txOutRef tx@(C.ShelleyTx C.ShelleyBasedEraBabbage b@Babbage.ValidatedTx{body}) =
+    let
+    in C.ShelleyTx C.ShelleyBasedEraBabbage
+            b{ Babbage.body = body{
+               Babbage.inputs = Set.fromList $ fmap C.toShelleyTxIn $
+                 fromRight (error "invalid txOutRef") (toCardanoTxIn txOutRef) : txInputs tx
+             }}
+
+
+txInputs :: C.Tx C.BabbageEra -> [C.TxIn]
+txInputs (C.Tx (C.TxBody body) _ws) = fst <$> C.txIns body
+
+txTxBody :: C.Tx C.BabbageEra -> C.TxBody C.BabbageEra
+txTxBody (C.Tx body _ws) = body
+
+txCollateralInputs :: C.Tx C.BabbageEra -> [C.TxIn]
+txCollateralInputs (C.Tx (C.TxBody body) _ws) = getTxIns $ C.txInsCollateral body
+  where
+    getTxIns C.TxInsCollateralNone       = []
+    getTxIns (C.TxInsCollateral _ txIns) = txIns
+
+
+outputsL :: Lens' (C.Tx C.BabbageEra) [TxOut]
+outputsL = lens getOutputs setOutputs
+  where
+    setOutputs :: C.Tx C.BabbageEra -> [TxOut] -> C.Tx C.BabbageEra
+    setOutputs (C.ShelleyTx C.ShelleyBasedEraBabbage b@Babbage.ValidatedTx{body}) txOuts =
+        let toLedgerTxOut = CBOR.mkSized . toShelleyTxOut C.ShelleyBasedEraBabbage . getTxOut
+        in C.ShelleyTx C.ShelleyBasedEraBabbage
+            b{ Babbage.body = body {
+               Babbage.outputs = Seq.fromList $ toLedgerTxOut <$> txOuts
+             }}
+    getOutputs :: C.Tx C.BabbageEra -> [TxOut]
+    getOutputs (C.Tx (C.TxBody body) _ws) = TxOut <$> C.txOuts body
+
+
+setStealerAddress :: Int -> C.AddressInEra C.BabbageEra -> C.Tx C.BabbageEra -> C.Tx C.BabbageEra
+setStealerAddress i addr tx = tx & outputsL . ix i . outAddress .~ addr
+
+witnessToPubKeyHash :: C.KeyWitness C.BabbageEra -> PubKeyHash
+witnessToPubKeyHash (C.ShelleyBootstrapWitness _ Shelley.BootstrapWitness{bwKey}) =
+  Alonzo.transKeyHash $ Ledger.hashKey bwKey
+witnessToPubKeyHash (C.ShelleyKeyWitness _ wvk) =
+  Alonzo.getWitVKeyHash wvk
 
 toCardanoUtxoIndex :: UtxoIndex -> Validation.UTxO EmulatorEra
 toCardanoUtxoIndex idx = either (error . show) id $ fromPlutusIndex idx
