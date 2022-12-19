@@ -3,7 +3,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let
-  inherit (packages) pkgs plutus-apps pab-nami-demo plutus-chain-index pab-cli docs webCommon;
+  inherit (packages) pkgs plutus-apps plutus-chain-index pab-cli docs webCommon;
   inherit (pkgs) lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell;
 
