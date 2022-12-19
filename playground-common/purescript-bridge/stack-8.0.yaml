@@ -1,0 +1,11 @@
+resolver: nightly-2020-08-17
+packages:
+- '.'
+extra-deps: []
+
+flags: {}
+
+extra-package-dbs: []
+
+nix:
+  shell-file: stack-8.0.nix
