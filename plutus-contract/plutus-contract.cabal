@@ -130,14 +130,16 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api            >=1.35
+    , cardano-api             >=1.35
     , cardano-crypto
     , cardano-ledger-alonzo
+    , cardano-ledger-babbage
     , cardano-ledger-core
+    , cardano-ledger-shelley
     , cardano-wallet-core
-    , plutus-core            >=1.0.0
-    , plutus-ledger-api      >=1.0.0
-    , plutus-tx              >=1.0.0
+    , plutus-core             >=1.0.0
+    , plutus-ledger-api       >=1.0.0
+    , plutus-tx               >=1.0.0
     , quickcheck-dynamic
 
   if !(impl(ghcjs) || os(ghcjs))
@@ -180,6 +182,7 @@ library
     , servant
     , stm
     , streaming
+    , strict-containers
     , template-haskell
     , text
     , text-class

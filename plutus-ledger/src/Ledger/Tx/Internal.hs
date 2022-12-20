@@ -28,6 +28,10 @@ import Control.Applicative (empty, (<|>))
 import Control.DeepSeq (NFData, rnf)
 import Control.Lens ((&), (.~), (?~))
 
+import Cardano.Ledger.Core qualified as Ledger (TxOut)
+import Cardano.Ledger.Serialization qualified as Ledger (Sized, mkSized)
+import Ouroboros.Consensus.Shelley.Eras qualified as Ledger
+
 import Control.Lens qualified as L
 import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
@@ -236,7 +240,6 @@ instance OpenApi.ToSchema TxOut where
           ]
         & OpenApi.required .~ ["address","value"]
 
-
 instance Pretty TxOut where
   pretty (TxOut (C.TxOut addr v d rs)) =
     hang 2 $ vsep $
@@ -251,6 +254,10 @@ instance Pretty TxOut where
           C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
             ["with reference script hash" <+> viaShow (C.hashScript s)]
           C.ReferenceScriptNone -> []
+
+toSizedTxOut :: TxOut -> Ledger.Sized (Ledger.TxOut Ledger.StandardBabbage)
+toSizedTxOut = Ledger.mkSized . C.toShelleyTxOut C.ShelleyBasedEraBabbage . getTxOut
+
 
 type ScriptsMap = Map ScriptHash (Versioned Script)
 type MintingWitnessesMap = Map MintingPolicyHash (Redeemer, Maybe (Versioned TxOutRef))
