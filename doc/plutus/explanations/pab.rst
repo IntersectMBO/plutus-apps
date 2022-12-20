@@ -127,9 +127,6 @@ Therefore, browser wallets will need to call a PAB helper endpoint which can bal
 
     The hosted deployment scenario for the PAB communicating with a browser wallet.
 
-A simple demo of this scenario is available here: `<https://github.com/input-output-hk/plutus-apps/tree/main/plutus-pab-executables/demo/pab-nami>`_.
-This demo is a work in progress.
-
 In-browser
 ~~~~~~~~~~
 
