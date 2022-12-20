@@ -1,7 +1,9 @@
 module Marconi.MambaCli where
 
-import Options.Applicative (Parser, ParserInfo, auto, execParser, fullDesc, header, help, helper, info, long, metavar,
-                            option, optional, strOption, (<**>))
+import Data.Maybe (fromMaybe)
+import Options.Applicative (Parser, ParserInfo, auto, execParser, fullDesc, header, help, helper, info, infoOption,
+                            long, metavar, option, optional, progDesc, strOption)
+import System.Environment (lookupEnv)
 
 import Marconi.Api.Types (CliArgs (CliArgs))
 import Marconi.CLI (multiString, pNetworkId)
@@ -20,9 +22,23 @@ parserCliArgs = CliArgs
                         <> help ("Bech32 Shelley addresses to index."
                                  <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
 
-parserOpts :: ParserInfo CliArgs
-parserOpts = info (parserCliArgs <**> helper)
-    ( fullDesc <> header "marconi-mamba - Cardano blockchain indexer" )
+parserOpts  :: String -> ParserInfo CliArgs
+parserOpts sha =
+    info (helper
+          <*> versionOption
+          <*> parserCliArgs)
+    ( fullDesc
+      <> progDesc "marconi-mamba"
+      <> header
+          "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
+    )
+    where
+        versionOption  =
+            infoOption sha (long "version"
+                            <> help "Show git SHA")
 
 parseCli :: IO CliArgs
-parseCli = execParser parserOpts
+parseCli = do
+    maybeSha <- lookupEnv "GITHUB_SHA"
+    let sha = fromMaybe "GIHUB_SHA environment variable not set!" maybeSha
+    execParser $ parserOpts sha

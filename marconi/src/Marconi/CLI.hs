@@ -13,17 +13,20 @@ module Marconi.CLI
     , scriptTxDbPath
     ) where
 
-import Cardano.Api (ChainPoint, NetworkId)
-import Cardano.Api qualified as C
 import Control.Applicative (optional, some)
 import Data.ByteString.Char8 qualified as C8
 import Data.List (nub)
 import Data.List.NonEmpty (fromList)
+import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (pack)
-import Marconi.Types (TargetAddresses)
 import Options.Applicative qualified as Opt
+import System.Environment (lookupEnv)
 import System.FilePath ((</>))
+
+import Cardano.Api (ChainPoint, NetworkId)
+import Cardano.Api qualified as C
+import Marconi.Types (TargetAddresses)
 
 chainPointParser :: Opt.Parser C.ChainPoint
 chainPointParser =
@@ -104,8 +107,23 @@ data Options = Options
     optionsTargetAddresses :: Maybe TargetAddresses
   }
   deriving (Show)
+
 parseOptions :: IO Options
-parseOptions = Opt.execParser $ Opt.info (optionsParser Opt.<**> Opt.helper) mempty
+parseOptions = do
+    maybeSha <- lookupEnv "GITHUB_SHA"
+    let sha = fromMaybe "GIHUB_SHA environment variable not set!" maybeSha
+    Opt.execParser (programParser sha)
+    where
+        programParser sha =
+            Opt.info (Opt.helper
+                      <*> (versionOption sha)
+                      <*> optionsParser)
+            (Opt.fullDesc
+                <> Opt.progDesc "marconi"
+                <> Opt.header
+                    "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
+            )
+        versionOption sha = Opt.infoOption sha (Opt.long "version" <> Opt.help "Show git SHA")
 
 optionsParser :: Opt.Parser Options
 optionsParser =
