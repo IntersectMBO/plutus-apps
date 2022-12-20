@@ -32,7 +32,6 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxInScriptWitnessHeader
   , toCardanoMintValue
   , toCardanoMintWitness
-  , toShelleyTxOut
   , ToCardanoError(..)
   , FromCardanoError(..)
   , getRequiredSigners
@@ -58,7 +57,6 @@ import Ledger.Address qualified as P
 import Ledger.Index.Internal qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPI.Internal
-import Ledger.Tx.CardanoAPITemp
 import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as PV1
 

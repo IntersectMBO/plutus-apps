@@ -64,7 +64,7 @@ import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (isPubKeyOut, mint, txCollateralInputs, txInputs)
 import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxId, fromCardanoTxIn, fromPlutusIndex,
-                             toCardanoAddressInEra, toCardanoTxIn, toCardanoTxOutDatumInline, toShelleyTxOut)
+                             toCardanoAddressInEra, toCardanoTxIn, toCardanoTxOutDatumInline)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
@@ -426,10 +426,9 @@ outputsL = lens getOutputs setOutputs
   where
     setOutputs :: C.Tx C.BabbageEra -> [TxOut] -> C.Tx C.BabbageEra
     setOutputs (C.ShelleyTx C.ShelleyBasedEraBabbage b@Babbage.ValidatedTx{body}) txOuts =
-        let toLedgerTxOut = CBOR.mkSized . toShelleyTxOut C.ShelleyBasedEraBabbage . getTxOut
-        in C.ShelleyTx C.ShelleyBasedEraBabbage
+        C.ShelleyTx C.ShelleyBasedEraBabbage
             b{ Babbage.body = body {
-               Babbage.outputs = Seq.fromList $ toLedgerTxOut <$> txOuts
+               Babbage.outputs = Seq.fromList $ toSizedTxOut <$> txOuts
              }}
     getOutputs :: C.Tx C.BabbageEra -> [TxOut]
     getOutputs (C.Tx (C.TxBody body) _ws) = TxOut <$> C.txOuts body
