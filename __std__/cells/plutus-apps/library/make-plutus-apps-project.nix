@@ -119,6 +119,7 @@ let
             # TODO disabled temporarely until we fix
             # /tmp/chairman/test-55543321c4d24d29: createDirectory: permission denied (Permission denied)
             marconi.components.tests.marconi-test.buildable = lib.mkForce false;
+            playground-common.doHaddock = false; # Segfault 11
           };
         })
         ({ pkgs, config, ... }: {
