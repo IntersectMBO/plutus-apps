@@ -1,9 +1,9 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE BlockArguments    #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE KindSignatures    #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Language.PureScript.Bridge.Printer where
 
@@ -14,95 +14,38 @@ import Data.Char (isLower)
 import Data.Function (on, (&))
 import Data.List (groupBy, nubBy, sortBy)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
+import Data.Text qualified as T
+import Data.Text.IO qualified as T
+import Language.PureScript.Bridge.CodeGenSwitches qualified as Switches
 import Language.PureScript.Bridge.PSTypes (psUnit)
-import Language.PureScript.Bridge.SumType
-  ( CustomInstance (..),
-    DataConstructor (..),
-    DataConstructorArgs (..),
-    ImportLine (..),
-    ImportLines,
-    Instance (..),
-    InstanceImplementation (..),
-    InstanceMember (..),
-    PSInstance,
-    RecordEntry (..),
-    SumType (SumType),
-    getUsedTypes,
-    importsFromList,
-    instanceToImportLines,
-    nootype,
-    recLabel,
-    recValue,
-    sigConstructor,
-    _recLabel,
-  )
-import Language.PureScript.Bridge.TypeInfo
-  ( Language (PureScript),
-    PSType,
-    TypeInfo (TypeInfo),
-    flattenTypeInfo,
-    typeName,
-    _typeModule,
-    _typeName,
-    _typePackage,
-    _typeParameters,
-  )
-import System.Directory
-  ( createDirectoryIfMissing,
-    doesDirectoryExist,
-  )
-import System.FilePath
-  ( joinPath,
-    takeDirectory,
-    (</>),
-  )
-import Text.PrettyPrint.Leijen.Text
-  ( Doc,
-    backslash,
-    char,
-    colon,
-    comma,
-    displayTStrict,
-    dquotes,
-    hang,
-    hsep,
-    indent,
-    lbrace,
-    lbracket,
-    line,
-    linebreak,
-    lparen,
-    nest,
-    parens,
-    punctuate,
-    rbrace,
-    rbracket,
-    renderPretty,
-    rparen,
-    softline,
-    textStrict,
-    vsep,
-    (<+>),
-  )
+import Language.PureScript.Bridge.SumType (CustomInstance (..), DataConstructor (..), DataConstructorArgs (..),
+                                           ImportLine (..), ImportLines, Instance (..), InstanceImplementation (..),
+                                           InstanceMember (..), PSInstance, RecordEntry (..), SumType (SumType),
+                                           _recLabel, getUsedTypes, importsFromList, instanceToImportLines, nootype,
+                                           recLabel, recValue, sigConstructor)
+import Language.PureScript.Bridge.TypeInfo (Language (PureScript), PSType, TypeInfo (TypeInfo), _typeModule, _typeName,
+                                            _typePackage, _typeParameters, flattenTypeInfo, typeName)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist)
+import System.FilePath (joinPath, takeDirectory, (</>))
+import Text.PrettyPrint.Leijen.Text (Doc, backslash, char, colon, comma, displayTStrict, dquotes, hang, hsep, indent,
+                                     lbrace, lbracket, line, linebreak, lparen, nest, parens, punctuate, rbrace,
+                                     rbracket, renderPretty, rparen, softline, textStrict, vsep, (<+>))
 
 renderText :: Doc -> Text
 renderText = T.replace " \n" "\n" . displayTStrict . renderPretty 0.4 200
 
 data Module (lang :: Language) = PSModule
-  { psModuleName :: !Text,
-    psImportLines :: !ImportLines,
+  { psModuleName       :: !Text,
+    psImportLines      :: !ImportLines,
     psQualifiedImports :: !(Map Text Text),
-    psTypes :: ![SumType lang]
+    psTypes            :: ![SumType lang]
   }
   deriving (Show)
 
@@ -286,7 +229,7 @@ constructorToDoc :: DataConstructor 'PureScript -> Doc
 constructorToDoc (DataConstructor n args) =
   hsep $
     textStrict n : case args of
-      Nullary -> []
+      Nullary   -> []
       Normal ts -> NE.toList $ typeInfoToDoc <$> ts
       Record rs -> [vrecord $ fieldSignatures rs]
 
@@ -297,7 +240,7 @@ instances st@(SumType t _ is) = go <$> is
   where
     mkConstraints :: (PSType -> [PSType]) -> [Doc]
     mkConstraints getConstraints = case getConstraints t of
-      [] -> []
+      []          -> []
       constraints -> [encloseHsep lparen rparen comma (typeInfoToDecl <$> constraints), "=>"]
     mkInstance instanceHead getConstraints methods =
       vsep
@@ -322,8 +265,8 @@ instances st@(SumType t _ is) = go <$> is
     toKind1 (TypeInfo p m n ps) = TypeInfo p m n $ init ps
     go :: PSInstance -> Doc
     go (Custom CustomInstance {..}) = case _customImplementation of
-      Derive -> mkDerivedInstance _customHead (const _customConstraints)
-      DeriveNewtype -> mkDerivedNewtypeInstance _customHead (const _customConstraints)
+      Derive           -> mkDerivedInstance _customHead (const _customConstraints)
+      DeriveNewtype    -> mkDerivedNewtypeInstance _customHead (const _customConstraints)
       Explicit members -> mkInstance _customHead (const _customConstraints) $ memberToMethod <$> members
     go Bounded =
       mkInstance
@@ -446,10 +389,10 @@ sumTypeToEncode (SumType _ cs _)
             & recLabel <>~ renderText (":" <+> typeToEncode (_recValue r))
 
 flattenTuple :: [PSType] -> [PSType]
-flattenTuple [] = []
-flattenTuple [a] = [a]
+flattenTuple []                                                         = []
+flattenTuple [a]                                                        = [a]
 flattenTuple [a, TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts'] = a : flattenTuple ts'
-flattenTuple (h : t) = h : flattenTuple t
+flattenTuple (h : t)                                                    = h : flattenTuple t
 
 typeToEncode :: PSType -> Doc
 typeToEncode (TypeInfo "purescript-prelude" "Prelude" "Unit" []) = "E.unit"
@@ -643,12 +586,12 @@ unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM mbool action = mbool >>= flip unless action
 
 constructorPattern :: DataConstructor 'PureScript -> Doc
-constructorPattern (DataConstructor name Nullary) = nullaryPattern name
+constructorPattern (DataConstructor name Nullary)     = nullaryPattern name
 constructorPattern (DataConstructor name (Normal ts)) = normalPattern name ts
 constructorPattern (DataConstructor name (Record rs)) = recordPattern name rs
 
 constructor :: DataConstructorArgs 'PureScript -> Doc
-constructor Nullary = nullaryExpr
+constructor Nullary     = nullaryExpr
 constructor (Normal ts) = normalExpr ts
 constructor (Record rs) = hrecord $ fields rs
 
@@ -663,7 +606,7 @@ normalPattern name = pattern name . hsep . normalLabels
 
 normalExpr :: NonEmpty PSType -> Doc
 normalExpr (_ :| []) = "a"
-normalExpr ts = parens . hsep . punctuate " /\\" $ normalLabels ts
+normalExpr ts        = parens . hsep . punctuate " /\\" $ normalLabels ts
 
 normalLabels :: NonEmpty PSType -> [Doc]
 normalLabels = fmap char . zipWith const ['a' ..] . NE.toList
@@ -716,8 +659,8 @@ signature topLevel name constraints params ret =
   where
     forAll = case (topLevel, allTypes >>= typeParams) of
       (False, _) -> Nothing
-      (_, []) -> Nothing
-      (_, ps) -> Just $ "forall" <+> hsep (typeInfoToDoc <$> nubBy (on (==) _typeName) ps) <> "."
+      (_, [])    -> Nothing
+      (_, ps)    -> Just $ "forall" <+> hsep (typeInfoToDoc <$> nubBy (on (==) _typeName) ps) <> "."
     allTypes = ret : constraints <> params
     constraintsDoc = case constraints of
       [] -> Nothing
@@ -743,11 +686,11 @@ encloseHsep :: Doc -> Doc -> Doc -> [Doc] -> Doc
 encloseHsep left right sp ds =
   case ds of
     [] -> left <> right
-    _ -> left <> hsep (punctuate sp ds) <> right
+    _  -> left <> hsep (punctuate sp ds) <> right
 
 encloseVsep :: Doc -> Doc -> Doc -> [Doc] -> Doc
 encloseVsep left right sp ds =
   case ds of
-    [] -> left <> right
+    []  -> left <> right
     [d] -> left <+> d <+> right
-    _ -> nest 2 $ linebreak <> vsep (zipWith (<+>) (left : repeat (hang 2 sp)) ds <> [right])
+    _   -> nest 2 $ linebreak <> vsep (zipWith (<+>) (left : repeat (hang 2 sp)) ds <> [right])

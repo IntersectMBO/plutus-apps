@@ -1,11 +1,11 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Servant.PureScript
   ( HasBridge,
@@ -37,15 +37,22 @@ module Servant.PureScript
   )
 where
 
+import Control.Lens
+import Control.Monad (guard)
 import Data.Aeson
 import Data.Bifunctor
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as BS
+import Data.ByteString.Lazy qualified as BS
+import Data.Functor (($>))
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Proxy
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.IO as T
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
+import Data.Text.IO qualified as T
 import Language.PureScript.Bridge hiding (psTypes)
 import Servant.Foreign hiding (Normal, toHeader)
 import Servant.PureScript.CodeGen
@@ -54,13 +61,6 @@ import System.Directory
 import System.FilePath
 import System.IO (IOMode (..), withFile)
 import Text.PrettyPrint.Mainland (hPutDocLn)
-import qualified Data.Set as Set
-import Control.Monad (guard)
-import Data.Maybe (fromMaybe)
-import Data.List.NonEmpty (NonEmpty(..))
-import Data.Functor (($>))
-import Control.Lens
-import qualified Data.Map as Map
 
 -- | Standard entry point - just create a purescript module with default settings
 --   for accessing the servant API.
@@ -177,10 +177,10 @@ mkToURIData name (SumType t cs is) = SumType t cs $ mkInstance : is
         <|> (guard canUseEncodeJson $> useEncodeJson)
     canDeriveNewtype = Newtype `elem` is && isn'tRecord cs
     isn'tRecord [DataConstructor _ (Normal (ty :| []))] = ty ^. typeName . to isKnownCompatibleType
-    isn'tRecord _ = False
+    isn'tRecord _                                       = False
     canUseEncodeJson = Json `elem` is
     isKnownCompatibleType "String" = True
-    isKnownCompatibleType _ = True
+    isKnownCompatibleType _        = True
     useShow = mkExplicit "show" Map.empty
     useEncodeJson = mkExplicit "encodeJson" $ importsFromList
       [ImportLine "Data.Argonaut" $ Set.fromList ["encodeJson"]

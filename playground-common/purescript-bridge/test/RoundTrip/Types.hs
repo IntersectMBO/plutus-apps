@@ -1,8 +1,8 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE BlockArguments             #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications           #-}
 
 module RoundTrip.Types where
 
@@ -13,7 +13,8 @@ import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, mkSumType, writePSTypes, writePSTypesWith)
+import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch,
+                                   mkSumType, writePSTypes, writePSTypesWith)
 import Language.PureScript.Bridge.TypeParameters (A)
 import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))

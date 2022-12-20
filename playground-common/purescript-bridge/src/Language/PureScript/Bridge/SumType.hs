@@ -1,39 +1,39 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE KindSignatures       #-}
+{-# LANGUAGE OverloadedLists      #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE PatternSynonyms      #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns         #-}
 
 module Language.PureScript.Bridge.SumType where
 
 import Control.Lens hiding (from, to)
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (maybeToList)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Typeable
 import Generics.Deriving
 import Language.PureScript.Bridge.TypeInfo
 
 data ImportLine = ImportLine
   { importModule :: !Text,
-    importTypes :: !(Set Text)
+    importTypes  :: !(Set Text)
   }
   deriving (Eq, Ord, Show)
 
@@ -94,11 +94,11 @@ data Instance (lang :: Language)
 type PSInstance = Instance 'PureScript
 
 data InstanceMember (lang :: Language) = InstanceMember
-  { _memberName :: Text,
-    _memberBindings :: [Text],
-    _memberBody :: Text,
+  { _memberName         :: Text,
+    _memberBindings     :: [Text],
+    _memberBody         :: Text,
     _memberDependencies :: [TypeInfo lang],
-    _memberImportLines :: ImportLines
+    _memberImportLines  :: ImportLines
   }
   deriving (Eq, Ord, Show)
 
@@ -109,8 +109,8 @@ data InstanceImplementation (lang :: Language)
   deriving (Eq, Ord, Show)
 
 data CustomInstance (lang :: Language) = CustomInstance
-  { _customConstraints :: [TypeInfo lang],
-    _customHead :: TypeInfo lang,
+  { _customConstraints    :: [TypeInfo lang],
+    _customHead           :: TypeInfo lang,
     _customImplementation :: InstanceImplementation lang
   }
   deriving (Eq, Ord, Show)
@@ -118,9 +118,9 @@ data CustomInstance (lang :: Language) = CustomInstance
 -- | The Purescript typeclass `Newtype` might be derivable if the original
 -- Haskell type was a simple type wrapper.
 nootype :: [DataConstructor lang] -> Maybe (Instance lang)
-nootype [DataConstructor _ (Record _)] = Just Newtype
+nootype [DataConstructor _ (Record _)]   = Just Newtype
 nootype [DataConstructor _ (Normal [_])] = Just Newtype
-nootype _ = Nothing
+nootype _                                = Nothing
 
 -- | Ensure that aeson-compatible `EncodeJson` and `DecodeJson` instances are generated for your type.
 argonaut :: SumType t -> SumType t
@@ -150,7 +150,7 @@ order (SumType ti dc is) = SumType ti dc . nub $ Eq : Ord : is
 data DataConstructor (lang :: Language) = DataConstructor
   { -- | e.g. `Left`/`Right` for `Either`
     _sigConstructor :: !Text,
-    _sigValues :: !(DataConstructorArgs lang)
+    _sigValues      :: !(DataConstructorArgs lang)
   }
   deriving (Show, Eq)
 
@@ -161,8 +161,8 @@ data DataConstructorArgs (lang :: Language)
   deriving (Show, Eq)
 
 instance Semigroup (DataConstructorArgs lang) where
-  Nullary <> b = b
-  a <> Nullary = a
+  Nullary <> b           = b
+  a <> Nullary           = a
   Normal as <> Normal bs = Normal $ as <> bs
   Record as <> Record bs = Record $ as <> bs
   Normal as <> Record bs = Normal as <> Normal (_recValue <$> bs)
@@ -207,7 +207,7 @@ instance GDataConstructorArgs U1 where
 
 instance (Selector a, Typeable t) => GDataConstructorArgs (S1 a (K1 R t)) where
   gToDataConstructorArgs e = case selName e of
-    "" -> Normal [mkTypeInfo @t]
+    ""   -> Normal [mkTypeInfo @t]
     name -> Record [RecordEntry (T.pack name) (mkTypeInfo @t)]
 
 -- | Get all used types in a sum type.
@@ -220,7 +220,7 @@ getUsedTypes (SumType _ cs is) =
     concatMap constructorToTypes cs <> concatMap instanceToTypes is
 
 constructorToTypes :: DataConstructor lang -> [TypeInfo lang]
-constructorToTypes (DataConstructor _ Nullary) = []
+constructorToTypes (DataConstructor _ Nullary)     = []
 constructorToTypes (DataConstructor _ (Normal ts)) = NE.toList ts
 constructorToTypes (DataConstructor _ (Record rs)) = _recValue <$> NE.toList rs
 
@@ -254,7 +254,7 @@ constraintToType = over typeName ("class " <>)
 
 implementationToTypes :: InstanceImplementation lang -> [TypeInfo lang]
 implementationToTypes (Explicit members) = concatMap _memberDependencies members
-implementationToTypes _ = []
+implementationToTypes _                  = []
 
 instanceToImportLines :: PSInstance -> ImportLines
 instanceToImportLines GenericShow =

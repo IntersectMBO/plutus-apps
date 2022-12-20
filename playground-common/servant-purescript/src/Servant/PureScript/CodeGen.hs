@@ -1,30 +1,32 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE BlockArguments        #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Servant.PureScript.CodeGen where
 
 import Control.Lens hiding (List, op)
-import qualified Data.Map as Map
-import Data.Maybe (fromMaybe, maybeToList, listToMaybe)
-import qualified Data.Set as Set
+import Data.Functor (($>))
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe, listToMaybe, maybeToList)
+import Data.Set qualified as Set
 import Data.Text (Text, toUpper)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Language.PureScript.Bridge (ImportLine (..), ImportLines, PSType, TypeInfo (..), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines, flattenTypeInfo)
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
+import Language.PureScript.Bridge (ImportLine (..), ImportLines, PSType, TypeInfo (..), flattenTypeInfo,
+                                   importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule,
+                                   typeToDecode, typeToEncode, typesToImportLines)
 import Language.PureScript.Bridge.PSTypes (psUnit)
+import Network.HTTP.Types
 import Servant.Foreign
 import Servant.PureScript.Internal
 import Text.PrettyPrint.Mainland
-import Data.Functor (($>))
-import Network.HTTP.Types
 
 typeInfoToText :: PSType -> Text
 typeInfoToText = renderText . typeInfoToDecl
@@ -134,7 +136,7 @@ genFnBody method headers body args queryString returnType = docIntercalate line 
   , strictText "headers = catMaybes" </> niceList headersDoc
   , strictText case body of
       Nothing -> "content = Nothing"
-      Just _ -> "content = Just reqBody"
+      Just _  -> "content = Just reqBody"
   , strictText "encode = E.encode encoder"
   , strictText "decode = D.decode decoder"
   , strictText "encoder =" <+> encoder
@@ -161,23 +163,23 @@ genFnBody method headers body args queryString returnType = docIntercalate line 
         docIntercalate line (fmap strictText $ T.lines $ renderText $ typeToDecode t)
     segments = segment . unSegment <$> args
     segment (Static (PathSegment seg)) = dquotes $ strictText seg
-    segment (Cap arg) = "toPathSegment" <+> arg ^. argName . to unPathSegment . to psVar
+    segment (Cap arg)                  = "toPathSegment" <+> arg ^. argName . to unPathSegment . to psVar
     query = case queryString of
       [] -> strictText "Nothing"
-      q -> strictText "Just $ fold" </> niceList (queryArg <$> q)
+      q  -> strictText "Just $ fold" </> niceList (queryArg <$> q)
     queryArg arg = queryFn (arg ^. queryArgType) <+> dquotes name <+> name
       where
         name = arg ^. queryArgName . argName . to unPathSegment . to strictText
     queryFn Normal = "paramQueryPairs"
-    queryFn Flag = "flagQueryPairs"
-    queryFn List = "paramListQueryPairs"
+    queryFn Flag   = "flagQueryPairs"
+    queryFn List   = "paramListQueryPairs"
 
 niceList :: [Doc] -> Doc
 niceList docs= lbracket <+> docIntercalate (line <> comma <> space) docs </> rbracket
 
 unMaybe :: PSType -> PSType
 unMaybe (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [a]) = a
-unMaybe a = a
+unMaybe a                                                      = a
 
 -----------
 

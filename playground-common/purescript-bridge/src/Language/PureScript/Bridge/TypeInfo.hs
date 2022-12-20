@@ -1,13 +1,13 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 module Language.PureScript.Bridge.TypeInfo
   ( TypeInfo (..),
@@ -29,7 +29,7 @@ where
 import Control.Lens
 import Data.Proxy
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Typeable
 
 data Language
@@ -39,10 +39,10 @@ data Language
 -- | Basic info about a data type:
 data TypeInfo (lang :: Language) = TypeInfo
   { -- | Hackage package
-    _typePackage :: !Text,
+    _typePackage    :: !Text,
     -- | Full Module path
-    _typeModule :: !Text,
-    _typeName :: !Text,
+    _typeModule     :: !Text,
+    _typeName       :: !Text,
     _typeParameters :: ![TypeInfo lang]
   }
   deriving (Eq, Ord, Show)

@@ -1,15 +1,15 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Servant.PureScript.Internal where
 
@@ -18,12 +18,12 @@ import Data.Bifunctor
 import Data.Char
 import Data.Proxy
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Typeable
 import Language.PureScript.Bridge hiding (psTypes)
-import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
+import Language.PureScript.Bridge.CodeGenSwitches qualified as Switches
 import Servant.Foreign
 import Servant.Foreign.Internal
 
@@ -70,12 +70,12 @@ instance Ord (SumTypeByTypeInfo lang) where
     compare ty1 ty2
 
 data Settings = Settings
-  { _apiModuleName :: Text,
-    _globalHeaders :: Set ParamName,
+  { _apiModuleName     :: Text,
+    _globalHeaders     :: Set ParamName,
     _globalQueryParams :: Set ParamName,
-    _psBridgeSwitches :: Switches.Switch,
-    _psTypes :: Set (SumTypeByTypeInfo 'Haskell),
-    _standardImports :: ImportLines
+    _psBridgeSwitches  :: Switches.Switch,
+    _psTypes           :: Set (SumTypeByTypeInfo 'Haskell),
+    _standardImports   :: ImportLines
   }
 
 makeLenses ''Settings
@@ -185,7 +185,7 @@ psTypeParameterA =
 jsCamelCaseL :: Getter FunctionName Text
 jsCamelCaseL = _FunctionName . to (convert . map (T.replace "-" ""))
   where
-    convert [] = ""
+    convert []       = ""
     convert (p : ps) = mconcat $ p : map capitalize ps
-    capitalize "" = ""
+    capitalize ""   = ""
     capitalize name = toUpper (T.head name) `T.cons` T.tail name

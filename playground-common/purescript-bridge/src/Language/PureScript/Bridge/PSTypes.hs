@@ -1,7 +1,7 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 -- | PureScript types to be used for bridges, e.g. in "Language.PureScript.Bridge.Primitives".
@@ -66,9 +66,9 @@ psTuple :: MonadReader BridgeData m => m PSType
 psTuple = do
   params <- view (haskType . typeParameters)
   bridge <- view fullBridge
-  let computeTuple [] = psUnit
-      computeTuple [a] = bridge a
-      computeTuple [a, b] = TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" [bridge a, bridge b]
+  let computeTuple []      = psUnit
+      computeTuple [a]     = bridge a
+      computeTuple [a, b]  = TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" [bridge a, bridge b]
       computeTuple (h : t) = TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" [bridge h, computeTuple t]
   pure $ computeTuple params
 

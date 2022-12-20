@@ -1,23 +1,24 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE BlockArguments        #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Main where
 
 import Control.Applicative
 import Control.Exception (bracket, bracket_)
 import Control.Lens
+import Control.Monad (when)
 import Data.Aeson
 import Data.Proxy
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text.IO as T
+import Data.Text.IO qualified as T
 import Data.Typeable
 import GHC.Generics
 import Language.PureScript.Bridge
@@ -27,13 +28,12 @@ import Servant.Foreign
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
-import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory, doesFileExist, doesDirectoryExist)
+import System.Directory (doesDirectoryExist, doesFileExist, removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (aroundAll_, describe, hspec, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Control.Monad (when)
 
 newtype Hello = Hello
   { message :: Text
@@ -68,10 +68,10 @@ type MyAPI =
 myApiProxy :: Proxy MyAPI
 myApiProxy = Proxy
 
-mySettings = defaultSettings 
+mySettings = defaultSettings
   & addGlobalQueryParam "globalParam"
   & addGlobalHeader "TestHeader"
-  & addTypes 
+  & addTypes
     [ equal . order . genericShow . argonaut $ mkSumType @Hello,
       argonaut $ mkSumType @TestHeader
     ]

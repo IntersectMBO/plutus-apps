@@ -1,7 +1,7 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE BlockArguments    #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Language.PureScript.Bridge
   ( bridgeSumType,
@@ -17,9 +17,9 @@ where
 
 import Control.Applicative
 import Control.Lens (over, traversed)
-import qualified Data.Map as M
-import qualified Data.Set as Set
-import qualified Data.Text.IO as T
+import Data.Map qualified as M
+import Data.Set qualified as Set
+import Data.Text.IO qualified as T
 import Language.PureScript.Bridge.Builder as Bridge
 import Language.PureScript.Bridge.CodeGenSwitches as Switches
 import Language.PureScript.Bridge.Primitives as Bridge
@@ -126,8 +126,8 @@ bridgeSumType br (SumType t cs is) =
           (br <$> _customConstraints)
           (br _customHead)
           case _customImplementation of
-            Derive -> Derive
-            DeriveNewtype -> DeriveNewtype
+            Derive           -> Derive
+            DeriveNewtype    -> DeriveNewtype
             Explicit members -> Explicit $ bridgeMember <$> members
     bridgeInstance Bounded = Bounded
     bridgeInstance Enum = Enum

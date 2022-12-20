@@ -1,8 +1,8 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE BlockArguments    #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module RoundTrip.Spec where
 
@@ -14,13 +14,16 @@ import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import Language.PureScript.Bridge (BridgePart, Language (..), SumType, argonaut, buildBridge, defaultBridge, defaultSwitch, equal, functor, genericShow, mkSumType, order, writePSTypes, writePSTypesWith)
+import Language.PureScript.Bridge (BridgePart, Language (..), SumType, argonaut, buildBridge, defaultBridge,
+                                   defaultSwitch, equal, functor, genericShow, mkSumType, order, writePSTypes,
+                                   writePSTypesWith)
 import Language.PureScript.Bridge.TypeParameters (A)
 import RoundTrip.Types
 import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))
 import System.IO (BufferMode (..), hFlush, hPutStrLn, hSetBuffering, stderr, stdout)
-import System.Process (CreateProcess (std_in, std_out), StdStream (CreatePipe), createProcess, getProcessExitCode, proc, readProcessWithExitCode, terminateProcess, waitForProcess)
+import System.Process (CreateProcess (std_in, std_out), StdStream (CreatePipe), createProcess, getProcessExitCode, proc,
+                       readProcessWithExitCode, terminateProcess, waitForProcess)
 import Test.HUnit (assertBool, assertEqual)
 import Test.Hspec (Spec, around, aroundAll_, around_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)

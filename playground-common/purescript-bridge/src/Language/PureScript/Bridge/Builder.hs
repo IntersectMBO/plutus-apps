@@ -1,11 +1,11 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 -- | A bridge builder DSL, powered by 'Monad', 'Alternative' and lens.
 --
@@ -42,7 +42,7 @@ import Control.Monad (MonadPlus, guard, mplus, mzero)
 import Control.Monad.Reader.Class
 import Control.Monad.Trans.Reader (Reader, ReaderT (..), runReader)
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Language.PureScript.Bridge.TypeInfo
 
 newtype BridgeBuilder a
@@ -86,7 +86,7 @@ type FullBridge = HaskellType -> PSType
 
 data BridgeData = BridgeData
   { -- | The Haskell type to translate.
-    _haskType :: HaskellType,
+    _haskType   :: HaskellType,
     -- | Reference to the bridge itself, needed for translation of type constructors.
     _fullBridge :: FullBridge
   }
