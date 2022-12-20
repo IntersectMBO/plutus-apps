@@ -36,6 +36,7 @@ common lang
     MultiParamTypeClasses
     ScopedTypeVariables
     StandaloneDeriving
+    TypeApplications
     TypeFamilies
 
   ghc-options:
@@ -113,7 +114,9 @@ executable marconi
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  iohk-monitoring
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
 
   ------------------------
   -- Non-IOG dependencies

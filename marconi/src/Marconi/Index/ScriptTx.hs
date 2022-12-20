@@ -9,14 +9,16 @@
 module Marconi.Index.ScriptTx where
 
 import Data.ByteString qualified as BS
-import Data.Foldable (foldl', forM_, toList)
-import Data.Maybe (catMaybes)
+import Data.Foldable (foldl', toList)
+import Data.Functor ((<&>))
+import Data.Maybe (catMaybes, fromMaybe)
+import Data.Proxy (Proxy (Proxy))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
 import GHC.Generics (Generic)
 
-import Cardano.Api (SlotNo (SlotNo))
+import Cardano.Api (BlockHeader, ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, SlotNo (SlotNo))
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 -- TODO Remove the following dependencies (and also cardano-ledger-*
@@ -33,8 +35,9 @@ import Cardano.Ledger.ShelleyMA.Timelocks qualified as Timelock
 
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
-                                 Rewindable (rewindStorage), StorableEvent, StorableMonad, StorablePoint, StorableQuery,
-                                 StorableResult, emptyState, filterWithQueryInterval)
+                                 Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent,
+                                 StorableMonad, StorablePoint, StorableQuery, StorableResult, emptyState,
+                                 filterWithQueryInterval)
 import RewindableIndex.Storable qualified as Storable
 
 {- The first thing that we need to define for a new indexer is the `handler` data
@@ -47,7 +50,7 @@ import RewindableIndex.Storable qualified as Storable
 
 data ScriptTxHandle = ScriptTxHandle
   { hdlConnection :: SQL.Connection
-  , hdlDiskStore  :: Int
+  , hdlDepth      :: Int
   }
 
 {- The next step is to define the data types that make up the indexer. There are
@@ -75,20 +78,20 @@ type instance StorableMonad ScriptTxHandle = IO
    may have some educational value. -}
 
 data instance StorableEvent ScriptTxHandle = ScriptTxEvent
-  { txScripts :: [(TxCbor, [StorableQuery ScriptTxHandle])]
-  , slotNo    :: !SlotNo
+  { txScripts  :: [(TxCbor, [StorableQuery ScriptTxHandle])]
+  , chainPoint :: !ChainPoint
   } deriving (Show)
 
 {- The resume and query functionality requires a way to specify points on the chain
    from which we want to resume, or points up to which we want to query. Next we
    define the types of these points. -}
 
-type instance StorablePoint ScriptTxHandle = SlotNo
+type instance StorablePoint ScriptTxHandle = ChainPoint
 
 -- We also need to know at which slot number an event was produced.
 
-instance HasPoint (StorableEvent ScriptTxHandle) SlotNo where
-  getPoint (ScriptTxEvent _ s) = s
+instance HasPoint (StorableEvent ScriptTxHandle) ChainPoint where
+  getPoint (ScriptTxEvent _ cp) = cp
 
 {- Next we begin to defined the types required for running queries. Both request and
    response types will depend naturally on the structure of the database, which is
@@ -113,11 +116,11 @@ newtype TxCbor = TxCbor BS.ByteString
 type ScriptTxIndexer = Storable.State ScriptTxHandle
 
 -- * SQLite
-
 data ScriptTxRow = ScriptTxRow
   { scriptAddress :: !(StorableQuery ScriptTxHandle)
   , txCbor        :: !TxCbor
   , txSlot        :: !SlotNo
+  , blockHash     :: !(Hash BlockHeader)
   } deriving (Generic)
 
 instance SQL.ToField (StorableQuery ScriptTxHandle) where
@@ -135,19 +138,34 @@ instance SQL.FromField SlotNo where
 instance SQL.ToRow ScriptTxRow where
   toRow o = [ SQL.toField $ scriptAddress o
             , SQL.toField $ txCbor o
-            , SQL.toField $ txSlot o ]
+            , SQL.toField $ txSlot o
+            , SQL.toField $ blockHash o ]
 
-deriving anyclass instance SQL.FromRow ScriptTxRow
+deriving instance SQL.FromRow ScriptTxRow
+
+instance SQL.ToField (Hash BlockHeader) where
+  toField f = SQL.toField $ C.serialiseToRawBytes f
+
+instance SQL.FromField (Hash BlockHeader) where
+   fromField f =
+      SQL.fromField f <&>
+        fromMaybe (error "Cannot deserialise block hash") .
+          C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
+
+instance Ord ChainPoint where
+   ChainPointAtGenesis <= _                = True
+   _ <= ChainPointAtGenesis                = False
+   (ChainPoint sn _) <= (ChainPoint sn' _) = sn <= sn'
 
 -- * Indexer
 
-type Query = StorableQuery ScriptTxHandle
+type Query  = StorableQuery  ScriptTxHandle
 type Result = StorableResult ScriptTxHandle
 
 toUpdate
   :: forall era . C.IsCardanoEra era
   => [C.Tx era]
-  -> SlotNo
+  -> ChainPoint
   -> StorableEvent ScriptTxHandle
 toUpdate txs = ScriptTxEvent txScripts'
   where
@@ -182,21 +200,21 @@ instance Buffered ScriptTxHandle where
   persistToStorage es h = do
     let rows = foldl' (\ea e -> ea ++ flatten e) [] es
         c    = hdlConnection h
-    SQL.execute_ c "BEGIN"
-    forM_ rows $
-      SQL.execute c "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo) VALUES (?, ?, ?)"
-    SQL.execute_ c "COMMIT"
+    SQL.executeMany c
+      "INSERT INTO script_transactions (scriptAddress, txCbor, slotNo, blockHash) VALUES (?, ?, ?, ?)" rows
     pure h
 
     where
       flatten :: StorableEvent ScriptTxHandle -> [ScriptTxRow]
-      flatten (ScriptTxEvent txs sl) = do
+      flatten (ScriptTxEvent txs (ChainPoint sn hsh)) = do
         (tx, scriptAddrs) <- txs
         addr <- scriptAddrs
         pure $ ScriptTxRow { scriptAddress = addr
                            , txCbor        = tx
-                           , txSlot        = sl
+                           , txSlot        = sn
+                           , blockHash     = hsh
                            }
+      flatten _ = error "There should be no scripts in the genesis block."
 
   {- We want to potentially store data in two formats. The first one is similar (if
      not identical) to the format of data stored in memory; it should contain information
@@ -213,13 +231,17 @@ instance Buffered ScriptTxHandle where
      function is called, and we know that there is a point after which we will not
      see any rollbacks. -}
 
-  -- TODO: getStoredPoints (?)
   getStoredEvents
     :: ScriptTxHandle
     -> IO [StorableEvent ScriptTxHandle]
   getStoredEvents (ScriptTxHandle c sz) = do
-    [[sn]] <- SQL.query c "SELECT MIN(slotNo) FROM script_transactions GROUP BY slotNo ORDER BY slotNo LIMIT ?" (SQL.Only sz)
-    es <- SQL.query c "SELECT scriptAddress, txCbor, slotNo FROM script_transactions WHERE slotNo >= ? ORDER BY slotNo DESC, txCbor, scriptAddress" (SQL.Only (sn :: Integer))
+    sns :: [[Integer]] <-
+      SQL.query c "SELECT slotNo FROM script_transactions GROUP BY slotNo ORDER BY slotNo DESC LIMIT ?" (SQL.Only sz)
+    -- Take the slot number of the sz'th slot
+    let sn = if null sns
+                then 0
+                else head . last $ take sz sns
+    es <- SQL.query c "SELECT scriptAddress, txCbor, slotNo, blockHash FROM script_transactions WHERE slotNo >= ? ORDER BY slotNo DESC, txCbor, scriptAddress" (SQL.Only (sn :: Integer))
     pure $ asEvents es
 
 -- This function recomposes the in-memory format from the database records. This
@@ -231,26 +253,26 @@ asEvents
   :: [ScriptTxRow]
   -> [StorableEvent ScriptTxHandle]
 asEvents [] = []
-asEvents rs@(ScriptTxRow _ _ sn : _) =
-   let (xs, ys) = span (\(ScriptTxRow _ _ sn') -> sn == sn') rs
+asEvents rs@(ScriptTxRow _ _ sn hsh : _) =
+   let (xs, ys) = span (\(ScriptTxRow _ _ sn' hsh') -> sn == sn' && hsh == hsh') rs
     in mkEvent xs : asEvents ys
   where
     mkEvent :: [ScriptTxRow] -> StorableEvent ScriptTxHandle
-    mkEvent rs'@(ScriptTxRow _ _ sn' : _) =
-       ScriptTxEvent { slotNo = sn'
+    mkEvent rs'@(ScriptTxRow _ _ sn' hsh' : _) =
+       ScriptTxEvent { chainPoint = ChainPoint sn' hsh'
                      , txScripts = agScripts rs'
                      }
     mkEvent _ = error "We should always be called with a non-empty list"
     agScripts :: [ScriptTxRow] -> [(TxCbor, [StorableQuery ScriptTxHandle])]
     agScripts [] = []
-    agScripts rs'@(ScriptTxRow _ tx _ : _) =
-       let (xs, ys) = span (\(ScriptTxRow _ tx' _) -> tx == tx') rs'
+    agScripts rs'@(ScriptTxRow _ tx _ _ : _) =
+       let (xs, ys) = span (\(ScriptTxRow _ tx' _ _) -> tx == tx') rs'
         in (tx, map scriptAddress xs) : agScripts ys
 
 instance Queryable ScriptTxHandle where
   queryStorage
     :: Foldable f
-    => QueryInterval SlotNo
+    => QueryInterval ChainPoint
     -> f (StorableEvent ScriptTxHandle)
     -> ScriptTxHandle
     -> StorableQuery ScriptTxHandle
@@ -259,9 +281,10 @@ instance Queryable ScriptTxHandle where
     persisted :: [ScriptTxRow] <-
       case qi of
         QEverything -> SQL.query c
-          "SELECT scriptAddress, txCbor, slotNo FROM script_transactions WHERE scriptAddress = ? ORDER BY slotNo ASC, txCbor, scriptAddress" (SQL.Only q)
-        QInterval _ e -> SQL.query c
-          "SELECT scriptAddress, txCbor, slotNo FROM script_transactions WHERE slotNo <= ? AND scriptAddress = ? ORDER BY slotNo ASC, txCbor, scriptAddress" (e, q)
+          "SELECT scriptAddress, txCbor, slotNo, blockHash FROM script_transactions WHERE scriptAddress = ? ORDER BY slotNo ASC, txCbor, scriptAddress" (SQL.Only q)
+        QInterval _ (ChainPoint sn _) -> SQL.query c
+          "SELECT scriptAddress, txCbor, slotNo, blockHash FROM script_transactions WHERE slotNo <= ? AND scriptAddress = ? ORDER BY slotNo ASC, txCbor, scriptAddress" (sn, q)
+        QInterval _ ChainPointAtGenesis -> pure []
     -- Note that ordering is quite important here, as the `filterWithQueryInterval`
     -- function assumes events are ordered from oldest (the head) to most recent.
     let updates = filterWithQueryInterval qi (asEvents persisted ++ toList es)
@@ -275,21 +298,38 @@ instance Queryable ScriptTxHandle where
 
 instance Rewindable ScriptTxHandle where
   rewindStorage
-    :: SlotNo
+    :: ChainPoint
     -> ScriptTxHandle
     -> IO (Maybe ScriptTxHandle)
-  rewindStorage sn h@(ScriptTxHandle c _) = do
+  rewindStorage (ChainPoint sn   _) h@(ScriptTxHandle c _) = do
      SQL.execute c "DELETE FROM script_transactions WHERE slotNo > ?" (SQL.Only sn)
      pure $ Just h
+  rewindStorage ChainPointAtGenesis h@(ScriptTxHandle c _) = do
+     SQL.execute_ c "DELETE FROM script_transactions"
+     pure $ Just h
+
+
+-- For resuming we need to provide a list of points where we can resume from.
+
+instance Resumable ScriptTxHandle where
+  resumeFromStorage h = do
+    es <- Storable.getStoredEvents h
+    -- The ordering here matters. The node will try to find the first point in the
+    -- ledger, then move to the next and so on, so we will send the latest point
+    -- first.
+    pure $ map chainPoint es ++ [ChainPointAtGenesis]
 
 open :: FilePath -> Depth -> IO ScriptTxIndexer
 open dbPath (Depth k) = do
   c <- SQL.open dbPath
-  SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL, slotNo INT NOT NULL)"
+  SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL, slotNo INT NOT NULL, blockHash BLOB NOT NULL)"
+  -- Add this index for normal queries.
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address ON script_transactions (scriptAddress)"
   -- Add this index for interval queries.
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address_slot ON script_transactions (scriptAddress, slotNo)"
-  emptyState k (ScriptTxHandle c (k * 2))
+  -- This index helps with group by
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_grp ON script_transactions (slotNo)"
+  emptyState k (ScriptTxHandle c k)
 
 -- * Copy-paste
 --
