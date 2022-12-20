@@ -24,7 +24,7 @@ cell.library.pkgs.writeShellApplication {
 
     for fragment in $shell_fragments; do
       echo building "$fragment"
-      nix develop ".#$fragment" --build --no-warn-dirty --accept-flake-config
+      GC_DONT_GC=1 nix develop ".#$fragment" --build --no-warn-dirty --accept-flake-config
     done
 
     derivation_fragments=$(
@@ -38,7 +38,7 @@ cell.library.pkgs.writeShellApplication {
 
     for fragment in $derivation_fragments; do
       echo building "$fragment"
-      nix build ".#$fragment" --no-warn-dirty --accept-flake-config
+      GC_DONT_GC=1 nix build ".#$fragment" --no-warn-dirty --accept-flake-config
     done
   '';
 }
