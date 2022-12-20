@@ -114,6 +114,19 @@ Any wallet that implements a handler for the link schema can be used to balance,
 
     The hosted deployment scenario for the PAB communicating with a desktop wallet.
 
+Browser wallet (In progress)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this wallet scenario, the user has setup a browser wallet such as Nami or Yoroi.
+The PAB updates it's contract instance status endpoint for each partial transaction that needs to be balanced, signed and submitted.
+Transaction signing happens on the user's machine.
+However, transaction balancing (coin selection) is handled by the PAB as it is not currently possible to balance transaction that contain script inputs in the browser (i.e. browser wallets can't balance transactions until it is possible to execute Plutus script in the browser).
+Therefore, browser wallets will need to call a PAB helper endpoint which can balance the transaction using funds from the user's browser wallet.
+
+.. figure:: ./hosted-pab-browser-wallet.png
+
+    The hosted deployment scenario for the PAB communicating with a browser wallet.
+
 In-browser
 ~~~~~~~~~~
 
