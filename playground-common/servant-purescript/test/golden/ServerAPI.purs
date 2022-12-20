@@ -23,14 +23,14 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.String.NonEmpty as NES
 
-getHello ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  Either (Tuple Int String) Hello ->
-  Boolean ->
-  Maybe String ->
-  Array Hello ->
-  ExceptT e m Hello
+getHello
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => Either (Tuple Int String) Hello
+  -> Boolean
+  -> Maybe String
+  -> Array Hello
+  -> ExceptT e m Hello
 getHello reqBody myFlag myParam myParams =
   request req
   where
@@ -54,11 +54,11 @@ getHello reqBody myFlag myParam myParams =
     , paramListQueryPairs "myParams" myParams
     ]
 
-getHelloByName ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  String ->
-  ExceptT e m (Maybe Hello)
+getHelloByName
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => String
+  -> ExceptT e m (Maybe Hello)
 getHelloByName name =
   request req
   where
@@ -79,11 +79,11 @@ getHelloByName name =
     ]
   query = Nothing
 
-getTestHeader ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  Maybe TestHeader ->
-  ExceptT e m TestHeader
+getTestHeader
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => Maybe TestHeader
+  -> ExceptT e m TestHeader
 getTestHeader localHeader =
   request req
   where
@@ -103,10 +103,10 @@ getTestHeader localHeader =
     ]
   query = Nothing
 
-getBy ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  ExceptT e m Int
+getBy
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => ExceptT e m Int
 getBy =
   request req
   where

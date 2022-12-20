@@ -17,7 +17,7 @@ main = do
   log "ready"
   go interface
   where
-  go interface = 
+  go interface =
     interface # question "" \input -> do
       let
         parsed :: Either JsonDecodeError TestData

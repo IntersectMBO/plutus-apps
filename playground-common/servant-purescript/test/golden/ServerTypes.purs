@@ -36,8 +36,10 @@ instance Show Hello where
   show a = genericShow a
 
 instance EncodeJson Hello where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { message: E.value :: _ String })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { message: E.value :: _ String }
+    )
 
 instance DecodeJson Hello where
   decodeJson = defer \_ -> D.decode $ (Hello <$> D.record "Hello" { message: D.value :: _ String })
@@ -48,7 +50,7 @@ derive instance Newtype Hello _
 
 --------------------------------------------------------------------------------
 
-_Hello :: Iso' Hello {message :: String}
+_Hello :: Iso' Hello { message :: String }
 _Hello = _Newtype
 
 --------------------------------------------------------------------------------
