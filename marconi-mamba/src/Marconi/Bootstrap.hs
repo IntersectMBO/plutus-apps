@@ -22,7 +22,7 @@ import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryTMVar), HasJson
                           JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber, TargetAddresses,
                           UtxoQueryTMVar (UtxoQueryTMVar))
 import Marconi.Api.UtxoIndexersQuery qualified as QApi
-import Marconi.Indexers (combineIndexers, utxoWorker)
+import Marconi.Indexers (mkIndexerStream, startIndexers, utxoWorker)
 import Network.Wai.Handler.Warp (defaultSettings, setPort)
 
 
@@ -50,23 +50,25 @@ bootstrapUtxoIndexers
     :: CliArgs
     -> JsonRpcEnv
     -> IO ()
-bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env =
-    do
-        let (UtxoQueryTMVar qTMVar) = env ^. queryEnv . queryTMVar
-            callbackIndexer :: QApi.UtxoIndex -> IO QApi.UtxoIndex
-            callbackIndexer index = atomically $ (QApi.writeTMVar qTMVar  index)  >>  pure index
-            indexers = combineIndexers [( utxoWorker  callbackIndexer (Just targetAddresses) , dbPath)]
-            chainPoint = ChainPointAtGenesis
-        c <- defaultConfigStdout
-        withTrace c "marconi-mamba" $ \trace ->
-          withChainSyncEventStream socket networkId chainPoint indexers
-          `catch` \NoIntersectionFound ->
-            logError trace $
-                renderStrict $
-                    layoutPretty defaultLayoutOptions $
-                        "No intersection found when looking for the chain point"
-                        <+> (pretty . show  $ chainPoint)  <> "."
-                        <+> "Please check the slot number and the block hash do belong to the chain"
+bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
+  let (UtxoQueryTMVar qTMVar) = env ^. queryEnv . queryTMVar
+      callbackIndexer :: QApi.UtxoIndex -> IO QApi.UtxoIndex
+      callbackIndexer index = atomically $ QApi.writeTMVar qTMVar index >> pure index
+  (_, coordinator) <-
+      startIndexers [( utxoWorker callbackIndexer (Just targetAddresses)
+                     , dbPath )]
+  let indexers   = mkIndexerStream coordinator
+      chainPoint = ChainPointAtGenesis
+  c <- defaultConfigStdout
+  withTrace c "marconi-mamba" $ \trace ->
+    withChainSyncEventStream socket networkId [chainPoint] indexers
+    `catch` \NoIntersectionFound ->
+      logError trace $
+          renderStrict $
+              layoutPretty defaultLayoutOptions $
+                  "No intersection found when looking for the chain point"
+                  <+> (pretty . show  $ chainPoint)  <> "."
+                  <+> "Please check the slot number and the block hash do belong to the chain"
 
 -- | parses a white space separated address list
 -- Note, duplicate addresses are rmoved

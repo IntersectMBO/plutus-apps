@@ -16,7 +16,7 @@ main :: IO ()
 main = do
   Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
 
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
+  withChainSyncEventStream optionsSocketPath optionsNetworkId [optionsChainPoint] $
     S.stdoutLn
       . S.map
         ( \case

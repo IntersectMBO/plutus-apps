@@ -158,6 +158,7 @@ haskell.project.shellFor {
     ${utillinux}/bin/taskset -pc 0-1000 $$
   ''
   + ''
+    export GITHUB_SHA=$(git rev-parse HEAD)
     export WEB_COMMON_SRC=${webCommon.cleanSrc}
 
     # This is probably set by haskell.nix's shellFor, but it interferes 
