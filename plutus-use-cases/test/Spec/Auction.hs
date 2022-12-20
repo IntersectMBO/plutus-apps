@@ -370,6 +370,6 @@ tests =
             withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
         -- TODO: commented because the test fails after 'CardanoTx(Both)' was deleted.
         -- The fix would be to start using CardanoTx instead of EmulatorTx in 'DoubleSatisfation.doubleSatisfactionCandidates'.
-        -- , testProperty "prop_doubleSatisfaction fails" $
-        --     expectFailure $ noShrinking prop_doubleSatisfaction
+        , testProperty "prop_doubleSatisfaction fails" $
+             expectFailure $ noShrinking prop_doubleSatisfaction
         ]

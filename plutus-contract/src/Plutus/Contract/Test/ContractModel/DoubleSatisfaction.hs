@@ -39,7 +39,6 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
 import Cardano.Ledger.Babbage.Tx qualified as Babbage
 import Cardano.Ledger.Keys qualified as Ledger
-import Cardano.Ledger.Serialization qualified as CBOR (mkSized)
 import Cardano.Ledger.Shelley.Address.Bootstrap qualified as Shelley
 
 import Control.Lens
