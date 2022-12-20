@@ -56,10 +56,10 @@ library
   exposed-modules: Plutus.PAB.Run.PSGenerator
   hs-source-dirs:  src
   build-depends:
-    , freer-extras       >=1.0.0
-    , playground-common  >=1.0.0
-    , plutus-contract    >=1.0.0
-    , plutus-pab         >=1.0.0
+    , freer-extras                                                                  >=1.0.0
+    , playground-common:{playground-common, purescript-bridge, servant-purescript}  >=1.0.0
+    , plutus-contract                                                               >=1.0.0
+    , plutus-pab                                                                    >=1.0.0
 
   --------------------
   -- Local components
