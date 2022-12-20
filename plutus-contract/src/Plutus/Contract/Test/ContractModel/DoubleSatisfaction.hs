@@ -63,9 +63,8 @@ import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (isPubKeyOut, mint, txCollateralInputs, txInputs)
-import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromPlutusIndex,
-                             fromCardanoTxId, fromCardanoTxIn, toCardanoAddressInEra, toCardanoTxIn,
-                             toCardanoTxOutDatumInline, toShelleyTxOut)
+import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxId, fromCardanoTxIn, fromPlutusIndex,
+                             toCardanoAddressInEra, toCardanoTxIn, toCardanoTxOutDatumInline, toShelleyTxOut)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
