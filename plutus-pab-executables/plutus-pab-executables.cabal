@@ -131,13 +131,13 @@ executable plutus-pab-examples
   -- Local components
   --------------------
   build-depends:
-    , playground-common          >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-pab-executables     >=1.0.0
-    , plutus-use-cases           >=1.0.0
+    , playground-common:{playground-common, purescript-bridge}  >=1.0.0
+    , plutus-contract                                           >=1.0.0
+    , plutus-ledger                                             >=1.0.0
+    , plutus-ledger-constraints                                 >=1.0.0
+    , plutus-pab                                                >=1.0.0
+    , plutus-pab-executables                                    >=1.0.0
+    , plutus-use-cases                                          >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -214,13 +214,13 @@ executable plutus-pab-local-cluster
   -- Local components
   --------------------
   build-depends:
-    , playground-common          >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-pab-executables     >=1.0.0
-    , plutus-use-cases           >=1.0.0
+    , playground-common:{playground-common, purescript-bridge}  >=1.0.0
+    , plutus-contract                                           >=1.0.0
+    , plutus-ledger                                             >=1.0.0
+    , plutus-ledger-constraints                                 >=1.0.0
+    , plutus-pab                                                >=1.0.0
+    , plutus-pab-executables                                    >=1.0.0
+    , plutus-use-cases                                          >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
@@ -260,14 +260,14 @@ executable plutus-pab-test-psgenerator
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator      >=1.0.0
-    , freer-extras               >=1.0.0
-    , playground-common          >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-use-cases           >=1.0.0
+    , cardano-node-emulator                                                         >=1.0.0
+    , freer-extras                                                                  >=1.0.0
+    , playground-common:{playground-common, purescript-bridge, servant-purescript}  >=1.0.0
+    , plutus-contract                                                               >=1.0.0
+    , plutus-ledger                                                                 >=1.0.0
+    , plutus-ledger-constraints                                                     >=1.0.0
+    , plutus-pab                                                                    >=1.0.0
+    , plutus-use-cases                                                              >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
@@ -316,16 +316,16 @@ test-suite plutus-pab-test-full
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator      >=1.0.0
-    , freer-extras               >=1.0.0
-    , playground-common          >=1.0.0
-    , plutus-chain-index-core    >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-pab-executables     >=1.0.0
-    , plutus-use-cases           >=1.0.0
+    , cardano-node-emulator                                     >=1.0.0
+    , freer-extras                                              >=1.0.0
+    , playground-common:{playground-common, purescript-bridge}  >=1.0.0
+    , plutus-chain-index-core                                   >=1.0.0
+    , plutus-contract                                           >=1.0.0
+    , plutus-ledger                                             >=1.0.0
+    , plutus-ledger-constraints                                 >=1.0.0
+    , plutus-pab                                                >=1.0.0
+    , plutus-pab-executables                                    >=1.0.0
+    , plutus-use-cases                                          >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
@@ -384,16 +384,16 @@ test-suite plutus-pab-test-full-long-running
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator      >=1.0.0
-    , freer-extras               >=1.0.0
-    , playground-common          >=1.0.0
-    , plutus-chain-index-core    >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-pab-executables     >=1.0.0
-    , plutus-use-cases           >=1.0.0
+    , cardano-node-emulator                                     >=1.0.0
+    , freer-extras                                              >=1.0.0
+    , playground-common:{playground-common, purescript-bridge}  >=1.0.0
+    , plutus-chain-index-core                                   >=1.0.0
+    , plutus-contract                                           >=1.0.0
+    , plutus-ledger                                             >=1.0.0
+    , plutus-ledger-constraints                                 >=1.0.0
+    , plutus-pab                                                >=1.0.0
+    , plutus-pab-executables                                    >=1.0.0
+    , plutus-use-cases                                          >=1.0.0
 
   --------------------------
   -- Other IOG dependencies
