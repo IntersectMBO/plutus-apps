@@ -171,7 +171,6 @@ import GHC.Generics hiding (to)
 
 import Cardano.Api qualified as CardanoAPI
 import Ledger.Ada qualified as Ada
-import Ledger.Params ()
 import Ledger.Slot
 import Ledger.Value
 import Plutus.Contract (Contract)

@@ -42,12 +42,13 @@ module Plutus.Contract.Test.ContractModel.Internal
   , module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
+import Cardano.Node.Emulator.Chain
+import Cardano.Node.Emulator.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.Freer.State (State, get, modify, runState)
 import Control.Monad.Writer as Writer (WriterT (..), runWriterT)
 import Ledger.Blockchain
-import Ledger.Params
 import Ledger.Tx
 import Plutus.Trace.Effects.EmulatorControl qualified as EmulatorControl
 import Plutus.Trace.Effects.Waiting (Waiting)
@@ -67,10 +68,10 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Generics
 
-import Cardano.Node.Emulator.Params ()
 import Cardano.Api (AssetId, SlotNo (..))
 import Cardano.Api qualified as CardanoAPI
 import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Node.Emulator.Params ()
 import Ledger.Ada qualified as Ada
 import Ledger.Address
 import Ledger.Index as Index
@@ -106,9 +107,8 @@ import Control.Monad.Freer.Reader qualified as Freer
 import Control.Monad.Freer.Writer (Writer (..), runWriter, tell)
 import Data.Void
 import Plutus.Contract.Types (IsContract (..))
+import Plutus.Trace.Effects.EmulatorControl qualified as EmulatorControl
 import Prettyprinter
-import Wallet.Emulator.Chain as EmulatorChain hiding (_currentSlot, currentSlot)
-import Wallet.Emulator.Chain qualified as EmulatorChain
 import Wallet.Emulator.MultiAgent (eteEvent)
 
 import Plutus.Contract.Test.ContractModel.Internal.ContractInstance as Internal
@@ -188,7 +188,7 @@ instance HasChainIndex (EmulatorTraceWithInstances state) where
     where chainStateToChainIndex nid cs =
             ChainIndex { before = beforeState
                        , after  = CM.ChainState
-                                    { slot = fromInteger . toInteger $ EmulatorChain._currentSlot cs
+                                    { slot = fromInteger . toInteger $ _chainCurrentSlot cs
                                     , utxo = makeUTxOs $ Index.initialise (_chainNewestFirst cs)
                                     }
                        -- The Backwards order

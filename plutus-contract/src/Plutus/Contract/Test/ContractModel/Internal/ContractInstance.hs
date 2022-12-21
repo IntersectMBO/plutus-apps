@@ -33,7 +33,6 @@ import Data.Data
 import Data.Row (Row)
 
 import Cardano.Api (AssetId)
-import Ledger.Params ()
 import Plutus.Contract (Contract)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Trace.Emulator as Trace (walletInstanceTag)
