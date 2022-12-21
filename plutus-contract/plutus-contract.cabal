@@ -138,11 +138,11 @@ library
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-wallet-core
-    , plutus-core            >=1.0.0
-    , plutus-ledger-api      >=1.0.0
-    , plutus-tx              >=1.0.0
-    , quickcheck-dynamic     >=2.0.0
     , contractmodel
+    , plutus-core             >=1.0.0
+    , plutus-ledger-api       >=1.0.0
+    , plutus-tx               >=1.0.0
+    , quickcheck-dynamic      >=2.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
