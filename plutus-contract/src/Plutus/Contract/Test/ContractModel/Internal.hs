@@ -50,7 +50,6 @@ import Control.Monad.Freer.State (State, get, modify, runState)
 import Control.Monad.Writer as Writer (WriterT (..), runWriterT)
 import Ledger.Blockchain
 import Ledger.Tx
-import Plutus.Trace.Effects.EmulatorControl qualified as EmulatorControl
 import Plutus.Trace.Effects.Waiting (Waiting)
 import Plutus.Trace.Emulator (initialChainState, waitUntilSlot)
 import Plutus.Trace.Emulator.Types (ContractHandle (..), ContractInstanceTag, UserThreadMsg (..))
@@ -81,7 +80,7 @@ import Plutus.Contract (ContractInstanceId)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, EmulatorEffects, EmulatorTrace, activateContract,
-                                       freezeContractInstance, getParams, waitNSlots)
+                                       freezeContractInstance, waitNSlots)
 import Plutus.V1.Ledger.Crypto
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Coverage hiding (_coverageIndex)
@@ -96,20 +95,10 @@ import Test.QuickCheck.ContractModel as CM
 import Test.QuickCheck.Monadic (PropertyM, monadic)
 import Test.QuickCheck.Monadic qualified as QC
 
-import Cardano.Node.Emulator.Chain hiding (_chainCurrentSlot, chainCurrentSlot)
-import Wallet.Emulator.MultiAgent (EmulatorEvent, eteEvent)
-import Wallet.Emulator.Stream (EmulatorErr)
+import Wallet.Emulator.MultiAgent (eteEvent)
 
-import Wallet.Emulator.Folds (postMapM)
-import Wallet.Emulator.Folds qualified as Folds
-
-import Control.Monad.Freer.Reader qualified as Freer
-import Control.Monad.Freer.Writer (Writer (..), runWriter, tell)
-import Data.Void
-import Plutus.Contract.Types (IsContract (..))
 import Plutus.Trace.Effects.EmulatorControl qualified as EmulatorControl
 import Prettyprinter
-import Wallet.Emulator.MultiAgent (eteEvent)
 
 import Plutus.Contract.Test.ContractModel.Internal.ContractInstance as Internal
 
@@ -177,11 +166,11 @@ instance CheckableContractModel state =>
 liftSpecificationTrace :: SpecificationEmulatorTrace s a -> EmulatorTraceWithInstances s a
 liftSpecificationTrace m = do
   s <- get
-  raise . raise . raise $ runReader s m
+  raise . raise $ runReader s m
 
 instance HasChainIndex (EmulatorTraceWithInstances state) where
   getChainIndex = do
-    nid <- pNetworkId <$> Trace.getParams
+    nid <- pNetworkId <$> EmulatorControl.getParams
     chainStateToChainIndex nid <$> EmulatorControl.chainState
     -- Note, we don't store the genesis transaction in the index but put it in the before state
     -- instead to avoid showing that as a balance change in the models.
@@ -389,7 +378,7 @@ propRunActionsWithOptions opts copts predicate actions =
 
         monadicPredicate :: PropertyM (RunMonad (EmulatorTraceWithInstances state)) Property
         monadicPredicate = do
-            ps <- QC.run . lift $ fmap pProtocolParams Trace.getParams
+            ps <- QC.run . lift $ fmap pProtocolParams EmulatorControl.getParams
             QC.run . lift $ activateWallets (\ _ -> error "No SymTokens yet") initialInstances
             result <- runContractModel actions
             pure $ assertBalanceChangesMatch (BalanceChangeOptions False signerPaysFees ps prettyAddr) result

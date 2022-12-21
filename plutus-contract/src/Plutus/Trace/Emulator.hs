@@ -74,8 +74,6 @@ module Plutus.Trace.Emulator(
     , runEmulatorTraceIO'
     -- * Interpreter
     , interpretEmulatorTrace
-    -- * New utility functions that I don't know what do about
-    , getParams
     ) where
 
 import Cardano.Node.Emulator.Chain (ChainControlEffect)
@@ -84,7 +82,7 @@ import Cardano.Node.Emulator.Params (Params (..))
 import Control.Foldl (generalize, list)
 import Control.Lens hiding ((:>))
 import Control.Monad (forM_, void)
-import Control.Monad.Freer (Eff, Member, interpret, interpretM, raise, reinterpret, run, runM, subsume, type (~>))
+import Control.Monad.Freer (Eff, Member, interpret, interpretM, raise, reinterpret, run, runM, subsume)
 import Control.Monad.Freer.Coroutine (Yield)
 import Control.Monad.Freer.Error (Error, handleError, throwError)
 import Control.Monad.Freer.Extras.Log (LogLevel (Info), LogMessage (LogMessage), LogMsg, mapLog)
@@ -145,12 +143,8 @@ data PrintEffect r where
   PrintLn :: String -> PrintEffect ()
 makeEffect ''PrintEffect
 
-data QueryParams r where
-  GetParams     :: QueryParams Params
-makeEffect ''QueryParams
 
-type EmulatorEffects = QueryParams
-                    ': StartContract
+type EmulatorEffects = StartContract
                     ': BaseEmulatorEffects
 
 type BaseEmulatorEffects =
@@ -164,10 +158,6 @@ type BaseEmulatorEffects =
              ]
 
 type EmulatorTrace = Eff EmulatorEffects
-
-handleQueryParams :: Params -> QueryParams ~> Eff effs
-handleQueryParams params = \case
-  GetParams     -> return params
 
 handleEmulatorTrace ::
     forall effs a.
@@ -187,12 +177,11 @@ handleEmulatorTrace params@Params{pNetworkId, pSlotConfig} action = do
             . interpret (mapLog (UserThreadEvent . UserLog))
             . flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleEmulatorControl @_ @effs @a pSlotConfig)
+            . interpret (handleEmulatorControl @_ @effs @a params)
             . interpret (handleWaiting @_ @effs @a pSlotConfig)
             . interpret (handleAssert @_ @effs @a)
             . interpret (handleRunContract @_ @effs @a)
             . interpret (handleStartContract @_ @effs @a pNetworkId)
-            . interpret (handleQueryParams params)
             $ raiseEnd action
     void $ exit @effs @EmulatorMessage result
 

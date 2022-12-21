@@ -20,12 +20,14 @@ module Plutus.Trace.Effects.EmulatorControl(
     , freezeContractInstance
     , thawContractInstance
     , chainState
+    , getParams
     , discardWallets
     , handleEmulatorControl
     , getSlotConfig
     ) where
 
 import Cardano.Node.Emulator.Chain (ChainState)
+import Cardano.Node.Emulator.Params
 import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Control.Lens (over, view)
 import Control.Monad (void)
@@ -68,6 +70,7 @@ data EmulatorControl r where
     FreezeContractInstance :: ContractInstanceId -> EmulatorControl ()
     ThawContractInstance :: ContractInstanceId -> EmulatorControl ()
     ChainState :: EmulatorControl ChainState
+    GetParams :: EmulatorControl Params
     GetSlotConfig :: EmulatorControl SlotConfig
     DiscardWallets :: (Wallet -> Bool) -> EmulatorControl ()  -- ^ Discard wallets matching the predicate.
 
@@ -81,10 +84,10 @@ handleEmulatorControl ::
     , Member MultiAgentControlEffect effs
     , Member (Yield (EmSystemCall effs2 EmulatorMessage a) (Maybe EmulatorMessage)) effs
     )
-    => SlotConfig
+    => Params
     -> EmulatorControl
     ~> Eff effs
-handleEmulatorControl slotCfg = \case
+handleEmulatorControl params@Params{pSlotConfig=slotCfg} = \case
     SetSigningProcess wllt sp -> walletControlAction wllt $ W.setSigningProcess sp
     AgentState wllt -> gets @EmulatorState (view (walletState wllt))
     FreezeContractInstance i -> do
@@ -96,6 +99,7 @@ handleEmulatorControl slotCfg = \case
         -- see note [Freeze and Thaw]
         void $ mkSysCall @effs2 @EmulatorMessage @_ @a Normal (Right $ Thaw threadId)
     ChainState -> gets (view EM.chainState)
+    GetParams -> return params
     GetSlotConfig -> return slotCfg
     DiscardWallets discard -> modify @EmulatorState $ over EM.walletStates (Map.filterWithKey (\ k _ -> not $ discard k))
 
