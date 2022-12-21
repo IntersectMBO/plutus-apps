@@ -147,6 +147,7 @@ inputs.std.lib.dev.mkShell {
     #   name = "PYTHONPATH";
     #   value = "";
     # }
+    # export GITHUB_SHA=$(git rev-parse HEAD)
   ];
 }
 
