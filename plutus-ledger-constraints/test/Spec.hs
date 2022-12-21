@@ -34,10 +34,12 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (prepareConstraints)
 import Ledger.Constraints.OffChain qualified as OC
 import Ledger.Constraints.OnChain.V2 qualified as ConstraintsV2
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Index qualified as Ledger
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
+import Ledger.Slot qualified as Slot
 import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
 import Ledger.Value (CurrencySymbol, Value (Value))
@@ -82,7 +84,23 @@ tests = testGroup "all tests"
     , testPropertyNamed "prepareConstraints fails if the same utxo is spent with a different referenceScript"
         "mustSpendScriptOutputFailsWithDifferentReferenceScript"
         mustSpendScriptOutputFailsWithDifferentReferenceScript
+    , testPropertyNamed "ValidityInterval roundTrip" "intervalRoundTrupProp" intervalRoundTrupProp
     ]
+
+intervalRoundTrupProp :: Property
+intervalRoundTrupProp = Hedgehog.property $ do
+    interval <- Hedgehog.forAll intervalGen
+    Hedgehog.tripping interval Interval.toPlutusInterval (Just . Interval.fromPlutusInterval)
+
+intervalGen :: Hedgehog.MonadGen m => m (Interval.ValidityInterval Slot.Slot)
+intervalGen = do
+    someSlot <- (Slot.Slot . toInteger) <$> Gen.int (Range.linear 0 100)
+    someSlot2 <- (Slot.Slot . toInteger) <$> Gen.int (Range.linear 0 100)
+    Gen.element [ Interval.ValidityInterval Nothing Nothing
+                , Interval.ValidityInterval Nothing (Just someSlot)
+                , Interval.ValidityInterval (Just someSlot) Nothing
+                , Interval.ValidityInterval (Just someSlot) (Just $ someSlot + someSlot2)
+                ]
 
 -- | Reduce one of the elements in a 'Value' by one.
 --   Returns 'Nothing' if the value contains no positive

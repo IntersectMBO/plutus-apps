@@ -54,7 +54,7 @@ import PlutusTx.Prelude
 import Ledger (Address, POSIXTime, PaymentPubKey, PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
-import Ledger.Interval qualified as Interval
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Scripts (unitDatum)
 import Ledger.Tokens
 import Ledger.Typed.Scripts qualified as Scripts
@@ -362,7 +362,7 @@ transition future@Future{ftDeliveryDate, ftPriceOracle} owners State{stateData=s
             | Just (Observation{obsValue=spotPrice, obsTime=oracleDate}, oracleConstraints) <- verifyOracle ftPriceOracle ov, ftDeliveryDate == oracleDate ->
                 let payment = payouts future accounts spotPrice
                     constraints =
-                        Constraints.mustValidateIn (Interval.from ftDeliveryDate)
+                        Constraints.mustValidateInTimeRange (Interval.from ftDeliveryDate)
                         <> oracleConstraints
                         <> payoutsTx payment owners
                 in Just ( constraints

@@ -58,8 +58,8 @@ import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Interval (after, before, from)
-import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -270,7 +270,7 @@ pay ::
 pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScriptWithDatumHash pk vl
-          <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
+          <> Constraints.mustValidateInTimeRange (Interval.interval 1 (1 + escrowDeadline escrow))
     utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
     getCardanoTxId <$> submitUnbalancedTx utx
 
@@ -304,10 +304,10 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     current <- Haskell.snd <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let
-        valRange = Interval.to (Haskell.pred $ escrowDeadline escrow)
+        valRange = Interval.lessThan $ escrowDeadline escrow
         tx = Constraints.collectFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
-                <> Constraints.mustValidateIn valRange
+                <> Constraints.mustValidateInTimeRange valRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
     else if foldMap (view Tx.decoratedTxOutValue) unspentOutputs `lt` targetTotal escrow
@@ -344,7 +344,7 @@ refund inst escrow = do
     let pkh = Scripts.datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
-                <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
+                <> Constraints.mustValidateInTimeRange (Interval.from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do
         utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst

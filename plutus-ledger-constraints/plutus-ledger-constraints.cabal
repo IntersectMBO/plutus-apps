@@ -53,6 +53,7 @@ library
     Ledger.Constraints.OnChain.V1
     Ledger.Constraints.OnChain.V2
     Ledger.Constraints.TxConstraints
+    Ledger.Constraints.ValidityInterval
 
   --------------------
   -- Local components

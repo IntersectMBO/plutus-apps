@@ -197,3 +197,5 @@ Notes
 -----
 
 This ADR is motivied by the SealedBidAuction bug fix in the PR `#767 <https://github.com/input-output-hk/plutus-apps/pull/767>`_.
+
+This ADR has been implemented here: `#878 <https://github.com/input-output-hk/plutus-apps/pull/878>`_.

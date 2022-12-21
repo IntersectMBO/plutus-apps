@@ -42,7 +42,7 @@ import Ledger (Address, POSIXTime, TokenName)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Interval qualified as Interval
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract
@@ -181,14 +181,9 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
 
     (GovState law mph (Just (Voting p oldMap)), AddVote owner tokenName vote) ->
         let newMap = AssocMap.insert tokenName vote oldMap
-            -- Correct validity interval should be:
-            -- @
-            --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ votingDeadline p)
-            -- @
-            -- See Note [Validity Interval's upper bound]
-            validityTimeRange = Interval.to (votingDeadline p - 2)
+            validityTimeRange = Interval.lessThan $ votingDeadline p - 1
             constraints = ownsVotingToken owner mph tokenName
-                        <> Constraints.mustValidateIn validityTimeRange
+                        <> Constraints.mustValidateInTimeRange validityTimeRange
         in Just (constraints, State (GovState law mph (Just (Voting p newMap))) stateValue)
 
     (GovState oldLaw mph (Just (Voting p votes)), FinishVoting) ->
