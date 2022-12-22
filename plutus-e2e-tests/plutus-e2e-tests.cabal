@@ -95,6 +95,7 @@ common lang
     , streaming
     , text
     , time
+    , transformers-except
 
 test-suite plutus-e2e-tests-test
   import:         lang

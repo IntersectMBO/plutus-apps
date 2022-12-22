@@ -40,7 +40,7 @@ startTestnet
   :: TN.TestnetOptions
   -> FilePath
   -> FilePath
-  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, TC.Conf, TN.TestnetRuntime)
+  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, TC.Conf, TN.TestnetRuntime, FilePath)
 startTestnet testnetOptions base tempAbsBasePath' = do
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf :: TC.Conf <- HE.noteShowM $
@@ -62,7 +62,7 @@ startTestnet testnetOptions base tempAbsBasePath' = do
           , C.localNodeSocketPath = socketPathAbs
           }
 
-  pure (localNodeConnectInfo, conf, tn)
+  pure (localNodeConnectInfo, conf, tn, socketPathAbs)
 
 getNetworkId :: TN.TestnetRuntime -> C.NetworkId
 getNetworkId tn = C.Testnet $ C.NetworkMagic $ fromIntegral (TN.testnetMagic tn)

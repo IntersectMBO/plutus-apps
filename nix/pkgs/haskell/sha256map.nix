@@ -6,4 +6,5 @@
   "https://github.com/Quviq/quickcheck-contractmodel"."5cd16ba995f1cd48c2b5f885c702ca6f2a2abbaa" = "sha256-rVVdr68f+xEOV4s27Ix+wdBznSVFvq+Q2ZBo0SEnkp0=";
   "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
   "https://github.com/james-iohk/cardano-node"."eb44c868fa4af3cbc9024421393880b6bef49811" = "0w9vy9xn7z3p1ib0ab05avh4c6g74q4j5w2lzflmwjqzyy4dnfax";
+  "https://github.com/james-iohk/cardano-node"."2b6978583b306ad28f7e1226b5d1ad604919c98a" = "06nggf0kpdh3whn6kqpw8s0484xw1q9r964rv125grbmpdx86dah";
 }

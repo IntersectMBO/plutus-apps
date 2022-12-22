@@ -13,12 +13,15 @@ import Codec.Serialise (serialise)
 import Control.Lens hiding ((.>))
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.ByteString as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.Either
 import Data.Map qualified as Map
+import Data.Set (Set)
 import Data.Void (Void)
+import GHC.Stack qualified as GHC
 import Plutus.Script.Utils.Typed as PSU
 import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Bytes as P
@@ -65,6 +68,35 @@ bytesFromHex b = bytes $ unsafeFromEither $ P.fromHex b
         unsafeFromEither (Left err)    = error err
         unsafeFromEither (Right value) = value
 
+-- unsafeFromRightM :: (Monad m, MonadFail m) => Either l r -> m r
+-- unsafeFromRightM = either (const $ fail "fromRightM: Nothing") pure ; {-# INLINE unsafeFromRightM #-}
+
+-- unsafeFromEitherM :: (H.MonadTest m, MonadFail m) => Either l r -> m r
+-- unsafeFromEitherM (Left _)  = error "bad thing"
+-- unsafeFromEitherM (Right v) = pure v
+
+-- -- could use from Hedgehog.Extras.Test.Base if QueryConvenienceError from Cardano.Api.Convenience.Query derives Show
+-- leftFail :: (H.MonadTest m, GHC.HasCallStack) => Either e a -> m a
+-- leftFail r = GHC.withFrozenCallStack $ case r of
+--   Right a -> return a
+--   Left e -> H.failMessage GHC.callStack "bad thing" -- failMessage GHC.callStack ("Expected Right: " <> show e)
+
+--  -- could use from Hedgehog.Extras.Test.Base if QueryConvenienceError from Cardano.Api.Convenience.Query derives Show
+-- leftFailM :: (H.MonadTest m, GHC.HasCallStack) => m (Either e a) -> m a
+-- leftFailM f = f >>= leftFail
+
+-- --- TRY WITH liftIO and leftFailM
+-- queryStateForBalancedTx
+--   :: (MonadIO m, H.MonadTest m, MonadFail m)
+--   => C.CardanoEra era -> C.NetworkId -> [C.TxIn] -> m (C.UTxO era, C.ProtocolParameters, C.EraHistory C.CardanoMode, C.SystemStart, Set C.PoolId)
+-- queryStateForBalancedTx era networkId allTxIns = H.leftFailM . liftIO
+--     $ C.queryStateForBalancedTx era networkId allTxIns
+--     -- r <- C.queryStateForBalancedTx era networkId allTxIns
+--     -- r2 <- unsafeFromEitherM r
+--     -- return r2
+
+-- end move to helpers
+
 tests :: TestTree
 tests = testGroup "SECP256k1"
   [ testPropertyNamed "schnorr verify builtin" "testSchnorr" testSchnorr
@@ -84,8 +116,11 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
 
 -- 1: spin up a testnet
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
-  (localNodeConnectInfo, conf, runtime) <- TN.startTestnet TN.defaultTestnetOptions base tempAbsPath
+  (localNodeConnectInfo, conf, runtime, socketPathAbs) <- TN.startTestnet TN.defaultTestnetOptions base tempAbsPath
   let networkId = TN.getNetworkId runtime
+
+  -- set node socket environment for Cardano.Api.Convenience.Query
+  liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" (socketPathAbs)
 
 -- 2: create a minting policy
 
@@ -137,21 +172,20 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
   let tokenA = C.AssetId policyId (C.AssetName "A")
       tokenAValue = C.valueFromList [(tokenA, 666)]
 
-      -- TODO: Use evaluateTransactionExecutionUnits?
-
       executionUnits = C.ExecutionUnits {C.executionSteps = 1_000_000_000, C.executionMemory = 500_000 } -- TODO: optimize. max cpu 10_000_000_000 , mem 16_000_000
+      --executionUnits = C.ExecutionUnits {C.executionSteps = 1, C.executionMemory = 1 }
 
       tx1Fee = 1_000_000 :: C.Lovelace
       amountPaid = totalLovelace - tx1Fee :: C.Lovelace
 
-      secp256Params = Secp256Params
+      schnorrParams = Secp256Params
          {
             vkey = BI.toBuiltin $ bytesFromHex "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b",
             msg  = BI.toBuiltin $ bytesFromHex "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
             sig  = BI.toBuiltin $ bytesFromHex "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
          }
 
-      redeemer = C.fromPlutusData $ PlutusV2.toData secp256Params
+      redeemer = C.fromPlutusData $ PlutusV2.toData schnorrParams
 
     --   redeemer = C.ScriptDataConstructor 0 -- schnorr
     --      [C.ScriptDataBytes (bytesFromHex "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"),
@@ -184,6 +218,22 @@ testSchnorr = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempA
     kw = C.makeShelleyKeyWitness tx1body (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
     tx1 = C.makeSignedTransaction [kw] tx1body
     tx1Id = C.getTxId (C.getTxBody tx1)
+
+
+  -- Make tx1 again with makeTransactionBodyAutoBalance or  queryStateForBalancedTx with constructBalancedTx:
+  (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <- H.leftFailM . liftIO
+    C.queryStateForBalancedTx C.BabbageEra networkId [tx1in]
+
+    C.constructBalancedTx
+        C.ShelleyBasedEraBabbage
+        nodeEraUTxO
+        txBodyContent
+        address -- change address
+        Nothing -- Override key witnesses
+        UTxO tx1in   -- tx inputs
+
+
+
   H.annotateShow tx1Id -- remove
 
   TN.submitTx localNodeConnectInfo tx1
