@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -10,6 +11,8 @@
 {-# LANGUAGE StrictData        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 {-| This module exports data types for logging, events and configuration
 -}
@@ -57,7 +60,8 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
 import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State (State)
 import Control.Monad.IO.Class (MonadIO)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
+import Data.Aeson.Types (parseFail, prependFailure, typeMismatch)
 import Data.Default (Default, def)
 import Data.Either (fromRight)
 import Data.Map qualified as Map
@@ -67,7 +71,7 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
-import Ledger (Block, Tx, txId)
+import Ledger (Block)
 import Ledger.CardanoWallet (WalletNumber)
 import Plutus.Contract.Trace qualified as Trace
 import Prettyprinter (Pretty, pretty, viaShow, vsep, (<+>))
@@ -76,6 +80,7 @@ import Wallet.Emulator (Wallet, WalletNumber (WalletNumber))
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
+import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper), testnetNetworkId)
 import Cardano.BM.Tracing (toObject)
 import Cardano.Node.Emulator.Params (pNetworkId, testnet)
@@ -220,14 +225,28 @@ instance ToObject PABServerLogMsg where
         CreatingRandomTransaction ->  mkObjectStr "Creating random transaction" ()
         TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
 
+instance ToJSON (C.Tx C.BabbageEra) where
+  toJSON tx =
+    object [ "tx" .= C.serialiseToTextEnvelope Nothing tx ]
+
+instance FromJSON (C.Tx C.BabbageEra) where
+  parseJSON (Object v) = do
+   envelope <- v .: "tx"
+   either (const $ parseFail "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx")
+          pure
+          $ C.deserialiseFromTextEnvelope (C.AsTx C.AsBabbageEra) envelope
+  parseJSON invalid =
+    prependFailure "parsing SomeCardanoApiTx failed, " (typeMismatch "Object" invalid)
+
+
 data BlockEvent = NewSlot
-    | NewTransaction Tx
+    | NewTransaction (C.Tx C.BabbageEra)
     deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Pretty BlockEvent where
     pretty = \case
         NewSlot          -> "Adding a new slot"
-        NewTransaction t -> "Adding a transaction " <+> pretty (Ledger.txId t)
+        NewTransaction t -> "Adding a transaction " <+> viaShow (C.getTxId $ C.getTxBody t)
 
 
 -- State --------------------------------------------------------------------------------------------------------------

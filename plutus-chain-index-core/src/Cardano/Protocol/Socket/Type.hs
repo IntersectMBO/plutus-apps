@@ -28,6 +28,7 @@ import GHC.Generics
 import NoThunks.Class (NoThunks (noThunks, showTypeOf, wNoThunks))
 
 import Cardano.Api (NetworkId (..))
+import Cardano.Api qualified as C
 import Cardano.Chain.Slotting (EpochSlots (..))
 import Codec.Serialise (DeserialiseFailure)
 import Codec.Serialise qualified as CBOR
@@ -51,7 +52,7 @@ import Ouroboros.Network.Util.ShowProxy
 import PlutusTx.Builtins qualified as PlutusTx
 import Prettyprinter.Extras
 
-import Ledger (Block, OnChainTx (..), Tx (..), TxId (..))
+import Ledger (Block, OnChainTx (..), TxId (..))
 
 -- | Tip of the block chain type (used by node protocols).
 type Tip = Block
@@ -74,13 +75,13 @@ blockId = BlockId
         . CBOR.serialise
 
 -- | Explains why our (plutus) data structures are hashable.
-type instance HeaderHash Tx = TxId
+type instance HeaderHash (C.Tx C.BabbageEra) = TxId
 type instance HeaderHash Block = BlockId
-deriving instance StandardHash Tx
+deriving instance StandardHash (C.Tx C.BabbageEra)
 
 -- TODO: Is this the best place for these instances?
 instance ShowProxy Char
-instance ShowProxy Tx where
+instance ShowProxy (C.Tx C.BabbageEra) where
 instance ShowProxy OnChainTx where
 instance ShowProxy a => ShowProxy [a] where
   showProxy _ = "[" ++ showProxy (Proxy @a) ++ "]"
@@ -178,10 +179,17 @@ chainSyncCodec =
       CBOR.encode             CBOR.decode
       CBOR.encode             CBOR.decode
 
-txSubmissionCodec :: Codec (TxSubmission.LocalTxSubmission Tx String)
+txSubmissionCodec :: Codec (TxSubmission.LocalTxSubmission (C.Tx C.BabbageEra) String)
                            DeserialiseFailure
                            IO BSL.ByteString
 txSubmissionCodec =
     TxSubmission.codecLocalTxSubmission
+      (CBOR.encode . C.serialiseToCBOR) decodeTx
       CBOR.encode CBOR.decode
-      CBOR.encode CBOR.decode
+    where
+        decodeTx = do
+          bs <- CBOR.decode
+          either
+              (const $ fail "Can't deserialize tx")
+              pure
+              (C.deserialiseFromCBOR (C.AsTx C.AsBabbageEra) bs)

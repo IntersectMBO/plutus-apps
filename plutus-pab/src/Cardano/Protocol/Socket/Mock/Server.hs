@@ -45,13 +45,15 @@ import Ouroboros.Network.Protocol.Handshake.Version
 import Ouroboros.Network.Snocket
 import Ouroboros.Network.Socket
 
+import Cardano.Api qualified as C
+
 import Cardano.Protocol.Socket.Type
 
 import Cardano.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel, currentSlot, getChannel,
                       getTip, handleControlChain, tip, txPool)
 import Cardano.Node.Emulator.Chain qualified as Chain
 import Cardano.Node.Emulator.Params (Params)
-import Ledger (Block, CardanoTx (..), Slot (..), Tx (..))
+import Ledger (Block, CardanoTx (..), Slot (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx))
 
 data CommandChannel = CommandChannel
   { ccCommand  :: TQueue ServerCommand
@@ -84,7 +86,7 @@ data ServerCommand =
     -- Set the slot number
   | ModifySlot (Slot -> Slot)
     -- Append a transaction to the transaction pool.
-  | AddTx Tx
+  | AddTx (C.Tx C.BabbageEra)
 
 instance Show ServerCommand where
     show = \case
@@ -117,7 +119,7 @@ modifySlot f ServerHandler{shCommandChannel} = do
         SlotChanged slot -> pure slot
         _                -> retry
 
-addTx :: MonadIO m => ServerHandler -> Tx -> m ()
+addTx :: MonadIO m => ServerHandler -> C.Tx C.BabbageEra -> m ()
 addTx ServerHandler { shCommandChannel } tx = do
     liftIO $ atomically $ writeTQueue (ccCommand  shCommandChannel) $ AddTx tx
 
@@ -151,7 +153,7 @@ handleCommand ::
 handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState params =
     liftIO (atomically $ readTQueue ccCommand) >>= \case
         AddTx tx     -> do
-            liftIO $ modifyMVar_ mvChainState (pure . over txPool (EmulatorTx tx :))
+            liftIO $ modifyMVar_ mvChainState (pure . over txPool (CardanoApiTx (CardanoApiEmulatorEraTx tx) :))
         ModifySlot f -> liftIO $ do
             state <- liftIO $ takeMVar mvChainState
             (s, nextState') <- liftIO $ Chain.modifySlot f
@@ -470,15 +472,15 @@ getChainPoints ch st = do
 
 txSubmissionServer ::
     MVar MockNodeServerChainState
- -> TxSubmission.LocalTxSubmissionServer Tx String IO ()
+ -> TxSubmission.LocalTxSubmissionServer (C.Tx C.BabbageEra) String IO ()
 txSubmissionServer state = txSubmissionState
     where
-      txSubmissionState :: TxSubmission.LocalTxSubmissionServer Tx String IO ()
+      txSubmissionState :: TxSubmission.LocalTxSubmissionServer (C.Tx C.BabbageEra) String IO ()
       txSubmissionState =
         TxSubmission.LocalTxSubmissionServer {
           TxSubmission.recvMsgSubmitTx =
             \tx -> do
-                modifyMVar_ state (pure . over txPool (addTxToPool (EmulatorTx tx)))
+                modifyMVar_ state (pure . over txPool (addTxToPool (CardanoApiTx $ CardanoApiEmulatorEraTx tx)))
                 return (TxSubmission.SubmitSuccess, txSubmissionState)
         , TxSubmission.recvMsgDone     = ()
         }
