@@ -7,7 +7,6 @@
 module HelloWorldApp where
 
 import Data.Text qualified as T
-import Playground.Contract (KnownCurrency, mkKnownCurrencies, mkSchemaDefinitions)
 import Plutus.Contract (Contract, EmptySchema, Endpoint, logInfo)
 import PlutusTx.Prelude ()
 

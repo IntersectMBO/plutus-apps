@@ -93,17 +93,6 @@ data UniswapContracts =
 instance Pretty UniswapContracts where
     pretty = viaShow
 
-instance HasDefinitions UniswapContracts where
-    getDefinitions = [Init, UniswapStart]
-    getSchema = \case
-        UniswapUser _ -> Builtin.endpointsToSchemas @Uniswap.UniswapUserSchema
-        UniswapStart  -> Builtin.endpointsToSchemas @Uniswap.UniswapOwnerSchema
-        Init          -> Builtin.endpointsToSchemas @Empty
-    getContract = \case
-        UniswapUser us -> SomeBuiltin . awaitPromise $ Uniswap.userEndpoints us
-        UniswapStart   -> SomeBuiltin Uniswap.ownerEndpoint
-        Init           -> SomeBuiltin US.setupTokens
-
 handlers :: SimulatorEffectHandlers (Builtin UniswapContracts)
 handlers =
     Simulator.mkSimulatorHandlers def

@@ -46,7 +46,6 @@ import Ledger.Value qualified as Value
 import Plutus.Contract as Contract
 import Plutus.Contract.Wallet (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Schema (ToSchema)
 
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
@@ -172,7 +171,7 @@ data SimpleMPS =
         , amount    :: Integer
         }
         deriving stock (Haskell.Eq, Haskell.Show, Generic)
-        deriving anyclass (FromJSON, ToJSON, ToSchema)
+        deriving anyclass (FromJSON, ToJSON)
 
 type CurrencySchema =
         Endpoint "Create native token" SimpleMPS

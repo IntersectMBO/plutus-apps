@@ -46,7 +46,6 @@ import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
 import Plutus.PAB.Simulator (SimulatorEffectHandlers)
 import Plutus.PAB.Simulator qualified as Simulator
-import Schema (FormSchema)
 
 data ContractExample = UniswapInit
                      | UniswapOwner

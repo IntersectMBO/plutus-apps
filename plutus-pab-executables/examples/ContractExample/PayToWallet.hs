@@ -16,7 +16,6 @@ module ContractExample.PayToWallet(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Schema (ToSchema)
 
 import Ledger (PaymentPubKeyHash, Value)
 import Ledger.Constraints (mustPayToPubKey)

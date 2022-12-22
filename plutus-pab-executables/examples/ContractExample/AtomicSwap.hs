@@ -28,7 +28,6 @@ import Plutus.Contract (AsContractError (_ContractError), ContractError, Endpoin
                         mapError, ownFirstPaymentPubKeyHash, throwError)
 import Plutus.Contracts.Escrow (EscrowParams (..))
 import Plutus.Contracts.Escrow qualified as Escrow
-import Schema (ToSchema)
 import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
 
 -- | Describes an exchange of two

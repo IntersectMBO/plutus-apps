@@ -40,7 +40,6 @@ import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefiniti
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg)
 import Plutus.PAB.Types (PABError (..))
-import Schema (FormSchema)
 
 data TestContracts = GameStateMachine | Currency | AtomicSwap | PayToWallet | PingPong
     deriving (Eq, Ord, Show, Generic)

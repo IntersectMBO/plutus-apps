@@ -18,11 +18,12 @@
 module Plutus.Contracts.Uniswap.Types
   where
 
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Data
 import Data.OpenApi.Schema qualified as OpenApi
+import GHC.Generics (Generic)
 import Ledger
 import Ledger.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
-import Playground.Contract (FromJSON, Generic, ToJSON, ToSchema)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
@@ -57,7 +58,7 @@ PlutusTx.makeLift ''Liquidity
 -- which one is which.
 newtype Coin a = Coin { unCoin :: AssetClass }
   deriving stock   (Haskell.Show, Generic, Data)
-  deriving newtype (ToJSON, FromJSON, ToSchema, Eq, Haskell.Eq, Haskell.Ord, OpenApi.ToSchema)
+  deriving newtype (ToJSON, FromJSON, Eq, Haskell.Eq, Haskell.Ord, OpenApi.ToSchema)
 PlutusTx.makeIsDataIndexed ''Coin [('Coin, 0)]
 PlutusTx.makeLift ''Coin
 
@@ -65,7 +66,7 @@ PlutusTx.makeLift ''Coin
 -- particular 'Coin'.
 newtype Amount a = Amount { unAmount :: Integer }
   deriving stock   (Haskell.Show, Generic, Data)
-  deriving newtype (ToJSON, FromJSON, ToSchema, Eq, Ord, PrintfArg)
+  deriving newtype (ToJSON, FromJSON, Eq, Ord, PrintfArg)
   deriving newtype (Haskell.Eq, Haskell.Ord, Haskell.Num)
   deriving newtype (AdditiveGroup, AdditiveMonoid, AdditiveSemigroup, MultiplicativeSemigroup)
 PlutusTx.makeIsDataIndexed ''Amount [('Amount, 0)]
@@ -94,7 +95,7 @@ mkCoin c = Coin . assetClass c
 newtype Uniswap = Uniswap
     { usCoin :: Coin U
     } deriving stock    (Haskell.Show, Generic, Data)
-      deriving anyclass (ToJSON, FromJSON, ToSchema, OpenApi.ToSchema)
+      deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
       deriving newtype  (Haskell.Eq, Haskell.Ord)
 PlutusTx.makeIsDataIndexed ''Uniswap [('Uniswap, 0)]
 PlutusTx.makeLift ''Uniswap
@@ -103,7 +104,7 @@ data LiquidityPool = LiquidityPool
     { lpCoinA :: Coin A
     , lpCoinB :: Coin B
     }
-    deriving (Haskell.Show, Generic, ToJSON, FromJSON, ToSchema, Data)
+    deriving (Haskell.Show, Generic, ToJSON, FromJSON, Data)
 PlutusTx.makeIsDataIndexed ''LiquidityPool [('LiquidityPool, 0)]
 PlutusTx.makeLift ''LiquidityPool
 

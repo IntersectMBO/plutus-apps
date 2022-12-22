@@ -60,7 +60,6 @@ import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), check, sha2_256, toBuiltin,
                          traceIfFalse, ($), (&&), (-), (.), (<$>), (<>), (==), (>>))
-import Schema (ToSchema)
 
 import Plutus.Contract.Test.Coverage.Analysis
 import PlutusTx.Coverage
@@ -74,7 +73,7 @@ data GameParam = GameParam
     , gameParamStartTime :: POSIXTime
     -- ^ Starting time of the game
     } deriving (Haskell.Show, Generic)
-      deriving anyclass (ToJSON, FromJSON, ToSchema)
+      deriving anyclass (ToJSON, FromJSON)
 
 PlutusTx.makeLift ''GameParam
 
@@ -102,7 +101,7 @@ data LockArgs =
         , lockArgsValue     :: Value
         -- ^ Value that is locked by the contract initially
         } deriving stock (Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema)
+          deriving anyclass (ToJSON, FromJSON)
 
 -- | Arguments for the @"guess"@ endpoint
 data GuessArgs =
@@ -118,7 +117,7 @@ data GuessArgs =
         , guessArgsValueTakenOut :: Value
         -- ^ How much to extract from the contract
         } deriving stock (Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema)
+          deriving anyclass (ToJSON, FromJSON)
 
 -- | The schema of the contract. It consists of the two endpoints @"lock"@
 --   and @"guess"@ with their respective argument types.
