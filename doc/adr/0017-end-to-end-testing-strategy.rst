@@ -1,6 +1,6 @@
 .. _end_to_end_testing_strategy:
 
-ADR 16: End-to-end testing strategy for Plutus, cardano-ledger-api and cardano-node-client
+ADR 17: End-to-end testing strategy for Plutus, cardano-ledger-api and cardano-node-client
 ==========================================================================================
 
 Date: 2022-12-02
@@ -25,8 +25,7 @@ Automation test scenarios for Plutus are currently being run as part of the wide
 <https://github.com/input-output-hk/cardano-node-tests/>`_ test suite, which uses a Python wrapper
 for ``cardano-cli``.
 Those tests focus on general ledger/node/cli functionality and only cover a few key scenarios for
-Plutus functionality, such as TxInfo and SECP256k1
-builtins.
+Plutus functionality, such as TxInfo and SECP256k1 builtins.
 
 There is also ongoing development work to separate the functionality of `cardano-api
 <https://github.com/input-output-hk/cardano-node/tree/master/cardano-api>`_ out into two packages:
@@ -49,8 +48,9 @@ The exploratory testing approach is not in the scope of this document.
 Decision
 --------
 
-* We will create a new end-to-end testing framework written in Haskell that'll live in a new
-  repository, see `argument 1`_.
+* We will create a new end-to-end testing framework written in Haskell called ``plutus-e2e-tests`` that
+  will initially be a package in `plutus-apps <https://github.com/input-output-hk/Plutus-apps/>`_,
+  see `argument 1`_.
 
 * We will use `cardano-testnet
   <https://github.com/input-output-hk/cardano-node/tree/master/cardano-testnet/>`_
@@ -67,15 +67,15 @@ Decision
 
 * We will prioritise ``Plutus`` test coverage over ``cardano-node``, see `argument 6`_.
 
-* We will start by creating a few tests with the node/ledger apis without depending on `Plutus-apps
-  <https://github.com/input-output-hk/Plutus-apps/>`_ and then assess whether we want to use the
-  Contract API and other off-chain tooling going forwards, see `argument 7`_.
+* We will start by creating a few tests with the node/ledger apis without depending on ``plutus-apps``
+  and then assess whether we want to use the Contract API and other off-chain tooling going forwards,
+  see `argument 7`_.
 
 * We will continue adding a subset of Plutus tests to ``cardano-node-tests``, see `argument 8`_.
 
-Types of Plutus tests for the Haskell framework
------------------------------------------------
-All ``Plutus`` end-to-end testing requirements will be covered by the Haskell framework.
+Types of Plutus tests for the ``plutus-e2e-tests`` Haskell framework
+--------------------------------------------------------------------
+All ``Plutus`` end-to-end testing requirements will be covered by ``plutus-e2e-tests``.
 In summary, with access to the Haskell and Plutus interfaces and reduced friction from using a
 single programming language we are likely improve test coverage at this level.
 For example, builtin functions and error scenarios.
@@ -109,8 +109,8 @@ Argument
 1. The primary aim is to satisfy all of ``Plutus`` (core) end-to-end testing requirements,
    although, this is an opportunity to also get coverage of other packages being developed such as
    ``cardano-testnet``, ``cardano-ledger-api`` and ``cardano-node-client``.
-   Seeing as packages from multiple repositories are being covered under test it makes sense to host
-   the framework in a new separate repository.
+   We can configure external packages and their versions using CHaPs so there is no need for
+   ``plutus-e2e-tests`` to have its own repo. It will initially be be a package in ``plutus-apps``.
 
 .. _`argument 2`:
 
@@ -138,7 +138,7 @@ Argument
 
 5. ``cardano-node-client`` will eventually replace ``cardano-api`` as a interface with consensus.
    As the expected means to submit and query for application developers, it is a vital we include it
-   under test in this new framework.
+   under test in ``plutus-e2e-tests``.
    When ready we will begin incorporating it as a replacement for ``cardano-api``.
 
 .. _`argument 6`:
@@ -239,7 +239,7 @@ Additional Considerations
   run on a public testnet. For example, initial wallet balances and utxos will need to be handled
   dynamically because we'd only have control over these in the private testnet.
 * Seeing as ``cardano-ledger-api`` and ``cardano-node-client`` are still in early stages of production
-  it would make sense not to block creation of this test framework. We can begin using ``cardano-api``
+  it would make sense not to block creation of ``plutus-e2e-tests``. We can begin using ``cardano-api``
   and switch over when ready.
 * End-to-end tests can be slow to execute and as the suite grows we may want to run a subset at more
   frequent intervals. For example, we run tests for the latest Plutus version nightly but older

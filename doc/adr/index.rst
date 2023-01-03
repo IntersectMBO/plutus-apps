@@ -46,4 +46,4 @@ The general process for creating an ADR is:
    0014-marconi-query-interface
    0015-time-conversion
    0016-cardano-node-emulator
-   0017- end-to-end testing-strategy
+   0017-end-to-end-testing-strategy
