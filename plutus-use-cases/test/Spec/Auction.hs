@@ -23,8 +23,7 @@ module Spec.Auction
     , prop_SanityCheckAssertions
     , prop_Whitelist
     , prop_CrashTolerance
-    -- TODO: re-activate when ThreatModelling framework is merged
-    -- , prop_doubleSatisfaction
+    , prop_doubleSatisfaction
     , check_propAuctionWithCoverage
     ) where
 
@@ -188,7 +187,7 @@ instance ContractModel AuctionModel where
         SellerH :: ContractInstanceKey AuctionModel AuctionOutput SellerSchema AuctionError ()
         BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError ()
 
-    data Action AuctionModel = Init | Bid Wallet Integer
+    data Action AuctionModel = Init | Bid Wallet Integer | WaitForDeadline
         deriving (Eq, Show, Generic)
 
     initialState = AuctionModel
@@ -211,8 +210,9 @@ instance ContractModel AuctionModel where
 
     arbitraryAction s
         | p /= NotStarted = do
-            oneof [ Bid w <$> validBid
-                  | w <- [w2, w3, w4] ]
+            oneof $ pure WaitForDeadline : [ Bid w <$> validBid
+                                           | w <- [w2, w3, w4] ]
+
         | otherwise = pure $ Init
         where
             p    = s ^. contractState . phase
@@ -227,6 +227,7 @@ instance ContractModel AuctionModel where
       s ^. contractState . phase /= NotStarted &&
       bid >= Ada.getLovelace (Ada.adaOf 2) &&
       bid > s ^. contractState . currentBid
+    precondition s WaitForDeadline = s ^. currentSlot < s ^. contractState . endSlot
 
     nextReactiveState slot' = do
       end  <- viewContractState endSlot
@@ -262,6 +263,10 @@ instance ContractModel AuctionModel where
                     currentBid .= bid
                     winner     .= w
                 wait 2
+            WaitForDeadline -> do
+              end <- viewContractState endSlot
+              slot <- viewModelState currentSlot
+              wait (fromIntegral $ end - slot)
 
     perform _      _ _ Init        = delay 3
     perform handle _ _ (Bid w bid) = do
@@ -274,9 +279,11 @@ instance ContractModel AuctionModel where
         delay 1
         Trace.callEndpoint @"bid" (handle $ BuyerH w) (Ada.lovelaceOf bid)
         delay 1
+    perform _ _ s WaitForDeadline = delay (fromIntegral $ s ^. contractState . endSlot - s ^. currentSlot)
 
-    shrinkAction _ Init      = []
-    shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
+    shrinkAction _ Init            = []
+    shrinkAction _ (Bid w v)       = WaitForDeadline : [ Bid w v' | v' <- shrink v ]
+    shrinkAction _ WaitForDeadline = []
 
     monitoring _ (Bid _ bid) =
       classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOutEstimated <> Ledger.maxFee))
@@ -339,8 +346,9 @@ prop_Whitelist :: Actions AuctionModel -> Property
 prop_Whitelist = checkErrorWhitelist defaultWhitelist
 
 instance CrashTolerance AuctionModel where
-  available (Bid w _) alive = (Key $ BuyerH  w) `elem` alive
-  available Init      _     = True
+  available (Bid w _) alive   = (Key $ BuyerH  w) `elem` alive
+  available Init      _       = True
+  available WaitForDeadline _ = True
 
   restartArguments _ BuyerH{}  = ()
   restartArguments _ SellerH{} = ()
@@ -358,9 +366,8 @@ check_propAuctionWithCoverage = do
         (set minLogLevel Critical options) covopts (const (pure True))
   writeCoverageReport "Auction" cr
 
--- TODO: re-activate when thread modelling framework is merged
--- prop_doubleSatisfaction :: Actions AuctionModel -> Property
--- prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
+prop_doubleSatisfaction :: Actions AuctionModel -> Property
+prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
 
 tests :: TestTree
 tests =
@@ -387,7 +394,6 @@ tests =
         , testProperty "NLFP fails" $ expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
             withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
-        -- TODO: re-activate when threat modelling framework is merged
-        -- , testProperty "prop_doubleSatisfaction fails" $
-        --     expectFailure $ noShrinking prop_doubleSatisfaction
+        , testProperty "prop_doubleSatisfaction fails" $
+            expectFailure $ noShrinking prop_doubleSatisfaction
         ]
