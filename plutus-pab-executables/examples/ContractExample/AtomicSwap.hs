@@ -73,7 +73,8 @@ type AtomicSwapSchema = Endpoint "Atomic swap" AtomicSwapParams
 data AtomicSwapError =
     EscrowError Escrow.EscrowError
     | OtherAtomicSwapError ContractError
-    | NotInvolvedError PaymentPubKeyHash AtomicSwapParams -- ^ When the wallet's public key doesn't match either of the two keys specified in the 'AtomicSwapParams'
+    | NotInvolvedError PaymentPubKeyHash AtomicSwapParams
+    -- ^ When the wallet's public key doesn't match either of the two keys specified in the 'AtomicSwapParams'
     deriving (Show, Generic, ToJSON, FromJSON)
 
 makeClassyPrisms ''AtomicSwapError

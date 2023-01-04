@@ -60,8 +60,10 @@ will use five of them:
    :start-after: START testWallets
    :end-before: END testWallets
 
-Let us decide arbitrarily that :hsobj:`Plutus.Contract.Test.w1` will receive a payout of 10 Ada,
-and :hsobj:`Plutus.Contract.Test.w2` will receive a payout of 20, and define an :hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`
+Let us decide arbitrarily that :hsobj:`Plutus.Contract.Test.w1` will
+receive a payout of 10 Ada, and :hsobj:`Plutus.Contract.Test.w2` will
+receive a payout of 20, and define an
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`
 value to represent that:
 
 .. literalinclude:: Escrow.hs
