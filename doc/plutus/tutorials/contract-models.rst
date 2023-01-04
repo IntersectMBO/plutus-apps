@@ -37,17 +37,23 @@ We begin by showing how to construct a model for a simplified escrow
 contract, which can be found in
 :hsmod:`Plutus.Contracts.Tutorial.Escrow`. This contract enables a
 group of wallets to make a predetermined exchange of tokens, for
-example selling an NFT for Ada. There are two endpoints, a :hsobj:`Plutus.Contracts.Tutorial.Escrow.pay`
-endpoint, and a :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint. Each wallet pays in its
-contribution to the contract using the :hsobj:`Plutus.Contracts.Tutorial.Escrow.pay` endpoint, and once all
+example selling an NFT for Ada. There are two endpoints, a
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.pay` endpoint, and a
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint.
+Each wallet pays in its contribution to the contract using the
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.pay` endpoint, and once all
 the wallets have done so, then any wallet can trigger the
-predetermined payout using the :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint.
+predetermined payout using the
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint.
 
 For simplicity, we will begin by testing the contract for a fixed set
-of predetermined payouts. These are defined by the :hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`, a
+of predetermined payouts.
+These are defined by the
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`, a
 type exported by the escrow contract, and which is actually passed to
 the on-chain validators. :hsmod:`Plutus.Contract.Test` provides ten
-emulated wallets for use in tests, :hsobj:`Plutus.Contract.Test.w1` to :hsobj:`Plutus.Contract.Test.w10`; in this case we
+emulated wallets for use in tests, :hsobj:`Plutus.Contract.Test.w1`
+to :hsobj:`Plutus.Contract.Test.w10`; in this case we
 will use five of them:
 
 .. literalinclude:: Escrow.hs
