@@ -78,7 +78,7 @@ tests = testGroup "Integration"
       the indexer to see if it was indexed properly
 -}
 testIndex :: Property
-testIndex = H.integration $ (liftIO setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "chairman" $ \tempAbsBasePath' -> do
+testIndex = H.integration $ (liftIO setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "." $ \tempAbsBasePath' -> do
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
   (socketPathAbs, networkId, tempAbsPath) <- startTestnet base tempAbsBasePath'
 
