@@ -50,6 +50,10 @@ import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 
+-- TODO: remove this dependency here once the instance of Ord for AddressInEra
+-- can be obtained from upstream and removed from quickcheck-contractmodel.
+import Test.QuickCheck.ContractModel.Internal.Common ()
+
 instance ToHttpApiData PrivateKey where
     toUrlPiece = toUrlPiece . getPrivateKey
 
@@ -79,19 +83,6 @@ instance Serialise (C.AddressInEra C.BabbageEra) where
     maybe (fail "Can get back Address")
       pure
       $ C.deserialiseFromRawBytes (C.AsAddressInEra C.AsBabbageEra) bs
-
-instance Ord (C.AddressInEra C.BabbageEra) where
-  compare (C.AddressInEra C.ByronAddressInAnyEra addr1)
-       (C.AddressInEra C.ByronAddressInAnyEra addr2) = compare addr1 addr2
-
-  compare (C.AddressInEra C.ShelleyAddressInEra{} addr1)
-       (C.AddressInEra C.ShelleyAddressInEra{} addr2) = compare addr1 addr2
-
-  compare (C.AddressInEra C.ByronAddressInAnyEra _)
-       (C.AddressInEra C.ShelleyAddressInEra{} _) = LT
-
-  compare (C.AddressInEra C.ShelleyAddressInEra{} _)
-       (C.AddressInEra C.ByronAddressInAnyEra _) = GT
 
 instance OpenApi.ToSchema C.ScriptHash where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptHash") mempty

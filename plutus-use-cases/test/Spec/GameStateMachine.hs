@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveFunctor        #-}
+{-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE GADTs                #-}
@@ -57,7 +58,6 @@ import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
-import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.GameStateMachine as G hiding (Guess)
 import Plutus.Trace.Emulator as Trace
 import PlutusTx.Coverage
@@ -93,7 +93,7 @@ instance ContractModel GameModel where
     data Action GameModel = Lock      Wallet String Integer
                           | Guess     Wallet String String Integer
                           | GiveToken Wallet
-        deriving (Eq, Show, Data)
+        deriving (Eq, Show, Generic)
 
     initialState = GameModel
         { _gameValue     = 0

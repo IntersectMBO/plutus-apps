@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -15,7 +15,6 @@ module Escrow
 
 import Control.Lens (makeLenses, to, (%=), (.=), (^.))
 import Control.Monad (void)
-import Data.Data (Data)
 import Data.Foldable (Foldable (fold))
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -39,7 +38,7 @@ import Test.Tasty.QuickCheck (Arbitrary (shrink), Property, choose, elements, fr
 {- START EscrowModel -}
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value.Value
                                , _targets       :: Map Wallet Value.Value
-                               } deriving (Eq, Show, Data)
+                               } deriving (Eq, Show, CM.Generic)
 
 makeLenses ''EscrowModel
 {- END EscrowModel -}
@@ -57,7 +56,7 @@ instance CM.ContractModel EscrowModel where
 {- START ActionType -}
   data Action EscrowModel = Pay Wallet Integer
                           | Redeem Wallet -- ^ Refund Wallet
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, CM.Generic)
 {- END ActionType -}
 
 {- START ContractInstanceKeyType -}

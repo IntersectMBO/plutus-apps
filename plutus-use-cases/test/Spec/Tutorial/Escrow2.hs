@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,7 +18,6 @@ module Spec.Tutorial.Escrow2(prop_Escrow, EscrowModel) where
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void)
-import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -40,9 +39,9 @@ import Test.QuickCheck
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
                                , _phase         :: Phase
-                               } deriving (Eq, Show, Data)
+                               } deriving (Eq, Show, Generic)
 
-data Phase = Initial | Running deriving (Eq, Show, Data)
+data Phase = Initial | Running deriving (Eq, Show, Generic)
 
 makeLenses ''EscrowModel
 
@@ -53,7 +52,7 @@ instance ContractModel EscrowModel where
   data Action EscrowModel = Init [(Wallet, Integer)]
                           | Redeem Wallet
                           | Pay Wallet Integer
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, Generic)
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError (EscrowParams Datum)

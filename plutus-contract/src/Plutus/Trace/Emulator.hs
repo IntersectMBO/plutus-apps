@@ -5,10 +5,12 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-
 
 An emulator trace is a contract trace that can be run in the Plutus emulator.
@@ -17,6 +19,8 @@ An emulator trace is a contract trace that can be run in the Plutus emulator.
 module Plutus.Trace.Emulator(
     Emulator
     , EmulatorTrace
+    , EmulatorEffects
+    , BaseEmulatorEffects
     , Wallet.Emulator.Stream.EmulatorErr(..)
     , Plutus.Trace.Emulator.Types.ContractHandle(..)
     , ContractInstanceTag
@@ -139,17 +143,21 @@ data PrintEffect r where
   PrintLn :: String -> PrintEffect ()
 makeEffect ''PrintEffect
 
-type EmulatorTrace =
-        Eff
-            '[ StartContract
-            , RunContract
-            , Assert
-            , Waiting
-            , EmulatorControl
-            , EmulatedWalletAPI
-            , LogMsg String
-            , Error EmulatorRuntimeError
-            ]
+
+type EmulatorEffects = StartContract
+                    ': BaseEmulatorEffects
+
+type BaseEmulatorEffects =
+             [ RunContract
+             , Assert
+             , Waiting
+             , EmulatorControl
+             , EmulatedWalletAPI
+             , LogMsg String
+             , Error EmulatorRuntimeError
+             ]
+
+type EmulatorTrace = Eff EmulatorEffects
 
 handleEmulatorTrace ::
     forall effs a.
@@ -164,12 +172,12 @@ handleEmulatorTrace ::
     => Params
     -> EmulatorTrace a
     -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage a) (Maybe EmulatorMessage) ': effs) ()
-handleEmulatorTrace Params{pNetworkId, pSlotConfig} action = do
+handleEmulatorTrace params@Params{pNetworkId, pSlotConfig} action = do
     result <- subsume @(Error EmulatorRuntimeError)
             . interpret (mapLog (UserThreadEvent . UserLog))
             . flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleEmulatorControl @_ @effs @a pSlotConfig)
+            . interpret (handleEmulatorControl @_ @effs @a params)
             . interpret (handleWaiting @_ @effs @a pSlotConfig)
             . interpret (handleAssert @_ @effs @a)
             . interpret (handleRunContract @_ @effs @a)

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -16,12 +17,14 @@ module Spec.Auction
     , AuctionModel
     , prop_Auction
     , prop_FinishAuction
+    , prop_BidInEndSlot
     , prop_NoLockedFunds
     , prop_NoLockedFundsFast
     , prop_SanityCheckAssertions
     , prop_Whitelist
     , prop_CrashTolerance
-    , prop_doubleSatisfaction
+    -- TODO: re-activate when ThreatModelling framework is merged
+    -- , prop_doubleSatisfaction
     , check_propAuctionWithCoverage
     ) where
 
@@ -48,7 +51,6 @@ import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
-import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.Auction hiding (Bid)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
@@ -187,7 +189,7 @@ instance ContractModel AuctionModel where
         BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError ()
 
     data Action AuctionModel = Init | Bid Wallet Integer
-        deriving (Eq, Show, Data)
+        deriving (Eq, Show, Generic)
 
     initialState = AuctionModel
         { _currentBid = 0
@@ -229,7 +231,7 @@ instance ContractModel AuctionModel where
     nextReactiveState slot' = do
       end  <- viewContractState endSlot
       p    <- viewContractState phase
-      when (slot' >= end && p == Bidding) $ do
+      when (slot' > end && p == Bidding) $ do
         w   <- viewContractState winner
         bid <- viewContractState currentBid
         phase .= AuctionOver
@@ -250,7 +252,9 @@ instance ContractModel AuctionModel where
                 wait 3
             Bid w bid -> do
                 currentPhase <- viewContractState phase
-                when (currentPhase == Bidding) $ do
+                end          <- viewContractState endSlot
+                slot'        <- viewModelState currentSlot
+                when (slot' < end && currentPhase == Bidding) $ do
                     current <- viewContractState currentBid
                     leader  <- viewContractState winner
                     withdraw w $ Ada.lovelaceValueOf bid
@@ -295,10 +299,24 @@ finishingStrategy :: DL AuctionModel ()
 finishingStrategy = do
     slot <- viewModelState currentSlot
     end  <- viewContractState endSlot
-    when (slot < end) $ waitUntilDL end
+    when (slot <= end) $ waitUntilDL (end + 1)
 
 prop_FinishAuction :: Property
 prop_FinishAuction = forAllDL finishAuction prop_Auction
+
+-- Test bidding in the end slot. The model says this should not work.
+noBidInEndSlot :: DL AuctionModel ()
+noBidInEndSlot = do
+  action Init
+  anyActions_
+  slot <- viewModelState currentSlot
+  end  <- viewContractState endSlot
+  when (slot < end) $ do
+    waitUntilDL end
+    action $ Bid w2 1_000_000_000
+
+prop_BidInEndSlot :: Property
+prop_BidInEndSlot = forAllDL noBidInEndSlot prop_Auction
 
 -- | This does not hold! The Payout transition is triggered by the sellers off-chain code, so if the
 --   seller walks away the buyer will not get their token (unless going around the off-chain code
@@ -340,8 +358,9 @@ check_propAuctionWithCoverage = do
         (set minLogLevel Critical options) covopts (const (pure True))
   writeCoverageReport "Auction" cr
 
-prop_doubleSatisfaction :: Actions AuctionModel -> Property
-prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
+-- TODO: re-activate when thread modelling framework is merged
+-- prop_doubleSatisfaction :: Actions AuctionModel -> Property
+-- prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
 
 tests :: TestTree
 tests =
@@ -368,6 +387,7 @@ tests =
         , testProperty "NLFP fails" $ expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
             withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
-        , testProperty "prop_doubleSatisfaction fails" $
-             expectFailure $ noShrinking prop_doubleSatisfaction
+        -- TODO: re-activate when threat modelling framework is merged
+        -- , testProperty "prop_doubleSatisfaction fails" $
+        --     expectFailure $ noShrinking prop_doubleSatisfaction
         ]

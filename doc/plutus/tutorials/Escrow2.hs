@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -19,7 +19,6 @@ module Escrow2(prop_Escrow, EscrowModel) where
 
 import Control.Lens (makeLenses, to, (%=), (.=), (^.))
 import Control.Monad (void)
-import Data.Data (Data)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -44,10 +43,10 @@ import Test.QuickCheck (Arbitrary (shrink), Gen, Property, choose, elements, fre
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value.Value
                                , _targets       :: Map Wallet Value.Value
                                , _phase         :: Phase             -- NEW!
-                               } deriving (Eq, Show, Data)
+                               } deriving (Eq, Show, CM.Generic)
 {- END ModelState -}
 
-data Phase = Initial | Running deriving (Eq, Show, Data)
+data Phase = Initial | Running deriving (Eq, Show, CM.Generic)
 
 makeLenses ''EscrowModel
 
@@ -59,7 +58,7 @@ instance CM.ContractModel EscrowModel where
   data Action EscrowModel = Init [(Wallet, Integer)]    -- NEW!
                           | Redeem Wallet
                           | Pay Wallet Integer
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, CM.Generic)
 {- END Action -}
 
 {- START ContractInstanceKey -}

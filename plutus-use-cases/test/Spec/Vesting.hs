@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
@@ -16,7 +16,6 @@ module Spec.Vesting (VestingModel, tests, prop_Vesting, prop_CheckNoLockedFundsP
 
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
-import Data.Data
 import Data.Default (Default (def))
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
@@ -60,7 +59,7 @@ data VestingModel =
                , _t2Slot       :: Slot -- ^ The time for the second tranche
                , _t1Amount     :: Value -- ^ The size of the first tranche
                , _t2Amount     :: Value -- ^ The size of the second tranche
-               } deriving (Show, Eq, Data)
+               } deriving (Show, Eq, Generic)
 
 makeLenses 'VestingModel
 
@@ -76,7 +75,7 @@ instance ContractModel VestingModel where
 
   data Action VestingModel = Vest Wallet
                            | Retrieve Wallet Value
-                           deriving (Eq, Show, Data)
+                           deriving (Eq, Show, Generic)
 
   initialState = VestingModel
     { _vestedAmount = mempty
@@ -116,7 +115,7 @@ instance ContractModel VestingModel where
     slot   <- viewModelState currentSlot
     amount <- viewContractState vestedAmount
     let newAmount = amount Numeric.- v
-    s      <- getContractState
+    s      <- viewContractState id
     when ( enoughValueLeft slot s v
          && v `leq` amount
          && mockWalletPaymentPubKeyHash w == vestingOwner params
@@ -257,14 +256,16 @@ tests =
     , HUnit.testCaseSteps "script size is reasonable" $ \step -> reasonable' step (vestingScript $ vesting startTime) 33000
     , testProperty "prop_Vesting" $ withMaxSuccess 20 prop_Vesting
     , testProperty "prop_CheckNoLockedFundsProof" $ withMaxSuccess 20 prop_CheckNoLockedFundsProof
-    , testProperty "prop_doubleSatisfaction" $ withMaxSuccess 20 prop_doubleSatisfaction
+    -- TODO: re-activate when double satisfaction is turned on again
+    -- , testProperty "prop_doubleSatisfaction" $ withMaxSuccess 20 prop_doubleSatisfaction
     ]
 
     where
         startTime = TimeSlot.scSlotZeroTime def
 
-prop_doubleSatisfaction :: Actions VestingModel -> Property
-prop_doubleSatisfaction = checkDoubleSatisfaction
+-- TODO: re-activate when double satisfaction is turned on again
+-- prop_doubleSatisfaction :: Actions VestingModel -> Property
+-- prop_doubleSatisfaction = checkDoubleSatisfaction
 
 retrieveFundsTrace :: EmulatorTrace ()
 retrieveFundsTrace = do

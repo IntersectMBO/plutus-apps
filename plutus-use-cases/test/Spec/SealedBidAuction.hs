@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -13,7 +13,6 @@ module Spec.SealedBidAuction where
 
 import Control.Lens hiding (elements)
 import Control.Monad (when)
-import Data.Data
 import Data.Default (Default (def))
 
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
@@ -48,10 +47,10 @@ data AuctionModel = AuctionModel
     , _endBidSlot        :: Slot
     , _payoutSlot        :: Slot
     , _phase             :: Phase }
-    deriving (Show, Data)
+    deriving (Show, Generic)
 
 data Phase = NotStarted | Bidding | AwaitingPayout | PayoutTime | AuctionOver
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, Generic)
 
 makeLenses 'AuctionModel
 
@@ -68,7 +67,7 @@ instance ContractModel AuctionModel where
                              | Bid Wallet Integer
                              | Reveal Wallet Integer
                              | Payout Wallet
-        deriving (Eq, Show, Data)
+        deriving (Eq, Show, Generic)
 
     initialState = AuctionModel
         { _currentBids       = []
@@ -175,7 +174,7 @@ instance ContractModel AuctionModel where
             Bid w bid | currentPhase == Bidding -> do
                   bids <- viewContractState currentBids
                   when (w `notElem` fmap snd bids) $ do
-                    currentBids $= ((bid, w):bids)
+                    currentBids .= ((bid, w):bids)
                   wait 1
 
             Reveal w bid | currentPhase == AwaitingPayout -> do
@@ -202,7 +201,7 @@ instance ContractModel AuctionModel where
 
                     Nothing -> deposit w1 theToken
                   wait 1
-                  phase $= AuctionOver
+                  phase .= AuctionOver
 
             _ -> pure ()
 
