@@ -88,15 +88,15 @@ readAs as path = do
   H.leftFailM . liftIO $ C.readFileTextEnvelope as path'
 
 -- | An empty transaction
-emptyTxBodyContent :: C.Lovelace -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx C.BabbageEra
-emptyTxBodyContent fee pparams = C.TxBodyContent
+emptyTxBodyContent :: C.ProtocolParameters -> C.TxBodyContent C.BuildTx C.BabbageEra
+emptyTxBodyContent pparams = C.TxBodyContent
   { C.txIns              = []
   , C.txInsCollateral    = C.TxInsCollateralNone
   , C.txInsReference     = C.TxInsReferenceNone
   , C.txOuts             = []
   , C.txTotalCollateral  = C.TxTotalCollateralNone
   , C.txReturnCollateral = C.TxReturnCollateralNone
-  , C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra fee
+  , C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra 0
   , C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
   , C.txMetadata         = C.TxMetadataNone
   , C.txAuxScripts       = C.TxAuxScriptsNone
@@ -180,6 +180,7 @@ submitTx localNodeConnectInfo tx = do
 --   submitTx con tx
 --   liftIO $ awaitTxId con $ C.getTxId txBody
 
+{-
 mkTransferTx
   :: (MonadIO m, MonadTest m, MonadFail m)
   => C.NetworkId -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address C.ShelleyAddr -> C.Address C.ShelleyAddr -> [C.ShelleyWitnessSigningKey] -> C.Lovelace
@@ -204,6 +205,7 @@ mkTransferTx networkId con from to keyWitnesses howMuch = do
                           ]}
   txBody :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx
   return (C.signShelleyTransaction txBody keyWitnesses, txBody)
+-}
 
 mkAddressAdaTxOut :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.BabbageEra
 mkAddressAdaTxOut address lovelace =
