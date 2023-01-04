@@ -185,6 +185,7 @@ import Test.QuickCheck qualified as QC
 import Plutus.Contract.Test.ContractModel.Internal qualified as CMI
 import Plutus.Contract.Test.Coverage as Coverage
 import Test.QuickCheck.ContractModel qualified as QCCM
+import Test.QuickCheck.ContractModel.ThreatModel qualified as QCCM
 import Test.QuickCheck.DynamicLogic qualified as QCD
 
 -- | A function returning the `ContractHandle` corresponding to a `ContractInstanceKey`. A
@@ -529,7 +530,7 @@ propRunActionsWithOptions ::
     -> Actions state                              -- ^ The actions to run
     -> Property
 propRunActionsWithOptions opts copts predicate actions =
-  CMI.propRunActionsWithOptions opts copts (predicate . fmap coerce) actions
+  CMI.propRunActionsWithOptions opts copts (predicate . fmap coerce) CMI.balanceChangePredicate actions
 
 -- | Sanity check a `ContractModel`. Ensures that wallet balances are not always unchanged.
 propSanityCheckModel :: forall state. ContractModel state => Property
@@ -629,7 +630,8 @@ checkDoubleSatisfactionWithOptions :: forall m. ContractModel m
                                    -> CMI.CoverageOptions
                                    -> Actions m
                                    -> Property
-checkDoubleSatisfactionWithOptions _opts _covopts _acts = error "TODO"
+checkDoubleSatisfactionWithOptions opts covopts acts =
+  CMI.propRunActionsWithOptions opts covopts (\ _ -> TracePredicate $ pure True) (CMI.threatModelPredicate QCCM.doubleSatisfaction) acts
 
 instance QCCM.HasSymTokens Wallet where
   getAllSymTokens _ = mempty

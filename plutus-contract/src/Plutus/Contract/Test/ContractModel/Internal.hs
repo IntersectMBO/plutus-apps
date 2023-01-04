@@ -69,6 +69,7 @@ import GHC.Generics
 
 import Cardano.Api (AssetId, SlotNo (..))
 import Cardano.Api qualified as CardanoAPI
+import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Node.Emulator.Params ()
 import Ledger.Address
@@ -91,6 +92,8 @@ import Test.QuickCheck.StateModel qualified as StateModel
 import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||.))
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.ContractModel as CM
+import Test.QuickCheck.ContractModel.Internal (ContractModelResult)
+import Test.QuickCheck.ContractModel.ThreatModel (ThreatModel, assertThreatModel)
 import Test.QuickCheck.Monadic (PropertyM, monadic)
 import Test.QuickCheck.Monadic qualified as QC
 
@@ -335,6 +338,22 @@ quickCheckWithCoverageAndResult qcargs copts prop = do
       when (chatty qcargs) $ putStrLn . show $ pretty report
       return (report, res)
 
+balanceChangePredicate :: ProtocolParameters -> ContractModelResult state -> Property
+balanceChangePredicate ps result =
+  let prettyAddr a = maybe (show a) show $ addressToWallet a
+  in assertBalanceChangesMatch (BalanceChangeOptions False signerPaysFees ps prettyAddr) result
+
+threatModelPredicate :: ThreatModel a -> ProtocolParameters -> ContractModelResult state -> Property
+threatModelPredicate m ps result = assertThreatModel ps m result
+
+checkThreatModel ::
+    CheckableContractModel state
+    => Actions (WithInstances state)                 -- ^ The actions to run
+    -> ThreatModel a
+    -> Property
+checkThreatModel actions m =
+    propRunActions (\ _ -> pure True) (threatModelPredicate m) actions
+
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
 --   wallet balance changes. Equivalent to
 --
@@ -346,7 +365,7 @@ propRunActions_ ::
     => Actions (WithInstances state)                 -- ^ The actions to run
     -> Property
 propRunActions_ actions =
-    propRunActions (\ _ -> pure True) actions
+    propRunActions (\ _ -> pure True) balanceChangePredicate actions
 
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
 --   wallet balance changes, and that the given `TracePredicate` holds at the end. Equivalent to:
@@ -357,31 +376,32 @@ propRunActions_ actions =
 propRunActions ::
     CheckableContractModel state
     => (ModelState (WithInstances state) -> TracePredicate) -- ^ Predicate to check at the end
+    -> (ProtocolParameters -> ContractModelResult (WithInstances state) -> Property) -- ^ Predicate to run on the contract model
     -> Actions (WithInstances state)                        -- ^ The actions to run
     -> Property
 propRunActions = propRunActionsWithOptions defaultCheckOptionsContractModel defaultCoverageOptions
+
 
 propRunActionsWithOptions :: forall state.
     CheckableContractModel state
     => CheckOptions                                         -- ^ Emulator options
     -> CoverageOptions                                      -- ^ Coverage options
     -> (ModelState (WithInstances state) -> TracePredicate) -- ^ Predicate to check at the end of execution
+    -> (ProtocolParameters -> ContractModelResult (WithInstances state) -> Property) -- ^ Predicate to run on the contract model
     -> Actions (WithInstances state)                        -- ^ The actions to run
     -> Property
-propRunActionsWithOptions opts copts predicate actions =
+propRunActionsWithOptions opts copts predicate contractmodelPredicate actions =
     asserts finalState QC..&&.
     monadic runFinalPredicate monadicPredicate
     where
         finalState = stateAfter actions
-
-        prettyAddr a = maybe (show a) show $ addressToWallet a
 
         monadicPredicate :: PropertyM (RunMonad (EmulatorTraceWithInstances state)) Property
         monadicPredicate = do
             ps <- QC.run . lift $ fmap pProtocolParams EmulatorControl.getParams
             QC.run . lift $ activateWallets (\ _ -> error "No SymTokens yet") initialInstances
             result <- runContractModel actions
-            pure $ assertBalanceChangesMatch (BalanceChangeOptions False signerPaysFees ps prettyAddr) result
+            pure $ contractmodelPredicate ps result
 
         runFinalPredicate :: RunMonad (EmulatorTraceWithInstances state) Property
                           -> Property
@@ -485,7 +505,7 @@ checkNoLockedFundsProofWithOptions
 checkNoLockedFundsProofWithOptions options =
   checkNoLockedFundsProof' prop
   where
-    prop = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
+    prop = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> TracePredicate $ pure True) balanceChangePredicate
 
 checkNoLockedFundsProofFastWithOptions
   :: CheckableContractModel model
@@ -574,6 +594,7 @@ checkNoLockedFundsProofLight NoLockedFundsProofLight{nlfplMainStrategy = mainStr
     nextVarIdx as = 1 + maximum ([0] ++ [ i | StateModel.Var i <- varOf <$> as ])
     run = propRunActionsWithOptions defaultCheckOptionsContractModel
                                     defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
+                                    balanceChangePredicate
 
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error
@@ -634,7 +655,7 @@ checkErrorWhitelistWithOptions :: forall m.
                                -> Actions (WithInstances m)
                                -> Property
 checkErrorWhitelistWithOptions opts copts whitelist =
-  propRunActionsWithOptions opts copts (const check)
+  propRunActionsWithOptions opts copts (const check) balanceChangePredicate
   where
     check :: TracePredicate
     check = checkOnchain .&&. (assertNoFailedTransactions .||. checkOffchain)
