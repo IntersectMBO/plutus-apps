@@ -60,8 +60,7 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
 import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State (State)
 import Control.Monad.IO.Class (MonadIO)
-import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
-import Data.Aeson.Types (parseFail, prependFailure, typeMismatch)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
 import Data.Either (fromRight)
 import Data.Map qualified as Map
@@ -224,20 +223,6 @@ instance ToObject PABServerLogMsg where
         BlockOperation e          ->  mkObjectStr "Block operation" (Tagged @"event" e)
         CreatingRandomTransaction ->  mkObjectStr "Creating random transaction" ()
         TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
-
-instance ToJSON (C.Tx C.BabbageEra) where
-  toJSON tx =
-    object [ "tx" .= C.serialiseToTextEnvelope Nothing tx ]
-
-instance FromJSON (C.Tx C.BabbageEra) where
-  parseJSON (Object v) = do
-   envelope <- v .: "tx"
-   either (const $ parseFail "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx")
-          pure
-          $ C.deserialiseFromTextEnvelope (C.AsTx C.AsBabbageEra) envelope
-  parseJSON invalid =
-    prependFailure "parsing SomeCardanoApiTx failed, " (typeMismatch "Object" invalid)
-
 
 data BlockEvent = NewSlot
     | NewTransaction (C.Tx C.BabbageEra)
