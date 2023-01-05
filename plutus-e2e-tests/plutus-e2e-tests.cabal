@@ -105,6 +105,7 @@ test-suite plutus-e2e-tests-test
   hs-source-dirs: test
   other-modules:
     Helpers
+    PlutusScripts
     Spec.Builtins.SECP256k1
 
   --------------------
