@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
@@ -366,6 +367,7 @@ check_propAuctionWithCoverage = do
         (set minLogLevel Critical options) covopts (const (pure True))
   writeCoverageReport "Auction" cr
 
+-- | Note: this property fails, because the contract is vulnerable to double satisfaction.
 prop_doubleSatisfaction :: Actions AuctionModel -> Property
 prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
 
@@ -397,3 +399,4 @@ tests =
         , testProperty "prop_doubleSatisfaction fails" $
             expectFailure $ noShrinking prop_doubleSatisfaction
         ]
+

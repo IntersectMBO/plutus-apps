@@ -154,7 +154,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/Quviq/quickcheck-contractmodel
-    tag: 6a9513c23c23717e31c55383bea46eea5d0c4343
+    tag: 5cd16ba995f1cd48c2b5f885c702ca6f2a2abbaa
     subdir:
       contractmodel
 

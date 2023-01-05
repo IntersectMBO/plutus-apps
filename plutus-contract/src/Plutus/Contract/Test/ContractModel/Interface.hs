@@ -68,6 +68,8 @@ module Plutus.Contract.Test.ContractModel.Interface
     , SpecificationEmulatorTrace
     , registerToken
     , delay
+    , fromSlotNo
+    , toSlotNo
 
     -- * Test scenarios
     --
@@ -117,6 +119,8 @@ module Plutus.Contract.Test.ContractModel.Interface
     , propRunActions
     , propRunActionsWithOptions
     , CMI.defaultCheckOptionsContractModel
+    , CMI.checkThreatModel
+    , CMI.checkThreatModelWithOptions
     -- ** DL properties
     , QCCM.forAllDL
     , QCCM.forAllDL_
@@ -185,7 +189,7 @@ import Test.QuickCheck qualified as QC
 import Plutus.Contract.Test.ContractModel.Internal qualified as CMI
 import Plutus.Contract.Test.Coverage as Coverage
 import Test.QuickCheck.ContractModel qualified as QCCM
-import Test.QuickCheck.ContractModel.ThreatModel qualified as QCCM
+import Test.QuickCheck.ContractModel.ThreatModel.DoubleSatisfaction qualified as QCCM
 import Test.QuickCheck.DynamicLogic qualified as QCD
 
 -- | A function returning the `ContractHandle` corresponding to a `ContractInstanceKey`. A
@@ -631,7 +635,7 @@ checkDoubleSatisfactionWithOptions :: forall m. ContractModel m
                                    -> Actions m
                                    -> Property
 checkDoubleSatisfactionWithOptions opts covopts acts =
-  CMI.propRunActionsWithOptions opts covopts (\ _ -> TracePredicate $ pure True) (CMI.threatModelPredicate QCCM.doubleSatisfaction) acts
+  CMI.checkThreatModelWithOptions opts covopts QCCM.doubleSatisfaction acts
 
 instance QCCM.HasSymTokens Wallet where
   getAllSymTokens _ = mempty

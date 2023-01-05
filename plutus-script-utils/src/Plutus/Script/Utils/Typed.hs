@@ -13,6 +13,7 @@ module Plutus.Script.Utils.Typed (
   , TypedValidator (..)
   , validatorHash
   , validatorCardanoAddress
+  , validatorCardanoAddressAny
   , validatorAddress
   , validatorScript
   , vValidatorScript
@@ -98,6 +99,12 @@ validatorCardanoAddress networkId tv =
   in case version validator of
           PlutusV1 -> PSU.PV1.mkValidatorCardanoAddress networkId $ unversioned validator
           PlutusV2 -> PSU.PV2.mkValidatorCardanoAddress networkId $ unversioned validator
+
+validatorCardanoAddressAny :: C.NetworkId -> TypedValidator a -> C.AddressAny
+validatorCardanoAddressAny nid tv =
+  case validatorCardanoAddress nid tv of
+    C.AddressInEra C.ShelleyAddressInEra{} addr  -> C.AddressShelley addr
+    C.AddressInEra C.ByronAddressInAnyEra{} addr -> C.AddressByron addr
 
 -- | The unversioned validator script itself.
 validatorScript :: TypedValidator a -> PV1.Validator

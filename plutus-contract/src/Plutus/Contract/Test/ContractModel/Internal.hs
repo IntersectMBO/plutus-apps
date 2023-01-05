@@ -344,15 +344,26 @@ balanceChangePredicate ps result =
   in assertBalanceChangesMatch (BalanceChangeOptions False signerPaysFees ps prettyAddr) result
 
 threatModelPredicate :: ThreatModel a -> ProtocolParameters -> ContractModelResult state -> Property
-threatModelPredicate m ps result = assertThreatModel ps m result
+threatModelPredicate m ps result = assertThreatModel m ps result
 
+-- | Check a threat model on all transactions produced by the given actions.
 checkThreatModel ::
     CheckableContractModel state
-    => Actions (WithInstances state)                 -- ^ The actions to run
-    -> ThreatModel a
+    => ThreatModel a
+    -> Actions (WithInstances state)                 -- ^ The actions to run
     -> Property
-checkThreatModel actions m =
-    propRunActions (\ _ -> pure True) (threatModelPredicate m) actions
+checkThreatModel = checkThreatModelWithOptions defaultCheckOptionsContractModel defaultCoverageOptions
+
+-- | Check a threat model on all transactions produced by the given actions.
+checkThreatModelWithOptions ::
+    CheckableContractModel state
+    => CheckOptions                                  -- ^ Emulator options
+    -> CoverageOptions                               -- ^ Coverage options
+    -> ThreatModel a
+    -> Actions (WithInstances state)                 -- ^ The actions to run
+    -> Property
+checkThreatModelWithOptions opts covopts m actions =
+  propRunActionsWithOptions opts covopts (\ _ -> pure True) (threatModelPredicate m) actions
 
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
 --   wallet balance changes. Equivalent to

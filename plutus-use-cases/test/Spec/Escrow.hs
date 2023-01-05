@@ -16,6 +16,7 @@ module Spec.Escrow( tests
                   , prop_Escrow_DoubleSatisfaction
                   , prop_FinishEscrow
                   , prop_NoLockedFunds
+                  , prop_validityChecks
                   , EscrowModel) where
 
 import Control.Lens hiding (both)
@@ -25,6 +26,10 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
+import Cardano.Api.Shelley (TxValidityLowerBound (..), TxValidityUpperBound (..), ValidityLowerBoundSupportedInEra (..),
+                            ValidityNoUpperBoundSupportedInEra (..), ValidityUpperBoundSupportedInEra (..),
+                            toPlutusData)
+import Cardano.Node.Emulator.Params qualified as Params
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), minAdaTxOutEstimated)
 import Ledger.Time (POSIXTime)
@@ -37,10 +42,13 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value
 
 import Plutus.Contracts.Escrow hiding (Action (..))
+import Plutus.Contracts.Escrow qualified as Impl
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx (fromData)
 import PlutusTx.Monoid (inv)
 
 import Test.QuickCheck as QC hiding ((.&&.))
+import Test.QuickCheck.ContractModel.ThreatModel
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
@@ -194,6 +202,24 @@ noLockProof = defaultNLFP
 prop_NoLockedFunds :: Property
 prop_NoLockedFunds = checkNoLockedFundsProofWithOptions options noLockProof
 
+-- | Check that you can't redeem after the deadline and not refund before the deadline.
+validityChecks :: ThreatModel ()
+validityChecks = do
+  let startTime  = TimeSlot.scSlotZeroTime def
+      params     = escrowParams startTime
+      deadline   = toSlotNo . TimeSlot.posixTimeToEnclosingSlot def $ escrowDeadline params
+      scriptAddr = Scripts.validatorCardanoAddressAny Params.testnet $ typedValidator params
+  input <- anyInputSuchThat $ (scriptAddr ==) . addressOf
+  rmdr  <- (fromData . toPlutusData =<<) <$> getRedeemer input
+  case rmdr of
+    Nothing          -> fail "Missing or bad redeemer"
+    Just Impl.Redeem -> shouldNotValidate $ changeValidityRange (TxValidityLowerBound ValidityLowerBoundInBabbageEra deadline,
+                                                                 TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra)
+    Just Impl.Refund -> shouldNotValidate $ changeValidityRange (TxValidityNoLowerBound,
+                                                                 TxValidityUpperBound ValidityUpperBoundInBabbageEra (deadline - 1))
+
+prop_validityChecks :: Actions EscrowModel -> Property
+prop_validityChecks = checkThreatModelWithOptions options defaultCoverageOptions validityChecks
 
 tests :: TestTree
 tests = testGroup "escrow"
@@ -262,6 +288,7 @@ tests = testGroup "escrow"
 
     , testProperty "QuickCheck ContractModel" prop_Escrow
     , testProperty "QuickCheck NoLockedFunds" prop_NoLockedFunds
+    , testProperty "QuickCheck validityChecks" $ withMaxSuccess 30 prop_validityChecks
 
     -- TODO: commented because the test fails after 'CardanoTx(Both)' was deleted.
     -- The fix would be to start using CardanoTx instead of EmulatorTx in 'DoubleSatisfation.doubleSatisfactionCandidates'.

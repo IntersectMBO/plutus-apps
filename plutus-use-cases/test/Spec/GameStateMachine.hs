@@ -28,10 +28,12 @@ module Spec.GameStateMachine
   , prop_SanityCheckModel
   , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
+  , prop_noGuessWithoutToken
   , certification
   , gameParam
   ) where
 
+import Cardano.Api qualified as CardanoAPI
 import Cardano.Node.Emulator.Params qualified as Params
 import Control.Exception hiding (handle)
 import Control.Lens
@@ -41,8 +43,10 @@ import Data.Data
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
+import Ledger.Tx.CardanoAPI.Internal
 import Prettyprinter
 import Test.QuickCheck as QC hiding (checkCoverage, (.&&.))
+import Test.QuickCheck.ContractModel.ThreatModel
 import Test.Tasty hiding (after)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
@@ -481,6 +485,27 @@ guessTokenVal :: Value
 guessTokenVal =
     let sym = Scripts.forwardingMintingPolicyHash $ G.typedValidator gameParam
     in G.token sym "guess"
+
+guessTokenVal' :: CardanoAPI.Value
+guessTokenVal' = either undefined id $ toCardanoValue guessTokenVal
+
+-- | Threat model checking that the guess token is required to submit guesses. Finds a transaction
+--   spending a game output and passing along the guess token, and checks that the transaction fails
+--   to validate if you remove the token.
+noGuessWithoutToken :: ThreatModel ()
+noGuessWithoutToken = do
+  let scriptAddr = Scripts.validatorCardanoAddressAny Params.testnet $ G.typedValidator gameParam
+  ensureHasInputAt scriptAddr
+
+  let hasGuessToken out = guessTokenVal' `leqValue` valueOf out
+  i <- anyInputSuchThat  hasGuessToken
+  o <- anyOutputSuchThat hasGuessToken
+
+  shouldNotValidate $ changeValueOf i (valueOf i <> CardanoAPI.negateValue guessTokenVal')
+                   <> changeValueOf o (valueOf o <> CardanoAPI.negateValue guessTokenVal')
+
+prop_noGuessWithoutToken :: Actions GameModel -> Property
+prop_noGuessWithoutToken = checkThreatModelWithOptions options defaultCoverageOptions noGuessWithoutToken
 
 -- | Certification.
 certification :: Certification GameModel

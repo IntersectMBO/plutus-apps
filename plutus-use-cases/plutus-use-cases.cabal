@@ -224,6 +224,38 @@ test-suite plutus-use-cases-test
     , tasty-quickcheck
     , text
 
+  -- General dependencies
+  build-depends:
+      base           >=4.7 && <5
+    , containers
+    , contractmodel
+    , lens
+    , mmorph
+    , mtl
+    , pretty
+
+  -- QuickCheck dependencies
+  build-depends:
+      QuickCheck
+    , quickcheck-dynamic  >=2.0.0
+
+  -- Plutus and Cardano dependencies
+  build-depends:
+      cardano-api                  >=1.35
+    , cardano-binary
+    , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , cardano-slotting
+    , ouroboros-consensus
+    , ouroboros-consensus-cardano
+    , plutus-ledger-api
+    , plutus-tx
+    , strict-containers
+    , time
+
 -- runs emulator traces from plutus-use-cases-tests and
 -- writes all applied validator scripts to a folder
 executable plutus-use-cases-scripts
@@ -292,6 +324,7 @@ executable plutus-use-cases-scripts
       base                  >=4.9 && <5
     , bytestring
     , containers
+    , contractmodel
     , data-default
     , foldl
     , freer-simple
