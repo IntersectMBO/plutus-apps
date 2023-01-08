@@ -27,8 +27,8 @@ tests = testGroup "SECP256k1"
   [ testPropertyNamed "verify schnorr and ecdsa builtins" "verifySchnorrAndEcdsa" verifySchnorrAndEcdsa
   ]
 
-{- | Test builtin verifySchnorrSecp256k1Signature can be used to verify multiple signatures using a
-   minting policy in a Babbage era transaction.
+{- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can be
+   used successfully to mint in a Babbage era transaction.
 
    Steps:
     - spin up a testnet
@@ -39,52 +39,37 @@ verifySchnorrAndEcdsa :: H.Property
 verifySchnorrAndEcdsa = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
 
 -- 1: spin up a testnet
+
   base <- TN.getProjectBase
   (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet TN.defaultTestnetOptions base tempAbsPath
+  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
-  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
+
   txIn <- TN.firstTxIn localNodeConnectInfo w1Address
-  let collateral = C.TxInsCollateral C.CollateralInBabbageEra [txIn]
 
-      tokenSchnorr = C.AssetId PS.verifySchnorrPolicyId (C.AssetName "Schnorr")
-      --TODO: tokenEcdsa = C.AssetId Scripts.verifyEcdsaPolicyId (C.AssetName "ECDSA")
-      tokenValue = C.valueFromList [(tokenSchnorr, 666)] --TODO: add tokenEcdsa
+  let
+    collateral = C.TxInsCollateral C.CollateralInBabbageEra [txIn]
+    tokenValues = C.valueFromList [(PS.verifySchnorrAssetId, 4), (PS.verifyEcdsaAssetId, 2)]
+    txOut = TN.txOutNoDatumOrRefScript (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
+    mintWitnesses = Map.fromList [PS.verifySchnorrMintWitness, PS.verifyEcdsaMintWitness]
 
-      --redeemerSchnorr = C.fromPlutusData $ PlutusV2.toData Scripts.verifySchnorrParams
-      --TODO: redeemerEcdsa = C.fromPlutusData $ PlutusV2.toData Scripts.verifyEcdsaParams
-
-      --scriptWitnessSchnorr = TN.mintScriptWitnessV2 Scripts.verifySchnorrPolicyScript redeemerSchnorr
-      --TODO: scriptWitnessEcdsa = Scripts.mintScriptWitness redeemerEcdsa
-
-      txOut :: C.TxOut ctx C.BabbageEra
-      txOut = TN.txOutNoDatumOrRefScript (C.lovelaceToValue 3_000_000 <> tokenValue) w1Address
-
-      mintWitnesses = Map.fromList [PS.verifySchnorrMintWitness]
-
-      txBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
-      txBodyContent = (TN.emptyTxBodyContent pparams)
-        { C.txIns = TN.pubkeyTxIns [txIn]
-        , C.txInsCollateral = collateral
-        , C.txOuts = [txOut]
-        , C.txMintValue = TN.txMintValue tokenValue mintWitnesses
-        }
+    txBodyContent = (TN.emptyTxBodyContent pparams)
+      { C.txIns = TN.pubkeyTxIns [txIn]
+      , C.txInsCollateral = collateral
+      , C.txOuts = [txOut]
+      , C.txMintValue = TN.txMintValue tokenValues mintWitnesses
+      }
 
   signedTx <- TN.buildTx txBodyContent w1Address w1SKey networkId
-  H.annotateShow signedTx --remove
-
--- 3: submit transaction to mint
 
   TN.submitTx localNodeConnectInfo signedTx
 
--- 4. query and assert successful mint
+-- 3. query and assert successful mint
 
-  let expectedTxIn = TN.txIn (C.getTxId $ C.getTxBody signedTx) 0
+  let expectedTxIn = TN.txInFromSignedTx signedTx 0
   resultTxOut <- TN.getTxOutAtAddress localNodeConnectInfo w1Address expectedTxIn
+  txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
 
-  H.annotateShow resultTxOut -- remove
-  -- TODO: get asset value from resultTxOut
+  H.assert txOutHasTokenValue
 
-  --endUtxos <- TN.getAddressTxInsValue localNodeConnectInfo w1Address --remove
-  --H.annotateShow endUtxos -- to check if minted - remove
-  H.assert False

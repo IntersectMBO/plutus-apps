@@ -6,11 +6,10 @@
 {-# LANGUAGE TypeApplications    #-}
 
 module PlutusScripts (
-    Secp256Params
-  , verifySchnorrPolicyScript
-  , verifySchnorrPolicyId
-  , verifySchnorrParams
+    verifySchnorrAssetId
   , verifySchnorrMintWitness
+  , verifyEcdsaAssetId
+  , verifyEcdsaMintWitness
   ) where
 
 import Cardano.Api qualified as C
@@ -41,7 +40,7 @@ mintScriptWitnessV2 script redeemer = C.PlutusScriptWitness C.PlutusScriptV2InBa
 toRedeemer :: PlutusTx.ToData a => a -> C.ScriptData
 toRedeemer a = C.fromPlutusData $ PlutusTx.toData a
 
--- | SECP256k1 Schnorr minting policy
+-- | SECP256k1
 
 data Secp256Params = Secp256Params
     { vkey :: !P.BuiltinByteString,
@@ -49,6 +48,8 @@ data Secp256Params = Secp256Params
       sig  :: !P.BuiltinByteString
     }
 PlutusTx.unstableMakeIsData ''Secp256Params
+
+-- | Schnorr minting policy
 
 {-# INLINABLE mkVerifySchnorrPolicy #-}
 mkVerifySchnorrPolicy :: (BI.BuiltinByteString, BI.BuiltinByteString, BI.BuiltinByteString)
@@ -71,6 +72,9 @@ verifySchnorrPolicyScript = C.PlutusScriptSerialised
 verifySchnorrPolicyId :: C.PolicyId
 verifySchnorrPolicyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 verifySchnorrPolicyScript :: C.PolicyId
 
+verifySchnorrAssetId :: C.AssetId
+verifySchnorrAssetId = C.AssetId verifySchnorrPolicyId (C.AssetName "Schnorr")
+
 verifySchnorrParams :: Secp256Params
 verifySchnorrParams = Secp256Params
   {
@@ -84,3 +88,43 @@ verifySchnorrRedeemer = toRedeemer verifySchnorrParams
 
 verifySchnorrMintWitness :: (C.PolicyId, C.ScriptWitness C.WitCtxMint C.BabbageEra)
 verifySchnorrMintWitness = (verifySchnorrPolicyId, mintScriptWitnessV2 verifySchnorrPolicyScript verifySchnorrRedeemer)
+
+-- | ECDSA minting policy
+
+{-# INLINABLE mkVerifyEcdsaPolicy #-}
+mkVerifyEcdsaPolicy :: (BI.BuiltinByteString, BI.BuiltinByteString, BI.BuiltinByteString)
+                               -> PlutusV2.ScriptContext
+                               -> Bool
+mkVerifyEcdsaPolicy (v, m, s) _sc = BI.verifyEcdsaSecp256k1Signature v m s
+
+verifyEcdsaPolicy :: PlutusV2.MintingPolicy
+verifyEcdsaPolicy = PlutusV2.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])
+  where
+      wrap = PSU.mkUntypedMintingPolicy mkVerifyEcdsaPolicy
+
+verifyEcdsaPolicyScript :: C.PlutusScript C.PlutusScriptV2
+verifyEcdsaPolicyScript = C.PlutusScriptSerialised
+                         $ SBS.toShort
+                         . LBS.toStrict
+                         $ serialise
+                         $ PlutusV2.unMintingPolicyScript verifyEcdsaPolicy
+
+verifyEcdsaPolicyId :: C.PolicyId
+verifyEcdsaPolicyId = C.scriptPolicyId $ C.PlutusScript C.PlutusScriptV2 verifyEcdsaPolicyScript :: C.PolicyId
+
+verifyEcdsaAssetId :: C.AssetId
+verifyEcdsaAssetId = C.AssetId verifyEcdsaPolicyId (C.AssetName "ECDSA")
+
+verifyEcdsaParams :: Secp256Params
+verifyEcdsaParams = Secp256Params
+  {
+    vkey = BI.toBuiltin $ bytesFromHex "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0",
+    msg  = BI.toBuiltin $ bytesFromHex "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9",
+    sig  = BI.toBuiltin $ bytesFromHex "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+  }
+
+verifyEcdsaRedeemer :: C.ScriptData
+verifyEcdsaRedeemer = toRedeemer verifyEcdsaParams
+
+verifyEcdsaMintWitness :: (C.PolicyId, C.ScriptWitness C.WitCtxMint C.BabbageEra)
+verifyEcdsaMintWitness = (verifyEcdsaPolicyId, mintScriptWitnessV2 verifyEcdsaPolicyScript verifyEcdsaRedeemer)

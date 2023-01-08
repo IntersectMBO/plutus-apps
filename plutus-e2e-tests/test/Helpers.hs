@@ -9,7 +9,9 @@ import Control.Concurrent.Async qualified as IO
 import Control.Monad (join, void, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Function ((&))
+import Data.List as List
 import Data.Map qualified as Map
+import Data.Map.Lazy (isSubmapOf)
 import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
 import Streaming.Prelude qualified as S
@@ -221,8 +223,8 @@ emptyTxBodyContent pparams = C.TxBodyContent
   , C.txScriptValidity   = C.TxScriptValidityNone
   }
 
-txIn :: C.TxId -> Int -> C.TxIn
-txIn txId txIx = C.TxIn txId (C.TxIx $ fromIntegral txIx)
+txInFromSignedTx :: C.Tx era -> Int -> C.TxIn
+txInFromSignedTx signedTx txIx = C.TxIn (C.getTxId $ C.getTxBody signedTx) (C.TxIx $ fromIntegral txIx)
 
 pubkeyTxIns  :: [C.TxIn] -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))]
 pubkeyTxIns txIns = map (\txIn -> (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) txIns
@@ -304,6 +306,14 @@ getTxOutAtAddress localNodeConnectInfo address txIn = do
   waitForTxInAtAddress localNodeConnectInfo address txIn
   utxos <- findUTxOByAddress localNodeConnectInfo address
   return $ unsafeFromMaybe $ Map.lookup txIn $ C.unUTxO utxos
+
+txOutHasValue :: (MonadIO m, MonadTest m)
+  => C.TxOut C.CtxUTxO C.BabbageEra
+  -> C.Value
+  -> m Bool
+txOutHasValue (C.TxOut _ txOutValue _ _) tokenValue = do
+  let value = C.txOutValueToValue txOutValue
+  return $ List.isInfixOf (C.valueToList tokenValue) (C.valueToList value)
 
 {-
 | Block until a transaction with @txId@ is sent over the local chainsync protocol.
