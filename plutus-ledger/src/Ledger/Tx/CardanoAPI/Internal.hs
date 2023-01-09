@@ -395,13 +395,19 @@ fromLedgerScript C.ShelleyBasedEraBabbage script = fromLedgerPlutusScript script
 fromLedgerPlutusScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Versioned P.Script)
 fromLedgerPlutusScript Alonzo.TimelockScript {} = Nothing
 fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV1 bs) =
-  let script = fmap (\s -> (PV1.scriptHash s, P.Versioned s P.PlutusV1))
+  let hash = PV1.fromCardanoHash
+           $ C.hashScript
+           $ C.PlutusScript C.PlutusScriptV1 $ C.PlutusScriptSerialised bs
+      script = fmap (\s -> (hash, P.Versioned s P.PlutusV1))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs
-   in either (const Nothing) Just script
+  in either (const Nothing) Just script
 fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
-  let script = fmap (\s -> (PV2.scriptHash s, P.Versioned s P.PlutusV2))
+  let hash = PV1.fromCardanoHash
+           $ C.hashScript
+           $ C.PlutusScript C.PlutusScriptV2 $ C.PlutusScriptSerialised bs
+      script = fmap (\s -> (hash, P.Versioned s P.PlutusV2))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs

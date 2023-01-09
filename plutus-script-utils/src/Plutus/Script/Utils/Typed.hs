@@ -193,8 +193,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     -- Thus, if a parameter can't be decoded, the culprit is the first parameter in the list that doesn't appear as
     -- successfully decoded in the log trace.
     mkUntypedValidator
-        :: forall d r
-        . (PV1.UnsafeFromData d, PV1.UnsafeFromData r)
+        :: (PV1.UnsafeFromData d, PV1.UnsafeFromData r)
         => (d -> r -> sc -> Bool)
         -> UntypedValidator
     -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
