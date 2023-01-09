@@ -249,11 +249,11 @@
     "hackage-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1668475001,
-        "narHash": "sha256-rFr6lYxUEoQz6BzJAPWSN5tZtD0rE27yOPTvclen6F8=",
+        "lastModified": 1673224025,
+        "narHash": "sha256-LwgeBKxji5KrSckk6h9x+qhPDpUKY2GF+XRUwQuQ89Q=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "10428b0a63b30782f26b1e01d6c3d383db75ae43",
+        "rev": "adbe11fcbabc1f192b98776c7c8b9f26d4e831c0",
         "type": "github"
       },
       "original": {
