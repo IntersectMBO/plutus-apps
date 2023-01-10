@@ -126,7 +126,6 @@ executable plutus-pab-examples
     , lens
     , openapi3
     , prettyprinter
-    , row-types
     , text
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
@@ -212,7 +211,6 @@ executable plutus-pab-local-cluster
     , lens
     , openapi3
     , prettyprinter
-    , row-types
     , text
 
 test-suite plutus-pab-test-full
