@@ -44,7 +44,7 @@ data AtomicSwapParams =
         , deadline     :: POSIXTime -- ^ Last time in which the swap can be executed.
         }
         deriving stock (Eq, Show, Generic)
-        deriving anyclass (ToJSON, FromJSON, ToSchema)
+        deriving anyclass (ToJSON, FromJSON)
 
 mkValue1 :: AtomicSwapParams -> Value
 mkValue1 = ada

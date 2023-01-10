@@ -58,7 +58,6 @@ import Plutus.PAB.Run (runWithOpts)
 import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
-import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
 import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
                          Config (Config, chainQueryConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig),
                          DbConfig (..), takeSqliteDB)
@@ -88,11 +87,7 @@ data TestingContracts = PingPong
 
 instance HasDefinitions TestingContracts where
   getDefinitions = [ PingPong ]
-  getSchema _    = Builtin.endpointsToSchemas @PingPong.PingPongSchema
   getContract _  = SomeBuiltin PingPong.simplePingPong
-
-instance HasPSTypes TestingContracts where
-  psTypes = undefined
 
 instance Pretty TestingContracts where
   pretty = viaShow

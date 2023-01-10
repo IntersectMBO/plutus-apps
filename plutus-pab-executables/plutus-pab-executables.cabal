@@ -215,55 +215,6 @@ executable plutus-pab-local-cluster
     , row-types
     , text
 
-executable plutus-pab-test-psgenerator
-  default-language:   Haskell2010
-  default-extensions: ImportQualifiedPost
-  ghc-options:        -Wunused-packages
-  hs-source-dirs:     test-psgenerator test/full examples
-  main-is:            TestPSGenerator.hs
-  other-modules:
-    ContractExample.AtomicSwap
-    ContractExample.IntegrationTest
-    ContractExample.PayToWallet
-    Plutus.PAB.Effects.Contract.ContractTest
-    Plutus.PAB.Simulator.Test
-
-  -- TODO plutus-use-cases dep needs to be removed
-  --------------------
-  -- Local components
-  --------------------
-  build-depends:
-    , cardano-node-emulator      >=1.0.0
-    , freer-extras               >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-pab                 >=1.0.0
-    , plutus-use-cases           >=1.0.0
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:      plutus-ledger-api >=1.0.0
-
-  ------------------------
-  -- Non-IOG dependencies
-  ------------------------
-  build-depends:
-    , aeson
-    , aeson-pretty
-    , base           >=4.9 && <5
-    , bytestring
-    , containers
-    , data-default
-    , filepath
-    , freer-simple
-    , lens
-    , mtl
-    , prettyprinter
-    , row-types
-    , text
-
 test-suite plutus-pab-test-full
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost

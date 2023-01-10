@@ -7,7 +7,6 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-
 
@@ -30,7 +29,6 @@ import Prettyprinter
 import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
 import ContractExample.PayToWallet qualified as Contracts.PayToWallet
 import Data.Text.Extras (tshow)
-import Playground.Types (FunctionSchema)
 import Plutus.Contract (awaitPromise)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
@@ -51,15 +49,6 @@ instance Pretty TestContracts where
 instance HasDefinitions TestContracts where
     getDefinitions = [ GameStateMachine, Currency, AtomicSwap, PayToWallet, PingPong ]
     getContract = getTestContracts
-    getSchema = getTestContractsSchema
-
-getTestContractsSchema :: TestContracts -> [FunctionSchema FormSchema]
-getTestContractsSchema = \case
-    GameStateMachine -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
-    Currency         -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
-    AtomicSwap       -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
-    PayToWallet      -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
-    PingPong         -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
 
 getTestContracts :: TestContracts -> SomeBuiltin
 getTestContracts = \case

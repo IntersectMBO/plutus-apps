@@ -28,7 +28,7 @@ data PayToWalletParams =
         , pkh    :: PaymentPubKeyHash
         }
         deriving stock (Eq, Show, Generic)
-        deriving anyclass (ToJSON, FromJSON, ToSchema)
+        deriving anyclass (ToJSON, FromJSON)
 
 type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 

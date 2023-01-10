@@ -28,10 +28,7 @@ import ContractExample.PayToWallet qualified as Contracts.PayToWallet
 import ContractExample.WaitForTx qualified as Contracts.WaitForTx
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Row
-import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType, order)
-import Language.PureScript.Bridge.TypeParameters (A)
 import Ledger (TxId)
-import Playground.Types (FunctionSchema)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
 import Plutus.Contracts.Game qualified as Contracts.Game
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
@@ -43,7 +40,6 @@ import Plutus.Contracts.Uniswap qualified as Contracts.Uniswap
 import Plutus.Contracts.Uniswap.Types (Coin, U)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..), SomeBuiltin (..))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
-import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
 import Plutus.PAB.Simulator (SimulatorEffectHandlers)
 import Plutus.PAB.Simulator qualified as Simulator
 
@@ -68,15 +64,6 @@ data ContractExample = UniswapInit
 instance Pretty ContractExample where
     pretty = viaShow
 
-instance HasPSTypes ContractExample where
-    psTypes =
-        [ equal . genericShow . argonaut $ mkSumType @ContractExample
-        -- These types come from the Uniswap contract and need to be available in PS
-        , equal . genericShow . argonaut $ mkSumType @Uniswap
-        , equal . genericShow . argonaut $ mkSumType @(Coin A)
-        , order . equal . genericShow $ argonaut $ mkSumType @U
-        ]
-
 instance HasDefinitions ContractExample where
     getDefinitions = [ UniswapInit
                      , UniswapOwner
@@ -93,25 +80,6 @@ instance HasDefinitions ContractExample where
                      , IntegrationTest
                      ]
     getContract = getContractExample
-    getSchema = getContractExampleSchema
-
-getContractExampleSchema :: ContractExample -> [FunctionSchema FormSchema]
-getContractExampleSchema = \case
-    UniswapInit         -> Builtin.endpointsToSchemas @Empty
-    UniswapUser _       -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
-    UniswapOwner        -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
-    Game                -> Builtin.endpointsToSchemas @Contracts.Game.GameSchema
-    GameStateMachine    -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
-    PayToWallet         -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
-    AtomicSwap          -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
-    Currency            -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
-    PrismMirror         -> Builtin.endpointsToSchemas @Contracts.Prism.MirrorSchema
-    PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
-    PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
-    PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
-    PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
-    WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
-    IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
 
 getContractExample :: ContractExample -> SomeBuiltin
 getContractExample = \case
