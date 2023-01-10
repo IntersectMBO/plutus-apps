@@ -368,15 +368,14 @@ processConstraint = \case
                 refTxOut <- lookupTxOutRef ref
                 case refTxOut ^? decoratedTxOutReferenceScript of
                     Just _ -> do
-                      txIn <- either (throwError . ToCardanoError) pure
-                                $ C.toCardanoTxIn . Tx.txInputRef . Tx.pubKeyTxInput $ ref
+                      txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn . Tx.txInputRef . Tx.pubKeyTxInput $ ref
                       unbalancedTx . tx . txInsReference <>= [txIn]
-                      either (throwError . ToCardanoError) pure
+                      throwLeft ToCardanoError
                         $ toCardanoMintWitness red (flip Tx.Versioned PlutusV2 <$> mref) Nothing
                     _      -> throwError (LedgerMkTxError $ P.TxOutRefNoReferenceScript ref)
             Nothing -> do
                 mintingPolicyScript <- lookupMintingPolicy mpsHash
-                either (throwError . ToCardanoError) pure
+                throwLeft ToCardanoError
                   $ toCardanoMintWitness red Nothing (Just mintingPolicyScript)
         unbalancedTx . tx . txMintValue <>= (v, Map.singleton pId witness)
 

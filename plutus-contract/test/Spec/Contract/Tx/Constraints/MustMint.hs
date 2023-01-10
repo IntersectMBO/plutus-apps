@@ -51,10 +51,7 @@ import Prelude hiding (not)
 tests :: TestTree
 tests = testGroup "MustMint"
       [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx
-      -- , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
-      -- Remove constraints below and activet the testGroup above once balancing for Tx constraints is implemented
-      , mustMintCurrencyWithRedeemerSuccessfulMintTx Scripts.PlutusV1
-      , mustMintCurrencyWithRedeemerSuccessfulMintTx Scripts.PlutusV2
+      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
       ]
 
 v1Tests :: SubmitTx -> TestTree
@@ -396,15 +393,6 @@ mustMintWithReferenceSuccessful submitTxFromConstraints lang =
     (void $ trace $ mustMintValueWithReferenceContract submitTxFromConstraints lang False)
 
 
--- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to mint tokens
-mustMintCurrencyWithRedeemerSuccessfulMintTx :: Ledger.Language -> TestTree
-mustMintCurrencyWithRedeemerSuccessfulMintTx lang =
-    checkPredicateOptions
-    (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
-    "Successful spend of tokens using mustMintCurrencyWithRedeemer"
-    (assertValidatedTransactionCount 1)
-    (void $ trace $ mustMintCurrencyWithRedeemerTxContract cardanoSubmitTx lang tknAmount tknName)
-
 -- | Valid Contract using a minting policy with mustMintCurrencyWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
 mustMintCurrencyWithRedeemerTxContract
     :: SubmitTx
@@ -484,7 +472,11 @@ type SubmitTx
 cardanoSubmitTx :: SubmitTx
 cardanoSubmitTx lookups tx = let
   p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  in submitUnbalancedTx $ either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups tx
+  rethrowError = \case
+    Tx.Constraints.ToCardanoError err  -> throwError $ TxToCardanoConvertContractError err
+    Tx.Constraints.LedgerMkTxError err -> throwError $ ConstraintResolutionContractError err
+
+  in either rethrowError submitUnbalancedTx $ Tx.Constraints.mkTx @UnitTest p lookups tx
 
 ledgerSubmitTx :: SubmitTx
 ledgerSubmitTx = submitTxConstraintsWith
