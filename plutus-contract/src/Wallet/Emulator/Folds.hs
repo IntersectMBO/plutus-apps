@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE ViewPatterns       #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
@@ -27,6 +31,8 @@ module Wallet.Emulator.Folds (
     , instanceAccumState
     -- * Folds for transactions and the UTXO set
     , chainEvents
+    , ScriptEvent(..)
+    , scriptEvents
     , failedTransactions
     , validatedTransactions
     , utxoAtAddress
@@ -49,6 +55,16 @@ module Wallet.Emulator.Folds (
     , mkTxLogs
     ) where
 
+import Cardano.Api.Shelley qualified as C
+import Cardano.Binary (serialize')
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo.Scripts
+import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo.TxInfo
+import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
+import Cardano.Ledger.Alonzo.Tx qualified as Alonzo.Tx
+import Cardano.Ledger.Babbage qualified as Babbage
+import Cardano.Ledger.Crypto qualified as Crypto
+import Cardano.Ledger.Mary.Value qualified as Mary
+import Cardano.Ledger.Shelley.UTxO qualified as Shelley.UTxO
 import Control.Applicative ((<|>))
 import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L
@@ -57,18 +73,22 @@ import Control.Monad ((>=>))
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson qualified as JSON
+import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe.Strict (strictMaybeToMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
+import GHC.Generics (Generic)
 import Ledger (Block, OnChainTx (Invalid, Valid), TxId)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Index (ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (CardanoTx, getCardanoTxFee, txOutValue)
+import Ledger.Index (ValidationError, ValidationPhase (Phase1, Phase2), UtxoIndex, ExBudget)
+import Ledger.Tx (CardanoTx(CardanoApiTx), getCardanoTxFee, txOutValue, SomeCardanoApiTx(CardanoApiEmulatorEraTx))
+import Ledger.Validation (fromPlutusIndex, EmulatorEra)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
@@ -98,17 +118,81 @@ type EmulatorEventFold a = Fold EmulatorEvent a
 type EmulatorEventFoldM effs a = FoldM (Eff effs) EmulatorEvent a
 
 -- | Transactions that failed to validate, in the given validation phase (if specified).
-failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, CardanoTx, ValidationError, Value)]
+failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(UtxoIndex, TxId, CardanoTx, ValidationError, Value)]
 failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
     where
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
           <|> preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _ValidationFailed) e
-        filterPhase Nothing (_, i, t, v, c)   = Just (i, t, v, c)
-        filterPhase (Just p) (p', i, t, v, c) = if p == p' then Just (i, t, v, c) else Nothing
+        filterPhase Nothing (idx, _, i, t, v, c)   = Just (idx, i, t, v, c)
+        filterPhase (Just p) (idx, p', i, t, v, c) = if p == p' then Just (idx, i, t, v, c) else Nothing
 
 -- | Transactions that were validated
-validatedTransactions :: EmulatorEventFold [(TxId, CardanoTx)]
+validatedTransactions :: EmulatorEventFold [(UtxoIndex, TxId, CardanoTx)]
 validatedTransactions = preMapMaybe (preview (eteEvent . chainEvent . _TxnValidate)) L.list
+
+{-| Execution of a script
+-}
+data ScriptEvent =
+    ScriptEvent
+        { seScriptHash    :: C.ScriptHash
+        -- ^ Hash of the scrupt
+        , seScript        :: Alonzo.Scripts.Script (Babbage.BabbageEra Crypto.StandardCrypto)
+        -- ^ The script itself
+        -- NB: Type 'C.Script C.BabbageEra' would be much better, but the function
+        -- 'Cardano.Api.Script.fromShelleyBasedScript' is not exported
+        -- in cardano-api :(
+
+        , seScriptSize    :: Int
+        -- ^ Script size (unapplied) in bytes
+
+        , seExUnits       :: ExBudget
+        -- ^ Cost of the script 
+        , seScriptPurpose :: String
+        -- ^ Purpose of the script
+
+        -- TODO: Add the redeemer and datum (if applicable)?
+        } deriving stock Generic
+          deriving anyclass JSON.ToJSON
+
+-- | Scripts that were run
+scriptEvents :: EmulatorEventFold [ScriptEvent]
+scriptEvents = preMapMaybe (preview (eteEvent . chainEvent) >=> getEvent) (concat <$> L.list) where
+    extractScripts :: Shelley.UTxO.UTxO EmulatorEra -> C.Tx C.BabbageEra -> [ScriptEvent]
+    extractScripts utxo tx =
+        let bd = C.getTxBody tx
+            C.ShelleyTx C.ShelleyBasedEraBabbage ltx = tx
+            C.ShelleyTxBody _era txb _scripts (C.TxBodyScriptData _ _ (Alonzo.unRedeemers -> redeemers)) _ _ = bd
+
+            scriptHashes = Alonzo.TxInfo.txscripts utxo ltx
+
+            getScriptHash = \case
+                Alonzo.Tx.Spending txIn -> do
+                    C.TxOut (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) (C.ShelleyAddress _ cred _ )) _ _ _ <- C.fromShelleyTxOut C.ShelleyBasedEraBabbage <$> Shelley.UTxO.txinLookup txIn utxo
+                    case C.fromShelleyPaymentCredential cred of
+                        C.PaymentCredentialByScript hsh -> pure hsh
+                        _ -> Nothing
+                Alonzo.Tx.Minting (Mary.PolicyID sh) -> Just (C.fromShelleyScriptHash sh)
+
+                -- Rewarding and Certifying not supported
+                _ -> Nothing
+            
+            getEvent' (ptr, (_dt, Alonzo.TxInfo.transExUnits -> seExUnits)) = do
+                sp <- strictMaybeToMaybe (Alonzo.Tx.rdptrInv txb ptr)
+                let seScriptPurpose = show (Alonzo.TxInfo.transScriptPurpose sp)
+                seScriptHash <- getScriptHash sp
+                seScript <- Map.lookup (C.toShelleyScriptHash seScriptHash) scriptHashes
+                let seScriptSize = BS.length (serialize' seScript)
+                pure ScriptEvent{seScriptPurpose, seExUnits, seScriptHash, seScript, seScriptSize}
+
+        in mapMaybe getEvent' $ Map.toList redeemers
+
+    getEvent :: ChainEvent -> Maybe [ScriptEvent]
+    getEvent = \case
+        TxnValidate txi _ (CardanoApiTx (CardanoApiEmulatorEraTx tx))             ->
+            extractScripts <$> either (const Nothing) pure (fromPlutusIndex txi) <*> pure tx
+        TxnValidationFail txi _ _ (CardanoApiTx (CardanoApiEmulatorEraTx tx)) _ _ ->
+            extractScripts <$> either (const Nothing) pure (fromPlutusIndex txi) <*> pure tx
+        _ -> Nothing
 
 -- | Unbalanced transactions that are sent to the wallet for balancing
 walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
@@ -245,9 +329,9 @@ utxoAtAddress addr =
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
         step = \case
-            TxnValidate _ txn                  -> AM.updateAddresses (Valid txn)
-            TxnValidationFail Phase2 _ txn _ _ -> AM.updateAddresses (Invalid txn)
-            _                                  -> id
+            TxnValidate _ _ txn                  -> AM.updateAddresses (Valid txn)
+            TxnValidationFail _ Phase2 _ txn _ _ -> AM.updateAddresses (Invalid txn)
+            _                                    -> id
 
 -- | The total value of unspent outputs at an address
 valueAtAddress :: Address -> EmulatorEventFold Value
@@ -262,9 +346,9 @@ walletFees :: Wallet -> EmulatorEventFold Value
 walletFees w = fees <$> walletSubmittedFees <*> validatedTransactions <*> failedTransactions (Just Phase2)
     where
         fees submitted txsV txsF =
-            findFees (\(i, _) -> i) (\(_, tx) -> getCardanoTxFee tx) submitted txsV
+            findFees (\(_, i, _) -> i) (\(_, _, tx) -> getCardanoTxFee tx) submitted txsV
             <>
-            findFees (\(i, _, _, _) -> i) (\(_, _, _, collateral) -> collateral) submitted txsF
+            findFees (\(_, i, _, _, _) -> i) (\(_, _, _, _, collateral) -> collateral) submitted txsF
         findFees getId getFees submitted = foldMap (\t -> if Map.member (getId t) submitted then getFees t else mempty)
         walletSubmittedFees = L.handles (eteEvent . walletClientEvent w . _TxSubmit) L.map
 
@@ -282,10 +366,10 @@ chainEvents = preMapMaybe (preview (eteEvent . chainEvent)) L.list
 blockchain :: EmulatorEventFold [Block]
 blockchain =
     let step (currentBlock, otherBlocks) = \case
-            SlotAdd _                          -> ([], currentBlock : otherBlocks)
-            TxnValidate _ txn                  -> (Valid txn : currentBlock, otherBlocks)
-            TxnValidationFail Phase1 _ _   _ _ -> (currentBlock, otherBlocks)
-            TxnValidationFail Phase2 _ txn _ _ -> (Invalid txn : currentBlock, otherBlocks)
+            SlotAdd _                            -> ([], currentBlock : otherBlocks)
+            TxnValidate _ _ txn                  -> (Valid txn : currentBlock, otherBlocks)
+            TxnValidationFail _ Phase1 _ _   _ _ -> (currentBlock, otherBlocks)
+            TxnValidationFail _ Phase2 _ txn _ _ -> (Invalid txn : currentBlock, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
             (currentBlock : otherBlocks)

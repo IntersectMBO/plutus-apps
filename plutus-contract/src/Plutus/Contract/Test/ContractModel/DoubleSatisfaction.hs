@@ -171,7 +171,7 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
       QC.assert False
    return env
     where
-      chainEventType (TxnValidate _ constr) = "TxnValidate "
+      chainEventType (TxnValidate _ _ constr) = "TxnValidate "
         ++ (head . words . show $ constr)
       chainEventType ce = head . words . show $ ce
 
@@ -192,7 +192,7 @@ getDSCounterexamples params = go 0 mempty
     go _ _ [] = ([], [], [])
     go slot idx (e:es) = case e of
       SlotAdd slot' -> go slot' idx es
-      TxnValidate _ txn ->
+      TxnValidate _ _ txn ->
           let
               cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
               e' = Validation.validateCardanoTx params slot cUtxoIndex txn
@@ -217,8 +217,8 @@ getDSCounterexamples params = go 0 mempty
 --   validation event.
 doubleSatisfactionCandidates :: P.Params -> Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates params slot idx event = case event of
-  TxnValidate txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
-  _                                -> []
+  TxnValidate _ txid (EmulatorTx tx) -> [WrappedTx txid tx idx slot params]
+  _                                  -> []
 
 -- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
 --   failed with error @err@.
