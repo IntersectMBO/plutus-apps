@@ -27,7 +27,6 @@ import ContractExample.IntegrationTest qualified as Contracts.IntegrationTest
 import ContractExample.PayToWallet qualified as Contracts.PayToWallet
 import ContractExample.WaitForTx qualified as Contracts.WaitForTx
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Row
 import Ledger (TxId)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
 import Plutus.Contracts.Game qualified as Contracts.Game
@@ -35,9 +34,7 @@ import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
 import Plutus.Contracts.PingPong qualified as Contracts.PingPong
 import Plutus.Contracts.Prism.Mirror qualified as Contracts.Prism
 import Plutus.Contracts.Prism.Unlock qualified as Contracts.Prism
-import Plutus.Contracts.Uniswap (Uniswap)
 import Plutus.Contracts.Uniswap qualified as Contracts.Uniswap
-import Plutus.Contracts.Uniswap.Types (Coin, U)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..), SomeBuiltin (..))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Simulator (SimulatorEffectHandlers)
