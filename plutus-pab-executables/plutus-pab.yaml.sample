@@ -11,6 +11,7 @@ sqliteDB:
 #     dbConfigPort: 5432
 #     dbConfigDatabase: pab
 #     dbConfigPoolSize: 20
+#     dbConfigMarconiFile: marconi.sqlite
 
 pabWebserverConfig:
   baseUrl: http://localhost:9080
