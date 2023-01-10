@@ -70,7 +70,6 @@ executable doc-doctests
     EscrowImpl
     GameModel
     HandlingBlockchainEvents
-    HelloWorldApp
     WriteScriptsTo
 
   --------------------
