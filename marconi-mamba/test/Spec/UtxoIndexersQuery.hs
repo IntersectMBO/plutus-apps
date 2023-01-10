@@ -37,7 +37,7 @@ tests = testGroup "marconi-mamba query specs" $
     [testPropertyNamed "marconi-mamba query" "Spec. round-trip store and query utxos " queryUtxoTest
     ]
 dbpath :: FilePath
-dbpath  = ":memory"
+dbpath  = ":memory:"
 
 -- | generate some Utxo events, store them and fetch them.
 --
