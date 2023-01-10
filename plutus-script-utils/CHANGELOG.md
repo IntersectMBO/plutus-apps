@@ -1,9 +1,8 @@
-.. A new scriv changelog fragment.
-..
-.. Uncomment the header that is right (remove the leading dots).
-..
-Removed
--------
+
+<a id='changelog-1.1.0'></a>
+# 1.1.0 — 2023-01-10
+
+## Removed
 
 - `mkUntypedMintingPolicyV1` replaced by a version agnostic function
 - `mkUntypedMintingPolicyV2` replaced by a version agnostic function
@@ -12,32 +11,15 @@ Removed
 - `mkUntypedValidatorV1` replaced by a version agnostic function
 - `mkUntypedValidatorV2` replaced by a version agnostic function
 
-
-Added
------
+## Added
 
 - `Plutus.Script.Utils.Typed.ScriptContext` a type class that allow the creation
   of an untyped minting policy, stake validator or validator.
 - an instance of `Plutus.Script.Utils.Typed.ScriptContext` for `Plutus. ledger.V1.Ledger.Context.ScriptContext`
 - an instance of `Plutus.Script.Utils.Typed.ScriptContext` for `Plutus. ledger.V2.Ledger.Context.ScriptContext`
 
-.. Changed
-.. -------
-..
-.. - A bullet item for the Changed category.
-..
-.. Deprecated
-.. ----------
-..
-.. - A bullet item for the Deprecated category.
-..
-.. Fixed
-.. -----
-..
-.. - A bullet item for the Fixed category.
-..
-.. Security
-.. --------
-..
-.. - A bullet item for the Security category.
-..
+## Changed
+
+- The default implementation of functions in the `IsScriptContext` typeclass now
+  log which data they are trying to decode, to ease debugging when an invalid
+  binary representation of a redeemer / value or script context is sent.

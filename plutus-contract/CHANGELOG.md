@@ -1,21 +1,17 @@
-<!--
-A new scriv changelog fragment.
 
-Uncomment the section that is right (remove the HTML comment wrapper).
--->
+<a id='changelog-1.1.0'></a>
+# 1.1.0 — 2023-01-10
 
-<!--
-### Removed
+## Added
 
-- A bullet item for the Removed category.
-
--->
-
-### Added
+- Added 'Ledger.Value.currencyValueOf' function.
 
 - Added the `Plutus.Trace.Emulator.runEmulatorTraceIOWithConfig` function
 
-### Changed
+- Creation of an 'assertEvaluationError' `Contract.Test` to ease verification of
+  invalid transactions.
+
+## Changed
 
 - Changed `Plutus.Trace.Emulator.TraceConfig` data contructor to work with `LogMessage EmulatorEvent`
   instead of `EmulatorEvent'`, added a parameter to configure the `LogLevel` of log messages,
@@ -32,19 +28,19 @@ Uncomment the section that is right (remove the HTML comment wrapper).
 - Change the output format of log messages printed by `Plutus.Trace.Emulator.runEmulatorTrace` by
   changing the `Default` instance of `TraceConfig`.
 
-### Deprecated
+- Renamed `Plutus.Trace.Emulator.currentSlot` to `Plutus.Trace.Emulator.chainCurrentSlot`.
+
+- We now use `cardano-api` `AddressInEra` (through the alias
+  `Ledger.Address.CardanoAddress`) in the emulator instead of `plutus`
+  addresses.
+
+- `DoubleSatisfaction` is now using `cardano-api` `Tx` instead of the emulator
+  one.
+
+## Deprecated
 
 - Deprecated `Plutus.Trace.Emulator.runEmulatorTraceIO'` in favor of `Plutus.Trace.Emulator.runEmulatorTraceIOWithConfig`
 
-<!--
-### Fixed
+## Security
 
-- A bullet item for the Fixed category.
-
--->
-<!--
-### Security
-
-- A bullet item for the Security category.
-
--->
+- Fixed state machine thread token on-chain check in light of https://www.tweag.io/blog/2022-03-25-minswap-lp-vulnerability
