@@ -19,7 +19,8 @@ module Plutus.Contract.Test.Certification.Run
   , certResJSON
   -- * There are a tonne of lenses
   , certRes_standardPropertyResult
-  , certRes_doubleSatisfactionResult
+  -- TODO: turn on when double satisfaction is activated again
+  -- , certRes_doubleSatisfactionResult
   , certRes_noLockedFundsResult
   , certRes_noLockedFundsLightResult
   , certRes_standardCrashToleranceResult
@@ -52,7 +53,6 @@ import GHC.Generics
 import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
-import Plutus.Contract.Test.Coverage
 import PlutusTx.Coverage
 import System.Random.SplitMix
 import Test.QuickCheck as QC
@@ -111,7 +111,8 @@ instance ToJSON Tasty.Result where
 
 data CertificationReport m = CertificationReport {
     _certRes_standardPropertyResult       :: QC.Result,
-    _certRes_doubleSatisfactionResult     :: QC.Result,
+    -- TODO: turn on again later
+    -- _certRes_doubleSatisfactionResult     :: QC.Result,
     _certRes_noLockedFundsResult          :: Maybe QC.Result,
     _certRes_noLockedFundsLightResult     :: Maybe QC.Result,
     _certRes_standardCrashToleranceResult :: Maybe QC.Result,
@@ -135,7 +136,7 @@ data CertificationEvent = QuickCheckTestEvent (Maybe Bool)  -- ^ Nothing if disc
 
 data CertificationTask = UnitTestsTask
                        | StandardPropertyTask
-                       | DoubleSatisfactionTask
+                       -- | DoubleSatisfactionTask
                        | NoLockedFundsTask
                        | NoLockedFundsLightTask
                        | CrashToleranceTask
@@ -152,7 +153,7 @@ certificationTasks Certification{..} = filter run [minBound..maxBound]
   where
     run UnitTestsTask          = isJust certUnitTests
     run StandardPropertyTask   = True
-    run DoubleSatisfactionTask = True
+    -- run DoubleSatisfactionTask = True
     run NoLockedFundsTask      = isJust certNoLockedFunds
     run NoLockedFundsLightTask = isJust certNoLockedFundsLight
     run CrashToleranceTask     = isJust certCrashTolerance
@@ -201,15 +202,16 @@ runStandardProperty opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
                                                  covopts
                                                  (\ _ -> pure True)
 
-checkDS :: forall m. ContractModel m => CertificationOptions -> CoverageIndex -> CertMonad QC.Result
-checkDS opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
-                                  (mkQCArgs opts)
-                                  (set coverageIndex covIdx defaultCoverageOptions)
-                                $ \ covopts -> addOnTestEvents opts $
-                                               checkDoubleSatisfactionWithOptions
-                                                 @m
-                                                 defaultCheckOptionsContractModel
-                                                 covopts
+-- TODO: turn on when double satisfaction is re-implemented
+-- checkDS :: forall m. ContractModel m => CertificationOptions -> CoverageIndex -> CertMonad QC.Result
+-- checkDS opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
+--                                   (mkQCArgs opts)
+--                                   (set coverageIndex covIdx defaultCoverageOptions)
+--                                 $ \ covopts -> addOnTestEvents opts $
+--                                                checkDoubleSatisfactionWithOptions
+--                                                  @m
+--                                                  defaultCheckOptionsContractModel
+--                                                  covopts
 
 checkNoLockedFunds :: ContractModel m => CertificationOptions -> NoLockedFundsProof m -> CertMonad QC.Result
 checkNoLockedFunds opts prf = lift $ quickCheckWithResult
@@ -329,9 +331,10 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- Standard property
   qcRes        <- wrapQCTask opts StandardPropertyTask
                 $ runStandardProperty @m opts certCoverageIndex
+  -- TODO: fixme when double sat done
   -- Double satisfaction
-  dsRes        <- wrapQCTask opts DoubleSatisfactionTask
-                $ checkDS @m opts certCoverageIndex
+  -- dsRes        <- wrapQCTask opts DoubleSatisfactionTask
+  --               $ checkDS @m opts certCoverageIndex
   -- No locked funds
   noLock       <- traverse (wrapQCTask opts NoLockedFundsTask . checkNoLockedFunds opts)
                            certNoLockedFunds
@@ -350,7 +353,7 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- Final results
   return $ CertificationReport
             { _certRes_standardPropertyResult       = qcRes
-            , _certRes_doubleSatisfactionResult     = dsRes
+            -- , _certRes_doubleSatisfactionResult     = dsRes
             , _certRes_standardCrashToleranceResult = ctRes
             , _certRes_noLockedFundsResult          = noLock
             , _certRes_noLockedFundsLightResult     = noLockLight

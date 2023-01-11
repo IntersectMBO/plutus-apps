@@ -138,6 +138,9 @@ library
   ------------------------
   -- Non-IOG dependencies
   ------------------------
+  -- TODO: remove the contractmodel dependency once the dependency on cardano-node
+  -- has been bumped to include the instance of Ord for AddressInEra
+  -- defined there.
   build-depends:
     , aeson
     , base               >=4.9  && <5
@@ -145,6 +148,7 @@ library
     , bytestring
     , cborg
     , containers
+    , contractmodel
     , cryptonite         >=0.25
     , deepseq
     , flat

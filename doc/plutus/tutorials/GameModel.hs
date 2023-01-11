@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
@@ -16,7 +16,7 @@
 module GameModel where
 
 import Control.Applicative ((<|>))
-import Control.Lens (makeLenses, set, (^.))
+import Control.Lens (makeLenses, set, (%=), (.=), (^.))
 import Control.Monad (when)
 import Data.Data (Data)
 import System.Random (Random)
@@ -38,6 +38,7 @@ import Plutus.Contract.Test.ContractModel qualified as CM
 -- END import ContractModel
 
 -- END import ContractModel
+import Test.QuickCheck.DynamicLogic (Quantification)
 import Test.QuickCheck.StateModel (Var (Var))
 
 -- START import Game
@@ -70,6 +71,8 @@ import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Data.Default (Default (def))
 -- END import Data.Default
 
+import GHC.Generics (Generic)
+
 -- START gameParam
 gameParam :: G.GameParam
 gameParam = G.GameParam (Address.toPlutusAddress $ mockWalletAddress w1) (TimeSlot.scSlotZeroTime def)
@@ -82,7 +85,7 @@ data GameModel = GameModel
     { _gameValue     :: Integer
     , _hasToken      :: Maybe Wallet
     , _currentSecret :: String }
-  deriving (Show, Data)
+  deriving (Show, Generic)
 
 makeLenses 'GameModel
 -- END GameModel
@@ -96,7 +99,7 @@ instance CM.ContractModel GameModel where
     data Action GameModel = Lock      Wallet String Integer
                           | Guess     Wallet String String Integer
                           | GiveToken Wallet
-        deriving (Eq, Show, Data)
+        deriving (Eq, Show, Generic)
 -- END instance ContractModel and Action type
 
 -- START ContractInstanceKey
@@ -150,9 +153,9 @@ instance CM.ContractModel GameModel where
     nextState (Lock w secret val) = do
         wasUnlocked <- (Nothing ==) <$> CM.viewContractState hasToken
         when wasUnlocked $ do
-          hasToken      CM.$= Just w
-          currentSecret CM.$= secret
-          gameValue     CM.$= val
+          hasToken      .= Just w
+          currentSecret .= secret
+          gameValue     .= val
           CM.mint guessTokenVal
           CM.deposit  w guessTokenVal
         CM.withdraw w $ Ada.lovelaceValueOf val
@@ -164,8 +167,8 @@ instance CM.ContractModel GameModel where
         holdsToken   <- (Just w ==) <$> CM.viewContractState hasToken
         enoughAda    <- (val <=)    <$> CM.viewContractState gameValue
         when (correctGuess && holdsToken && enoughAda) $ do
-            currentSecret CM.$= new
-            gameValue     CM.$~ subtract val
+            currentSecret .= new
+            gameValue     %= subtract val
             CM.deposit w $ Ada.lovelaceValueOf val
         CM.wait 1
 -- END nextState Guess
@@ -173,7 +176,7 @@ instance CM.ContractModel GameModel where
     nextState (GiveToken w) = do
         w0 <- fromJust <$> CM.viewContractState hasToken
         CM.transfer w0 w guessTokenVal
-        hasToken CM.$= Just w
+        hasToken .= Just w
         CM.wait 1
 
 -- START arbitraryAction
@@ -270,14 +273,11 @@ unitTest = do
 -- END unitTest
 
 -- START badUnitTest
-badUnitTest :: CM.DLTest GameModel
-badUnitTest =
-    CM.BadPrecondition
-      [CM.Witness (1 :: Integer),
-       CM.Do $ CM.NoBind (Var 1) $ Lock w1 "hello" 1,
-       CM.Do $ CM.NoBind (Var 2) $ GiveToken w2]
-      [CM.Action (CM.NoBind (Var 3) (Guess w2 "hello" "new secret" 3))]
-      (GameModel {_gameValue = 1, _hasToken = Just w2, _currentSecret = "hello"})
+badUnitTest :: CM.DL GameModel ()
+badUnitTest = do
+  CM.action $ Lock w1 "hello" 1
+  CM.action $ GiveToken w2
+  CM.action $ Guess w2 "hello" "new secret" 3
 -- END badUnitTest
 
 unitTest2 :: CM.DL GameModel ()
@@ -328,7 +328,7 @@ guessTokenVal =
 
 -- START testLock v1
 testLock :: Property
-testLock = prop_Game $ CM.actionsFromList [Lock w1 "hunter2" 0]
+testLock = flip CM.forAllDL prop_Game $ CM.action $ Lock w1 "hunter2" 0
 -- END testLock v1
 
 testLockWithMaxSuccess :: ()
@@ -336,15 +336,14 @@ testLockWithMaxSuccess = ()
  where
 -- START testLock withMaxSuccess
  testLock :: Property
- testLock = withMaxSuccess 1 . prop_Game $ CM.actionsFromList [Lock w1 "hunter2" 0]
+ testLock = withMaxSuccess 1 . flip CM.forAllDL prop_Game $ CM.action $ Lock w1 "hunter2" 0
 -- END testLock withMaxSuccess
 
 -- START testDoubleLock
 testDoubleLock :: Property
-testDoubleLock = prop_Game $
-  CM.actionsFromList
-    [Lock w1 "*******" 0,
-     Lock w1 "secret" 0]
+testDoubleLock = flip CM.forAllDL prop_Game $ do
+  CM.action $ Lock w1 "*******" 0
+  CM.action $ Lock w1 "secret" 0
 -- END testDoubleLock
 
 anyActionsDef :: ()
@@ -373,9 +372,9 @@ v1_model = ()
     nextState :: CM.Action GameModel -> CM.Spec GameModel ()
 -- START nextState Lock v1
     nextState (Lock w secret val) = do
-        hasToken      CM.$= Just w
-        currentSecret CM.$= secret
-        gameValue     CM.$= val
+        hasToken      .= Just w
+        currentSecret .= secret
+        gameValue     .= val
         CM.mint guessTokenVal
         CM.deposit  w guessTokenVal
         CM.withdraw w $ Ada.lovelaceValueOf val
@@ -386,15 +385,15 @@ v1_model = ()
         holdsToken   <- (Just w ==) <$> CM.viewContractState hasToken
         enoughAda    <- (val <=)    <$> CM.viewContractState gameValue
         when (correctGuess && holdsToken && enoughAda) $ do
-            currentSecret CM.$= new
-            gameValue     CM.$~ subtract val
+            currentSecret .= new
+            gameValue     %= subtract val
             CM.deposit w $ Ada.lovelaceValueOf val
 -- END nextState Guess v1
 -- START nextState GiveToken v1
     nextState (GiveToken w) = do
         w0 <- fromJust <$> CM.viewContractState hasToken
         CM.transfer w0 w guessTokenVal
-        hasToken CM.$= Just w
+        hasToken .= Just w
 -- END nextState GiveToken v1
 
     precondition :: CM.ModelState GameModel -> CM.Action GameModel -> Bool
@@ -441,9 +440,9 @@ v2_model = ()
     nextState :: CM.Action GameModel -> CM.Spec GameModel ()
 -- START nextState Lock v2
     nextState (Lock w secret val) = do
-        hasToken      CM.$= Just w
-        currentSecret CM.$= secret
-        gameValue     CM.$= val
+        hasToken      .= Just w
+        currentSecret .= secret
+        gameValue     .= val
         CM.mint guessTokenVal
         CM.deposit  w guessTokenVal
         CM.withdraw w $ Ada.lovelaceValueOf val
@@ -616,6 +615,6 @@ typeSignatures = id
 -- END monitoring type
  monitoring = CM.monitoring
 -- START chooseQ type
- chooseQ :: (Arbitrary a, Random a, Ord a) => (a, a) -> CM.Quantification a
+ chooseQ :: (Arbitrary a, Random a, Ord a) => (a, a) -> Quantification a
 -- END chooseQ type
  chooseQ = CM.chooseQ
