@@ -1,0 +1,4 @@
+Changed
+-------
+
+- `tx-inject` now uses `Tx` from `cardano-node`

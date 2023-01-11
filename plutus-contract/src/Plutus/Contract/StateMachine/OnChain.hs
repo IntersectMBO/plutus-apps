@@ -133,8 +133,9 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                 | otherwise ->
                     let -- Check that the thread token value is still there
                         valueWithToken = newValue <> threadTokenValueInner threadToken (ownHash ptx)
-                        constraint = mustPayToTheScriptWithDatumInTx newData valueWithToken
-                        -- Overwrite `txOwnOutputs` to change the output type
+                        -- Type annotation is required to compile validator when profiling is activated.
+                        -- If 'Void' is not explicitly set, the plutus plugin can't handle the free type variable.
+                        constraint = mustPayToTheScriptWithDatumInTx @s @Void newData valueWithToken
                         txc = newConstraints { txOwnOutputs = txOwnOutputs constraint }
                     in traceIfFalse "S5" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext @_ @s txc ptx)
             Nothing -> trace "S6" {-"State transition invalid - input is not a valid transition at the current state"-} False

@@ -354,6 +354,7 @@ executable tx-inject
   -- Local components
   --------------------
   build-depends:
+    , cardano-api            >=1.35
     , cardano-node-emulator  >=1.0.0
     , plutus-contract        >=1.0.0
     , plutus-ledger          >=1.0.0

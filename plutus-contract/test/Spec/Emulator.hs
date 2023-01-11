@@ -19,6 +19,7 @@ import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
 import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.Params (Params (Params, pNetworkId))
 import Cardano.Node.Emulator.Validation qualified as Validation
+import Control.Applicative (Alternative)
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
@@ -313,7 +314,7 @@ evalEmulatorTraceTest = property $ do
     Hedgehog.annotateShow res
     Hedgehog.assert (either (const False) (const True) res)
 
-genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, CardanoTx)
+genChainTxn :: Alternative m => Hedgehog.MonadGen m => m (Mockchain, CardanoTx)
 genChainTxn = do
     m <- Gen.genMockchain
     txn <- Gen.genValidTransaction m
