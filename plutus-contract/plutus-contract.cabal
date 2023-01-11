@@ -137,7 +137,6 @@ library
     , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
-    , cardano-wallet-core
     , contractmodel
     , plutus-core             >=1.0.0
     , plutus-ledger-api       >=1.0.0
