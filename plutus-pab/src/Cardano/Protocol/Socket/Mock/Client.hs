@@ -21,6 +21,8 @@ import Control.Concurrent.STM
 import Control.Monad.Catch (catchAll)
 import Control.Tracer
 
+import Cardano.Api qualified as C
+
 import Ouroboros.Network.Block (Point (..))
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
 import Ouroboros.Network.Protocol.LocalTxSubmission.Client qualified as TxSubmission
@@ -34,15 +36,15 @@ import Ouroboros.Network.Socket
 
 import Cardano.Protocol.Socket.Client (ChainSyncHandle (..))
 import Cardano.Protocol.Socket.Type
-import Ledger (Block, Slot (..), Tx (..))
+import Ledger (Block, Slot (..))
 
 newtype TxSendHandle = TxSendHandle
-    { tshQueue :: TQueue Tx }
+    { tshQueue :: TQueue (C.Tx C.BabbageEra) }
 
 -- | Queue a transaction to be sent to the server.
 queueTx ::
     TxSendHandle
- -> Tx
+ -> C.Tx C.BabbageEra
  -> IO ()
 queueTx TxSendHandle { tshQueue } tx =
     atomically (writeTQueue tshQueue tx)
@@ -159,7 +161,7 @@ runTxSender socketPath = do
                loop timeout ch iocp)
 
       nodeToClientProtocols
-        :: TQueue Tx
+        :: TQueue (C.Tx C.BabbageEra)
         -> NodeToClientProtocols 'InitiatorMode LBS.ByteString IO () Void
       nodeToClientProtocols sendQueue =
         NodeToClientProtocols
@@ -169,7 +171,7 @@ runTxSender socketPath = do
           , localTxMonitorProtocol = doNothingInitiatorProtocol
           }
 
-      txSubmission :: TQueue Tx
+      txSubmission :: TQueue (C.Tx C.BabbageEra)
                    -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
       txSubmission inputQueue =
           InitiatorProtocolOnly $
@@ -180,12 +182,12 @@ runTxSender socketPath = do
                (txSubmissionClient inputQueue))
 
 -- | The client updates the application state when the protocol state changes.
-txSubmissionClient :: TQueue Tx
-                   -> TxSubmission.LocalTxSubmissionClient Tx String IO ()
+txSubmissionClient :: TQueue (C.Tx C.BabbageEra)
+                   -> TxSubmission.LocalTxSubmissionClient (C.Tx C.BabbageEra) String IO ()
 txSubmissionClient txQueue =
     TxSubmission.LocalTxSubmissionClient pushTxs
     where
-      pushTxs :: IO (TxSubmission.LocalTxClientStIdle Tx String IO ())
+      pushTxs :: IO (TxSubmission.LocalTxClientStIdle (C.Tx C.BabbageEra) String IO ())
       pushTxs = do
         header <- atomically $ readTQueue txQueue
         return $ TxSubmission.SendMsgSubmitTx

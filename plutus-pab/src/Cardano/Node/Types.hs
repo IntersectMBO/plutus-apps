@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -10,6 +11,8 @@
 {-# LANGUAGE StrictData        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 {-| This module exports data types for logging, events and configuration
 -}
@@ -67,7 +70,7 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
-import Ledger (Block, Tx, txId)
+import Ledger (Block)
 import Ledger.CardanoWallet (WalletNumber)
 import Plutus.Contract.Trace qualified as Trace
 import Prettyprinter (Pretty, pretty, viaShow, vsep, (<+>))
@@ -76,6 +79,7 @@ import Wallet.Emulator (Wallet, WalletNumber (WalletNumber))
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
+import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper), testnetNetworkId)
 import Cardano.BM.Tracing (toObject)
 import Cardano.Node.Emulator.Params (pNetworkId, testnet)
@@ -221,13 +225,13 @@ instance ToObject PABServerLogMsg where
         TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
 
 data BlockEvent = NewSlot
-    | NewTransaction Tx
+    | NewTransaction (C.Tx C.BabbageEra)
     deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Pretty BlockEvent where
     pretty = \case
         NewSlot          -> "Adding a new slot"
-        NewTransaction t -> "Adding a transaction " <+> pretty (Ledger.txId t)
+        NewTransaction t -> "Adding a transaction " <+> viaShow (C.getTxId $ C.getTxBody t)
 
 
 -- State --------------------------------------------------------------------------------------------------------------
