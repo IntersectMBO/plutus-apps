@@ -34,8 +34,8 @@ import Cardano.Api.Shelley qualified as C
 --import Cardano.Streaming qualified as CS
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
 import Test.Runtime qualified as TN
-import Testnet.Babbage qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
+import Testnet.Plutus qualified as TN
 
 getProjectBase :: (MonadIO m, MonadTest m) => m String
 getProjectBase = liftIO . IO.canonicalizePath =<< HE.getProjectBase
@@ -222,6 +222,11 @@ emptyTxBodyContent pparams = C.TxBodyContent
   , C.txMintValue        = C.TxMintNone
   , C.txScriptValidity   = C.TxScriptValidityNone
   }
+
+txInsCollateral :: C.CardanoEra era -> [C.TxIn] -> C.TxInsCollateral era
+txInsCollateral era txIns = case C.collateralSupportedInEra era of
+    Nothing        -> error "era supporting collateral only"
+    Just supported -> C.TxInsCollateral supported txIns
 
 txInFromSignedTx :: C.Tx era -> Int -> C.TxIn
 txInFromSignedTx signedTx txIx = C.TxIn (C.getTxId $ C.getTxBody signedTx) (C.TxIx $ fromIntegral txIx)
