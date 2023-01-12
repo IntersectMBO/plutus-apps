@@ -132,7 +132,7 @@ handleMultiWallet params = \case
     CreateWallet funds -> do
         wallets <- get @Wallets
         mockWallet <- newWallet
-        let walletId = Wallet.WalletId . CWP.WalletId $ CW.mwWalletId mockWallet
+        let walletId = Wallet.WalletId $ CW.mwWalletId mockWallet
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
             pkh = CW.paymentPubKeyHash mockWallet
             addr = CW.mockWalletAddress mockWallet

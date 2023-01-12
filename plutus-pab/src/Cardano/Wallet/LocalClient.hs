@@ -79,11 +79,12 @@ handleWalletClient
     -> Wallet
     -> WalletEffect
     ~> Eff effs
-handleWalletClient config (Wallet _ (WalletId walletId)) event = do
-    params <- WAPI.getClientParams
-    let mpassphrase = pscPassphrase config
+handleWalletClient config (Wallet _ (WalletId wId)) event = do
     clientEnv <- ask @ClientEnv
-    let
+    params <- WAPI.getClientParams
+    let walletId = C.WalletId wId
+        mpassphrase = pscPassphrase config
+
         runClient :: ClientM a -> Eff effs a
         runClient a = do
             result <- runClient' a
