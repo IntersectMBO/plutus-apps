@@ -16,7 +16,6 @@ module Plutus.Contract.Wallet(
       balanceTx
     , handleTx
     , yieldUnbalancedTx
-    , getUnspentOutput
     , WAPI.signTxAndSubmit
     -- * Exporting transactions
     , ExportTx(..)
@@ -30,7 +29,6 @@ import Cardano.Node.Emulator.Params (Params (emulatorPParams, pNetworkId))
 import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
 import Control.Applicative ((<|>))
 import Control.Monad ((>=>))
-import Control.Monad.Error.Lens (throwing)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (String), object, withObject, (.:), (.=))
@@ -43,20 +41,15 @@ import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
-import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger (DCert, Redeemer, StakingCredential, toPlutusAddress, txRedeemers)
+import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
 import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
-import Ledger.Ada qualified as Ada
-import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx), mustPayToAddress)
-import Ledger.Tx (CardanoTx, TxId (TxId), TxIn (..), TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx))
+import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
-import Plutus.Contract.Error (AsContractError (_OtherContractError))
-import Plutus.Contract.Request qualified as Contract
-import Plutus.Contract.Types (Contract)
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
@@ -107,17 +100,6 @@ handleTx ::
     )
     => UnbalancedTx -> Eff effs CardanoTx
 handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
-
--- | Get an unspent output belonging to the wallet.
-getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
-getUnspentOutput = do
-    addr <- Contract.ownAddress
-    let constraints = mustPayToAddress (toPlutusAddress addr) (Ada.lovelaceValueOf 1)
-    utx <- Contract.mkTxConstraints @Void mempty constraints
-    tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
-    case getCardanoTxInputs tx of
-        inp : _ -> pure $ txInRef inp
-        []      -> throwing _OtherContractError "Balanced transaction has no inputs"
 
 data ExportTxRedeemerPurpose = Spending | Minting | Rewarding | Certifying
 

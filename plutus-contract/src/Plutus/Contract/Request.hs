@@ -88,6 +88,7 @@ module Plutus.Contract.Request(
     , ownAddresses
     , ownAddress
     , ownUtxos
+    , getUnspentOutput
     -- ** Submitting transactions
     , adjustUnbalancedTx
     , submitUnbalancedTx
@@ -156,7 +157,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse, collectQueryResponse, paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
-import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
+import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _OtherContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
@@ -502,6 +503,14 @@ ownUtxos :: forall w s e. (AsContractError e) => Contract w s e (Map TxOutRef De
 ownUtxos = do
     addrs <- ownAddresses
     fold <$> mapM utxosAt (NonEmpty.toList addrs)
+
+-- | Get an unspent output belonging to the wallet.
+getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
+getUnspentOutput = do
+    utxos <- ownUtxos
+    case Map.keys utxos of
+        inp : _ -> pure  inp
+        []      -> throwError $ review _OtherContractError "Balanced transaction has no inputs"
 
 -- | Get all the unspent transaction output at an address w.r.t. a page query TxOutRef
 queryUnspentTxOutsAt ::
