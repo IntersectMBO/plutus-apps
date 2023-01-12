@@ -93,55 +93,6 @@
         )
         (datatypebind
           (datatype
-            (tyvardecl Extended (fun (type) (type)))
-            (tyvardecl a (type))
-            Extended_match
-            (vardecl Finite (fun a [ Extended a ]))
-            (vardecl NegInf [ Extended a ])
-            (vardecl PosInf [ Extended a ])
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl Bool (type))
-
-            Bool_match
-            (vardecl True Bool) (vardecl False Bool)
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl LowerBound (fun (type) (type)))
-            (tyvardecl a (type))
-            LowerBound_match
-            (vardecl
-              LowerBound (fun [ Extended a ] (fun Bool [ LowerBound a ]))
-            )
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl UpperBound (fun (type) (type)))
-            (tyvardecl a (type))
-            UpperBound_match
-            (vardecl
-              UpperBound (fun [ Extended a ] (fun Bool [ UpperBound a ]))
-            )
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl Interval (fun (type) (type)))
-            (tyvardecl a (type))
-            Interval_match
-            (vardecl
-              Interval
-              (fun [ LowerBound a ] (fun [ UpperBound a ] [ Interval a ]))
-            )
-          )
-        )
-        (datatypebind
-          (datatype
             (tyvardecl TxOutDatum (fun (type) (type)))
             (tyvardecl datum (type))
             TxOutDatum_match
@@ -151,6 +102,17 @@
           )
         )
         (typebind (tyvardecl TxOutRef (type)) (all a (type) (fun a a)))
+        (datatypebind
+          (datatype
+            (tyvardecl ValidityInterval (fun (type) (type)))
+            (tyvardecl a (type))
+            ValidityInterval_match
+            (vardecl
+              ValidityInterval
+              (fun [ Maybe a ] (fun [ Maybe a ] [ ValidityInterval a ]))
+            )
+          )
+        )
         (let
           (rec)
           (datatypebind
@@ -270,7 +232,8 @@
               )
               (vardecl MustUseOutputAsCollateral (fun TxOutRef TxConstraint))
               (vardecl
-                MustValidateIn (fun [ Interval (con integer) ] TxConstraint)
+                MustValidateInTimeRange
+                (fun [ ValidityInterval (con integer) ] TxConstraint)
               )
             )
           )
@@ -303,6 +266,14 @@
               )
             )
             (typebind (tyvardecl Void (type)) (all a (type) (fun a a)))
+            (datatypebind
+              (datatype
+                (tyvardecl Bool (type))
+
+                Bool_match
+                (vardecl True Bool) (vardecl False Bool)
+              )
+            )
             (datatypebind
               (datatype
                 (tyvardecl StateMachine (fun (type) (fun (type) (type))))
@@ -9153,56 +9124,79 @@
                                                                                                                                     [
                                                                                                                                       [
                                                                                                                                         c
-                                                                                                                                        [
-                                                                                                                                          MustValidateIn
-                                                                                                                                          [
-                                                                                                                                            [
-                                                                                                                                              {
-                                                                                                                                                Interval
+                                                                                                                                        (let
+                                                                                                                                          (nonrec)
+                                                                                                                                          (termbind
+                                                                                                                                            (strict)
+                                                                                                                                            (vardecl
+                                                                                                                                              dt
+                                                                                                                                              [
+                                                                                                                                                ValidityInterval
                                                                                                                                                 (con
                                                                                                                                                   integer
                                                                                                                                                 )
-                                                                                                                                              }
-                                                                                                                                              [
+                                                                                                                                              ]
+                                                                                                                                            )
+                                                                                                                                            (let
+                                                                                                                                              (nonrec)
+                                                                                                                                              (termbind
+                                                                                                                                                (strict)
+                                                                                                                                                (vardecl
+                                                                                                                                                  dt
+                                                                                                                                                  [
+                                                                                                                                                    Maybe
+                                                                                                                                                    (con
+                                                                                                                                                      integer
+                                                                                                                                                    )
+                                                                                                                                                  ]
+                                                                                                                                                )
                                                                                                                                                 [
                                                                                                                                                   {
-                                                                                                                                                    LowerBound
+                                                                                                                                                    Just
                                                                                                                                                     (con
                                                                                                                                                       integer
                                                                                                                                                     )
                                                                                                                                                   }
-                                                                                                                                                  [
-                                                                                                                                                    {
-                                                                                                                                                      Finite
-                                                                                                                                                      (con
-                                                                                                                                                        integer
-                                                                                                                                                      )
-                                                                                                                                                    }
-                                                                                                                                                    ww
-                                                                                                                                                  ]
+                                                                                                                                                  ww
                                                                                                                                                 ]
-                                                                                                                                                True
-                                                                                                                                              ]
-                                                                                                                                            ]
-                                                                                                                                            [
+                                                                                                                                              )
+                                                                                                                                              (termbind
+                                                                                                                                                (strict)
+                                                                                                                                                (vardecl
+                                                                                                                                                  dt
+                                                                                                                                                  [
+                                                                                                                                                    Maybe
+                                                                                                                                                    (con
+                                                                                                                                                      integer
+                                                                                                                                                    )
+                                                                                                                                                  ]
+                                                                                                                                                )
+                                                                                                                                                {
+                                                                                                                                                  Nothing
+                                                                                                                                                  (con
+                                                                                                                                                    integer
+                                                                                                                                                  )
+                                                                                                                                                }
+                                                                                                                                              )
                                                                                                                                               [
-                                                                                                                                                {
-                                                                                                                                                  UpperBound
-                                                                                                                                                  (con
-                                                                                                                                                    integer
-                                                                                                                                                  )
-                                                                                                                                                }
-                                                                                                                                                {
-                                                                                                                                                  PosInf
-                                                                                                                                                  (con
-                                                                                                                                                    integer
-                                                                                                                                                  )
-                                                                                                                                                }
+                                                                                                                                                [
+                                                                                                                                                  {
+                                                                                                                                                    ValidityInterval
+                                                                                                                                                    (con
+                                                                                                                                                      integer
+                                                                                                                                                    )
+                                                                                                                                                  }
+                                                                                                                                                  dt
+                                                                                                                                                ]
+                                                                                                                                                dt
                                                                                                                                               ]
-                                                                                                                                              True
-                                                                                                                                            ]
+                                                                                                                                            )
+                                                                                                                                          )
+                                                                                                                                          [
+                                                                                                                                            MustValidateInTimeRange
+                                                                                                                                            dt
                                                                                                                                           ]
-                                                                                                                                        ]
+                                                                                                                                        )
                                                                                                                                       ]
                                                                                                                                       n
                                                                                                                                     ]

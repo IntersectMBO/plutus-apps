@@ -74,6 +74,7 @@ import Ledger.Constraints.OffChain qualified as P
 import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
                                          TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
+import Ledger.Constraints.ValidityInterval (toPlutusInterval)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Tx qualified as PV2
@@ -217,8 +218,8 @@ prepareConstraints
 prepareConstraints ownOutputs constraints = do
     let
       extractPosixTimeRange = \case
-        P.MustValidateIn range -> Left range
-        other                  -> Right other
+        P.MustValidateInTimeRange range -> Left $ toPlutusInterval range
+        other                           -> Right other
       (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> constraints
     other <- mapLedgerMkTxError $ P.prepareConstraints ownOutputs nonRangeConstraints
     pure $ MkSortedConstraints ranges other

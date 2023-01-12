@@ -119,11 +119,12 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateInTimeRange),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
+import Ledger.Constraints.ValidityInterval (toPlutusInterval)
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Index (adjustTxOut)
 import Ledger.Orphans ()
@@ -683,9 +684,9 @@ processConstraint
 processConstraint = \case
     MustIncludeDatumInTxWithHash _ _ -> pure () -- always succeeds
     MustIncludeDatumInTx _ -> pure () -- always succeeds
-    MustValidateIn timeRange -> do
+    MustValidateInTimeRange timeRange -> do
         slotRange <-
-            gets ( flip posixTimeRangeToContainedSlotRange timeRange
+            gets ( flip posixTimeRangeToContainedSlotRange (toPlutusInterval timeRange)
                  . pSlotConfig
                  . cpsParams
                  )

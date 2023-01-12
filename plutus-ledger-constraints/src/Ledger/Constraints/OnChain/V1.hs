@@ -23,11 +23,12 @@ import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icReferenceTxOutRef, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateInTimeRange),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
                                          TxConstraintFuns (TxConstraintFuns),
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx))
+import Ledger.Constraints.ValidityInterval (toPlutusInterval)
 import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Value (leq)
 import Ledger.Value qualified as Value
@@ -77,9 +78,9 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustIncludeDatumInTx dv ->
         traceIfFalse "L2" -- "Missing datum"
         $ dv `elem` fmap snd (txInfoData scriptContextTxInfo)
-    MustValidateIn interval ->
+    MustValidateInTimeRange interval ->
         traceIfFalse "L3" -- "Wrong validation interval"
-        $ interval `contains` txInfoValidRange scriptContextTxInfo
+        $ toPlutusInterval interval `contains` txInfoValidRange scriptContextTxInfo
     MustBeSignedBy pkh ->
         traceIfFalse "L4" -- "Missing signature"
         $ scriptContextTxInfo `V.txSignedBy` unPaymentPubKeyHash pkh

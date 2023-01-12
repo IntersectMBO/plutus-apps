@@ -88,7 +88,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Interval qualified as Interval
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Scripts (MintingPolicyHash)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (AssetClass, TokenName, Value)
@@ -301,7 +301,7 @@ applyInput sc@Stablecoin{scOracle,scStablecoinTokenName,scReservecoinTokenName} 
                 { bsReservecoins = bsReservecoins bs + rc
                 , bsReserves = bsReserves bs + fmap round (fees + rcValue)
                 }, Constraints.mustMintCurrency bsMintingPolicyScript scReservecoinTokenName (unRC rc))
-    let dateConstraints = Constraints.mustValidateIn $ Interval.from obsTime
+    let dateConstraints = Constraints.mustValidateInTimeRange $ Interval.from obsTime
     pure (constraints <> newConstraints <> dateConstraints, newState)
 
 {-# INLINEABLE step #-}
