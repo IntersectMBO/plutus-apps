@@ -76,7 +76,6 @@ library
     Plutus.Contract.Trace.RequestHandler
     Plutus.Contract.Types
     Plutus.Contract.Util
-    Plutus.Contract.Wallet
     Plutus.Trace
     Plutus.Trace.Effects.Assert
     Plutus.Trace.Effects.ContractInstanceId

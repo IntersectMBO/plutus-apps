@@ -70,6 +70,7 @@ library
     Cardano.Protocol.Socket.Mock.Client
     Cardano.Protocol.Socket.Mock.Server
     Cardano.Wallet.LocalClient
+    Cardano.Wallet.LocalClient.ExportTx
     Cardano.Wallet.Mock.API
     Cardano.Wallet.Mock.Client
     Cardano.Wallet.Mock.Handlers

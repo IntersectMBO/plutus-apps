@@ -108,17 +108,6 @@ handleTx ::
     => UnbalancedTx -> Eff effs CardanoTx
 handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 
--- | Get an unspent output belonging to the wallet.
-getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
-getUnspentOutput = do
-    addr <- Contract.ownAddress
-    let constraints = mustPayToAddress (toPlutusAddress addr) (Ada.lovelaceValueOf 1)
-    utx <- Contract.mkTxConstraints @Void mempty constraints
-    tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
-    case getCardanoTxInputs tx of
-        inp : _ -> pure $ txInRef inp
-        []      -> throwing _OtherContractError "Balanced transaction has no inputs"
-
 data ExportTxRedeemerPurpose = Spending | Minting | Rewarding | Certifying
 
 instance ToJSON ExportTxRedeemerPurpose where
