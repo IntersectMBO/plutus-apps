@@ -1,6 +1,6 @@
 cabal-version:   2.0
 name:            plutus-use-cases
-version:         1.0.0.0
+version:         1.1.0.0
 license:         Apache-2.0
 license-file:    LICENSE NOTICE
 maintainer:      jann.mueller@iohk.io
@@ -91,14 +91,14 @@ library
   -- Local components
   --------------------
   build-depends:
-      cardano-node-emulator      >=1.0.0
-    , playground-common          >=1.0.0
-    , plutus-chain-index-core    >=1.0.0
-    , plutus-contract            >=1.0.0
+      cardano-node-emulator      >=1.1.0
+    , playground-common          >=1.1.0
+    , plutus-chain-index-core    >=1.1.0
+    , plutus-contract            >=1.1.0
     , plutus-core                >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-script-utils        >=1.0.0
+    , plutus-ledger              >=1.1.0
+    , plutus-ledger-constraints  >=1.1.0
+    , plutus-script-utils        >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
@@ -182,15 +182,15 @@ test-suite plutus-use-cases-test
   -- Local components
   --------------------
   build-depends:
-      cardano-node-emulator          >=1.0.0
-    , freer-extras                   >=1.0.0
-    , playground-common              >=1.0.0
-    , plutus-contract                >=1.0.0
-    , plutus-contract-certification  >=1.0.0
-    , plutus-ledger                  >=1.0.0
-    , plutus-ledger-constraints      >=1.0.0
-    , plutus-script-utils            >=1.0.0
-    , plutus-use-cases               >=1.0.0
+      cardano-node-emulator          >=1.1.0
+    , freer-extras                   >=1.1.0
+    , playground-common              >=1.1.0
+    , plutus-contract                >=1.1.0
+    , plutus-contract-certification  >=1.1.0
+    , plutus-ledger                  >=1.1.0
+    , plutus-ledger-constraints      >=1.1.0
+    , plutus-script-utils            >=1.1.0
+    , plutus-use-cases               >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
@@ -266,14 +266,14 @@ executable plutus-use-cases-scripts
   -- Local components
   --------------------
   build-depends:
-      cardano-node-emulator          >=1.0.0
-    , freer-extras                   >=1.0.0
-    , plutus-contract                >=1.0.0
-    , plutus-contract-certification  >=1.0.0
-    , plutus-ledger                  >=1.0.0
-    , plutus-ledger-constraints      >=1.0.0
-    , plutus-script-utils            >=1.0.0
-    , plutus-use-cases               >=1.0.0
+      cardano-node-emulator          >=1.1.0
+    , freer-extras                   >=1.1.0
+    , plutus-contract                >=1.1.0
+    , plutus-contract-certification  >=1.1.0
+    , plutus-ledger                  >=1.1.0
+    , plutus-ledger-constraints      >=1.1.0
+    , plutus-script-utils            >=1.1.0
+    , plutus-use-cases               >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
