@@ -5,7 +5,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling sources sourcesOverride; }
 }:
 let
-  inherit (packages) pkgs plutus-apps docs webCommon;
+  inherit (packages) pkgs plutus-apps docs;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt glibcLocales;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji scriv nix-pre-commit-hooks cabal-fmt;
 
@@ -56,13 +56,6 @@ let
       cabal-fmt = cabal-fmt;
     };
     hooks = {
-      purs-tidy-hook = {
-        enable = true;
-        name = "purs-tidy";
-        entry = "${plutus-apps.purs-tidy}/bin/purs-tidy format-in-place";
-        files = "\\.purs$";
-        language = "system";
-      };
       stylish-haskell.enable = true;
       nixpkgs-fmt = {
         enable = true;
@@ -122,21 +115,13 @@ let
     cardano-repo-tool
     docs.build-and-serve-docs
     fixPngOptimization
-    fix-purs-tidy
     fixCabalFmt
     fixStylishHaskell
     haskell-language-server
     haskell-language-server-wrapper
     hie-bios
     hlint
-    psa
-    purescript-language-server
-    purs-0_14_3
-    purs-tidy
-    spago
-    spago2nix
     stylish-haskell
-    updateClientDeps
   ]);
 
 in
@@ -159,7 +144,6 @@ haskell.project.shellFor {
   ''
   + ''
     export GITHUB_SHA=$(git rev-parse HEAD)
-    export WEB_COMMON_SRC=${webCommon.cleanSrc}
 
     # This is probably set by haskell.nix's shellFor, but it interferes 
     # with the pythonTools in nativeBuildInputs above.

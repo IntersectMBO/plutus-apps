@@ -1,5 +1,3 @@
-# TODO(std) DUP(except purs-tidy)
-
 { inputs, cell }:
 
 let
@@ -21,14 +19,6 @@ inputs.pre-commit-hooks-nix.lib.run {
     stylish-haskell.enable = true;
     cabal-fmt.enable = true;
     shellcheck.enable = true;
-
-    purs-tidy-hook = {
-      enable = true;
-      name = "purs-tidy";
-      entry = "${cell.library.easy-ps.purs-tidy}/bin/purs-tidy format-in-place";
-      files = "\\.purs$";
-      language = "system";
-    };
 
     editorconfig-checker = {
       enable = true;

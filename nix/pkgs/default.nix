@@ -41,13 +41,9 @@ let
   #
   # dev convenience scripts
   #
-  fix-purs-tidy = pkgs.callPackage ./fix-purs-tidy { inherit purs-tidy; };
   fixCabalFmt = pkgs.callPackage ./fix-cabal-fmt { inherit cabal-fmt; };
   fixStylishHaskell = pkgs.callPackage ./fix-stylish-haskell { inherit stylish-haskell; };
   fixPngOptimization = pkgs.callPackage ./fix-png-optimization { };
-  updateClientDeps = pkgs.callPackage ./update-client-deps {
-    inherit purs-0_14_3 spago spago2nix;
-  };
 
   #
   # sphinx python packages
@@ -64,21 +60,6 @@ let
     inherit system;
     inherit (sources) nixpkgs;
   });
-
-  # easy-purescript-nix has some kind of wacky internal IFD
-  # usage that breaks the logic that makes source fetchers
-  # use native dependencies. This isn't easy to fix, since
-  # the only places that need to use native dependencies
-  # are deep inside, and we don't want to build the whole
-  # thing native. Fortunately, we only want to build the
-  # client on Linux, so that's okay. However, it does
-  # mean that e.g. we can't build the client dep updating
-  # script on Darwin.
-  easyPS = pkgs.callPackage (sources.easy-purescript-nix) { };
-
-  # We pull out some packages from easyPS that are a pain to get otherwise.
-  # This does mean we can't as easily control the version we get, though.
-  inherit (easyPS) purs-tidy purs-0_14_3 spago purescript-language-server psa spago2nix;
 
   # sphinx haddock support
   sphinxcontrib-haddock = pkgs.callPackage (sources.sphinxcontrib-haddock) { pythonPackages = pkgs.python3Packages; };
@@ -100,15 +81,6 @@ let
   lib = rec {
     inherit gitignore-nix;
     haddock-combine = pkgs.callPackage (sources.plutus-core + "/nix/lib/haddock-combine.nix") { inherit sphinxcontrib-haddock; };
-    filterNpm = pkgs.callPackage ../lib/filter-npm.nix { };
-    npmlock2nix = pkgs.callPackage sources.npmlock2nix { };
-    buildPursPackage = pkgs.callPackage ../lib/purescript.nix { inherit easyPS; inherit (pkgs) nodejs; };
-    buildNodeModules = pkgs.callPackage ../lib/node_modules.nix ({
-      inherit npmlock2nix;
-    } // pkgs.lib.optionalAttrs (stdenv.isDarwin) {
-      CoreServices = pkgs.darwin.apple_sdk.frameworks.CoreServices;
-      xcodebuild = pkgs.xcodebuild;
-    });
   };
 
 in
@@ -117,8 +89,7 @@ in
   inherit scriv;
   inherit nix-pre-commit-hooks;
   inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios cabal-fmt;
-  inherit purs-tidy purs-0_14_3 spago spago2nix purescript-language-server psa;
-  inherit fix-purs-tidy fixStylishHaskell fixCabalFmt fixPngOptimization updateClientDeps;
-  inherit easyPS plutus-haddock-combined;
+  inherit fixStylishHaskell fixCabalFmt fixPngOptimization;
+  inherit plutus-haddock-combined;
   inherit lib;
 }

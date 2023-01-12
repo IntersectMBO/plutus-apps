@@ -49,24 +49,8 @@
       url = "github:input-output-hk/cardano-repo-tool";
       flake = false;
     };
-    easy-purescript-nix = {
-      url = "github:justinwoo/easy-purescript-nix";
-      flake = false;
-    };
-    npmlock2nix = {
-      url = "github:tweag/npmlock2nix";
-      flake = false;
-    };
     plutus-core = {
       url = "github:input-output-hk/plutus";
-      flake = false;
-    };
-    spago2nix = {
-      url = "github:justinwoo/spago2nix";
-      flake = false;
-    };
-    web-common = {
-      url = "github:input-output-hk/purescript-web-common";
       flake = false;
     };
   };
