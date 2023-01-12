@@ -111,8 +111,8 @@ library
   -- Local components
   --------------------
   build-depends:
-    , freer-extras         >=1.0.0
-    , plutus-script-utils  >=1.0.0
+    , freer-extras         >=1.1.0
+    , plutus-script-utils  >=1.1.0
 
   --------------------------
   -- Other IOG dependencies

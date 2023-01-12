@@ -72,7 +72,7 @@ library
   --------------------
   -- Local components
   --------------------
-  build-depends:   plutus-script-utils >=1.0.0
+  build-depends:   plutus-script-utils >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
