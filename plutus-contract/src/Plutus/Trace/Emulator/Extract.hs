@@ -13,18 +13,24 @@ module Plutus.Trace.Emulator.Extract(
 
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Params (Params (..), networkIdL, protocolParamsL)
+import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
 import Control.Foldl qualified as L
 import Control.Lens ((&), (.~))
 import Control.Monad.Freer (run)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.ByteString.Lazy qualified as BSL
 import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
+import Data.Set qualified as Set
+
+import Ledger qualified
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
+import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Request (MkTxLog)
-import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api (ExBudget (..))
@@ -103,14 +109,28 @@ writeTransaction
     -> Int
     -> UnbalancedTx
     -> IO ()
-writeTransaction params fp prefix idx tx = do
+writeTransaction params fp prefix idx utx = do
     let filename1 = fp </> prefix <> "-" <> show idx <> ".json"
-    case export params tx of
+    case buildTx utx of
         Left err ->
             putStrLn $ "Export tx failed for " <> filename1 <> ". Reason: " <> show (pretty err)
-        Right exportTx -> do
+        Right ctx -> do
             putStrLn $ "Writing partial transaction JSON: " <> filename1
-            BSL.writeFile filename1 $ encodePretty exportTx
+            BSL.writeFile filename1 $ encodePretty ctx
+    where
+      buildTx :: UnbalancedTx -> Either CardanoLedgerError (C.Tx C.BabbageEra)
+      buildTx (UnbalancedEmulatorTx tx sigs _) =
+        let requiredSigners = Set.toList sigs
+        in bimap
+            Right
+            (C.makeSignedTransaction [])
+            (CardanoAPI.toCardanoTxBody (pNetworkId params) (emulatorPParams params) requiredSigners tx)
+      buildTx (UnbalancedCardanoTx tx utxos) =
+        let fromCardanoTx ctx = do
+              utxo <- fromPlutusIndex $ Ledger.UtxoIndex utxos
+              makeTransactionBody params utxo ctx
+        in C.makeSignedTransaction [] <$> fromCardanoTx tx
+
 
 writeMkTxLog :: FilePath -> String -> Int -> MkTxLog -> IO ()
 writeMkTxLog fp prefix idx event = do
