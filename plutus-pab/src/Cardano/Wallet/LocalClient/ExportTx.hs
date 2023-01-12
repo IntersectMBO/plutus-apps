@@ -37,7 +37,6 @@ import Data.Bifunctor (Bifunctor (bimap), first)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import Data.OpenApi qualified as OpenApi
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -115,7 +114,6 @@ data ExportTxRedeemer =
     | RewardingRedeemer { redeemer:: Plutus.Redeemer, redeemerStakingCredential :: StakingCredential}
     | CertifyingRedeemer { redeemer:: Plutus.Redeemer, redeemerDCert :: DCert }
     deriving stock (Eq, Show, Generic, Typeable)
-    deriving anyclass (OpenApi.ToSchema)
 
 instance FromJSON ExportTxRedeemer where
     parseJSON v = parseSpendingRedeemer v <|> parseMintingRedeemer v <|> parseRewardingRedeemer v <|> parseCertifyingRedeemer v
@@ -164,7 +162,6 @@ data ExportTx =
             , redeemers :: [ExportTxRedeemer]
             }
     deriving stock (Eq, Show, Generic, Typeable)
-    deriving anyclass (OpenApi.ToSchema)
 
 instance FromJSON ExportTx where
   parseJSON = withObject "ExportTx" $ \v -> ExportTx
@@ -197,7 +194,6 @@ data ExportTxInput =
         , etxiAssets           :: [(C.PolicyId, C.AssetName, C.Quantity)]
         }
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (OpenApi.ToSchema)
 
 instance FromJSON ExportTxInput where
     parseJSON = withObject "ExportTxInput" $ \o -> ExportTxInput

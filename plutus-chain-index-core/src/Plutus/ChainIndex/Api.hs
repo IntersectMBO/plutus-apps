@@ -1,9 +1,12 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutus.ChainIndex.Api
   ( API
@@ -22,7 +25,7 @@ module Plutus.ChainIndex.Api
   , collectQueryResponse
   ) where
 
-import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
+import Control.Monad.Freer.Extras.Pagination (Page, PageQuery, PageSize)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Default (def)
 import Data.OpenApi qualified as OpenApi
@@ -30,15 +33,35 @@ import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Ledger (AssetClass, TxId)
 import Ledger.Credential (Credential)
-import Ledger.Tx (DecoratedTxOut, TxOutRef, Versioned)
+import Ledger.Tx (DatumFromQuery, DecoratedTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-                             StakeValidatorHash, Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
+                             PubKeyHash, Redeemer, RedeemerHash (RedeemerHash), StakeValidator (StakeValidator),
+                             StakeValidatorHash (StakeValidatorHash), StakingCredential, Validator,
+                             ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import Servant qualified
 import Servant.API (Description, Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
 import Servant.OpenApi (toOpenApi)
 import Servant.Swagger.UI (SwaggerSchemaUI, SwaggerSchemaUI', swaggerSchemaUIServer)
+
+deriving newtype instance OpenApi.ToSchema ValidatorHash
+deriving instance OpenApi.ToSchema DatumFromQuery
+deriving anyclass instance OpenApi.ToSchema PubKeyHash
+deriving instance OpenApi.ToSchema DecoratedTxOut
+deriving newtype instance OpenApi.ToSchema RedeemerHash
+deriving newtype instance OpenApi.ToSchema StakeValidator
+deriving newtype instance OpenApi.ToSchema MintingPolicy
+deriving newtype instance OpenApi.ToSchema MintingPolicyHash
+deriving newtype instance OpenApi.ToSchema AssetClass
+deriving anyclass instance OpenApi.ToSchema Credential
+deriving anyclass instance OpenApi.ToSchema StakingCredential
+deriving newtype instance OpenApi.ToSchema StakeValidatorHash
+
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (PageQuery a)
+deriving anyclass instance OpenApi.ToSchema PageSize
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Page a)
 
 -- | When requesting UTxOs of a given address, you need to provide the address,
 -- and optionnally the number of elements per page and the last item of the last

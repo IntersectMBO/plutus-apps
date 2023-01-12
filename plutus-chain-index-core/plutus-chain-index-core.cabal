@@ -92,6 +92,7 @@ library
     , ouroboros-consensus-shelley
     , ouroboros-network
     , ouroboros-network-framework
+    , plutus-core                  >=1.0.0
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0
     , typed-protocols
@@ -101,7 +102,7 @@ library
   ------------------------
   build-depends:
     , aeson
-    , base                  >=4.7     && <5
+    , base                       >=4.7     && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
@@ -114,6 +115,7 @@ library
     , fingertree
     , freer-simple
     , http-types
+    , insert-ordered-containers
     , io-classes
     , iohk-monitoring
     , lens
@@ -121,7 +123,7 @@ library
     , mtl
     , nothunks
     , openapi3
-    , prettyprinter         >=1.1.0.1
+    , prettyprinter              >=1.1.0.1
     , resource-pool
     , retry
     , semigroups
@@ -155,10 +157,10 @@ test-suite plutus-chain-index-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator    >=1.0.0
-    , freer-extras             >=1.0.0
-    , plutus-chain-index-core  >=1.0.0
-    , plutus-ledger            >=1.0.0
+    , cardano-node-emulator    >=1.1.0
+    , freer-extras             >=1.1.0
+    , plutus-chain-index-core  >=1.1.0
+    , plutus-ledger            >=1.1.0
 
   --------------------------
   -- Other IOG dependencies

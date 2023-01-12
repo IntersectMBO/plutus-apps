@@ -71,7 +71,6 @@ library
     , freer-simple
     , lens
     , mtl
-    , openapi3
     , postgresql-simple
     , prettyprinter
     , resource-pool

@@ -102,7 +102,7 @@ import Codec.Serialise qualified as Codec
 import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
 import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes, TkSimple))
 import Control.Applicative ((<|>))
-import Control.Lens ((&), (.~), (<&>), (?~))
+import Control.Lens ((<&>))
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser, parseFail, prependFailure, typeMismatch)
@@ -114,12 +114,7 @@ import Data.ByteString.Short qualified as SBS
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import Data.OpenApi (NamedSchema (NamedSchema), OpenApiType (OpenApiObject), byteSchema, declareSchemaRef, properties,
-                     required, sketchSchema, type_)
-import Data.OpenApi qualified as OpenApi
-import Data.Proxy (Proxy (Proxy))
 import Data.Tuple (swap)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Ada qualified as P
@@ -145,18 +140,6 @@ instance ToJSON CardanoBuildTx where
 
 instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
-
-instance OpenApi.ToSchema CardanoBuildTx where
-  -- TODO: implement the schema
-  declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
-
-instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "EraInMode") $ sketchSchema C.BabbageEraInCardanoMode
-
-instance (Typeable era) => OpenApi.ToSchema (C.Tx era) where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "Tx") byteSchema
 
 -- | Cardano tx from any era.
 data SomeCardanoApiTx where
@@ -290,18 +273,6 @@ parseSomeCardanoTx errorMsg txAsType (Aeson.Object v) =
 parseSomeCardanoTx _ _ invalid =
     prependFailure "parsing SomeCardanoApiTx failed, "
       (typeMismatch "Object" invalid)
-
-instance OpenApi.ToSchema SomeCardanoApiTx where
-  declareNamedSchema _ = do
-    txSchema <- declareSchemaRef (Proxy :: Proxy (C.Tx C.BabbageEra))
-    eraInModeSchema <- declareSchemaRef (Proxy :: Proxy (C.EraInMode C.BabbageEra C.CardanoMode))
-    return $ NamedSchema (Just "SomeCardanoApiTx") $ mempty
-      & type_ ?~ OpenApiObject
-      & properties .~
-          [ ("tx", txSchema)
-          , ("eraInMode", eraInModeSchema)
-          ]
-      & required .~ [ "tx", "eraInMode" ]
 
 txOutRefs :: SomeCardanoApiTx -> [(PV1.TxOut, PV1.TxOutRef)]
 txOutRefs (SomeTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) _) =

@@ -81,7 +81,6 @@ import Control.Lens (Iso', iso)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (Max (..))
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
@@ -142,12 +141,12 @@ never = send @(Resumable i o) RZero
 --   'Resumable' programs.
 newtype RequestID = RequestID Natural
     deriving stock (Eq, Ord, Show, Generic)
-    deriving newtype (ToJSON, FromJSON, OpenApi.ToSchema, ToJSONKey, FromJSONKey, Pretty, Enum, Num)
+    deriving newtype (ToJSON, FromJSON, ToJSONKey, FromJSONKey, Pretty, Enum, Num)
 
 -- | A value that uniquely identifies groups of requests.
 newtype IterationID = IterationID Natural
     deriving stock (Eq, Ord, Show, Generic)
-    deriving newtype (ToJSON, FromJSON, OpenApi.ToSchema, ToJSONKey, FromJSONKey, Pretty, Enum, Num)
+    deriving newtype (ToJSON, FromJSON, ToJSONKey, FromJSONKey, Pretty, Enum, Num)
     deriving (Semigroup) via (Max Natural)
 
 instance Monoid IterationID where
@@ -161,8 +160,6 @@ data Request o =
         , rqRequest :: o
         } deriving stock (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
            deriving anyclass (ToJSON, FromJSON)
-
-deriving instance OpenApi.ToSchema o => OpenApi.ToSchema (Request o)
 
 instance Pretty o => Pretty (Request o) where
     pretty Request{rqID, itID, rqRequest} =
