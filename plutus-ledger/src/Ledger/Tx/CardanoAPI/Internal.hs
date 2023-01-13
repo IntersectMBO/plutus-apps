@@ -136,7 +136,7 @@ newtype CardanoBuildTx = CardanoBuildTx { getCardanoBuildTx :: C.TxBodyContent C
   deriving (Eq, Show)
 
 instance ToJSON CardanoBuildTx where
-  toJSON = error "TODO: ToJSON CardanoBuildTx"
+  toJSON _ = Aeson.String "TODO: ToJSON CardanoBuildTx"
 
 instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"

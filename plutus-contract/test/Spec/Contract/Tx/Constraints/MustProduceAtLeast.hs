@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustProduceAtLeast(tests) where
 
-import Control.Lens (review, (&), (??), (^.))
+import Control.Lens ((&), (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -21,15 +21,12 @@ import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (mapError, throwError)
 import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
-                               submitTxConstraintsWith, submitUnbalancedTx, utxosAt)
-import Plutus.Contract.Error (AsContractError (_TxConstraintResolutionContractError))
+                               submitCardanoTxConstraintsWith, submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig,
-                             mockWalletAddress, w1, w6, (.&&.))
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
+                             w1, w6, (.&&.))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import Plutus.V1.Ledger.Value qualified as Value
@@ -246,11 +243,7 @@ type SubmitTx
   -> Contract () Empty ContractError Tx.CardanoTx
 
 cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx lookups tx = let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  tx' = Tx.Constraints.mkTx @UnitTest p lookups tx
-  in submitUnbalancedTx =<<
-    (mapError (review _TxConstraintResolutionContractError) $ either throwError pure tx')
+cardanoSubmitTx = submitCardanoTxConstraintsWith
 
 ledgerSubmitTx :: SubmitTx
 ledgerSubmitTx = submitTxConstraintsWith
