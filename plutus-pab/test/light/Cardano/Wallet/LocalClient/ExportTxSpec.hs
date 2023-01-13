@@ -3,8 +3,6 @@
 
 module Cardano.Wallet.LocalClient.ExportTxSpec
     ( tests
-    -- TODO: remove export, added to silence the warnings
-    , jsonInvProp
     ) where
 
 import Cardano.Api qualified as C
@@ -26,17 +24,14 @@ import Ledger.Scripts qualified as Script
 import Ledger.Tx.CardanoAPI (fromCardanoPolicyId, fromCardanoTxId)
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import Test.Tasty (TestTree, testGroup)
--- import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests =
     testGroup
         "Plutus.Cardano.Wallet"
-        -- TODO: Reenable once we update `cardano-node` with the following PR merged:
-        -- https://github.com/input-output-hk/cardano-node/pull/3847
-        []
-        -- [ testProperty "ExportTx FromJSON and ToJSON inverse property" jsonInvProp
-        -- ]
+        [ testProperty "ExportTx FromJSON and ToJSON inverse property" jsonInvProp
+        ]
 
 jsonInvProp :: Property
 jsonInvProp = Hedgehog.property $ do
