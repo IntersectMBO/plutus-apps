@@ -1,6 +1,0 @@
-Changed
--------
-
-- The default implementation of functions in the `IsScriptContext` typeclass now
-  log which data they are trying to decode, to ease debugging when an invalid
-  binary representation of a redeemer / value or script context is sent.

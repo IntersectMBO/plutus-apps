@@ -37,6 +37,7 @@ import Ledger (Address, POSIXTime, PaymentPubKeyHash)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
@@ -211,7 +212,7 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
                     }
                  )
     (CollectingSignatures payment _, Cancel) ->
-        let constraints = Constraints.mustValidateIn (Interval.from (paymentDeadline payment)) in
+        let constraints = Constraints.mustValidateInTimeRange (ValidityInterval.from (paymentDeadline payment)) in
         Just ( constraints
              , State
                 { stateData = Holding
@@ -221,14 +222,9 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
     (CollectingSignatures payment pkh, Pay)
         | proposalAccepted params pkh ->
             let Payment{paymentAmount, paymentRecipient, paymentDeadline} = payment
-                -- Correct validity interval should be:
-                -- @
-                --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ paymentDeadline p)
-                -- @
-                -- See Note [Validity Interval's upper bound]
-                validityTimeRange = Interval.to $ paymentDeadline - 2
+                validityTimeRange = ValidityInterval.lessThan $ paymentDeadline - 1
                 constraints =
-                    Constraints.mustValidateIn validityTimeRange
+                    Constraints.mustValidateInTimeRange validityTimeRange
                     <> Constraints.mustPayToAddress paymentRecipient paymentAmount
                 newValue = currentValue - paymentAmount
             in Just ( constraints

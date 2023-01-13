@@ -28,7 +28,8 @@ module Ledger.Tx.Constraints(
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
     , TC.mustUseOutputAsCollateral
     , TC.mustReferenceOutput
-    , TC.mustValidateIn
+    , TC.mustValidateInSlotRange
+    , TC.mustValidateInTimeRange
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast
     , TC.mustIncludeDatumInTxWithHash
@@ -93,6 +94,7 @@ module Ledger.Tx.Constraints(
     , TC.mustPayWithInlineDatumToPubKeyAddress
     , TC.mustPayToOtherScript
     , TC.mustPayToOtherScriptAddress
+    , TC.mustValidateIn
     ) where
 
 import Ledger.Constraints.TxConstraints qualified as TC

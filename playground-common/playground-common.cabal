@@ -1,0 +1,142 @@
+cabal-version: 2.0
+name:          playground-common
+version:       1.1.0.0
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+author:        David Smith
+category:      Web
+build-type:    Simple
+data-files:    test/oAuthToken1.json
+
+library
+  exposed-modules:
+    Auth
+    Auth.Types
+    Control.Monad.Now
+    Control.Monad.Trace
+    Control.Monad.Web
+    Gist
+    Language.Haskell.Interpreter
+    Playground.Contract
+    Playground.Interpreter.Util
+    Playground.Schema
+    Playground.TH
+    Playground.Types
+    PSGenerator.Common
+    Schema
+    Servant.Extra
+
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wmissing-import-lists
+    -Wredundant-constraints
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      cardano-node-emulator      >=1.0.0
+    , freer-extras               >=1.0.0
+    , plutus-chain-index-core    >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+      cardano-api        >=1.35
+    , cardano-slotting
+    , ouroboros-network
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+      aeson
+    , aeson-casing
+    , base                >=4.7  && <5
+    , bytestring
+    , containers
+    , cookie
+    , cryptonite
+    , data-default
+    , deriving-compat
+    , exceptions
+    , foldl
+    , freer-simple
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , jwt
+    , lens
+    , monad-logger
+    , mtl
+    , newtype-generics
+    , openapi3
+    , prettyprinter
+    , process
+    , purescript-bridge
+    , recursion-schemes   <5.2
+    , row-types
+    , servant             >=0.16
+    , servant-client
+    , servant-purescript
+    , servant-server
+    , streaming
+    , template-haskell
+    , text
+    , time
+    , time-out
+    , time-units
+    , transformers
+    , uuid
+
+test-suite playground-common-test
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  other-modules:
+    Auth.TypesSpec
+    Paths_playground_common
+    Playground.TypesSpec
+    SchemaSpec
+
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wmissing-import-lists -Wredundant-constraints
+    -fprint-potential-instances -Wunused-packages
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+      playground-common  >=1.0.0
+    , plutus-contract    >=1.0.0
+    , plutus-ledger      >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+      aeson
+    , base               >=4.7 && <5
+    , bytestring
+    , recursion-schemes  <5.2
+    , tasty
+    , tasty-hunit
+    , text

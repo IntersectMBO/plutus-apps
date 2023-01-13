@@ -15,10 +15,10 @@ import Control.Monad (void)
 import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Data.Void (Void)
-import Ledger (POSIXTimeRange)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -76,7 +76,7 @@ contract = do
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
             <> Constraints.mustIncludeDatumInTx unitDatum
-            <> Constraints.mustValidateIn (from $ now + 1000)
+            <> Constraints.mustValidateInTimeRange (Interval.from $ now + 1000)
     void $ waitNSlots 2
     ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -114,7 +114,7 @@ traceCardano c = do
     void $ Trace.activateContractWallet w1 c
     void $ Trace.waitNSlots 4
 
-contractCardano :: (POSIXTime -> POSIXTimeRange) -> Params -> Contract () Empty ContractError ()
+contractCardano :: (POSIXTime -> Interval.ValidityInterval POSIXTime) -> Params -> Contract () Empty ContractError ()
 contractCardano f p = do
     let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @UnitTest p lookups constraints
     pkh <- Con.ownFirstPaymentPubKeyHash
@@ -125,7 +125,7 @@ contractCardano f p = do
         lookups = Tx.Constraints.unspentOutputs utxos
         tx  =  Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOutEstimated)
             <> Tx.Constraints.mustSpendPubKeyOutput utxoRef
-            <> Tx.Constraints.mustValidateIn (f now)
+            <> Tx.Constraints.mustValidateInTimeRange (f now)
     void $ waitNSlots 2
     ledgerTx <- submitUnbalancedTx $ mkTx lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
@@ -138,13 +138,13 @@ contractCardano f p = do
     P.unless (cSlot `I.member` txRange) $ P.traceError "InvalidRange"
 
 validContractCardano :: Params -> Contract () Empty ContractError ()
-validContractCardano = contractCardano $ from . (+ 1000)
+validContractCardano = contractCardano $ Interval.from . (+ 1000)
 
 pastTxContractCardano :: Params -> Contract () Empty ContractError ()
-pastTxContractCardano = contractCardano I.to
+pastTxContractCardano = contractCardano $ Interval.lessThan . (+ 1000)
 
 futureTxContractCardano :: Params -> Contract () Empty ContractError ()
-futureTxContractCardano = contractCardano $ from . (+ 4000)
+futureTxContractCardano = contractCardano $ Interval.from . (+ 4000)
 
 protocolV6Cardano :: TestTree
 protocolV6Cardano =

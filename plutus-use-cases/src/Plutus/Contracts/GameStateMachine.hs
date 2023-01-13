@@ -44,7 +44,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, ScriptContext, TokenName, Value)
+import Ledger (Address, POSIXTime, TokenName, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Address.Orphans ()
 import Ledger.Constraints (TxConstraints)
@@ -260,11 +260,8 @@ guess = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessTokenTarget, gue
         $ SM.runStep (client guessArgsGameParam)
             (Guess guessTokenTarget guessedSecret newSecret guessArgsValueTakenOut)
 
-cc :: PlutusTx.CompiledCode (GameParam -> GameState -> GameInput -> ScriptContext -> ())
-cc = $$(PlutusTx.compile [|| \a b c d -> check (mkValidator a b c d) ||])
-
 covIdx :: CoverageIndex
-covIdx = computeRefinedCoverageIndex cc
+covIdx = $refinedCoverageIndex $$(PlutusTx.compile [|| \a b c d -> check (mkValidator a b c d) ||])
 
 PlutusTx.unstableMakeIsData ''GameState
 PlutusTx.makeLift ''GameState
