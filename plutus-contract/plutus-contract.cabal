@@ -257,7 +257,6 @@ test-suite plutus-contract-test
     Spec.Emulator
     Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle
-    Spec.Plutus.Contract.Wallet
     Spec.Rows
     Spec.Secrets
     Spec.State

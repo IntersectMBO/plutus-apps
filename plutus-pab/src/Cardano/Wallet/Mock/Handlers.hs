@@ -24,7 +24,6 @@ import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
                                   fromWalletState)
-import Cardano.Wallet.Primitive.Types as CWP
 import Control.Concurrent (MVar)
 import Control.Concurrent.MVar (putMVar, takeMVar)
 import Control.Lens (at, (?~))
