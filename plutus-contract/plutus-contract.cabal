@@ -76,7 +76,6 @@ library
     Plutus.Contract.Trace.RequestHandler
     Plutus.Contract.Types
     Plutus.Contract.Util
-    Plutus.Contract.Wallet
     Plutus.Trace
     Plutus.Trace.Effects.Assert
     Plutus.Trace.Effects.ContractInstanceId
@@ -137,7 +136,6 @@ library
     , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
-    , cardano-wallet-core
     , contractmodel
     , plutus-core             >=1.0.0
     , plutus-ledger-api       >=1.0.0
@@ -259,7 +257,6 @@ test-suite plutus-contract-test
     Spec.Emulator
     Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle
-    Spec.Plutus.Contract.Wallet
     Spec.Rows
     Spec.Secrets
     Spec.State

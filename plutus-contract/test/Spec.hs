@@ -14,7 +14,6 @@ import Spec.Contract.Tx.Constraints.Spec qualified
 import Spec.Emulator qualified
 import Spec.ErrorChecking qualified
 import Spec.Plutus.Contract.Oracle qualified
-import Spec.Plutus.Contract.Wallet qualified
 import Spec.Rows qualified
 import Spec.Secrets qualified
 import Spec.State qualified
@@ -34,7 +33,6 @@ tests = testGroup "plutus-contract" [
     Spec.Contract.Tx.Constraints.Spec.tests,
     Spec.Secrets.tests,
     Spec.ErrorChecking.tests,
-    Spec.Plutus.Contract.Wallet.tests,
     Spec.Plutus.Contract.Oracle.tests,
     Spec.Balancing.tests
     ]

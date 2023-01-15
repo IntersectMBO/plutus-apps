@@ -1,13 +1,16 @@
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Spec.Plutus.Contract.Wallet
+module Cardano.Wallet.LocalClient.ExportTxSpec
     ( tests
     -- TODO: remove export, added to silence the warnings
     , jsonInvProp
     ) where
 
 import Cardano.Api qualified as C
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx (ExportTx),
+                                            ExportTxInput (ExportTxInput, etxiAssets, etxiId, etxiTxIx),
+                                            ExportTxRedeemer (MintingRedeemer, SpendingRedeemer))
 import Data.Aeson (decode, encode)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty)
@@ -21,8 +24,6 @@ import Hedgehog.Range qualified as Range
 import Ledger (TxOutRef (TxOutRef))
 import Ledger.Scripts qualified as Script
 import Ledger.Tx.CardanoAPI (fromCardanoPolicyId, fromCardanoTxId)
-import Plutus.Contract.Wallet (ExportTx (ExportTx), ExportTxInput (ExportTxInput, etxiAssets, etxiId, etxiTxIx),
-                               ExportTxRedeemer (MintingRedeemer, SpendingRedeemer))
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import Test.Tasty (TestTree, testGroup)
 -- import Test.Tasty.Hedgehog (testProperty)

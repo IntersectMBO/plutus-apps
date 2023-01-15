@@ -53,6 +53,7 @@ module Plutus.PAB.Core.ContractInstance.STM(
 
 import Cardano.Node.Emulator.Params (Params (pSlotConfig))
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Applicative (Alternative (empty))
 import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
@@ -73,7 +74,6 @@ import Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)
 import Plutus.ChainIndex.UtxoState (UtxoIndex, UtxoState (_usTxUtxoData), utxoState)
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription))
 import Plutus.Contract.Resumable (IterationID, Request (Request, itID, rqID, rqRequest), RequestID)
-import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core.Indexer.TxConfirmationStatus (TCSIndex)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue (EndpointValue),
                      NotificationError (EndpointNotAvailable, InstanceDoesNotExist, MoreThanOneEndpointAvailable))

@@ -24,6 +24,7 @@ module Plutus.PAB.Webserver.WebSocket
     , observableStateChange
     ) where
 
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Concurrent.Async (Async, async, waitAnyCancel)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
@@ -47,7 +48,6 @@ import Ledger.Slot (Slot)
 import Network.WebSockets qualified as WS
 import Network.WebSockets.Connection (Connection, PendingConnection)
 import Plutus.Contract.Effects (ActiveEndpoint)
-import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, OpenEndpoint (oepName))

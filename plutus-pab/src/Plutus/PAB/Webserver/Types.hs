@@ -10,6 +10,7 @@
 
 module Plutus.PAB.Webserver.Types where
 
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.Map (Map)
@@ -20,7 +21,6 @@ import Ledger.Index (UtxoIndex)
 import Ledger.Slot (Slot)
 import Playground.Types (FunctionSchema)
 import Plutus.Contract.Effects (ActiveEndpoint, PABReq)
-import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
 import Prettyprinter (Pretty, pretty, (<+>))
 import Schema (FormSchema)

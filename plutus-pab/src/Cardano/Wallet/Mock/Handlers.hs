@@ -24,7 +24,6 @@ import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
                                   fromWalletState)
-import Cardano.Wallet.Primitive.Types as CWP
 import Control.Concurrent (MVar)
 import Control.Concurrent.MVar (putMVar, takeMVar)
 import Control.Lens (at, (?~))
@@ -132,7 +131,7 @@ handleMultiWallet params = \case
     CreateWallet funds -> do
         wallets <- get @Wallets
         mockWallet <- newWallet
-        let walletId = Wallet.WalletId . CWP.WalletId $ CW.mwWalletId mockWallet
+        let walletId = Wallet.WalletId $ CW.mwWalletId mockWallet
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
             pkh = CW.paymentPubKeyHash mockWallet
             addr = CW.mockWalletAddress mockWallet
