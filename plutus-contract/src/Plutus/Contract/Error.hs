@@ -60,7 +60,6 @@ instance AsAssertionError T.Text where
 data ContractError =
     WalletContractError WalletAPIError
   | ChainIndexContractError T.Text ChainIndexResponse
-  | EmulatorAssertionContractError AssertionError -- TODO: Why do we need this constructor
   | ConstraintResolutionContractError MkTxError
   | TxToCardanoConvertContractError ToCardanoError
   | ResumableContractError MatchingError
@@ -86,7 +85,6 @@ instance Pretty ContractError where
         <+> pretty expectedResp
         <> ", got"
         <+> pretty actualResp
-    EmulatorAssertionContractError a    -> "Emulator assertion error:" <+> pretty a
     ConstraintResolutionContractError e -> "Constraint resolution error:" <+> pretty e
     TxToCardanoConvertContractError e   -> "To Cardano transaction conversation error:" <+> pretty e
     ResumableContractError e            -> "Resumable error:" <+> pretty e
@@ -106,9 +104,6 @@ instance AsContractError T.Text where
 
 instance IsString ContractError where
   fromString = OtherContractError . fromString
-
-instance AsAssertionError ContractError where
-    _AssertionError = _EmulatorAssertionContractError
 
 instance AsCheckpointError ContractError where
   _CheckpointError = _CCheckpointContractError
