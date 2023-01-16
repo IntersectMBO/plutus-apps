@@ -37,9 +37,14 @@ import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
 tests :: TestTree
 tests =
     testGroup "Required signer"
-        [ testGroup "ledger constraints" $ tests' ledgerSubmitTx
-        , testGroup "cardano constraints" $ tests' cardanoSubmitTx
+        [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
+        , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
         ]
+
+type SubmitTx
+  =  Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
 
 tests' :: SubmitTx -> [TestTree]
 tests' sub =
@@ -162,20 +167,3 @@ mustBeSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx = submitCardanoTxConstraintsWith
-  {- let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  tx' = Tx.Constraints.mkTx @UnitTest p lookups tx
-  in submitUnbalancedTx =<<
-    (mapError (review _TxConstraintResolutionContractError) $ either throwError pure tx')
-    -}
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith

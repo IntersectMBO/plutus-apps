@@ -23,7 +23,6 @@ import Data.String (IsString (fromString))
 import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
-import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
 import Data.Aeson qualified as JSON
@@ -63,7 +62,6 @@ data ContractError =
   | ChainIndexContractError T.Text ChainIndexResponse
   | EmulatorAssertionContractError AssertionError -- TODO: Why do we need this constructor
   | ConstraintResolutionContractError MkTxError
-  | TxConstraintResolutionContractError Tx.Constraints.MkTxError
   | TxToCardanoConvertContractError ToCardanoError
   | ResumableContractError MatchingError
   | CCheckpointContractError CheckpointError
@@ -90,7 +88,6 @@ instance Pretty ContractError where
         <+> pretty actualResp
     EmulatorAssertionContractError a    -> "Emulator assertion error:" <+> pretty a
     ConstraintResolutionContractError e -> "Constraint resolution error:" <+> pretty e
-    TxConstraintResolutionContractError e -> "Constraint resolution error:" <+> pretty e
     TxToCardanoConvertContractError e   -> "To Cardano transaction conversation error:" <+> pretty e
     ResumableContractError e            -> "Resumable error:" <+> pretty e
     CCheckpointContractError e          -> "Checkpoint error:" <+> pretty e

@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendAtLeast(tests) where
 
-import Control.Lens ((??))
+import Control.Lens (has, (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -33,9 +33,14 @@ import Prelude hiding (not)
 tests :: TestTree
 tests =
     testGroup "MustSpendAtLeast"
-        [ testGroup "ledger constraints" $ tests' ledgerSubmitTx
-        , testGroup "cardano constraints" $ tests' cardanoSubmitTx
+        [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
+        , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
         ]
+
+type SubmitTx
+  =  Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
 
 tests' :: SubmitTx -> [TestTree]
 tests' sub =
@@ -100,9 +105,7 @@ higherThanScriptBalance sub =
             defaultCheckOptions
             "Validation pass when mustSpendAtLeast is greater than script's balance and wallet's pubkey is included in the lookup"
             (assertContractError contract (Trace.walletInstanceTag w1)
-                (\case
-                    { ConstraintResolutionContractError (Constraints.DeclaredInputMismatch _) -> True
-                    ; _                                                                       -> False }) "failed to throw error"
+                (has (_ConstraintResolutionContractError . Constraints._DeclaredInputMismatch)) "failed to throw error"
             .&&. assertValidatedTransactionCount 1)
             (void $ trace contract)
 
@@ -119,7 +122,8 @@ phase2Failure sub =
 
 {-# INLINEABLE mkValidator #-}
 mkValidator :: Integer -> () -> ScriptContext -> Bool
-mkValidator amt _ ctx = P.traceIfFalse "mustSpendAtLeast not satisfied" (Constraints.checkScriptContext @() @() (Constraints.mustSpendAtLeast P.$ Ada.lovelaceValueOf amt) ctx)
+mkValidator amt _ ctx = P.traceIfFalse "mustSpendAtLeast not satisfied"
+  (Constraints.checkScriptContext @() @() (Constraints.mustSpendAtLeast P.$ Ada.lovelaceValueOf amt) ctx)
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest where
@@ -138,14 +142,3 @@ valHash = Scripts.validatorHash typedValidator
 
 scrAddress :: Ledger.NetworkId -> Ledger.CardanoAddress
 scrAddress = flip Typed.validatorCardanoAddress typedValidator
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx = submitCardanoTxConstraintsWith
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith

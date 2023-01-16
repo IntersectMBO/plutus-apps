@@ -136,7 +136,15 @@ newtype CardanoBuildTx = CardanoBuildTx { getCardanoBuildTx :: C.TxBodyContent C
   deriving (Eq, Show)
 
 instance ToJSON CardanoBuildTx where
-  toJSON _ = Aeson.String "TODO: ToJSON CardanoBuildTx"
+  -- TODO better instance than this one that rely on SomeCardanoTx
+  toJSON = either
+    (const $ Aeson.String "invalid tx body")
+    (toJSON
+    . flip SomeTx C.BabbageEraInCardanoMode
+    . C.makeSignedTransaction []
+    )
+    . C.makeTransactionBody
+    . getCardanoBuildTx
 
 instance FromJSON CardanoBuildTx where
   parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"

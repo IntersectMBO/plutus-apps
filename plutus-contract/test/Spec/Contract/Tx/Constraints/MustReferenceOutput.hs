@@ -37,8 +37,7 @@ import Plutus.ChainIndex.Emulator (diskState)
 import Plutus.ChainIndex.Emulator.DiskState (addressMap, unCredentialMap)
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
-                             assertValidatedTransactionCountOfTotal, checkPredicate, checkPredicateOptions,
-                             defaultCheckOptions, emulatorConfig, valueAtAddress, w1, walletFundsChange, (.&&.))
+                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Script.Utils.Scripts qualified as PSU
 import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V1.Address qualified as PSU.V1
@@ -61,12 +60,8 @@ makeClassyPrisms ''L.ScriptError
 tests :: TestTree
 tests =
     testGroup "MustReferenceOutput"
-      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx,
-        testGroup "tx constraints"
-        [ txConstraintsTxBuildFailWhenUsingV1Script,
-          txConstraintsCanUnlockFundsWithV2Script
-        ] -- to be replaced with the following line when MustMint is implemented (PLT-672)
-      --, testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
+      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? submitTxConstraintsWith
+      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? submitCardanoTxConstraintsWith
       ]
 
 v1Tests :: SubmitTx -> TestTree
@@ -319,16 +314,6 @@ mustReferenceOutputV1ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV1ValidatorAddress =
     PSU.V1.mkValidatorCardanoAddress Params.testnet mustReferenceOutputV1Validator
 
-txConstraintsTxBuildFailWhenUsingV1Script :: TestTree
-txConstraintsTxBuildFailWhenUsingV1Script =
-    checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
-        (walletFundsChange w1 (Ada.adaValueOf (-5))
-        .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
-        .&&. assertValidatedTransactionCountOfTotal 1 2
-        ) $ do
-            void $ Trace.activateContract w1 mustReferenceOutputTxV1Contract tag
-            void $ Trace.waitNSlots 2
-
 mustReferenceOutputTxV1Contract :: Contract () EmptySchema ContractError ()
 mustReferenceOutputTxV1Contract = do
     let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
@@ -372,16 +357,6 @@ mustReferenceOutputV2Validator = PV2.mkValidatorScript
 mustReferenceOutputV2ValidatorAddress :: L.CardanoAddress
 mustReferenceOutputV2ValidatorAddress =
     PSU.V2.mkValidatorCardanoAddress Params.testnet mustReferenceOutputV2Validator
-
-txConstraintsCanUnlockFundsWithV2Script :: TestTree
-txConstraintsCanUnlockFundsWithV2Script =
-    checkPredicate "Tx.Constraints.mustReferenceOutput can be used on-chain to unlock funds in a PlutusV2 script"
-        (walletFundsChange w1 (Ada.adaValueOf 0)
-        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
-        .&&. assertValidatedTransactionCount 2
-        ) $ do
-            void $ Trace.activateContract w1 mustReferenceOutputTxV2Contract tag
-            void $ Trace.waitNSlots 3
 
 mustReferenceOutputTxV2Contract :: Contract () EmptySchema ContractError ()
 mustReferenceOutputTxV2Contract = do
