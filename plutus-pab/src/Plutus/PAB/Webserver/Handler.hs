@@ -22,6 +22,7 @@ module Plutus.PAB.Webserver.Handler
     , contractSchema
     ) where
 
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Lens (preview)
 import Control.Monad (join, unless)
 import Control.Monad.Freer.Error (throwError)
@@ -33,7 +34,6 @@ import Data.OpenApi.Schema (ToSchema)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
 import Plutus.Contract.Effects (PABReq, _ExposeEndpointReq)
-import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Effects.Contract qualified as Contract

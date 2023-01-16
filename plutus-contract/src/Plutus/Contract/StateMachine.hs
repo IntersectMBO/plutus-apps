@@ -78,14 +78,13 @@ import Plutus.Contract (AsContractError (_ContractError), Contract, ContractErro
                         awaitPromise, isSlot, isTime, logWarn, mapError, never, ownFirstPaymentPubKeyHash, ownUtxos,
                         promiseBind, select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt,
                         utxosTxOutTxFromTx)
-import Plutus.Contract.Request (mkTxConstraints)
+import Plutus.Contract.Request (getUnspentOutput, mkTxConstraints)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
 import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
                                              StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
                                              StateMachineInstance (StateMachineInstance, stateMachine, typedValidator))
 import Plutus.Contract.StateMachine.OnChain qualified as SM
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
-import Plutus.Contract.Wallet (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.V2.Ledger.Tx qualified as V2
@@ -126,7 +125,10 @@ getInput ::
 getInput outRef tx = do
     -- We retrieve the correspondent redeemer according to the index of txIn in the list
     let findRedeemer (ix, _) = Map.lookup (Tx.RedeemerPtr Tx.Spend ix) (_citxRedeemers tx)
-    Ledger.Redeemer r <- listToMaybe $ mapMaybe findRedeemer $ filter (\(_, Tx.TxIn{Tx.txInRef}) -> outRef == txInRef) $ zip [0..] $ _citxInputs tx
+    Ledger.Redeemer r <- listToMaybe
+                       $ mapMaybe findRedeemer
+                       $ filter (\(_, Tx.TxIn{Tx.txInRef}) -> outRef == txInRef)
+                       $ zip [0..] $ _citxInputs tx
     PlutusTx.fromBuiltinData r
 
 getStates
@@ -196,8 +198,9 @@ threadTokenChooser ::
     -> [OnChainState state input]
     -> Either SMContractError (OnChainState state input)
 threadTokenChooser val states =
-    let hasToken OnChainState{ocsTxOutRef} = val `Value.leq` (V2.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef) in
-    case filter hasToken states of
+    let hasToken OnChainState{ocsTxOutRef} =
+          val `Value.leq` (V2.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut ocsTxOutRef)
+    in case filter hasToken states of
         [x] -> Right x
         xs ->
             let msg = unwords ["Found", show (length xs), "outputs with thread token", show val, "expected 1"]
@@ -326,7 +329,8 @@ waitForUpdateTimeout client@StateMachineClient{scInstance, scChooser} timeout = 
                         let addr = SM.machineAddress scInstance in
                         promiseBind (utxoIsProduced addr) $ \txns -> do
                             outRefMaps <- traverse utxosTxOutTxFromTx txns
-                            let produced = getStates @state @i scInstance (Map.fromList $ map projectFst $ concat outRefMaps)
+                            let produced = getStates @state @i scInstance
+                                         $ Map.fromList $ map projectFst $ concat outRefMaps
                             case scChooser produced of
                                 Left e             -> throwing _SMContractError e
                                 Right onChainState -> pure $ InitialState onChainState

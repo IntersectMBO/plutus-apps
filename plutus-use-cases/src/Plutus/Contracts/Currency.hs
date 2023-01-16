@@ -44,9 +44,10 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract as Contract
-import Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Contract.Request (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 
+import Control.Monad (void)
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
 
@@ -160,7 +161,7 @@ mintContract addr amounts = mapError (review _CurrencyError) $ do
         mintTx      = Constraints.mustSpendPubKeyOutput txOutRef
                         <> Constraints.mustMintValue (mintedValue theCurrency)
     tx <- submitTxConstraintsWith @Scripts.Any lookups mintTx
-    _ <- awaitTxConfirmed (getCardanoTxId tx)
+    void $ awaitTxConfirmed (getCardanoTxId tx)
     pure theCurrency
 
 -- | Minting policy for a currency that has a fixed amount of tokens issued
@@ -182,5 +183,5 @@ mintCurrency
 mintCurrency = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
     ownAddr <- ownAddress
     cur <- mintContract ownAddr [(tokenName, amount)]
-    tell (Just (Last cur))
+    tell $ Just $ Last cur
     pure cur

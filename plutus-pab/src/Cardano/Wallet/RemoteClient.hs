@@ -12,13 +12,13 @@ module Cardano.Wallet.RemoteClient
     ( handleWalletClient
     ) where
 
+import Cardano.Wallet.LocalClient.ExportTx (export)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Text qualified as Text
-import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Core.ContractInstance.STM (InstancesState)
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
 import Wallet.API qualified as WAPI
