@@ -56,7 +56,7 @@ makeClassy ''UtxoIndexerEnv
 -- | JSON-RPC configuration
 data JsonRpcEnv = JsonRpcEnv
     { _httpSettings :: Settings               -- ^ HTTP server setting
-    , _queryEnv     :: UtxoIndexerEnv           -- ^ used for query sqlite
+    , _queryEnv     :: UtxoIndexerEnv         -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
 

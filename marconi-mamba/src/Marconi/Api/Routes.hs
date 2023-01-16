@@ -30,3 +30,5 @@ type PrintMessage = "print" :> ReqBody '[PlainText] String :> Post '[PlainText] 
 type RestAPI = "rest" :> (GetTime :<|> GetTargetAddresses :<|> PrintMessage)
 
 type API = JsonRpcAPI :<|> RestAPI
+
+type NonEndpoint = "json-rpc" :> RawJsonRpc (JsonRpc "launch-missles" Int String Bool)

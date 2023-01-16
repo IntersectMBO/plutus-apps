@@ -31,7 +31,6 @@ import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Cardano.Streaming qualified as CS
-import Control.Concurrent.STM.TMVar (TMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.EpochStakepoolSize qualified as EpochStakepoolSize
@@ -117,15 +116,6 @@ datumWorker Coordinator{_barrier, _channel} path = do
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
 
--- | does the transaction contain a targetAddress
-isInTargetTxOut
-    :: TargetAddresses        -- ^ non empty list of target address
-    -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
-    -> Bool
-isInTargetTxOut targetAddresses (C.TxOut address _ _ _) = case address of
-    (C.AddressInEra  (C.ShelleyAddressInEra _) addr) -> addr `elem` targetAddresses
-    _                                                -> False
-
 utxoWorker_
   :: (Utxo.UtxoIndexer -> IO ())  -- ^ CPS function used in the queryApi thread, needs to be non-blocking
   -> Utxo.Depth
@@ -196,10 +186,6 @@ scriptTxWorker onInsert coordinator path = do
   (loop, ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator workerChannel path
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
-
-newtype UtxoQueryTMVar = UtxoQueryTMVar
-    { unUtxoIndex  :: TMVar Utxo.UtxoIndexer      -- ^ for query thread to access in-memory utxos
-    }
 
 epochStakepoolSizeWorker :: FilePath -> Worker
 epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do

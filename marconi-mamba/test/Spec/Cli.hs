@@ -55,4 +55,5 @@ generateHelpScreen commands = do
         Failure failure     -> failure
         Success _           -> error "Parser expected to fail"
         CompletionInvoked _ -> error "Parser expected to fail"
+  -- pure $ BSL.fromStrict $ encodeUtf8 <$> fst $ renderFailure text "marconi"
   pure $ BSL.fromStrict ( encodeUtf8 . T.pack  <$> fst $ renderFailure text "marconi")

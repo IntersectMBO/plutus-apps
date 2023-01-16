@@ -82,8 +82,8 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , async
     , aeson
+    , async
     , base
     , bytestring
     , containers
@@ -180,7 +180,7 @@ test-suite marconi-test
     , optparse-applicative
     , prettyprinter
     , serialise
-    -- , sqlite-simple
+    , sqlite-simple
     , stm
     , streaming
     , tasty

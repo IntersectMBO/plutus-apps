@@ -15,5 +15,5 @@ main = do
     cli@(CliArgs _ _ maybePort _ tAddress)  <- parseCli
     rpcEnv <- bootstrapJsonRpc maybePort tAddress
     race_
-       (bootstrapHttp rpcEnv)                   -- start http server
-       (bootstrapUtxoIndexers cli rpcEnv)       -- start utxo indexer
+       (bootstrapHttp rpcEnv)                            -- start http server
+       (bootstrapUtxoIndexers cli rpcEnv)

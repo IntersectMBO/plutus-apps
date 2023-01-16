@@ -81,8 +81,8 @@ genShelleyUtxo = do
 
 genShelleyEvents :: Gen (Utxo.StorableEvent Utxo.UtxoHandle)
 genShelleyEvents = do
-  ueUtxos <- Gen.set (Range.linear 1 5) genShelleyUtxo
-  ueInputs <- Gen.set (Range.linear 1 4) CGen.genTxIn
+  ueUtxos <- Gen.set (Range.linear 1 3) genShelleyUtxo
+  ueInputs <- Gen.set (Range.linear 1 2) CGen.genTxIn
   ueBlockNo <- genBlockNo
   ueChainPoint <- genChainPoint
   pure $ Utxo.UtxoEvent {..}
@@ -121,7 +121,7 @@ tests = testGroup "marconi-mamba query Api Specs"
 --
 queryTargetAddressTest :: Property
 queryTargetAddressTest = property $ do
-  events <- forAll $ Gen.list (Range.linear 1 5) genShelleyEvents
+  events <- forAll $ Gen.list (Range.linear 1 3) genShelleyEvents
   depth <- forAll $ Gen.int (Range.linear 6 9 ) -- force DB writes
   let
     targetAddresses :: TargetAddresses

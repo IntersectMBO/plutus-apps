@@ -223,30 +223,17 @@ test-suite marconi-mamba-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}
-    , iohk-monitoring
+     , cardano-api:{cardano-api, gen}
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    -- , aeson
     , base                  >=4.9 && <5
     , containers
-    , directory
-    , filepath
     , hedgehog
-    , hedgehog-extras
     , lens
-    , optparse-applicative
-    , prettyprinter
-    , serialise
-    , sqlite-simple
     , stm
-    , streaming
     , tasty
-    , tasty-golden
     , tasty-hedgehog
-    , tasty-hunit
-    , temporary
     , text
