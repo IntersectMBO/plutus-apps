@@ -37,6 +37,8 @@ import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasP
                               StorablePoint, StorableQuery, StorableResult, emptyState, filterWithQueryInterval)
 import Marconi.Core.Storable qualified as Storable
 
+import Marconi.Index.Common ()
+
 {- The first thing that we need to define for a new indexer is the `handler` data
    type, meant as a wrapper for the connection type (in this case the SQLite
    connection).

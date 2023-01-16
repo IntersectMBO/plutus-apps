@@ -56,6 +56,7 @@ library
     Marconi.ChainIndex.Indexers.EpochStakepoolSize
     Marconi.ChainIndex.Indexers.ScriptTx
     Marconi.ChainIndex.Indexers.Utxo
+    Marconi.ChainIndex.Indexers.Common
     Marconi.ChainIndex.Logging
     Marconi.ChainIndex.Orphans
     Marconi.ChainIndex.Types
