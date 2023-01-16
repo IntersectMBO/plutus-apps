@@ -467,10 +467,6 @@ mustMintPolicy lang = case lang of
   Ledger.PlutusV1 -> Ledger.Versioned mustMintPolicyV1 lang
   Ledger.PlutusV2 -> Ledger.Versioned mustMintPolicyV2 lang
 
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith
-
-
 mustMintPolicyHash :: Ledger.Language -> Ledger.MintingPolicyHash
 mustMintPolicyHash l = case l of
   Ledger.PlutusV1 -> PSU.V1.mintingPolicyHash $ Scripts.unversioned $ mustMintPolicy l
