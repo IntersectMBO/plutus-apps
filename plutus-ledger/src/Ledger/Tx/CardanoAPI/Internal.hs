@@ -549,6 +549,7 @@ toCardanoStakeKeyHash :: PV1.PubKeyHash -> Either ToCardanoError (C.Hash C.Stake
 toCardanoStakeKeyHash (PV1.PubKeyHash bs) = tag "toCardanoStakeKeyHash" $ deserialiseFromRawBytes (C.AsHash C.AsStakeKey) (PlutusTx.fromBuiltin bs)
 
 fromCardanoTxOutValue :: C.TxOutValue era -> C.Value
+fromCardanoTxOutValue (C.TxOutAdaOnly _ 0)        = mempty
 fromCardanoTxOutValue (C.TxOutAdaOnly _ lovelace) = C.lovelaceToValue lovelace
 fromCardanoTxOutValue (C.TxOutValue _ value)      = value
 

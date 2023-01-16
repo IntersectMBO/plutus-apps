@@ -32,6 +32,7 @@ import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
+import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Playground.Types (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet), EvaluationResult,
                          Expression, FunctionSchema (FunctionSchema), PlaygroundError (JsonDecodingError, OtherError),
                          SimulatorWallet (SimulatorWallet), amount, argument, argumentValues, caller, decodingError,
@@ -99,7 +100,7 @@ evaluationResultFold wallets =
             <*> L.generalize (filter isInteresting <$> Folds.emulatorLog)
             <*> renderInstanceTrace (walletInstanceTag . fromWalletNumber <$> wallets)
             <*> fmap (fmap (uncurry SimulatorWallet) . Map.toList) (funds wallets)
-            <*> fmap (fmap (uncurry SimulatorWallet) . Map.toList) (fmap C.lovelaceToValue <$> fees wallets)
+            <*> fmap (fmap (uncurry SimulatorWallet) . Map.toList) (fmap lovelaceToValue <$> fees wallets)
             <*> pure (fmap pkh wallets)
 
 -- | Evaluate a JSON payload from the Playground frontend against a given contract schema.

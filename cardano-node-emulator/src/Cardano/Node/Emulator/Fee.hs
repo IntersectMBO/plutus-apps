@@ -43,7 +43,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
                              toCardanoReturnCollateral, toCardanoTotalCollateral, toCardanoTxBodyContent)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Value.CardanoAPI (split, valueGeq)
+import Ledger.Value.CardanoAPI (isZero, lovelaceToValue, split, valueGeq)
 
 estimateTransactionFee
   :: Params
@@ -83,7 +83,7 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) cChangeAd
     change' =
       case (change, trial) of
         (C.Api.TxOut addr (C.Api.TxOutValue vtype value) datum _referenceScript, Left (C.Api.TxBodyErrorAdaBalanceNegative delta)) ->
-          C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> C.Api.lovelaceToValue delta) datum _referenceScript
+          C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> lovelaceToValue delta) datum _referenceScript
         _ -> change
   -- Construct the body with correct execution units and fees.
   C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance [change']
@@ -174,25 +174,25 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
     inputValues <- traverse lookupValue txInputs
 
     let left = Tx.getTxBodyContentMint filteredUnbalancedTxTx <> fold inputValues
-        right = C.lovelaceToValue fees <> foldMap (Tx.txOutValue . Tx.TxOut) (C.txOuts filteredUnbalancedTxTx)
+        right = lovelaceToValue fees <> foldMap (Tx.txOutValue . Tx.TxOut) (C.txOuts filteredUnbalancedTxTx)
         balance = left <> C.negateValue right
 
     ((neg, newInputs), (pos, mNewTxOut)) <- calculateTxChanges params cChangeAddr utxoProvider errorReporter $ split balance
 
     newTxIns <- traverse (either (errorReporter . Right) (pure . (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) . CardanoAPI.toCardanoTxIn . fst) newInputs
 
-    let txWithOutputsAdded = if pos == mempty
+    let txWithOutputsAdded = if isZero pos
         then filteredUnbalancedTxTx
         else filteredUnbalancedTxTx & over Tx.txBodyContentOuts (++ toList mNewTxOut)
 
-    let txWithinputsAdded = if neg == mempty
+    let txWithinputsAdded = if isZero neg
         then txWithOutputsAdded
         else txWithOutputsAdded & over Tx.txBodyContentIns (++ newTxIns)
 
     collateral <- traverse lookupValue (Tx.getTxBodyContentCollateralInputs txWithinputsAdded)
     let returnCollateral = Tx.getTxBodyContentReturnCollateral txWithinputsAdded
 
-    if fold collateral == mempty
+    if isZero (fold collateral)
         && null (C.collectTxBodyScriptWitnesses txWithinputsAdded) -- every script has a redeemer, no redeemers -> no scripts
         && null returnCollateral then
         -- Don't add collateral if there are no plutus scripts that can fail
@@ -202,13 +202,13 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
         let collAddr = maybe cChangeAddr (\(Tx.TxOut (C.TxOut aie _tov _tod _rs)) -> aie) returnCollateral
             collateralPercent = maybe 100 fromIntegral (C.protocolParamCollateralPercent (pProtocolParams params))
             collFees = (fees * collateralPercent + 99 {- make sure to round up -}) `div` 100
-            collBalance = fold collateral <> C.lovelaceToValue (-collFees)
+            collBalance = fold collateral <> lovelaceToValue (-collFees)
 
         ((negColl, newColInputs), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ split collBalance
 
         newTxInsColl <- traverse (either (errorReporter . Right) pure . CardanoAPI.toCardanoTxIn . fst) newColInputs
 
-        let txWithCollateralInputs = if negColl == mempty
+        let txWithCollateralInputs = if isZero negColl
             then txWithinputsAdded
             else txWithinputsAdded & over Tx.txBodyContentCollateralIns (++ newTxInsColl)
 
@@ -224,7 +224,7 @@ removeEmptyOutputsBuildTx bodyContent@C.TxBodyContent { C.txOuts } = bodyContent
     where
         txOuts' = filter (not . isEmpty' . Tx.TxOut) txOuts
         isEmpty' txOut =
-            Tx.txOutValue txOut == mempty && isNothing (Tx.txOutDatumHash txOut)
+            isZero (Tx.txOutValue txOut) && isNothing (Tx.txOutDatumHash txOut)
 
 calculateTxChanges
     :: Monad m
@@ -235,22 +235,23 @@ calculateTxChanges
     -> (C.Value, C.Value) -- ^ The unbalanced tx's negative and positive balance.
     -> m ((C.Value, [(TxOutRef, TxOut)]), (C.Value, Maybe TxOut))
 calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
+
     -- Calculate the change output with minimal ada
-    (newNeg, newPos, mExtraTxOut) <- either (errorReporter . Right) pure $ if pos == mempty
+    (newNeg, newPos, mExtraTxOut) <- either (errorReporter . Right) pure $ if isZero pos
         then pure (neg, pos, Nothing)
         else do
             let txOut = C.TxOut addr (CardanoAPI.toCardanoTxOutValue pos) C.TxOutDatumNone C.Api.ReferenceScriptNone
             (missing, extraTxOut) <- adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
-            let missingValue = C.lovelaceToValue (fold missing)
+            let missingValue = lovelaceToValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
 
     -- Calculate the extra inputs needed
-    (spend, change) <- if newNeg == mempty
+    (spend, change) <- if isZero newNeg
         then pure ([], mempty)
         else utxoProvider newNeg
 
-    if change == mempty
+    if isZero change
         then do
             -- No change, so the new inputs and outputs have balanced the transaction
             pure ((newNeg, spend), (newPos, mExtraTxOut))

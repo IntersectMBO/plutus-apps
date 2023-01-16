@@ -199,6 +199,7 @@ test-suite plutus-ledger-test
     , cardano-api:{cardano-api, gen}  >=1.35
     , cardano-crypto-class            >=2.0.0
     , plutus-ledger-api               >=1.0.0
+    , plutus-tx                       >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies

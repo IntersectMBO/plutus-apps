@@ -3,7 +3,6 @@ module Plutus.Contract.Test.MissingLovelace
   ( calculateDelta
   ) where
 
-import Cardano.Api qualified as C
 import Ledger.Value.CardanoAPI qualified as Value
 
 -- | Returns the calculated delta between initial and final values. Might be false positive.
@@ -21,18 +20,18 @@ import Ledger.Value.CardanoAPI qualified as Value
 -- For example, we expected -n, but there is n among deltas and realDelta is n,
 -- it is divisible by n, then the test will pass. So please be careful.
 calculateDelta
-  :: C.Value
+  :: Value.Value
   -- ^ Expected delta of the test
-  -> C.Lovelace
+  -> Value.Lovelace
   -- ^ Initial value of the wallet before the test
-  -> C.Lovelace
+  -> Value.Lovelace
   -- ^ Final value of the wallet after the test
-  -> [C.Lovelace]
+  -> [Value.Lovelace]
   -- ^ Missing lovelace costs of outputs from 'AdjustingUnbalancedTx' logs
-  -> C.Value
+  -> Value.Value
 calculateDelta expectedDelta initialValue finalValue allWalletsTxOutCosts =
   let
-    expectedAda = C.selectLovelace expectedDelta
+    expectedAda = Value.selectLovelace expectedDelta
 
     -- the list of deltas: combinations (+/-) between outputs' costs,
     -- the expected delta and the wallet's output costs.
@@ -48,7 +47,7 @@ calculateDelta expectedDelta initialValue finalValue allWalletsTxOutCosts =
       -- by checking if 'realDelta''s is divisible by any delta without a reminder.
       if or [abs realDelta `mod` d == 0 | d <- deltas, d /= 0] then
         -- if yes, we return a sum of 'realDelta''s ada with non-ada value of the expected delta
-        let missingAda = C.lovelaceToValue realDelta
+        let missingAda = Value.lovelaceToValue realDelta
             missingNonAda = Value.noAdaValue expectedDelta
         in missingAda <> missingNonAda
       -- otherwise we just return the expected delta

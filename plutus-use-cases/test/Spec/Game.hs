@@ -49,7 +49,7 @@ tests =
     testGroup "game with secret arguments tests"
     [ checkPredicate "run a successful game trace"
         (walletFundsChange w2 (Value.adaValueOf 8)
-        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Value.adaValueOf 0 ==)
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) Value.isZero
         .&&. walletFundsChange w1 (Value.adaValueOf (-8)))
         successTrace
 

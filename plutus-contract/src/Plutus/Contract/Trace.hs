@@ -52,7 +52,6 @@ module Plutus.Contract.Trace
     , EM.knownWallet
     ) where
 
-import Cardano.Api (Lovelace (Lovelace), Value, lovelaceToValue)
 import Control.Lens (makeClassyPrisms, preview)
 import Control.Monad.Freer (Member)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve)
@@ -62,6 +61,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Ledger.Value.CardanoAPI (Lovelace (Lovelace), Value, lovelaceToValue)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Effects qualified as E

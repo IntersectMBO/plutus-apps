@@ -128,7 +128,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Tx (Tx, onCardanoTx)
-import Ledger.Value.CardanoAPI (fromCardanoValue, toCardanoValue)
+import Ledger.Value.CardanoAPI (fromCardanoValue, lovelaceToValue, toCardanoValue)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
@@ -617,7 +617,7 @@ walletFundsExactChange = walletFundsChangeImpl True
 walletFundsChangeImpl :: Bool -> Wallet -> C.Value -> TracePredicate
 walletFundsChangeImpl exact w dlt' =
     walletFundsCheck w $ \initialValue finalValue' fees allWalletsTxOutCosts ->
-        let finalValue = finalValue' <> if exact then mempty else C.lovelaceToValue fees
+        let finalValue = finalValue' <> if exact then mempty else lovelaceToValue fees
             dlt = calculateDelta dlt' (C.selectLovelace initialValue) (C.selectLovelace finalValue) allWalletsTxOutCosts
             result = initialValue <> dlt == finalValue
         in if result then Nothing else Just $

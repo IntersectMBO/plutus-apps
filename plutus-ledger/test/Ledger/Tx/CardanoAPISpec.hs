@@ -16,9 +16,11 @@ import Ledger.Test (someValidator)
 import Ledger.Tx (Language (PlutusV1), Tx (txMint), Versioned (Versioned), addMintingPolicy)
 import Ledger.Tx.CardanoAPI (fromCardanoAssetName, fromCardanoValue, makeTransactionBody, toCardanoAddressInEra,
                              toCardanoAssetName, toCardanoPolicyId, toCardanoTxBodyContent, toCardanoValue)
+import Ledger.Value.CardanoAPI (combine, valueFromList, valueGeq)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.V1.Ledger.Scripts (unitRedeemer)
+import PlutusTx.Lattice ((\/))
 
 import Cardano.Api qualified as C
 import Data.Default (def)
@@ -31,12 +33,20 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
-tests = testGroup "Ledger.CardanoAPI"
+tests =
+  testGroup "CardanoAPI"
+  [ testGroup "Ledger.Tx.CardanoAPI"
     [ testPropertyNamed "Cardano Address -> Plutus Address roundtrip" "addressRoundTripSpec" addressRoundTripSpec
     , testPropertyNamed "Tx conversion retains minting policy scripts" "txConversionRetainsMPS" convertMintingTx
     , testPropertyNamed "TokenName <- Cardano AssetName roundtrip" "cardanoAssetNameRoundTrip" cardanoAssetNameRoundTrip
     , testPropertyNamed "Plutus Value <- Cardano Value roundtrip" "cardanoValueRoundTrip" cardanoValueRoundTrip
     ]
+  , testGroup "Ledger.Value.CardanoAPI"
+    [ testPropertyNamed "combineLeftId" "combineLeftId" combineLeftId
+    , testPropertyNamed "combineRightId" "combineRightId" combineRightId
+    , testPropertyNamed "valueJoinGeq" "valueJoinGeq" valueJoinGeq
+    ]
+  ]
 
 cardanoAssetNameRoundTrip :: Property
 cardanoAssetNameRoundTrip = property $ do
@@ -110,3 +120,24 @@ convertMintingTx = property $ do
     msg -> do
       Hedgehog.annotateShow msg
       Hedgehog.failure
+
+combineLeftId :: Property
+combineLeftId = property $ do
+  valueL <- forAll genValueDefault
+  valueR <- forAll genValueDefault
+  combine (\a l _ -> valueFromList [(a, l)]) valueL valueR === valueL
+
+combineRightId :: Property
+combineRightId = property $ do
+  valueL <- forAll genValueDefault
+  valueR <- forAll genValueDefault
+  combine (\a _ r -> valueFromList [(a, r)]) valueL valueR === valueR
+
+valueJoinGeq :: Property
+valueJoinGeq = property $ do
+  valueL <- forAll genValueDefault
+  valueR <- forAll genValueDefault
+  let jn = valueL \/ valueR
+  Hedgehog.annotateShow (valueL, valueR, jn)
+  Hedgehog.assert (jn `valueGeq` valueL)
+  Hedgehog.assert (jn `valueGeq` valueR)

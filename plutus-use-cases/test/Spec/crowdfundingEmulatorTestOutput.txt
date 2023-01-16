@@ -25,16 +25,16 @@ Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
 Slot 1: W[2]: Balancing an unbalanced transaction:
                 Tx:
-                  Tx 47dfcf628a60440aece381646f85bc0e886adac5ceb2b553b1a8316618c23825:
+                  Tx 4d30ccb1da5be3c4831949465021ba9917bffc7521b5ee863cc4490f877f84e8:
                     {inputs:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      - Value (Map [(,Map [("",10000000)])]) addressed to
+                      - 10000000 lovelace addressed to
                         ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                         with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
-                    mint: Value (Map [])
-                    fee: Value (Map [])
+                    mint: 
+                    fee: 0 lovelace
                     mps:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -53,13 +53,13 @@ Slot 1: W[2]: Finished balancing:
                   reference inputs:
                   collateral inputs:
                   outputs:
-                    - Value (Map [(,Map [("",10000000)])]) addressed to
+                    - 10000000 lovelace addressed to
                       ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                       with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
-                    - Value (Map [(,Map [("",9823763)])]) addressed to
+                    - 9823763 lovelace addressed to
                       PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
-                  mint: Value (Map [])
-                  fee: Value (Map [(,Map [("",176237)])])
+                  mint: 
+                  fee: 176237 lovelace
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   data:
                     ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
@@ -70,16 +70,16 @@ Slot 1: W[2]: Submitting tx: 3227f530620ff37bcb1adabec8fecc61d92739632ec2418bc61
 Slot 1: W[2]: TxSubmit: 3227f530620ff37bcb1adabec8fecc61d92739632ec2418bc61bffcbd0b2048b
 Slot 1: W[3]: Balancing an unbalanced transaction:
                 Tx:
-                  Tx aa49a22c0c9976fb9c7da4b9c06f01017e5716ecbf7136a21d82ffd98fa89602:
+                  Tx 4081ce35788331f2e20b5bb845e1cd20b52d53d906e0d7ceffdfed078fa50060:
                     {inputs:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      - Value (Map [(,Map [("",10000000)])]) addressed to
+                      - 10000000 lovelace addressed to
                         ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                         with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
-                    mint: Value (Map [])
-                    fee: Value (Map [])
+                    mint: 
+                    fee: 0 lovelace
                     mps:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -98,13 +98,13 @@ Slot 1: W[3]: Finished balancing:
                   reference inputs:
                   collateral inputs:
                   outputs:
-                    - Value (Map [(,Map [("",10000000)])]) addressed to
+                    - 10000000 lovelace addressed to
                       ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                       with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
-                    - Value (Map [(,Map [("",9823763)])]) addressed to
+                    - 9823763 lovelace addressed to
                       PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
-                  mint: Value (Map [])
-                  fee: Value (Map [(,Map [("",176237)])])
+                  mint: 
+                  fee: 176237 lovelace
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   data:
                     ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
@@ -115,16 +115,16 @@ Slot 1: W[3]: Submitting tx: 74a3a6fe8f9ac06ce71ed118ba9bfbaab731482845ae9ee44a9
 Slot 1: W[3]: TxSubmit: 74a3a6fe8f9ac06ce71ed118ba9bfbaab731482845ae9ee44a9965992e129b45
 Slot 1: W[4]: Balancing an unbalanced transaction:
                 Tx:
-                  Tx 7e175ba05524d367f323fccdabf146ce210ed44e65cdb784f6b9f93c0b5efe60:
+                  Tx 9dd22e558e95b3d21f51e855610c6caace136e18c6857de4ee4fddfdda875c6e:
                     {inputs:
                     reference inputs:
                     collateral inputs:
                     outputs:
-                      - Value (Map [(,Map [("",2500000)])]) addressed to
+                      - 2500000 lovelace addressed to
                         ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                         with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
-                    mint: Value (Map [])
-                    fee: Value (Map [])
+                    mint: 
+                    fee: 0 lovelace
                     mps:
                     signatures:
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -141,13 +141,13 @@ Slot 1: W[4]: Finished balancing:
                   reference inputs:
                   collateral inputs:
                   outputs:
-                    - Value (Map [(,Map [("",2500000)])]) addressed to
+                    - 2500000 lovelace addressed to
                       ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                       with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
-                    - Value (Map [(,Map [("",7329791)])]) addressed to
+                    - 7329791 lovelace addressed to
                       PubKeyCredential: 557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d (no staking credential)
-                  mint: Value (Map [])
-                  fee: Value (Map [(,Map [("",170209)])])
+                  mint: 
+                  fee: 170209 lovelace
                   validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                   data:
                     ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
@@ -163,7 +163,7 @@ Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: W[1]: Balancing an unbalanced transaction:
                  Tx:
-                   Tx fa62cb69ee6684c10072fecaac4773bc16a7a624caf170fbeb81807c36066622:
+                   Tx b09686985f566baad272d5c9527c0c93336d9a78eabc5f6b2b58ffd3b3813db6:
                      {inputs:
                         - 74a3a6fe8f9ac06ce71ed118ba9bfbaab731482845ae9ee44a9965992e129b45!0
                           <>
@@ -174,8 +174,8 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                      reference inputs:
                      collateral inputs:
                      outputs:
-                     mint: Value (Map [])
-                     fee: Value (Map [])
+                     mint: 
+                     fee: 0 lovelace
                      mps:
                      signatures:
                      validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 30})) False}
@@ -193,15 +193,15 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                    a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2
                  Utxo index:
                    ( 232dee3b7c51cfa504095f575368d6fa3850e1794565773bd5b8c36a76f0416e!0
-                   , - Value (Map [(,Map [("",2500000)])]) addressed to
+                   , - 2500000 lovelace addressed to
                        ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                        with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 )
                    ( 3227f530620ff37bcb1adabec8fecc61d92739632ec2418bc61bffcbd0b2048b!0
-                   , - Value (Map [(,Map [("",10000000)])]) addressed to
+                   , - 10000000 lovelace addressed to
                        ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                        with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 )
                    ( 74a3a6fe8f9ac06ce71ed118ba9bfbaab731482845ae9ee44a9965992e129b45!0
-                   , - Value (Map [(,Map [("",10000000)])]) addressed to
+                   , - 10000000 lovelace addressed to
                        ScriptCredential: 1e1accf1fbc2830702726792be900e4ea87426e9c5be06e6e3595739 (no staking credential)
                        with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 )
 Slot 20: W[1]: Finished balancing:
@@ -218,14 +218,14 @@ Slot 20: W[1]: Finished balancing:
                      - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!50
 
                    outputs:
-                     - Value (Map [(,Map [("",22024946)])]) addressed to
+                     - 22024946 lovelace addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
                    return collateral:
-                     - Value (Map [(,Map [("",9287419)])]) addressed to
+                     - 9287419 lovelace addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
-                   total collateral: Value (Map [(,Map [("",712581)])])
-                   mint: Value (Map [])
-                   fee: Value (Map [(,Map [("",475054)])])
+                   total collateral: 712581 lovelace
+                   mint: 
+                   fee: 475054 lovelace
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 30})) False}
                    data:
                      ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122

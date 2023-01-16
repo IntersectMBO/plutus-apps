@@ -54,7 +54,7 @@ import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOutRef (TxOutRef))
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
-import Ledger.Value.CardanoAPI (AssetId (AssetId), Value, assetIdValue, lovelaceToValue)
+import Ledger.Value.CardanoAPI (AssetId (AssetId), Lovelace (Lovelace), Value, assetIdValue, lovelaceToValue)
 import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOut (..), ChainIndexTxOutputs (..),
                              OutputDatum (NoOutputDatum), ReferenceScript (ReferenceScriptNone), txOutRefs)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -102,7 +102,7 @@ genAddress = Gen.mapMaybeT
 genNonZeroAdaValue :: Gen Value
 genNonZeroAdaValue = do
   value <- assetIdValue <$> (AssetId <$> Gen.genPolicyId <*> Gen.genAssetName) <*> Gen.integral (Range.linear 1 100_000_000_000)
-  lovelace <- C.Lovelace <$> Gen.integral (Range.linear 1 100_000_000_000)
+  lovelace <- Lovelace <$> Gen.integral (Range.linear 1 100_000_000_000)
   pure $ value <> lovelaceToValue lovelace
 
 data TxGenState =

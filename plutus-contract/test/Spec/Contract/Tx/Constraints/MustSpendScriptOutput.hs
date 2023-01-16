@@ -311,7 +311,7 @@ validUseOfMustSpendScriptOutputUsingAllScriptOutputs :: PSU.Language -> TestTree
 validUseOfMustSpendScriptOutputUsingAllScriptOutputs l =
     checkPredicate
     "Successful use of mustSpendScriptOutput for all script's UtxOs"
-    (valueAtAddress (someCardanoAddress Params.testnet) (== Value.lovelaceValueOf 0)
+    (valueAtAddress (someCardanoAddress Params.testnet) Value.isZero
     .&&. assertValidatedTransactionCount 2)
     (void $ trace $ mustSpendScriptOutputsContract l 5 5)
 
@@ -335,7 +335,7 @@ validUseOfReferenceScript l = let
             (changeInitialWalletValue w1 (const $ Value.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
-            .&&. valueAtAddress (scriptAddress Params.testnet MustReferenceOutputValidator l) (== Value.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress Params.testnet MustReferenceOutputValidator l) Value.isZero
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -350,7 +350,7 @@ validMultipleUseOfTheSameReferenceScript l = let
             (changeInitialWalletValue w1 (const $ Value.adaValueOf 1000) defaultCheckOptions)
             "Successful use of several mustSpendScriptOutputWithReference with the same reference to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (tokenValue versionedMintingPolicy)
-            .&&. valueAtAddress (scriptAddress Params.testnet MustReferenceOutputValidator l) (== Value.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress Params.testnet MustReferenceOutputValidator l) Value.isZero
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -364,7 +364,7 @@ validUseOfReferenceScriptDespiteLookup l = let
             (changeInitialWalletValue w1 (const $ Value.adaValueOf 1000) defaultCheckOptions)
             "Successful use of mustSpendScriptOutputWithReference (ignore lookups) to unlock funds in a PlutusV2 script"
             (walletFundsChange w1 (Value.adaValueOf 0)
-            .&&. valueAtAddress (scriptAddress Params.testnet MustReferenceOutputValidator l) (== Value.adaValueOf 0)
+            .&&. valueAtAddress (scriptAddress Params.testnet MustReferenceOutputValidator l) Value.isZero
             .&&. assertValidatedTransactionCount 2
             )
     $ traceN 3 contract
@@ -789,7 +789,7 @@ txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script =
         (changeInitialWalletValue w1 (const $ Value.adaValueOf 1000) defaultCheckOptions)
         "Tx.Constraints.mustSpendScriptOutputWithReference can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Value.adaValueOf 0)
-        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Value.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress Value.isZero
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ Trace.activateContract w1 mustSpendScriptOutputWithReferenceTxV2ConTest tag

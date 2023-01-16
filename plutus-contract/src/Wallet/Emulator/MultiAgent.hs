@@ -46,6 +46,7 @@ import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
@@ -317,14 +318,14 @@ emulatorStateInitialDist params mp = do
         mkOutputs minAda (key, vl) = traverse (mkOutput key) (splitInto10 vl minAda)
         splitInto10 vl minAda = if count <= 1
             then [vl]
-            else replicate (fromIntegral count) (C.lovelaceToValue (ada `div` count)) ++ remainder
+            else replicate (fromIntegral count) (lovelaceToValue (ada `div` count)) ++ remainder
             where
                 ada = case C.valueToLovelace vl of
-                    Nothing       -> C.selectLovelace vl
-                    Just lovelace -> lovelace - minAda
+                    Just lovelace -> lovelace
+                    Nothing       -> C.selectLovelace vl - minAda
                 -- Make sure we don't make the outputs too small
                 count = min 10 $ ada `div` minAda
-                remainder = [ vl <> C.lovelaceToValue (-ada) | isNothing (C.valueToLovelace vl) ]
+                remainder = [ vl <> lovelaceToValue (-ada) | isNothing (C.valueToLovelace vl) ]
         mkOutput key vl = do
             addr <- CardanoAPI.toCardanoAddressInEra (pNetworkId params) (pubKeyHashAddress key Nothing)
             pure $ TxOut $ C.TxOut addr (CardanoAPI.toCardanoTxOutValue vl) C.TxOutDatumNone C.ReferenceScriptNone

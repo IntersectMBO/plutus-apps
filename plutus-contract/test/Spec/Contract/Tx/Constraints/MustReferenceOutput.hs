@@ -378,7 +378,7 @@ txConstraintsCanUnlockFundsWithV2Script :: TestTree
 txConstraintsCanUnlockFundsWithV2Script =
     checkPredicate "Tx.Constraints.mustReferenceOutput can be used on-chain to unlock funds in a PlutusV2 script"
         (walletFundsChange w1 (Value.adaValueOf 0)
-        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Value.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress Value.isZero
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ Trace.activateContract w1 mustReferenceOutputTxV2Contract tag

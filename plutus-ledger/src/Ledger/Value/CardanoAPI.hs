@@ -12,9 +12,10 @@ module Ledger.Value.CardanoAPI (
   , C.selectLovelace
   , C.filterValue
   , C.negateValue
-  , C.lovelaceToValue
+  , lovelaceToValue
   , lovelaceValueOf
   , adaValueOf
+  , isZero
   , noAdaValue
   , adaOnlyValue
   , adaToCardanoValue
@@ -44,6 +45,10 @@ import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import PlutusTx.Lattice (JoinSemiLattice (..))
 
+lovelaceToValue :: C.Lovelace -> C.Value
+lovelaceToValue 0 = mempty
+lovelaceToValue l = C.lovelaceToValue l
+
 lovelaceValueOf :: Integer -> C.Value
 lovelaceValueOf = C.lovelaceToValue . C.Lovelace
 
@@ -51,6 +56,8 @@ adaValueOf :: Rational -> C.Value
 adaValueOf r = if denominator l == 1 then lovelaceValueOf (numerator l) else error "Ledger.Value.CardanoAPI: value is not a whole number of lovelace"
   where l = r * 1_000_000
 
+isZero :: C.Value -> Bool
+isZero = all (\(_, q) -> q == 0) . C.valueToList
 
 noAdaValue :: C.Value -> C.Value
 noAdaValue = C.filterValue (/= C.AdaAssetId)

@@ -97,7 +97,7 @@ import Ledger (CardanoTx (EmulatorTx), Datum, Interval, Language (PlutusV1), POS
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index.Internal qualified as Index (UtxoIndex (UtxoIndex))
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Ledger.Tx.CardanoAPI (fromCardanoPlutusScript, fromPlutusIndex)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
 import Plutus.Script.Utils.Ada qualified as Ada
@@ -237,21 +237,21 @@ genValidTransactionSpending' g ins totalVal = do
         fee' = C.Lovelace 300000
         numOut = Set.size (gmPubKeys g) - 1
         totalValAda = C.selectLovelace totalVal
-        totalValTokens = if Value.noAdaValue totalVal == mempty then Nothing else Just $ Value.noAdaValue totalVal
+        totalValTokens = if Value.isZero (Value.noAdaValue totalVal) then Nothing else Just $ Value.noAdaValue totalVal
     if fee' < totalValAda
         then do
             -- We only split the Ada part of the input value
             splitOutVals <- splitVal numOut (totalValAda - fee')
             let outVals = case totalValTokens <> mintValue of
                   Nothing -> do
-                    fmap C.lovelaceToValue splitOutVals
+                    fmap Value.lovelaceToValue splitOutVals
                   Just mv -> do
                     -- If there is a minted value, we look for a value in the
                     -- splitted values which can be associated with it.
                     let outValForMint =
                           maybe mempty id $ List.find (\v -> v >= Ledger.minLovelaceTxOutEstimated)
                                           $ List.sort splitOutVals
-                    C.lovelaceToValue outValForMint <> mv : fmap C.lovelaceToValue (List.delete outValForMint splitOutVals)
+                    Value.lovelaceToValue outValForMint <> mv : fmap Value.lovelaceToValue (List.delete outValForMint splitOutVals)
                 txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
                           $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
                 (ins', witnesses) = unzip $ map txInToTxInput ins
@@ -265,7 +265,7 @@ genValidTransactionSpending' g ins totalVal = do
                         , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
                         , txScripts = Map.fromList (map ((\s -> (scriptHash s, s)) . fmap getValidator) scripts)
                         }
-                    & addMintingPolicy (Versioned ScriptGen.alwaysSucceedPolicy PlutusV1) (Script.unitRedeemer, Nothing)
+                    & addMintingPolicy (Versioned alwaysSucceedPolicy PlutusV1) (Script.unitRedeemer, Nothing)
                     & EmulatorTx
 
                 -- sign the transaction with all known wallets
@@ -425,7 +425,9 @@ assertValid :: (MonadTest m, HasCallStack)
     => CardanoTx
     -> Mockchain
     -> m ()
-assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
+assertValid tx mc = let res = validateMockchain mc tx in do
+    Hedgehog.annotateShow res
+    Hedgehog.assert $ isNothing res
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required
@@ -460,6 +462,9 @@ genSeed =  Gen.bytes $ Range.singleton 32
 genPassphrase :: MonadGen m => m Passphrase
 genPassphrase =
   Passphrase <$> Gen.utf8 (Range.singleton 16) Gen.unicode
+
+alwaysSucceedPolicy :: Script.MintingPolicy
+alwaysSucceedPolicy = Script.MintingPolicy (fromCardanoPlutusScript $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)
 
 alwaysSucceedPolicyId :: C.PolicyId
 alwaysSucceedPolicyId = C.scriptPolicyId (C.PlutusScript C.PlutusScriptV1 $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)

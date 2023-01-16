@@ -51,7 +51,7 @@ instance Eq SymValue where
                                      && v == v'
 -- | Check if a symbolic value is zero
 symIsZero :: SymValue -> Bool
-symIsZero (SymValue m v) = all (==0) m && v == mempty
+symIsZero (SymValue m v) = all (==0) m && V.isZero v
 
 -- | Check if one symbolic value is less than or equal to another
 symLeq :: SymValue -> SymValue -> Bool
@@ -95,7 +95,7 @@ instance SymValueLike Ada.Ada where
   toSymValue = toSymValue . Ada.toValue
 
 instance SymValueLike C.Lovelace where
-  toSymValue = toSymValue . C.lovelaceToValue
+  toSymValue = toSymValue . V.lovelaceToValue
 
 instance TokenLike SymToken where
   symAssetIdValueOf (SymValue svm _) t = sum $ Map.lookup t svm

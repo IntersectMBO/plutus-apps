@@ -41,6 +41,7 @@ import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), TxI
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Prettyprinter
 
@@ -173,8 +174,8 @@ validateBlock params slot@(Slot s) idx txns =
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> C.Value
 getCollateral idx tx = case getCardanoTxTotalCollateral tx of
-    Just v -> C.lovelaceToValue v
-    Nothing -> fromRight (C.lovelaceToValue $ getCardanoTxFee tx) $
+    Just v -> lovelaceToValue v
+    Nothing -> fromRight (lovelaceToValue $ getCardanoTxFee tx) $
         alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (getCardanoTxCollateralInputs tx)
 
 -- | Check whether the given transaction can be validated in the given slot.
