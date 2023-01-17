@@ -168,9 +168,9 @@ test-suite marconi-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base                  >=4.9 && <5
     , aeson
     , async
+    , base                  >=4.9 && <5
     , bytestring
     , containers
     , directory
