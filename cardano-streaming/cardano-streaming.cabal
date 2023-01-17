@@ -48,7 +48,6 @@ library
     , aeson
     , async
     , base                          >=4.9 && <5
-    , base16-bytestring
     , bytestring
     , cardano-api
     , cardano-binary
@@ -62,9 +61,6 @@ library
     , cardano-protocol-tpraos
     , cardano-slotting
     , containers
-    , filepath
-    , formatting
-    , memory
     , ouroboros-consensus
     , ouroboros-consensus-byron
     , ouroboros-consensus-cardano
@@ -74,10 +70,8 @@ library
     , small-steps
     , streaming
     , transformers
-    , transformers-except
     , typed-protocols
     , vector
-    , yaml
 
 executable cardano-streaming-example-1
   import:         lang
