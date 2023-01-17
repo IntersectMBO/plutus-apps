@@ -26,7 +26,6 @@ import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
 import Control.Applicative (empty, (<|>))
 import Control.DeepSeq (NFData, rnf)
-import Control.Lens ((&), (.~), (?~))
 
 import Cardano.Ledger.Core qualified as Ledger (TxOut)
 import Cardano.Ledger.Serialization qualified as Ledger (Sized, mkSized)
@@ -36,11 +35,9 @@ import Control.Lens qualified as L
 import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
-import Data.Data (Proxy (Proxy))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 
 import Ledger.Address (CardanoAddress, cardanoPubKeyHash, toPlutusAddress)
@@ -75,7 +72,7 @@ data TxInType =
     | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
     | ConsumeSimpleScriptAddress -- ^ Consume a simple script
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 
 -- | A transaction input, consisting of a transaction output reference and an input type.
 data TxIn = TxIn {
@@ -83,7 +80,7 @@ data TxIn = TxIn {
     txInType :: Maybe TxInType
     }
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 
 
 instance Pretty TxIn where
@@ -224,21 +221,6 @@ instance Serialise TxOut where
 
 instance NFData TxOut where
   rnf (TxOut tx) = seq tx ()
-
-instance OpenApi.ToSchema TxOut where
-    declareNamedSchema _ = do
-      addressSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy (C.AddressInEra C.BabbageEra))
-      valueSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Value)
-      bsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Datum)
-      pure $ OpenApi.NamedSchema (Just "TxOut") $ mempty
-        & OpenApi.type_ ?~ OpenApi.OpenApiObject
-        & OpenApi.properties .~
-          [ ("address", addressSchema)
-          , ("value", valueSchema)
-          , ("datum", bsSchema)
-          , ("referenceScript", bsSchema)
-          ]
-        & OpenApi.required .~ ["address","value"]
 
 instance Pretty TxOut where
   pretty (TxOut (C.TxOut addr v d rs)) =
@@ -526,12 +508,6 @@ lookupMintingPolicy :: ScriptsMap -> MintingPolicyHash -> Maybe (Versioned Minti
 lookupMintingPolicy txScripts = (fmap . fmap) MintingPolicy . lookupScript txScripts . toScriptHash
     where
         toScriptHash (MintingPolicyHash b) = ScriptHash b
-
-deriving instance OpenApi.ToSchema Tx
-deriving instance OpenApi.ToSchema TxInputType
-deriving instance OpenApi.ToSchema TxInput
-deriving instance OpenApi.ToSchema Withdrawal
-deriving instance OpenApi.ToSchema Certificate
 
 lookupStakeValidator :: ScriptsMap -> StakeValidatorHash -> Maybe (Versioned StakeValidator)
 lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txScripts . toScriptHash

@@ -20,7 +20,6 @@ module Plutus.Contract.StateMachine.ThreadToken where
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger (CurrencySymbol, TxOutRef (..))
 import Ledger.Scripts
@@ -37,7 +36,7 @@ data ThreadToken = ThreadToken
     , ttCurrencySymbol :: CurrencySymbol
     }
     deriving stock (Haskell.Eq, Haskell.Show, Haskell.Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 
 PlutusTx.makeIsDataIndexed ''ThreadToken [('ThreadToken,0)]

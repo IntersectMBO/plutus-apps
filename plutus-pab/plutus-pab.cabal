@@ -144,7 +144,10 @@ library
   build-depends:
     , cardano-addresses
     , cardano-api                      >=1.35
+    , cardano-crypto
+    , cardano-crypto-class
     , cardano-ledger-alonzo
+    , cardano-ledger-core
     , cardano-slotting
     , cardano-wallet
     , cardano-wallet-cli
@@ -164,10 +167,10 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson                 <2.0.3.0
+    , aeson                      <2.0.3.0
     , aeson-pretty
     , async
-    , base                  >=4.7     && <5
+    , base                       >=4.7     && <5
     , beam-core
     , beam-migrate
     , beam-postgres
@@ -185,6 +188,7 @@ library
     , generic-arbitrary
     , http-client
     , http-client-tls
+    , insert-ordered-containers
     , lens
     , memory
     , monad-logger
@@ -193,7 +197,7 @@ library
     , openapi3
     , optparse-applicative
     , postgresql-simple
-    , prettyprinter         >=1.1.0.1
+    , prettyprinter              >=1.1.0.1
     , QuickCheck
     , quickcheck-instances
     , random

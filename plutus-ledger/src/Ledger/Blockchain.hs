@@ -44,8 +44,6 @@ import Data.Either (fromRight)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
-import Data.OpenApi qualified as OpenApi
-import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
@@ -71,9 +69,6 @@ instance ToJSON BlockId where
 
 instance FromJSON BlockId where
     parseJSON v = BlockId <$> JSON.decodeByteString v
-
-instance OpenApi.ToSchema BlockId where
-    declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @String)
 
 instance Pretty BlockId where
     pretty (BlockId blockId) =

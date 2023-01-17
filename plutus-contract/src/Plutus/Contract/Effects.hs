@@ -96,7 +96,6 @@ import Control.Lens (Iso', Prism', iso, makePrisms, prism')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.List.NonEmpty (NonEmpty)
-import Data.OpenApi.Schema qualified as OpenApi
 import Data.String (fromString)
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, toPlutusAddress)
@@ -142,7 +141,7 @@ data PABReq =
     | PosixTimeRangeToContainedSlotRangeReq POSIXTimeRange
     | YieldUnbalancedTxReq UnbalancedTx
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty PABReq where
   pretty = \case
@@ -281,7 +280,7 @@ data ChainIndexQuery =
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
   | GetTip
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty ChainIndexQuery where
     pretty = \case
@@ -406,7 +405,7 @@ data ActiveEndpoint = ActiveEndpoint
   , aeMetadata    :: Maybe JSON.Value -- ^ Data that should be shown to the user
   }
   deriving (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty ActiveEndpoint where
   pretty ActiveEndpoint{aeDescription, aeMetadata} =

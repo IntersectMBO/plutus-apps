@@ -14,16 +14,18 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# options_ghc -Wno-redundant-constraints #-}
 {-# options_ghc -fno-specialise            #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutus.Contracts.Uniswap.Types
   where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data
-import Data.OpenApi.Schema qualified as OpenApi
+import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger
-import Ledger.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
+import Ledger.Value (AssetClass (..), CurrencySymbol (CurrencySymbol), TokenName (TokenName), assetClass,
+                     assetClassValue, assetClassValueOf)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
@@ -53,6 +55,13 @@ PlutusTx.makeLift ''PoolState
 data Liquidity = Liquidity deriving Data
 PlutusTx.makeIsDataIndexed ''Liquidity [('Liquidity, 0)]
 PlutusTx.makeLift ''Liquidity
+
+instance OpenApi.ToSchema BuiltinByteString where
+    declareNamedSchema _ = Haskell.pure $ OpenApi.NamedSchema (Just "Bytes") Haskell.mempty
+
+deriving newtype instance OpenApi.ToSchema TokenName
+deriving newtype instance OpenApi.ToSchema CurrencySymbol
+deriving newtype instance OpenApi.ToSchema AssetClass
 
 -- | A single 'AssetClass'. Because we use three coins, we use a phantom type to track
 -- which one is which.
