@@ -28,7 +28,6 @@ import Plutus.Contract (AsContractError (_ContractError), ContractError, Endpoin
                         mapError, ownFirstPaymentPubKeyHash, throwError)
 import Plutus.Contracts.Escrow (EscrowParams (..))
 import Plutus.Contracts.Escrow qualified as Escrow
-import Schema (ToSchema)
 import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
 
 -- | Describes an exchange of two
@@ -45,7 +44,7 @@ data AtomicSwapParams =
         , deadline     :: POSIXTime -- ^ Last time in which the swap can be executed.
         }
         deriving stock (Eq, Show, Generic)
-        deriving anyclass (ToJSON, FromJSON, ToSchema)
+        deriving anyclass (ToJSON, FromJSON)
 
 mkValue1 :: AtomicSwapParams -> Value
 mkValue1 = ada

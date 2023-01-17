@@ -26,8 +26,6 @@
 
   fix-stylish-haskell = import ./fix-stylish-haskell.nix block;
 
-  fix-purs-tidy = import ./fix-purs-tidy.nix block;
-
   ghc = import ./ghc.nix block;
 
   haskell-language-server = import ./haskell-language-server.nix block;

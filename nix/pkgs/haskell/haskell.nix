@@ -58,7 +58,6 @@ let
             marconi.package.buildable = false;
             pab-blockfrost.package.buildable = false;
             marconi-mamba.package.buildable = false;
-            playground-common.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
             plutus-chain-index-core.package.buildable = false;
@@ -113,7 +112,6 @@ let
         (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
           packages = {
             plutus-pab-executables.components.tests.plutus-pab-test-full-long-running.buildable = lib.mkForce false;
-            playground-common.doHaddock = false; # Segfault 11
           };
         })
         ({ pkgs, config, ... }: {
@@ -180,7 +178,6 @@ let
             marconi.ghcOptions = [ "-Werror" ];
             pab-blockfrost.ghcOptions = [ "-Werror" ];
             marconi-mamba.ghcOptions = [ "-Werror" ];
-            playground-common.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
             plutus-contract.ghcOptions = [ "-Werror" ];

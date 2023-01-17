@@ -16,7 +16,6 @@ module ContractExample.PayToWallet(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Schema (ToSchema)
 
 import Ledger (PaymentPubKeyHash, Value)
 import Ledger.Constraints (mustPayToPubKey)
@@ -29,7 +28,7 @@ data PayToWalletParams =
         , pkh    :: PaymentPubKeyHash
         }
         deriving stock (Eq, Show, Generic)
-        deriving anyclass (ToJSON, FromJSON, ToSchema)
+        deriving anyclass (ToJSON, FromJSON)
 
 type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 

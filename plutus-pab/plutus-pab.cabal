@@ -130,7 +130,6 @@ library
     , cardano-node-emulator      >=1.1.0
     , freer-extras               >=1.1.0
     , pab-blockfrost             >=1.1.0
-    , playground-common          >=1.1.0
     , plutus-chain-index         >=1.1.0
     , plutus-chain-index-core    >=1.1.0
     , plutus-contract            >=1.1.0

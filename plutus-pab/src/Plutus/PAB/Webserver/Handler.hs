@@ -59,10 +59,7 @@ getContractReport :: forall t env. Contract.PABContract t => PABAction t env (Co
 getContractReport = do
     contracts <- Contract.getDefinitions @t
     activeContractIDs <- fmap fst . Map.toList <$> Contract.getActiveContracts @t
-    crAvailableContracts <-
-        traverse
-            (\t -> ContractSignatureResponse t <$> Contract.exportSchema @t t)
-            contracts
+    crAvailableContracts <- pure $ map ContractSignatureResponse contracts
     crActiveContractStates <- traverse (\i -> Contract.getState @t i >>= \s -> pure (i, fromResp $ Contract.serialisableState (Proxy @t) s)) activeContractIDs
     pure ContractReport {crAvailableContracts, crActiveContractStates}
 
@@ -71,11 +68,11 @@ getFullReport = do
     contractReport <- getContractReport @t
     pure FullReport {contractReport, chainReport = emptyChainReport}
 
-contractSchema :: forall t env. Contract.PABContract t => ContractInstanceId -> PABAction t env (ContractSignatureResponse (Contract.ContractDef t))
+contractSchema :: forall t env. ContractInstanceId -> PABAction t env (ContractSignatureResponse (Contract.ContractDef t))
 contractSchema contractId = do
     def <- Contract.getDefinition @t contractId
     case def of
-        Just ContractActivationArgs{caID} -> ContractSignatureResponse caID <$> Contract.exportSchema @t caID
+        Just ContractActivationArgs{caID} -> pure $ ContractSignatureResponse caID
         Nothing                           -> throwError (ContractInstanceNotFound contractId)
 
 -- | Handler for the API
@@ -178,11 +175,9 @@ allInstanceStates mStatus = do
     filter (isInstanceStatusMatch . cicStatus)
         <$> traverse get (mapMaybe getStatus $ Map.toList mp)
 
-availableContracts :: forall t env. Contract.PABContract t => PABAction t env [ContractSignatureResponse (Contract.ContractDef t)]
+availableContracts :: forall t env. PABAction t env [ContractSignatureResponse (Contract.ContractDef t)]
 availableContracts = do
-    def <- Contract.getDefinitions @t
-    let mkSchema s = ContractSignatureResponse s <$> Contract.exportSchema @t s
-    traverse mkSchema def
+    map ContractSignatureResponse <$> Contract.getDefinitions @t
 
 shutdown :: forall t env. ContractInstanceId -> PABAction t env ()
 shutdown cid = do

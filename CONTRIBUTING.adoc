@@ -15,7 +15,6 @@ This includes a variety of useful tools:
 * `cabal-install`
 * `stylish-haskell`
 * `haskell-language-server`
-* `purescript-language-server`
 * ... and more
 
 Have a look in `shell.nix` to see what's there.
@@ -31,7 +30,6 @@ The shell comes with some tools for fixing various simple problems that the CI w
 
 - `fix-stylish-haskell` will re-format all the Haskell sources correctly.
 - `fix-cabal-fmt` will re-format all the Cabal sources correctly.
-- `fix-purs-tidy` will re-format all the Purescript sources correctly.
 - `fix-png-optimization` will optimize all PNGs in the repository.
 
 If you're not using `nix-shell` all the time and you want to run one of these, you can use `nix-shell --run`.
@@ -97,16 +95,6 @@ The `nix-shell` environment has a `haskell-language-server` binary for the right
 IMPORTANT: this binary is called `haskell-language-server`, rather than `haskell-language-server-wrapper`, which is what some of the editor integrations expect.
 
 We don't have a `hie.yaml`, the implicit cradle support in HLS seems to work fine these days.
-
-=== How to setup `purescript-language-server`
-The `nix-shell` environment has a `purescript-language-server` executable.
-Follow the instructions for your editor to configure it:
-
-- https://github.com/nwolverson/purescript-language-server
-
-NOTE: you must run your editor from the nix shell, and not from, say, an
-application launcher like spotlight or dmenu for your editor to find it in
-its PATH.
 
 [[update-index-state]]
 === Updating dependencies
@@ -270,10 +258,10 @@ See link:https://plutus-apps.readthedocs.io/en/latest/adr/index.html[the readthe
 
 === Code formatting
 
-We use `stylish-haskell` for Haskell code formatting, `purs-tidy` for Purescript, and `cabal-fmt` for cabal files.
+We use `stylish-haskell` for Haskell code formatting, and `cabal-fmt` for cabal files.
 They are run automatically as pre-commit hooks, but CI will run them again and expect that to be a no-op, so if you somehow don’t apply them your PR will not go green.
 
-To run `stylish-haskell`, `purs-tidy` or `cabal-fmt` manually over your tree, type `fix-stylish-haskell`, `fix-purs-tidy` or `fix-cabal-fmt` respectively.
+To run `stylish-haskell` or `cabal-fmt` manually over your tree, type `fix-stylish-haskell` or  `fix-cabal-fmt` respectively.
 They are provided by the `nix-shell` environment.
 
 === Compiler warnings

@@ -74,7 +74,6 @@ import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>), (>>=))
 import Prelude qualified as Haskell
-import Schema (ToArgument, ToSchema)
 import Wallet.Emulator (Wallet (..), knownWallet)
 import Wallet.Emulator qualified as Emulator
 
@@ -87,7 +86,7 @@ data Campaign = Campaign
     , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
-    } deriving (Generic, ToJSON, FromJSON, ToSchema, Haskell.Show)
+    } deriving (Generic, ToJSON, FromJSON, Haskell.Show)
 
 PlutusTx.makeLift ''Campaign
 
@@ -108,7 +107,7 @@ newtype Contribution = Contribution
         { contribValue :: PV1.Value
         -- ^ how much to contribute
         } deriving stock (Haskell.Eq, Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema, ToArgument)
+          deriving anyclass (ToJSON, FromJSON)
 
 -- | Construct a 'Campaign' value from the campaign parameters,
 --   using the wallet's public key.

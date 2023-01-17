@@ -254,22 +254,6 @@
         "type": "github"
       }
     },
-    "easy-purescript-nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1670198178,
-        "narHash": "sha256-5KkyNpPakv4xIP2ba0S5GX+dcmd3AcO9kPhwa482BbA=",
-        "owner": "justinwoo",
-        "repo": "easy-purescript-nix",
-        "rev": "7a4cb3cd6ca53566ea1675692eab0aa13907ff09",
-        "type": "github"
-      },
-      "original": {
-        "owner": "justinwoo",
-        "repo": "easy-purescript-nix",
-        "type": "github"
-      }
-    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -1003,22 +987,6 @@
         "type": "github"
       }
     },
-    "npmlock2nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1670067743,
-        "narHash": "sha256-ZeWESHkSHpE9fVUQlxT9fojvgDiX77oEr6yN9qs5yAc=",
-        "owner": "tweag",
-        "repo": "npmlock2nix",
-        "rev": "45faec611d6bfd5c63f3aaaeabe0b65f5a069407",
-        "type": "github"
-      },
-      "original": {
-        "owner": "tweag",
-        "repo": "npmlock2nix",
-        "type": "github"
-      }
-    },
     "old-ghc-nix": {
       "flake": false,
       "locked": {
@@ -1077,36 +1045,16 @@
       "inputs": {
         "CHaP": "CHaP",
         "cardano-repo-tool": "cardano-repo-tool",
-        "easy-purescript-nix": "easy-purescript-nix",
         "gitignore-nix": "gitignore-nix",
         "hackage-nix": "hackage-nix",
         "haskell-language-server": "haskell-language-server",
         "haskell-nix": "haskell-nix",
         "iohk-nix": "iohk-nix",
         "nixpkgs": "nixpkgs_5",
-        "npmlock2nix": "npmlock2nix",
         "plutus-core": "plutus-core",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
-        "spago2nix": "spago2nix",
         "sphinxcontrib-haddock": "sphinxcontrib-haddock",
-        "std": "std_2",
-        "web-common": "web-common"
-      }
-    },
-    "spago2nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1641236534,
-        "narHash": "sha256-a5cBQdkFg98NC8mpKzfVm5Iv2DtMSLlr9IclWp5D8mI=",
-        "owner": "justinwoo",
-        "repo": "spago2nix",
-        "rev": "1c834738a8216a4c89d9defac9bf1c331d302a6a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "justinwoo",
-        "repo": "spago2nix",
-        "type": "github"
+        "std": "std_2"
       }
     },
     "sphinxcontrib-haddock": {
@@ -1251,22 +1199,6 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
-        "type": "github"
-      }
-    },
-    "web-common": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1661439746,
-        "narHash": "sha256-JPZnEUFVVsFIV3swJIjZ7XWCCi/sNAjU4QgpzTdTNNw=",
-        "owner": "input-output-hk",
-        "repo": "purescript-web-common",
-        "rev": "ca788ff613e22d1cba115eb2f3553514681f603b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "purescript-web-common",
         "type": "github"
       }
     },

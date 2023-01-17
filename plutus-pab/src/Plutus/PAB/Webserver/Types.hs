@@ -19,11 +19,9 @@ import GHC.Generics (Generic)
 import Ledger (PubKeyHash, Tx, TxId)
 import Ledger.Index (UtxoIndex)
 import Ledger.Slot (Slot)
-import Playground.Types (FunctionSchema)
 import Plutus.Contract.Effects (ActiveEndpoint, PABReq)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
 import Prettyprinter (Pretty, pretty, (<+>))
-import Schema (FormSchema)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Rollup.Types (AnnotatedTx)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId)
@@ -56,15 +54,14 @@ data FullReport t =
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
-data ContractSignatureResponse t =
+newtype ContractSignatureResponse t =
     ContractSignatureResponse
         { csrDefinition :: t
-        , csrSchemas    :: [FunctionSchema FormSchema]
         }
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON)
 
-deriving instance OpenApi.ToSchema t => OpenApi.ToSchema (ContractSignatureResponse t)
+deriving anyclass instance OpenApi.ToSchema t => OpenApi.ToSchema (ContractSignatureResponse t)
 
 -- | Data needed to start a new instance of a contract.
 data ContractActivationArgs t =
