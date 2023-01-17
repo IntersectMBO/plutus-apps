@@ -20,7 +20,6 @@ module Plutus.Contracts.Uniswap.Types
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data
-import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger
 import Ledger.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
@@ -58,7 +57,7 @@ PlutusTx.makeLift ''Liquidity
 -- which one is which.
 newtype Coin a = Coin { unCoin :: AssetClass }
   deriving stock   (Haskell.Show, Generic, Data)
-  deriving newtype (ToJSON, FromJSON, Eq, Haskell.Eq, Haskell.Ord, OpenApi.ToSchema)
+  deriving newtype (ToJSON, FromJSON, Eq, Haskell.Eq, Haskell.Ord)
 PlutusTx.makeIsDataIndexed ''Coin [('Coin, 0)]
 PlutusTx.makeLift ''Coin
 
@@ -95,7 +94,7 @@ mkCoin c = Coin . assetClass c
 newtype Uniswap = Uniswap
     { usCoin :: Coin U
     } deriving stock    (Haskell.Show, Generic, Data)
-      deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+      deriving anyclass (ToJSON, FromJSON)
       deriving newtype  (Haskell.Eq, Haskell.Ord)
 PlutusTx.makeIsDataIndexed ''Uniswap [('Uniswap, 0)]
 PlutusTx.makeLift ''Uniswap
