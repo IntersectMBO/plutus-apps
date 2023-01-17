@@ -109,7 +109,6 @@ import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -304,7 +303,7 @@ data UnbalancedTx
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
         }
     deriving stock (Eq, Generic, Show)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON)
 
 makeLensesFor
     [ ("unBalancedEmulatorTx", "tx")

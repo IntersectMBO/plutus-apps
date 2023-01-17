@@ -104,7 +104,6 @@ import Data.Data (Proxy (Proxy))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
-import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
@@ -136,7 +135,7 @@ data DatumFromQuery
     = DatumUnknown
     | DatumInline V2.Datum
     | DatumInBody V2.Datum
-    deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON)
 
 makePrisms ''DatumFromQuery
 
@@ -176,7 +175,7 @@ data DecoratedTxOut =
       -- | Full version of the validator protecting the transaction output
       _decoratedTxOutValidator         :: Maybe (Versioned V1.Validator)
   }
-  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
+  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON)
 
 makeLenses ''DecoratedTxOut
 makePrisms ''DecoratedTxOut
@@ -274,7 +273,7 @@ data CardanoTx
     = EmulatorTx { _emulatorTx :: Tx }
     | CardanoApiTx { _cardanoApiTx :: SomeCardanoApiTx }
     deriving (Eq, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, Serialise)
+    deriving anyclass (FromJSON, ToJSON, Serialise)
 
 makeLenses ''CardanoTx
 

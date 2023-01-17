@@ -19,7 +19,6 @@ import Codec.Serialise (Serialise)
 import Control.Lens (makeClassyPrisms)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Map qualified as Map
-import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Orphans ()
@@ -32,7 +31,7 @@ import Prettyprinter.Extras (PrettyShow (..))
 -- | The UTxOs of a blockchain indexed by their references.
 newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef TxOut }
     deriving stock (Show, Generic)
-    deriving newtype (Eq, Semigroup, OpenApi.ToSchema, Monoid, Serialise)
+    deriving newtype (Eq, Semigroup, Monoid, Serialise)
     deriving anyclass (FromJSON, ToJSON)
 
 -- | A reason why a transaction is invalid.

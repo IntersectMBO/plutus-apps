@@ -9,7 +9,6 @@ import Ledger.Builtins.Orphans ()
 
 import Codec.CBOR.Extras (SerialiseViaFlat (..))
 import Data.Aeson.Extras qualified as JSON
-import Data.OpenApi qualified as OpenApi
 import Plutus.V1.Ledger.Scripts
 
 import Data.Aeson (FromJSON (parseJSON), FromJSONKey, ToJSON (toJSON), ToJSONKey)
@@ -42,7 +41,6 @@ deriving anyclass instance ToJSONKey DatumHash
 deriving anyclass instance FromJSONKey DatumHash
 deriving newtype instance Hashable DatumHash
 deriving newtype instance Serialise DatumHash
-deriving newtype instance OpenApi.ToSchema DatumHash
 
 deriving anyclass instance ToJSON RedeemerHash
 deriving anyclass instance FromJSON RedeemerHash
@@ -64,7 +62,6 @@ deriving anyclass instance ToJSONKey StakeValidatorHash
 deriving anyclass instance FromJSONKey StakeValidatorHash
 deriving newtype instance Hashable StakeValidatorHash
 deriving newtype instance Serialise StakeValidatorHash
-deriving newtype instance OpenApi.ToSchema StakeValidatorHash
 
 deriving anyclass instance ToJSON ScriptHash
 deriving anyclass instance FromJSON ScriptHash
@@ -79,7 +76,6 @@ deriving anyclass instance ToJSONKey ValidatorHash
 deriving anyclass instance FromJSONKey ValidatorHash
 deriving newtype instance Hashable ValidatorHash
 deriving newtype instance Serialise ValidatorHash
-deriving newtype instance OpenApi.ToSchema ValidatorHash
 
 deriving newtype instance ToJSON Context
 deriving newtype instance FromJSON Context
@@ -100,4 +96,3 @@ deriving anyclass instance Serialise Redeemer
 deriving anyclass instance ToJSON Datum
 deriving anyclass instance FromJSON Datum
 deriving anyclass instance Serialise Datum
-deriving newtype instance OpenApi.ToSchema Datum

@@ -5,13 +5,16 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Plutus.PAB.Events.ContractInstanceState(
     PartiallyDecodedResponse(..)
     , fromResp
     , hasActiveRequests
     ) where
 
-import Control.Monad.Freer.Extras.Log (LogMessage)
+import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
 import Data.Aeson (FromJSON, ToJSON (..), Value)
 import Data.Aeson.Encode.Pretty qualified as JSON
 import Data.ByteString.Lazy.Char8 qualified as BS8
@@ -22,6 +25,13 @@ import GHC.Generics (Generic)
 import Plutus.Contract.Resumable qualified as Contract
 import Plutus.Contract.State qualified as Contract
 import Prettyprinter
+
+deriving instance OpenApi.ToSchema Value
+deriving instance OpenApi.ToSchema LogLevel
+deriving instance OpenApi.ToSchema (LogMessage Value)
+deriving newtype instance OpenApi.ToSchema Contract.IterationID
+deriving newtype instance OpenApi.ToSchema Contract.RequestID
+deriving instance OpenApi.ToSchema o => OpenApi.ToSchema (Contract.Request o)
 
 -- TODO: Replace with type synonym for @ContractResponse Value Value Value h@
 data PartiallyDecodedResponse v =

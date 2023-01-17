@@ -77,7 +77,6 @@ library
     , hedgehog
     , lens
     , mtl
-    , openapi3
     , prettyprinter      >=1.1.0.1
     , serialise
     , strict-containers

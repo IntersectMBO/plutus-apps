@@ -12,7 +12,6 @@ module Wallet.Rollup.Types where
 import Control.Lens (makeLenses, makeLensesFor)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
-import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics
 import Ledger (CardanoTx, PaymentPubKeyHash (PaymentPubKeyHash), TxIn, TxOut, cardanoAddressCredential, txOutAddress)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), TxId, ValidatorHash, Value)
@@ -24,7 +23,7 @@ data TxKey =
         , _txKeyTxOutRefIdx :: Integer
         }
     deriving (Show, Eq, Ord, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON)
 
 instance Pretty TxKey where
     pretty = viaShow
@@ -35,7 +34,7 @@ data SequenceId =
         , txIndex   :: Int
         }
     deriving (Eq, Ord, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON)
 
 makeLensesFor
      [ ("slotIndex", "slotIndexL")
@@ -50,7 +49,7 @@ data DereferencedInput
           }
     | InputNotFound TxKey
     deriving (Eq, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON)
 
 isFound :: DereferencedInput -> Bool
 isFound DereferencedInput {} = True
@@ -60,7 +59,7 @@ data BeneficialOwner
     = OwnedByPaymentPubKey PaymentPubKeyHash
     | OwnedByScript ValidatorHash
     deriving (Eq, Show, Ord, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, FromJSONKey, ToJSONKey)
+    deriving anyclass (FromJSON, ToJSON, FromJSONKey, ToJSONKey)
 
 toBeneficialOwner :: TxOut -> BeneficialOwner
 toBeneficialOwner txOut =
@@ -78,7 +77,7 @@ data AnnotatedTx =
         , valid              :: Bool
         }
     deriving (Eq, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON)
 
 makeLenses 'AnnotatedTx
 

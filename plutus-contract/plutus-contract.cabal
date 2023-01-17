@@ -170,7 +170,6 @@ library
     , memory
     , mmorph
     , mtl
-    , openapi3
     , pretty
     , prettyprinter         >=1.1.0.1
     , profunctors

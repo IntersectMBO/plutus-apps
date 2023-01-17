@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -67,7 +68,7 @@ import Codec.Serialise qualified as CBOR
 import Codec.Serialise.Class (Serialise (decode, encode))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
-import Control.Lens (makeLenses, makePrisms)
+import Control.Lens (makeLenses, makePrisms, (&), (.~), (?~))
 import Control.Monad (void)
 import Crypto.Hash (SHA256, hash)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.!=), (.:), (.:?), (.=))
@@ -76,24 +77,34 @@ import Data.Aeson.KeyMap qualified as Aeson
 import Data.ByteArray qualified as BA
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
+import Data.HashMap.Strict.InsOrd qualified as InsOrdMap
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Monoid (Last (..), Sum (..))
+import Data.OpenApi (NamedSchema (NamedSchema), OpenApiType (OpenApiObject), byteSchema, declareSchemaRef, properties,
+                     required, sketchSchema, type_)
 import Data.OpenApi qualified as OpenApi
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Typeable (Proxy (Proxy), Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, SlotRange, SomeCardanoApiTx, TxIn (..), TxOutRef (..), Versioned, toPlutusAddress)
+import Ledger (CardanoAddress, Language, SlotRange, SomeCardanoApiTx, TxIn (..), TxInType (..), TxOutRef (..),
+               Versioned, toPlutusAddress)
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
-import Ledger.Slot (Slot)
+import Ledger.Slot (Slot (Slot))
 import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
-import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Script, ScriptHash)
-import Plutus.V1.Ledger.Tx (Redeemers, TxId)
-import Plutus.V2.Ledger.Api (OutputDatum (..))
+import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash (DatumHash), Script, ScriptHash (..))
+import Plutus.V1.Ledger.Tx (RedeemerPtr, Redeemers, ScriptTag, TxId (TxId))
+import Plutus.V2.Ledger.Api (CurrencySymbol (CurrencySymbol), Extended, Interval (..), LowerBound, OutputDatum (..),
+                             Redeemer (Redeemer), TokenName (TokenName), UpperBound, Validator (Validator), Value (..))
+import PlutusCore.Data
+import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Builtins.Internal (BuiltinData (..))
 import PlutusTx.Lattice (MeetSemiLattice (..))
+import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter
 import Prettyprinter.Extras (PrettyShow (..))
 
@@ -146,6 +157,53 @@ fromReferenceScript :: ReferenceScript -> Maybe (Versioned Script)
 fromReferenceScript ReferenceScriptNone             = Nothing
 fromReferenceScript (ReferenceScriptInAnyLang sial) = fromCardanoScriptInAnyLang sial
 
+instance OpenApi.ToSchema (C.AddressInEra C.BabbageEra) where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "AddressInBabbageEra") mempty
+
+instance OpenApi.ToSchema Data where
+  declareNamedSchema _ = do
+    integerSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Integer)
+    constrArgsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy (Integer, [Data]))
+    mapArgsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy [(Data, Data)])
+    listArgsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy [Data])
+    bytestringSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy String)
+    return $ OpenApi.NamedSchema (Just "Data") $ mempty
+      & OpenApi.type_ ?~ OpenApi.OpenApiObject
+      & OpenApi.properties .~
+          InsOrdMap.fromList
+          [ ("Constr", constrArgsSchema)
+          , ("Map", mapArgsSchema)
+          , ("List", listArgsSchema)
+          , ("I", integerSchema)
+          , ("B", bytestringSchema)
+          ]
+
+deriving instance OpenApi.ToSchema BuiltinData
+
+instance OpenApi.ToSchema PlutusTx.BuiltinByteString where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "Bytes") mempty
+
+deriving newtype instance OpenApi.ToSchema TokenName
+deriving newtype instance OpenApi.ToSchema Value
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Extended a)
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Interval a)
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (LowerBound a)
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (UpperBound a)
+deriving instance OpenApi.ToSchema Language
+deriving instance OpenApi.ToSchema script => OpenApi.ToSchema (Versioned script)
+-- deriving anyclass instance OpenApi.ToSchema C.TxId
+deriving newtype instance OpenApi.ToSchema TxId
+deriving instance OpenApi.ToSchema ScriptTag
+deriving newtype instance OpenApi.ToSchema Validator
+deriving instance OpenApi.ToSchema TxInType
+deriving instance OpenApi.ToSchema TxIn
+deriving newtype instance OpenApi.ToSchema Slot
+deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
+deriving anyclass instance OpenApi.ToSchema OutputDatum
+
+instance OpenApi.ToSchema C.Value where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "Value") $ OpenApi.toSchema (Proxy @[(String, Integer)])
+
 data ChainIndexTxOut = ChainIndexTxOut
   { citoAddress   :: CardanoAddress -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era
   , citoValue     :: C.Value
@@ -182,6 +240,37 @@ data ChainIndexTxOutputs =
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makePrisms ''ChainIndexTxOutputs
+
+deriving instance OpenApi.ToSchema TxOutRef
+deriving instance OpenApi.ToSchema RedeemerPtr
+deriving newtype instance OpenApi.ToSchema Redeemer
+deriving newtype instance OpenApi.ToSchema ScriptHash
+instance OpenApi.ToSchema Script where
+    declareNamedSchema _ =
+        pure $ OpenApi.NamedSchema (Just "Script") (OpenApi.toSchema (Proxy :: Proxy String))
+deriving newtype instance OpenApi.ToSchema CurrencySymbol
+deriving newtype instance OpenApi.ToSchema Datum
+deriving newtype instance OpenApi.ToSchema DatumHash
+
+instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "EraInMode") $ sketchSchema C.BabbageEraInCardanoMode
+
+instance (Typeable era) => OpenApi.ToSchema (C.Tx era) where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "Tx") byteSchema
+
+instance OpenApi.ToSchema SomeCardanoApiTx where
+  declareNamedSchema _ = do
+    txSchema <- declareSchemaRef (Proxy :: Proxy (C.Tx C.BabbageEra))
+    eraInModeSchema <- declareSchemaRef (Proxy :: Proxy (C.EraInMode C.BabbageEra C.CardanoMode))
+    return $ NamedSchema (Just "SomeCardanoApiTx") $ mempty
+      & type_ ?~ OpenApiObject
+      & properties .~
+          InsOrdMap.fromList [ ("tx", txSchema)
+          , ("eraInMode", eraInModeSchema)
+          ]
+      & required .~ [ "tx", "eraInMode" ]
 
 data ChainIndexTx = ChainIndexTx {
     _citxTxId       :: TxId,
@@ -244,6 +333,9 @@ newtype BlockNumber = BlockNumber { unBlockNumber :: Word64 }
 instance Pretty BlockNumber where
     pretty (BlockNumber blockNumber) =
         "BlockNumber " <> pretty blockNumber
+
+instance OpenApi.ToSchema BlockId where
+    declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @String)
 
 -- | The tip of the chain index.
 data Tip =

@@ -35,13 +35,11 @@ import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 
 import Prettyprinter.Extras (PrettyShow (..), Tagged (..))
 
-import Data.OpenApi.Schema qualified as OpenApi
-
 -- | Unique ID for contract instance
 newtype ContractInstanceId = ContractInstanceId { unContractInstanceId :: UUID }
     deriving (Eq, Ord, Show, Generic)
     deriving newtype (FromJSONKey, ToJSONKey)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON)
     deriving Pretty via (PrettyShow UUID)
 
 -- | A pure list of all 'ContractInstanceId' values. To be used in testing.
@@ -51,7 +49,7 @@ contractInstanceIDs = ContractInstanceId <$> UUID.mockUUIDs
 randomID :: IO ContractInstanceId
 randomID = ContractInstanceId <$> UUID.nextRandom
 
-data ContractActivityStatus = Active | Stopped | Done deriving (Eq, Show, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
+data ContractActivityStatus = Active | Stopped | Done deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 parseContractActivityStatus :: Text -> Maybe ContractActivityStatus
 parseContractActivityStatus t = case T.toLower t of
@@ -63,7 +61,7 @@ parseContractActivityStatus t = case T.toLower t of
 newtype EndpointDescription = EndpointDescription { getEndpointDescription :: String }
     deriving stock (Eq, Ord, Generic, Show, TH.Lift)
     deriving newtype (IsString, Pretty)
-    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 newtype EndpointValue a = EndpointValue { unEndpointValue :: a }
     deriving stock (Eq, Ord, Generic, Show)

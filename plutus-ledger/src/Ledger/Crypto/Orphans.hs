@@ -9,7 +9,6 @@ import Codec.Serialise (Serialise)
 import Control.Newtype.Generics (Newtype)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
-import Data.OpenApi (ToSchema)
 
 import Plutus.V1.Ledger.Crypto
 
@@ -20,4 +19,3 @@ deriving anyclass instance ToJSONKey PubKeyHash
 deriving anyclass instance Newtype PubKeyHash
 deriving newtype instance Serialise PubKeyHash
 deriving newtype instance Hashable PubKeyHash
-deriving anyclass instance ToSchema PubKeyHash

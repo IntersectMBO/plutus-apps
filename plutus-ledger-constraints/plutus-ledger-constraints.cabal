@@ -81,7 +81,6 @@ library
     , data-default
     , lens
     , mtl
-    , openapi3
     , prettyprinter
     , transformers
 

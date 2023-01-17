@@ -45,7 +45,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (..))
 import Data.List.NonEmpty qualified as L
 import Data.Maybe (isJust, listToMaybe)
-import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
@@ -57,14 +56,14 @@ data PageQuery a = PageQuery
     , pageQueryLastItem :: Maybe a -- ^ Last item of the queried page.
     }
     deriving stock (Eq, Ord, Show, Generic, Functor)
-    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 instance Default (PageQuery a) where
   def = PageQuery def Nothing
 
 newtype PageSize = PageSize { getPageSize :: Natural }
     deriving stock (Eq, Ord, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
     deriving newtype (Num)
 
 instance Default PageSize where
@@ -81,8 +80,6 @@ data Page a = Page
     }
     deriving stock (Eq, Ord, Show, Generic, Functor)
     deriving anyclass (ToJSON, FromJSON)
-
-deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Page a)
 
 -- | Given a 'Set', request the 'Page' with the given 'PageQuery'.
 pageOf

@@ -84,7 +84,6 @@ library
     , monad-logger
     , mtl
     , newtype-generics
-    , openapi3
     , prettyprinter
     , process
     , purescript-bridge

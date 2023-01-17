@@ -48,7 +48,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe)
-import Data.OpenApi.Schema qualified as OpenApi
 import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
@@ -131,8 +130,6 @@ instance Pretty Wallet where
     pretty (Wallet Nothing i)  = "W" <> pretty (T.take 7 $ toBase16 i)
     pretty (Wallet (Just s) _) = "W[" <> fromString s <> "]"
 
-deriving anyclass instance OpenApi.ToSchema Wallet
-
 newtype WalletId = WalletId { unWalletId :: Crypto.Digest Crypto.Blake2b_160 }
     deriving (Eq, Ord, Generic, Data)
     deriving anyclass (ToJSONKey)
@@ -147,7 +144,6 @@ instance ToHttpApiData WalletId where
     toUrlPiece = toBase16
 instance FromHttpApiData WalletId where
     parseUrlPiece = first T.pack . fromBase16
-deriving anyclass instance OpenApi.ToSchema WalletId
 
 toBase16 :: WalletId -> T.Text
 toBase16 = T.decodeUtf8 . convertToBase Base16 . unWalletId
