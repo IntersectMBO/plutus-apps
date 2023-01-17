@@ -1,6 +1,7 @@
-{-# LANGUAGE LambdaCase     #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections  #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Helpers where
 
@@ -40,10 +41,12 @@ import Testnet.Plutus qualified as TN
 getProjectBase :: (MonadIO m, MonadTest m) => m String
 getProjectBase = liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
+-- TODO: move to shared utils
 unsafeFromEither :: Show l => Either l r -> r
 unsafeFromEither (Left err)    = error (show err)
 unsafeFromEither (Right value) = value
 
+-- TODO: move to shared utils
 unsafeFromMaybe :: Maybe a -> a
 unsafeFromMaybe Nothing  = error "not maybe, nothing."
 unsafeFromMaybe (Just a) = a
@@ -70,11 +73,12 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
 
 -- | Start a testnet.
-startTestnet :: TN.TestnetOptions
+startTestnet :: C.CardanoEra era
+  -> TN.TestnetOptions
   -> FilePath
   -> FilePath
   -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
-startTestnet testnetOptions base tempAbsBasePath' = do
+startTestnet era testnetOptions base tempAbsBasePath' = do
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf :: TC.Conf <- HE.noteShowM $
     TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
@@ -95,7 +99,7 @@ startTestnet testnetOptions base tempAbsBasePath' = do
           , C.localNodeSocketPath = socketPathAbs
           }
       networkId = getNetworkId tn
-  pparams <- getBabbageProtocolParams localNodeConnectInfo
+  pparams <- getProtocolParams era localNodeConnectInfo
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
   pure (localNodeConnectInfo, pparams, networkId)
 
@@ -109,11 +113,17 @@ getPoolSocketPathAbs conf tn = do
   socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
   pure socketPathAbs
 
-getBabbageProtocolParams :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
-getBabbageProtocolParams localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
+getProtocolParams :: (MonadIO m, MonadTest m) => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
+getProtocolParams era localNodeConnectInfo = do
+    case era of
+      C.AlonzoEra  -> getProtocolParams' C.ShelleyBasedEraAlonzo localNodeConnectInfo
+      C.BabbageEra -> getProtocolParams' C.ShelleyBasedEraBabbage localNodeConnectInfo
+
+getProtocolParams' :: (MonadIO m, MonadTest m) => C.ShelleyBasedEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
+getProtocolParams' shelleyEra localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
   $ C.queryNodeLocalState localNodeConnectInfo Nothing
-  $ C.QueryInEra C.BabbageEraInCardanoMode
-  $ C.QueryInShelleyBasedEra C.ShelleyBasedEraBabbage C.QueryProtocolParameters
+  $ C.QueryInEra (unsafeFromMaybe $ C.toEraInMode (C.shelleyBasedToCardanoEra shelleyEra) C.CardanoMode)
+                 (C.QueryInShelleyBasedEra shelleyEra C.QueryProtocolParameters)
 
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = do
@@ -140,44 +150,62 @@ w1 tempAbsPath' networkId = do
 
   return (genesisSKey, address)
 
-txOutNoDatumOrRefScript :: C.Value -> C.Address C.ShelleyAddr -> C.TxOut ctx C.BabbageEra
-txOutNoDatumOrRefScript value address = C.TxOut
-    (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) address)
-    (C.TxOutValue C.MultiAssetInBabbageEra value)
+txOutNoDatumOrRefScript :: C.CardanoEra era
+  -> C.Value
+  -> C.Address C.ShelleyAddr
+  -> C.TxOut ctx era
+txOutNoDatumOrRefScript era value address = C.TxOut
+    (unsafeFromMaybe $ C.anyAddressInEra era $ C.toAddressAny address) --(C.shelleyAddressInEra address)
+    (C.TxOutValue (unsafeFromEither $ C.multiAssetSupportedInEra era) value)
     C.TxOutDatumNone
     C.ReferenceScriptNone
 
-firstTxIn :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> C.Address C.ShelleyAddr -> m C.TxIn
-firstTxIn = txInFromUtxo 0
+firstTxIn :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
+  -> C.Address C.ShelleyAddr
+  -> m C.TxIn
+firstTxIn era = txInFromUtxo era 0
 
-txInFromUtxo :: (MonadIO m, MonadTest m) => Int -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address C.ShelleyAddr -> m C.TxIn
-txInFromUtxo i localNodeConnectInfo address = do
-  atM i =<< txInsFromUtxo =<< findUTxOByAddress localNodeConnectInfo address
+txInFromUtxo :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era
+  -> Int -> C.LocalNodeConnectInfo C.CardanoMode
+  -> C.Address C.ShelleyAddr
+  -> m C.TxIn
+txInFromUtxo era i localNodeConnectInfo address = do
+  atM i =<< txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
   where
     atM :: (MonadTest m) => Int -> [a] -> m a
     atM i' l = return $ l !! i'
 
-txInsFromUtxo :: (MonadIO m) => C.UTxO C.BabbageEra -> m [C.TxIn]
+txInsFromUtxo :: (MonadIO m) => C.UTxO era -> m [C.TxIn]
 txInsFromUtxo utxos = do
   let (txIns, _) = unzip $ Map.toList $ C.unUTxO utxos
   return txIns
 
-findUTxOByAddress
+findUTxOByAddress :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
+findUTxOByAddress era localNodeConnectInfo address = do
+    case era of
+      C.AlonzoEra  -> findUTxOByAddress' C.ShelleyBasedEraAlonzo localNodeConnectInfo address
+      C.BabbageEra -> findUTxOByAddress' C.ShelleyBasedEraBabbage localNodeConnectInfo address
+
+findUTxOByAddress'
   :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO C.BabbageEra)
-findUTxOByAddress localNodeConnectInfo address = let
-  query = C.QueryInShelleyBasedEra C.ShelleyBasedEraBabbage $ C.QueryUTxO $
+  => C.ShelleyBasedEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
+findUTxOByAddress' shelleyEra localNodeConnectInfo address = let
+  query = C.QueryInShelleyBasedEra shelleyEra $ C.QueryUTxO $
     C.QueryUTxOByAddress $ Set.singleton (C.toAddressAny address)
   in
   H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra C.BabbageEraInCardanoMode query
+    C.QueryInEra (unsafeFromMaybe $ C.toEraInMode (C.shelleyBasedToCardanoEra shelleyEra) C.CardanoMode) query
 
 -- | Get [TxIn] and total lovelace value for an address.
 getAddressTxInsLovelaceValue
   :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Lovelace)
-getAddressTxInsLovelaceValue con address = do
-  utxo <- findUTxOByAddress con address
+  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Lovelace)
+getAddressTxInsLovelaceValue era con address = do
+  utxo <- findUTxOByAddress era con address
   let
     (txIns, txOuts) = unzip $ Map.toList $ C.unUTxO utxo
     values = map (\case C.TxOut _ v _ _ -> C.txOutValueToLovelace v) txOuts
@@ -186,32 +214,26 @@ getAddressTxInsLovelaceValue con address = do
 -- | Get [TxIn] and value for an address (including assets).
 getAddressTxInsValue
   :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Value)
-getAddressTxInsValue con address = do
-  utxo <- findUTxOByAddress con address
+  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Value)
+getAddressTxInsValue era con address = do
+  utxo <- findUTxOByAddress era con address
   let
     (txIns, txOuts) = unzip $ Map.toList $ C.unUTxO utxo
     values = map (\case C.TxOut _ v _ _ -> C.txOutValueToValue v) txOuts
   pure (txIns, (mconcat values))
 
--- valueAtAddressTxIn:: (MonadIO m, MonadTest m) -- at single txo
---   => C.LocalNodeConnectInfo C.CardanoMode
---   -> C.Address C.ShelleyAddr
---   -> C.Value
--- valueAtAddressUtxo localNodeConnectInfo address expValue = do
---     (_, value) <- getAddressTxInsValue localNodeConnectInfo address
-
 -- | An empty transaction
-emptyTxBodyContent :: C.ProtocolParameters -> C.TxBodyContent C.BuildTx C.BabbageEra
-emptyTxBodyContent pparams = C.TxBodyContent
+emptyTxBodyContent :: C.CardanoEra era -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx era
+emptyTxBodyContent era pparams = C.TxBodyContent
   { C.txIns              = []
   , C.txInsCollateral    = C.TxInsCollateralNone
   , C.txInsReference     = C.TxInsReferenceNone
   , C.txOuts             = []
   , C.txTotalCollateral  = C.TxTotalCollateralNone
   , C.txReturnCollateral = C.TxReturnCollateralNone
-  , C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra 0
-  , C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+  , C.txFee              = C.TxFeeExplicit (unsafeFromEither $ C.txFeesExplicitInEra era) 0
+  , C.txValidityRange    = (C.TxValidityNoLowerBound,(C.TxValidityNoUpperBound $ unsafeFromMaybe $
+                                C.validityNoUpperBoundSupportedInEra era))
   , C.txMetadata         = C.TxMetadataNone
   , C.txAuxScripts       = C.TxAuxScriptsNone
   , C.txExtraKeyWits     = C.TxExtraKeyWitnessesNone
@@ -231,27 +253,42 @@ txInsCollateral era txIns = case C.collateralSupportedInEra era of
 txInFromSignedTx :: C.Tx era -> Int -> C.TxIn
 txInFromSignedTx signedTx txIx = C.TxIn (C.getTxId $ C.getTxBody signedTx) (C.TxIx $ fromIntegral txIx)
 
-pubkeyTxIns  :: [C.TxIn] -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))]
+pubkeyTxIns  :: [C.TxIn] -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))]
 pubkeyTxIns txIns = map (\txIn -> (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) txIns
 
-txMintValue :: C.Value-> Map.Map C.PolicyId (C.ScriptWitness C.WitCtxMint C.BabbageEra)
-  -> C.TxMintValue C.BuildTx C.BabbageEra
-txMintValue tv m = C.TxMintValue C.MultiAssetInBabbageEra tv (C.BuildTxWith m)
+txMintValue :: C.CardanoEra era
+  -> C.Value
+  -> Map.Map C.PolicyId (C.ScriptWitness C.WitCtxMint era)
+  -> C.TxMintValue C.BuildTx era
+txMintValue era tv m = C.TxMintValue (unsafeFromEither $ C.multiAssetSupportedInEra era) tv (C.BuildTxWith m)
 
 buildTx :: (MonadIO m, MonadTest m)
-  => C.TxBodyContent C.BuildTx C.BabbageEra
+  => C.CardanoEra era
+  -> C.TxBodyContent C.BuildTx era
   -> C.Address C.ShelleyAddr
   -> C.SigningKey C.GenesisUTxOKey
   -> C.NetworkId
-  -> m (C.Tx C.BabbageEra)
-buildTx txBody changeAddress sKey networkId = do
+  -> m (C.Tx era)
+buildTx era txBody changeAddress sKey networkId = do
+  case era of
+    C.AlonzoEra  -> buildTx' C.ShelleyBasedEraAlonzo txBody changeAddress sKey networkId
+    C.BabbageEra -> buildTx' C.ShelleyBasedEraBabbage txBody changeAddress sKey networkId
+
+buildTx' :: (MonadIO m, MonadTest m, C.IsShelleyBasedEra era)
+  => C.ShelleyBasedEra era
+  -> C.TxBodyContent C.BuildTx era
+  -> C.Address C.ShelleyAddr
+  -> C.SigningKey C.GenesisUTxOKey
+  -> C.NetworkId
+  -> m (C.Tx era)
+buildTx' shelleyEra txBody changeAddress sKey networkId = do
   (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <- H.leftFailM . liftIO $
-    C.queryStateForBalancedTx C.BabbageEra networkId (fst <$> C.txIns txBody)
+    C.queryStateForBalancedTx (C.shelleyBasedToCardanoEra shelleyEra) networkId (fst <$> C.txIns txBody)
 
   return $ unsafeFromEither $ C.constructBalancedTx
-    C.BabbageEraInCardanoMode
+    (unsafeFromMaybe $ C.toEraInMode (C.shelleyBasedToCardanoEra shelleyEra) C.CardanoMode)
     txBody
-    (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) changeAddress)
+    (C.shelleyAddressInEra changeAddress)
     Nothing -- Override key witnesses
     nodeEraUtxo -- tx inputs
     pparams
@@ -261,12 +298,13 @@ buildTx txBody changeAddress sKey networkId = do
     [C.WitnessPaymentKey $ C.castSigningKey sKey]
 
 submitTx :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode
-  -> C.Tx C.BabbageEra
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
+  -> C.Tx era
   -> m ()
-submitTx localNodeConnectInfo tx = do
+submitTx era localNodeConnectInfo tx = do
   submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
-    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.BabbageEraInCardanoMode
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (unsafeFromMaybe $ C.toEraInMode era C.CardanoMode)
   failOnTxSubmitFail submitResult
   where
     failOnTxSubmitFail :: (Show a, MonadTest m) => SubmitResult a -> m ()
@@ -276,130 +314,46 @@ submitTx localNodeConnectInfo tx = do
 
 --TODO: loop timeout
 waitForTxIdAtAddress :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> C.TxId
   -> m ()
-waitForTxIdAtAddress localNodeConnectInfo address txId = do
+waitForTxIdAtAddress era localNodeConnectInfo address txId = do
   let loop = do
-        txIns <- txInsFromUtxo =<< findUTxOByAddress localNodeConnectInfo address
+        txIns <- txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
         let txIds = map (\(C.TxIn txId _) -> txId) txIns
         when (not $ txId `elem` txIds) loop
   loop
 
 --TODO: loop timeout
 waitForTxInAtAddress :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> C.TxIn
   -> m ()
-waitForTxInAtAddress localNodeConnectInfo address txIn = do
+waitForTxInAtAddress era localNodeConnectInfo address txIn = do
   let loop = do
-        utxos <- findUTxOByAddress localNodeConnectInfo address
+        utxos <- findUTxOByAddress era localNodeConnectInfo address
         when (Map.notMember txIn $ C.unUTxO utxos) loop
   loop
 
---   utxos <- findUTxOByAddress localNodeConnectInfo address
---   return $ unsafeFromMaybe $ Map.lookup txIn $ C.unUTxO utxos -- $ findUTxOByAddress localNodeConnectInfo address
-
 getTxOutAtAddress :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> C.TxIn
-  -> m (C.TxOut C.CtxUTxO C.BabbageEra)
-getTxOutAtAddress localNodeConnectInfo address txIn = do
-  waitForTxInAtAddress localNodeConnectInfo address txIn
-  utxos <- findUTxOByAddress localNodeConnectInfo address
+  -> m (C.TxOut C.CtxUTxO era)
+getTxOutAtAddress era localNodeConnectInfo address txIn = do
+  waitForTxInAtAddress era localNodeConnectInfo address txIn
+  utxos <- findUTxOByAddress era localNodeConnectInfo address
   return $ unsafeFromMaybe $ Map.lookup txIn $ C.unUTxO utxos
 
 txOutHasValue :: (MonadIO m, MonadTest m)
-  => C.TxOut C.CtxUTxO C.BabbageEra
+  => C.TxOut C.CtxUTxO era
   -> C.Value
   -> m Bool
 txOutHasValue (C.TxOut _ txOutValue _ _) tokenValue = do
   let value = C.txOutValueToValue txOutValue
   return $ List.isInfixOf (C.valueToList tokenValue) (C.valueToList value)
-
-{-
-| Block until a transaction with @txId@ is sent over the local chainsync protocol.
-awaitTxId :: C.LocalNodeConnectInfo C.CardanoMode -> C.TxId -> IO ()
-awaitTxId con txId = do
-  chan :: IO.Chan [C.TxId] <- IO.newChan
-  let indexer = CS.blocks con C.ChainPointAtGenesis
-        & CS.ignoreRollbacks
-        & S.map bimTxIds
-        & S.chain (IO.writeChan chan)
-  void $ (IO.link =<<) $ IO.async $ void $ S.effects indexer
-  let loop = do
-        txIds <- IO.readChan chan
-        when (not $ txId `elem` txIds) loop
-  loop
-
-| Submit the argument transaction and await for it to be accepted into the blockhain.
-submitAwaitTx
-  :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> (C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra) -> m ()
-submitAwaitTx con (tx, txBody) = do
-  submitTx con tx
-  liftIO $ awaitTxId con $ C.getTxId txBody
-
-
-mkTransferTx
-  :: (MonadIO m, MonadTest m, MonadFail m)
-  => C.NetworkId -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address C.ShelleyAddr -> C.Address C.ShelleyAddr -> [C.ShelleyWitnessSigningKey] -> C.Lovelace
-  -> m (C.Tx C.BabbageEra, C.TxBody C.BabbageEra)
-mkTransferTx networkId con from to keyWitnesses howMuch = do
-  pparams <- getBabbageProtocolParams con
-  (txIns, totalLovelace) <- getAddressTxInsLovelaceValue con from
-  let
-    fee0 = 0
-    tx0 = (emptyTxBodyContent fee0 pparams)
-      { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-      , C.txOuts = [mkAddressAdaTxOut to $ totalLovelace - fee0]
-      }
-  txBody0 :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx0
-  let fee = calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses) networkId txBody0 :: C.Lovelace
-
-  when (howMuch + fee >= totalLovelace) $ fail "Not enough funds"
-  let
-    tx = tx0 { C.txFee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra fee
-             , C.txOuts = [ mkAddressAdaTxOut to howMuch
-                          , mkAddressAdaTxOut from $ totalLovelace - howMuch - fee
-                          ]}
-  txBody :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx
-  return (C.signShelleyTransaction txBody keyWitnesses, txBody)
-
-mkAddressAdaTxOut :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.BabbageEra
-mkAddressAdaTxOut address lovelace =
-  C.TxOut
-    (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) address)
-    (C.TxOutValue C.MultiAssetInBabbageEra $ C.lovelaceToValue lovelace)
-    C.TxOutDatumNone
-    C.ReferenceScriptNone
-
--- | Adapted from:
--- https://github.com/input-output-hk/cardano-node/blob/d15ff2b736452857612dd533c1ddeea2405a2630/cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs#L1105-L1112
--- https://github.com/input-output-hk/cardano-node/blob/d15ff2b736452857612dd533c1ddeea2405a2630/cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs#L1121-L1128
-calculateFee :: C.IsShelleyBasedEra era => C.ProtocolParameters -> Int -> Int -> Int -> Int -> C.NetworkId -> C.TxBody era -> C.Lovelace
-calculateFee pparams nInputs nOutputs nByronKeyWitnesses nShelleyKeyWitnesses networkId txBody = C.estimateTransactionFee
-  networkId
-  (C.protocolParamTxFeeFixed pparams)
-  (C.protocolParamTxFeePerByte pparams)
-  (C.makeSignedTransaction [] txBody)
-  nInputs nOutputs
-  nByronKeyWitnesses nShelleyKeyWitnesses
-
--- * Accessors
-
-bimTxIds :: C.BlockInMode mode -> [C.TxId]
-bimTxIds (C.BlockInMode block _) = blockTxIds block
-
-blockTxIds :: C.Block era -> [C.TxId]
-blockTxIds (C.Block (C.BlockHeader _slotNo _ _blockNo) txs) = map (C.getTxId . C.getTxBody) txs
-
-bimSlotNo :: C.BlockInMode mode -> C.SlotNo
-bimSlotNo (C.BlockInMode (C.Block (C.BlockHeader slotNo _ _blockNo) _txs) _era) = slotNo
-
-bimBlockNo :: C.BlockInMode mode -> C.BlockNo
-bimBlockNo (C.BlockInMode (C.Block (C.BlockHeader _slotNo _ blockNo) _txs) _era) = blockNo
--}

@@ -33,8 +33,17 @@ bytesFromHex b = bytes $ unsafeFromEither $ P.fromHex b
 defExecutionUnits :: C.ExecutionUnits
 defExecutionUnits = C.ExecutionUnits {C.executionSteps = 0, C.executionMemory = 0 }
 
-mintScriptWitnessV2 :: C.PlutusScript C.PlutusScriptV2 -> C.ScriptData -> C.ScriptWitness C.WitCtxMint C.BabbageEra
-mintScriptWitnessV2 script redeemer = C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+-- TODO: move to shared utils
+unsafeFromMaybe :: Maybe a -> a
+unsafeFromMaybe Nothing  = error "not maybe, nothing."
+unsafeFromMaybe (Just a) = a
+
+
+mintScriptWitnessV2 :: C.CardanoEra era
+  -> C.PlutusScript C.PlutusScriptV2
+  -> C.ScriptData
+  -> C.ScriptWitness C.WitCtxMint era
+mintScriptWitnessV2 era script redeemer = C.PlutusScriptWitness (unsafeFromMaybe $ C.scriptLanguageSupportedInEra era $ C.PlutusScriptLanguage C.PlutusScriptV2) C.PlutusScriptV2
         (C.PScript script) C.NoScriptDatumForMint redeemer defExecutionUnits
 
 toRedeemer :: PlutusTx.ToData a => a -> C.ScriptData
@@ -86,8 +95,9 @@ verifySchnorrParams = Secp256Params
 verifySchnorrRedeemer :: C.ScriptData
 verifySchnorrRedeemer = toRedeemer verifySchnorrParams
 
-verifySchnorrMintWitness :: (C.PolicyId, C.ScriptWitness C.WitCtxMint C.BabbageEra)
-verifySchnorrMintWitness = (verifySchnorrPolicyId, mintScriptWitnessV2 verifySchnorrPolicyScript verifySchnorrRedeemer)
+verifySchnorrMintWitness :: C.CardanoEra era
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+verifySchnorrMintWitness era = (verifySchnorrPolicyId, mintScriptWitnessV2 era verifySchnorrPolicyScript verifySchnorrRedeemer)
 
 -- | ECDSA minting policy
 
@@ -126,5 +136,6 @@ verifyEcdsaParams = Secp256Params
 verifyEcdsaRedeemer :: C.ScriptData
 verifyEcdsaRedeemer = toRedeemer verifyEcdsaParams
 
-verifyEcdsaMintWitness :: (C.PolicyId, C.ScriptWitness C.WitCtxMint C.BabbageEra)
-verifyEcdsaMintWitness = (verifyEcdsaPolicyId, mintScriptWitnessV2 verifyEcdsaPolicyScript verifyEcdsaRedeemer)
+verifyEcdsaMintWitness :: C.CardanoEra era
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+verifyEcdsaMintWitness era = (verifyEcdsaPolicyId, mintScriptWitnessV2 era verifyEcdsaPolicyScript verifyEcdsaRedeemer)

@@ -2,6 +2,7 @@
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Spec.Builtins.SECP256k1(tests) where
 
@@ -23,14 +24,15 @@ import Helpers qualified as TN
 import PlutusScripts qualified as PS
 import Testnet.Plutus qualified as TN
 
--- data TestEraPv = TestEraPv
---     { era :: TN.Era,
---       pv  :: Int
---     }
+testnetOptionsAlonzo   = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
+testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
+testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
 
-testnetOptionsAlonzo   = TN.defaultTestnetOptions {TN.era = TN.Alonzo,  TN.protocolVersion = 6}
-testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = TN.Babbage, TN.protocolVersion = 7}
-testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = TN.Babbage, TN.protocolVersion = 8}
+-- shelleyBasedEra :: C.CardanoEra era -> C.ShelleyBasedEra era
+-- shelleyBasedEra cEra = case cEra of
+--     C.AlonzoEra  -> C.ShelleyBasedEraAlonzo
+--     C.BabbageEra -> C.ShelleyBasedEraBabbage
+--     _            -> error " Alonzo or Babbage only"
 
 tests :: TestTree
 tests = testGroup "SECP256k1"
@@ -50,40 +52,39 @@ tests = testGroup "SECP256k1"
 verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
 verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
 
-  let era :: C.CardanoEra era = case TN.era testnetOptions of
-        TN.Alonzo  -> C.AlonzoEra
-        TN.Babbage -> C.BabbageEra
+  C.AnyCardanoEra (era :: C.CardanoEra era) <- return $ TN.era testnetOptions
+  --let shelleyEra :: C.ShelleyBasedEra era = shelleyBasedEra era
 
 -- 1: spin up a testnet
   base <- TN.getProjectBase
-  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet testnetOptions base tempAbsPath
+  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
 
-  txIn <- TN.firstTxIn localNodeConnectInfo w1Address
+  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
   let
     collateral = TN.txInsCollateral era [txIn] -- C.TxInsCollateral C.CollateralInBabbageEra [txIn]
     tokenValues = C.valueFromList [(PS.verifySchnorrAssetId, 4), (PS.verifyEcdsaAssetId, 2)]
-    txOut = TN.txOutNoDatumOrRefScript (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
-    mintWitnesses = Map.fromList [PS.verifySchnorrMintWitness, PS.verifyEcdsaMintWitness]
+    txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
+    mintWitnesses = Map.fromList [PS.verifySchnorrMintWitness era, PS.verifyEcdsaMintWitness era]
 
-    txBodyContent = (TN.emptyTxBodyContent pparams)
+    txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]
       , C.txInsCollateral = collateral
       , C.txOuts = [txOut]
-      , C.txMintValue = TN.txMintValue tokenValues mintWitnesses
+      , C.txMintValue = TN.txMintValue era tokenValues mintWitnesses
       }
 
-  signedTx <- TN.buildTx txBodyContent w1Address w1SKey networkId
+  signedTx <- TN.buildTx era txBodyContent w1Address w1SKey networkId
 
-  TN.submitTx localNodeConnectInfo signedTx
+  TN.submitTx era localNodeConnectInfo signedTx
 
 -- 3. query and assert successful mint
 
   let expectedTxIn = TN.txInFromSignedTx signedTx 0
-  resultTxOut <- TN.getTxOutAtAddress localNodeConnectInfo w1Address expectedTxIn
+  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
   txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
 
   H.assert txOutHasTokenValue
