@@ -148,7 +148,6 @@ executable plutus-uniswap
   --------------------
   build-depends:
     , plutus-contract      >=1.1.0
-    , plutus-ledger        >=1.1.0
     , plutus-pab           >=1.1.0
     , plutus-script-utils  >=1.1.0
     , plutus-use-cases     >=1.1.0
@@ -364,7 +363,6 @@ executable tx-inject
     , plutus-contract        >=1.1.0
     , plutus-ledger          >=1.1.0
     , plutus-pab             >=1.1.0
-    , plutus-script-utils    >=1.1.0
 
   ------------------------
   -- Non-IOG dependencies
