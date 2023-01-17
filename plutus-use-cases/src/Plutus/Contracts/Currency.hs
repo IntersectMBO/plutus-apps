@@ -30,6 +30,7 @@ module Plutus.Contracts.Currency(
     ) where
 
 import Control.Lens
+import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Semigroup (Last (..))
 import GHC.Generics (Generic)
@@ -42,14 +43,13 @@ import Ledger (CardanoAddress, CurrencySymbol, TxId, TxOutRef (..), getCardanoTx
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value.CardanoAPI qualified as V
 import Plutus.Contract as Contract
-import Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Contract.Request (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Schema (ToSchema)
 
-import Ledger.Value.CardanoAPI qualified as V
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
 
@@ -166,7 +166,7 @@ mintContract addr amounts = mapError (review _CurrencyError) $ do
         mintTx      = Constraints.mustSpendPubKeyOutput txOutRef
                         <> Constraints.mustMintValue (mintedValue theCurrency)
     tx <- submitTxConstraintsWith @Scripts.Any lookups mintTx
-    _ <- awaitTxConfirmed (getCardanoTxId tx)
+    void $ awaitTxConfirmed (getCardanoTxId tx)
     pure theCurrency
 
 -- | Minting policy for a currency that has a fixed amount of tokens issued
@@ -177,7 +177,7 @@ data SimpleMPS =
         , amount    :: Integer
         }
         deriving stock (Haskell.Eq, Haskell.Show, Generic)
-        deriving anyclass (FromJSON, ToJSON, ToSchema)
+        deriving anyclass (FromJSON, ToJSON)
 
 type CurrencySchema =
         Endpoint "Create native token" SimpleMPS
@@ -188,5 +188,5 @@ mintCurrency
 mintCurrency = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
     ownAddr <- ownAddress
     cur <- mintContract ownAddr [(tokenName, amount)]
-    tell (Just (Last cur))
+    tell $ Just $ Last cur
     pure cur

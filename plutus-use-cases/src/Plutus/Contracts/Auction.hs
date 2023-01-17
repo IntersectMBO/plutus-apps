@@ -37,7 +37,7 @@ import GHC.Generics (Generic)
 import Ledger (Ada, Address, POSIXTime, Value, toPlutusAddress)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
-import Ledger.Interval qualified as Interval
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,
@@ -130,7 +130,7 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=old
         (Ongoing HighestBid{highestBid, highestBidder}, Bid{newBid, newBidder}) | newBid > highestBid -> -- if the new bid is higher,
             let constraints = if highestBid == 0 then mempty else
                     Constraints.mustPayToAddress highestBidder (Ada.toValue highestBid) -- we pay back the previous highest bid
-                    <> Constraints.mustValidateIn (Interval.to apEndTime) -- but only if we haven't gone past 'apEndTime'
+                    <> Constraints.mustValidateInTimeRange (Interval.lessThan $ 1 + apEndTime) -- but only if we haven't gone past 'apEndTime'
                 newState =
                     State
                         { stateData = Ongoing HighestBid{highestBid = newBid, highestBidder = newBidder}
@@ -142,7 +142,7 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=old
 
         (Ongoing h@HighestBid{highestBidder, highestBid}, Payout) ->
             let constraints =
-                    Constraints.mustValidateIn (Interval.from apEndTime) -- When the auction has ended,
+                    Constraints.mustValidateInTimeRange (Interval.from apEndTime) -- When the auction has ended,
                     <> Constraints.mustPayToAddress apOwner (Ada.toValue highestBid) -- the owner receives the payment
                     <> Constraints.mustPayToAddress highestBidder apAsset -- and the highest bidder the asset
                 newState = State { stateData = Finished h, stateValue = mempty }

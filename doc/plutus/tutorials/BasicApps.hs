@@ -41,7 +41,6 @@ import PlutusTx.Prelude (Bool, Maybe (Just, Nothing), Semigroup ((<>)), mapMaybe
                          (>=))
 import Prelude (IO, (<$>), (>>))
 import Prelude qualified as Haskell
-import Schema (ToSchema)
 import Wallet.Emulator.Stream (filterLogLevel)
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 

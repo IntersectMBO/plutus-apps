@@ -36,8 +36,9 @@ import Cardano.Node.Emulator.Params (pNetworkId, testnet)
 import GHC.Generics (Generic)
 import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash),
                decoratedTxOutPlutusValue)
-import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateInTimeRange)
 import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Typed.Scripts qualified as Scripts
@@ -221,7 +222,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                             Dead  -> mempty
         tx = Constraints.collectFromTheScript unspentOutputs ()
                 <> remainingOutputs
-                <> mustValidateIn (Interval.from now)
+                <> mustValidateInTimeRange (ValidityInterval.from now)
                 <> mustBeSignedBy (vestingOwner vesting)
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the

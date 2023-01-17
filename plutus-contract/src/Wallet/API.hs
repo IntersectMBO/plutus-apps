@@ -63,7 +63,6 @@ module Wallet.API(
     ) where
 
 import Cardano.Node.Emulator.Params (Params (..))
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Monad (unless, void)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
@@ -78,6 +77,7 @@ import Ledger (Address, CardanoTx, Interval (Interval, ivFrom, ivTo), PaymentPub
                width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (adjustUnbalancedTx)
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownAddresses,
                        publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (AdjustingUnbalancedTx))
@@ -127,7 +127,7 @@ payToAddress ::
 payToAddress params range v addr = do
     pkh <- ownFirstPaymentPubKeyHash
     let constraints = Constraints.mustPayToAddress addr v
-                   <> Constraints.mustValidateIn (TimeSlot.slotRangeToPOSIXTimeRange (pSlotConfig params) range)
+                   <> Constraints.mustValidateInSlotRange (Interval.fromPlutusInterval range)
                    <> Constraints.mustBeSignedBy pkh
     utx <- either (throwError . PaymentMkTxError)
                   pure

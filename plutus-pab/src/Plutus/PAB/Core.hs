@@ -89,6 +89,7 @@ module Plutus.PAB.Core
     ) where
 
 import Cardano.Node.Emulator.Params (Params)
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Applicative (empty, (<|>))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
@@ -116,7 +117,6 @@ import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutS
 import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api qualified as ChainIndex
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), PABReq)
-import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
 import Plutus.PAB.Core.ContractInstance qualified as ContractInstance
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Active, Done, Stopped), BlockchainEnv, InstancesState,

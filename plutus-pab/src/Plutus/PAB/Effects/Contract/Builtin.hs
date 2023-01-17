@@ -29,7 +29,6 @@ module Plutus.PAB.Effects.Contract.Builtin(
     , type (.\/)
     , EmptySchema
     , Empty
-    , endpointsToSchemas
     , getResponse
     , fromResponse
     , HasDefinitions(..)
@@ -47,8 +46,6 @@ import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Row
 import GHC.Generics (Generic)
-import Playground.Schema (endpointsToSchemas)
-import Playground.Types (FunctionSchema)
 import Plutus.Contract (ContractInstanceId, EmptySchema, IsContract (toContract))
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Response, responses)
@@ -58,13 +55,12 @@ import Plutus.Contract.State qualified as ContractState
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState, _lastLogs, _lastState),
                               SuspendedContract (SuspendedContract, _resumableResult))
 import Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (ContractLog, ProcessFirstInboxMessage))
-import Plutus.PAB.Effects.Contract (ContractEffect (ExportSchema, InitialState, UpdateContract),
+import Plutus.PAB.Effects.Contract (ContractEffect (InitialState, UpdateContract),
                                     PABContract (ContractDef, State, serialisableState))
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (ContractInstanceLog))
 import Plutus.PAB.Types (PABError (ContractCommandError))
 import Plutus.Trace.Emulator.Types (ContractInstanceStateInternal (ContractInstanceStateInternal, cisiSuspState))
 import Plutus.Trace.Emulator.Types qualified as Emulator
-import Schema (FormSchema)
 
 -- | Contracts that are built into the PAB (ie. compiled with it) and receive
 --   an initial value of type 'a'.
@@ -116,7 +112,6 @@ instance PABContract (Builtin a) where
 class HasDefinitions a where
     getDefinitions :: [a] -- ^ Available contract definitions for a contract type `a`
     getContract :: a -> SomeBuiltin -- ^ The actual contract function of contract type `a`
-    getSchema :: a -> [FunctionSchema FormSchema] -- List of schemas for contract type `a`
 
 -- | Defined in order to prevent type errors like: "Couldn't match type 'effs'
 -- with 'effs1'".
@@ -134,7 +129,6 @@ handleBuiltin :: HasDefinitions a => BuiltinHandler a
 handleBuiltin = BuiltinHandler $ \case
     InitialState i c           -> case getContract c of SomeBuiltin c' -> initBuiltin i c'
     UpdateContract i _ state p -> case state of SomeBuiltinState s w -> updateBuiltin i s w p
-    ExportSchema a             -> pure $ getSchema a
 
 getResponse :: forall a. SomeBuiltinState a -> ContractResponse Value Value PABResp PABReq
 getResponse (SomeBuiltinState s w) =

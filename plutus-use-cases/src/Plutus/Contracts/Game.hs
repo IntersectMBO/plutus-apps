@@ -52,7 +52,6 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as C
-import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
 import Plutus.Script.Utils.Typed (ScriptContextV1)
@@ -71,7 +70,7 @@ data GameParam = GameParam
     , gameParamStartTime :: POSIXTime
     -- ^ Starting time of the game
     } deriving (Haskell.Show, Generic)
-      deriving anyclass (ToJSON, FromJSON, ToSchema)
+      deriving anyclass (ToJSON, FromJSON)
 
 PlutusTx.makeLift ''GameParam
 
@@ -146,7 +145,7 @@ data LockArgs =
         , lockArgsValue     :: Value
         -- ^ Value that is locked by the contract initially
         } deriving stock (Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema)
+          deriving anyclass (ToJSON, FromJSON)
 
 -- | Arguments for the @"guess"@ endpoint
 data GuessArgs =
@@ -156,7 +155,7 @@ data GuessArgs =
         , guessArgsSecret    :: Haskell.String
         -- ^ The guess
         } deriving stock (Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema)
+          deriving anyclass (ToJSON, FromJSON)
 
 -- | The "lock" contract endpoint. See note [Contract endpoints]
 lock :: AsContractError e => Promise () GameSchema e ()

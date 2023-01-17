@@ -1,7 +1,6 @@
 { pkgs
 , gitignore-nix
 , fixStylishHaskell
-, fix-purs-tidy
 , fixCabalFmt
 , fixPngOptimization
 , src
@@ -19,11 +18,6 @@ pkgs.recurseIntoAttrs {
   stylishHaskell = pkgs.callPackage ./stylish-haskell.nix {
     src = cleanSrc;
     inherit fixStylishHaskell;
-  };
-
-  purs-tidy = pkgs.callPackage ./purs-tidy.nix {
-    src = cleanSrc;
-    inherit fix-purs-tidy;
   };
 
   nixpkgsFmt = pkgs.callPackage ./nixpkgs-fmt.nix {

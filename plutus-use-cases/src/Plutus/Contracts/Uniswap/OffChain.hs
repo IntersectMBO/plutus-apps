@@ -38,16 +38,17 @@ module Plutus.Contracts.Uniswap.OffChain
 import Cardano.Node.Emulator.Params (testnet)
 import Control.Lens ((^?))
 import Control.Monad hiding (fmap)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import Data.Monoid (Last (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
-import Ledger (CardanoAddress, DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutPlutusValue,
+import GHC.Generics (Generic)
+import Ledger (CardanoAddress, DecoratedTxOut, TokenName, TxOutRef, datumInDatumFromQuery, decoratedTxOutPlutusValue,
                decoratedTxOutScriptDatum)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
-import Playground.Contract
 import Plutus.Contract as Contract
 import Plutus.Contract.Test.Coverage.Analysis
 import Plutus.Contracts.Currency qualified as Currency
@@ -56,14 +57,13 @@ import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
-import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer),
-                             ScriptContext, Validator, Value)
+import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), Validator,
+                             Value)
 import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
-import PlutusTx.Code
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
-import Prelude as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show, (^))
+import Prelude as Haskell (Int, Semigroup (..), Show, String, div, dropWhile, flip, show, (^))
 import Text.Printf (printf)
 
 data Uniswapping
@@ -128,17 +128,8 @@ liquidityPolicy us = mkMintingPolicyScript $
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode poolStateTokenName
 
-cc :: CompiledCode
-        (Uniswap
-         -> Coin PoolState
-         -> UniswapDatum
-         -> UniswapAction
-         -> ScriptContext
-         -> ())
-cc = $$(PlutusTx.compile [|| \u s r d c -> check $ mkUniswapValidator u s r d c ||])
-
 covIdx :: CoverageIndex
-covIdx = computeRefinedCoverageIndex cc
+covIdx = $refinedCoverageIndex $$(PlutusTx.compile [|| \u s r d c -> check $ mkUniswapValidator u s r d c ||])
 
 liquidityCurrency :: Uniswap -> CurrencySymbol
 liquidityCurrency = scriptCurrencySymbol . liquidityPolicy
@@ -164,7 +155,7 @@ data CreateParams = CreateParams
     , cpCoinB   :: Coin B   -- ^ The other 'Coin'.
     , cpAmountA :: Amount A -- ^ Amount of liquidity for the first 'Coin'.
     , cpAmountB :: Amount B -- ^ Amount of liquidity for the second 'Coin'.
-    } deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Show, Generic, ToJSON, FromJSON)
 
 -- | Parameters for the @swap@-endpoint, which allows swaps between the two different coins in a liquidity pool.
 -- One of the provided amounts must be positive, the other must be zero.
@@ -173,20 +164,20 @@ data SwapParams = SwapParams
     , spCoinB   :: Coin B         -- ^ The other 'Coin'.
     , spAmountA :: Amount A       -- ^ The amount the first 'Coin' that should be swapped.
     , spAmountB :: Amount B       -- ^ The amount of the second 'Coin' that should be swapped.
-    } deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Show, Generic, ToJSON, FromJSON)
 
 -- | Parameters for the @close@-endpoint, which closes a liquidity pool.
 data CloseParams = CloseParams
     { clpCoinA :: Coin A         -- ^ One 'Coin' of the liquidity pair.
     , clpCoinB :: Coin B         -- ^ The other 'Coin' of the liquidity pair.
-    } deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Show, Generic, ToJSON, FromJSON)
 
 -- | Parameters for the @remove@-endpoint, which removes some liquidity from a liquidity pool.
 data RemoveParams = RemoveParams
     { rpCoinA :: Coin A           -- ^ One 'Coin' of the liquidity pair.
     , rpCoinB :: Coin B           -- ^ The other 'Coin' of the liquidity pair.
     , rpDiff  :: Amount Liquidity -- ^ The amount of liquidity tokens to burn in exchange for liquidity from the pool.
-    } deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Show, Generic, ToJSON, FromJSON)
 
 -- | Parameters for the @add@-endpoint, which adds liquidity to a liquidity pool in exchange for liquidity tokens.
 data AddParams = AddParams
@@ -194,7 +185,7 @@ data AddParams = AddParams
     , apCoinB   :: Coin B         -- ^ The other 'Coin' of the liquidity pair.
     , apAmountA :: Amount A       -- ^ The amount of coins of the first kind to add to the pool.
     , apAmountB :: Amount B       -- ^ The amount of coins of the second kind to add to the pool.
-    } deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Show, Generic, ToJSON, FromJSON)
 
 -- | Creates a Uniswap "factory". This factory will keep track of the existing liquidity pools and enforce that there will be at most one liquidity pool
 -- for any pair of tokens at any given time.

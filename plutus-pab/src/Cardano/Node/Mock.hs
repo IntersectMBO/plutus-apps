@@ -26,6 +26,7 @@ import Data.Time.Units (Millisecond, toMicroseconds)
 import Data.Time.Units.Extra ()
 import Servant (NoContent (NoContent))
 
+import Cardano.Api qualified as C
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Chain (handleChain, handleControlChain)
 import Cardano.Node.Emulator.Chain qualified as Chain
@@ -34,7 +35,6 @@ import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength), cu
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Server qualified as Server
-import Ledger (Tx)
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 
@@ -56,7 +56,7 @@ addTx ::
     , MonadIO m
     , LastMember m effs
     )
- => Tx -> Eff effs NoContent
+ => C.Tx C.BabbageEra -> Eff effs NoContent
 addTx tx = do
     logInfo $ BlockOperation $ NewTransaction tx
     clientHandler <- Eff.ask

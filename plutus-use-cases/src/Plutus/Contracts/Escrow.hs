@@ -58,13 +58,13 @@ import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
 import Cardano.Node.Emulator.Params (pNetworkId)
-import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, interval, scriptOutputsAt,
-               txSignedBy, valuePaidTo)
+import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, scriptOutputsAt, txSignedBy,
+               valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Interval (after, before, from)
-import Ledger.Interval qualified as Interval
+import Ledger.Constraints.ValidityInterval qualified as Interval
+import Ledger.Interval (after, before)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -261,7 +261,7 @@ pay ::
 pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
-          <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
+          <> Constraints.mustValidateInTimeRange (Interval.interval 1 (1 + escrowDeadline escrow))
     mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx
         >>= submitUnbalancedTx
@@ -302,15 +302,10 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     then throwing _RedeemFailed NotEnoughFundsAtAddress
     else do
       let
-          -- Correct validity interval should be:
-          -- @
-          --   Interval (LowerBound NegInf True) (Interval.strictUpperBound $ escrowDeadline escrow)
-          -- @
-          -- See Note [Validity Interval's upper bound]
-          validityTimeRange = Interval.to (Haskell.pred $ Haskell.pred $ escrowDeadline escrow)
+          validityTimeRange = Interval.lessThan $ Haskell.pred $ escrowDeadline escrow
           tx = Constraints.collectFromTheScript unspentOutputs Redeem
                   <> foldMap mkTx (escrowTargets escrow)
-                  <> Constraints.mustValidateIn validityTimeRange
+                  <> Constraints.mustValidateInTimeRange validityTimeRange
       utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                             <> Constraints.unspentOutputs unspentOutputs
                              ) tx
@@ -345,7 +340,7 @@ refund inst escrow = do
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustBeSignedBy pk
-                <> Constraints.mustValidateIn (from (escrowDeadline escrow))
+                <> Constraints.mustValidateInTimeRange (Interval.from $ escrowDeadline escrow)
     if Constraints.modifiesUtxoSet tx'
     then do
         utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst

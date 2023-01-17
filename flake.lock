@@ -102,22 +102,6 @@
         "type": "github"
       }
     },
-    "easy-purescript-nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1666686938,
-        "narHash": "sha256-/UOLRdnEhIOcxcm5ouOipOiSgHRzJde0ccAx4xB1dnU=",
-        "owner": "justinwoo",
-        "repo": "easy-purescript-nix",
-        "rev": "da7acb2662961fd355f0a01a25bd32bf33577fa8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "justinwoo",
-        "repo": "easy-purescript-nix",
-        "type": "github"
-      }
-    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -249,11 +233,11 @@
     "hackage-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1668475001,
-        "narHash": "sha256-rFr6lYxUEoQz6BzJAPWSN5tZtD0rE27yOPTvclen6F8=",
+        "lastModified": 1673224025,
+        "narHash": "sha256-LwgeBKxji5KrSckk6h9x+qhPDpUKY2GF+XRUwQuQ89Q=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "10428b0a63b30782f26b1e01d6c3d383db75ae43",
+        "rev": "adbe11fcbabc1f192b98776c7c8b9f26d4e831c0",
         "type": "github"
       },
       "original": {
@@ -512,22 +496,6 @@
         "type": "github"
       }
     },
-    "npmlock2nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1654775747,
-        "narHash": "sha256-9pXHDpIjmsK5390wmpGHu9aA4QOPpegPBvThHeBlef4=",
-        "owner": "tweag",
-        "repo": "npmlock2nix",
-        "rev": "5c4f247688fc91d665df65f71c81e0726621aaa8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "tweag",
-        "repo": "npmlock2nix",
-        "type": "github"
-      }
-    },
     "plutus-core": {
       "flake": false,
       "locked": {
@@ -564,7 +532,6 @@
       "inputs": {
         "CHaP": "CHaP",
         "cardano-repo-tool": "cardano-repo-tool",
-        "easy-purescript-nix": "easy-purescript-nix",
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "gitignore-nix": "gitignore-nix",
@@ -573,14 +540,12 @@
         "haskell-nix": "haskell-nix",
         "iohk-nix": "iohk-nix",
         "nixpkgs": "nixpkgs",
-        "npmlock2nix": "npmlock2nix",
         "plutus-core": "plutus-core",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "spago2nix": "spago2nix",
         "sphinxcontrib-haddock": "sphinxcontrib-haddock",
         "stackage-nix": "stackage-nix",
-        "tullia": "tullia",
-        "web-common": "web-common"
+        "tullia": "tullia"
       }
     },
     "spago2nix": {
@@ -700,22 +665,6 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
-        "type": "github"
-      }
-    },
-    "web-common": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1652191089,
-        "narHash": "sha256-npOEcwVFKnuMgSQ5FgkuKmO1rAyw7dq6kh2P5LgtxQY=",
-        "owner": "input-output-hk",
-        "repo": "purescript-web-common",
-        "rev": "cdfbed5d0b828d83eec7b3f9dc79449430839a0b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "purescript-web-common",
         "type": "github"
       }
     },

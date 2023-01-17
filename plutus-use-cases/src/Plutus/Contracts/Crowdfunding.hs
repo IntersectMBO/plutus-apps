@@ -59,7 +59,7 @@ import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
-import Ledger.Interval (Extended (NegInf), Interval (Interval), LowerBound (LowerBound))
+import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract
@@ -74,7 +74,6 @@ import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>), (>>=))
 import Prelude qualified as Haskell
-import Schema (ToArgument, ToSchema)
 import Wallet.Emulator (Wallet (..), knownWallet)
 import Wallet.Emulator qualified as Emulator
 
@@ -87,7 +86,7 @@ data Campaign = Campaign
     , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
-    } deriving (Generic, ToJSON, FromJSON, ToSchema, Haskell.Show)
+    } deriving (Generic, ToJSON, FromJSON, Haskell.Show)
 
 PlutusTx.makeLift ''Campaign
 
@@ -108,7 +107,7 @@ newtype Contribution = Contribution
         { contribValue :: PV1.Value
         -- ^ how much to contribute
         } deriving stock (Haskell.Eq, Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema, ToArgument)
+          deriving anyclass (ToJSON, FromJSON)
 
 -- | Construct a 'Campaign' value from the campaign parameters,
 --   using the wallet's public key.
@@ -120,19 +119,15 @@ mkCampaign ddl collectionDdl ownerWallet =
         , campaignOwner = Emulator.mockWalletPaymentPubKeyHash ownerWallet
         }
 
--- | The 'POSIXTimeRange' during which the funds can be collected
+-- | The 'ValidityInterval POSIXTime' during which the funds can be collected
 {-# INLINABLE collectionRange #-}
-collectionRange :: Campaign -> PV1.POSIXTimeRange
-collectionRange cmp =
-    Interval
-        (Interval.lowerBound $ campaignDeadline cmp)
-        (Interval.strictUpperBound $ campaignCollectionDeadline cmp)
+collectionRange :: Campaign -> ValidityInterval.ValidityInterval PV1.POSIXTime
+collectionRange cmp = ValidityInterval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp)
 
--- | The 'POSIXTimeRange' during which a refund may be claimed
+-- | The 'ValidityInterval POSIXTime' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
-refundRange :: Campaign -> PV1.POSIXTimeRange
-refundRange cmp =
-    Interval.from (campaignCollectionDeadline cmp)
+refundRange :: Campaign -> ValidityInterval.ValidityInterval PV1.POSIXTime
+refundRange cmp = ValidityInterval.from (campaignCollectionDeadline cmp)
 
 data Crowdfunding
 instance Scripts.ValidatorTypes Crowdfunding where
@@ -150,7 +145,7 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
 validRefund :: Campaign -> PaymentPubKeyHash -> PV1.TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
-    refundRange campaign `Interval.contains` PV1.txInfoValidRange txinfo
+    ValidityInterval.toPlutusInterval (refundRange campaign) `Interval.contains` PV1.txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
     && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash contributor)
 
@@ -158,7 +153,7 @@ validRefund campaign contributor txinfo =
 validCollection :: Campaign -> PV1.TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
-    (collectionRange campaign `Interval.contains` PV1.txInfoValidRange txinfo)
+    (ValidityInterval.toPlutusInterval (collectionRange campaign) `Interval.contains` PV1.txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
     && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
@@ -208,11 +203,9 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
     contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
-        validityTimeRange =
-            Interval (LowerBound NegInf True)
-                     (Interval.strictUpperBound $ campaignDeadline cmp)
+        validityTimeRange = ValidityInterval.lessThan (campaignDeadline cmp)
         tx = Constraints.mustPayToTheScriptWithDatumInTx contributor contribValue
-                <> Constraints.mustValidateIn validityTimeRange
+                <> Constraints.mustValidateInTimeRange validityTimeRange
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
@@ -224,7 +217,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
 
     let flt Ledger.TxOutRef{txOutRefId} _ = txid Haskell.== txOutRefId
         tx' = Constraints.collectFromTheScriptFilter flt utxo Refund
-                <> Constraints.mustValidateIn (refundRange cmp)
+                <> Constraints.mustValidateInTimeRange (refundRange cmp)
                 <> Constraints.mustBeSignedBy contributor
     if Constraints.modifiesUtxoSet tx'
     then do
@@ -251,7 +244,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
 
     let tx = Constraints.collectFromTheScript unspentOutputs Collect
             <> Constraints.mustBeSignedBy (campaignOwner cmp)
-            <> Constraints.mustValidateIn (collectionRange cmp)
+            <> Constraints.mustValidateInTimeRange (collectionRange cmp)
 
     logInfo @Text "Collecting funds"
     void $ mkTxConstraints (Constraints.typedValidatorLookups inst

@@ -23,11 +23,6 @@ inputs.std.lib.dev.mkShell {
       help = "Fix all PNG files in-place";
     }
     {
-      package = cell.packages.fix-purs-tidy;
-      category = "general commands";
-      help = "Format all purs files in-place";
-    }
-    {
       package = pkgs.shellcheck;
       category = "general commands";
       help = "Shell file checker";
@@ -137,11 +132,6 @@ inputs.std.lib.dev.mkShell {
       value = pkgs.lib.optionalString
         (pkgs.stdenv.hostPlatform.libc == "glibc") "${pkgs.glibcLocales}/lib/locale/locale-archive";
     }
-    # TODO(std) bring this in eventually
-    # {
-    #   name = "WEB_COMMON_SRC";
-    #   value = webCommon.cleanSrc;
-    # }
     # TODO(std) most likely we don't need this
     # {
     #   name = "PYTHONPATH";
@@ -203,19 +193,10 @@ inputs.std.lib.dev.mkShell {
 # cardano-repo-tool
 # docs.build-and-serve-docs
 # fixPngOptimization
-# fix-purs-tidy
 # fixCabalFmt
 # fixStylishHaskell
 # haskell-language-server
 # haskell-language-server-wrapper
 # hie-bios
 # hlint
-# pab-nami-demo.start-backend
-# psa
-# purescript-language-server
-# purs-0_14_3
-# purs-tidy
-# spago
-# spago2nix
 # stylish-haskell
-# updateClientDeps

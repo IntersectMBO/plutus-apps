@@ -57,7 +57,7 @@ module Cardano.Node.Emulator.Generators(
     ) where
 
 import Control.Lens ((&))
-import Control.Monad (replicateM)
+import Control.Monad (guard, replicateM)
 import Data.Bifunctor (Bifunctor (first), bimap)
 import Data.ByteString qualified as BS
 import Data.Default (Default (def), def)
@@ -102,7 +102,6 @@ import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts (Versioned (Versioned), datumHash)
-import Plutus.Script.Utils.V1.Generators qualified as ScriptGen
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
 
@@ -238,40 +237,38 @@ genValidTransactionSpending' g ins totalVal = do
         numOut = Set.size (gmPubKeys g) - 1
         totalValAda = C.selectLovelace totalVal
         totalValTokens = if Value.isZero (Value.noAdaValue totalVal) then Nothing else Just $ Value.noAdaValue totalVal
-    if fee' < totalValAda
-        then do
-            -- We only split the Ada part of the input value
-            splitOutVals <- splitVal numOut (totalValAda - fee')
-            let outVals = case totalValTokens <> mintValue of
-                  Nothing -> do
-                    fmap Value.lovelaceToValue splitOutVals
-                  Just mv -> do
-                    -- If there is a minted value, we look for a value in the
-                    -- splitted values which can be associated with it.
-                    let outValForMint =
-                          maybe mempty id $ List.find (\v -> v >= Ledger.minLovelaceTxOutEstimated)
-                                          $ List.sort splitOutVals
-                    Value.lovelaceToValue outValForMint <> mv : fmap Value.lovelaceToValue (List.delete outValForMint splitOutVals)
-                txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
-                          $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
-                (ins', witnesses) = unzip $ map txInToTxInput ins
-                (scripts, datums) = bimap catMaybes catMaybes $ unzip witnesses
-                tx = mempty
-                        { txInputs = ins'
-                        , txCollateralInputs = maybe [] (flip take ins' . fromIntegral) (gmMaxCollateralInputs g)
-                        , txOutputs = txOutputs
-                        , txMint = maybe mempty id mintValue
-                        , txFee = fee'
-                        , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
-                        , txScripts = Map.fromList (map ((\s -> (scriptHash s, s)) . fmap getValidator) scripts)
-                        }
-                    & addMintingPolicy (Versioned alwaysSucceedPolicy PlutusV1) (Script.unitRedeemer, Nothing)
-                    & EmulatorTx
+    guard $ fee' < totalValAda
+    -- We only split the Ada part of the input value
+    splitOutVals <- splitVal numOut (totalValAda - fee')
+    let outVals = case totalValTokens <> mintValue of
+            Nothing -> do
+                fmap Value.lovelaceToValue splitOutVals
+            Just mv -> do
+                -- If there is a minted value, we look for a value in the
+                -- splitted values which can be associated with it.
+                let outValForMint =
+                        maybe mempty id $ List.find (\v -> v >= Ledger.minLovelaceTxOutEstimated)
+                                        $ List.sort splitOutVals
+                Value.lovelaceToValue outValForMint <> mv : fmap Value.lovelaceToValue (List.delete outValForMint splitOutVals)
+        txOutputs = either (error . ("Cannot create outputs: " <>) . show) id
+                    $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing) $ zip outVals (Set.toList $ gmPubKeys g)
+        (ins', witnesses) = unzip $ map txInToTxInput ins
+        (scripts, datums) = bimap catMaybes catMaybes $ unzip witnesses
+        tx = mempty
+                { txInputs = ins'
+                , txCollateralInputs = maybe [] (flip take ins' . fromIntegral) (gmMaxCollateralInputs g)
+                , txOutputs = txOutputs
+                , txMint = maybe mempty id mintValue
+                , txFee = fee'
+                , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
+                , txScripts = Map.fromList (map ((\s -> (scriptHash s, s)) . fmap getValidator) scripts)
+                }
+            & addMintingPolicy (Versioned alwaysSucceedPolicy PlutusV1) (Script.unitRedeemer, Nothing)
+            & EmulatorTx
 
-                -- sign the transaction with all known wallets
-                -- this is somewhat crude (but technically valid)
-            pure (signAll tx)
-        else Gen.discard
+        -- sign the transaction with all known wallets
+        -- this is somewhat crude (but technically valid)
+    pure (signAll tx)
 
     where
         -- | Translate TxIn to TxInput taking out data witnesses if present.

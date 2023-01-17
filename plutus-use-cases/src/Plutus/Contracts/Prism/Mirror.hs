@@ -32,7 +32,6 @@ import Plutus.Contracts.Prism.Credential qualified as Credential
 import Plutus.Contracts.Prism.StateMachine as StateMachine
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName)
-import Schema (ToSchema)
 import Wallet.Emulator (mockWalletPaymentPubKeyHash)
 import Wallet.Emulator.Wallet (Wallet)
 
@@ -45,7 +44,7 @@ data CredentialOwnerReference =
         , coOwner     :: Wallet
         }
     deriving stock (Generic, Eq, Show, Ord)
-    deriving anyclass (ToJSON, FromJSON, ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 type MirrorSchema =
         Endpoint "issue" CredentialOwnerReference -- lock a single credential token in a state machine tied to the credential token owner

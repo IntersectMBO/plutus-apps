@@ -24,6 +24,7 @@ module Plutus.PAB.Webserver.WebSocket
     , observableStateChange
     ) where
 
+import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Concurrent.Async (Async, async, waitAnyCancel)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
@@ -47,7 +48,6 @@ import Ledger.Slot (Slot)
 import Network.WebSockets qualified as WS
 import Network.WebSockets.Connection (Connection, PendingConnection)
 import Plutus.Contract.Effects (ActiveEndpoint)
-import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, OpenEndpoint (oepName))
@@ -68,10 +68,7 @@ getContractReport :: forall t env. Contract.PABContract t => PABAction t env (Co
 getContractReport = do
     availableContracts <- Contract.getDefinitions @t
     activeContractIDs <- fmap fst . Map.toList <$> Contract.getActiveContracts @t
-    crAvailableContracts <-
-        traverse
-            (\t -> ContractSignatureResponse t <$> Contract.exportSchema @t t)
-            availableContracts
+    crAvailableContracts <- pure $ map ContractSignatureResponse availableContracts
     crActiveContractStates <- traverse (\i -> Contract.getState @t i >>= \s -> pure (i, fromResp $ Contract.serialisableState (Proxy @t) s)) activeContractIDs
     pure ContractReport {crAvailableContracts, crActiveContractStates}
 

@@ -14,7 +14,7 @@ import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class
 import Data.Proxy (Proxy (Proxy))
-import Ledger (onCardanoTx)
+import Ledger (SomeCardanoApiTx (CardanoApiEmulatorEraTx), onCardanoTx)
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 
@@ -61,8 +61,8 @@ handleNodeClientClient params e = do
                   throwError TxSenderNotAvailable
               Just handle ->
                   liftIO $
-                      onCardanoTx (MockClient.queueTx handle)
-                                  (const $ error "Cardano.Node.Client: Expecting a mock tx, not a cardano-api tx when publishing it.")
+                      onCardanoTx (const $ error "Cardano.Node.Client: Expecting a cardano-api tx, not a mock when publishing it.")
+                                  (MockClient.queueTx handle . (\(CardanoApiEmulatorEraTx c) -> c))
                                   tx
         GetClientSlot ->
             either (liftIO . MockClient.getCurrentSlot)

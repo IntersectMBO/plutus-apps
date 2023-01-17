@@ -31,7 +31,6 @@ import Plutus.V1.Ledger.Scripts qualified as Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
-import Schema (ToSchema)
 
 -- | Entity that is authorised to mint credential tokens
 newtype CredentialAuthority =
@@ -39,7 +38,7 @@ newtype CredentialAuthority =
         { unCredentialAuthority :: PaymentPubKeyHash
         }
     deriving stock (Generic, Haskell.Eq, Haskell.Show, Haskell.Ord)
-    deriving anyclass (ToJSON, FromJSON, Hashable, ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Hashable)
 
 -- | Named credential issued by a credential authority
 data Credential =
@@ -48,7 +47,7 @@ data Credential =
         , credName      :: TokenName
         }
     deriving stock (Generic, Haskell.Eq, Haskell.Show, Haskell.Ord)
-    deriving anyclass (ToJSON, FromJSON, Hashable, ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Hashable)
 
 -- | The minting policy script validating the creation of credential tokens
 {-# INLINABLE validateMint #-}

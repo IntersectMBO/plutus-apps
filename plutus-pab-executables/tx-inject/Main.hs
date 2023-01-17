@@ -33,6 +33,7 @@ import System.Random.MWC (GenIO, createSystemRandom)
 import System.Signal (installHandler, sigINT)
 import Text.Pretty.Simple (pPrint)
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Params (Params (..), testnet)
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
@@ -40,7 +41,7 @@ import Data.Either (fromRight)
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (CardanoTx (EmulatorTx), Tx (..))
+import Ledger.Tx (CardanoTx (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx))
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.PAB.Types (Config (..))
 import TxInject.RandomTx (generateTx)
@@ -64,7 +65,7 @@ data Stats = Stats
 -}
 data AppEnv = AppEnv
   { txSendHandle :: TxSendHandle
-  , txQueue      :: TBQueue Tx
+  , txQueue      :: TBQueue (C.Tx C.BabbageEra)
   , stats        :: TVar Stats
   , utxoIndex    :: UtxoIndex
   }
@@ -93,7 +94,7 @@ runProducer AppEnv{txQueue, stats, utxoIndex} = do
       -- boundaries. We don't currently use boundaries for our generated
       -- transactions, so we chose the random number.
       tx <- generateTx rng (Slot 4) utxo
-      let utxo' = insertBlock [Valid $ EmulatorTx tx] utxo
+      let utxo' = insertBlock [Valid $ CardanoApiTx $ CardanoApiEmulatorEraTx tx] utxo
       atomically $ do
         writeTBQueue txQueue tx
         modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ getIndex utxo' }

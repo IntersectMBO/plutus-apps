@@ -15,14 +15,13 @@ import Control.Monad (void)
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger (PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Interval (from)
+import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Contract
 import Plutus.Script.Utils.Scripts qualified as Ledger
 import Plutus.V1.Ledger.Api (Datum (Datum))
-
-import Plutus.Contract
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
@@ -50,11 +49,11 @@ badRefund ::
 badRefund inst pk = do
     networkId <- pNetworkId <$> getParams
     unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
-    current <- snd <$> currentNodeClientTimeRange
+    current <- currentNodeClientSlot
     let pkh = Ledger.datumHash $ Datum $ PlutusTx.toBuiltinData pk
         flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
         tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
-           <> Constraints.mustValidateIn (from (current - 1))
+           <> Constraints.mustValidateInSlotRange (Interval.from (current - 1))
     utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                           <> Constraints.unspentOutputs unspentOutputs
                            ) tx'

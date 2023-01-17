@@ -3,13 +3,12 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeFamilies       #-}
 
-module Main(main, ExportTx(..)) where
+module Main(main) where
 
 import Cardano.Api qualified as C
 import Data.Default (Default (..))
 import Data.Monoid (Sum (..))
 import Options.Applicative
-import Plutus.Contract.Wallet (ExportTx (..))
 import Plutus.Contracts.Crowdfunding qualified as Crowdfunding
 import Plutus.Contracts.Uniswap.Trace qualified as Uniswap
 import Plutus.Trace (Command (..), ScriptsConfig (..), ValidatorMode (..), showStats, writeScriptsTo)

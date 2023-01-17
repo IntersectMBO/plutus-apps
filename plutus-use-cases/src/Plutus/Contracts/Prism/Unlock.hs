@@ -46,7 +46,6 @@ import Plutus.Contracts.TokenAccount qualified as TokenAccount
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName)
 import Prelude as Haskell
-import Schema (ToSchema)
 
 data STOSubscriber =
     STOSubscriber
@@ -56,7 +55,7 @@ data STOSubscriber =
         , wSTOAmount    :: Integer
         }
     deriving stock (Generic, Haskell.Eq, Haskell.Show)
-    deriving anyclass (ToJSON, FromJSON, ToSchema)
+    deriving anyclass (ToJSON, FromJSON)
 
 type STOSubscriberSchema = Endpoint "sto" STOSubscriber
 

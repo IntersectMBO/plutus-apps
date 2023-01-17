@@ -29,7 +29,8 @@ module Ledger.Constraints(
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
     , TC.mustUseOutputAsCollateral
     , TC.mustReferenceOutput
-    , TC.mustValidateIn
+    , TC.mustValidateInTimeRange
+    , TC.mustValidateInSlotRange
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast
     , TC.mustIncludeDatumInTxWithHash
@@ -94,6 +95,7 @@ module Ledger.Constraints(
     , TC.mustPayWithInlineDatumToPubKeyAddress
     , TC.mustPayToOtherScript
     , TC.mustPayToOtherScriptAddress
+    , TC.mustValidateIn
     ) where
 
 import Ledger.Constraints.OffChain qualified as OC

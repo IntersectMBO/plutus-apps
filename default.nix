@@ -32,8 +32,6 @@ rec {
     plutus-pab-examples
     plutus-uniswap;
 
-  webCommon = pkgs.callPackage sources.web-common { inherit (plutus-apps.lib) gitignore-nix; };
-
   plutus-use-cases = pkgs.callPackage ./plutus-use-cases {
     inherit haskell;
   };
@@ -51,7 +49,7 @@ rec {
   tests = import ./nix/tests/default.nix {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;
-    inherit (plutus-apps) fixStylishHaskell fix-purs-tidy fixPngOptimization fixCabalFmt;
+    inherit (plutus-apps) fixStylishHaskell fixPngOptimization fixCabalFmt;
     src = ./.;
   };
 

@@ -18,9 +18,11 @@
 -- | Constraints for transactions
 module Ledger.Constraints.TxConstraints where
 
+import Cardano.Node.Emulator.TimeSlot (slotRangeToPOSIXTimeRange)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (Bifunctor (bimap))
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
@@ -33,11 +35,12 @@ import PlutusTx.Prelude (Bool (False, True), Eq, Foldable (foldMap), Functor (fm
                          not, null, ($), (.), (==), (>>=), (||))
 
 import Ledger.Address (Address (Address), PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Slot (Slot)
 import Ledger.Tx (DecoratedTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
-                             POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
+                             POSIXTime, POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
                                  ValidatorHash (ValidatorHash), unitRedeemer)
@@ -49,6 +52,8 @@ import Data.Function (const, flip)
 import Data.Maybe (fromMaybe)
 import Prelude qualified as Haskell
 import Prettyprinter.Render.String (renderShowS)
+
+import Ledger.Constraints.ValidityInterval (ValidityInterval, fromPlutusInterval, toPlutusInterval)
 
 -- | How tx outs datum are embedded in a a Tx
 --
@@ -113,7 +118,7 @@ data TxConstraint =
     -- hash of the 'Datum'.
     | MustIncludeDatumInTx Datum
     -- ^ Like 'MustHashDatum', but the hash of the 'Datum' is computed automatically.
-    | MustValidateIn POSIXTimeRange
+    | MustValidateInTimeRange !(ValidityInterval POSIXTime)
     -- ^ The transaction's validity range must be set with the given 'POSIXTimeRange'.
     | MustBeSignedBy PaymentPubKeyHash
     -- ^ The transaction must add the given 'PaymentPubKeyHash' in its signatories.
@@ -147,7 +152,7 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must include datum in tx with hash:", pretty dvh, pretty dv]
         MustIncludeDatumInTx dv ->
             hang 2 $ vsep ["must include datum in tx:", pretty dv]
-        MustValidateIn range ->
+        MustValidateInTimeRange range ->
             "must validate in:" <+> viaShow range
         MustBeSignedBy signatory ->
             "must be signed by:" <+> pretty signatory
@@ -299,8 +304,9 @@ singleton :: TxConstraint -> TxConstraints i o
 singleton a = mempty { txConstraints = [a] }
 
 {-# INLINABLE mustValidateIn #-}
+{-# DEPRECATED mustValidateIn "Please use mustValidateInTimeRange or mustValidateInSlotRange instead" #-}
 -- | @mustValidateIn r@ requires the transaction's validity time range to be contained
---   in @r@.
+--   in POSIXTimeRange @r@.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint sets the
 -- transaction's validity time range to @r@.
@@ -308,7 +314,31 @@ singleton a = mempty { txConstraints = [a] }
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
 -- time range @r@ is entirely contained in the transaction's validity time range.
 mustValidateIn :: forall i o. POSIXTimeRange -> TxConstraints i o
-mustValidateIn = singleton . MustValidateIn
+mustValidateIn = singleton . MustValidateInTimeRange . fromPlutusInterval
+
+{-# INLINABLE mustValidateInTimeRange #-}
+-- | @mustValidateInTimeRange r@ requires the transaction's validity time range to be contained
+--   in POSIXTime range @r@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint sets the
+-- transaction's validity time range to @r@.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- time range @r@ is entirely contained in the transaction's validity time range.
+mustValidateInTimeRange :: forall i o. ValidityInterval POSIXTime -> TxConstraints i o
+mustValidateInTimeRange = singleton . MustValidateInTimeRange
+
+{-# INLINABLE mustValidateInSlotRange #-}
+-- | @mustValidateInSlotRange r@ requires the transaction's validity slot range to be contained
+--   in Slot range @r@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint sets the
+-- transaction's validity slot range to @r@.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- slot range @r@ is entirely contained in the transaction's validity time range.
+mustValidateInSlotRange :: forall i o. ValidityInterval Slot -> TxConstraints i o
+mustValidateInSlotRange = singleton . MustValidateInTimeRange . fromPlutusInterval . slotRangeToPOSIXTimeRange def . toPlutusInterval
 
 {-# INLINABLE mustBeSignedBy #-}
 -- | @mustBeSignedBy pk@ requires the transaction to be signed by the public
@@ -967,8 +997,8 @@ mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . map txConstraints
 -- | Are the constraints satisfiable?
 isSatisfiable :: forall i o. TxConstraints i o -> Bool
 isSatisfiable TxConstraints{txConstraints} =
-    let intervals = mapMaybe (\case { MustValidateIn i -> Just i; _ -> Nothing }) txConstraints
-        itvl = foldl I.intersection I.always intervals
+    let intervals = mapMaybe (\case { MustValidateInTimeRange i -> Just i; _ -> Nothing }) txConstraints
+        itvl = foldl I.intersection I.always $ map toPlutusInterval intervals
     in not (I.isEmpty itvl)
 
 {-# INLINABLE pubKeyPayments #-}
