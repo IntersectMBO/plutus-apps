@@ -277,17 +277,18 @@ txMintValue :: C.CardanoEra era
   -> C.TxMintValue C.BuildTx era
 txMintValue era tv m = C.TxMintValue (multiAssetSupportedInEra era) tv (C.BuildTxWith m)
 
-buildTx :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
+buildTx :: (MonadIO m, MonadTest m, C.IsShelleyBasedEra era)
+  => C.ShelleyBasedEra era
   -> C.TxBodyContent C.BuildTx era
   -> C.Address C.ShelleyAddr
   -> C.SigningKey C.GenesisUTxOKey
   -> C.NetworkId
   -> m (C.Tx era)
 buildTx era txBody changeAddress sKey networkId = do
-  case era of
-    C.AlonzoEra  -> buildTx' C.ShelleyBasedEraAlonzo txBody changeAddress sKey networkId
-    C.BabbageEra -> buildTx' C.ShelleyBasedEraBabbage txBody changeAddress sKey networkId
+  buildTx' era txBody changeAddress sKey networkId
+  -- case era of
+  --   C.AlonzoEra  -> buildTx' C.ShelleyBasedEraAlonzo txBody changeAddress sKey networkId
+  --   C.BabbageEra -> buildTx' C.ShelleyBasedEraBabbage txBody changeAddress sKey networkId
 
 buildTx' :: (MonadIO m, MonadTest m, C.IsShelleyBasedEra era)
   => C.ShelleyBasedEra era
@@ -314,6 +315,10 @@ buildTx' shelleyEra txBody changeAddress sKey networkId = do
     where
       fromEither (Left e)   = error $ show e
       fromEither (Right tx) = tx
+
+-- withIsShelleyBasedEra :: C.CardanoEra era -> (C.IsShelleyBasedEra era => r) -> r
+-- withIsShelleyBasedEra C.AlonzoEra r = r
+-- withIsShelleyBasedEra C.BabbageEra r = r
 
 submitTx :: (MonadIO m, MonadTest m)
   => C.CardanoEra era

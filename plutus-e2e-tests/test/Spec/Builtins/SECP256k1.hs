@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -28,12 +29,6 @@ testnetOptionsAlonzo   = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.Al
 testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
 testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
 
--- shelleyBasedEra :: C.CardanoEra era -> C.ShelleyBasedEra era
--- shelleyBasedEra cEra = case cEra of
---     C.AlonzoEra  -> C.ShelleyBasedEraAlonzo
---     C.BabbageEra -> C.ShelleyBasedEraBabbage
---     _            -> error " Alonzo or Babbage only"
-
 tests :: TestTree
 tests = testGroup "SECP256k1"
   [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo) --change test used or outcome
@@ -53,7 +48,9 @@ verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
 verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
 
   C.AnyCardanoEra (era :: C.CardanoEra era) <- return $ TN.era testnetOptions
-  --let shelleyEra :: C.ShelleyBasedEra era = shelleyBasedEra era
+  shelleyBasedEra <- case cardanoEraToShelleyBasedEra era of
+                       Just era -> pure era
+                       Nothing  -> error "Not a shelley era"
 
 -- 1: spin up a testnet
   base <- TN.getProjectBase
@@ -77,7 +74,7 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
       , C.txMintValue = TN.txMintValue era tokenValues mintWitnesses
       }
 
-  signedTx <- TN.buildTx era txBodyContent w1Address w1SKey networkId
+  signedTx <- withIsShelleyBasedEra shelleyBasedEra $ TN.buildTx shelleyBasedEra txBodyContent w1Address w1SKey networkId
 
   TN.submitTx era localNodeConnectInfo signedTx
 
@@ -89,3 +86,23 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
 
   H.assert txOutHasTokenValue
 
+-- | Maybe converts a C.CardanoEra to a C.ShelleyBasedEra.
+cardanoEraToShelleyBasedEra :: C.CardanoEra era -> Maybe (C.ShelleyBasedEra era)
+cardanoEraToShelleyBasedEra cEra = case cEra of
+    C.ByronEra   -> Nothing
+    C.ShelleyEra -> Just C.ShelleyBasedEraShelley
+    C.AllegraEra -> Just C.ShelleyBasedEraAllegra
+    C.MaryEra    -> Just C.ShelleyBasedEraMary
+    C.AlonzoEra  -> Just C.ShelleyBasedEraAlonzo
+    C.BabbageEra -> Just C.ShelleyBasedEraBabbage
+
+-- | Run code that needs an 'C.IsShelleyBasedEra era' constraint while you only have a
+-- 'C.ShelleyBasedEra era' and not knowing what the specific era is.
+withIsShelleyBasedEra :: C.ShelleyBasedEra era -> (C.IsShelleyBasedEra era => r) -> r
+withIsShelleyBasedEra era r =
+    case era of
+        C.ShelleyBasedEraShelley -> r
+        C.ShelleyBasedEraAllegra -> r
+        C.ShelleyBasedEraMary    -> r
+        C.ShelleyBasedEraAlonzo  -> r
+        C.ShelleyBasedEraBabbage -> r
