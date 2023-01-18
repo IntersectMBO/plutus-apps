@@ -4,8 +4,8 @@ module Spec.PubKey(tests, pubKeyTrace) where
 import Control.Monad (void)
 import Data.Map qualified as Map
 
-import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts (unitRedeemer)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts as Scripts
 import Plutus.Contract
 import Plutus.Contract.Test

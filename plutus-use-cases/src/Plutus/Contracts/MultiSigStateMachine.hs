@@ -34,10 +34,10 @@ import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, PaymentPubKeyHash)
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V2.Contexts qualified as V2

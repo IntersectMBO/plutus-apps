@@ -50,6 +50,7 @@ library
   exposed-modules:
     Ledger.Tx.Constraints
     Ledger.Tx.Constraints.OffChain
+    Ledger.Tx.Constraints.ValidityInterval
 
   --------------------
   -- Local components

@@ -44,7 +44,7 @@ module Ledger.Tx.Constraints.OffChain(
     , txOuts
     , P.utxoIndex
     , emptyUnbalancedTx
-    , P.adjustUnbalancedTx
+    , adjustUnbalancedTx
     , MkTxError(..)
     , mkTx
     , mkSomeTx
@@ -52,22 +52,24 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator.Params (Params (..), networkIdL, pProtocolParams)
-import Cardano.Node.Emulator.TimeSlot (posixTimeRangeToContainedSlotRange)
-import Control.Lens (Lens', Traversal', _2, coerced, iso, makeLensesFor, use, uses, (.=), (<>=), (^.), (^?))
+import Cardano.Node.Emulator.Params (PParams, Params (..), networkIdL, pProtocolParams)
+import Cardano.Node.Emulator.TimeSlot (posixTimeRangeToContainedSlotRange, slotRangeToPOSIXTimeRange)
+import Control.Lens
 import Control.Lens.Extras (is)
-import Control.Monad.Except (Except, MonadError, guard, lift, mapExcept, runExcept, throwError, unless, withExcept)
+import Control.Monad.Except (Except, MonadError (catchError), guard, lift, mapExcept, runExcept, throwError, unless,
+                             withExcept)
 import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), ask, mapReaderT)
-import Control.Monad.State (MonadState, StateT, execStateT, gets, mapStateT)
+import Control.Monad.State (MonadState (get, put), StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
+import Data.Functor.Compose (Compose (Compose))
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Datum, Language (PlutusV2), MintingPolicy, MintingPolicyHash, POSIXTimeRange, Versioned,
-               decoratedTxOutReferenceScript)
+               adjustCardanoTxOut, decoratedTxOutReferenceScript)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
@@ -395,7 +397,22 @@ processConstraint = \case
     P.MustSpendAtLeast vl -> P.valueSpentInputs <>= P.required vl
     P.MustProduceAtLeast vl -> P.valueSpentOutputs <>= P.required vl
 
-    c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"
+    P.MustSatisfyAnyOf xs -> do
+        s <- get
+        let tryNext [] =
+                throwError $ LedgerMkTxError P.CannotSatisfyAny
+            tryNext (hs:qs) = do
+                traverse_ processConstraint hs `catchError` const (put s >> tryNext qs)
+        tryNext xs
+
+    P.MustValidateInTimeRange timeRange -> do
+        slotConfig <- gets (pSlotConfig . P.cpsParams)
+        unbTx <- use unbalancedTx
+        let currentValRange = unbTx ^? tx . txValidityRange
+        let currentTimeRange = maybe top (slotRangeToPOSIXTimeRange slotConfig . C.fromCardanoValidityRange) currentValRange
+        let newRange = posixTimeRangeToContainedSlotRange slotConfig $ currentTimeRange /\ toPlutusInterval timeRange
+        cTxTR <- throwLeft ToCardanoError $ C.toCardanoValidityRange newRange
+        unbalancedTx . tx . txValidityRange .= cTxTR
 
 lookupTxOutRef
     :: Tx.TxOutRef
@@ -459,3 +476,8 @@ addOwnInput P.ScriptInputConstraint{P.icRedeemer, P.icTxOutRef} = do
                     $ mkWitness datum (C.toCardanoScriptData $ toBuiltinData icRedeemer) C.zeroExecutionUnits
     unbalancedTx . tx .txIns <>= [(txIn, C.BuildTxWith witIn)]
     pure ()
+
+-- | Each transaction output should contain a minimum amount of Ada (this is a
+-- restriction on the real Cardano network).
+adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([C.Lovelace], UnbalancedTx)
+adjustUnbalancedTx params = alaf Compose (tx . txOuts . traverse) (fmap (\(l,out) -> (l, Tx.getTxOut out)) . adjustCardanoTxOut params . Tx.TxOut)

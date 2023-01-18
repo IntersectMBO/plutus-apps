@@ -115,8 +115,6 @@ import Data.ByteString.Short qualified as SBS
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import Data.String (IsString (fromString))
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Tuple (swap)
 import Data.Vector qualified as Vector
@@ -298,12 +296,15 @@ instance FromJSON (C.TxValidityUpperBound C.BabbageEra) where
 
 instance ToJSON (C.TxExtraKeyWitnesses C.BabbageEra) where
   toJSON C.TxExtraKeyWitnessesNone      = Aeson.Null
-  toJSON (C.TxExtraKeyWitnesses _ keys) = Aeson.Array $ Vector.fromList $ map (Aeson.String . Text.pack . show) keys
+  toJSON (C.TxExtraKeyWitnesses _ keys) = Aeson.Array $ Vector.fromList $ map (Aeson.String . C.serialiseToRawBytesHexText) keys
 instance FromJSON (C.TxExtraKeyWitnesses C.BabbageEra) where
   parseJSON Aeson.Null = pure C.TxExtraKeyWitnessesNone
   parseJSON (Aeson.Array v) = C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse parseHash (Vector.toList v)
     where
-      parseHash = Aeson.withText "TxExtraKeyWitnesses" (pure . fromString . Text.unpack)
+      parseHash = Aeson.withText "TxExtraKeyWitnesses" (either (error "instance FromJSON (TxExtraKeyWitnesses BabbageEra): deserialisation failed") pure
+        . C.deserialiseFromRawBytesHex (C.AsHash C.AsPaymentKey)
+        . Text.encodeUtf8)
+
   parseJSON invalid = prependFailure "parsing TxExtraKeyWitnesses failed, " (typeMismatch "Array" invalid)
 
 instance ToJSON (C.TxScriptValidity C.BabbageEra) where

@@ -20,8 +20,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKeyHash)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.TxConstraints (TxConstraints)
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient (..), Void)
 import Plutus.Contract.StateMachine qualified as StateMachine

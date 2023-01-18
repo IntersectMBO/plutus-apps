@@ -18,7 +18,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger.Constraints as Constraints
+import Ledger.Tx.Constraints as Constraints
 import Plutus.Contract as Contract
 import Plutus.Contracts.Currency ()
 import Plutus.Contracts.Uniswap.Pool

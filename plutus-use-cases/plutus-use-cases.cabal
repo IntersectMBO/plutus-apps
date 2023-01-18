@@ -98,6 +98,7 @@ library
     , plutus-ledger              >=1.1.0
     , plutus-ledger-constraints  >=1.1.0
     , plutus-script-utils        >=1.1.0
+    , plutus-tx-constraints      >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
@@ -186,8 +187,8 @@ test-suite plutus-use-cases-test
     , plutus-contract                >=1.1.0
     , plutus-contract-certification  >=1.1.0
     , plutus-ledger                  >=1.1.0
-    , plutus-ledger-constraints      >=1.1.0
     , plutus-script-utils            >=1.1.0
+    , plutus-tx-constraints          >=1.1.0
     , plutus-use-cases               >=1.1.0
 
   --------------------------
@@ -285,8 +286,8 @@ executable plutus-use-cases-scripts
     , plutus-contract                >=1.1.0
     , plutus-contract-certification  >=1.1.0
     , plutus-ledger                  >=1.1.0
-    , plutus-ledger-constraints      >=1.1.0
     , plutus-script-utils            >=1.1.0
+    , plutus-tx-constraints          >=1.1.0
     , plutus-use-cases               >=1.1.0
 
   --------------------------
