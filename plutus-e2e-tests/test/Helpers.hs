@@ -41,15 +41,20 @@ import Testnet.Plutus qualified as TN
 getProjectBase :: (MonadIO m, MonadTest m) => m String
 getProjectBase = liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
--- TODO: move to shared utils
-unsafeFromEither :: Show l => Either l r -> r
-unsafeFromEither (Left err)    = error (show err)
-unsafeFromEither (Right value) = value
+toEraInCardanoMode :: C.ShelleyBasedEra era -> (C.EraInMode era C.CardanoMode)
+toEraInCardanoMode shelleyEra = toEraInCardanoMode' (C.shelleyBasedToCardanoEra shelleyEra)
 
--- TODO: move to shared utils
-unsafeFromMaybe :: Maybe a -> a
-unsafeFromMaybe Nothing  = error "not maybe, nothing."
-unsafeFromMaybe (Just a) = a
+toEraInCardanoMode' :: C.CardanoEra era -> (C.EraInMode era C.CardanoMode)
+toEraInCardanoMode' era = fromMaybe $ C.toEraInMode era C.CardanoMode
+  where
+    fromMaybe Nothing    = error $ "No mode for this era " ++ show era ++ " in CardanoMode"
+    fromMaybe (Just eim) = eim
+
+multiAssetSupportedInEra :: C.CardanoEra era -> C.MultiAssetSupportedInEra era
+multiAssetSupportedInEra era = fromEither $ C.multiAssetSupportedInEra era
+  where
+    fromEither (Left _)  = error $ "Era must support MA"
+    fromEither (Right m) = m
 
 -- | This is a copy of the workspace from
 -- hedgehog-extras:Hedgehog.Extras.Test.Base, which for darwin sets
@@ -122,8 +127,7 @@ getProtocolParams era localNodeConnectInfo = do
 getProtocolParams' :: (MonadIO m, MonadTest m) => C.ShelleyBasedEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
 getProtocolParams' shelleyEra localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
   $ C.queryNodeLocalState localNodeConnectInfo Nothing
-  $ C.QueryInEra (unsafeFromMaybe $ C.toEraInMode (C.shelleyBasedToCardanoEra shelleyEra) C.CardanoMode)
-                 (C.QueryInShelleyBasedEra shelleyEra C.QueryProtocolParameters)
+  $ C.QueryInEra (toEraInCardanoMode shelleyEra) (C.QueryInShelleyBasedEra shelleyEra C.QueryProtocolParameters)
 
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = do
@@ -155,10 +159,13 @@ txOutNoDatumOrRefScript :: C.CardanoEra era
   -> C.Address C.ShelleyAddr
   -> C.TxOut ctx era
 txOutNoDatumOrRefScript era value address = C.TxOut
-    (unsafeFromMaybe $ C.anyAddressInEra era $ C.toAddressAny address) --(C.shelleyAddressInEra address)
-    (C.TxOutValue (unsafeFromEither $ C.multiAssetSupportedInEra era) value)
+    (fromMaybe $ C.anyAddressInEra era $ C.toAddressAny address)
+    (C.TxOutValue (multiAssetSupportedInEra era) value)
     C.TxOutDatumNone
     C.ReferenceScriptNone
+  where
+    fromMaybe Nothing    = error $ "Era must be ShelleyBased"
+    fromMaybe (Just aie) = aie
 
 firstTxIn :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
@@ -198,7 +205,9 @@ findUTxOByAddress' shelleyEra localNodeConnectInfo address = let
     C.QueryUTxOByAddress $ Set.singleton (C.toAddressAny address)
   in
   H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra (unsafeFromMaybe $ C.toEraInMode (C.shelleyBasedToCardanoEra shelleyEra) C.CardanoMode) query
+    C.QueryInEra (toEraInCardanoMode shelleyEra) query
+  where
+    fromMaybe Nothing = error
 
 -- | Get [TxIn] and total lovelace value for an address.
 getAddressTxInsLovelaceValue
@@ -231,9 +240,9 @@ emptyTxBodyContent era pparams = C.TxBodyContent
   , C.txOuts             = []
   , C.txTotalCollateral  = C.TxTotalCollateralNone
   , C.txReturnCollateral = C.TxReturnCollateralNone
-  , C.txFee              = C.TxFeeExplicit (unsafeFromEither $ C.txFeesExplicitInEra era) 0
-  , C.txValidityRange    = (C.TxValidityNoLowerBound,(C.TxValidityNoUpperBound $ unsafeFromMaybe $
-                                C.validityNoUpperBoundSupportedInEra era))
+  , C.txFee              = C.TxFeeExplicit (fromTxFeesExplicit $ C.txFeesExplicitInEra era) 0
+  , C.txValidityRange    = (C.TxValidityNoLowerBound,(C.TxValidityNoUpperBound $
+                             fromNoUpperBoundMaybe $ C.validityNoUpperBoundSupportedInEra era))
   , C.txMetadata         = C.TxMetadataNone
   , C.txAuxScripts       = C.TxAuxScriptsNone
   , C.txExtraKeyWits     = C.TxExtraKeyWitnessesNone
@@ -244,6 +253,12 @@ emptyTxBodyContent era pparams = C.TxBodyContent
   , C.txMintValue        = C.TxMintNone
   , C.txScriptValidity   = C.TxScriptValidityNone
   }
+  where
+    fromNoUpperBoundMaybe Nothing    = error "Era must support no upper bound"
+    fromNoUpperBoundMaybe (Just nub) = nub
+
+    fromTxFeesExplicit (Left _)    = error "Era must support explicit fees"
+    fromTxFeesExplicit (Right tfe) = tfe
 
 txInsCollateral :: C.CardanoEra era -> [C.TxIn] -> C.TxInsCollateral era
 txInsCollateral era txIns = case C.collateralSupportedInEra era of
@@ -260,7 +275,7 @@ txMintValue :: C.CardanoEra era
   -> C.Value
   -> Map.Map C.PolicyId (C.ScriptWitness C.WitCtxMint era)
   -> C.TxMintValue C.BuildTx era
-txMintValue era tv m = C.TxMintValue (unsafeFromEither $ C.multiAssetSupportedInEra era) tv (C.BuildTxWith m)
+txMintValue era tv m = C.TxMintValue (multiAssetSupportedInEra era) tv (C.BuildTxWith m)
 
 buildTx :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
@@ -285,8 +300,8 @@ buildTx' shelleyEra txBody changeAddress sKey networkId = do
   (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <- H.leftFailM . liftIO $
     C.queryStateForBalancedTx (C.shelleyBasedToCardanoEra shelleyEra) networkId (fst <$> C.txIns txBody)
 
-  return $ unsafeFromEither $ C.constructBalancedTx
-    (unsafeFromMaybe $ C.toEraInMode (C.shelleyBasedToCardanoEra shelleyEra) C.CardanoMode)
+  return $ fromEither $ C.constructBalancedTx
+    (toEraInCardanoMode shelleyEra)
     txBody
     (C.shelleyAddressInEra changeAddress)
     Nothing -- Override key witnesses
@@ -296,6 +311,9 @@ buildTx' shelleyEra txBody changeAddress sKey networkId = do
     systemStart
     stakePools
     [C.WitnessPaymentKey $ C.castSigningKey sKey]
+    where
+      fromEither (Left e)   = error $ show e
+      fromEither (Right tx) = tx
 
 submitTx :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
@@ -304,7 +322,7 @@ submitTx :: (MonadIO m, MonadTest m)
   -> m ()
 submitTx era localNodeConnectInfo tx = do
   submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
-    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (unsafeFromMaybe $ C.toEraInMode era C.CardanoMode)
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (toEraInCardanoMode' era)
   failOnTxSubmitFail submitResult
   where
     failOnTxSubmitFail :: (Show a, MonadTest m) => SubmitResult a -> m ()
@@ -348,7 +366,10 @@ getTxOutAtAddress :: (MonadIO m, MonadTest m)
 getTxOutAtAddress era localNodeConnectInfo address txIn = do
   waitForTxInAtAddress era localNodeConnectInfo address txIn
   utxos <- findUTxOByAddress era localNodeConnectInfo address
-  return $ unsafeFromMaybe $ Map.lookup txIn $ C.unUTxO utxos
+  return $ fromMaybe $ Map.lookup txIn $ C.unUTxO utxos
+    where
+      fromMaybe Nothing    = error $ "txIn " ++ show txIn ++ " is not at address " ++ show address
+      fromMaybe (Just txo) = txo
 
 txOutHasValue :: (MonadIO m, MonadTest m)
   => C.TxOut C.CtxUTxO era

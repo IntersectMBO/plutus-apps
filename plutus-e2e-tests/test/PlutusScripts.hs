@@ -18,33 +18,34 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as BS (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Helpers (unsafeFromEither)
 import Plutus.Script.Utils.Typed as PSU (IsScriptContext (mkUntypedMintingPolicy))
-import Plutus.V1.Ledger.Bytes as P (bytes, fromHex)
+import Plutus.V1.Ledger.Bytes qualified as P (bytes, fromHex)
 import Plutus.V2.Ledger.Api qualified as PlutusV2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as BI
 import PlutusTx.Prelude qualified as P
 
 bytesFromHex :: BS.ByteString -> BS.ByteString
-bytesFromHex b = bytes $ unsafeFromEither $ P.fromHex b
+bytesFromHex = P.bytes . fromEither . P.fromHex
+  where
+    fromEither (Left e)  = error $ show e
+    fromEither (Right b) = b
 
 -- | Default execution units with zero values
 defExecutionUnits :: C.ExecutionUnits
 defExecutionUnits = C.ExecutionUnits {C.executionSteps = 0, C.executionMemory = 0 }
 
--- TODO: move to shared utils
-unsafeFromMaybe :: Maybe a -> a
-unsafeFromMaybe Nothing  = error "not maybe, nothing."
-unsafeFromMaybe (Just a) = a
-
-
 mintScriptWitnessV2 :: C.CardanoEra era
   -> C.PlutusScript C.PlutusScriptV2
   -> C.ScriptData
   -> C.ScriptWitness C.WitCtxMint era
-mintScriptWitnessV2 era script redeemer = C.PlutusScriptWitness (unsafeFromMaybe $ C.scriptLanguageSupportedInEra era $ C.PlutusScriptLanguage C.PlutusScriptV2) C.PlutusScriptV2
-        (C.PScript script) C.NoScriptDatumForMint redeemer defExecutionUnits
+mintScriptWitnessV2 era script redeemer = C.PlutusScriptWitness (fromMaybe $
+        C.scriptLanguageSupportedInEra era $ C.PlutusScriptLanguage C.PlutusScriptV2)
+        C.PlutusScriptV2 (C.PScript script) C.NoScriptDatumForMint redeemer defExecutionUnits
+  where
+    fromMaybe Nothing = error $ "Era " ++ show era ++ " does not support script language " ++
+                        show (C.PlutusScriptLanguage C.PlutusScriptV2)
+    fromMaybe (Just slie) = slie
 
 toRedeemer :: PlutusTx.ToData a => a -> C.ScriptData
 toRedeemer a = C.fromPlutusData $ PlutusTx.toData a
