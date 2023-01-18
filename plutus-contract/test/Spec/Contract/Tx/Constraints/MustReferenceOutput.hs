@@ -292,57 +292,6 @@ ledgerSubmitTx :: SubmitTx
 ledgerSubmitTx = submitTxConstraintsWith
 
 
--- plutus-tx-constraints tests
--- all below to be covered by the above tests when MustMint is implemented (PLT-672)
-
-tag :: Trace.ContractInstanceTag
-tag = "instance 1"
-
-{-# INLINABLE mkMustReferenceOutputV1Validator #-}
-mkMustReferenceOutputV1Validator :: Tx.TxOutRef -> () -> PV1.ScriptContext -> Bool
-mkMustReferenceOutputV1Validator txOutRef _ =
-    Cons.V1.checkScriptContext @Void @Void (Cons.mustReferenceOutput txOutRef)
-
-{-# INLINABLE mustReferenceOutputV1Validator #-}
-mustReferenceOutputV1Validator :: PV1.Validator
-mustReferenceOutputV1Validator = PV1.mkValidatorScript
-    $$(PlutusTx.compile [|| wrap ||])
- where
-     wrap = Typed.mkUntypedValidator mkMustReferenceOutputV1Validator
-
-mustReferenceOutputV1ValidatorAddress :: L.CardanoAddress
-mustReferenceOutputV1ValidatorAddress =
-    PSU.V1.mkValidatorCardanoAddress Params.testnet mustReferenceOutputV1Validator
-
-mustReferenceOutputTxV1Contract :: Contract () EmptySchema ContractError ()
-mustReferenceOutputTxV1Contract = do
-    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
-
-    utxos <- ownUtxos
-    let ((utxoRef, utxo), (utxoRefForBalance1, _), (utxoRefForBalance2, _)) = get3 $ M.toList utxos
-        vh = PSU.V1.validatorHash mustReferenceOutputV1Validator
-        lookups1 = Cons.unspentOutputs utxos
-        datum = PV1.Datum $ PlutusTx.toBuiltinData utxoRef
-        tx1 = Cons.mustPayToOtherScriptWithDatumInTx vh datum (Ada.adaValueOf 5)
-          <> Cons.mustIncludeDatumInTx datum
-          <> Cons.mustSpendPubKeyOutput utxoRefForBalance1
-          <> Cons.mustUseOutputAsCollateral utxoRefForBalance1
-    submitTxConfirmed $ mkTx lookups1 tx1
-
-    -- Trying to unlock the Ada in the script address
-    scriptUtxos <- utxosAt $ mustReferenceOutputV1ValidatorAddress
-    let
-        scriptUtxo = fst . head . M.toList $ scriptUtxos
-        lookups2 = Cons.unspentOutputs (M.singleton utxoRef utxo <> scriptUtxos)
-               <> Cons.plutusV1OtherScript mustReferenceOutputV1Validator
-               <> Cons.unspentOutputs utxos
-        tx2 = Cons.mustReferenceOutput utxoRef
-          <> Cons.mustSpendScriptOutput scriptUtxo L.unitRedeemer
-          <> Cons.mustSpendPubKeyOutput utxoRefForBalance2
-          <> Cons.mustUseOutputAsCollateral utxoRefForBalance2
-    submitTxConfirmed $ mkTx lookups2 tx2
-
-
 mkMustReferenceOutputV2Validator :: Tx.TxOutRef -> () -> PV2.ScriptContext -> Bool
 mkMustReferenceOutputV2Validator txOutRef _ =
     Cons.V2.checkScriptContext @Void @Void (Cons.mustReferenceOutput txOutRef)
