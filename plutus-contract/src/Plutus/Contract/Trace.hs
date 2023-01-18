@@ -61,7 +61,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger.Value.CardanoAPI (Lovelace (Lovelace), Value, lovelaceToValue)
+import Ledger.Value.CardanoAPI (Value, lovelaceValueOf)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Effects qualified as E
@@ -247,7 +247,7 @@ defaultDist :: InitialDistribution
 defaultDist = defaultDistFor EM.knownWallets
 
 defaultDistFor :: [EM.Wallet] -> InitialDistribution
-defaultDistFor wallets = Map.fromList $ zip wallets (repeat (lovelaceToValue (Lovelace 100_000_000)))
+defaultDistFor wallets = Map.fromList $ zip wallets (repeat (lovelaceValueOf 100_000_000))
 
 makeClassyPrisms ''TraceError
 

@@ -136,13 +136,15 @@ tests =
                 (waitingForSlot theContract tag 20)
                 (void $ activateContract w1 theContract tag)
 
-        -- , let smallTx = Constraints.mustPayToPubKey (mockWalletPaymentPubKeyHash w2) (Ada.adaValueOf 10)
-        --       theContract :: Contract () Schema ContractError () = submitTx smallTx >>= awaitTxConfirmed . getCardanoTxId >> submitTx smallTx >>= awaitTxConfirmed . getCardanoTxId
-        --   in run "handle several blockchain events"
-        --         (walletFundsChange w1 (CardanoAPI.adaValueOf (-20))
-        --             .&&. assertNoFailedTransactions
-        --             .&&. assertDone theContract tag (const True) "all blockchain events should be processed")
-        --         (void $ activateContract w1 theContract tag >> Trace.waitUntilSlot 3)
+        , let smallTx = Constraints.mustPayToPubKey (mockWalletPaymentPubKeyHash w2) (Ada.adaValueOf 10)
+              theContract :: Contract () Schema ContractError () = do
+                submitTx smallTx >>= awaitTxConfirmed . Ledger.getCardanoTxId
+                submitTx smallTx >>= awaitTxConfirmed . Ledger.getCardanoTxId
+          in run "handle several blockchain events"
+                (walletFundsChange w1 (CardanoAPI.adaValueOf (-20))
+                    .&&. assertNoFailedTransactions
+                    .&&. assertDone theContract tag (const True) "all blockchain events should be processed")
+                (void $ activateContract w1 theContract tag >> Trace.waitUntilSlot 3)
 
         , let l = endpoint @"1" pure .> endpoint @"2" pure
               r = endpoint @"3" pure .> endpoint @"4" pure

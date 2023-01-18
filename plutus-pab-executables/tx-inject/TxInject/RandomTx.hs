@@ -29,7 +29,7 @@ import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (CardanoApiTx, EmulatorTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx),
                   TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
-import Ledger.Value.CardanoAPI (adaOnlyValue)
+import Ledger.Value.CardanoAPI (isAdaOnlyValue)
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -67,8 +67,7 @@ generateTx gen slot (UtxoIndex utxo) = do
   -- We definitely need this for creating multi currency transactions!
         =
           filter
-            (\(_, txOut ) ->
-                txOutValue txOut == adaOnlyValue (txOutValue txOut)) $
+            (\(_, txOut ) -> isAdaOnlyValue (txOutValue txOut)) $
           filter
             (\(_, txOut) ->
                 txOutAddress txOut == sourceAddress) $

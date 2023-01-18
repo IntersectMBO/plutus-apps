@@ -16,6 +16,7 @@ module Ledger.Value.CardanoAPI (
   , lovelaceValueOf
   , adaValueOf
   , isZero
+  , isAdaOnlyValue
   , noAdaValue
   , adaOnlyValue
   , adaToCardanoValue
@@ -36,6 +37,7 @@ module Ledger.Value.CardanoAPI (
 import Cardano.Api qualified as C
 import Data.Bifunctor (bimap)
 import Data.List (partition)
+import Data.Maybe (isJust)
 import Data.Monoid (All (All, getAll))
 import Data.Ratio (denominator, numerator)
 import Ledger.Scripts (Language (..), MintingPolicy (MintingPolicy), Versioned (..))
@@ -58,6 +60,9 @@ adaValueOf r = if denominator l == 1 then lovelaceValueOf (numerator l) else err
 
 isZero :: C.Value -> Bool
 isZero = all (\(_, q) -> q == 0) . C.valueToList
+
+isAdaOnlyValue :: C.Value -> Bool
+isAdaOnlyValue = isJust . C.valueToLovelace
 
 noAdaValue :: C.Value -> C.Value
 noAdaValue = C.filterValue (/= C.AdaAssetId)

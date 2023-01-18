@@ -43,7 +43,7 @@ assetClassMapAndTxShouldShareTxOuts = property $ do
     let diskState = DiskState.fromTx chainIndexTx
         ciTxOutRefs = Set.fromList
                     $ fmap snd
-                    $ filter (\(ChainIndexTxOut{citoValue}, _) -> Value.noAdaValue citoValue /= mempty)
+                    $ filter (\(ChainIndexTxOut{citoValue}, _) -> not $ Value.isAdaOnlyValue citoValue)
                     $ txOutsWithRef chainIndexTx
         assetClassMapTxOutRefs =
           mconcat $ diskState ^.. DiskState.assetClassMap . DiskState.unAssetClassMap . folded
