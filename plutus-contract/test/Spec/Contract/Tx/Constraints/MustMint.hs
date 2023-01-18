@@ -14,7 +14,7 @@ import Spec.Contract.Error (cardanoLedgerErrorContaining, insufficientFundsError
 import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Node.Emulator.Params qualified as Params
-import Control.Lens (_Just, has, (&), (??), (^.))
+import Control.Lens (_Just, has, (&), (??))
 import Data.Map qualified as Map
 import Data.Void (Void)
 import Ledger qualified
@@ -28,14 +28,12 @@ import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Scripts (ScriptHash (ScriptHash), unitRedeemer)
 import Ledger.Test (asRedeemer, coinMintingPolicy, coinMintingPolicyCurrencySymbol, coinMintingPolicyHash)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertFailedTransaction,
                              assertValidatedTransactionCount, changeInitialWalletValue, checkPredicate,
-                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1,
-                             walletFundsAssetClassChange, (.&&.))
+                             checkPredicateOptions, defaultCheckOptions, w1, walletFundsAssetClassChange, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
@@ -50,9 +48,14 @@ import Prelude hiding (not)
 
 tests :: TestTree
 tests = testGroup "MustMint"
-      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? ledgerSubmitTx
-      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? cardanoSubmitTx
+      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? submitTxConstraintsWith
+      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? submitCardanoTxConstraintsWith
       ]
+
+type SubmitTx
+  = Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
 
 v1Tests :: SubmitTx -> TestTree
 v1Tests submitTxFromConstraints = testGroup "Plutus V1" $
@@ -463,24 +466,6 @@ mustMintPolicy :: Ledger.Language -> Ledger.Versioned Scripts.MintingPolicy
 mustMintPolicy lang = case lang of
   Ledger.PlutusV1 -> Ledger.Versioned mustMintPolicyV1 lang
   Ledger.PlutusV2 -> Ledger.Versioned mustMintPolicyV2 lang
-
-type SubmitTx
-  = Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx lookups tx = let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  rethrowError = \case
-    Tx.Constraints.ToCardanoError err  -> throwError $ TxToCardanoConvertContractError err
-    Tx.Constraints.LedgerMkTxError err -> throwError $ ConstraintResolutionContractError err
-
-  in either rethrowError submitUnbalancedTx $ Tx.Constraints.mkTx @UnitTest p lookups tx
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith
-
 
 mustMintPolicyHash :: Ledger.Language -> Ledger.MintingPolicyHash
 mustMintPolicyHash l = case l of

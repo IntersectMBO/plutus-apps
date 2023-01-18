@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustProduceAtLeast(tests) where
 
-import Control.Lens (review, (&), (??), (^.))
+import Control.Lens (has, makeClassyPrisms, (&), (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -21,15 +21,12 @@ import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (mapError, throwError)
-import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Empty, awaitTxConfirmed,
-                               submitTxConstraintsWith, submitUnbalancedTx, utxosAt)
-import Plutus.Contract.Error (AsContractError (_TxConstraintResolutionContractError))
+import Plutus.Contract as Con (Contract, ContractError, Empty, _WalletContractError, awaitTxConfirmed,
+                               submitCardanoTxConstraintsWith, submitTxConstraintsWith, utxosAt)
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, emulatorConfig,
-                             mockWalletAddress, w1, w6, (.&&.))
+                             changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
+                             w1, w6, (.&&.))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import Plutus.V1.Ledger.Value qualified as Value
@@ -37,17 +34,23 @@ import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
 import Spec.Contract.Error (insufficientFundsError)
-import Wallet.Emulator.Error (WalletAPIError (InsufficientFunds))
+import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet')
 
---
--- TODO include these tests to the main suite in the test-suite when we'll be able to validate the contract
+makeClassyPrisms ''WalletAPIError
+
 tests :: TestTree
 tests =
     testGroup "MustProduceAtLeast"
-    [ testGroup "ledger constraints" $ tests' ledgerSubmitTx
-    , testGroup "cardano constraints" $ tests' cardanoSubmitTx
+    [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
+    , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
     ]
+
+type SubmitTx
+  = Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
+
 
 tests' :: SubmitTx -> [TestTree]
 tests' sub =
@@ -188,7 +191,7 @@ contractErrorWhenUnableToSpendMoreThanScriptTokenBalance sub =
     in checkPredicateOptions
         options
         "Fail validation when there are not enough tokens to satisfy mustProduceAtLeast constraint"
-        (assertContractError contract (Trace.walletInstanceTag w1) (\case { WalletContractError (InsufficientFunds _)-> True; _ -> False }) "failed to throw error"
+        (assertContractError contract (Trace.walletInstanceTag w1) (has (_WalletContractError . _InsufficientFunds)) "failed to throw error"
         .&&. assertValidatedTransactionCount 1)
         (void $ trace contract)
 
@@ -239,18 +242,3 @@ typedValidator = Scripts.mkTypedValidator @UnitTest
 
 scrAddress :: Ledger.CardanoAddress
 scrAddress = Scripts.validatorCardanoAddress Params.testnet typedValidator
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx lookups tx = let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  tx' = Tx.Constraints.mkTx @UnitTest p lookups tx
-  in submitUnbalancedTx =<<
-    (mapError (review _TxConstraintResolutionContractError) $ either throwError pure tx')
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith

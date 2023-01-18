@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.RequiredSigner(tests) where
 
-import Control.Lens (review, (??), (^.))
+import Control.Lens ((??))
 import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
@@ -21,14 +21,12 @@ import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSign
 import Ledger.Constraints.OnChain.V2 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
-                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash,
-                             w1, w2)
+                             checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
-import Plutus.Trace qualified as Trace
+import Plutus.Trace.Emulator qualified as Trace (activateContractWallet, nextSlot, setSigningProcess)
 import Plutus.V1.Ledger.Scripts (unitDatum)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
@@ -39,9 +37,14 @@ import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
 tests :: TestTree
 tests =
     testGroup "Required signer"
-        [ testGroup "ledger constraints" $ tests' ledgerSubmitTx
-        , testGroup "cardano constraints" $ tests' cardanoSubmitTx
+        [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
+        , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
         ]
+
+type SubmitTx
+  =  Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
 
 tests' :: SubmitTx -> [TestTree]
 tests' sub =
@@ -164,18 +167,3 @@ mustBeSignedByTypedValidator = Scripts.mkTypedValidator @UnitTest
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx lookups tx = let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  tx' = Tx.Constraints.mkTx @UnitTest p lookups tx
-  in submitUnbalancedTx =<<
-    (mapError (review _TxConstraintResolutionContractError) $ either throwError pure tx')
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith

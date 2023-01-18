@@ -83,10 +83,12 @@ module Plutus.Contract(
     , WalletAPIError
     , Request.adjustUnbalancedTx
     , Request.submitTx
+    , Request.submitCardanoTx
     , Request.submitTxConfirmed
     , Request.submitTxConstraints
     , Request.submitTxConstraintsSpending
     , Request.submitTxConstraintsWith
+    , Request.submitCardanoTxConstraintsWith
     , Request.submitUnbalancedTx
     , Request.submitBalancedTx
     , Request.balanceTx
