@@ -27,7 +27,9 @@ main = do
     let indexers = filterIndexers (Cli.utxoDbPath o)
                                   (Cli.datumDbPath o)
                                   (Cli.scriptTxDbPath o)
+                                  (Cli.epochStakepoolSizeDbPath o)
                                   (Cli.optionsTargetAddresses o)
+                                  (Cli.optionsNodeConfigPath o)
     (cp, coordinator) <- startIndexers indexers
     let preferredChainPoints =
           -- If the user specifies the chain point then use that,

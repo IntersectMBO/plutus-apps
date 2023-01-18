@@ -17,8 +17,10 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 import Gen.Cardano.Api.Typed qualified as CGen
 
-import Integration qualified
 import Marconi.Index.ScriptTx qualified as ScriptTx
+
+-- See TODO below, import EpochStakepoolSize qualified
+import Integration qualified
 import Spec.Utxo qualified
 
 main :: IO ()
@@ -29,6 +31,8 @@ tests = testGroup "Marconi"
   [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
   , Spec.Utxo.tests
   , Integration.tests
+  -- , EpochStakepoolSize.tests
+  -- TODO Enable above when the following PR in cardano-node is merged: https://github.com/input-output-hk/cardano-node/pull/4680/
   ]
 
 -- | Create @nScripts@ scripts, add them to a transaction body, then
@@ -99,4 +103,4 @@ genWitnessAndHashInEra era = do
 -- | TODO Copy-paste from cardano-node: cardano-api/gen/Gen/Cardano/Api/Typed.hs
 genExecutionUnits :: Gen C.ExecutionUnits
 genExecutionUnits = C.ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
-                                   <*> Gen.integral (Range.constant 0 1000)
+                                     <*> Gen.integral (Range.constant 0 1000)

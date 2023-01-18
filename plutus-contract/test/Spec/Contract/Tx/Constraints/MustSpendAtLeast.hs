@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendAtLeast(tests) where
 
-import Control.Lens (review, (??), (^.))
+import Control.Lens (has, (??))
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -18,14 +18,13 @@ import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertValidatedTransactionCount,
-                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1, (.&&.))
+                             checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Typed
-import Plutus.Trace qualified as Trace
+import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, walletInstanceTag)
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -34,9 +33,14 @@ import Prelude hiding (not)
 tests :: TestTree
 tests =
     testGroup "MustSpendAtLeast"
-        [ testGroup "ledger constraints" $ tests' ledgerSubmitTx
-        , testGroup "cardano constraints" $ tests' cardanoSubmitTx
+        [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
+        , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
         ]
+
+type SubmitTx
+  =  Constraints.ScriptLookups UnitTest
+  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
+  -> Contract () Empty ContractError Tx.CardanoTx
 
 tests' :: SubmitTx -> [TestTree]
 tests' sub =
@@ -101,10 +105,7 @@ higherThanScriptBalance sub =
             defaultCheckOptions
             "Validation pass when mustSpendAtLeast is greater than script's balance and wallet's pubkey is included in the lookup"
             (assertContractError contract (Trace.walletInstanceTag w1)
-                (\case
-                    { ConstraintResolutionContractError (Constraints.DeclaredInputMismatch _) -> True
-                    ; TxConstraintResolutionContractError (Tx.Constraints.LedgerMkTxError (Constraints.DeclaredInputMismatch _)) -> True
-                    ; _ -> False }) "failed to throw error"
+                (has (_ConstraintResolutionContractError . Constraints._DeclaredInputMismatch)) "failed to throw error"
             .&&. assertValidatedTransactionCount 1)
             (void $ trace contract)
 
@@ -121,7 +122,8 @@ phase2Failure sub =
 
 {-# INLINEABLE mkValidator #-}
 mkValidator :: Integer -> () -> ScriptContext -> Bool
-mkValidator amt _ ctx = P.traceIfFalse "mustSpendAtLeast not satisfied" (Constraints.checkScriptContext @() @() (Constraints.mustSpendAtLeast P.$ Ada.lovelaceValueOf amt) ctx)
+mkValidator amt _ ctx = P.traceIfFalse "mustSpendAtLeast not satisfied"
+  (Constraints.checkScriptContext @() @() (Constraints.mustSpendAtLeast P.$ Ada.lovelaceValueOf amt) ctx)
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest where
@@ -140,18 +142,3 @@ valHash = Scripts.validatorHash typedValidator
 
 scrAddress :: Ledger.NetworkId -> Ledger.CardanoAddress
 scrAddress = flip Typed.validatorCardanoAddress typedValidator
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx lookups tx = let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  tx' = Tx.Constraints.mkTx @UnitTest p lookups tx
-  in submitUnbalancedTx =<<
-    (mapError (review _TxConstraintResolutionContractError) $ either throwError pure tx')
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith

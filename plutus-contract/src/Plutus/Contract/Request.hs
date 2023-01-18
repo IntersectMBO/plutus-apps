@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -95,11 +96,16 @@ module Plutus.Contract.Request(
     , submitBalancedTx
     , balanceTx
     , submitTx
+    , submitCardanoTx
     , submitTxConstraints
+    , submitCardanoTxConstraints
     , submitTxConstraintsSpending
+    , submitCardanoTxConstraintsSpending
     , submitTxConstraintsWith
+    , submitCardanoTxConstraintsWith
     , submitTxConfirmed
     , mkTxConstraints
+    , mkCardanoTxConstraints
     , yieldUnbalancedTx
     -- ** Parameters
     , getParams
@@ -136,6 +142,7 @@ import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
+import Ledger.Tx.Constraints.OffChain qualified as Tx.Constraints
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Plutus.Contract.Util (loopM)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
@@ -946,6 +953,16 @@ submitTx :: forall w s e.
 submitTx = submitTxConstraintsWith @Void mempty
 
 -- | Build a transaction that satisfies the constraints, then submit it to the
+--   network. The constraints do not refer to any typed script inputs or
+--   outputs.
+submitCardanoTx :: forall w s e.
+  ( AsContractError e
+  )
+  => TxConstraints Void Void
+  -> Contract w s e CardanoTx
+submitCardanoTx = submitCardanoTxConstraintsWith @Void mempty
+
+-- | Build a transaction that satisfies the constraints, then submit it to the
 --   network. Using the current outputs at the contract address and the
 --   contract's own public key to solve the constraints.
 submitTxConstraints
@@ -959,6 +976,21 @@ submitTxConstraints
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
 submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLookups inst)
+
+-- | Build a transaction that satisfies the constraints, then submit it to the
+--   network. Using the current outputs at the contract address and the
+--   contract's own public key to solve the constraints.
+submitCardanoTxConstraints
+  :: forall a w s e.
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
+  , AsContractError e
+  )
+  => TypedValidator a
+  -> TxConstraints (RedeemerType a) (DatumType a)
+  -> Contract w s e CardanoTx
+submitCardanoTxConstraints inst = submitCardanoTxConstraintsWith (Constraints.typedValidatorLookups inst)
 
 -- | Build a transaction that satisfies the constraints using the UTXO map
 --   to resolve any input constraints (see 'Ledger.Constraints.TxConstraints.InputConstraint')
@@ -977,6 +1009,23 @@ submitTxConstraintsSpending inst utxo =
   let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
   in submitTxConstraintsWith lookups
 
+-- | Build a transaction that satisfies the constraints using the UTXO map
+--   to resolve any input constraints (see 'Ledger.Constraints.TxConstraints.InputConstraint')
+submitCardanoTxConstraintsSpending
+  :: forall a w s e.
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
+  , AsContractError e
+  )
+  => TypedValidator a
+  -> Map TxOutRef DecoratedTxOut
+  -> TxConstraints (RedeemerType a) (DatumType a)
+  -> Contract w s e CardanoTx
+submitCardanoTxConstraintsSpending inst utxo =
+  let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
+  in submitCardanoTxConstraintsWith lookups
+
 -- | Build a transaction that satisfies the constraints
 mkTxConstraints :: forall a w s e.
   ( PlutusTx.ToData (RedeemerType a)
@@ -989,14 +1038,41 @@ mkTxConstraints :: forall a w s e.
   -> Contract w s e UnbalancedTx
 mkTxConstraints lookups constraints = do
     params <- getParams
-    let result = Constraints.mkTxWithParams params lookups constraints
+    let rethrow = \case
+          Tx.Constraints.ToCardanoError err  -> review _TxToCardanoConvertContractError err
+          Tx.Constraints.LedgerMkTxError err -> review _ConstraintResolutionContractError err
+        result = first Tx.Constraints.LedgerMkTxError $ Constraints.mkTxWithParams params lookups constraints
         logData = MkTxLog
           { mkTxLogLookups = Constraints.generalise lookups
           , mkTxLogTxConstraints = bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData constraints
           , mkTxLogResult = result
           }
     logDebug logData
-    mapError (review _ConstraintResolutionContractError) $ either throwError pure result
+    mapError rethrow $ either throwError pure result
+
+-- | Build a transaction that satisfies the constraints
+mkCardanoTxConstraints :: forall a w s e.
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
+  , AsContractError e
+  )
+  => ScriptLookups a
+  -> TxConstraints (RedeemerType a) (DatumType a)
+  -> Contract w s e UnbalancedTx
+mkCardanoTxConstraints lookups constraints = do
+    params <- getParams
+    let rethrow = \case
+          Tx.Constraints.ToCardanoError err  -> review _TxToCardanoConvertContractError err
+          Tx.Constraints.LedgerMkTxError err -> review _ConstraintResolutionContractError err
+        result = Tx.Constraints.mkTx params lookups constraints
+        logData = MkTxLog
+          { mkTxLogLookups = Constraints.generalise lookups
+          , mkTxLogTxConstraints = bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData constraints
+          , mkTxLogResult = result
+          }
+    logDebug logData
+    mapError rethrow $ either throwError pure result
 
 {-| Arguments and result of a call to 'mkTx'
 -}
@@ -1004,7 +1080,7 @@ data MkTxLog =
     MkTxLog
         { mkTxLogLookups       :: ScriptLookups Any
         , mkTxLogTxConstraints :: TxConstraints PlutusTx.BuiltinData PlutusTx.BuiltinData
-        , mkTxLogResult        :: Either Constraints.MkTxError UnbalancedTx
+        , mkTxLogResult        :: Either Tx.Constraints.MkTxError UnbalancedTx
         }
         deriving stock (Show, Generic)
         deriving anyclass (ToJSON, FromJSON)
@@ -1021,7 +1097,23 @@ submitTxConstraintsWith
   => ScriptLookups a
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e CardanoTx
-submitTxConstraintsWith sl constraints = mkTxConstraints sl constraints >>= submitUnbalancedTx
+submitTxConstraintsWith sl constraints =
+  mkTxConstraints sl constraints >>= submitUnbalancedTx
+
+-- | Build a transaction that satisfies the constraints, then submit it to the
+--   network. Using the given constraints.
+submitCardanoTxConstraintsWith
+  :: forall a w s e.
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
+  , AsContractError e
+  )
+  => ScriptLookups a
+  -> TxConstraints (RedeemerType a) (DatumType a)
+  -> Contract w s e CardanoTx
+submitCardanoTxConstraintsWith sl constraints =
+  mkCardanoTxConstraints sl constraints >>= submitUnbalancedTx
 
 -- | A version of 'submitTx' that waits until the transaction has been
 --   confirmed on the ledger before returning.
