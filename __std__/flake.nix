@@ -9,6 +9,10 @@
       url = "github:divnix/std";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-compat = {
+      url = "github:input-output-hk/flake-compat/fixes";
+      flake = false;
+    };
     haskell-nix = {
       url = "github:input-output-hk/haskell.nix/e601c9ce609af07a78edf1c57f5985931788aeb2";
       inputs = {
@@ -44,14 +48,13 @@
       url = "github:haskell/haskell-language-server?ref=1.5.1";
       flake = false;
     };
-    # TODO(std) unique to plutus-apps vvvvv
-    cardano-repo-tool = {
-      url = "github:input-output-hk/cardano-repo-tool";
-      flake = false;
-    };
     plutus-core = {
       url = "github:input-output-hk/plutus";
       flake = false;
+    };
+    cardano-node = {
+      url = "github:input-output-hk/cardano-node/1.35.4";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -64,7 +67,7 @@
           (inputs.std.devshells "devshells")
           (inputs.std.installables "packages")
           (inputs.std.functions "library")
-          (inputs.std.installables "ciJobs")
+          (inputs.std.installables "hydraJobs")
         ];
       }
       {
@@ -72,7 +75,7 @@
         packages = inputs.std.harvest inputs.self [ "plutus-apps" "packages" ];
       }
       {
-        hydraJobs = inputs.std.harvest inputs.self [ "automation" "ciJobs" ];
+        hydraJobs = inputs.std.harvest inputs.self [ "automation" "hydraJobs" ];
       };
 
   nixConfig = {

@@ -46,6 +46,18 @@
 
   sphinx-build-readthedocs-site = import ./sphinx-build-readthedocs-site.nix block;
 
+  plutus-use-cases = import ./plutus-use-cases.nix block;
+
+  pab-cli = import ./pab-cli.nix block;
+
+  plutus-chain-index = import ./plutus-chain-index.nix block;
+
+  marconi = import ./marconi.nix block;
+
+  marconi-mamba = import ./marconi-mamba.nix block;
+
+  create-script-context = import ./create-script-context.nix block;
+
   scriv = import ./scriv.nix block;
 
   inherit (import ./sphinxcontrib-haddock.nix block)
@@ -55,4 +67,5 @@
     sphinxcontrib-haddock
 
     sphobjinv;
+
 }
