@@ -48,11 +48,6 @@
       url = "github:haskell/haskell-language-server?ref=1.5.1";
       flake = false;
     };
-    # TODO(std) unique to plutus-apps vvvvv
-    cardano-repo-tool = {
-      url = "github:input-output-hk/cardano-repo-tool";
-      flake = false;
-    };
     plutus-core = {
       url = "github:input-output-hk/plutus";
       flake = false;

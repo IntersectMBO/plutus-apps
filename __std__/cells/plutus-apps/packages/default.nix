@@ -46,8 +46,6 @@
 
   sphinx-build-readthedocs-site = import ./sphinx-build-readthedocs-site.nix block;
 
-  cardano-repo-tool = import ./cardano-repo-tool.nix block;
-
   plutus-use-cases = import ./plutus-use-cases.nix block;
 
   pab-cli = import ./pab-cli.nix block;

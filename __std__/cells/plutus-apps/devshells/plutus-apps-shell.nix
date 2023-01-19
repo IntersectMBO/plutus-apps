@@ -114,7 +114,6 @@ inputs.std.lib.dev.mkShell {
     cell.packages.haskell-language-server
     cell.packages.cabal-install
     cell.packages.cabal-fmt
-    cell.packages.cardano-repo-tool
     cell.packages.plutus-use-cases
 
     cell.library.cardano-node.cardano-node
