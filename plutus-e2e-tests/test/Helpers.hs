@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -41,11 +42,8 @@ import Testnet.Plutus qualified as TN
 getProjectBase :: (MonadIO m, MonadTest m) => m String
 getProjectBase = liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
-toEraInCardanoMode :: C.ShelleyBasedEra era -> (C.EraInMode era C.CardanoMode)
-toEraInCardanoMode shelleyEra = toEraInCardanoMode' (C.shelleyBasedToCardanoEra shelleyEra)
-
-toEraInCardanoMode' :: C.CardanoEra era -> (C.EraInMode era C.CardanoMode)
-toEraInCardanoMode' era = fromMaybe $ C.toEraInMode era C.CardanoMode
+toEraInCardanoMode :: C.CardanoEra era -> (C.EraInMode era C.CardanoMode)
+toEraInCardanoMode era = fromMaybe $ C.toEraInMode era C.CardanoMode
   where
     fromMaybe Nothing    = error $ "No mode for this era " ++ show era ++ " in CardanoMode"
     fromMaybe (Just eim) = eim
@@ -55,6 +53,20 @@ multiAssetSupportedInEra era = fromEither $ C.multiAssetSupportedInEra era
   where
     fromEither (Left _)  = error $ "Era must support MA"
     fromEither (Right m) = m
+
+withIsShelleyBasedEra :: C.CardanoEra era -> (C.IsShelleyBasedEra era => r) -> r
+withIsShelleyBasedEra era r =
+    case era of
+        C.AlonzoEra  -> r
+        C.BabbageEra -> r
+        _            -> error "Must use Alonzo or Babbage era"
+
+-- | Maybe converts a C.CardanoEra to a C.ShelleyBasedEra.
+cardanoEraToShelleyBasedEra :: C.CardanoEra era -> C.ShelleyBasedEra era
+cardanoEraToShelleyBasedEra cEra = case cEra of
+    C.AlonzoEra  -> C.ShelleyBasedEraAlonzo
+    C.BabbageEra -> C.ShelleyBasedEraBabbage
+    _            -> error "Must use Alonzo or Babbage era"
 
 -- | This is a copy of the workspace from
 -- hedgehog-extras:Hedgehog.Extras.Test.Base, which for darwin sets
@@ -119,15 +131,9 @@ getPoolSocketPathAbs conf tn = do
   pure socketPathAbs
 
 getProtocolParams :: (MonadIO m, MonadTest m) => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
-getProtocolParams era localNodeConnectInfo = do
-    case era of
-      C.AlonzoEra  -> getProtocolParams' C.ShelleyBasedEraAlonzo localNodeConnectInfo
-      C.BabbageEra -> getProtocolParams' C.ShelleyBasedEraBabbage localNodeConnectInfo
-
-getProtocolParams' :: (MonadIO m, MonadTest m) => C.ShelleyBasedEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
-getProtocolParams' shelleyEra localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
+getProtocolParams era localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
   $ C.queryNodeLocalState localNodeConnectInfo Nothing
-  $ C.QueryInEra (toEraInCardanoMode shelleyEra) (C.QueryInShelleyBasedEra shelleyEra C.QueryProtocolParameters)
+  $ C.QueryInEra (toEraInCardanoMode era) $ C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) C.QueryProtocolParameters
 
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = do
@@ -190,22 +196,15 @@ txInsFromUtxo utxos = do
   let (txIns, _) = unzip $ Map.toList $ C.unUTxO utxos
   return txIns
 
-findUTxOByAddress :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
-findUTxOByAddress era localNodeConnectInfo address = do
-    case era of
-      C.AlonzoEra  -> findUTxOByAddress' C.ShelleyBasedEraAlonzo localNodeConnectInfo address
-      C.BabbageEra -> findUTxOByAddress' C.ShelleyBasedEraBabbage localNodeConnectInfo address
-
-findUTxOByAddress'
+findUTxOByAddress
   :: (MonadIO m, MonadTest m)
-  => C.ShelleyBasedEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
-findUTxOByAddress' shelleyEra localNodeConnectInfo address = let
-  query = C.QueryInShelleyBasedEra shelleyEra $ C.QueryUTxO $
+  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
+findUTxOByAddress era localNodeConnectInfo address = let
+  query = C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) $ C.QueryUTxO $
     C.QueryUTxOByAddress $ Set.singleton (C.toAddressAny address)
   in
   H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra (toEraInCardanoMode shelleyEra) query
+    C.QueryInEra (toEraInCardanoMode era) query
   where
     fromMaybe Nothing = error
 
@@ -277,32 +276,35 @@ txMintValue :: C.CardanoEra era
   -> C.TxMintValue C.BuildTx era
 txMintValue era tv m = C.TxMintValue (multiAssetSupportedInEra era) tv (C.BuildTxWith m)
 
-buildTx :: (MonadIO m, MonadTest m, C.IsShelleyBasedEra era)
-  => C.ShelleyBasedEra era
+buildTx :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era
   -> C.TxBodyContent C.BuildTx era
   -> C.Address C.ShelleyAddr
   -> C.SigningKey C.GenesisUTxOKey
   -> C.NetworkId
   -> m (C.Tx era)
 buildTx era txBody changeAddress sKey networkId = do
-  buildTx' era txBody changeAddress sKey networkId
-  -- case era of
-  --   C.AlonzoEra  -> buildTx' C.ShelleyBasedEraAlonzo txBody changeAddress sKey networkId
-  --   C.BabbageEra -> buildTx' C.ShelleyBasedEraBabbage txBody changeAddress sKey networkId
+    eitherTx <- buildTx' era txBody changeAddress sKey networkId
+    return $ fromEither eitherTx
+    where
+      fromEither (Left e)   = error $ show e
+      fromEither (Right tx) = tx
 
-buildTx' :: (MonadIO m, MonadTest m, C.IsShelleyBasedEra era)
-  => C.ShelleyBasedEra era
+-- | Maybe build signed transaction using convenience functions for calculating fees and exunits.
+--   Useful for asserting for error.
+buildTx' :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era
   -> C.TxBodyContent C.BuildTx era
   -> C.Address C.ShelleyAddr
   -> C.SigningKey C.GenesisUTxOKey
   -> C.NetworkId
-  -> m (C.Tx era)
-buildTx' shelleyEra txBody changeAddress sKey networkId = do
+  -> m (Either C.TxBodyErrorAutoBalance (C.Tx era))
+buildTx' era txBody changeAddress sKey networkId = do
   (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <- H.leftFailM . liftIO $
-    C.queryStateForBalancedTx (C.shelleyBasedToCardanoEra shelleyEra) networkId (fst <$> C.txIns txBody)
+    C.queryStateForBalancedTx era networkId (fst <$> C.txIns txBody)
 
-  return $ fromEither $ C.constructBalancedTx
-    (toEraInCardanoMode shelleyEra)
+  return $ withIsShelleyBasedEra era $ C.constructBalancedTx
+    (toEraInCardanoMode era)
     txBody
     (C.shelleyAddressInEra changeAddress)
     Nothing -- Override key witnesses
@@ -312,13 +314,6 @@ buildTx' shelleyEra txBody changeAddress sKey networkId = do
     systemStart
     stakePools
     [C.WitnessPaymentKey $ C.castSigningKey sKey]
-    where
-      fromEither (Left e)   = error $ show e
-      fromEither (Right tx) = tx
-
--- withIsShelleyBasedEra :: C.CardanoEra era -> (C.IsShelleyBasedEra era => r) -> r
--- withIsShelleyBasedEra C.AlonzoEra r = r
--- withIsShelleyBasedEra C.BabbageEra r = r
 
 submitTx :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
@@ -327,7 +322,7 @@ submitTx :: (MonadIO m, MonadTest m)
   -> m ()
 submitTx era localNodeConnectInfo tx = do
   submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
-    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (toEraInCardanoMode' era)
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (toEraInCardanoMode era)
   failOnTxSubmitFail submitResult
   where
     failOnTxSubmitFail :: (Show a, MonadTest m) => SubmitResult a -> m ()
@@ -362,6 +357,7 @@ waitForTxInAtAddress era localNodeConnectInfo address txIn = do
         when (Map.notMember txIn $ C.unUTxO utxos) loop
   loop
 
+-- | Get tx out at address is for general use when txo is expected
 getTxOutAtAddress :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> C.LocalNodeConnectInfo C.CardanoMode
@@ -369,12 +365,23 @@ getTxOutAtAddress :: (MonadIO m, MonadTest m)
   -> C.TxIn
   -> m (C.TxOut C.CtxUTxO era)
 getTxOutAtAddress era localNodeConnectInfo address txIn = do
-  waitForTxInAtAddress era localNodeConnectInfo address txIn
-  utxos <- findUTxOByAddress era localNodeConnectInfo address
-  return $ fromMaybe $ Map.lookup txIn $ C.unUTxO utxos
+    maybeTxOut <- getTxOutAtAddress' era localNodeConnectInfo address txIn
+    return $ fromMaybe maybeTxOut
     where
       fromMaybe Nothing    = error $ "txIn " ++ show txIn ++ " is not at address " ++ show address
       fromMaybe (Just txo) = txo
+
+-- | Maybe get tx out at address for asserting when it is not expected to be present
+getTxOutAtAddress' :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
+  -> C.Address C.ShelleyAddr
+  -> C.TxIn
+  -> m (Maybe (C.TxOut C.CtxUTxO era))
+getTxOutAtAddress' era localNodeConnectInfo address txIn = do
+  waitForTxInAtAddress era localNodeConnectInfo address txIn
+  utxos <- findUTxOByAddress era localNodeConnectInfo address
+  return $ Map.lookup txIn $ C.unUTxO utxos
 
 txOutHasValue :: (MonadIO m, MonadTest m)
   => C.TxOut C.CtxUTxO era

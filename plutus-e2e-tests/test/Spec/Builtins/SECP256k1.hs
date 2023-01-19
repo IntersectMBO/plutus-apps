@@ -1,17 +1,21 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
 
 module Spec.Builtins.SECP256k1(tests) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Control.Lens ((??))
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad (when)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Either qualified as E
 import Data.Map qualified as Map
+import Data.Maybe qualified as M
 import Plutus.V2.Ledger.Api qualified as PlutusV2
 import Test.Tasty (TestTree, testGroup)
 
@@ -31,26 +35,24 @@ testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.Ba
 
 tests :: TestTree
 tests = testGroup "SECP256k1"
-  [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo) --change test used or outcome
-  , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsa testnetOptionsBabbage7) --change test used or outcome
+  [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo)
+  , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsa testnetOptionsBabbage7)
   , testProperty "can use SECP256k1 builtins in Babbage PV8" (verifySchnorrAndEcdsa testnetOptionsBabbage8)
   ]
 
-{- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can be
-   used successfully to mint in a Babbage era transaction.
+{- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can only
+   be used to mint in Babbage era protocol version 8 and beyond.
 
    Steps:
     - spin up a testnet
-    - build and submit a transaction to mint a token using the builtin
+    - build and submit a transaction to mint a token using the two SECP256k1 builtins
     - query the ledger to see if mint was successful
 -}
 verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
 verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
 
-  C.AnyCardanoEra (era :: C.CardanoEra era) <- return $ TN.era testnetOptions
-  shelleyBasedEra <- case cardanoEraToShelleyBasedEra era of
-                       Just era -> pure era
-                       Nothing  -> error "Not a shelley era"
+  let pv = TN.protocolVersion testnetOptions
+  C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
 -- 1: spin up a testnet
   base <- TN.getProjectBase
@@ -62,47 +64,33 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
   let
-    collateral = TN.txInsCollateral era [txIn] -- C.TxInsCollateral C.CollateralInBabbageEra [txIn]
     tokenValues = C.valueFromList [(PS.verifySchnorrAssetId, 4), (PS.verifyEcdsaAssetId, 2)]
     txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
     mintWitnesses = Map.fromList [PS.verifySchnorrMintWitness era, PS.verifyEcdsaMintWitness era]
+    collateral = TN.txInsCollateral era [txIn]
 
     txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]
       , C.txInsCollateral = collateral
-      , C.txOuts = [txOut]
       , C.txMintValue = TN.txMintValue era tokenValues mintWitnesses
+      , C.txOuts = [txOut]
       }
 
-  signedTx <- withIsShelleyBasedEra shelleyBasedEra $ TN.buildTx shelleyBasedEra txBodyContent w1Address w1SKey networkId
+  case pv of
+    6 -> do
+      H.failure -- TODO: get error from mintScriptWitnessV2 OR use V1 script OR remove era from test
 
-  TN.submitTx era localNodeConnectInfo signedTx
+    7 -> do
+      eitherTx <- TN.buildTx' era txBodyContent w1Address w1SKey networkId
+      H.assert (E.isLeft eitherTx) -- todo: check for prohibited builtin plutus error
+      H.success
 
--- 3. query and assert successful mint
-
-  let expectedTxIn = TN.txInFromSignedTx signedTx 0
-  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
-  txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
-
-  H.assert txOutHasTokenValue
-
--- | Maybe converts a C.CardanoEra to a C.ShelleyBasedEra.
-cardanoEraToShelleyBasedEra :: C.CardanoEra era -> Maybe (C.ShelleyBasedEra era)
-cardanoEraToShelleyBasedEra cEra = case cEra of
-    C.ByronEra   -> Nothing
-    C.ShelleyEra -> Just C.ShelleyBasedEraShelley
-    C.AllegraEra -> Just C.ShelleyBasedEraAllegra
-    C.MaryEra    -> Just C.ShelleyBasedEraMary
-    C.AlonzoEra  -> Just C.ShelleyBasedEraAlonzo
-    C.BabbageEra -> Just C.ShelleyBasedEraBabbage
-
--- | Run code that needs an 'C.IsShelleyBasedEra era' constraint while you only have a
--- 'C.ShelleyBasedEra era' and not knowing what the specific era is.
-withIsShelleyBasedEra :: C.ShelleyBasedEra era -> (C.IsShelleyBasedEra era => r) -> r
-withIsShelleyBasedEra era r =
-    case era of
-        C.ShelleyBasedEraShelley -> r
-        C.ShelleyBasedEraAllegra -> r
-        C.ShelleyBasedEraMary    -> r
-        C.ShelleyBasedEraAlonzo  -> r
-        C.ShelleyBasedEraBabbage -> r
+    8 -> do
+      signedTx <- TN.buildTx era txBodyContent w1Address w1SKey networkId
+      TN.submitTx era localNodeConnectInfo signedTx
+      let expectedTxIn = TN.txInFromSignedTx signedTx 0
+      -- 3. query and assert successful mint
+      resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
+      txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
+      H.assert txOutHasTokenValue
+      H.success
