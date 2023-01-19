@@ -17,4 +17,6 @@
   ghc-compiler-nix-name = import ./ghc-compiler-nix-name.nix block;
 
   cabal-project-index-state = import ./cabal-project-index-state.nix block;
-}  
+
+  cardano-node = import ./cardano-node.nix block;
+}

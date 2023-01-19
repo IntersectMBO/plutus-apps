@@ -15,7 +15,7 @@ cell.library.pkgs.writeShellApplication {
 
     shell_fragments=$(
       find \
-        "$root/nix/cells" \
+        "$root/__std__/cells" \
         -name "*.nix" \
         -and -not -name "*default.nix" \
         -and -path "*/devshells*" \
@@ -24,12 +24,12 @@ cell.library.pkgs.writeShellApplication {
 
     for fragment in $shell_fragments; do
       echo building "$fragment"
-      nix develop ".#$fragment" --build --no-warn-dirty --accept-flake-config
+      GC_DONT_GC=1 nix develop ".#$fragment" --build --no-warn-dirty --accept-flake-config
     done
 
     derivation_fragments=$(
       find \
-        "$(repo-root)/nix/cells" \
+        "$root/__std__/cells" \
         -name "*.nix" \
         -and -not -name "*default.nix" \
         -and -path "*/packages*" \
@@ -38,7 +38,7 @@ cell.library.pkgs.writeShellApplication {
 
     for fragment in $derivation_fragments; do
       echo building "$fragment"
-      nix build ".#$fragment" --no-warn-dirty --accept-flake-config
+      GC_DONT_GC=1 nix build ".#$fragment" --no-warn-dirty --accept-flake-config
     done
   '';
 }
