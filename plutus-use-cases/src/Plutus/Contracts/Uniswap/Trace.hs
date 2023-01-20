@@ -84,5 +84,5 @@ setupTokens = do
 wallets :: [Wallet]
 wallets = take 4 knownWallets
 
-tokenNames :: [TokenName]
+tokenNames :: [Value.TokenName]
 tokenNames = ["A", "B", "C", "D"]

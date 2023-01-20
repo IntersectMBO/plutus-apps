@@ -47,7 +47,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
+import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -56,6 +56,7 @@ import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnba
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
 import Plutus.Script.Utils.Typed (ScriptContextV1)
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
+import Plutus.Script.Utils.Value (Value)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)

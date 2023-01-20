@@ -53,7 +53,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import GHC.Generics (Generic)
-import Ledger (CardanoTx, DecoratedTxOut, PubKeyHash, TxOutRef, UtxoIndex (..), Value)
+import Ledger (CardanoTx, DecoratedTxOut, PubKeyHash, TxOutRef, UtxoIndex (..))
 import Ledger qualified
 import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, PaymentPubKeyHash (PaymentPubKeyHash),
                        cardanoAddressCredential)
@@ -70,7 +70,7 @@ import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
-import Plutus.V1.Ledger.Api (ValidatorHash)
+import Plutus.V1.Ledger.Api (ValidatorHash, Value)
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.Effects (NodeClientEffect,

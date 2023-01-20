@@ -369,7 +369,7 @@ mkMustPayToPubKeyAddressPolicy checkScriptContext = \case
 mustPayToPubKeyAddressPolicyHash :: LanguageContext -> Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash tc = mintingPolicyHash tc $ mustPayToPubKeyAddressPolicy tc
 
-mustPayToPubKeyAddressPolicyCurrencySymbol :: LanguageContext -> Ledger.CurrencySymbol
+mustPayToPubKeyAddressPolicyCurrencySymbol :: LanguageContext -> Value.CurrencySymbol
 mustPayToPubKeyAddressPolicyCurrencySymbol = Value.mpsSymbol . mustPayToPubKeyAddressPolicyHash
 
 type SubmitTx

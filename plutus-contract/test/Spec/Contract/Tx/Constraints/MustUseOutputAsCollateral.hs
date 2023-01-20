@@ -317,5 +317,5 @@ ledgerSubmitTx = submitTxConstraintsWith
 mustUseOutputAsCollateralPolicyHash :: PSU.Language -> L.MintingPolicyHash
 mustUseOutputAsCollateralPolicyHash lc = mintingPolicyHash lc $ mustUseOutputAsCollateralPolicy lc
 
-mustUseOutputAsCollateralPolicyCurrencySymbol :: PSU.Language -> L.CurrencySymbol
+mustUseOutputAsCollateralPolicyCurrencySymbol :: PSU.Language -> Value.CurrencySymbol
 mustUseOutputAsCollateralPolicyCurrencySymbol = Value.mpsSymbol . mustUseOutputAsCollateralPolicyHash

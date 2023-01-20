@@ -688,7 +688,7 @@ getVersionedScript script l = PSU.Versioned (getScript script l) l
 mintingPolicyHash :: Script MintingPolicy -> PSU.Language -> L.MintingPolicyHash
 mintingPolicyHash script l = PSU.mintingPolicyHash (getVersionedScript script l)
 
-mintingPolicyCurrencySymbol :: Script MintingPolicy -> PSU.Language -> L.CurrencySymbol
+mintingPolicyCurrencySymbol :: Script MintingPolicy -> PSU.Language -> V.CurrencySymbol
 mintingPolicyCurrencySymbol script = V.mpsSymbol . mintingPolicyHash script
 
 scriptAddress :: L.NetworkId -> Script Validator -> PSU.Language -> L.CardanoAddress

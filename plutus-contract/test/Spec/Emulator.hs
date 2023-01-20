@@ -36,15 +36,16 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, ScriptError (EvaluationError),
-               Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Value, Versioned (Versioned),
-               cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs, mkValidatorCardanoAddress, mkValidatorScript,
-               onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
+               Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Versioned (Versioned), cardanoTxMap,
+               getCardanoTxOutRefs, getCardanoTxOutputs, mkValidatorCardanoAddress, mkValidatorScript, onCardanoTx,
+               outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Contexts (ScriptContext)

@@ -38,7 +38,7 @@ import Data.Semigroup (Sum (..))
 import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, TokenName)
+import Ledger (Address, POSIXTime)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as Interval
@@ -47,6 +47,7 @@ import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified

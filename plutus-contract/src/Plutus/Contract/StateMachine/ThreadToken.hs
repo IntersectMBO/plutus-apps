@@ -21,11 +21,11 @@ import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (CurrencySymbol, TxOutRef (..))
+import Ledger (TxOutRef (..))
 import Ledger.Scripts
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
 import Plutus.Script.Utils.Typed (ScriptContextV1, mkUntypedMintingPolicy)
-import Plutus.Script.Utils.Value (TokenName (..), Value (..))
+import Plutus.Script.Utils.Value (CurrencySymbol, TokenName (..), Value (..))
 import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified

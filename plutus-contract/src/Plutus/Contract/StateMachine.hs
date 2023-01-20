@@ -64,7 +64,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, Slot, TxOutRef, Value)
+import Ledger (POSIXTime, Slot, TxOutRef)
 import Ledger qualified
 import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
                            mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
@@ -86,6 +86,7 @@ import Plutus.Contract.StateMachine.OnChain qualified as SM
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V2.Ledger.Tx qualified as V2
 import PlutusTx qualified

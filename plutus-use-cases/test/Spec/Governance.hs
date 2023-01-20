@@ -22,6 +22,7 @@ import Wallet.Emulator qualified as EM
 
 import Plutus.Contract.Test
 import Plutus.Contracts.Governance qualified as Gov
+import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 
@@ -63,7 +64,7 @@ tests =
 numberOfHolders :: Integer
 numberOfHolders = 10
 
-baseName :: Ledger.TokenName
+baseName :: TokenName
 baseName = "TestLawToken"
 
 -- | A governance contract that requires 6 votes out of 10

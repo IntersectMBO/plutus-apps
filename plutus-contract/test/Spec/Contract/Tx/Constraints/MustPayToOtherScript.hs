@@ -34,6 +34,7 @@ import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertF
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedValidatorHash)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
+import Plutus.Script.Utils.Value qualified as Plutus
 import Plutus.Trace qualified as Trace
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -467,21 +468,21 @@ ledgerSubmitTx :: SubmitTx
 ledgerSubmitTx = submitTxConstraintsWith
 
 data ConstraintParams =
-    MustPayToOtherScriptWithDatumInTx PSU.V1.ValidatorHash Ledger.Datum Ledger.Value
+    MustPayToOtherScriptWithDatumInTx PSU.V1.ValidatorHash Ledger.Datum Plutus.Value
   | MustPayToOtherScriptAddressWithDatumInTx
         PSU.V1.ValidatorHash
         Ledger.StakingCredential
         Ledger.Datum
-        Ledger.Value
+        Plutus.Value
   | MustPayToOtherScriptWithInlineDatum
         PSU.V1.ValidatorHash
         Ledger.Datum
-        Ledger.Value
+        Plutus.Value
   | MustPayToOtherScriptAddressWithInlineDatum
         PSU.V1.ValidatorHash
         Ledger.StakingCredential
         Ledger.Datum
-        Ledger.Value
+        Plutus.Value
     deriving (Show)
 
 PlutusTx.unstableMakeIsData ''ConstraintParams

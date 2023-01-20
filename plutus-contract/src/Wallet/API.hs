@@ -72,12 +72,12 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
 import Ledger (Address, CardanoTx, Interval (Interval, ivFrom, ivTo), PaymentPubKeyHash (PaymentPubKeyHash),
-               PubKey (PubKey, getPubKey), PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after,
-               always, before, cardanoPubKeyHash, contains, interval, isEmpty, member, pubKeyHashAddress, singleton,
-               width)
+               PubKey (PubKey, getPubKey), PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, after, always,
+               before, cardanoPubKeyHash, contains, interval, isEmpty, member, pubKeyHashAddress, singleton, width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain (adjustUnbalancedTx)
 import Ledger.Constraints.ValidityInterval qualified as Interval
+import Plutus.V1.Ledger.Value (Value)
 import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownAddresses,
                        publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (AdjustingUnbalancedTx))

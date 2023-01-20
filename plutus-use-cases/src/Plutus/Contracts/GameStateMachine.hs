@@ -44,7 +44,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, TokenName, Value)
+import Ledger (Address, POSIXTime)
 import Ledger.Address.Orphans ()
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -55,6 +55,7 @@ import Plutus.Contract.Secrets (SecretArgument, escape_sha2_256, extractSecret)
 import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as V
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified

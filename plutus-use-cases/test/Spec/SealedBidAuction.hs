@@ -17,7 +17,7 @@ import Data.Default (Default (def))
 
 import Cardano.Node.Emulator.Generators (someTokenValue)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Ledger (Slot (..), Value)
+import Ledger (Slot (..))
 import Ledger qualified
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Secrets
@@ -25,6 +25,7 @@ import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.SealedBidAuction
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator qualified as Trace
 
 import Test.QuickCheck hiding ((.&&.))

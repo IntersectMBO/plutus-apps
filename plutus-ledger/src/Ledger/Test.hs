@@ -87,18 +87,18 @@ coinMintingPolicyHashV1 = PV1.mintingPolicyHash coinMintingPolicyV1
 coinMintingPolicyHashV2 :: Ledger.MintingPolicyHash
 coinMintingPolicyHashV2 = PV2.mintingPolicyHash coinMintingPolicyV2
 
-coinMintingPolicyCurrencySymbol :: Language -> Ledger.CurrencySymbol
+coinMintingPolicyCurrencySymbol :: Language -> Value.CurrencySymbol
 coinMintingPolicyCurrencySymbol lang = case lang of
   PlutusV1 -> coinMintingPolicyCurrencySymbolV1
   PlutusV2 -> coinMintingPolicyCurrencySymbolV2
 
-coinMintingPolicyCurrencySymbolV1 :: Ledger.CurrencySymbol
+coinMintingPolicyCurrencySymbolV1 :: Value.CurrencySymbol
 coinMintingPolicyCurrencySymbolV1 = Value.mpsSymbol $ coinMintingPolicyHash PlutusV1
 
-coinMintingPolicyCurrencySymbolV2 :: Ledger.CurrencySymbol
+coinMintingPolicyCurrencySymbolV2 :: Value.CurrencySymbol
 coinMintingPolicyCurrencySymbolV2 = Value.mpsSymbol $ coinMintingPolicyHash PlutusV2
 
-someToken :: Language -> Ledger.Value
+someToken :: Language -> Value.Value
 someToken lang = Value.singleton (coinMintingPolicyCurrencySymbol lang) "someToken" 1
 
 asRedeemer :: PlutusTx.ToData a => a -> Ledger.Redeemer

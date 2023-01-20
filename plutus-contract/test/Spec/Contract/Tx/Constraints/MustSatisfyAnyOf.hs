@@ -330,7 +330,7 @@ ledgerSubmitTx = submitTxConstraintsWith
 mustSatisfyAnyOfPolicyHash :: LanguageContext -> L.MintingPolicyHash
 mustSatisfyAnyOfPolicyHash lc = mintingPolicyHash lc $ mustSatisfyAnyOfPolicy lc
 
-mustSatisfyAnyOfPolicyCurrencySymbol :: LanguageContext -> L.CurrencySymbol
+mustSatisfyAnyOfPolicyCurrencySymbol :: LanguageContext -> CurrencySymbol
 mustSatisfyAnyOfPolicyCurrencySymbol = mpsSymbol . mustSatisfyAnyOfPolicyHash
 
 {-# INLINABLE buildConstraints #-}

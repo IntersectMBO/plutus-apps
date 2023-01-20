@@ -39,7 +39,7 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import Ledger (CardanoAddress, CurrencySymbol, TxId, TxOutRef (..), getCardanoTxId)
+import Ledger (CardanoAddress, TxId, TxOutRef (..), getCardanoTxId)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts
@@ -47,7 +47,7 @@ import Ledger.Value.CardanoAPI qualified as V
 import Plutus.Contract as Contract
 import Plutus.Contract.Request (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.Value (TokenName, Value)
+import Plutus.Script.Utils.Value (CurrencySymbol, TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
 
 import Prelude (Semigroup (..))

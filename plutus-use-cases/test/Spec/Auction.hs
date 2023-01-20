@@ -41,7 +41,7 @@ import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Ledger (Ada, Slot (..))
+import Ledger (Slot (..))
 import Ledger qualified
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract hiding (currentSlot)
@@ -88,7 +88,7 @@ seller = auctionSeller (apAsset params) (apEndTime params)
 buyer :: ThreadToken -> Contract AuctionOutput BuyerSchema AuctionError ()
 buyer cur = auctionBuyer cur params
 
-trace1WinningBid :: Ada
+trace1WinningBid :: Ada.Ada
 trace1WinningBid = Ada.adaOf 50
 
 auctionTrace1 :: Trace.EmulatorTrace ()
@@ -102,7 +102,7 @@ auctionTrace1 = do
     void $ Trace.waitUntilTime $ apEndTime params
     void $ Trace.waitNSlots 1
 
-trace2WinningBid :: Ada
+trace2WinningBid :: Ada.Ada
 trace2WinningBid = Ada.adaOf 70
 
 extractAssetClass :: Trace.ContractHandle AuctionOutput SellerSchema AuctionError -> Trace.EmulatorTrace ThreadToken

@@ -45,7 +45,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, DecoratedTxOut, TokenName, TxOutRef, datumInDatumFromQuery, decoratedTxOutPlutusValue,
+import Ledger (CardanoAddress, DecoratedTxOut, TxOutRef, datumInDatumFromQuery, decoratedTxOutPlutusValue,
                decoratedTxOutScriptDatum)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -57,8 +57,8 @@ import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
-import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), Validator,
-                             Value)
+import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), TokenName,
+                             Validator, Value)
 import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Coverage

@@ -32,13 +32,14 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.V1.Ledger.Contexts as V
+import Plutus.V1.Ledger.Value as Plutus
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), foldMap)
 
 import Prelude as Haskell (Semigroup (..), Show, foldMap)
 
 type MultiSigSchema =
-        Endpoint "lock" (MultiSig, Value)
+        Endpoint "lock" (MultiSig, Plutus.Value)
         .\/ Endpoint "unlock" (MultiSig, [PaymentPubKeyHash])
 
 data MultiSig =

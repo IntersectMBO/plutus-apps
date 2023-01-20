@@ -141,6 +141,7 @@ import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmu
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)
 import Plutus.V1.Ledger.Scripts qualified as PV1
+import Plutus.V1.Ledger.Value qualified as Plutus
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Coverage
 import Streaming qualified as S
@@ -410,7 +411,7 @@ valueAtAddress address check = TracePredicate $
             tell @(Doc Void) ("Funds at address" <+> pretty (toPlutusAddress address) <+> "were" <+> pretty vl)
         pure result
 
-plutusValueAtAddress :: CardanoAddress -> (Ledger.Value -> Bool) -> TracePredicate
+plutusValueAtAddress :: CardanoAddress -> (Plutus.Value -> Bool) -> TracePredicate
 plutusValueAtAddress addr p = valueAtAddress addr (p . fromCardanoValue)
 
 -- | Get a datum of a given type 'd' out of a Transaction Output.
@@ -602,7 +603,7 @@ assertOutcome contract inst p nm = TracePredicate $
         pure result
 
 -- | Check that the funds in the wallet have changed by the given amount, exluding fees, using the Plutus `Value` type.
-walletFundsChangePlutus :: Wallet -> Ledger.Value -> TracePredicate
+walletFundsChangePlutus :: Wallet -> Plutus.Value -> TracePredicate
 walletFundsChangePlutus w v = case toCardanoValue v of
     Left _   -> TracePredicate $ pure False
     Right cv -> walletFundsChangeImpl False w cv

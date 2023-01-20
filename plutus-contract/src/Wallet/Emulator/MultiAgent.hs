@@ -46,7 +46,6 @@ import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
