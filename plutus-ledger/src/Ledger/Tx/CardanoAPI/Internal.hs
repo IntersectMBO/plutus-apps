@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase          #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE OverloadedLists    #-}
@@ -114,7 +115,11 @@ import Data.ByteString.Short qualified as SBS
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
+import Data.String (IsString (fromString))
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 import Data.Tuple (swap)
+import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Ledger.Address qualified as P
 import Ledger.Scripts qualified as P
@@ -133,21 +138,191 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
 newtype CardanoBuildTx = CardanoBuildTx { getCardanoBuildTx :: C.TxBodyContent C.BuildTx C.BabbageEra }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+  deriving newtype (FromJSON, ToJSON)
 
-instance ToJSON CardanoBuildTx where
-  -- TODO better instance than this one that rely on SomeCardanoTx
-  toJSON = either
-    (const $ Aeson.String "invalid tx body")
-    (toJSON
-    . flip SomeTx C.BabbageEraInCardanoMode
-    . C.makeSignedTransaction []
-    )
-    . C.makeTransactionBody
-    . getCardanoBuildTx
+instance ToJSON (C.TxInsReference C.BuildTx C.BabbageEra) where
+  toJSON C.TxInsReferenceNone       = Aeson.Null
+  toJSON (C.TxInsReference _ txIns) = toJSON txIns
+instance FromJSON (C.TxInsReference C.BuildTx C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxInsReferenceNone
+  parseJSON v          = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> parseJSON v
 
-instance FromJSON CardanoBuildTx where
-  parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
+instance ToJSON (C.TxReturnCollateral ctx C.BabbageEra) where
+  toJSON C.TxReturnCollateralNone       = Aeson.Null
+  toJSON (C.TxReturnCollateral _ txOut) = toJSON txOut
+instance FromJSON (C.TxReturnCollateral C.CtxTx C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxReturnCollateralNone
+  parseJSON v = case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+    Just yes -> C.TxReturnCollateral yes <$> parseJSON v
+    Nothing  -> pure C.TxReturnCollateralNone
+
+instance ToJSON (C.TxTotalCollateral C.BabbageEra) where
+  toJSON C.TxTotalCollateralNone          = Aeson.Null
+  toJSON (C.TxTotalCollateral _ lovelace) = toJSON lovelace
+instance FromJSON (C.TxTotalCollateral C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxTotalCollateralNone
+  parseJSON v = case C.totalAndReturnCollateralSupportedInEra C.BabbageEra of
+    Just yes -> C.TxTotalCollateral yes <$> parseJSON v
+    Nothing  -> pure C.TxTotalCollateralNone
+
+instance ToJSON (C.TxInsCollateral C.BabbageEra) where
+  toJSON C.TxInsCollateralNone       = Aeson.Null
+  toJSON (C.TxInsCollateral _ txIns) = toJSON txIns
+instance FromJSON (C.TxInsCollateral C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxInsCollateralNone
+  parseJSON v          = C.TxInsCollateral C.CollateralInBabbageEra <$> parseJSON v
+
+instance ToJSON w => ToJSON (C.BuildTxWith C.BuildTx w) where
+  toJSON (C.BuildTxWith a) = toJSON a
+instance FromJSON w => FromJSON (C.BuildTxWith C.BuildTx w) where
+  parseJSON v = C.BuildTxWith <$> parseJSON v
+
+deriving instance Generic (C.PlutusScriptOrReferenceInput lang)
+deriving instance ToJSON (C.PlutusScriptOrReferenceInput C.PlutusScriptV1)
+deriving instance FromJSON (C.PlutusScriptOrReferenceInput C.PlutusScriptV1)
+deriving instance ToJSON (C.PlutusScriptOrReferenceInput C.PlutusScriptV2)
+deriving instance FromJSON (C.PlutusScriptOrReferenceInput C.PlutusScriptV2)
+
+instance ToJSON (C.PlutusScript C.PlutusScriptV1) where
+  toJSON s = Aeson.String (C.serialiseToRawBytesHexText s)
+instance ToJSON (C.PlutusScript C.PlutusScriptV2) where
+  toJSON s = Aeson.String (C.serialiseToRawBytesHexText s)
+
+instance FromJSON (C.PlutusScript C.PlutusScriptV1) where
+  parseJSON = Aeson.withText "PlutusScript" $
+    either (error "instance FromJSON PlutusScript: deserialisation failed") pure
+    . C.deserialiseFromRawBytesHex (C.AsPlutusScript C.AsPlutusScriptV1)
+    . Text.encodeUtf8
+instance FromJSON (C.PlutusScript C.PlutusScriptV2) where
+  parseJSON = Aeson.withText "PlutusScript" $
+    either (error "instance FromJSON PlutusScript: deserialisation failed") pure
+    . C.deserialiseFromRawBytesHex (C.AsPlutusScript C.AsPlutusScriptV2)
+    . Text.encodeUtf8
+
+instance ToJSON (C.ScriptDatum C.WitCtxTxIn) where
+  toJSON C.InlineScriptDatum      = Aeson.Null
+  toJSON (C.ScriptDatumForTxIn s) = toJSON s
+instance FromJSON (C.ScriptDatum C.WitCtxTxIn) where
+  parseJSON Aeson.Null = pure C.InlineScriptDatum
+  parseJSON v          = C.ScriptDatumForTxIn <$> parseJSON v
+
+instance ToJSON (C.ScriptDatum C.WitCtxMint) where
+  toJSON C.NoScriptDatumForMint = Aeson.Null
+instance FromJSON (C.ScriptDatum C.WitCtxMint) where
+  parseJSON _ = pure C.NoScriptDatumForMint
+
+instance ToJSON C.ScriptData where
+  toJSON = toJSON . C.toPlutusData
+instance FromJSON C.ScriptData where
+  parseJSON = fmap C.fromPlutusData . parseJSON
+instance ToJSON (C.ScriptDatum ctx) => ToJSON (C.ScriptWitness ctx C.BabbageEra) where
+  toJSON C.SimpleScriptWitness{} = error "ToJSON ScriptWitness: Simple scripts not supported"
+  toJSON (C.PlutusScriptWitness _ version script datum red exUnits) =
+    Aeson.object
+      [ "version" .= C.AnyPlutusScriptVersion version
+      , case version of
+          C.PlutusScriptV1 -> "scriptOrReferenceInput" .= script
+          C.PlutusScriptV2 -> "scriptOrReferenceInput" .= script
+      , "datum" .= datum
+      , "redeemer" .= red
+      , "executionUnits" .= exUnits
+      ]
+
+instance FromJSON (C.ScriptDatum ctx) => FromJSON (C.ScriptWitness ctx C.BabbageEra) where
+  parseJSON = Aeson.withObject "ScriptWitness" $ \v ->
+    mkPSW v <*> v .: "datum" <*> v .: "redeemer" <*> v .: "executionUnits"
+    where
+      mkPSW :: Aeson.Object -> Parser (C.ScriptDatum ctx -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness ctx C.BabbageEra)
+      mkPSW v = do
+        C.AnyPlutusScriptVersion version <- v .: "version"
+        case version of
+          C.PlutusScriptV1 -> C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 <$> v .: "scriptOrReferenceInput"
+          C.PlutusScriptV2 -> C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 <$> v .: "scriptOrReferenceInput"
+
+instance ToJSON (C.Witness C.WitCtxTxIn C.BabbageEra) where
+  toJSON (C.KeyWitness C.KeyWitnessForSpending)         = Aeson.Null
+  toJSON (C.ScriptWitness C.ScriptWitnessForSpending w) = toJSON w
+instance ToJSON (C.Witness C.WitCtxMint C.BabbageEra) where
+  toJSON (C.KeyWitness v)                              = case v of
+  toJSON (C.ScriptWitness C.ScriptWitnessForMinting w) = toJSON w
+
+instance FromJSON (C.Witness C.WitCtxTxIn C.BabbageEra) where
+  parseJSON Aeson.Null = pure $ C.KeyWitness C.KeyWitnessForSpending
+  parseJSON v          = C.ScriptWitness C.ScriptWitnessForSpending <$> parseJSON v
+instance FromJSON (C.Witness C.WitCtxMint C.BabbageEra) where
+  parseJSON v = C.ScriptWitness C.ScriptWitnessForMinting <$> parseJSON v
+
+deriving anyclass instance Aeson.FromJSONKey C.PolicyId
+deriving anyclass instance Aeson.ToJSONKey C.PolicyId
+
+instance ToJSON (C.TxMintValue C.BuildTx C.BabbageEra) where
+  toJSON C.TxMintNone          = Aeson.Null
+  toJSON (C.TxMintValue _ v m) = Aeson.object ["value" .= v, "policyMap" .= m]
+instance FromJSON (C.TxMintValue C.BuildTx C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxMintNone
+  parseJSON (Aeson.Object v) = C.TxMintValue C.MultiAssetInBabbageEra
+        <$> v .: "value"
+        <*> v .: "policyMap"
+  parseJSON invalid = prependFailure "parsing TxMintValue failed, " (typeMismatch "Object" invalid)
+
+instance ToJSON (C.TxFee C.BabbageEra) where
+  toJSON (C.TxFeeImplicit v)   = case v of
+  toJSON (C.TxFeeExplicit _ l) = toJSON l
+instance FromJSON (C.TxFee C.BabbageEra) where
+  parseJSON v = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra <$> parseJSON v
+
+instance ToJSON (C.TxValidityLowerBound C.BabbageEra) where
+  toJSON C.TxValidityNoLowerBound          = Aeson.Null
+  toJSON (C.TxValidityLowerBound _ slotNo) = toJSON slotNo
+instance FromJSON (C.TxValidityLowerBound C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxValidityNoLowerBound
+  parseJSON v          = C.TxValidityLowerBound C.ValidityLowerBoundInBabbageEra <$> parseJSON v
+
+instance ToJSON (C.TxValidityUpperBound C.BabbageEra) where
+  toJSON (C.TxValidityNoUpperBound _)      = Aeson.Null
+  toJSON (C.TxValidityUpperBound _ slotNo) = toJSON slotNo
+instance FromJSON (C.TxValidityUpperBound C.BabbageEra) where
+  parseJSON Aeson.Null = pure $ C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra
+  parseJSON v          = C.TxValidityUpperBound C.ValidityUpperBoundInBabbageEra <$> parseJSON v
+
+instance ToJSON (C.TxExtraKeyWitnesses C.BabbageEra) where
+  toJSON C.TxExtraKeyWitnessesNone      = Aeson.Null
+  toJSON (C.TxExtraKeyWitnesses _ keys) = Aeson.Array $ Vector.fromList $ map (Aeson.String . Text.pack . show) keys
+instance FromJSON (C.TxExtraKeyWitnesses C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxExtraKeyWitnessesNone
+  parseJSON (Aeson.Array v) = C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse parseHash (Vector.toList v)
+    where
+      parseHash = Aeson.withText "TxExtraKeyWitnesses" (pure . fromString . Text.unpack)
+  parseJSON invalid = prependFailure "parsing TxExtraKeyWitnesses failed, " (typeMismatch "Array" invalid)
+
+instance ToJSON (C.TxScriptValidity C.BabbageEra) where
+  toJSON C.TxScriptValidityNone                 = Aeson.Null
+  toJSON (C.TxScriptValidity _ C.ScriptInvalid) = Aeson.Bool False
+  toJSON (C.TxScriptValidity _ C.ScriptValid)   = Aeson.Bool True
+instance FromJSON (C.TxScriptValidity C.BabbageEra) where
+  parseJSON Aeson.Null = pure C.TxScriptValidityNone
+  parseJSON (Aeson.Bool v) = pure $ C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra $ if v then C.ScriptValid else C.ScriptInvalid
+  parseJSON invalid = prependFailure "parsing TxScriptValidity failed, " (typeMismatch "Bool" invalid)
+
+instance ToJSON (C.TxMetadataInEra C.BabbageEra) where toJSON _ = Aeson.Null
+instance FromJSON (C.TxMetadataInEra C.BabbageEra) where parseJSON _ = pure C.TxMetadataNone
+
+instance ToJSON (C.TxAuxScripts C.BabbageEra) where toJSON _ = Aeson.Null
+instance FromJSON (C.TxAuxScripts C.BabbageEra) where parseJSON _ = pure C.TxAuxScriptsNone
+
+instance ToJSON (C.TxWithdrawals C.BuildTx era) where toJSON _ = Aeson.Null
+instance FromJSON (C.TxWithdrawals C.BuildTx era) where parseJSON _ = pure C.TxWithdrawalsNone
+
+instance ToJSON (C.TxCertificates C.BuildTx era) where toJSON _ = Aeson.Null
+instance FromJSON (C.TxCertificates C.BuildTx era) where parseJSON _ = pure C.TxCertificatesNone
+
+instance ToJSON (C.TxUpdateProposal C.BabbageEra) where toJSON _ = Aeson.Null
+instance FromJSON (C.TxUpdateProposal C.BabbageEra) where parseJSON _ = pure C.TxUpdateProposalNone
+
+deriving instance Generic (C.TxBodyContent C.BuildTx C.BabbageEra)
+deriving instance FromJSON (C.TxBodyContent C.BuildTx C.BabbageEra)
+deriving instance ToJSON (C.TxBodyContent C.BuildTx C.BabbageEra)
 
 -- | Cardano tx from any era.
 data SomeCardanoApiTx where
