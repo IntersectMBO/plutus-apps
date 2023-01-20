@@ -362,8 +362,8 @@ processConstraint = \case
             then P.valueSpentInputs <>= P.provided (value (negate i))
             else P.valueSpentOutputs <>= P.provided (value i)
 
-        v <- either undefined pure $ C.toCardanoValue $ value i
-        pId <- either undefined pure $ toCardanoPolicyId mpsHash
+        v <- throwLeft ToCardanoErro $ C.toCardanoValue $ value i
+        pId <- throwLeft ToCardanoErro $ toCardanoPolicyId mpsHash
         witness <- case mref of
             Just ref -> do
                 refTxOut <- lookupTxOutRef ref

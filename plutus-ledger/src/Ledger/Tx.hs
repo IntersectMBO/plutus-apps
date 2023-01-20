@@ -393,14 +393,14 @@ getCardanoTxProducedReturnCollateral tx = maybe Map.empty (Map.singleton (V1.TxO
     getCardanoTxReturnCollateral tx
 
 getCardanoTxTotalCollateral :: CardanoTx -> Maybe C.Lovelace
-getCardanoTxTotalCollateral = onCardanoTx (undefined . txTotalCollateral)
+getCardanoTxTotalCollateral = onCardanoTx txTotalCollateral
     (\(CardanoApiEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) -> CardanoAPI.fromCardanoTotalCollateral txTotalCollateral)
 
 getCardanoTxFee :: CardanoTx -> C.Lovelace
-getCardanoTxFee = onCardanoTx (undefined . txFee) (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
+getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
 
 getCardanoTxMint :: CardanoTx -> C.Value
-getCardanoTxMint = onCardanoTx (undefined . txMint) (getTxBodyContentMint . getTxBodyContent)
+getCardanoTxMint = onCardanoTx txMint (getTxBodyContentMint . getTxBodyContent)
 
 getTxBodyContentMint :: C.TxBodyContent ctx era -> C.Value
 getTxBodyContentMint C.TxBodyContent {..} = CardanoAPI.fromCardanoMintValue txMintValue

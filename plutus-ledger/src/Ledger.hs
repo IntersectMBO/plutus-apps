@@ -1,10 +1,5 @@
 module Ledger (
     module Export,
-    AssetClass,
-    CurrencySymbol,
-    TokenName,
-    Value,
-    Ada,
     DCert,
     NetworkId,
     Credential,
@@ -20,11 +15,9 @@ import Ledger.Orphans ()
 import Ledger.Scripts as Export
 import Ledger.Slot as Export
 import Ledger.Tx as Export
-import Plutus.Script.Utils.Ada (Ada)
-import Plutus.Script.Utils.Value as Export (noAdaValue)
+import Ledger.Value.CardanoAPI as Export hiding (singleton)
 import Plutus.V1.Ledger.Api (Credential, DCert)
 import Plutus.V1.Ledger.Contexts as Export hiding (TxOut (..))
 import Plutus.V1.Ledger.Credential (StakingCredential)
-import Plutus.V1.Ledger.Interval as Export
+import Plutus.V1.Ledger.Interval as Export hiding (singleton)
 import Plutus.V1.Ledger.Time as Export
-import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)

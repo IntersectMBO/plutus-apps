@@ -83,7 +83,7 @@ class TokenLike t where
   symAssetIdValue :: t -> Integer -> SymValue
 
 instance SymValueLike Value where
-  toSymValue = SymValue mempty . fromRight mempty . V.toCardanoValue
+  toSymValue = SymValue mempty . fromRight (error "instance SymValueLike Value: conversion failure") . V.toCardanoValue
 
 instance SymValueLike C.Value where
   toSymValue = SymValue mempty
@@ -104,7 +104,9 @@ instance TokenLike SymToken where
   symAssetIdValue t i = SymValue (Map.singleton t i) mempty
 
 instance TokenLike AssetClass where
-  symAssetIdValueOf (SymValue _ v) t = either (const 0) (\t' -> case C.selectAsset v t' of C.Quantity i -> i) $ V.toCardanoAssetId t
+  symAssetIdValueOf (SymValue _ v) t =
+    let t' = fromRight (error "instance SymValueLike Value: conversion failure") $ V.toCardanoAssetId t
+    in case C.selectAsset v t' of C.Quantity i -> i
   symAssetIdValue t i = toSymValue $ assetClassValue t i
 
 instance TokenLike C.AssetId where
