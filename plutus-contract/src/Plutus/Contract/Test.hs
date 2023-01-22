@@ -639,7 +639,7 @@ assertFailedTransaction predicate = TracePredicate $
         [] -> do
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
-        xs -> pure (all (\(_, t, e, _) -> onCardanoTx (\t' -> predicate t' e) (const True) t) xs)
+        xs -> pure (all (\(_, _, t, e, _) -> onCardanoTx (\t' -> predicate t' e) (const True) t) xs)
 
 -- | Assert that no transaction failed to validate.
 assertNoFailedTransactions :: TracePredicate
@@ -647,7 +647,7 @@ assertNoFailedTransactions = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> pure True
         xs -> do
-            let prettyTxFail (i, _, err, _) = pretty i <> colon <+> pretty err
+            let prettyTxFail (_, i, _, err, _) = pretty i <> colon <+> pretty err
             tell @(Doc Void) $ vsep ("Transactions failed to validate:" : fmap prettyTxFail xs)
             pure False
 

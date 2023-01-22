@@ -37,6 +37,8 @@ module Ledger.Tx
     , getCardanoTxId
     , getCardanoTxInputs
     , getCardanoTxCollateralInputs
+    , getCardanoTxReferenceInputs
+    , getCardanoTxAllInputs
     , getCardanoTxOutRefs
     , getCardanoTxOutputs
     , getCardanoTxSpentOutputs
@@ -268,6 +270,11 @@ getCardanoTxReferenceInputs = onCardanoTx
      txInsReferenceToPlutusTxIns C.TxInsReferenceNone = []
      txInsReferenceToPlutusTxIns (C.TxInsReference _ txIns) =
          fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn) txIns
+
+-- | Get all inputs (regular, collateral, reference) used by the transaction
+getCardanoTxAllInputs :: CardanoTx -> Set TxIn
+getCardanoTxAllInputs tx =
+    Set.fromList $ getCardanoTxReferenceInputs tx ++ getCardanoTxCollateralInputs tx ++ getCardanoTxInputs tx
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, V1.Tx.TxOutRef)]
 getCardanoTxOutRefs = onCardanoTx txOutRefs cardanoApiTxOutRefs

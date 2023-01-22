@@ -322,13 +322,14 @@ handleBalance utx = do
         eitherTx = U.unBalancedTxTx utx
         plUtxo = traverse (Tx.toTxOut pNetworkId) utxo
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure plUtxo
-    cUtxoIndex <- handleError eitherTx $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo
+    let plIdx = UtxoIndex $ U.unBalancedTxUtxoIndex utx <> mappedUtxo
+    cUtxoIndex <- handleError plIdx eitherTx $ fromPlutusIndex plIdx
     case eitherTx of
         Right _ -> do
             -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
             let calcFee n fee = do
                     tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-                    newFee <- handleError (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
+                    newFee <- handleError plIdx (Right tx) $ estimateTransactionFee params cUtxoIndex requiredSigners tx
                     if newFee /= fee
                         then if n == (0 :: Int)
                             -- If we don't reach a fixed point, pick the larger fee
@@ -338,23 +339,24 @@ handleBalance utx = do
             -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
             theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-            cTx <- handleError (Right tx) $ fromPlutusTx params cUtxoIndex requiredSigners tx
+            cTx <- handleError plIdx (Right tx) $ fromPlutusTx params cUtxoIndex requiredSigners tx
             pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
         Left txBodyContent -> do
             ownAddr <- gets ownAddress
-            cTx <- handleError eitherTx $ makeAutoBalancedTransaction params cUtxoIndex txBodyContent ownAddr
+            cTx <- handleError plIdx eitherTx $ makeAutoBalancedTransaction params cUtxoIndex txBodyContent ownAddr
             pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
     where
-        handleError tx (Left (Left (ph, ve))) = do
+        handleError idx tx (Left (Left (ph, ve))) = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
                  $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction []) . makeTransactionBody mempty)
                           (pure . Tx.EmulatorTx)
                  $ tx
-            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty
+            let inputs = Set.map Tx.txInRef (Tx.getCardanoTxAllInputs tx')
+            logWarn $ ValidationFailed (Ledger.restrictTo inputs idx) ph (Ledger.getCardanoTxId tx') tx' ve mempty
             throwError $ WAPI.ValidationError ve
-        handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
-        handleError _ (Right v) = pure v
+        handleError _ _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
+        handleError _ _ (Right v) = pure v
 
 handleAddSignature ::
     ( Member (State WalletState) effs

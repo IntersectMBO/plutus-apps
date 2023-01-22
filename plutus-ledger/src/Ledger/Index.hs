@@ -16,6 +16,7 @@ module Ledger.Index(
     insertBlock,
     initialise,
     lookup,
+    restrictTo,
     ValidationError(..),
     ValidationErrorInPhase,
     ValidationPhase(..),
@@ -37,6 +38,7 @@ import Control.Lens (Fold, folding)
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
+import Data.Set (Set)
 import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
@@ -58,6 +60,10 @@ insertCollateral tx = UtxoIndex . updateUtxoCollateral tx . getIndex
 -- | Update the index for the addition of a block.
 insertBlock :: Block -> UtxoIndex -> UtxoIndex
 insertBlock blck i = foldl' (flip (eitherTx insertCollateral insert)) i blck
+
+-- | Remove all but the given tx inputs from the index
+restrictTo :: Set TxOutRef -> UtxoIndex -> UtxoIndex
+restrictTo txIns (UtxoIndex idx) = UtxoIndex $ Map.restrictKeys idx txIns
 
 -- | Find an unspent transaction output by the 'TxOutRef' that spends it.
 lookup :: MonadError ValidationError m => TxOutRef -> UtxoIndex -> m TxOut

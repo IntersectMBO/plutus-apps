@@ -132,12 +132,16 @@ library
     , cardano-api            >=1.35
     , cardano-crypto
     , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-shelley-ma
+    , cardano-ledger-shelley
     , cardano-ledger-core
     , cardano-wallet-core
     , plutus-core            >=1.0.0
     , plutus-ledger-api      >=1.0.0
     , plutus-tx              >=1.0.0
     , quickcheck-dynamic
+    , cardano-binary
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -185,6 +189,7 @@ library
     , uniplate
     , unordered-containers
     , uuid
+    , strict-containers
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors

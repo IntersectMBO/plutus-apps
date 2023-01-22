@@ -28,11 +28,12 @@ import Data.Foldable (traverse_)
 import Data.List ((\\))
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
+import Data.Set qualified as Set
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef), Value,
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), Slot (..), TxId, TxIn (txInRef), Value, UtxoIndex,
                eitherTx, getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxValidityRange,
-               txOutValue)
+               txOutValue, getCardanoTxInputs, getCardanoTxReferenceInputs)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -40,9 +41,10 @@ import Prettyprinter
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
-    TxnValidate TxId CardanoTx
-    -- ^ A transaction has been validated and added to the blockchain.
-    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError Value
+    TxnValidate UtxoIndex TxId CardanoTx
+    -- ^ A transaction has been validated and added to the blockchain. Includes a 'UtxoIndex' with
+    --   all inputs of the transation
+    | TxnValidationFail UtxoIndex Index.ValidationPhase TxId CardanoTx Index.ValidationError Value
     -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
     | SlotAdd Slot
     deriving stock (Eq, Show, Generic)
@@ -50,9 +52,9 @@ data ChainEvent =
 
 instance Pretty ChainEvent where
     pretty = \case
-        TxnValidate i _             -> "TxnValidate" <+> pretty i
-        TxnValidationFail p i _ e _ -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e
-        SlotAdd sl                  -> "SlotAdd" <+> pretty sl
+        TxnValidate _ i _             -> "TxnValidate" <+> pretty i
+        TxnValidationFail _ p i _ e _ -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e
+        SlotAdd sl                    -> "SlotAdd" <+> pretty sl
 
 -- | A pool of transactions which have yet to be validated.
 type TxPool = [CardanoTx]
@@ -176,9 +178,11 @@ canValidateNow slot = Interval.member slot . getCardanoTxValidityRange
 
 mkValidationEvent :: Index.UtxoIndex -> CardanoTx -> Maybe Index.ValidationErrorInPhase -> ChainEvent
 mkValidationEvent idx t result =
-    case result of
-        Nothing           -> TxnValidate (getCardanoTxId t) t
-        Just (phase, err) -> TxnValidationFail phase (getCardanoTxId t) t err (getCollateral idx t)
+    let inputs = Set.fromList $ fmap txInRef $ getCardanoTxInputs t ++ getCardanoTxReferenceInputs t ++ getCardanoTxCollateralInputs t
+        idx'   = Index.restrictTo inputs idx
+    in case result of
+        Nothing           -> TxnValidate idx' (getCardanoTxId t) t
+        Just (phase, err) -> TxnValidationFail idx' phase (getCardanoTxId t) t err (getCollateral idx t)
 
 -- | Validate a transaction in the current emulator state.
 validateEm

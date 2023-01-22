@@ -19,7 +19,7 @@ import GHC.Generics (Generic)
 import Ledger (Address, CardanoTx, TxId, getCardanoTxId)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Index (ValidationError, ValidationPhase)
+import Ledger.Index (ValidationError, ValidationPhase, UtxoIndex)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
 import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
@@ -57,6 +57,7 @@ data TxBalanceMsg =
     | SigningTx CardanoTx
     | SubmittingTx CardanoTx
     | ValidationFailed
+        UtxoIndex
         ValidationPhase
         TxId
         CardanoTx
@@ -67,16 +68,16 @@ data TxBalanceMsg =
 
 instance Pretty TxBalanceMsg where
     pretty = \case
-        BalancingUnbalancedTx utx    -> hang 2 $ vsep ["Balancing an unbalanced transaction:", pretty utx]
-        NoOutputsAdded               -> "No outputs added"
-        AddingPublicKeyOutputFor vl  -> "Adding public key output for" <+> pretty vl
-        NoInputsAdded                -> "No inputs added"
-        AddingInputsFor vl           -> "Adding inputs for" <+> pretty vl
-        NoCollateralInputsAdded      -> "No collateral inputs added"
-        AddingCollateralInputsFor vl -> "Adding collateral inputs for" <+> pretty vl
-        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
-        SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
-        SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
-        ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
+        BalancingUnbalancedTx utx      -> hang 2 $ vsep ["Balancing an unbalanced transaction:", pretty utx]
+        NoOutputsAdded                 -> "No outputs added"
+        AddingPublicKeyOutputFor vl    -> "Adding public key output for" <+> pretty vl
+        NoInputsAdded                  -> "No inputs added"
+        AddingInputsFor vl             -> "Adding inputs for" <+> pretty vl
+        NoCollateralInputsAdded        -> "No collateral inputs added"
+        AddingCollateralInputsFor vl   -> "Adding collateral inputs for" <+> pretty vl
+        FinishedBalancing tx           -> hang 2 $ vsep ["Finished balancing:", pretty tx]
+        SigningTx tx                   -> "Signing tx:" <+> pretty (getCardanoTxId tx)
+        SubmittingTx tx                -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
+        ValidationFailed _ p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 
 makePrisms ''TxBalanceMsg

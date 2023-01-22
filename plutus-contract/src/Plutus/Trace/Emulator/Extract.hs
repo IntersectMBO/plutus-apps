@@ -33,6 +33,7 @@ import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import Text.Printf (printf)
 import Wallet.Emulator.Folds qualified as Folds
+import Wallet.Emulator.Folds (ScriptEvent(..))
 import Wallet.Emulator.Stream (foldEmulatorStreamM)
 
 -- | Configuration for 'writeScriptsTo'
@@ -72,7 +73,8 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
         getEvents theFold = S.fst' $ run $ foldEmulatorStreamM (L.generalize theFold) stream
     createDirectoryIfMissing True scPath
     case scCommand of
-        Scripts _ -> pure mempty
+        Scripts mode ->
+            foldMap (uncurry $ writeScript scPath prefix mode) (zip [1::Int ..] $ getEvents Folds.scriptEvents)
         Transactions{networkId, protocolParamsJSON} -> do
             bs <- BSL.readFile protocolParamsJSON
             case Aeson.eitherDecode bs of
@@ -93,6 +95,19 @@ showStats :: Int64 -> ExBudget -> String
 showStats byteSize (ExBudget exCPU exMemory) = "Size: " <> size <> "kB, Cost: " <> show exCPU <> ", " <> show exMemory
     where
         size = printf ("%.1f"::String) (fromIntegral byteSize / 1024.0 :: Double)
+
+writeScript
+    :: FilePath
+    -> String
+    -> ValidatorMode
+    -> Int
+    -> Folds.ScriptEvent
+    -> IO (Sum Int64, ExBudget)
+writeScript fp prefix _ idx se@ScriptEvent{seExUnits, seScriptHash} = do
+    let filename1 = fp </> prefix <> "-" <> show seScriptHash <> "-" <> show idx <> ".json"
+    putStrLn $ "Writing script event JSON: " <> filename1
+    BSL.writeFile filename1 $ encodePretty se
+    pure (0, seExUnits)
 
 writeTransaction
     :: Params
