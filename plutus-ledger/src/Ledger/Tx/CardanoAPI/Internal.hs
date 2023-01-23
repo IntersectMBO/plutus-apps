@@ -305,19 +305,29 @@ instance FromJSON (C.TxScriptValidity C.BabbageEra) where
   parseJSON (Aeson.Bool v) = pure $ C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra $ if v then C.ScriptValid else C.ScriptInvalid
   parseJSON invalid = prependFailure "parsing TxScriptValidity failed, " (typeMismatch "Bool" invalid)
 
-instance ToJSON (C.TxMetadataInEra C.BabbageEra) where toJSON _ = Aeson.Null
+instance ToJSON (C.TxMetadataInEra C.BabbageEra) where
+  toJSON C.TxMetadataNone = Aeson.Null
+  toJSON _                = error "ToJSON CardanoBuildTx: TxMetadata not supported"
 instance FromJSON (C.TxMetadataInEra C.BabbageEra) where parseJSON _ = pure C.TxMetadataNone
 
-instance ToJSON (C.TxAuxScripts C.BabbageEra) where toJSON _ = Aeson.Null
+instance ToJSON (C.TxAuxScripts C.BabbageEra) where
+  toJSON C.TxAuxScriptsNone = Aeson.Null
+  toJSON _                  = error "ToJSON CardanoBuildTx: TxAuxScripts not supported"
 instance FromJSON (C.TxAuxScripts C.BabbageEra) where parseJSON _ = pure C.TxAuxScriptsNone
 
-instance ToJSON (C.TxWithdrawals C.BuildTx era) where toJSON _ = Aeson.Null
+instance ToJSON (C.TxWithdrawals C.BuildTx era) where
+  toJSON C.TxWithdrawalsNone = Aeson.Null
+  toJSON _                   = error "ToJSON CardanoBuildTx: TxWithdrawals not supported"
 instance FromJSON (C.TxWithdrawals C.BuildTx era) where parseJSON _ = pure C.TxWithdrawalsNone
 
-instance ToJSON (C.TxCertificates C.BuildTx era) where toJSON _ = Aeson.Null
+instance ToJSON (C.TxCertificates C.BuildTx era) where
+  toJSON C.TxCertificatesNone = Aeson.Null
+  toJSON _                    = error "ToJSON CardanoBuildTx: TxCertificates not supported"
 instance FromJSON (C.TxCertificates C.BuildTx era) where parseJSON _ = pure C.TxCertificatesNone
 
-instance ToJSON (C.TxUpdateProposal C.BabbageEra) where toJSON _ = Aeson.Null
+instance ToJSON (C.TxUpdateProposal C.BabbageEra) where
+  toJSON C.TxUpdateProposalNone = Aeson.Null
+  toJSON _                      = error "ToJSON CardanoBuildTx: TxUpdateProposal not supported"
 instance FromJSON (C.TxUpdateProposal C.BabbageEra) where parseJSON _ = pure C.TxUpdateProposalNone
 
 deriving instance Generic (C.TxBodyContent C.BuildTx C.BabbageEra)
