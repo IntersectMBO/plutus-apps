@@ -56,7 +56,7 @@ import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName, Value)
-import Plutus.Script.Utils.Value qualified as V
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), check, sha2_256, toBuiltin,
@@ -149,7 +149,7 @@ newtype GuessToken = GuessToken { unGuessToken :: Value }
     deriving newtype (Eq, Haskell.Show)
 
 token :: MintingPolicyHash -> TokenName -> Value
-token mps tn = V.singleton (V.mpsSymbol mps) tn 1
+token mps tn = Value.singleton (Value.mpsSymbol mps) tn 1
 
 -- | State of the guessing game
 data GameState =
@@ -209,7 +209,7 @@ transition _ State{stateData=oldData, stateValue=oldValue} input = case (oldData
             newValue = oldValue - takenOut
          in Just ( constraints
                  , State
-                    { stateData = if V.isZero (Ada.toValue $ Ada.fromValue newValue)
+                    { stateData = if Value.isZero (Ada.toValue $ Ada.fromValue newValue)
                                      then Finished
                                      else Locked mph tn nextSecret
                     , stateValue = newValue
