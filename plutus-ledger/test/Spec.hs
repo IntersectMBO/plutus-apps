@@ -4,20 +4,22 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 module Main(main) where
 
-import Cardano.Api qualified as Api
+import Cardano.Api qualified as C
 import Cardano.Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Internal qualified as Aeson
 import Data.ByteString.Lazy qualified as BSL
 import Data.List (sort)
-import Hedgehog (Property, forAll, property)
+import Gen.Cardano.Api.Typed qualified as Gen
+import Hedgehog (Property, forAll, fromGenT, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Slot (Slot))
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), SomeCardanoApiTx (SomeTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
 import Plutus.Script.Utils.Ada qualified as Ada
@@ -53,11 +55,12 @@ tests = testGroup "all tests" [
     testGroup "TxIn" [
         testPropertyNamed "Check that Ord instances of TxIn match" "txInOrdInstanceEquivalenceTest" txInOrdInstanceEquivalenceTest
     ],
-    -- TODO: Reenable once we update `cardano-node` with the following PR merged:
-    -- https://github.com/input-output-hk/cardano-node/pull/3837
-    -- testGroup "SomeCardanoApiTx" [
-    --     testPropertyNamed "Value ToJSON/FromJSON" "genSomeCardanoApiTx" (jsonRoundTrip Gen.genSomeCardanoApiTx)
-    --     ],
+    testGroup "SomeCardanoApiTx" [
+        testPropertyNamed "Value ToJSON/FromJSON" "genSomeCardanoApiTx" (jsonRoundTrip genSomeCardanoApiTx)
+    ],
+    testGroup "CardanoBuildTx" [
+        testPropertyNamed "Value ToJSON/FromJSON" "genCardanoBuildTx" (jsonRoundTrip genCardanoBuildTx)
+    ],
     Ledger.Tx.CardanoAPISpec.tests
     ]
 
@@ -104,6 +107,7 @@ jsonRoundTrip gen = property $ do
     let enc    = JSON.toJSON bts
         result = Aeson.iparse JSON.parseJSON enc
 
+    Hedgehog.annotateShow (result, bts)
     Hedgehog.assert $ result == Aeson.ISuccess bts
 
 byteStringJson :: (Show a, Eq a, JSON.ToJSON a, JSON.FromJSON a) => BSL.ByteString -> a -> [TestTree]
@@ -121,8 +125,61 @@ txInOrdInstanceEquivalenceTest = property $ do
     let plutusTxIns = sort $ toPlutus txIns
     Hedgehog.assert $ toPlutus txIns == plutusTxIns
 
-genTxIn :: Hedgehog.MonadGen m => m Api.TxIn
+genTxIn :: Hedgehog.MonadGen m => m C.TxIn
 genTxIn = do
-    txId <- (\t -> Api.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> Gen.utf8 (Range.singleton 5) Gen.unicode
-    txIx <- Api.TxIx <$> Gen.integral (Range.linear 0 maxBound)
-    return $ Api.TxIn txId txIx
+    txId <- (\t -> C.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> Gen.utf8 (Range.singleton 5) Gen.unicode
+    txIx <- C.TxIx <$> Gen.integral (Range.linear 0 maxBound)
+    return $ C.TxIn txId txIx
+
+genCardanoBuildTx :: Hedgehog.Gen CardanoBuildTx
+genCardanoBuildTx = do
+    tx <- Gen.genTxBodyContent C.BabbageEra
+    let tx' = tx {
+        C.txMetadata = C.TxMetadataNone,
+        C.txAuxScripts = C.TxAuxScriptsNone,
+        C.txWithdrawals = C.TxWithdrawalsNone,
+        C.txCertificates = C.TxCertificatesNone,
+        C.txUpdateProposal = C.TxUpdateProposalNone
+    }
+    pure $ CardanoBuildTx tx'
+
+-- TODO Unfortunately, there's no way to get a warning if another era has been
+-- added to EraInMode. Alternative way?
+genSomeCardanoApiTx :: Hedgehog.Gen SomeCardanoApiTx
+genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
+                                 , genShelleyEraInCardanoModeTx
+                                 , genAllegraEraInCardanoModeTx
+                                 , genMaryEraInCardanoModeTx
+                                 , genAlonzoEraInCardanoModeTx
+                                 , genBabbageEraInCardanoModeTx
+                                 ]
+
+genByronEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genByronEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.ByronEra
+  pure $ SomeTx tx C.ByronEraInCardanoMode
+
+genShelleyEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genShelleyEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.ShelleyEra
+  pure $ SomeTx tx C.ShelleyEraInCardanoMode
+
+genAllegraEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genAllegraEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.AllegraEra
+  pure $ SomeTx tx C.AllegraEraInCardanoMode
+
+genMaryEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genMaryEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.MaryEra
+  pure $ SomeTx tx C.MaryEraInCardanoMode
+
+genAlonzoEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genAlonzoEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.AlonzoEra
+  pure $ SomeTx tx C.AlonzoEraInCardanoMode
+
+genBabbageEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genBabbageEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.BabbageEra
+  pure $ SomeTx tx C.BabbageEraInCardanoMode

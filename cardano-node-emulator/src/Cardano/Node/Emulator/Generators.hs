@@ -32,7 +32,6 @@ module Cardano.Node.Emulator.Generators(
     genPOSIXTime,
     genSlotConfig,
     -- * Etc.
-    genSomeCardanoApiTx,
     genPolicyId,
     genAssetId,
     Gen.genAssetName,
@@ -63,7 +62,6 @@ import Data.ByteString qualified as BS
 import Data.Default (Default (def), def)
 import Data.Either.Combinators (leftToMaybe)
 import Data.Foldable (fold, foldl')
-import Data.Functor.Identity (Identity)
 import Data.List (sort)
 import Data.List qualified as List
 import Data.Map (Map)
@@ -87,8 +85,7 @@ import Cardano.Node.Emulator.Validation (fromPlutusTxSigned, validateCardanoTx)
 import Data.String (fromString)
 import Ledger (CardanoTx (EmulatorTx), Datum, Interval, Language (PlutusV1), POSIXTime (POSIXTime, getPOSIXTime),
                POSIXTimeRange, Passphrase (Passphrase), PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey,
-               Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
-               Tx (txCollateralInputs, txFee, txInputs, txMint, txOutputs, txValidRange),
+               Slot (Slot), SlotRange, Tx (txCollateralInputs, txFee, txInputs, txMint, txOutputs, txValidRange),
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput (TxInput),
                TxInputType (TxConsumePublicKeyAddress, TxConsumeSimpleScriptAddress, TxScriptAddress), TxOut,
                TxOutRef (TxOutRef), ValidationErrorInPhase, Validator, Versioned, addCardanoTxSignature,
@@ -330,41 +327,6 @@ genSlotConfig :: Hedgehog.MonadGen m => m SlotConfig
 genSlotConfig = do
     sl <- Gen.integral (Range.linear 1 1000000)
     return $ def { TimeSlot.scSlotLength = sl }
-
--- TODO Unfortunately, there's no way to get a warning if another era has been
--- added to EraInMode. Alternative way?
-genSomeCardanoApiTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
-                                 , genShelleyEraInCardanoModeTx
-                                 , genAllegraEraInCardanoModeTx
-                                 , genMaryEraInCardanoModeTx
-                                 , genBabbageEraInCardanoModeTx
-                                 ]
-
-genByronEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genByronEraInCardanoModeTx = do
-  tx <- fromGenT $ Gen.genTx C.ByronEra
-  pure $ SomeTx tx C.ByronEraInCardanoMode
-
-genShelleyEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genShelleyEraInCardanoModeTx = do
-  tx <- fromGenT $ Gen.genTx C.ShelleyEra
-  pure $ SomeTx tx C.ShelleyEraInCardanoMode
-
-genAllegraEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genAllegraEraInCardanoModeTx = do
-  tx <- fromGenT $ Gen.genTx C.AllegraEra
-  pure $ SomeTx tx C.AllegraEraInCardanoMode
-
-genMaryEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genMaryEraInCardanoModeTx = do
-  tx <- fromGenT $ Gen.genTx C.MaryEra
-  pure $ SomeTx tx C.MaryEraInCardanoMode
-
-genBabbageEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
-genBabbageEraInCardanoModeTx = do
-  tx <- fromGenT $ Gen.genTx C.BabbageEra
-  pure $ SomeTx tx C.BabbageEraInCardanoMode
 
 -- | Generate a 'ByteString s' of up to @s@ bytes.
 genSizedByteString :: forall m. MonadGen m => Int -> m BS.ByteString
