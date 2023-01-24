@@ -61,15 +61,18 @@ import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
-import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
+import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V2.Scripts qualified as PV2
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V2.Ledger.Contexts qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>), (>>=))
@@ -130,32 +133,32 @@ refundRange :: Campaign -> ValidityInterval.ValidityInterval PV1.POSIXTime
 refundRange cmp = ValidityInterval.from (campaignCollectionDeadline cmp)
 
 data Crowdfunding
-instance Scripts.ValidatorTypes Crowdfunding where
+instance PV2.ValidatorTypes Crowdfunding where
     type instance RedeemerType Crowdfunding = CampaignAction
     type instance DatumType Crowdfunding = PaymentPubKeyHash
 
-typedValidator :: Campaign -> Scripts.TypedValidator Crowdfunding
-typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
+typedValidator :: Campaign -> PV2.TypedValidator Crowdfunding
+typedValidator = PV2.mkTypedValidatorParam @Crowdfunding
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PaymentPubKeyHash -> PV1.TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> PV2.TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
-    ValidityInterval.toPlutusInterval (refundRange campaign) `Interval.contains` PV1.txInfoValidRange txinfo
+    ValidityInterval.toPlutusInterval (refundRange campaign) `Interval.contains` PV2.txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
-    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash contributor)
+    && (txinfo `PV2.txSignedBy` unPaymentPubKeyHash contributor)
 
 {-# INLINABLE validCollection #-}
-validCollection :: Campaign -> PV1.TxInfo -> Bool
+validCollection :: Campaign -> PV2.TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
-    (ValidityInterval.toPlutusInterval (collectionRange campaign) `Interval.contains` PV1.txInfoValidRange txinfo)
+    (ValidityInterval.toPlutusInterval (collectionRange campaign) `Interval.contains` PV2.txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    && (txinfo `PV2.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
@@ -165,8 +168,8 @@ validCollection campaign txinfo =
 -- and different campaigns have different addresses. The Campaign{..} syntax
 -- means that all fields of the 'Campaign' value are in scope
 -- (for example 'campaignDeadline' in l. 70).
-mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> PV1.ScriptContext -> Bool
-mkValidator c con act PV1.ScriptContext{PV1.scriptContextTxInfo} = case act of
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> PV2.ScriptContext -> Bool
+mkValidator c con act PV2.ScriptContext{PV2.scriptContextTxInfo} = case act of
     -- the "refund" branch
     Refund  -> validRefund c con scriptContextTxInfo
     -- the "collection" branch
