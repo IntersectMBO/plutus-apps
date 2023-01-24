@@ -164,6 +164,7 @@ library
     , text
     , time-units
     , transformers
+    , vector
 
   ghc-options:        -fprint-potential-instances
 
