@@ -24,10 +24,11 @@ import Data.Map qualified as Map
 import GHC.Generics (Generic)
 
 import Cardano.Node.Emulator.Params (pNetworkId)
-import Ledger hiding (initialise, to)
+import Ledger hiding (Value, initialise, to)
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Contexts qualified as V
+import Plutus.V1.Ledger.Value (Value)
 import PlutusTx qualified
 
 import Ledger.Constraints qualified as Constraints

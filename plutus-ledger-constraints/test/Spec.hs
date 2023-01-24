@@ -7,7 +7,7 @@
 
 module Main(main) where
 
-import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Generators qualified as Gen hiding (someTokenValue)
 import Cardano.Node.Emulator.Params (Params (pNetworkId))
 import Control.Lens (toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
@@ -26,7 +26,6 @@ import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
 import Ledger qualified (DatumFromQuery (DatumInBody), DecoratedTxOut (ScriptDecoratedTxOut), inputs, paymentPubKeyHash,
                          scriptTxInputs, toPlutusAddress, toTxOut, txInputRef, unitDatum, unitRedeemer)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, stakeValidatorHashCredential,
                        xprvToPaymentPubKeyHash, xprvToStakingCredential)
 import Ledger.Constraints (MkTxError, mustSpendPubKeyOutput, mustSpendScriptOutput, mustSpendScriptOutputWithReference)
@@ -42,12 +41,13 @@ import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHa
 import Ledger.Slot qualified as Slot
 import Ledger.Test (asRedeemer)
 import Ledger.Tx (Tx (txCollateralInputs, txOutputs), TxOut (TxOut), txOutAddress)
-import Ledger.Value (CurrencySymbol, Value (Value))
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Generators qualified as Gen
 import Plutus.Script.Utils.V2.Scripts qualified as Ledger
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.Value (CurrencySymbol, Value (Value))
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as Ledger
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap

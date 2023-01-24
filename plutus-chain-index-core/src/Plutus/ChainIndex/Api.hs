@@ -31,9 +31,8 @@ import Data.Default (def)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import Ledger (AssetClass, TxId)
 import Ledger.Credential (Credential)
-import Ledger.Tx (DatumFromQuery, DecoratedTxOut, TxOutRef, Versioned)
+import Ledger.Tx (DatumFromQuery, DecoratedTxOut, TxId, TxOutRef, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),

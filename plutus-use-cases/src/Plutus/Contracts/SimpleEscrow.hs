@@ -19,7 +19,7 @@ module Plutus.Contracts.SimpleEscrow
   where
 
 import Cardano.Node.Emulator.Params qualified as Params
-import Control.Lens (makeClassyPrisms, view)
+import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -30,10 +30,9 @@ import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Interval (after, before)
-import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ScriptContextV1)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value, geq)
+import Plutus.Script.Utils.Value (Value, geq)
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
 
 import Plutus.Contract
@@ -143,7 +142,7 @@ redeemEp = endpoint @"redeem" redeem
       pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
-      let value = foldMap (view Tx.decoratedTxOutValue) unspentOutputs
+      let value = foldMap Ledger.decoratedTxOutPlutusValue unspentOutputs
           validityTimeRange = Interval.lessThan (Haskell.pred $ Haskell.pred $ deadline params)
           tx = Constraints.collectFromTheScript unspentOutputs Redeem
                       <> Constraints.mustValidateInTimeRange validityTimeRange

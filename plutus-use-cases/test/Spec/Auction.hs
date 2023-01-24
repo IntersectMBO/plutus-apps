@@ -37,23 +37,23 @@ import Data.Data
 import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
-import Ledger (Ada, Slot (..), Value)
-import Ledger qualified
-import Ledger.Ada qualified as Ada
-import Plutus.Contract hiding (currentSlot)
-import Plutus.Contract.Test hiding (not)
-import Plutus.Script.Utils.V1.Generators (someTokenValue)
-import Streaming.Prelude qualified as S
-import Wallet.Emulator.Folds qualified as Folds
-import Wallet.Emulator.Stream qualified as Stream
-
+import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Ledger (Slot (..))
+import Ledger qualified
+import Ledger.Value.CardanoAPI qualified as Value
+import Plutus.Contract hiding (currentSlot)
+import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contracts.Auction hiding (Bid)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator qualified as Trace
-import PlutusTx.Monoid (inv)
+import Streaming.Prelude qualified as S
+import Wallet.Emulator.Folds qualified as Folds
+import Wallet.Emulator.Stream qualified as Stream
 
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
@@ -66,15 +66,15 @@ params :: AuctionParams
 params =
     AuctionParams
         { apOwner   = Ledger.toPlutusAddress $ mockWalletAddress w1
-        , apAsset   = theToken
+        , apAsset   = Value.fromCardanoValue theToken
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
 
 -- | The token that we are auctioning off.
-theToken :: Value
+theToken :: C.Value
 theToken =
     -- This currency is created by the initial transaction.
-    someTokenValue "token" 1
+    Gen.someTokenValue "token" 1
 
 -- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
@@ -88,7 +88,7 @@ seller = auctionSeller (apAsset params) (apEndTime params)
 buyer :: ThreadToken -> Contract AuctionOutput BuyerSchema AuctionError ()
 buyer cur = auctionBuyer cur params
 
-trace1WinningBid :: Ada
+trace1WinningBid :: Ada.Ada
 trace1WinningBid = Ada.adaOf 50
 
 auctionTrace1 :: Trace.EmulatorTrace ()
@@ -102,7 +102,7 @@ auctionTrace1 = do
     void $ Trace.waitUntilTime $ apEndTime params
     void $ Trace.waitNSlots 1
 
-trace2WinningBid :: Ada
+trace2WinningBid :: Ada.Ada
 trace2WinningBid = Ada.adaOf 70
 
 extractAssetClass :: Trace.ContractHandle AuctionOutput SellerSchema AuctionError -> Trace.EmulatorTrace ThreadToken
@@ -369,8 +369,8 @@ tests =
             (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
             .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w2) (const True) "buyer should be done"
             .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace1FinalState ) "wallet 2 final state should be OK"
-            .&&. walletFundsChange w1 (Ada.toValue trace1WinningBid <> inv theToken)
-            .&&. walletFundsChange w2 (inv (Ada.toValue trace1WinningBid) <> theToken))
+            .&&. walletFundsChange w1 (Value.adaToCardanoValue trace1WinningBid <> C.negateValue theToken)
+            .&&. walletFundsChange w2 (Value.adaToCardanoValue (-trace1WinningBid) <> theToken))
             auctionTrace1
         , checkPredicateOptions options "run an auction with multiple bids"
             (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
@@ -378,8 +378,8 @@ tests =
             .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w3) (const True) "3rd party should be done"
             .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace2FinalState) "wallet 2 final state should be OK"
             .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w3) ((==) trace2FinalState) "wallet 3 final state should be OK"
-            .&&. walletFundsChange w1 (Ada.toValue trace2WinningBid <> inv theToken)
-            .&&. walletFundsChange w2 (inv (Ada.toValue trace2WinningBid) <> theToken)
+            .&&. walletFundsChange w1 (Value.adaToCardanoValue trace2WinningBid <> C.negateValue theToken)
+            .&&. walletFundsChange w2 (Value.adaToCardanoValue (-trace2WinningBid) <> theToken)
             .&&. walletFundsChange w3 mempty)
             auctionTrace2
         , testProperty "QuickCheck property FinishAuction" prop_FinishAuction

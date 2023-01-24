@@ -46,10 +46,10 @@ import Ledger qualified as P
 import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx))
 import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
-import Ledger.Value (currencyMPSHash)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
+import Plutus.V1.Ledger.Value (currencyMPSHash)
 import PlutusTx qualified
 import Wallet.API qualified as WAPI
 import Wallet.Effects (WalletEffect, balanceTx, yieldUnbalancedTx)
@@ -250,7 +250,7 @@ mkInputs = traverse (uncurry toExportTxInput) . Map.toList
 
 toExportTxInput :: Plutus.TxOutRef -> P.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
 toExportTxInput Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = do
-    cardanoValue <- CardanoAPI.toCardanoValue (P.txOutValue txOut)
+    let cardanoValue = P.txOutValue txOut
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId

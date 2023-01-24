@@ -41,7 +41,6 @@ import Data.Text qualified as Text
 import Data.Yaml (decodeFileThrow)
 import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
-import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
                             responseTimeoutNone)
 import Plutus.ChainIndex.Types (Point (..))
@@ -66,6 +65,7 @@ import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (callInstanceEndpoint),
                                     PabClient (PabClient, activateContract, instanceClient), pabClient)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import Plutus.Script.Utils.Ada (lovelaceValueOf)
 import Prettyprinter (Pretty (pretty), viaShow)
 import Servant ((:<|>))
 import Servant qualified

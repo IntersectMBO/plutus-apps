@@ -28,9 +28,11 @@ import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, getTip)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
 import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), txOuts)
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 
 import Hedgehog (Property, assert, forAll, property, (===))
+import Ledger.Tx.CardanoAPI (fromCardanoAssetId)
+import Ledger.Value.CardanoAPI qualified as Value
 import Test.Tasty
 import Test.Tasty.Hedgehog (testPropertyNamed)
 import Util (utxoSetFromBlockAddrs)
@@ -134,8 +136,8 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
   ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
 
   let assetClasses =
-        fmap (\(c, t, _) -> AssetClass (c, t))
-             $ flattenValue
+        fmap (\(aid, _) -> fromCardanoAssetId aid)
+             $ Value.valueToList
              $ view (traverse . to txOuts . traverse . to citoValue) block
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do

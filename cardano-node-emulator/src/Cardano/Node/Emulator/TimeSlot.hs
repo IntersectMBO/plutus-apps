@@ -26,7 +26,6 @@ module Cardano.Node.Emulator.TimeSlot(
 ) where
 
 import Codec.Serialise (Serialise)
-import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.Time.Clock qualified as Time
@@ -51,7 +50,7 @@ data SlotConfig =
         , scSlotZeroTime :: POSIXTime -- ^ Beginning of slot 0 (in milliseconds)
         }
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise)
 
 makeLift ''SlotConfig
 

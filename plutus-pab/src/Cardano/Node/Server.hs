@@ -28,7 +28,7 @@ import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Units (Millisecond, Second)
-import Ledger.Ada qualified as Ada
+import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
@@ -63,7 +63,7 @@ main trace nodeServerConfig@PABServerConfig { pscBaseUrl
                             , pscSocketPath } availability = LM.runLogEffects trace $ do
 
     -- make initial distribution of 1 billion Ada to all configured wallets
-    let dist = Map.fromList $ zip (fromWalletNumber <$> pscInitialTxWallets) (repeat (Ada.adaValueOf 1000_000_000))
+    let dist = Map.fromList $ zip (fromWalletNumber <$> pscInitialTxWallets) (repeat (CardanoAPI.adaValueOf 1_000_000_000))
     initialState <- initialChainState dist
     let appState = AppState
             { _chainState = initialState

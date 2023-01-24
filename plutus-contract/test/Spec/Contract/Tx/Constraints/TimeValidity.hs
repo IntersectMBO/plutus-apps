@@ -16,7 +16,6 @@ import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Tx qualified as Tx
@@ -27,6 +26,7 @@ import Plutus.Contract as Con (Contract, ContractError, Empty, awaitTxConfirmed,
                                submitTxConstraintsWith, submitUnbalancedTx, utxosAt, waitNSlots)
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P

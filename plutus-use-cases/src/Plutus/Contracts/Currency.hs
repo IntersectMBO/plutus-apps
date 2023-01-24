@@ -23,12 +23,14 @@ module Plutus.Contracts.Currency(
     , mintContract
     , mintedValue
     , currencySymbol
+    , currencyPolicyId
     -- * Simple minting policy currency
     , SimpleMPS(..)
     , mintCurrency
     ) where
 
 import Control.Lens
+import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Semigroup (Last (..))
 import GHC.Generics (Generic)
@@ -37,17 +39,17 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import Ledger (CardanoAddress, CurrencySymbol, TxId, TxOutRef (..), getCardanoTxId)
+import Ledger (CardanoAddress, TxId, TxOutRef (..), getCardanoTxId)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (TokenName, Value)
-import Ledger.Value qualified as Value
+import Ledger.Value.CardanoAPI qualified as V
 import Plutus.Contract as Contract
 import Plutus.Contract.Request (getUnspentOutput)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.Value (CurrencySymbol, TokenName, Value)
+import Plutus.Script.Utils.Value qualified as Value
 
-import Control.Monad (void)
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
 
@@ -128,6 +130,9 @@ mintedValue cur = currencyValue (currencySymbol cur) cur
 
 currencySymbol :: OneShotCurrency -> CurrencySymbol
 currencySymbol = PV1.scriptCurrencySymbol . curPolicy
+
+currencyPolicyId :: OneShotCurrency -> V.PolicyId
+currencyPolicyId = V.policyId . (`Versioned` PlutusV1) . curPolicy
 
 newtype CurrencyError =
     CurContractError ContractError

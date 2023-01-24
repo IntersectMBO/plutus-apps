@@ -47,7 +47,6 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
 import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -57,6 +56,7 @@ import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Types (PABError)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Prettyprinter (pretty)
 import Servant (ServerError (..), err400, err401, err404)
 import Servant.Client (ClientEnv)

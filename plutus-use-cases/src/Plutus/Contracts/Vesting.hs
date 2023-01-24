@@ -34,17 +34,17 @@ import Prelude (Semigroup (..))
 
 import Cardano.Node.Emulator.Params (pNetworkId, testnet)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash),
+               decoratedTxOutPlutusValue)
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateInTimeRange)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
-import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value)
-import Ledger.Value qualified as Value
 import Plutus.Contract
+import Plutus.Script.Utils.Value (Value)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import PlutusTx qualified
@@ -207,7 +207,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
     now <- fst <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let
-        currentlyLocked = foldMap (view Tx.decoratedTxOutValue) (Map.elems unspentOutputs)
+        currentlyLocked = foldMap decoratedTxOutPlutusValue (Map.elems unspentOutputs)
         remainingValue = currentlyLocked - payment
         mustRemainLocked = totalAmount vesting - availableAt vesting now
         maxPayment = currentlyLocked - mustRemainLocked

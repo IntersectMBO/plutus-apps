@@ -34,7 +34,6 @@ import Cardano.Api qualified as C.Api
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
 import Codec.Serialise (Serialise, serialise)
-import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
@@ -53,7 +52,7 @@ instance Pretty Language where
 -- | A script of some kind with its Plutus language version
 data Versioned script = Versioned { unversioned :: script, version :: Language }
     deriving stock (Show, Eq, Ord, Functor, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise)
 
 instance Pretty script => Pretty (Versioned script) where
     pretty Versioned{unversioned,version} = pretty unversioned <> " (" <> pretty version <> ")"

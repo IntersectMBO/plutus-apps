@@ -30,12 +30,12 @@ module Plutus.Contracts.Prism.STO(
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger.Ada (Ada (Lovelace), fromValue)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Value (TokenName, Value)
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada (Ada (Lovelace), fromValue)
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.Value (TokenName, Value)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Api (ScriptContext (..), ScriptPurpose (..))
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Scripts qualified as Scripts

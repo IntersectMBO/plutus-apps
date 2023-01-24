@@ -24,7 +24,6 @@ import Data.Maybe (isJust)
 import GHC.Generics (Generic)
 import Ledger (unitDatum)
 import Ledger qualified as L
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, mintingPolicy, plutusV1MintingPolicy,
                                                       plutusV2MintingPolicy)
 import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
@@ -43,6 +42,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicateOptions,
                              defaultCheckOptions, emulatorConfig, mockWalletPaymentPubKeyHash, w1, w2)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someTokenValue)
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
@@ -330,7 +330,7 @@ ledgerSubmitTx = submitTxConstraintsWith
 mustSatisfyAnyOfPolicyHash :: LanguageContext -> L.MintingPolicyHash
 mustSatisfyAnyOfPolicyHash lc = mintingPolicyHash lc $ mustSatisfyAnyOfPolicy lc
 
-mustSatisfyAnyOfPolicyCurrencySymbol :: LanguageContext -> L.CurrencySymbol
+mustSatisfyAnyOfPolicyCurrencySymbol :: LanguageContext -> CurrencySymbol
 mustSatisfyAnyOfPolicyCurrencySymbol = mpsSymbol . mustSatisfyAnyOfPolicyHash
 
 {-# INLINABLE buildConstraints #-}

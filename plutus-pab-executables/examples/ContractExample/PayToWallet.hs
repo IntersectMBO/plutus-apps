@@ -17,10 +17,11 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 
-import Ledger (PaymentPubKeyHash, Value)
+import Ledger (PaymentPubKeyHash)
 import Ledger.Constraints (mustPayToPubKey)
 import Plutus.Contract (ContractError, Endpoint, Promise, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints,
                         yieldUnbalancedTx)
+import Plutus.Script.Utils.Value (Value)
 
 data PayToWalletParams =
     PayToWalletParams

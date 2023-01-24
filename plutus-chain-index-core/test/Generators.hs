@@ -46,17 +46,15 @@ import Data.Map qualified as Map
 import Data.Maybe (listToMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Hedgehog (MonadGen)
+import Hedgehog (Gen, MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOutRef (TxOutRef))
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
-import Ledger.Value (Value)
-import Ledger.Value qualified as Value
+import Ledger.Value.CardanoAPI (AssetId (AssetId), Lovelace (Lovelace), Value, assetIdValue, lovelaceToValue)
 import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOut (..), ChainIndexTxOutputs (..),
                              OutputDatum (NoOutputDatum), ReferenceScript (ReferenceScriptNone), txOutRefs)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -100,14 +98,12 @@ genAddress = Gen.mapMaybeT
            $ pubKeyAddress <$> (PaymentPubKey <$> ["000fff", "aabbcc", "123123"])
                            <*> pure Nothing
 
--- | Generate random Value (possibly containing Ada) with a positive Ada value.
-genNonZeroAdaValue :: MonadGen m => m Value
+-- | Generate random Value with a positive Ada value.
+genNonZeroAdaValue :: Gen Value
 genNonZeroAdaValue = do
-  value <- Value.singleton <$> (Value.currencySymbol <$> Gen.genSizedByteStringExact 32)
-                           <*> (Value.tokenName <$> Gen.genSizedByteString 32)
-                           <*> Gen.integral (Range.linear 1 100_000_000_000)
-  ada <- Ada.lovelaceValueOf <$> Gen.integral (Range.linear 1 100_000_000_000)
-  pure $ value <> ada
+  value <- assetIdValue <$> (AssetId <$> Gen.genPolicyId <*> Gen.genAssetName) <*> Gen.integral (Range.linear 1 100_000_000_000)
+  lovelace <- Lovelace <$> Gen.integral (Range.linear 1 100_000_000_000)
+  pure $ value <> lovelaceToValue lovelace
 
 data TxGenState =
         TxGenState
@@ -159,10 +155,9 @@ deleteInputs spent = do
 
 -- | Generate a valid 'Tx' that spends some UTXOs and creates some new ones
 genTx ::
-    forall m effs.
+    forall effs.
     ( Member (State TxGenState) effs
-    , LastMember m effs
-    , MonadGen m
+    , LastMember Gen effs
     )
     => Eff effs ChainIndexTx
 genTx = do
@@ -209,34 +204,30 @@ genTx = do
 --   far. Ensures that tx outputs are created before they are spent, and that
 --   tx IDs are unique.
 genTxUtxoBalance ::
-    forall m effs.
+    forall effs.
     ( Member (State TxGenState) effs
-    , LastMember m effs
-    , MonadGen m
+  , LastMember Gen effs
     ) => Eff effs TxUtxoBalance
 genTxUtxoBalance = fmap (\(s,_,_) -> s) genTxState
 
 genTxOutBalance ::
-    forall m effs.
+    forall effs.
     ( Member (State TxGenState) effs
-    , LastMember m effs
-    , MonadGen m
+  , LastMember Gen effs
     ) => Eff effs TxOutBalance
 genTxOutBalance = fmap (\(_,s,_) -> s) genTxState
 
 genTxIdState ::
-    forall m effs.
+    forall effs.
     ( Member (State TxGenState) effs
-    , LastMember m effs
-    , MonadGen m
+  , LastMember Gen effs
     ) => Eff effs TxIdState
 genTxIdState = fmap (\(_,_,s) -> s) genTxState
 
 genTxState ::
-  forall m effs.
+  forall effs.
   ( Member (State TxGenState) effs
-  , LastMember m effs
-  , MonadGen m
+  , LastMember Gen effs
   ) => Eff effs (TxUtxoBalance, TxOutBalance, TxIdState)
 genTxState = sendM genChainAction >>= \case
     DoNothing -> pure (mempty, mempty, mempty)
@@ -258,10 +249,9 @@ runTxGenState :: forall m a. Monad m => Eff '[State TxGenState, m] a -> m (a, Tx
 runTxGenState = runM . runState initialState
 
 genNonEmptyBlock ::
-    forall m effs.
+    forall effs.
     ( Member (State TxGenState) effs
-    , LastMember m effs
-    , MonadGen m
+  , LastMember Gen effs
     )
     => Eff effs (Tip, [ChainIndexTx])
 genNonEmptyBlock = do
@@ -271,10 +261,9 @@ genNonEmptyBlock = do
     pure (tp, theBlock)
 
 genTxStateTipAndTx ::
-    forall m effs.
+    forall effs.
     ( Member (State TxGenState) effs
-    , LastMember m effs
-    , MonadGen m
+  , LastMember Gen effs
     )
     => Eff effs (Tip, ChainIndexTx)
 genTxStateTipAndTx  = do

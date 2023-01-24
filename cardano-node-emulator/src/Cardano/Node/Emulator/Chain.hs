@@ -17,6 +17,7 @@
 
 module Cardano.Node.Emulator.Chain where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Params (Params (..))
 import Cardano.Node.Emulator.Validation qualified as Validation
 import Control.Lens hiding (index)
@@ -34,12 +35,13 @@ import Data.Monoid (Ap (Ap))
 import Data.Text (Text)
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), TxId, TxIn (txInRef), Value,
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), TxId, TxIn (txInRef),
                getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxTotalCollateral,
                getCardanoTxValidityRange, txOutValue, unOnChain)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Prettyprinter
 
@@ -47,7 +49,7 @@ import Prettyprinter
 data ChainEvent =
     TxnValidate TxId CardanoTx [Text]
     -- ^ A transaction has been validated and added to the blockchain.
-    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError Value [Text]
+    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError C.Value [Text]
     -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
     | SlotAdd Slot
     deriving stock (Eq, Show, Generic)
@@ -55,9 +57,9 @@ data ChainEvent =
 
 instance Pretty ChainEvent where
     pretty = \case
-        TxnValidate i _ logs            -> "TxnValidate" <+> pretty i <+> pretty logs
+        TxnValidate i _ logs             -> "TxnValidate" <+> pretty i <+> pretty logs
         TxnValidationFail p i _ e _ logs -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e <+> pretty logs
-        SlotAdd sl                  -> "SlotAdd" <+> pretty sl
+        SlotAdd sl                       -> "SlotAdd" <+> pretty sl
 
 -- | A pool of transactions which have yet to be validated.
 type TxPool = [CardanoTx]
@@ -170,10 +172,10 @@ validateBlock params slot@(Slot s) idx txns =
         events   = (uncurry (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
     in ValidatedBlock block events idx'
 
-getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
+getCollateral :: Index.UtxoIndex -> CardanoTx -> C.Value
 getCollateral idx tx = case getCardanoTxTotalCollateral tx of
-    Just v -> v
-    Nothing -> fromRight (getCardanoTxFee tx) $
+    Just v -> lovelaceToValue v
+    Nothing -> fromRight (lovelaceToValue $ getCardanoTxFee tx) $
         alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (getCardanoTxCollateralInputs tx)
 
 -- | Check whether the given transaction can be validated in the given slot.

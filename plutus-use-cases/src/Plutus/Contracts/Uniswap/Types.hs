@@ -23,9 +23,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Data
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
-import Ledger
-import Ledger.Value (AssetClass (..), CurrencySymbol (CurrencySymbol), TokenName (TokenName), assetClass,
-                     assetClassValue, assetClassValueOf)
+import Ledger.Value.Orphans ()
+import Plutus.Script.Utils.Value (AssetClass (..), CurrencySymbol (..), TokenName (..), Value, assetClass,
+                                  assetClassValue, assetClassValueOf)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell

@@ -31,8 +31,8 @@ import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Coverage
 
 import Ledger qualified as Ledger
-import Ledger.Ada qualified as Ada
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 
 import Data.Coerce
 import Data.Foldable
@@ -499,7 +499,7 @@ instance ContractModel UniswapModel where
           Coin ac = liquidityCoin (fst . Value.unAssetClass . tokenSem $ us) c1 c2
       Trace.callEndpoint @"create" (h (WalletKey w)) $ CreateParams c1 c2 (Amount a1) (Amount a2)
       delay 5
-      when (not $ hasPool s t1 t2) $ do
+      unless (hasPool s t1 t2) $ do
         registerToken "Liquidity" ac
 
     AddLiquidity w t1 a1 t2 a2 -> do

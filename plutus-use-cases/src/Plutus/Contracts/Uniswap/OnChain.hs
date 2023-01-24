@@ -20,10 +20,10 @@ import Data.Void (Void)
 import Ledger ()
 import Ledger.Constraints.OnChain.V1 as Constraints
 import Ledger.Constraints.TxConstraints as Constraints
-import Ledger.Value (AssetClass (..), symbols)
 import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateInitialLiquidity, calculateRemoval,
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types
+import Plutus.Script.Utils.Value (AssetClass (..), symbols)
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ScriptContext (..), TokenName, TxInInfo (txInInfoResolved),
                              TxInfo (txInfoInputs, txInfoMint), TxOut (txOutDatumHash, txOutValue), Value)
 import Plutus.V1.Ledger.Contexts qualified as PV1

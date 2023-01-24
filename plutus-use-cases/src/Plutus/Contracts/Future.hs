@@ -58,13 +58,13 @@ import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Scripts (unitDatum)
 import Ledger.Tokens
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value as Value
 import Plutus.Contract
 import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Scripts (validatorHash)
+import Plutus.Script.Utils.Value as Value
 import Plutus.V1.Ledger.Api (Datum (Datum), Validator, ValidatorHash)
 
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)

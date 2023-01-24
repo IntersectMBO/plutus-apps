@@ -11,8 +11,8 @@ module Plutus.Contracts.Uniswap.Pool
   , lpTicker
   ) where
 
-import Ledger.Value (TokenName (..), unAssetClass, unCurrencySymbol)
 import Plutus.Contracts.Uniswap.Types
+import Plutus.Script.Utils.Value (TokenName (..), unAssetClass, unCurrencySymbol)
 import PlutusTx.Prelude hiding (ratio)
 import PlutusTx.Sqrt
 

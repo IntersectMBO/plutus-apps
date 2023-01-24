@@ -28,12 +28,10 @@ import Control.Lens (makeClassyPrisms)
 import Control.Monad (forever)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (getCardanoTxId)
-import Ledger.Value (TokenName)
 import Plutus.Contract
 import Plutus.Contract.StateMachine (InvalidTransition, SMContractError, StateMachine, StateMachineTransition (..))
 import Plutus.Contract.StateMachine qualified as SM
@@ -45,6 +43,8 @@ import Plutus.Contracts.Prism.StateMachine (IDAction (PresentCredential), IDStat
 import Plutus.Contracts.Prism.StateMachine qualified as StateMachine
 import Plutus.Contracts.TokenAccount (TokenAccountError)
 import Plutus.Contracts.TokenAccount qualified as TokenAccount
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName)
 import Prelude as Haskell
 
 data STOSubscriber =

@@ -14,7 +14,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutus.Contract.Test.Coverage.Analysis.Common where
-import Control.DeepSeq
 import Data.Text qualified as Text
 import Debug.Trace
 import GHC.Stack
@@ -82,20 +81,6 @@ traceDocIf _    = \ _ _ a -> a
 
 errorDoc :: HasCallStack => Doc -> a
 errorDoc = error . ("\n"++) . show
-
-deriving instance NFData Trm'
-deriving instance NFData Bind'
-deriving instance NFData (VarDecl TyName Name DefaultUni DefaultFun ())
-deriving instance NFData (TyVarDecl TyName ())
-deriving instance NFData Dat'
-deriving instance NFData Strictness
-deriving instance NFData Recursivity
-
-deriving instance NFData (TyVarDecl NamedTyDeBruijn ())
-deriving instance NFData Dat
-deriving instance NFData (VarDecl NamedTyDeBruijn NamedDeBruijn DefaultUni DefaultFun ())
-deriving instance NFData Bind
-deriving instance NFData Trm
 
 {-# COMPLETE Star, (:->) #-}
 pattern Star :: Kin

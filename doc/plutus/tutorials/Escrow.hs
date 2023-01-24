@@ -20,12 +20,12 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 
 import Ledger (minAdaTxOutEstimated)
-import Ledger.Ada qualified as Ada
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value qualified as Value
 import Plutus.Contract (selectList)
 import Plutus.Contract.Test (Wallet, mockWalletPaymentPubKeyHash, w1, w2, w3, w4, w5)
 import Plutus.Contract.Test.ContractModel qualified as CM
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 
 import Plutus.Contracts.Tutorial.Escrow (EscrowError, EscrowParams (EscrowParams, escrowTargets), EscrowSchema, payEp,
                                          payToPaymentPubKeyTarget, redeemEp)

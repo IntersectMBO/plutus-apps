@@ -30,13 +30,13 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx))
 import Ledger.Constraints.ValidityInterval (toPlutusInterval)
 import Ledger.Credential (Credential (ScriptCredential))
-import Ledger.Value (leq)
-import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
                                         TxInInfo (TxInInfo, txInInfoResolved),
                                         TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
                                         TxOut (TxOut, txOutAddress, txOutDatumHash))
 import Plutus.Script.Utils.V1.Contexts qualified as V
+import Plutus.Script.Utils.Value (leq)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Interval (contains)
 
 {-# INLINABLE checkScriptContext #-}

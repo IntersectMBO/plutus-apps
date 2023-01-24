@@ -14,9 +14,9 @@ import Data.Semigroup qualified as Semigroup
 import Data.Void (Void)
 import Ledger
 import Ledger.Constraints
-import Ledger.Value as Value
 import Plutus.Contract
 import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Script.Utils.Value as Value
 import Wallet.Emulator.Types (Wallet (..), walletPubKey)
 
 initContract :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()

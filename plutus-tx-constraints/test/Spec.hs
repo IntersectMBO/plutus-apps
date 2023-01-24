@@ -7,7 +7,7 @@ module Main(main) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Generators qualified as Gen hiding (someTokenValue)
 import Control.Lens (preview, toListOf, view)
 import Control.Monad (forM_, guard, replicateM, void)
 import Control.Monad.IO.Class (MonadIO (liftIO))
@@ -23,7 +23,6 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.Haskell.TH.Syntax
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, stakePubKeyHashCredential)
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
@@ -32,9 +31,10 @@ import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Tx.Constraints as Constraints
 import Ledger.Tx.Constraints.OffChain qualified as OC
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (CurrencySymbol, Value (Value))
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators qualified as Gen
+import Plutus.Script.Utils.Value (CurrencySymbol, Value (Value))
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Api qualified as Ledger
 import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified

@@ -440,7 +440,7 @@ framework (including wallet contents, slot number etc), but it
 contains the "contract state", which is the state we have defined
 ourselves, the ``EscrowModel``. The *lens* ``contractState
 . contributions . to fold`` extracts the ``EscrowModel``, extracts the
-``contributions`` field from it, and then combines all the :hsobj:`Ledger.Value`
+``contributions`` field from it, and then combines all the :hsobj:`Plutus.V1.Ledger.Value.Value`
 using |fold|_. When we apply it to ``s`` using |^.|_, we get
 the total value of all contributions. Likewise, the second lens
 application computes the combined value of all the targets. If the
@@ -457,8 +457,8 @@ of :hsobj:`Plutus.Contract.Test.ContractModel.Interface.Action`, so we just add 
 
 .. note::
 
-   We can't use ``(>=)`` to compare :hsobj:`Ledger.Value`; there is no
-   ``Ord`` instance. That is because some :hsobj:`Ledger.Value` are incomparable,
+   We can't use ``(>=)`` to compare :hsobj:`Plutus.V1.Ledger.Value.Value`; there is no
+   ``Ord`` instance. That is because some :hsobj:`Plutus.V1.Ledger.Value.Value` are incomparable,
    such as one Ada and one NFT, which would break our expectations about
    ``Ord``. That is why we have to compare them using :hsobj:`Plutus.V1.Ledger.Value.geq` instead.
 
@@ -1212,7 +1212,7 @@ model state, :hsobj:`Plutus.Contract.Test.ContractModel.Interface.lockedValue` i
 that computes the total value held by contracts, and :hsobj:`Plutus.Contract.Test.ContractModel.Interface.symIsZero`
 checks that this is zero. The value is returned here as a
 :hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, but for now it can be thought of just as a normal
-Plutus :hsobj:`Ledger.Value` with an extra type wrapper.
+Plutus :hsobj:`Plutus.V1.Ledger.Value.Value` with an extra type wrapper.
 
 This scenario just tests that the given finishing strategy always
 succeeds in recovering all tokens from contracts, no matter what
@@ -2667,7 +2667,7 @@ test another contract, and we'll see how they reveal some surprising
 behaviour.  The contract we take this time is the auction contract in
 :hsmod:`Plutus.Contracts.Auction`. This module actually defines *two*
 contracts, a seller contract and a buyer contract. The seller puts up
-a :hsobj:`Ledger.Value` for sale, creating an auction UTXO containing the value,
+a :hsobj:`Plutus.V1.Ledger.Value.Value` for sale, creating an auction UTXO containing the value,
 and buyers can then bid Ada for it. When the auction deadline is
 reached, the highest bidder receives the auctioned value, and the
 seller receives the bid.
@@ -2906,8 +2906,8 @@ Now ``prop_Auction`` fails!
 
  .. note::
 
-    The balance change is actually a :hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, not a :hsobj:`Ledger.Value`,
-    but as you can see it *contains* a :hsobj:`Ledger.Value`, which is all we care
+    The balance change is actually a :hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, not a :hsobj:`Plutus.V1.Ledger.Value.Value`,
+    but as you can see it *contains* a :hsobj:`Plutus.V1.Ledger.Value.Value`, which is all we care
     about right now.
 
 Even in this simple case, the seller does not receive the right

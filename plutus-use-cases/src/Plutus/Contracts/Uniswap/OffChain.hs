@@ -36,7 +36,7 @@ module Plutus.Contracts.Uniswap.OffChain
     ) where
 
 import Cardano.Node.Emulator.Params (testnet)
-import Control.Lens (view, (^?))
+import Control.Lens ((^?))
 import Control.Monad hiding (fmap)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
@@ -45,8 +45,8 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, DecoratedTxOut, TokenName, TxOutRef, datumInDatumFromQuery, decoratedTxOutScriptDatum,
-               decoratedTxOutValue)
+import Ledger (CardanoAddress, DecoratedTxOut, TxOutRef, datumInDatumFromQuery, decoratedTxOutPlutusValue,
+               decoratedTxOutScriptDatum)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Contract
@@ -57,8 +57,8 @@ import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
-import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), Validator,
-                             Value)
+import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), TokenName,
+                             Validator, Value)
 import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Coverage
@@ -280,7 +280,7 @@ remove us RemoveParams{..} = do
         lC           = mkCoin (liquidityCurrency us) $ lpTicker lp
         psVal        = unitValue psC
         lVal         = valueOf lC rpDiff
-        inVal        = view decoratedTxOutValue o
+        inVal        = decoratedTxOutPlutusValue o
         inA          = amountOf inVal rpCoinA
         inB          = amountOf inVal rpCoinB
         (outA, outB) = calculateRemoval inA inB liquidity rpDiff
@@ -305,7 +305,7 @@ add :: forall w s. Uniswap -> AddParams -> Contract w s Text ()
 add us AddParams{..} = do
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us apCoinA apCoinB
     when (apAmountA < 0 || apAmountB < 0) $ throwError "amounts must not be negative"
-    let outVal = view decoratedTxOutValue o
+    let outVal = decoratedTxOutPlutusValue o
         oldA   = amountOf outVal apCoinA
         oldB   = amountOf outVal apCoinB
         newA   = oldA + apAmountA
@@ -347,7 +347,7 @@ swap :: forall w s. Uniswap -> SwapParams -> Contract w s Text ()
 swap us SwapParams{..} = do
     unless (spAmountA > 0 && spAmountB == 0 || spAmountA == 0 && spAmountB > 0) $ throwError "exactly one amount must be positive"
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us spCoinA spCoinB
-    let outVal = view decoratedTxOutValue o
+    let outVal = decoratedTxOutPlutusValue o
     let oldA = amountOf outVal spCoinA
         oldB = amountOf outVal spCoinB
     (newA, newB) <- if spAmountA > 0 then do
@@ -385,7 +385,7 @@ pools us = do
     go :: [DecoratedTxOut] -> Contract w s Text [((Coin A, Amount A), (Coin B, Amount B))]
     go []       = return []
     go (o : os) = do
-        let v = view decoratedTxOutValue o
+        let v = decoratedTxOutPlutusValue o
         if isUnity v c
             then do
                 d <- getUniswapDatum o
@@ -409,8 +409,8 @@ pools us = do
 funds :: forall w s. Contract w s Text Value
 funds = do
     addr <- Contract.ownAddress
-    os  <- map snd . Map.toList <$> utxosAt addr
-    return $ mconcat [view decoratedTxOutValue o | o <- os]
+    os   <- map snd . Map.toList <$> utxosAt addr
+    return $ foldMap decoratedTxOutPlutusValue os
 
 getUniswapDatum :: DecoratedTxOut -> Contract w s Text UniswapDatum
 getUniswapDatum o = do
@@ -438,7 +438,7 @@ findUniswapInstance us c f = do
     let addr = uniswapAddress us
     logInfo @String $ printf "looking for Uniswap instance at address %s containing coin %s " (show addr) (show c)
     utxos <- utxosAt addr
-    go  [x | x@(_, o) <- Map.toList utxos, isUnity (view decoratedTxOutValue o) c]
+    go  [x | x@(_, o) <- Map.toList utxos, isUnity (decoratedTxOutPlutusValue o) c]
   where
     go [] = throwError "Uniswap instance not found"
     go ((oref, o) : xs) = do

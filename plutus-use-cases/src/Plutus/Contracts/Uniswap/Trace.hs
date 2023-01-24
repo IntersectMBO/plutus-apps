@@ -20,13 +20,13 @@ import Data.Monoid qualified as Monoid
 import Data.Semigroup qualified as Semigroup
 import Data.Void (Void)
 import Ledger
-import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Constraints hiding (adjustUnbalancedTx)
-import Ledger.Value qualified as Value
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OffChain as OffChain
 import Plutus.Contracts.Uniswap.Types as Types
+import Plutus.Script.Utils.Ada (adaSymbol, adaToken)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Emulator
 import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletAddress)
@@ -84,5 +84,5 @@ setupTokens = do
 wallets :: [Wallet]
 wallets = take 4 knownWallets
 
-tokenNames :: [TokenName]
+tokenNames :: [Value.TokenName]
 tokenNames = ["A", "B", "C", "D"]

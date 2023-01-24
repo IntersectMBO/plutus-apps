@@ -16,17 +16,17 @@ import Control.Monad (void)
 import Prelude hiding (Rational, negate)
 
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto (toPublicKey)
 import Ledger.Time (POSIXTime)
-import Ledger.Value qualified as Value
 import Plutus.Contract.Oracle (Observation, SignedMessage, signObservation')
 import Plutus.Contract.Test
 import Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
                                     Stablecoin (..), StablecoinError, StablecoinSchema)
 import Plutus.Contracts.Stablecoin qualified as Stablecoin
+import Plutus.Script.Utils.Ada (adaSymbol, adaToken)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Numeric (negate, one, zero)

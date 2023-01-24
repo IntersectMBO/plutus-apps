@@ -40,6 +40,7 @@ import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
 import Ledger.Tx qualified as L (DatumFromQuery (..), DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutDatum,
                                  mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut)
+import Ledger.Tx.CardanoAPI (toCardanoAssetId)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
@@ -242,8 +243,9 @@ handleQuery = \case
           pure $ QueryResponse [] Nothing
         _ -> pure $ QueryResponse datums (nextPageQuery page)
     UtxoSetWithCurrency pageQuery assetClass -> do
+        assetId <- either (throwError . ToCardanoError) pure $ toCardanoAssetId assetClass
         state <- get
-        let outRefs = view (diskState . assetClassMap . at assetClass) state
+        let outRefs = view (diskState . assetClassMap . at assetId) state
             utxo = view (utxoIndex . to utxoState) state
             utxoRefs = Set.filter (flip TxUtxoBalance.isUnspentOutput utxo) (fromMaybe mempty outRefs)
             page = pageOf pageQuery utxoRefs

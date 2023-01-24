@@ -25,14 +25,18 @@ import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKe
 import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Scripts (Language (..), Versioned (..))
 import Ledger.Slot (Slot)
 import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef,
                   Withdrawal)
 import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoAddressInEra, toCardanoTxOut)
+import Ledger.Value.CardanoAPI (policyId)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
+import Plutus.Script.Utils.Ada qualified as Plutus
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
+import Plutus.Script.Utils.Value qualified as Plutus
 import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
 import Plutus.V2.Ledger.Api qualified as PV2
@@ -296,21 +300,42 @@ instance Arbitrary Ledger.Redeemer where
 instance Arbitrary Ledger.Validator where
     arbitrary = pure acceptingValidator
 
-instance Arbitrary Ledger.TokenName where
+instance Arbitrary Plutus.TokenName where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary Ledger.CurrencySymbol where
+instance Arbitrary Plutus.CurrencySymbol where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary Ledger.Ada where
+instance Arbitrary Plutus.Ada where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary Ledger.Value where
+instance Arbitrary C.Lovelace where
     arbitrary = genericArbitrary
     shrink = genericShrink
+
+instance Arbitrary Plutus.Value where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary C.Value where
+    arbitrary = C.valueFromList <$> arbitrary
+
+instance Arbitrary C.AssetId where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary C.AssetName where
+    arbitrary = C.AssetName <$> arbitrary
+
+instance Arbitrary C.Quantity where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary C.PolicyId where
+    arbitrary = pure $ policyId (Versioned acceptingMintingPolicy PlutusV1)
 
 instance (Arbitrary k, Arbitrary v) => Arbitrary (AssocMap.Map k v) where
     arbitrary = AssocMap.fromList <$> arbitrary

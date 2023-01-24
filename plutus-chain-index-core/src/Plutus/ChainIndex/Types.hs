@@ -201,9 +201,12 @@ deriving newtype instance OpenApi.ToSchema Slot
 deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
 deriving anyclass instance OpenApi.ToSchema OutputDatum
 
+instance OpenApi.ToSchema C.Value where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "Value") $ OpenApi.toSchema (Proxy @[(String, Integer)])
+
 data ChainIndexTxOut = ChainIndexTxOut
   { citoAddress   :: CardanoAddress -- ^ We can't use AddressInAnyEra here because of missing FromJson instance for Byron era
-  , citoValue     :: Value
+  , citoValue     :: C.Value
   , citoDatum     :: OutputDatum
   , citoRefScript :: ReferenceScript
   } deriving (Eq, Show, Generic, Serialise, OpenApi.ToSchema)

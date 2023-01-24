@@ -24,15 +24,15 @@
 [DEBUG] Slot 1: W[1]: Adjusting an unbalanced transaction: []
 [INFO] Slot 1: W[1]: Balancing an unbalanced transaction:
                        Tx:
-                         Tx 930943e7989630a86454c2a69d81f9045c52355615169510c9f11eaae378a455:
+                         Tx 9c9596d60024e95465678ab2c67c2c2a72721f1fded0c985e0efc4e69e8d7881:
                            {inputs:
                            reference inputs:
                            collateral inputs:
                            outputs:
-                             - Value (Map [(,Map [("",90000000)])]) addressed to
+                             - 90000000 lovelace addressed to
                                PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
-                           mint: Value (Map [])
-                           fee: Value (Map [])
+                           mint: 
+                           fee: 0 lovelace
                            mps:
                            signatures:
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}}
@@ -65,12 +65,12 @@
                          reference inputs:
                          collateral inputs:
                          outputs:
-                           - Value (Map [(,Map [("",90000000)])]) addressed to
+                           - 90000000 lovelace addressed to
                              PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
-                           - Value (Map [(,Map [("",9773911)])]) addressed to
+                           - 9773911 lovelace addressed to
                              PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
-                         mint: Value (Map [])
-                         fee: Value (Map [(,Map [("",226089)])])
+                         mint: 
+                         fee: 226089 lovelace
                          validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                          data:
                          redeemers:}
@@ -92,15 +92,15 @@
 [DEBUG] Slot 2: W[2]: Adjusting an unbalanced transaction: []
 [INFO] Slot 2: W[2]: Balancing an unbalanced transaction:
                        Tx:
-                         Tx 1c64666de4c0eb8ec33778877569043a7e3cacca6ab109b0c875b7b6c90ba8c3:
+                         Tx 2914329fb974a357aac55d208868b7293b72467f2b3978deef7a30c20d39ec4d:
                            {inputs:
                            reference inputs:
                            collateral inputs:
                            outputs:
-                             - Value (Map [(,Map [("",110000000)])]) addressed to
+                             - 110000000 lovelace addressed to
                                PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
-                           mint: Value (Map [])
-                           fee: Value (Map [])
+                           mint: 
+                           fee: 0 lovelace
                            mps:
                            signatures:
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}}
@@ -135,12 +135,12 @@
                          reference inputs:
                          collateral inputs:
                          outputs:
-                           - Value (Map [(,Map [("",110000000)])]) addressed to
+                           - 110000000 lovelace addressed to
                              PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
-                           - Value (Map [(,Map [("",79768059)])]) addressed to
+                           - 79768059 lovelace addressed to
                              PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
-                         mint: Value (Map [])
-                         fee: Value (Map [(,Map [("",231941)])])
+                         mint: 
+                         fee: 231941 lovelace
                          validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                          data:
                          redeemers:}
@@ -162,15 +162,15 @@
 [DEBUG] Slot 3: W[3]: Adjusting an unbalanced transaction: []
 [INFO] Slot 3: W[3]: Balancing an unbalanced transaction:
                        Tx:
-                         Tx 0198e1656fef15cf20ff9239d78370b990f19671a7eb086125651191cd5e18cc:
+                         Tx a62743f6c8568f7f267a7e943664a856975ec2e4c36d440d4aabc94304aa1195:
                            {inputs:
                            reference inputs:
                            collateral inputs:
                            outputs:
-                             - Value (Map [(,Map [("",110000000)])]) addressed to
+                             - 110000000 lovelace addressed to
                                PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
-                           mint: Value (Map [])
-                           fee: Value (Map [])
+                           mint: 
+                           fee: 0 lovelace
                            mps:
                            signatures:
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}}
@@ -205,12 +205,12 @@
                          reference inputs:
                          collateral inputs:
                          outputs:
-                           - Value (Map [(,Map [("",110000000)])]) addressed to
+                           - 110000000 lovelace addressed to
                              PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
-                           - Value (Map [(,Map [("",99768323)])]) addressed to
+                           - 99768323 lovelace addressed to
                              PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
-                         mint: Value (Map [])
-                         fee: Value (Map [(,Map [("",231677)])])
+                         mint: 
+                         fee: 231677 lovelace
                          validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                          data:
                          redeemers:}
@@ -232,15 +232,15 @@
 [DEBUG] Slot 4: W[1]: Adjusting an unbalanced transaction: []
 [INFO] Slot 4: W[1]: Balancing an unbalanced transaction:
                        Tx:
-                         Tx aa9b60da97a20dda38b739c6ad5209cc85370013450926dcdc33c7fa85ef25c8:
+                         Tx a9cbf5e79c34fc991169736281959404c8c403ec2f24740f6afac65165975865:
                            {inputs:
                            reference inputs:
                            collateral inputs:
                            outputs:
-                             - Value (Map [(,Map [("",20000000)])]) addressed to
+                             - 20000000 lovelace addressed to
                                PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
-                           mint: Value (Map [])
-                           fee: Value (Map [])
+                           mint: 
+                           fee: 0 lovelace
                            mps:
                            signatures:
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}}
@@ -255,12 +255,12 @@
                          reference inputs:
                          collateral inputs:
                          outputs:
-                           - Value (Map [(,Map [("",20000000)])]) addressed to
+                           - 20000000 lovelace addressed to
                              PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
-                           - Value (Map [(,Map [("",89828603)])]) addressed to
+                           - 89828603 lovelace addressed to
                              PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
-                         mint: Value (Map [])
-                         fee: Value (Map [(,Map [("",171397)])])
+                         mint: 
+                         fee: 171397 lovelace
                          validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                          data:
                          redeemers:}
@@ -292,23 +292,13 @@
 [DEBUG] Slot 6: W[5]: InsertionSuccess: New tip is Tip(Slot 6, BlockId 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71, BlockNumber 5). UTxO state was added to the end.
 [DEBUG] Slot 6: Thread 0 {initial thread}: Stopped (Sleeping)
 Final balances
-Wallet 7: 
-    {, ""}: 100000000
-Wallet 8: 
-    {, ""}: 100000000
-Wallet 6: 
-    {, ""}: 100000000
-Wallet 4: 
-    {, ""}: 100000000
-Wallet 2: 
-    {, ""}: 99768059
-Wallet 1: 
-    {, ""}: 99602514
-Wallet 10: 
-    {, ""}: 100000000
-Wallet 9: 
-    {, ""}: 100000000
-Wallet 3: 
-    {, ""}: 99768323
-Wallet 5: 
-    {, ""}: 100000000
+Wallet 7: 100000000 lovelace
+Wallet 8: 100000000 lovelace
+Wallet 6: 100000000 lovelace
+Wallet 4: 100000000 lovelace
+Wallet 2: 99768059 lovelace
+Wallet 1: 99602514 lovelace
+Wallet 10: 100000000 lovelace
+Wallet 9: 100000000 lovelace
+Wallet 3: 99768323 lovelace
+Wallet 5: 100000000 lovelace

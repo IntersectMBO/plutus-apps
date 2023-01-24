@@ -45,7 +45,7 @@ module Plutus.Contracts.Escrow(
     , covIdx
     ) where
 
-import Control.Lens (_1, has, makeClassyPrisms, only, review, view)
+import Control.Lens (_1, has, makeClassyPrisms, only, review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
@@ -68,9 +68,9 @@ import Ledger.Interval (after, before)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value, geq, lt)
 import Plutus.Contract
 import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Value (Value, geq, lt)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 
 import Prelude (Semigroup (..), foldMap)
@@ -298,7 +298,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     current <- snd <$> currentNodeClientTimeRange
     if current >= escrowDeadline escrow
     then throwing _RedeemFailed DeadlinePassed
-    else if foldMap (view Tx.decoratedTxOutValue) unspentOutputs `lt` targetTotal escrow
+    else if foldMap Tx.decoratedTxOutPlutusValue unspentOutputs `lt` targetTotal escrow
     then throwing _RedeemFailed NotEnoughFundsAtAddress
     else do
       let
@@ -363,7 +363,7 @@ payRedeemRefund params vl = do
         go = do
             networkId <- pNetworkId <$> getParams
             cur <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
-            let presentVal = foldMap (view Tx.decoratedTxOutValue) cur
+            let presentVal = foldMap Tx.decoratedTxOutPlutusValue cur
             if presentVal `geq` targetTotal params
                 then Right <$> redeem inst params
                 else do

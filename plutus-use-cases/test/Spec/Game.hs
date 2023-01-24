@@ -26,14 +26,15 @@ import Test.Tasty.HUnit qualified as HUnit
 
 import Cardano.Node.Emulator.Params (testnet)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Ledger.Ada qualified as Ada
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value)
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test (checkPredicate, goldenPir, mockWalletPaymentPubKeyHash, reasonable', valueAtAddress, w1,
                              w2, walletFundsChange, (.&&.))
 import Plutus.Contracts.Game (GuessArgs (GuessArgs, guessArgsGameParam, guessArgsSecret),
                               LockArgs (LockArgs, lockArgsGameParam, lockArgsSecret, lockArgsValue))
 import Plutus.Contracts.Game qualified as G
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx qualified
@@ -47,15 +48,15 @@ tests :: TestTree
 tests =
     testGroup "game with secret arguments tests"
     [ checkPredicate "run a successful game trace"
-        (walletFundsChange w2 (Ada.adaValueOf 8)
-        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Ada.adaValueOf 0 ==)
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
+        (walletFundsChange w2 (Value.adaValueOf 8)
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) Value.isZero
+        .&&. walletFundsChange w1 (Value.adaValueOf (-8)))
         successTrace
 
     , checkPredicate "run a failed trace"
         (walletFundsChange w2 mempty
-        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Ada.adaValueOf 8 ==)
-        .&&. walletFundsChange w1 (Ada.adaValueOf (-8)))
+        .&&. valueAtAddress (Scripts.validatorCardanoAddress testnet $ G.gameInstance gameParam) (Value.adaValueOf 8 ==)
+        .&&. walletFundsChange w1 (Value.adaValueOf (-8)))
         failTrace
 
     , goldenPir "test/Spec/game.pir" $$(PlutusTx.compile [|| G.mkValidator ||])

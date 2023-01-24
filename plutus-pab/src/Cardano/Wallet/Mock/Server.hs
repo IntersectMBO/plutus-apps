@@ -32,12 +32,12 @@ import Data.Coerce (coerce)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Plutus.Script.Utils.Ada qualified as Ada
 import Servant (Application, NoContent (NoContent), err404, hoistServer, serve, (:<|>) ((:<|>)))
 import Servant.Client (BaseUrl (baseUrlPort), ClientEnv, mkClientEnv)
 import Wallet.Effects (balanceTx, submitTxn, totalFunds, walletAddSignature)

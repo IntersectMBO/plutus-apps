@@ -19,7 +19,6 @@ import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
 import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.Params (Params (Params, pNetworkId))
 import Cardano.Node.Emulator.Validation qualified as Validation
-import Control.Applicative (Alternative)
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
@@ -37,16 +36,16 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, ScriptError (EvaluationError),
-               Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Value,
-               Versioned (Versioned, unversioned), cardanoTxMap, getCardanoTxOutRefs, getCardanoTxOutputs,
-               mkValidatorScript, onCardanoTx, outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
-import Ledger.Ada qualified as Ada
+               Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Versioned (Versioned), cardanoTxMap,
+               getCardanoTxOutRefs, getCardanoTxOutputs, mkValidatorCardanoAddress, mkValidatorScript, onCardanoTx,
+               outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Index qualified as Index
-import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoAddressInEra, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
-import Ledger.Value qualified as Value
+import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test hiding (not)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Contexts (ScriptContext)
@@ -143,9 +142,9 @@ selectCoinProp = property $ do
     let result = selectCoin inputs target
     case result of
         Left _ ->
-            Hedgehog.assert $ not $ foldMap snd inputs `Value.geq` target
+            Hedgehog.assert $ not $ foldMap snd inputs `Value.valueGeq` target
         Right (ins, change) ->
-            Hedgehog.assert $ foldMap (fromMaybe mempty . (`lookup` inputs)) ins == (target P.+ change)
+            Hedgehog.assert $ foldMap (fromMaybe mempty . (`lookup` inputs)) ins == (target <> change)
 
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
@@ -191,7 +190,7 @@ validTrace2 = property $ do
 invalidTrace :: Property
 invalidTrace = property $ do
     (Mockchain m utxo params, txn) <- forAll genChainTxn
-    let invalidTxn = cardanoTxMap (\tx -> tx { txMint = Ada.adaValueOf 1 }) (\_ -> error "Unexpected Cardano.Api.Tx") txn
+    let invalidTxn = cardanoTxMap (\tx -> tx { txMint = Value.adaValueOf 1 }) (\_ -> error "Unexpected Cardano.Api.Tx") txn
         signedTxn = Gen.signTx params utxo invalidTxn
         options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn signedTxn)
@@ -211,14 +210,14 @@ invalidScript = property $ do
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ getCardanoTxOutputs txn1) - 1))
     let emulatorTx = onCardanoTx id (\_ -> error "Unexpected Cardano.Api.Tx") txn1
-    let setOutputs o =
-            either (const Hedgehog.failure) (pure . TxOut)
-          $ C.TxOut <$> toCardanoAddressInEra pNetworkId (mkValidatorAddress $ unversioned failValidator)
-            <*> toCardanoTxOutValue (txOutValue o)
-            <*> Right (toCardanoTxOutDatumInTx unitDatum)
-            <*> pure C.ReferenceScriptNone
-    outs <- traverse setOutputs $ emulatorTx ^. outputs
-    let scriptTxn = EmulatorTx $
+        setOutputs o = TxOut
+          $ C.TxOut
+                (mkValidatorCardanoAddress pNetworkId failValidator)
+                (toCardanoTxOutValue $ txOutValue o)
+                (toCardanoTxOutDatumInTx unitDatum)
+                C.ReferenceScriptNone
+        outs = setOutputs <$> emulatorTx ^. outputs
+        scriptTxn = EmulatorTx $
             emulatorTx
           & outputs .~ outs
     Hedgehog.annotateShow scriptTxn
@@ -314,7 +313,7 @@ evalEmulatorTraceTest = property $ do
     Hedgehog.annotateShow res
     Hedgehog.assert (either (const False) (const True) res)
 
-genChainTxn :: Alternative m => Hedgehog.MonadGen m => m (Mockchain, CardanoTx)
+genChainTxn :: Hedgehog.Gen (Mockchain, CardanoTx)
 genChainTxn = do
     m <- Gen.genMockchain
     txn <- Gen.genValidTransaction m

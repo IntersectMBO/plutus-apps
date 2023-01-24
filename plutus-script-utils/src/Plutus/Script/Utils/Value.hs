@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Ledger.Value
+module Plutus.Script.Utils.Value
   ( module Export
   , noAdaValue
   , adaOnlyValue
@@ -8,8 +8,13 @@ module Ledger.Value
   , currencyValueOf
   ) where
 
-import Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Value as Export
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.V1.Ledger.Value as Export (AssetClass (AssetClass, unAssetClass),
+                                         CurrencySymbol (CurrencySymbol, unCurrencySymbol),
+                                         TokenName (TokenName, unTokenName), Value (Value, getValue), adaSymbol,
+                                         adaToken, assetClass, assetClassValue, assetClassValueOf, currencyMPSHash,
+                                         currencySymbol, flattenValue, geq, gt, isZero, leq, lt, mpsSymbol, scale,
+                                         singleton, split, symbols, toString, tokenName, unionWith, valueOf)
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude (Bool, Eq ((==)), Maybe (Just, Nothing), mempty, (-))
 

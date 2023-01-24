@@ -26,13 +26,13 @@ import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
-import Ledger (Ada, CardanoAddress, PaymentPubKeyHash (unPaymentPubKeyHash), toPlutusAddress)
-import Ledger.Ada qualified as Ada
+import Ledger (CardanoAddress, PaymentPubKeyHash (unPaymentPubKeyHash), toPlutusAddress)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Endpoint, Promise, endpoint, getParams, logInfo, selectList, submitTxConstraints,
                         submitTxConstraintsSpending, type (.\/), utxosAt)
 import Plutus.Contract.Test (w1, w2)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api (Address, ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoOutputs),
                              TxOut (TxOut, txOutAddress, txOutValue), Value)
@@ -50,7 +50,7 @@ data SplitData =
     SplitData
         { recipient1 :: Address -- ^ First recipient of the funds
         , recipient2 :: Address -- ^ Second recipient of the funds
-        , amount     :: Ada -- ^ How much Ada we want to lock
+        , amount     :: Ada.Ada -- ^ How much Ada we want to lock
         }
     deriving stock (Haskell.Show, Generic)
 
@@ -93,7 +93,7 @@ data LockArgs =
         LockArgs
             { recipient1Address :: CardanoAddress
             , recipient2Address :: CardanoAddress
-            , totalAda          :: Ada
+            , totalAda          :: Ada.Ada
             }
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)

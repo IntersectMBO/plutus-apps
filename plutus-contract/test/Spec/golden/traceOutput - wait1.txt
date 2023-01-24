@@ -45,23 +45,13 @@
 [DEBUG] Slot 3: W[5]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71, BlockNumber 2). UTxO state was added to the end.
 [DEBUG] Slot 3: Thread 0 {initial thread}: Stopped (Sleeping)
 Final balances
-Wallet 7: 
-    {, ""}: 100000000
-Wallet 8: 
-    {, ""}: 100000000
-Wallet 6: 
-    {, ""}: 100000000
-Wallet 4: 
-    {, ""}: 100000000
-Wallet 2: 
-    {, ""}: 100000000
-Wallet 1: 
-    {, ""}: 100000000
-Wallet 10: 
-    {, ""}: 100000000
-Wallet 9: 
-    {, ""}: 100000000
-Wallet 3: 
-    {, ""}: 100000000
-Wallet 5: 
-    {, ""}: 100000000
+Wallet 7: 100000000 lovelace
+Wallet 8: 100000000 lovelace
+Wallet 6: 100000000 lovelace
+Wallet 4: 100000000 lovelace
+Wallet 2: 100000000 lovelace
+Wallet 1: 100000000 lovelace
+Wallet 10: 100000000 lovelace
+Wallet 9: 100000000 lovelace
+Wallet 3: 100000000 lovelace
+Wallet 5: 100000000 lovelace

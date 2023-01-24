@@ -3,9 +3,7 @@ module Plutus.Contract.Test.MissingLovelace
   ( calculateDelta
   ) where
 
-import Ledger.Ada qualified as Ada
-import Ledger.Value (Value, noAdaValue)
-import PlutusTx.Prelude qualified as P
+import Ledger.Value.CardanoAPI qualified as Value
 
 -- | Returns the calculated delta between initial and final values. Might be false positive.
 --
@@ -22,35 +20,35 @@ import PlutusTx.Prelude qualified as P
 -- For example, we expected -n, but there is n among deltas and realDelta is n,
 -- it is divisible by n, then the test will pass. So please be careful.
 calculateDelta
-  :: Value
+  :: Value.Value
   -- ^ Expected delta of the test
-  -> Ada.Ada
+  -> Value.Lovelace
   -- ^ Initial value of the wallet before the test
-  -> Ada.Ada
+  -> Value.Lovelace
   -- ^ Final value of the wallet after the test
-  -> [Ada.Ada]
+  -> [Value.Lovelace]
   -- ^ Missing lovelace costs of outputs from 'AdjustingUnbalancedTx' logs
-  -> Value
+  -> Value.Value
 calculateDelta expectedDelta initialValue finalValue allWalletsTxOutCosts =
   let
-    expectedAda = Ada.fromValue expectedDelta
+    expectedAda = Value.selectLovelace expectedDelta
 
     -- the list of deltas: combinations (+/-) between outputs' costs,
     -- the expected delta and the wallet's output costs.
-    deltas = map P.abs $ concat
-      [ [ P.abs val P.- P.abs wCost
-        , P.abs val P.+ P.abs wCost ] | val <- [expectedAda, 0] ++ allWalletsTxOutCosts
+    deltas = map abs $ concat
+      [ [ abs val - abs wCost
+        , abs val + abs wCost ] | val <- [expectedAda, 0] ++ allWalletsTxOutCosts
                                       , wCost <- allWalletsTxOutCosts ]
 
-    realDelta = finalValue P.- initialValue
+    realDelta = finalValue - initialValue
 
     missingDelta =
       -- We check if 'realDelta' is a result of combination of operations between initial delta and outputs' costs
       -- by checking if 'realDelta''s is divisible by any delta without a reminder.
-      if or [(P.abs realDelta) `mod` d == 0 | d <- deltas, d /= 0] then
+      if or [abs realDelta `mod` d == 0 | d <- deltas, d /= 0] then
         -- if yes, we return a sum of 'realDelta''s ada with non-ada value of the expected delta
-        let missingAda = Ada.toValue realDelta
-            missingNonAda = noAdaValue expectedDelta
+        let missingAda = Value.lovelaceToValue realDelta
+            missingNonAda = Value.noAdaValue expectedDelta
         in missingAda <> missingNonAda
       -- otherwise we just return the expected delta
       else expectedDelta

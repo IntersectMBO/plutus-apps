@@ -22,12 +22,13 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (CurrencySymbol, POSIXTime, PaymentPubKeyHash, TokenName, Value)
-import Ledger.Value qualified as Value
+import Ledger (POSIXTime, PaymentPubKeyHash)
 import Plutus.Contract (AsContractError (_ContractError), ContractError, Endpoint, Promise, awaitTxConfirmed, endpoint,
                         mapError, ownFirstPaymentPubKeyHash, throwError)
 import Plutus.Contracts.Escrow (EscrowParams (..))
 import Plutus.Contracts.Escrow qualified as Escrow
+import Plutus.Script.Utils.Value (CurrencySymbol, TokenName, Value)
+import Plutus.Script.Utils.Value qualified as Value
 import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
 
 -- | Describes an exchange of two

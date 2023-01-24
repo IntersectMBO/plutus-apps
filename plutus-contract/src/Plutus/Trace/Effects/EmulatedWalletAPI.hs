@@ -22,7 +22,7 @@ import Data.Default (def)
 import Data.Text (Text)
 import Ledger qualified
 import Ledger.Tx (TxId, getCardanoTxId)
-import Ledger.Value (Value)
+import Plutus.Script.Utils.Value (Value)
 import Wallet.API (WalletAPIError, defaultSlotRange, payToAddress)
 import Wallet.Effects (WalletEffect)
 import Wallet.Emulator qualified as EM

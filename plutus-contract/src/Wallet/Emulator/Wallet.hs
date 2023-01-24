@@ -24,6 +24,7 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api (makeSignedTransaction)
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainState (_index))
 import Cardano.Node.Emulator.Fee qualified as Fee
 import Cardano.Node.Emulator.Params (Params (..))
@@ -52,7 +53,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import GHC.Generics (Generic)
-import Ledger (CardanoTx, DecoratedTxOut, PubKeyHash, TxOutRef, UtxoIndex (..), Value)
+import Ledger (CardanoTx, DecoratedTxOut, PubKeyHash, TxOutRef, UtxoIndex (..))
 import Ledger qualified
 import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, PaymentPubKeyHash (PaymentPubKeyHash),
                        cardanoAddressCredential)
@@ -62,14 +63,14 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (getRequiredSigners)
+import Ledger.Tx.CardanoAPI (fromCardanoValue, getRequiredSigners)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
-import Plutus.V1.Ledger.Api (ValidatorHash)
+import Plutus.V1.Ledger.Api (ValidatorHash, Value)
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.Effects (NodeClientEffect,
@@ -279,7 +280,7 @@ handleWallet = \case
         handleAddSignature txCTx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
-    totalFundsH = foldMap (view Ledger.decoratedTxOutValue) <$> (get >>= ownOutputs)
+    totalFundsH = fromCardanoValue . foldMap (view Ledger.decoratedTxOutValue) <$> (get >>= ownOutputs)
 
     yieldUnbalancedTxH ::
         ( Member (Error WalletAPIError) effs
@@ -464,7 +465,7 @@ walletPaymentPubKeyHashes = foldl' f Map.empty . Map.toList
 
 -- | For a set of wallets, convert them into a map of value: entity,
 -- where entity is one of 'Entity'.
-balances :: ChainState -> WalletSet -> Map.Map Entity Value
+balances :: ChainState -> WalletSet -> Map.Map Entity C.Value
 balances state wallets = foldl' f Map.empty . getIndex . _index $ state
   where
     toEntity :: CardanoAddress -> Entity

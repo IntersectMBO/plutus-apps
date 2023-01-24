@@ -15,6 +15,7 @@ module Wallet.Rollup.Render(
     , showBlockchainFold
     ) where
 
+import Cardano.Api qualified as C
 import Codec.Serialise.Class (Serialise, decode, encode)
 import Control.Lens.Combinators (itraverse)
 import Control.Monad.Except (MonadError, throwError)
@@ -34,15 +35,15 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxId, TxIn (TxIn), TxInType (..), TxOut,
-               TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txOutValue)
-import Ledger.Ada (Ada (Lovelace))
-import Ledger.Ada qualified as Ada
+               TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txOutValue)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
                        Versioned (Versioned), unValidatorScript)
 import Ledger.Tx qualified as Tx
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada (Ada (Lovelace))
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value)
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
@@ -205,6 +206,10 @@ deriving via RenderPretty String instance Render String
 deriving via RenderPretty Integer instance Render Integer
 
 deriving via RenderPretty Address instance Render Address
+
+deriving via RenderPretty C.Value instance Render C.Value
+
+deriving via RenderPretty C.Lovelace instance Render C.Lovelace
 
 instance Render Wallet where
     render (Wallet _ n) = pure $ "Wallet" <+> viaShow n

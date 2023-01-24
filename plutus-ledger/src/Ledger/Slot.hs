@@ -23,7 +23,6 @@ module Ledger.Slot(
     ) where
 
 import Codec.Serialise.Class (Serialise)
-import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
@@ -44,7 +43,7 @@ import Plutus.V1.Ledger.Interval
 -- slots pass at a constant rate.
 newtype Slot = Slot { getSlot :: Integer }
     deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic, Data)
-    deriving anyclass (FromJSON, FromJSONKey, ToJSON, ToJSONKey, NFData)
+    deriving anyclass (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
     deriving newtype (AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, Eq, Ord, Enum, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise, Hashable)
 

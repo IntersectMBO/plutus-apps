@@ -34,18 +34,18 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Monoid (Last (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
-import Ledger (Ada, Address, POSIXTime, Value, toPlutusAddress)
-import Ledger.Ada qualified as Ada
+import Ledger (Address, POSIXTime, toPlutusAddress)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,
                                      WaitingResult (..))
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Util (loopM)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage
@@ -56,7 +56,7 @@ import Prelude qualified as Haskell
 data AuctionParams
     = AuctionParams
         { apOwner   :: Address -- ^ Current owner of the asset. This is where the proceeds of the auction will be sent.
-        , apAsset   :: Value -- ^ The asset itself. This value is going to be locked by the auction script output.
+        , apAsset   :: Value.Value -- ^ The asset itself. This value is going to be locked by the auction script output.
         , apEndTime :: POSIXTime -- ^ When the time window for bidding ends.
         }
         deriving stock (Haskell.Eq, Haskell.Show, Generic)
@@ -67,7 +67,7 @@ PlutusTx.makeLift ''AuctionParams
 
 data HighestBid =
     HighestBid
-        { highestBid    :: Ada
+        { highestBid    :: Ada.Ada
         , highestBidder :: Address
         }
     deriving stock (Haskell.Eq, Haskell.Show, Generic)
@@ -108,7 +108,7 @@ PlutusTx.unstableMakeIsData ''AuctionState
 
 -- | Transition between auction states
 data AuctionInput
-    = Bid { newBid :: Ada, newBidder :: Address } -- Increase the price
+    = Bid { newBid :: Ada.Ada, newBidder :: Address } -- Increase the price
     | Payout
     deriving stock (Generic, Haskell.Show)
     deriving anyclass (ToJSON, FromJSON)
@@ -186,7 +186,7 @@ machineClient inst threadToken auctionParams =
     let machine = auctionStateMachine (threadToken, auctionParams)
     in SM.mkStateMachineClient (SM.StateMachineInstance machine inst)
 
-type BuyerSchema = Endpoint "bid" Ada
+type BuyerSchema = Endpoint "bid" Ada.Ada
 type SellerSchema = EmptySchema -- Don't need any endpoints: the contract runs automatically until the auction is finished.
 
 data AuctionLog =
@@ -214,7 +214,7 @@ instance SM.AsSMContractError AuctionError where
     _SMContractError = _StateMachineContractError . SM._SMContractError
 
 -- | Client code for the seller
-auctionSeller :: Value -> POSIXTime -> Contract AuctionOutput SellerSchema AuctionError ()
+auctionSeller :: Value.Value -> POSIXTime -> Contract AuctionOutput SellerSchema AuctionError ()
 auctionSeller value time = do
     threadToken <- SM.getThreadToken
     tell $ threadTokenOut threadToken
@@ -269,7 +269,7 @@ Updates to the user are provided via 'tell'.
 
 data BuyerEvent =
         AuctionIsOver HighestBid -- ^ The auction has ended with the highest bid
-        | SubmitOwnBid Ada -- ^ We want to submit a new bid
+        | SubmitOwnBid Ada.Ada -- ^ We want to submit a new bid
         | OtherBid HighestBid -- ^ Another buyer submitted a higher bid
         | NoChange HighestBid -- ^ Nothing has changed
 

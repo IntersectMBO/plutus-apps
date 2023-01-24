@@ -8,7 +8,7 @@
 {-# OPTIONS_GHC -Wno-identities #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 -- | Functions for working with 'Ada' in Template Haskell.
-module Ledger.Ada(
+module Plutus.Script.Utils.Ada(
       Ada (..)
     , getAda
     , adaSymbol
@@ -28,17 +28,18 @@ module Ledger.Ada(
 
 import Prelude qualified as Haskell
 
-import Data.Fixed
+import Data.Fixed (Fixed (MkFixed), Micro)
 
 import Codec.Serialise.Class (Serialise)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Tagged
+import Data.Tagged (Tagged (Tagged))
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Value (CurrencySymbol (..), TokenName (..), Value)
+import Plutus.V1.Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value)
 import Plutus.V1.Ledger.Value qualified as TH
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
-import PlutusTx.Prelude hiding (divide)
+import PlutusTx.Prelude (AdditiveGroup, AdditiveMonoid, AdditiveSemigroup ((+)), Bool, Eq ((==)), Integer, Monoid,
+                         MultiplicativeMonoid, MultiplicativeSemigroup, Ord, Semigroup, emptyByteString)
 import PlutusTx.Prelude qualified as P
 import Prettyprinter (Pretty)
 

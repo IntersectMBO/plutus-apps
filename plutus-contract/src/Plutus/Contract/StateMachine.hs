@@ -64,7 +64,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, Slot, TxOutRef, Value)
+import Ledger (POSIXTime, Slot, TxOutRef)
 import Ledger qualified
 import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
                            mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
@@ -72,7 +72,6 @@ import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutpu
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value qualified as Value
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Promise, adjustUnbalancedTx,
                         awaitPromise, isSlot, isTime, logWarn, mapError, never, ownFirstPaymentPubKeyHash, ownUtxos,
@@ -87,6 +86,8 @@ import Plutus.Contract.StateMachine.OnChain qualified as SM
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
 import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
+import Plutus.Script.Utils.Value (Value)
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V2.Ledger.Tx qualified as V2
 import PlutusTx qualified
 import PlutusTx.Monoid (inv)

@@ -44,7 +44,6 @@ import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredenti
 import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, Redeemer, StakeValidator, Validator (..), ValidatorHash (..))
 import Plutus.V1.Ledger.Scripts qualified as Ledger (DatumHash, Script, ScriptHash (..))
 import Plutus.V1.Ledger.Tx qualified
-import Plutus.V1.Ledger.Value qualified as Ledger
 
 import PlutusTx qualified
 
@@ -131,7 +130,7 @@ processUnspentTxOut (Just utxo) = buildResponse utxo
     buildPublicKeyTxOut :: Ledger.CardanoAddress -> UtxoOutput -> Maybe DecoratedTxOut
     buildPublicKeyTxOut addr utxoOut = mkPubkeyDecoratedTxOut addr (utxoValue utxoOut) Nothing Nothing
 
-    utxoValue :: UtxoOutput -> Ledger.Value
+    utxoValue :: UtxoOutput -> Value
     utxoValue = amountsToValue . _utxoOutputAmount
 
     utxoDatumHash :: UtxoOutput -> Ledger.DatumHash
@@ -204,7 +203,7 @@ processUnspentTxOutSetAtAddress _ cred xs =
                                                            , _decoratedTxOutReferenceScript=Nothing
                                                            }
 
-    utxoValue :: AddressUtxo -> Ledger.Value
+    utxoValue :: AddressUtxo -> Value
     utxoValue = amountsToValue . _addressUtxoAmount
 
     utxoDatumHash :: AddressUtxo -> Ledger.DatumHash

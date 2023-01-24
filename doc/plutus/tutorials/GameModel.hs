@@ -46,9 +46,9 @@ import Plutus.Contracts.GameStateMachine qualified as G
 -- END import Game
 
 -- START import Ada
-import Ledger.Ada qualified as Ada
 import Ledger.Address qualified as Address
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 -- END import Ada
 
 -- START import Scripts

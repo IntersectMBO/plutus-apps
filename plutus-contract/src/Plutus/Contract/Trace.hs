@@ -59,20 +59,15 @@ import Control.Monad.Freer.Reader (Reader)
 import Data.Aeson.Types qualified as JSON
 import Data.Map (Map)
 import Data.Map qualified as Map
-import GHC.Generics (Generic)
-import Prettyprinter (Pretty, pretty, (<+>))
-
 import Data.Text (Text)
-
+import GHC.Generics (Generic)
+import Ledger.Value.CardanoAPI (Value, lovelaceValueOf)
+import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Trace.RequestHandler (RequestHandler, RequestHandlerLogMsg, generalise)
 import Plutus.Contract.Trace.RequestHandler qualified as RequestHandler
-
-import Ledger.Ada qualified as Ada
-import Ledger.Value (Value)
-
-import Plutus.ChainIndex (ChainIndexQueryEffect)
+import Prettyprinter (Pretty, pretty, (<+>))
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator (Wallet)
 import Wallet.Emulator qualified as EM
@@ -252,7 +247,7 @@ defaultDist :: InitialDistribution
 defaultDist = defaultDistFor EM.knownWallets
 
 defaultDistFor :: [EM.Wallet] -> InitialDistribution
-defaultDistFor wallets = Map.fromList $ zip wallets (repeat (Ada.lovelaceValueOf 100_000_000))
+defaultDistFor wallets = Map.fromList $ zip wallets (repeat (lovelaceValueOf 100_000_000))
 
 makeClassyPrisms ''TraceError
 

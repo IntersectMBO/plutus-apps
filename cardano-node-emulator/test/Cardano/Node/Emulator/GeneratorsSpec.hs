@@ -6,9 +6,7 @@
 {-# LANGUAGE TypeApplications   #-}
 module Cardano.Node.Emulator.GeneratorsSpec (tests) where
 
-import Hedgehog (Property, evalEither, forAll, property, (===))
-import Ledger.Tx.CardanoAPI (fromCardanoAssetId, fromCardanoAssetName, fromCardanoPolicyId, fromCardanoValue,
-                             toCardanoAssetId, toCardanoAssetName, toCardanoPolicyId, toCardanoValue)
+import Hedgehog (Property, forAll, property)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
@@ -23,26 +21,19 @@ import Hedgehog.Range qualified as Range
 import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBound (LowerBound), Slot (Slot),
                UpperBound (UpperBound), fromMilliSeconds, interval)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Bytes qualified as Bytes
 import Ledger.Interval qualified as Interval
-import Ledger.Value qualified as Value
+import Ledger.Value.CardanoAPI qualified as C
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 
 import Data.String (fromString)
 import Hedgehog (Gen)
 
 
-import Cardano.Node.Emulator.Generators (genAssetClass, genMintingPolicyHash, genTokenName, genValue)
-
 tests :: TestTree
 tests = testGroup "Cardano.Node.Emulator.Generators" [
-  testGroup "Roundtrips" [
-    testPropertyNamed "MintingPolicyHash -> Cardano PolicyId roundtrip" "mintingPolicyHashRoundTrip" mintingPolicyHashRoundTrip,
-    testPropertyNamed "TokenName -> Cardano AssetName roundtrip" "tokenNameRoundTrip" tokenNameRoundTrip,
-    testPropertyNamed "AssetClass -> Cardano AssetId roundtrip" "assetClassRoundTrip" assetClassRoundTrip,
-    testPropertyNamed "Plutus Value -> Cardano Value roundtrip" "plutusValueRoundTrip" plutusValueRoundTrip
-  ],
   testGroup "UTXO model" [
     testPropertyNamed "initial transaction is valid" "initialTxnValid" initialTxnValid
   ],
@@ -62,9 +53,9 @@ tests = testGroup "Cardano.Node.Emulator.Generators" [
   ],
   testGroup "Value" [
     testPropertyNamed "Value ToJSON/FromJSON" "value_json_roundtrip" (jsonRoundTrip Gen.genValue),
-    testPropertyNamed "TokenName ToJSON/FromJSON" "tokenname_json_roundtrip" (jsonRoundTrip Gen.genTokenName),
     testPropertyNamed "CurrencySymbol ToJSON/FromJSON" "currency_symbol_json_roundtrip" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
-    testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow
+    testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow,
+    testPropertyNamed "Old split equals the new split" "valueSplit" valueSplit
   ],
   testGroup "TimeSlot" [
     testPropertyNamed "time range of starting slot" "initialSlotToTimeProp," initialSlotToTimeProp,
@@ -82,30 +73,6 @@ tests = testGroup "Cardano.Node.Emulator.Generators" [
     testPropertyNamed "signed payload verifies with public key" "signAndVerifyTest" signAndVerifyTest
   ]
   ]
-
-assetClassRoundTrip :: Property
-assetClassRoundTrip = property $ do
-    assetClass <- forAll genAssetClass
-    assetId    <- evalEither $ toCardanoAssetId assetClass
-    assetClass === fromCardanoAssetId assetId
-
-mintingPolicyHashRoundTrip :: Property
-mintingPolicyHashRoundTrip = property $ do
-    policyHash <- forAll genMintingPolicyHash
-    policyId   <- evalEither $ toCardanoPolicyId policyHash
-    policyHash === fromCardanoPolicyId policyId
-
-tokenNameRoundTrip :: Property
-tokenNameRoundTrip = property $ do
-    tokenName <- forAll genTokenName
-    assetName <- evalEither $ toCardanoAssetName tokenName
-    tokenName === fromCardanoAssetName assetName
-
-plutusValueRoundTrip :: Property
-plutusValueRoundTrip = property $ do
-    plutusValue  <- forAll genValue
-    cardanoValue <- evalEither $ toCardanoValue plutusValue
-    plutusValue === fromCardanoValue cardanoValue
 
 initialTxnValid :: Property
 initialTxnValid = property $ do
@@ -152,27 +119,27 @@ currencySymbolIsStringShow = property $ do
 valueAddIdentity :: Property
 valueAddIdentity = property $ do
     vl1 <- forAll Gen.genValue
-    Hedgehog.assert $ vl1 == (vl1 PlutusTx.+ PlutusTx.zero)
-    Hedgehog.assert $ vl1 == (PlutusTx.zero PlutusTx.+ vl1)
+    Hedgehog.assert $ vl1 == vl1 <> mempty
+    Hedgehog.assert $ vl1 == mempty <> vl1
 
 valueAddInverse :: Property
 valueAddInverse = property $ do
     vl1 <- forAll Gen.genValue
-    let vl1' = PlutusTx.negate vl1
-    Hedgehog.assert $ PlutusTx.zero == (vl1 PlutusTx.+ vl1')
+    let vl1' = C.negateValue vl1
+    Hedgehog.assert $ mempty == (vl1 <> vl1')
 
 valueScalarIdentity :: Property
 valueScalarIdentity = property $ do
     vl1 <- forAll Gen.genValue
-    Hedgehog.assert $ vl1 == PlutusTx.scale 1 vl1
+    Hedgehog.assert $ vl1 == C.scale 1 vl1
 
 valueScalarDistrib :: Property
 valueScalarDistrib = property $ do
     vl1 <- forAll Gen.genValue
     vl2 <- forAll Gen.genValue
     scalar <- forAll (Gen.integral (fromIntegral <$> Range.linearBounded @Int))
-    let r1 = PlutusTx.scale scalar (vl1 PlutusTx.+ vl2)
-        r2 = PlutusTx.scale scalar vl1 PlutusTx.+ PlutusTx.scale scalar vl2
+    let r1 = C.scale scalar (vl1 <> vl2)
+        r2 = C.scale scalar vl1 <> C.scale scalar vl2
     Hedgehog.assert $ r1 == r2
 
 -- | Asserting that time range of 'scSlotZeroTime' to 'scSlotZeroTime + scSlotLength'
@@ -274,3 +241,10 @@ jsonRoundTrip gen = property $ do
         result = Aeson.iparse JSON.parseJSON enc
 
     Hedgehog.assert $ result == Aeson.ISuccess bts
+
+valueSplit :: Property
+valueSplit = property $ do
+    vl <- forAll Gen.genValue
+    let (pvl1, pvl2) = Value.split (C.fromCardanoValue vl)
+        (vl1, vl2) = C.split vl
+    Hedgehog.assert $ (pvl1, pvl2) == (C.fromCardanoValue vl1, C.fromCardanoValue vl2)
