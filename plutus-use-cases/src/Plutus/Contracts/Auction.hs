@@ -46,6 +46,7 @@ import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value qualified as Value
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage
@@ -162,13 +163,13 @@ auctionStateMachine (threadToken, auctionParams) =
     isFinal _          = False
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: (ThreadToken, AuctionParams) -> Scripts.ValidatorType AuctionMachine
+mkValidator :: (ThreadToken, AuctionParams) -> V2.ValidatorType AuctionMachine
 mkValidator = SM.mkValidator . auctionStateMachine
 
 -- | The script instance of the auction state machine. It contains the state
 --   machine compiled to a Plutus core validator script.
-typedValidator :: (ThreadToken, AuctionParams) -> Scripts.TypedValidator AuctionMachine
-typedValidator = Scripts.mkTypedValidatorParam @AuctionMachine
+typedValidator :: (ThreadToken, AuctionParams) -> V2.TypedValidator AuctionMachine
+typedValidator = V2.mkTypedValidatorParam @AuctionMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
@@ -178,7 +179,7 @@ typedValidator = Scripts.mkTypedValidatorParam @AuctionMachine
 --   with the on-chain code, and the Haskell definition of the state machine for
 --   off-chain use.
 machineClient
-    :: Scripts.TypedValidator AuctionMachine
+    :: V2.TypedValidator AuctionMachine
     -> ThreadToken -- ^ Thread token of the instance
     -> AuctionParams
     -> StateMachineClient AuctionState AuctionInput

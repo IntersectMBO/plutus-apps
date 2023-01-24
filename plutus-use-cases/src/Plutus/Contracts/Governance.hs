@@ -46,6 +46,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Script.Utils.Value qualified as Value
@@ -140,11 +141,11 @@ machine params = SM.mkStateMachine Nothing (transition params) isFinal where
     isFinal _ = False
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: Params -> Scripts.ValidatorType GovernanceMachine
+mkValidator :: Params -> V2.ValidatorType GovernanceMachine
 mkValidator params = SM.mkValidator $ machine params
 
-typedValidator :: Params -> Scripts.TypedValidator GovernanceMachine
-typedValidator = Scripts.mkTypedValidatorParam @GovernanceMachine
+typedValidator :: Params -> V2.TypedValidator GovernanceMachine
+typedValidator = V2.mkTypedValidatorParam @GovernanceMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where

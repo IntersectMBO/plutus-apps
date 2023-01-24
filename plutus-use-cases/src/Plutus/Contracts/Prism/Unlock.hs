@@ -80,7 +80,7 @@ subscribeSTO = forever $ handleError (const $ return ()) $ awaitPromise $
                 <> Constraints.mustPayToPubKey wSTOIssuer (Ada.lovelaceValueOf wSTOAmount)
                 <> credConstraints
             lookups =
-                Constraints.plutusV1MintingPolicy (STO.policy stoData)
+                Constraints.plutusV2MintingPolicy (STO.policy stoData)
                 <> credLookups
         mapError WithdrawTxError
             $ submitTxConstraintsWith lookups constraints >>= awaitTxConfirmed . getCardanoTxId

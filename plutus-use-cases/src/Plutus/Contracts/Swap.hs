@@ -16,15 +16,16 @@ module Plutus.Contracts.Swap(
     swapValidator
     ) where
 
-import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash), PubKeyHash)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Script.Utils.Ada (Ada)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value)
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V1.Ledger.Address (toPubKeyHash)
+import Plutus.V2.Ledger.Api qualified as V2
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude
 
@@ -75,8 +76,8 @@ PlutusTx.makeLift ''SwapOwners
 type SwapOracleMessage = SignedMessage (Observation Rational)
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: Swap -> SwapOwners -> SwapOracleMessage -> PV1.ScriptContext -> Bool
-mkValidator Swap{..} SwapOwners{..} redeemer p@PV1.ScriptContext{PV1.scriptContextTxInfo=txInfo} =
+mkValidator :: Swap -> SwapOwners -> SwapOracleMessage -> V2.ScriptContext -> Bool
+mkValidator Swap{..} SwapOwners{..} redeemer p@V2.ScriptContext{V2.scriptContextTxInfo=txInfo} =
     let
         extractVerifyAt :: SignedMessage (Observation Rational) -> PaymentPubKey -> POSIXTime -> Rational
         extractVerifyAt sm pk time =
@@ -94,8 +95,12 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@PV1.ScriptContext{PV1.scriptConte
         adaValueIn :: Value -> Integer
         adaValueIn v = Ada.getLovelace (Ada.fromValue v)
 
-        isPaymentPubKeyOutput :: PV1.TxOut -> PaymentPubKeyHash -> Bool
-        isPaymentPubKeyOutput o k = maybe False ((==) (unPaymentPubKeyHash k)) (PV1.pubKeyOutput o)
+        isPaymentPubKeyOutput :: V2.TxOut -> PaymentPubKeyHash -> Bool
+        isPaymentPubKeyOutput o k = maybe False ((==) (unPaymentPubKeyHash k)) (pubKeyOutput o)
+
+        -- | Get the public key hash that locks the transaction output, if any.
+        pubKeyOutput :: V2.TxOut -> Maybe PubKeyHash
+        pubKeyOutput V2.TxOut{txOutAddress} = toPubKeyHash txOutAddress
 
         -- Verify the authenticity of the oracle value and compute
         -- the payments.
@@ -132,8 +137,8 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@PV1.ScriptContext{PV1.scriptConte
         -- NOTE: Partial match is OK because if it fails then the PLC script
         --       terminates with `error` and the validation fails (which is
         --       what we want when the number of inputs and outputs is /= 2)
-        [t1, t2] = PV1.txInfoInputs txInfo
-        [o1, o2] = PV1.txInfoOutputs txInfo
+        [t1, t2] = V2.txInfoInputs txInfo
+        [o1, o2] = V2.txInfoOutputs txInfo
 
         -- Each participant must deposit the margin. But we don't know
         -- which of the two participant's deposit we are currently
@@ -142,15 +147,15 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@PV1.ScriptContext{PV1.scriptConte
 
         -- True if the transaction input is the margin payment of the
         -- fixed leg
-        iP1 :: PV1.TxInInfo -> Bool
-        iP1 PV1.TxInInfo{PV1.txInInfoResolved=PV1.TxOut{txOutValue}} =
-            PV1.txSignedBy txInfo (unPaymentPubKeyHash swapOwnersFixedLeg) && adaValueIn txOutValue == margin
+        iP1 :: V2.TxInInfo -> Bool
+        iP1 V2.TxInInfo{V2.txInInfoResolved=V2.TxOut{txOutValue}} =
+            V2.txSignedBy txInfo (unPaymentPubKeyHash swapOwnersFixedLeg) && adaValueIn txOutValue == margin
 
         -- True if the transaction input is the margin payment of the
         -- floating leg
-        iP2 :: PV1.TxInInfo -> Bool
-        iP2 PV1.TxInInfo{PV1.txInInfoResolved=PV1.TxOut{txOutValue}} =
-            PV1.txSignedBy txInfo (unPaymentPubKeyHash swapOwnersFloating) && adaValueIn txOutValue == margin
+        iP2 :: V2.TxInInfo -> Bool
+        iP2 V2.TxInInfo{V2.txInInfoResolved=V2.TxOut{txOutValue}} =
+            V2.txSignedBy txInfo (unPaymentPubKeyHash swapOwnersFloating) && adaValueIn txOutValue == margin
 
         inConditions = (iP1 t1 && iP2 t2) || (iP1 t2 && iP2 t1)
 
@@ -159,13 +164,13 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@PV1.ScriptContext{PV1.scriptConte
         -- between fixed and floating payment
 
         -- True if the output is the payment of the fixed leg.
-        ol1 :: PV1.TxOut -> Bool
-        ol1 o@PV1.TxOut{PV1.txOutValue} =
+        ol1 :: V2.TxOut -> Bool
+        ol1 o@V2.TxOut{V2.txOutValue} =
             isPaymentPubKeyOutput o swapOwnersFixedLeg && adaValueIn txOutValue <= fixedRemainder
 
         -- True if the output is the payment of the floating leg.
-        ol2 :: PV1.TxOut -> Bool
-        ol2 o@PV1.TxOut{PV1.txOutValue} =
+        ol2 :: V2.TxOut -> Bool
+        ol2 o@V2.TxOut{V2.txOutValue} =
             isPaymentPubKeyOutput o swapOwnersFloating && adaValueIn txOutValue <= floatRemainder
 
         -- NOTE: I didn't include a check that the time is greater
@@ -180,8 +185,8 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@PV1.ScriptContext{PV1.scriptConte
 --   See note [Swap Transactions]
 --   See note [Contracts and Validator Scripts] in
 --       Language.Plutus.Coordination.Contracts
-swapValidator :: Swap -> PV1.Validator
-swapValidator swp = PV1.mkValidatorScript $
+swapValidator :: Swap -> V2.Validator
+swapValidator swp = V2.mkValidatorScript $
     $$(PlutusTx.compile [|| validatorParam ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode swp

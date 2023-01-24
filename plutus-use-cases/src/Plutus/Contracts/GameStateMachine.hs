@@ -57,6 +57,7 @@ import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), check, sha2_256, toBuiltin,
@@ -226,11 +227,11 @@ machine gameParam = SM.mkStateMachine Nothing (transition gameParam) isFinal whe
     isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: GameParam -> Scripts.ValidatorType GameStateMachine
+mkValidator :: GameParam -> V2.ValidatorType GameStateMachine
 mkValidator gameParam = SM.mkValidator (machine gameParam)
 
-typedValidator :: GameParam -> Scripts.TypedValidator GameStateMachine
-typedValidator = Scripts.mkTypedValidatorParam @GameStateMachine
+typedValidator :: GameParam -> V2.TypedValidator GameStateMachine
+typedValidator = V2.mkTypedValidatorParam @GameStateMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where

@@ -69,7 +69,7 @@ badRemove us BadRemoveParams{..} = do
 
         lookups  = Constraints.typedValidatorLookups usInst          <>
                    Constraints.plutusV1OtherScript usScript                  <>
-                   Constraints.plutusV1MintingPolicy (liquidityPolicy us)   <>
+                   Constraints.plutusV2MintingPolicy (liquidityPolicy us)   <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>

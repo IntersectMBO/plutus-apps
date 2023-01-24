@@ -64,15 +64,14 @@ import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
+import Plutus.Script.Utils.V2.Scripts as V2
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2 hiding (validatorHash)
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Contexts qualified as PV1
-import Plutus.V2.Ledger.Contexts qualified as PV2
+import Plutus.V1.Ledger.Api qualified as V1
+import Plutus.V1.Ledger.Contexts qualified as V1
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>), (>>=))
@@ -82,9 +81,9 @@ import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign
-    { campaignDeadline           :: PV1.POSIXTime
+    { campaignDeadline           :: V1.POSIXTime
     -- ^ The date by which the campaign funds can be contributed.
-    , campaignCollectionDeadline :: PV1.POSIXTime
+    , campaignCollectionDeadline :: V1.POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
     , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
@@ -107,14 +106,14 @@ type CrowdfundingSchema =
     .\/ Endpoint "contribute" Contribution
 
 newtype Contribution = Contribution
-        { contribValue :: PV1.Value
+        { contribValue :: V1.Value
         -- ^ how much to contribute
         } deriving stock (Haskell.Eq, Haskell.Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
 
 -- | Construct a 'Campaign' value from the campaign parameters,
 --   using the wallet's public key.
-mkCampaign :: PV1.POSIXTime -> PV1.POSIXTime -> Wallet -> Campaign
+mkCampaign :: V1.POSIXTime -> V1.POSIXTime -> Wallet -> Campaign
 mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
@@ -124,41 +123,41 @@ mkCampaign ddl collectionDdl ownerWallet =
 
 -- | The 'ValidityInterval POSIXTime' during which the funds can be collected
 {-# INLINABLE collectionRange #-}
-collectionRange :: Campaign -> ValidityInterval.ValidityInterval PV1.POSIXTime
+collectionRange :: Campaign -> ValidityInterval.ValidityInterval V1.POSIXTime
 collectionRange cmp = ValidityInterval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp)
 
 -- | The 'ValidityInterval POSIXTime' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
-refundRange :: Campaign -> ValidityInterval.ValidityInterval PV1.POSIXTime
+refundRange :: Campaign -> ValidityInterval.ValidityInterval V1.POSIXTime
 refundRange cmp = ValidityInterval.from (campaignCollectionDeadline cmp)
 
 data Crowdfunding
-instance PV2.ValidatorTypes Crowdfunding where
+instance Scripts.ValidatorTypes Crowdfunding where
     type instance RedeemerType Crowdfunding = CampaignAction
     type instance DatumType Crowdfunding = PaymentPubKeyHash
 
-typedValidator :: Campaign -> PV2.TypedValidator Crowdfunding
-typedValidator = PV2.mkTypedValidatorParam @Crowdfunding
+typedValidator :: Campaign -> V2.TypedValidator Crowdfunding
+typedValidator = V2.mkTypedValidatorParam @Crowdfunding
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PaymentPubKeyHash -> PV2.TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> V2.TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
-    ValidityInterval.toPlutusInterval (refundRange campaign) `Interval.contains` PV2.txInfoValidRange txinfo
+    ValidityInterval.toPlutusInterval (refundRange campaign) `Interval.contains` V2.txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
-    && (txinfo `PV2.txSignedBy` unPaymentPubKeyHash contributor)
+    && (txinfo `V2.txSignedBy` unPaymentPubKeyHash contributor)
 
 {-# INLINABLE validCollection #-}
-validCollection :: Campaign -> PV2.TxInfo -> Bool
+validCollection :: Campaign -> V2.TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
-    (ValidityInterval.toPlutusInterval (collectionRange campaign) `Interval.contains` PV2.txInfoValidRange txinfo)
+    (ValidityInterval.toPlutusInterval (collectionRange campaign) `Interval.contains` V2.txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `PV2.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    && (txinfo `V2.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
@@ -168,8 +167,8 @@ validCollection campaign txinfo =
 -- and different campaigns have different addresses. The Campaign{..} syntax
 -- means that all fields of the 'Campaign' value are in scope
 -- (for example 'campaignDeadline' in l. 70).
-mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> PV2.ScriptContext -> Bool
-mkValidator c con act PV2.ScriptContext{PV2.scriptContextTxInfo} = case act of
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> V2.ScriptContext -> Bool
+mkValidator c con act V2.ScriptContext{V2.scriptContextTxInfo} = case act of
     -- the "refund" branch
     Refund  -> validRefund c con scriptContextTxInfo
     -- the "collection" branch
@@ -178,19 +177,19 @@ mkValidator c con act PV2.ScriptContext{PV2.scriptContextTxInfo} = case act of
 -- | The validator script that determines whether the campaign owner can
 --   retrieve the funds or the contributors can claim a refund.
 --
-contributionScript :: Campaign -> PV1.Validator
-contributionScript = Scripts.validatorScript . typedValidator
+contributionScript :: Campaign -> V2.Validator
+contributionScript = V2.validatorScript . typedValidator
 
 -- | The address of a [[Campaign]]
-campaignAddress :: Campaign -> PV1.ValidatorHash
-campaignAddress = PV1.validatorHash . contributionScript
+campaignAddress :: Campaign -> V2.ValidatorHash
+campaignAddress = V2.validatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
 crowdfunding :: Campaign -> Contract () CrowdfundingSchema ContractError ()
 crowdfunding c = selectList [contribute c, scheduleCollection c]
 
 -- | A sample campaign
-theCampaign :: PV1.POSIXTime -> Campaign
+theCampaign :: V1.POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 20000
     , campaignCollectionDeadline = startTime + 30000
@@ -264,7 +263,7 @@ startCampaign = do
     pure hdl
 
 -- | Call the "contribute" endpoint, contributing the amount from the wallet
-makeContribution :: Wallet -> PV1.Value -> EmulatorTrace ()
+makeContribution :: Wallet -> V1.Value -> EmulatorTrace ()
 makeContribution w v = do
     startTime <- TimeSlot.scSlotZeroTime <$> getSlotConfig
     hdl <- Trace.activateContractWallet w (crowdfunding $ theCampaign startTime)

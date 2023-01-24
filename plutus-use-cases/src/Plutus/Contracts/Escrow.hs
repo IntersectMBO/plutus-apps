@@ -51,16 +51,13 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
 import Cardano.Node.Emulator.Params (pNetworkId)
-import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, scriptOutputsAt, txSignedBy,
-               valuePaidTo)
-import Ledger qualified
+import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as Interval
@@ -71,7 +68,11 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
+import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), scriptOutputsAt, txInfoValidRange, txSignedBy)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
+import Plutus.V2.Ledger.Contexts (valuePaidTo)
+import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatumHash))
 
 import Prelude (Semigroup (..), foldMap)
 import Prelude qualified as Haskell
@@ -197,7 +198,7 @@ meetsTarget ptx = \case
     ScriptTarget validatorHash dataValue vl ->
         case scriptOutputsAt validatorHash ptx of
             [(dataValue', vl')] ->
-                traceIfFalse "dataValue" (dataValue' == dataValue)
+                traceIfFalse "dataValue" (dataValue' == (OutputDatumHash dataValue))
                 && traceIfFalse "value" (vl' `geq` vl)
             _ -> False
 
@@ -212,9 +213,9 @@ validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptCo
             traceIfFalse "escrowDeadline-before" ((escrowDeadline - 1) `before` txInfoValidRange scriptContextTxInfo)
             && traceIfFalse "txSignedBy" (scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)
 
-typedValidator :: EscrowParams Datum -> Scripts.TypedValidator Escrow
+typedValidator :: EscrowParams Datum -> V2.TypedValidator Escrow
 typedValidator escrow = go (Haskell.fmap datumHash escrow) where
-    go = Scripts.mkTypedValidatorParam @Escrow
+    go = V2.mkTypedValidatorParam @Escrow
         $$(PlutusTx.compile [|| validate ||])
         $$(PlutusTx.compile [|| wrap ||])
     wrap = Scripts.mkUntypedValidator

@@ -25,15 +25,18 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy, valuePaidTo)
+import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Interval (after, before)
-import Ledger.Typed.Scripts (ScriptContextV1)
+import Ledger.Typed.Scripts (ScriptContextV2)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Value (Value, geq)
-import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
+import Plutus.V2.Ledger.Api (ScriptContext (..), TxInfo (..))
+import Plutus.V2.Ledger.Contexts (txSignedBy, valuePaidTo)
+import Plutus.V2.Ledger.Contexts qualified as V2
 
 import Plutus.Contract
 import PlutusTx qualified
@@ -95,16 +98,16 @@ instance Scripts.ValidatorTypes Escrow where
 escrowAddress :: Ledger.CardanoAddress
 escrowAddress = Scripts.validatorCardanoAddress Params.testnet escrowInstance
 
-escrowInstance :: Scripts.TypedValidator Escrow
-escrowInstance = Scripts.mkTypedValidator @Escrow
+escrowInstance :: V2.TypedValidator Escrow
+escrowInstance = V2.mkTypedValidator @Escrow
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
       where
-        wrap = Scripts.mkUntypedValidator @ScriptContextV1 @EscrowParams @Action
+        wrap = Scripts.mkUntypedValidator @ScriptContextV2 @EscrowParams @Action
 
 {-# INLINABLE validate #-}
-validate :: EscrowParams -> Action -> ScriptContext -> Bool
-validate params action ScriptContext{scriptContextTxInfo=txInfo} =
+validate :: EscrowParams -> Action -> V2.ScriptContext -> Bool
+validate params action V2.ScriptContext{V2.scriptContextTxInfo=txInfo} =
   case action of
     Redeem ->
           -- Can't redeem after the deadline

@@ -10,6 +10,7 @@ import Plutus.V1.Ledger.Scripts qualified as Ledger
 import Plutus.Contracts.Currency (OneShotCurrency)
 import Plutus.Contracts.Currency qualified as Cur
 import Plutus.Trace.Emulator qualified as Trace
+import Plutus.V2.Ledger.Api qualified as V2
 
 import Test.Tasty
 
@@ -29,7 +30,7 @@ tests = testGroup "currency"
         currencyTrace
     , checkPredicate
         "script size is reasonable"
-        (assertDone theContract (Trace.walletInstanceTag w1) ((30000 >=) . Ledger.scriptSize . Ledger.unMintingPolicyScript . Cur.curPolicy) "script too large")
+        (assertDone theContract (Trace.walletInstanceTag w1) ((30000 >=) . Ledger.scriptSize . V2.unMintingPolicyScript . Cur.curPolicy) "script too large")
         currencyTrace
 
     ]

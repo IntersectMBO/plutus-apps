@@ -27,6 +27,7 @@ import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachine
 import Plutus.Contract.StateMachine qualified as StateMachine
 import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
 import Plutus.Contracts.Prism.Credential qualified as Credential
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (TokenName, Value)
 import PlutusTx qualified
 import PlutusTx.Prelude
@@ -89,8 +90,8 @@ typedValidator ::
 typedValidator credentialData =
     let val = $$(PlutusTx.compile [|| validator ||]) `PlutusTx.applyCode` PlutusTx.liftCode credentialData
         validator d = StateMachine.mkValidator (credentialStateMachine d)
-        wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @IDState @IDAction
-    in Scripts.mkTypedValidator @(StateMachine IDState IDAction) val $$(PlutusTx.compile [|| wrap ||])
+        wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV2 @IDState @IDAction
+    in V2.mkTypedValidator @(StateMachine IDState IDAction) val $$(PlutusTx.compile [|| wrap ||])
 
 machineClient ::
     Scripts.TypedValidator (StateMachine IDState IDAction)

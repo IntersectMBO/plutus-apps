@@ -55,17 +55,18 @@ import Ledger (CardanoAddress, toPlutusAddress)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (CardanoTx, decoratedTxOutPlutusValue)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
-import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
+import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contracts.Currency qualified as Currency
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.Value (TokenName, Value)
+import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
+import Plutus.Script.Utils.Value (AssetClass, TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api (ValidatorHash)
-import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V2.Ledger.Api qualified as V2
+import Plutus.V2.Ledger.Contexts qualified as V2
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
 
-newtype Account = Account { accountOwner :: Value.AssetClass }
+newtype Account = Account { accountOwner :: AssetClass }
     deriving stock    (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
     deriving Pretty via (PrettyShow Account)
@@ -124,21 +125,21 @@ accountToken :: Account -> Value
 accountToken (Account currency) = Value.assetClassValue currency 1
 
 {-# INLINEABLE validate #-}
-validate :: Account -> () -> () -> PV1.ScriptContext -> Bool
-validate account _ _ ptx = PV1.valueSpent (PV1.scriptContextTxInfo ptx) `Value.geq` accountToken account
+validate :: Account -> () -> () -> V2.ScriptContext -> Bool
+validate account _ _ ptx = V2.valueSpent (V2.scriptContextTxInfo ptx) `Value.geq` accountToken account
 
-typedValidator :: Account -> Scripts.TypedValidator TokenAccount
-typedValidator = Scripts.mkTypedValidatorParam @TokenAccount
+typedValidator :: Account -> V2.TypedValidator TokenAccount
+typedValidator = V2.mkTypedValidatorParam @TokenAccount
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
 
 address :: Account -> CardanoAddress
-address = Scripts.validatorCardanoAddress Params.testnet . typedValidator
+address = mkValidatorCardanoAddress Params.testnet . Scripts.validatorScript . typedValidator
 
-validatorHash :: Account -> ValidatorHash
-validatorHash = PV1.validatorHash . Scripts.validatorScript . typedValidator
+validatorHash :: Account -> V2.ValidatorHash
+validatorHash = V2.validatorHash . typedValidator
 
 -- | A transaction that pays the given value to the account
 payTx

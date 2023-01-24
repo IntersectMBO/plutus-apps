@@ -45,8 +45,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, DecoratedTxOut, TxOutRef, datumInDatumFromQuery, decoratedTxOutPlutusValue,
-               decoratedTxOutScriptDatum)
+import Ledger (CardanoAddress, DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutScriptDatum, decoratedTxOutPlutusValue, decoratedTxOutScriptDatum)
 import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Contract
@@ -55,11 +54,12 @@ import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
-import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
-import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
+import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
+import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.V1.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), TokenName,
                              Validator, Value)
-import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
+import Plutus.V2.Ledger.Api as V2
 import PlutusTx qualified
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
@@ -101,8 +101,8 @@ uniswapTokenName, poolStateTokenName :: TokenName
 uniswapTokenName = "Uniswap"
 poolStateTokenName = "Pool State"
 
-uniswapInstance :: Uniswap -> Scripts.TypedValidator Uniswapping
-uniswapInstance us = Scripts.mkTypedValidator @Uniswapping
+uniswapInstance :: Uniswap -> V2.TypedValidator Uniswapping
+uniswapInstance us = V2.mkTypedValidator @Uniswapping
     ($$(PlutusTx.compile [|| mkUniswapValidator ||])
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode c)
@@ -111,7 +111,7 @@ uniswapInstance us = Scripts.mkTypedValidator @Uniswapping
     c :: Coin PoolState
     c = poolStateCoin us
 
-    wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @UniswapDatum @UniswapAction
+    wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV2 @UniswapDatum @UniswapAction
 
 uniswapScript :: Uniswap -> Validator
 uniswapScript = Scripts.validatorScript . uniswapInstance
@@ -123,7 +123,7 @@ uniswap :: CurrencySymbol -> Uniswap
 uniswap cs = Uniswap $ mkCoin cs uniswapTokenName
 
 liquidityPolicy :: Uniswap -> MintingPolicy
-liquidityPolicy us = mkMintingPolicyScript $
+liquidityPolicy us = V2.mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \u t -> Scripts.mkUntypedMintingPolicy (validateLiquidityMinting u t) ||])
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode poolStateTokenName
@@ -225,8 +225,8 @@ create us CreateParams{..} = do
         lpVal    = valueOf cpCoinA cpAmountA <> valueOf cpCoinB cpAmountB <> unitValue psC
 
         lookups  = Constraints.typedValidatorLookups usInst        <>
-                   Constraints.plutusV1OtherScript usScript                <>
-                   Constraints.plutusV1MintingPolicy (liquidityPolicy us) <>
+                   Constraints.plutusV2OtherScript usScript                <>
+                   Constraints.plutusV2MintingPolicy (liquidityPolicy us) <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx usDat1 usVal                                     <>
@@ -254,8 +254,8 @@ close us CloseParams{..} = do
         redeemer = Redeemer $ PlutusTx.toBuiltinData Close
 
         lookups  = Constraints.typedValidatorLookups usInst        <>
-                   Constraints.plutusV1OtherScript usScript                <>
-                   Constraints.plutusV1MintingPolicy (liquidityPolicy us) <>
+                   Constraints.plutusV2OtherScript usScript                <>
+                   Constraints.plutusV2MintingPolicy (liquidityPolicy us) <>
                    Constraints.unspentOutputs (Map.singleton oref1 o1 <> Map.singleton oref2 o2)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx usDat usVal <>
@@ -288,8 +288,8 @@ remove us RemoveParams{..} = do
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Remove
 
         lookups  = Constraints.typedValidatorLookups usInst          <>
-                   Constraints.plutusV1OtherScript usScript                  <>
-                   Constraints.plutusV1MintingPolicy (liquidityPolicy us)   <>
+                   Constraints.plutusV2OtherScript usScript                  <>
+                   Constraints.plutusV2MintingPolicy (liquidityPolicy us)   <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
@@ -326,8 +326,8 @@ add us AddParams{..} = do
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Add
 
         lookups  = Constraints.typedValidatorLookups usInst             <>
-                   Constraints.plutusV1OtherScript usScript                     <>
-                   Constraints.plutusV1MintingPolicy (liquidityPolicy us)       <>
+                   Constraints.plutusV2OtherScript usScript                     <>
+                   Constraints.plutusV2MintingPolicy (liquidityPolicy us)       <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>
@@ -365,7 +365,7 @@ swap us SwapParams{..} = do
         val     = valueOf spCoinA newA <> valueOf spCoinB newB <> unitValue (poolStateCoin us)
 
         lookups = Constraints.typedValidatorLookups inst                 <>
-                  Constraints.plutusV1OtherScript (Scripts.validatorScript inst) <>
+                  Constraints.plutusV2OtherScript (Scripts.validatorScript inst) <>
                   Constraints.unspentOutputs (Map.singleton oref o)
 
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
