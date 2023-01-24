@@ -135,13 +135,16 @@ genCardanoBuildTx :: Hedgehog.Gen CardanoBuildTx
 genCardanoBuildTx = do
     tx <- Gen.genTxBodyContent C.BabbageEra
     let tx' = tx {
-        C.txMetadata = C.TxMetadataNone,
-        C.txAuxScripts = C.TxAuxScriptsNone,
-        C.txWithdrawals = C.TxWithdrawalsNone,
         C.txCertificates = C.TxCertificatesNone,
-        C.txUpdateProposal = C.TxUpdateProposalNone
+        C.txUpdateProposal = C.TxUpdateProposalNone,
+        C.txAuxScripts = onlyPlutusScripts $ C.txAuxScripts tx
     }
     pure $ CardanoBuildTx tx'
+    where
+        onlyPlutusScripts C.TxAuxScriptsNone         = C.TxAuxScriptsNone
+        onlyPlutusScripts (C.TxAuxScripts p scripts) = C.TxAuxScripts p $ filter isPlutusScript scripts
+        isPlutusScript (C.ScriptInEra _ C.PlutusScript{}) = True
+        isPlutusScript _                                  = False
 
 -- TODO Unfortunately, there's no way to get a warning if another era has been
 -- added to EraInMode. Alternative way?
