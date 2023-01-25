@@ -45,8 +45,8 @@ import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachine
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage

@@ -50,16 +50,18 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy, valuePaidTo)
+import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), txSignedBy)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash)
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash)
+import Plutus.V2.Ledger.Contexts (valuePaidTo)
 
 import Cardano.Node.Emulator.Params qualified as Params
 import Plutus.Contract
@@ -191,9 +193,9 @@ validate EscrowParams{escrowTargets} contributor action ScriptContext{scriptCont
         Refund ->
             traceIfFalse "txSignedBy" (scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)
 
-typedValidator :: EscrowParams Datum -> Scripts.TypedValidator Escrow
+typedValidator :: EscrowParams Datum -> V2.TypedValidator Escrow
 typedValidator escrow = go (Haskell.fmap Ledger.datumHash escrow) where
-    go = Scripts.mkTypedValidatorParam @Escrow
+    go = V2.mkTypedValidatorParam @Escrow
         $$(PlutusTx.compile [|| validate ||])
         $$(PlutusTx.compile [|| wrap ||])
     wrap = Scripts.mkUntypedValidator

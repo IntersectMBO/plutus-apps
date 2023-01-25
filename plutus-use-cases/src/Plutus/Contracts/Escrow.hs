@@ -67,10 +67,10 @@ import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.Script.Utils.Value (Value, geq, lt)
 import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), scriptOutputsAt, txInfoValidRange, txSignedBy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
+import Plutus.Script.Utils.Value (Value, geq, lt)
+import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V2.Ledger.Contexts (valuePaidTo)
 import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatumHash))
 

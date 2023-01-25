@@ -5,7 +5,7 @@ module Spec.Currency(tests, currencyTrace) where
 import Control.Monad (void)
 import Plutus.Contract
 import Plutus.Contract.Test
-import Plutus.V1.Ledger.Scripts qualified as Ledger
+import Plutus.V1.Ledger.Scripts (scriptSize)
 
 import Plutus.Contracts.Currency (OneShotCurrency)
 import Plutus.Contracts.Currency qualified as Cur
@@ -30,7 +30,7 @@ tests = testGroup "currency"
         currencyTrace
     , checkPredicate
         "script size is reasonable"
-        (assertDone theContract (Trace.walletInstanceTag w1) ((30000 >=) . Ledger.scriptSize . V2.unMintingPolicyScript . Cur.curPolicy) "script too large")
+        (assertDone theContract (Trace.walletInstanceTag w1) ((30000 >=) . scriptSize . V2.unMintingPolicyScript . Cur.curPolicy) "script too large")
         currencyTrace
 
     ]

@@ -55,10 +55,10 @@ import Plutus.Contract.Secrets (SecretArgument, escape_sha2_256, extractSecret)
 import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.V2.Scripts (MintingPolicyHash)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
-import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), check, sha2_256, toBuiltin,
                          traceIfFalse, ($), (&&), (-), (.), (<$>), (<>), (==), (>>))

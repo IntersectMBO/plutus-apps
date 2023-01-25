@@ -42,8 +42,8 @@ import Plutus.Contract
 import Plutus.Contract.Secrets
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, Void)
 import Plutus.Contract.StateMachine qualified as SM
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified

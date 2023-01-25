@@ -95,8 +95,8 @@ import Plutus.Contract.Oracle
 import Plutus.Contract.StateMachine (AsSMContractError, SMContractError, State (..), StateMachine,
                                      StateMachineClient (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
-import Plutus.Script.Utils.V2.Typed.Scripts as V2
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.V2.Typed.Scripts as V2
 import Plutus.Script.Utils.Value (AssetClass, TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified

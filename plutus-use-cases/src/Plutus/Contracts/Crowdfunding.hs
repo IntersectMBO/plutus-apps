@@ -69,8 +69,7 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2 hiding (validatorHas
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V1.Ledger.Api qualified as V1
-import Plutus.V1.Ledger.Contexts qualified as V1
+import Plutus.V2.Ledger.Api qualified as V2
 import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
@@ -81,9 +80,9 @@ import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign
-    { campaignDeadline           :: V1.POSIXTime
+    { campaignDeadline           :: V2.POSIXTime
     -- ^ The date by which the campaign funds can be contributed.
-    , campaignCollectionDeadline :: V1.POSIXTime
+    , campaignCollectionDeadline :: V2.POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
     , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
@@ -106,14 +105,14 @@ type CrowdfundingSchema =
     .\/ Endpoint "contribute" Contribution
 
 newtype Contribution = Contribution
-        { contribValue :: V1.Value
+        { contribValue :: V2.Value
         -- ^ how much to contribute
         } deriving stock (Haskell.Eq, Haskell.Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
 
 -- | Construct a 'Campaign' value from the campaign parameters,
 --   using the wallet's public key.
-mkCampaign :: V1.POSIXTime -> V1.POSIXTime -> Wallet -> Campaign
+mkCampaign :: V2.POSIXTime -> V2.POSIXTime -> Wallet -> Campaign
 mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
@@ -123,12 +122,12 @@ mkCampaign ddl collectionDdl ownerWallet =
 
 -- | The 'ValidityInterval POSIXTime' during which the funds can be collected
 {-# INLINABLE collectionRange #-}
-collectionRange :: Campaign -> ValidityInterval.ValidityInterval V1.POSIXTime
+collectionRange :: Campaign -> ValidityInterval.ValidityInterval V2.POSIXTime
 collectionRange cmp = ValidityInterval.interval (campaignDeadline cmp) (campaignCollectionDeadline cmp)
 
 -- | The 'ValidityInterval POSIXTime' during which a refund may be claimed
 {-# INLINABLE refundRange #-}
-refundRange :: Campaign -> ValidityInterval.ValidityInterval V1.POSIXTime
+refundRange :: Campaign -> ValidityInterval.ValidityInterval V2.POSIXTime
 refundRange cmp = ValidityInterval.from (campaignCollectionDeadline cmp)
 
 data Crowdfunding
@@ -189,7 +188,7 @@ crowdfunding :: Campaign -> Contract () CrowdfundingSchema ContractError ()
 crowdfunding c = selectList [contribute c, scheduleCollection c]
 
 -- | A sample campaign
-theCampaign :: V1.POSIXTime -> Campaign
+theCampaign :: V2.POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 20000
     , campaignCollectionDeadline = startTime + 30000
@@ -263,7 +262,7 @@ startCampaign = do
     pure hdl
 
 -- | Call the "contribute" endpoint, contributing the amount from the wallet
-makeContribution :: Wallet -> V1.Value -> EmulatorTrace ()
+makeContribution :: Wallet -> V2.Value -> EmulatorTrace ()
 makeContribution w v = do
     startTime <- TimeSlot.scSlotZeroTime <$> getSlotConfig
     hdl <- Trace.activateContractWallet w (crowdfunding $ theCampaign startTime)

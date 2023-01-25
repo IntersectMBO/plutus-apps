@@ -46,11 +46,11 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.V2.Scripts (MintingPolicyHash)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
