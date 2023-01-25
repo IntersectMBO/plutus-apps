@@ -194,9 +194,20 @@ test-suite plutus-use-cases-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-      cardano-api
-    , plutus-ledger-api  >=1.0.0
-    , plutus-tx          >=1.0.0
+      cardano-api                  >=1.35
+    , cardano-binary
+    , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , cardano-slotting
+    , contractmodel
+    , ouroboros-consensus
+    , ouroboros-consensus-cardano
+    , plutus-ledger-api            >=1.0.0
+    , plutus-tx                    >=1.0.0
+    , quickcheck-dynamic           >=2.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -206,54 +217,26 @@ test-suite plutus-use-cases-test
   ------------------------
   build-depends:
       aeson
-    , base              >=4.9     && <5
+    , base               >=4.9     && <5
     , bytestring
     , containers
     , data-default
     , foldl
     , freer-simple
     , lens
-    , mtl
-    , prettyprinter
-    , QuickCheck
-    , streaming
-    , tasty
-    , tasty-golden
-    , tasty-hedgehog    >=0.2.0.0
-    , tasty-hunit
-    , tasty-quickcheck
-    , text
-
-  -- General dependencies
-  build-depends:
-      base           >=4.7 && <5
-    , containers
-    , contractmodel
-    , lens
     , mmorph
     , mtl
     , pretty
-
-  -- QuickCheck dependencies
-  build-depends:
-      QuickCheck
-    , quickcheck-dynamic  >=2.0.0
-
-  -- Plutus and Cardano dependencies
-  build-depends:
-      cardano-api                  >=1.35
-    , cardano-binary
-    , cardano-ledger-alonzo
-    , cardano-ledger-babbage
-    , cardano-ledger-core
-    , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
-    , cardano-slotting
-    , ouroboros-consensus
-    , ouroboros-consensus-cardano
-    , plutus-ledger-api
-    , plutus-tx
+    , prettyprinter
+    , QuickCheck
+    , streaming
     , strict-containers
+    , tasty
+    , tasty-golden
+    , tasty-hedgehog     >=0.2.0.0
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
     , time
 
 -- runs emulator traces from plutus-use-cases-tests and
