@@ -64,9 +64,9 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
   let
-    tokenValues = C.valueFromList [(PS.verifySchnorrAssetId, 4), (PS.verifyEcdsaAssetId, 2)]
+    tokenValues = C.valueFromList [(PS.verifySchnorrAssetIdV2, 4), (PS.verifyEcdsaAssetIdV2, 2)]
     txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
-    mintWitnesses = Map.fromList [PS.verifySchnorrMintWitness era, PS.verifyEcdsaMintWitness era]
+    mintWitnesses = Map.fromList [PS.verifySchnorrMintWitnessV2 era, PS.verifyEcdsaMintWitnessV2 era]
     collateral = TN.txInsCollateral era [txIn]
 
     txBodyContent = (TN.emptyTxBodyContent era pparams)
@@ -78,7 +78,13 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
 
   case pv of
     6 -> do
-      H.failure -- TODO: get error from mintScriptWitnessV2 OR use V1 script OR remove era from test
+      let
+        tokenValuesPv6 = C.valueFromList [(PS.verifySchnorrAssetIdV1, 4), (PS.verifyEcdsaAssetIdV1, 2)]
+        mintWitnessesPv6 = Map.fromList [PS.verifySchnorrMintWitnessV1 era, PS.verifyEcdsaMintWitnessV1 era]
+        txBodyContentPv6 = txBodyContent { C.txMintValue = TN.txMintValue era tokenValuesPv6 mintWitnessesPv6}
+      eitherTx <- TN.buildTx' era txBodyContentPv6 w1Address w1SKey networkId
+      H.assert (E.isLeft eitherTx) -- todo: check for specific plutus error
+      H.success
 
     7 -> do
       eitherTx <- TN.buildTx' era txBodyContent w1Address w1SKey networkId
