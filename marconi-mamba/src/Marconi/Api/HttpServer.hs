@@ -33,7 +33,9 @@ bootstrap env =  runSettings
         (env ^. httpSettings)
         (serve (Proxy @API) (server (env ^. queryEnv ) ) )
 
-server :: UtxoIndexerEnv -> Server API
+server
+  :: UtxoIndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
+  -> Server API
 server env
     = ( echo
         :<|> utxoJsonReport env
@@ -46,7 +48,7 @@ server env
 -- | prints message to console
 --  Used for testing the server from console
 printMessage
-    :: UtxoIndexerEnv               -- ^ database configuration
+    :: UtxoIndexerEnv    -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
     -> String
     -> Handler NoContent
 printMessage env msg = NoContent <$  (
@@ -71,21 +73,21 @@ getTime = timeString <$> liftIO getCurrentTime
     timeString = formatTime defaultTimeLocale "%T"
 
 getTargetAddresses
-    :: UtxoIndexerEnv               -- ^ database configuration
+    :: UtxoIndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
     -> Handler [Text]
 getTargetAddresses =  pure . Q.Utxo.reportBech32Addresses
 
 -- | Retrieves a set of TxOutRef
 utxoJsonReport
-    :: UtxoIndexerEnv               -- ^ database configuration
-    -> String                   -- ^ bech32 addressCredential
+    :: UtxoIndexerEnv   -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
+    -> String           -- ^ bech32 addressCredential
     -> Handler (Either (JsonRpcErr String) UtxoReport )
 utxoJsonReport env address = liftIO $
     first toRpcErr <$> (Q.Utxo.findByAddress env . pack $ address)
 
 targetAddressesReport
     :: UtxoIndexerEnv                   -- ^ database configuration
-    -> Int                          -- ^ limit, for now we are ignoring this param and return 100
+    -> Int                              -- ^ limit, for now we are ignoring returning everyting
     -> Handler (Either (JsonRpcErr String) [Text] )
 targetAddressesReport env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env
 

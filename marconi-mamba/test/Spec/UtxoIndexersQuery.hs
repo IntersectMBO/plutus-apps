@@ -69,7 +69,7 @@ genTxIndex = C.TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genShelleyUtxo :: Gen Utxo.Utxo
 genShelleyUtxo = do
-  _address          <- fmap (Utxo.UtxoAddress . C.toAddressAny)  CGen.genAddressShelley
+  _address          <- fmap  C.toAddressAny  CGen.genAddressShelley
   _txId             <- CGen.genTxId
   _txIx             <- genTxIndex
   sc <- CGen.genTxOutDatumHashTxContext C.BabbageEra
@@ -127,7 +127,7 @@ queryTargetAddressTest = property $ do
     targetAddresses :: TargetAddresses
     targetAddresses
       = fromList
-      . mapMaybe (addressAnyToShelley . (\(Utxo.UtxoAddress a) -> a) )
+      . mapMaybe addressAnyToShelley
       . nub
       . fmap Utxo._address
       . concatMap (Set.toList . Utxo.ueUtxos)

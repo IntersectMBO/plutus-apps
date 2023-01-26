@@ -117,7 +117,7 @@ datumWorker Coordinator{_barrier, _channel} path = do
               Ix.rewind offset index
 
 utxoWorker_
-  :: (Utxo.UtxoIndexer -> IO ())  -- ^ CPS function used in the queryApi thread, needs to be non-blocking
+  :: (Utxo.UtxoIndexer -> IO ())  -- ^ callback function used in the queryApi thread, needs to be non-blocking
   -> Utxo.Depth
   -> Maybe TargetAddresses                       -- ^ Target addresses to filter for
   -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), MVar Utxo.UtxoIndexer)

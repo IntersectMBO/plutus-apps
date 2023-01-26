@@ -65,7 +65,7 @@ instance ToJSON C.ScriptData where
 
 
 instance ToJSON Utxo.Utxo where
-  toJSON (Utxo.Utxo (Utxo.UtxoAddress addr) tId tIx dtum dtumHash val scrpt scrptHash) = object
+  toJSON (Utxo.Utxo addr tId tIx dtum dtumHash val scrpt scrptHash) = object
     ["address"            .=  addr
     , "txId"              .= tId
     , "txIx"              .= tIx

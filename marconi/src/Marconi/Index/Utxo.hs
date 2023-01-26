@@ -90,7 +90,7 @@ type instance StorablePoint UtxoHandle = C.ChainPoint
 newtype Depth = Depth Int
 
 data Utxo = Utxo
-  { _address          :: StorableQuery UtxoHandle
+  { _address          :: C.AddressAny
   , _txId             :: !C.TxId
   , _txIx             :: !C.TxIx
   , _datum            :: Maybe C.ScriptData
@@ -98,17 +98,14 @@ data Utxo = Utxo
   , _value            :: C.Value
   , _inlineScript     :: Maybe Shelley.ScriptInAnyLang -- ByteString -- ^ ReferenceScript
   , _inlineScriptHash :: Maybe C.ScriptHash
-  } deriving (Show, Generic)
+  } deriving (Show, Eq, Generic)
 
 $(makeLenses ''Utxo)
 
-instance Eq Utxo where
-  left == right
-    =  _txId left == _txId right
-    && _txIx left == _txIx right
-
 instance Ord Utxo where
-  left <= right = _txId left <= _txId right
+  left <= right
+    =   _txId left <= _txId right
+    &&  _txIx left <= _txIx right
 
 data UtxoRow = UtxoRow
   { _urUtxo      :: Utxo
@@ -143,15 +140,16 @@ data Spent = Spent
   , _sTxInTxIx  :: C.TxIx
   , _sSlotNo    :: C.SlotNo
   , _sBlockHash:: C.Hash C.BlockHeader
-  } deriving (Show)
+  } deriving (Show, Eq)
 
 $(makeLenses ''Spent)
 
-instance Eq Spent where
-  l == r = (l ^. sTxInTxId) == (r ^. sTxInTxId)
-
 instance Ord Spent where
-  compare l r = (l ^. sTxInTxId) `compare` (r ^. sTxInTxId)
+  compare l r =
+      case  (l ^. sTxInTxId) `compare` (r ^. sTxInTxId) of
+        EQ  -> (l ^. sTxInTxIx) `compare` (r ^. sTxInTxIx)
+        neq -> neq
+
 instance HasPoint (StorableEvent UtxoHandle) C.ChainPoint where
   getPoint (UtxoEvent _ _ _ cp) = cp
 
@@ -193,16 +191,16 @@ instance FromRow UtxoRow where
                 <*> field <*> field <*> field <*> field)
       <*> field <*> field <*> field
 
-instance FromField (StorableQuery UtxoHandle) where
+instance FromField C.AddressAny where
   fromField f = fromField f >>= \b -> maybe
     cantDeserialise
-    (pure . UtxoAddress) $ C.deserialiseFromRawBytes C.AsAddressAny
+    pure $ C.deserialiseFromRawBytes C.AsAddressAny
     b
     where
       cantDeserialise = returnError SQL.ConversionFailed f "Cannot deserialise address."
 
-instance ToField (StorableQuery UtxoHandle) where
-  toField (UtxoAddress a) = SQLBlob . C.serialiseToRawBytes $ a
+instance ToField C.AddressAny where
+  toField = SQLBlob . C.serialiseToRawBytes
 
 instance FromField C.TxId where
   fromField f = fromField f >>= maybe
@@ -421,10 +419,11 @@ rowsToEvents f rows = traverse eventFromRow  rows <&> foldl' g []
         }
 
 eventsAtAddress
-  :: Foldable f => StorableQuery UtxoHandle
+  :: Foldable f
+  => StorableQuery UtxoHandle
   -> f (StorableEvent UtxoHandle)
   -> [StorableEvent UtxoHandle]
-eventsAtAddress addr = concatMap splitEventAtAddress
+eventsAtAddress (UtxoAddress addr) = concatMap splitEventAtAddress
   where
     splitEventAtAddress :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle]
     splitEventAtAddress event =
@@ -526,7 +525,7 @@ instance Resumable UtxoHandle where
 toUtxoRows :: StorableEvent UtxoHandle -> [UtxoRow]
 toUtxoRows ( UtxoEvent utxos _ blockno (C.ChainPoint slotno hsh) ) =
   fmap (\u -> UtxoRow u blockno slotno hsh) . Set.toList $ utxos
-toUtxoRows ( UtxoEvent _ _ _ C.ChainPointAtGenesis ) = error "There should be no UTXOs in the genesis block."
+toUtxoRows ( UtxoEvent _ _ _ C.ChainPointAtGenesis ) = []
 
 -- | convert from AddressInEra of the currentERa to AddressAny
 toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
@@ -554,7 +553,7 @@ getUtxos maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent {C.txOuts})
         _txIx = C.TxIx $ fromIntegral ix
         _txId = C.getTxId txBody
         C.TxOut address' value' datum' refScript = out
-        _address = UtxoAddress . toAddr $ address'
+        _address = toAddr address'
         _value = C.txOutValueToValue value'
         (_datum, _datumHash) = getScriptDataAndHash datum'
         (_inlineScript, _inlineScriptHash) =
@@ -637,10 +636,7 @@ txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptV
 -- | does the transaction contain a targetAddress
 isAddressInTarget :: TargetAddresses -> Utxo -> Bool
 isAddressInTarget targetAddresses utxo =
-  let
-    (UtxoAddress addr) = utxo ^. address
-  in
-    case addr of
+    case utxo ^. address  of
       C.AddressByron _       -> False
       C.AddressShelley addr' -> addr' `elem` targetAddresses
 

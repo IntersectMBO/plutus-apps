@@ -219,17 +219,12 @@ test-suite marconi-mamba-test
     , marconi-mamba
     , rewindable-index
 
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
-     , cardano-api:{cardano-api, gen}
-
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base                  >=4.9 && <5
+    , base                            >=4.9 && <5
+    , cardano-api:{cardano-api, gen}
     , containers
     , hedgehog
     , lens
