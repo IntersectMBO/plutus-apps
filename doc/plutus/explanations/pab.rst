@@ -52,7 +52,7 @@ The PAB subscribes to ledger state updates from the node, using a socket protoco
 Wallet
 ~~~~~~
 
-A Cardano wallet is required for balancing and signing transactions (and optionnaly submitting transactions).
+A Cardano wallet is required for balancing and signing transactions (and optionally submitting transactions).
 Balancing means taking a partial transaction and adding inputs and outputs to make the transaction valid.
 
 Take `Marlowe <https://play.marlowe-finance.io/doc/marlowe/tutorials/introducing-marlowe.html>`_ as an example.
@@ -76,7 +76,7 @@ Deployment Scenarios
 
 There are two deployment models envisaged for the PAB: Hosted and in-browser.
 The hosted variant will be supported at the initial release of the PAB.
-The in-browser variant wil be available after the initial release.
+The in-browser variant will be available after the initial release.
 
 Hosted
 ~~~~~~
