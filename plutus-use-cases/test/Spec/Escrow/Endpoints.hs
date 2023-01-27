@@ -21,7 +21,7 @@ import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Script.Utils.Scripts qualified as Ledger
-import Plutus.V1.Ledger.Api (Datum (Datum))
+import Plutus.V2.Ledger.Api (Datum (Datum))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 

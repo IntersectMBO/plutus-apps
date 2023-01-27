@@ -13,13 +13,14 @@ import Prelude (Show, String, show)
 
 import Control.Monad (void)
 import GHC.Generics (Generic)
-import Ledger.Typed.Scripts (TypedValidator, mkTypedValidator)
+import Ledger.Typed.Scripts (TypedValidator)
 import Plutus.Contract (Contract, EmptySchema, logError, mapError)
 import Plutus.Contract.StateMachine (StateMachine, StateMachineClient, ThreadToken, mkStateMachine, stateData)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Test
-import Plutus.Script.Utils.Typed (ScriptContextV1)
+import Plutus.Script.Utils.Typed (ScriptContextV2)
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Trace (EmulatorTrace, activateContractWallet)
 import Plutus.Trace qualified as Trace
 import PlutusTx qualified
@@ -55,12 +56,12 @@ stateMachine threadToken =
 
 typedValidator :: ThreadToken -> TypedValidator (StateMachine State Input)
 typedValidator threadToken =
-  mkTypedValidator @(StateMachine State Input)
+  V2.mkTypedValidator @(StateMachine State Input)
     ($$(PlutusTx.compile [||validator||]) `PlutusTx.applyCode` PlutusTx.liftCode threadToken)
     $$(PlutusTx.compile [||wrap||])
  where
   validator c = SM.mkValidator (stateMachine c)
-  wrap = Scripts.mkUntypedValidator @ScriptContextV1 @State @Input
+  wrap = Scripts.mkUntypedValidator @ScriptContextV2 @State @Input
 
 stateMachineClient :: ThreadToken -> StateMachineClient State Input
 stateMachineClient threadToken =

@@ -62,10 +62,10 @@ import Plutus.Contract
 import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Contract.Util (loopM)
-import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
-import Plutus.Script.Utils.V1.Scripts (validatorHash)
+import Plutus.Script.Utils.V2.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value as Value
-import Plutus.V1.Ledger.Api (Datum (Datum), Validator, ValidatorHash)
+import Plutus.V2.Ledger.Api (Datum (Datum), Validator, ValidatorHash)
 
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
@@ -309,7 +309,7 @@ futureStateMachine ft fos = SM.mkStateMachine Nothing (transition ft fos) isFina
     isFinal Finished = True
     isFinal _        = False
 
-typedValidator :: Future -> FutureAccounts -> Scripts.TypedValidator (SM.StateMachine FutureState FutureAction)
+typedValidator :: Future -> FutureAccounts -> V2.TypedValidator (SM.StateMachine FutureState FutureAction)
 typedValidator future ftos =
     let val = $$(PlutusTx.compile [|| validatorParam ||])
             `PlutusTx.applyCode`
@@ -317,9 +317,9 @@ typedValidator future ftos =
                 `PlutusTx.applyCode`
                     PlutusTx.liftCode ftos
         validatorParam f g = SM.mkValidator (futureStateMachine f g)
-        wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV1 @FutureState @FutureAction
+        wrap = Scripts.mkUntypedValidator @Scripts.ScriptContextV2 @FutureState @FutureAction
 
-    in Scripts.mkTypedValidator @(SM.StateMachine FutureState FutureAction)
+    in V2.mkTypedValidator @(SM.StateMachine FutureState FutureAction)
         val
         $$(PlutusTx.compile [|| wrap ||])
 
@@ -592,7 +592,7 @@ escrowParams
     -> EscrowParams Datum
 escrowParams client future ftos FutureSetup{longPK, shortPK, contractStart} =
     let
-        address = validatorHash $ Scripts.validatorScript $ SM.typedValidator $ SM.scInstance client
+        address = V2.validatorHash $ SM.typedValidator $ SM.scInstance client
         dataScript  = Datum $ PlutusTx.toBuiltinData $ initialState future
         targets =
             [ Escrow.payToScriptTarget address

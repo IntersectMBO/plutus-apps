@@ -47,17 +47,19 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef)
+import Ledger (CardanoAddress, POSIXTime, PaymentPubKeyHash, TxOutRef)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (DecoratedTxOut (..), datumInDatumFromQuery, decoratedTxOutDatum)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as C
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint, fundsAtAddressGeq,
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
-import Plutus.Script.Utils.Typed (ScriptContextV1)
-import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
+import Plutus.Script.Utils.Typed (ScriptContextV2)
+import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
+import Plutus.V2.Ledger.Api (Datum (Datum), Validator)
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)
 import PlutusTx.Coverage (CoverageIndex)
@@ -102,18 +104,18 @@ gameAddress = mkValidatorCardanoAddress testnet . gameValidator
 gameValidator :: GameParam -> Validator
 gameValidator = Scripts.validatorScript . gameInstance
 
-gameInstance :: GameParam -> Scripts.TypedValidator Game
-gameInstance = Scripts.mkTypedValidatorParam @Game
+gameInstance :: GameParam -> V2.TypedValidator Game
+gameInstance = V2.mkTypedValidatorParam @Game
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.mkUntypedValidator @ScriptContextV1 @HashedString @ClearString
+        wrap = Scripts.mkUntypedValidator @ScriptContextV2 @HashedString @ClearString
 
 -- | The validation function (Datum -> Redeemer -> ScriptContext -> Bool)
 --
 -- The 'GameParam' parameter is not used in the validation. It is meant to
 -- parameterize the script address depending based on the value of 'GaramParam'.
 {-# INLINABLE mkValidator #-}
-mkValidator :: GameParam -> HashedString -> ClearString -> ScriptContext -> Bool
+mkValidator :: GameParam -> HashedString -> ClearString -> V2.ScriptContext -> Bool
 mkValidator _ hs cs _ = isGoodGuess hs cs
 
 {-# INLINABLE isGoodGuess #-}

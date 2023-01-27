@@ -550,7 +550,7 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
-TxId:       1ddaf6dd5ad3f90095c16b3b23f08569dd35ac60fb6d1f176ccc966cb1557a6d
+TxId:       18ff0a43c9a18aa720d0374db11148469bc7c1463775e27926d9e3e7da8a9c4d
 Fee:        178173 lovelace
 Mint:       
 Inputs:
@@ -573,7 +573,7 @@ Inputs:
 
 Outputs:
   ---- Output 0 ----
-  Destination:  Script: 0413eb3b692998b1831fe919606696fdd6d19a2b0174137fd12fb8d0
+  Destination:  Script: 7b66f50cdcd7ac18e340436d68db619ee159ff0fbef0cc2f9b5715da
   Value:
     8000000 lovelace
 
@@ -624,6 +624,6 @@ Balances Carried Forward:
   Value:
     Ada:      Lovelace:  100000000
 
-  Script: 0413eb3b692998b1831fe919606696fdd6d19a2b0174137fd12fb8d0
+  Script: 7b66f50cdcd7ac18e340436d68db619ee159ff0fbef0cc2f9b5715da
   Value:
     Ada:      Lovelace:  8000000

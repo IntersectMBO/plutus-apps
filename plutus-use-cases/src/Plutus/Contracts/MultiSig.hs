@@ -31,8 +31,9 @@ import Ledger
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
-import Plutus.V1.Ledger.Contexts as V
-import Plutus.V1.Ledger.Value as Plutus
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
+import Plutus.V2.Ledger.Api as Plutus (Value)
+import Plutus.V2.Ledger.Contexts as V2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), foldMap)
 
@@ -58,17 +59,17 @@ contract :: AsContractError e => Contract () MultiSigSchema e ()
 contract = selectList [lock, unlock] >> contract
 
 {-# INLINABLE validate #-}
-validate :: MultiSig -> () -> () -> ScriptContext -> Bool
+validate :: MultiSig -> () -> () -> V2.ScriptContext -> Bool
 validate MultiSig{signatories, minNumSignatures} _ _ p =
-    let present = length (filter (V.txSignedBy (scriptContextTxInfo p) . unPaymentPubKeyHash) signatories)
+    let present = length (filter (V2.txSignedBy (V2.scriptContextTxInfo p) . unPaymentPubKeyHash) signatories)
     in traceIfFalse "not enough signatures" (present >= minNumSignatures)
 
 instance Scripts.ValidatorTypes MultiSig where
     type instance RedeemerType MultiSig = ()
     type instance DatumType MultiSig = ()
 
-typedValidator :: MultiSig -> Scripts.TypedValidator MultiSig
-typedValidator = Scripts.mkTypedValidatorParam @MultiSig
+typedValidator :: MultiSig -> V2.TypedValidator MultiSig
+typedValidator = V2.mkTypedValidatorParam @MultiSig
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where

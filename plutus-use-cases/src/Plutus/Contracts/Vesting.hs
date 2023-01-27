@@ -43,10 +43,11 @@ import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
-import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V2.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), fold)
 import Prelude qualified as Haskell
@@ -127,10 +128,10 @@ remainingFrom t@VestingTranche{vestingTrancheAmount} range =
     vestingTrancheAmount - availableFrom t range
 
 {-# INLINABLE validate #-}
-validate :: VestingParams -> () -> () -> ScriptContext -> Bool
-validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx@ScriptContext{scriptContextTxInfo=txInfo@TxInfo{txInfoValidRange}} =
+validate :: VestingParams -> () -> () -> V2.ScriptContext -> Bool
+validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx@V2.ScriptContext{scriptContextTxInfo=txInfo@TxInfo{txInfoValidRange}} =
     let
-        remainingActual  = Validation.valueLockedBy txInfo (Validation.ownHash ctx)
+        remainingActual  = V2.valueLockedBy txInfo (V2.ownHash ctx)
 
         remainingExpected =
             remainingFrom vestingTranche1 txInfoValidRange
@@ -141,15 +142,15 @@ validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx
             -- is "vestingOwner can do with the funds what they want" (as opposed
             -- to "the funds must be paid to vestingOwner"). This is enforcey by
             -- the following condition:
-            && Validation.txSignedBy txInfo (unPaymentPubKeyHash vestingOwner)
+            && V2.txSignedBy txInfo (unPaymentPubKeyHash vestingOwner)
             -- That way the recipient of the funds can pay them to whatever address they
             -- please, potentially saving one transaction.
 
 vestingScript :: VestingParams -> Validator
 vestingScript = Scripts.validatorScript . typedValidator
 
-typedValidator :: VestingParams -> Scripts.TypedValidator Vesting
-typedValidator = Scripts.mkTypedValidatorParam @Vesting
+typedValidator :: VestingParams -> V2.TypedValidator Vesting
+typedValidator = V2.mkTypedValidatorParam @Vesting
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where

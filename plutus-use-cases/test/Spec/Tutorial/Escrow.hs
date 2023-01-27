@@ -29,7 +29,7 @@ import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value
-import Plutus.V1.Ledger.Api (Datum)
+import Plutus.V2.Ledger.Api (Datum)
 
 import Plutus.Contracts.Tutorial.Escrow hiding (Action (..))
 import Plutus.Trace.Emulator qualified as Trace

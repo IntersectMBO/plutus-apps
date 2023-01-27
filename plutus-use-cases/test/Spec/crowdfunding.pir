@@ -9,8 +9,6 @@
         (vardecl Collect CampaignAction) (vardecl Refund CampaignAction)
       )
     )
-    (typebind (tyvardecl ScriptPurpose (type)) (all a (type) (fun a a)))
-    (typebind (tyvardecl DCert (type)) (all a (type) (fun a a)))
     (datatypebind
       (datatype
         (tyvardecl Bool (type))
@@ -55,6 +53,8 @@
         )
       )
     )
+    (typebind (tyvardecl ScriptPurpose (type)) (all a (type) (fun a a)))
+    (typebind (tyvardecl DCert (type)) (all a (type) (fun a a)))
     (typebind (tyvardecl TxInInfo (type)) (all a (type) (fun a a)))
     (typebind (tyvardecl TxOut (type)) (all a (type) (fun a a)))
     (typebind (tyvardecl StakingCredential (type)) (all a (type) (fun a a)))
@@ -85,25 +85,9 @@
               (fun
                 [ List TxInInfo ]
                 (fun
-                  [ List TxOut ]
+                  [ List TxInInfo ]
                   (fun
-                    [
-                      [
-                        (lam
-                          k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                        )
-                        (con bytestring)
-                      ]
-                      [
-                        [
-                          (lam
-                            k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                          )
-                          (con bytestring)
-                        ]
-                        (con integer)
-                      ]
-                    ]
+                    [ List TxOut ]
                     (fun
                       [
                         [
@@ -125,21 +109,76 @@
                         ]
                       ]
                       (fun
-                        [ List DCert ]
-                        (fun
+                        [
                           [
-                            List [ [ Tuple2 StakingCredential ] (con integer) ]
+                            (lam
+                              k
+                              (type)
+                              (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                            )
+                            (con bytestring)
                           ]
+                          [
+                            [
+                              (lam
+                                k
+                                (type)
+                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                              )
+                              (con bytestring)
+                            ]
+                            (con integer)
+                          ]
+                        ]
+                        (fun
+                          [ List DCert ]
                           (fun
-                            [ Interval (con integer) ]
+                            [
+                              [
+                                (lam
+                                  k
+                                  (type)
+                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                                )
+                                StakingCredential
+                              ]
+                              (con integer)
+                            ]
                             (fun
-                              [ List (con bytestring) ]
+                              [ Interval (con integer) ]
                               (fun
-                                [
-                                  List
-                                  [ [ Tuple2 (con bytestring) ] (con data) ]
-                                ]
-                                (fun (con bytestring) TxInfo)
+                                [ List (con bytestring) ]
+                                (fun
+                                  [
+                                    [
+                                      (lam
+                                        k
+                                        (type)
+                                        (lam
+                                          v (type) [ List [ [ Tuple2 k ] v ] ]
+                                        )
+                                      )
+                                      ScriptPurpose
+                                    ]
+                                    (con data)
+                                  ]
+                                  (fun
+                                    [
+                                      [
+                                        (lam
+                                          k
+                                          (type)
+                                          (lam
+                                            v (type) [ List [ [ Tuple2 k ] v ] ]
+                                          )
+                                        )
+                                        (con bytestring)
+                                      ]
+                                      (con data)
+                                    ]
+                                    (fun (con bytestring) TxInfo)
+                                  )
+                                )
                               )
                             )
                           )
@@ -164,78 +203,49 @@
         )
         (datatypebind
           (datatype
-            (tyvardecl Ordering (type))
-
-            Ordering_match
-            (vardecl EQ Ordering) (vardecl GT Ordering) (vardecl LT Ordering)
+            (tyvardecl Maybe (fun (type) (type)))
+            (tyvardecl a (type))
+            Maybe_match
+            (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
+          )
+        )
+        (datatypebind
+          (datatype
+            (tyvardecl ValidityInterval (fun (type) (type)))
+            (tyvardecl a (type))
+            ValidityInterval_match
+            (vardecl
+              ValidityInterval
+              (fun [ Maybe a ] (fun [ Maybe a ] [ ValidityInterval a ]))
+            )
           )
         )
         (termbind
           (strict)
           (vardecl
-            fOrdInteger_ccompare
-            (fun (con integer) (fun (con integer) Ordering))
-          )
-          (lam
-            x
-            (con integer)
-            (lam
-              y
-              (con integer)
-              {
-                [
-                  [
-                    {
-                      [
-                        Bool_match
-                        [
-                          [
-                            [
-                              { (builtin ifThenElse) Bool }
-                              [ [ (builtin equalsInteger) x ] y ]
-                            ]
-                            True
-                          ]
-                          False
-                        ]
-                      ]
-                      (all dead (type) Ordering)
-                    }
-                    (abs dead (type) EQ)
-                  ]
-                  (abs
-                    dead
-                    (type)
-                    {
-                      [
-                        [
-                          {
-                            [
-                              Bool_match
-                              [
-                                [
-                                  [
-                                    { (builtin ifThenElse) Bool }
-                                    [ [ (builtin lessThanEqualsInteger) x ] y ]
-                                  ]
-                                  True
-                                ]
-                                False
-                              ]
-                            ]
-                            (all dead (type) Ordering)
-                          }
-                          (abs dead (type) LT)
-                        ]
-                        (abs dead (type) GT)
-                      ]
-                      (all dead (type) dead)
-                    }
-                  )
-                ]
-                (all dead (type) dead)
-              }
+            WValidityInterval
+            (all
+              a
+              (type)
+              (fun [ Maybe a ] (fun [ Maybe a ] [ ValidityInterval a ]))
             )
+          )
+          (abs
+            a
+            (type)
+            (lam
+              dt
+              [ Maybe a ]
+              (lam dt [ Maybe a ] [ [ { ValidityInterval a } dt ] dt ])
+            )
+          )
+        )
+        (datatypebind
+          (datatype
+            (tyvardecl Ordering (type))
+
+            Ordering_match
+            (vardecl EQ Ordering) (vardecl GT Ordering) (vardecl LT Ordering)
           )
         )
         (datatypebind
@@ -300,7 +310,75 @@
                             )
                           )
                         ]
-                        fOrdInteger_ccompare
+                        (lam
+                          x
+                          (con integer)
+                          (lam
+                            y
+                            (con integer)
+                            {
+                              [
+                                [
+                                  {
+                                    [
+                                      Bool_match
+                                      [
+                                        [
+                                          [
+                                            { (builtin ifThenElse) Bool }
+                                            [ [ (builtin equalsInteger) x ] y ]
+                                          ]
+                                          True
+                                        ]
+                                        False
+                                      ]
+                                    ]
+                                    (all dead (type) Ordering)
+                                  }
+                                  (abs dead (type) EQ)
+                                ]
+                                (abs
+                                  dead
+                                  (type)
+                                  {
+                                    [
+                                      [
+                                        {
+                                          [
+                                            Bool_match
+                                            [
+                                              [
+                                                [
+                                                  { (builtin ifThenElse) Bool }
+                                                  [
+                                                    [
+                                                      (builtin
+                                                        lessThanEqualsInteger
+                                                      )
+                                                      x
+                                                    ]
+                                                    y
+                                                  ]
+                                                ]
+                                                True
+                                              ]
+                                              False
+                                            ]
+                                          ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (abs dead (type) LT)
+                                      ]
+                                      (abs dead (type) GT)
+                                    ]
+                                    (all dead (type) dead)
+                                  }
+                                )
+                              ]
+                              (all dead (type) dead)
+                            }
+                          )
+                        )
                       ]
                       (lam
                         x
@@ -449,6 +527,1450 @@
         )
         (datatypebind
           (datatype
+            (tyvardecl Campaign (type))
+
+            Campaign_match
+            (vardecl
+              Campaign
+              (fun
+                (con integer)
+                (fun (con integer) (fun (con bytestring) Campaign))
+              )
+            )
+          )
+        )
+        (termbind
+          (strict)
+          (vardecl
+            compare (all a (type) (fun [ Ord a ] (fun a (fun a Ordering))))
+          )
+          (abs
+            a
+            (type)
+            (lam
+              v
+              [ Ord a ]
+              [
+                { [ { Ord_match a } v ] (fun a (fun a Ordering)) }
+                (lam
+                  v
+                  [ (lam a (type) (fun a (fun a Bool))) a ]
+                  (lam
+                    v
+                    (fun a (fun a Ordering))
+                    (lam
+                      v
+                      (fun a (fun a Bool))
+                      (lam
+                        v
+                        (fun a (fun a Bool))
+                        (lam
+                          v
+                          (fun a (fun a Bool))
+                          (lam
+                            v
+                            (fun a (fun a Bool))
+                            (lam
+                              v (fun a (fun a a)) (lam v (fun a (fun a a)) v)
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              ]
+            )
+          )
+        )
+        (termbind
+          (strict)
+          (vardecl
+            hull_ccompare
+            (all
+              a
+              (type)
+              (fun [ Ord a ] (fun [ Extended a ] (fun [ Extended a ] Ordering)))
+            )
+          )
+          (abs
+            a
+            (type)
+            (lam
+              dOrd
+              [ Ord a ]
+              (lam
+                ds
+                [ Extended a ]
+                (lam
+                  ds
+                  [ Extended a ]
+                  (let
+                    (nonrec)
+                    (termbind
+                      (strict)
+                      (vardecl fail (fun (con unit) Ordering))
+                      (lam
+                        ds
+                        (con unit)
+                        {
+                          [
+                            [
+                              [
+                                {
+                                  [ { Extended_match a } ds ]
+                                  (all dead (type) Ordering)
+                                }
+                                (lam
+                                  default_arg0
+                                  a
+                                  (abs
+                                    dead
+                                    (type)
+                                    {
+                                      [
+                                        [
+                                          [
+                                            {
+                                              [ { Extended_match a } ds ]
+                                              (all dead (type) Ordering)
+                                            }
+                                            (lam
+                                              l
+                                              a
+                                              (abs
+                                                dead
+                                                (type)
+                                                {
+                                                  [
+                                                    [
+                                                      [
+                                                        {
+                                                          [
+                                                            { Extended_match a }
+                                                            ds
+                                                          ]
+                                                          (all
+                                                            dead (type) Ordering
+                                                          )
+                                                        }
+                                                        (lam
+                                                          r
+                                                          a
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            [
+                                                              [
+                                                                [
+                                                                  { compare a }
+                                                                  dOrd
+                                                                ]
+                                                                l
+                                                              ]
+                                                              r
+                                                            ]
+                                                          )
+                                                        )
+                                                      ]
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        (error Ordering)
+                                                      )
+                                                    ]
+                                                    (abs
+                                                      dead
+                                                      (type)
+                                                      (error Ordering)
+                                                    )
+                                                  ]
+                                                  (all dead (type) dead)
+                                                }
+                                              )
+                                            )
+                                          ]
+                                          (abs dead (type) (error Ordering))
+                                        ]
+                                        (abs dead (type) GT)
+                                      ]
+                                      (all dead (type) dead)
+                                    }
+                                  )
+                                )
+                              ]
+                              (abs
+                                dead
+                                (type)
+                                {
+                                  [
+                                    [
+                                      [
+                                        {
+                                          [ { Extended_match a } ds ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (lam
+                                          l
+                                          a
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      r
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [
+                                                          [
+                                                            [
+                                                              { compare a } dOrd
+                                                            ]
+                                                            l
+                                                          ]
+                                                          r
+                                                        ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead (type) (error Ordering)
+                                                  )
+                                                ]
+                                                (abs
+                                                  dead (type) (error Ordering)
+                                                )
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        )
+                                      ]
+                                      (abs dead (type) (error Ordering))
+                                    ]
+                                    (abs dead (type) GT)
+                                  ]
+                                  (all dead (type) dead)
+                                }
+                              )
+                            ]
+                            (abs dead (type) LT)
+                          ]
+                          (all dead (type) dead)
+                        }
+                      )
+                    )
+                    (termbind
+                      (strict)
+                      (vardecl fail (fun (con unit) Ordering))
+                      (lam
+                        ds
+                        (con unit)
+                        {
+                          [
+                            [
+                              [
+                                {
+                                  [ { Extended_match a } ds ]
+                                  (all dead (type) Ordering)
+                                }
+                                (lam
+                                  default_arg0
+                                  a
+                                  (abs
+                                    dead
+                                    (type)
+                                    {
+                                      [
+                                        [
+                                          [
+                                            {
+                                              [ { Extended_match a } ds ]
+                                              (all dead (type) Ordering)
+                                            }
+                                            (lam
+                                              l
+                                              a
+                                              (abs
+                                                dead
+                                                (type)
+                                                {
+                                                  [
+                                                    [
+                                                      [
+                                                        {
+                                                          [
+                                                            { Extended_match a }
+                                                            ds
+                                                          ]
+                                                          (all
+                                                            dead (type) Ordering
+                                                          )
+                                                        }
+                                                        (lam
+                                                          r
+                                                          a
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            [
+                                                              [
+                                                                [
+                                                                  { compare a }
+                                                                  dOrd
+                                                                ]
+                                                                l
+                                                              ]
+                                                              r
+                                                            ]
+                                                          )
+                                                        )
+                                                      ]
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        (error Ordering)
+                                                      )
+                                                    ]
+                                                    (abs
+                                                      dead
+                                                      (type)
+                                                      (error Ordering)
+                                                    )
+                                                  ]
+                                                  (all dead (type) dead)
+                                                }
+                                              )
+                                            )
+                                          ]
+                                          (abs dead (type) (error Ordering))
+                                        ]
+                                        (abs dead (type) GT)
+                                      ]
+                                      (all dead (type) dead)
+                                    }
+                                  )
+                                )
+                              ]
+                              (abs
+                                dead
+                                (type)
+                                {
+                                  [
+                                    [
+                                      [
+                                        {
+                                          [ { Extended_match a } ds ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (lam
+                                          l
+                                          a
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      r
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [
+                                                          [
+                                                            [
+                                                              { compare a } dOrd
+                                                            ]
+                                                            l
+                                                          ]
+                                                          r
+                                                        ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead (type) (error Ordering)
+                                                  )
+                                                ]
+                                                (abs
+                                                  dead (type) (error Ordering)
+                                                )
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        )
+                                      ]
+                                      (abs dead (type) (error Ordering))
+                                    ]
+                                    (abs dead (type) GT)
+                                  ]
+                                  (all dead (type) dead)
+                                }
+                              )
+                            ]
+                            (abs dead (type) LT)
+                          ]
+                          (all dead (type) dead)
+                        }
+                      )
+                    )
+                    (termbind
+                      (strict)
+                      (vardecl fail (fun (con unit) Ordering))
+                      (lam
+                        ds
+                        (con unit)
+                        {
+                          [
+                            [
+                              [
+                                {
+                                  [ { Extended_match a } ds ]
+                                  (all dead (type) Ordering)
+                                }
+                                (lam
+                                  default_arg0
+                                  a
+                                  (abs
+                                    dead
+                                    (type)
+                                    {
+                                      [
+                                        [
+                                          [
+                                            {
+                                              [ { Extended_match a } ds ]
+                                              (all dead (type) Ordering)
+                                            }
+                                            (lam
+                                              l
+                                              a
+                                              (abs
+                                                dead
+                                                (type)
+                                                {
+                                                  [
+                                                    [
+                                                      [
+                                                        {
+                                                          [
+                                                            { Extended_match a }
+                                                            ds
+                                                          ]
+                                                          (all
+                                                            dead (type) Ordering
+                                                          )
+                                                        }
+                                                        (lam
+                                                          r
+                                                          a
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            [
+                                                              [
+                                                                [
+                                                                  { compare a }
+                                                                  dOrd
+                                                                ]
+                                                                l
+                                                              ]
+                                                              r
+                                                            ]
+                                                          )
+                                                        )
+                                                      ]
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        (error Ordering)
+                                                      )
+                                                    ]
+                                                    (abs
+                                                      dead
+                                                      (type)
+                                                      (error Ordering)
+                                                    )
+                                                  ]
+                                                  (all dead (type) dead)
+                                                }
+                                              )
+                                            )
+                                          ]
+                                          (abs dead (type) (error Ordering))
+                                        ]
+                                        (abs dead (type) GT)
+                                      ]
+                                      (all dead (type) dead)
+                                    }
+                                  )
+                                )
+                              ]
+                              (abs
+                                dead
+                                (type)
+                                {
+                                  [
+                                    [
+                                      [
+                                        {
+                                          [ { Extended_match a } ds ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (lam
+                                          l
+                                          a
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      r
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [
+                                                          [
+                                                            [
+                                                              { compare a } dOrd
+                                                            ]
+                                                            l
+                                                          ]
+                                                          r
+                                                        ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead (type) (error Ordering)
+                                                  )
+                                                ]
+                                                (abs
+                                                  dead (type) (error Ordering)
+                                                )
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        )
+                                      ]
+                                      (abs dead (type) (error Ordering))
+                                    ]
+                                    (abs dead (type) GT)
+                                  ]
+                                  (all dead (type) dead)
+                                }
+                              )
+                            ]
+                            (abs dead (type) LT)
+                          ]
+                          (all dead (type) dead)
+                        }
+                      )
+                    )
+                    (termbind
+                      (strict)
+                      (vardecl fail (fun (con unit) Ordering))
+                      (lam
+                        ds
+                        (con unit)
+                        {
+                          [
+                            [
+                              [
+                                {
+                                  [ { Extended_match a } ds ]
+                                  (all dead (type) Ordering)
+                                }
+                                (lam
+                                  default_arg0
+                                  a
+                                  (abs
+                                    dead
+                                    (type)
+                                    {
+                                      [
+                                        [
+                                          [
+                                            {
+                                              [ { Extended_match a } ds ]
+                                              (all dead (type) Ordering)
+                                            }
+                                            (lam
+                                              l
+                                              a
+                                              (abs
+                                                dead
+                                                (type)
+                                                {
+                                                  [
+                                                    [
+                                                      [
+                                                        {
+                                                          [
+                                                            { Extended_match a }
+                                                            ds
+                                                          ]
+                                                          (all
+                                                            dead (type) Ordering
+                                                          )
+                                                        }
+                                                        (lam
+                                                          r
+                                                          a
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            [
+                                                              [
+                                                                [
+                                                                  { compare a }
+                                                                  dOrd
+                                                                ]
+                                                                l
+                                                              ]
+                                                              r
+                                                            ]
+                                                          )
+                                                        )
+                                                      ]
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        (error Ordering)
+                                                      )
+                                                    ]
+                                                    (abs
+                                                      dead
+                                                      (type)
+                                                      (error Ordering)
+                                                    )
+                                                  ]
+                                                  (all dead (type) dead)
+                                                }
+                                              )
+                                            )
+                                          ]
+                                          (abs dead (type) (error Ordering))
+                                        ]
+                                        (abs dead (type) GT)
+                                      ]
+                                      (all dead (type) dead)
+                                    }
+                                  )
+                                )
+                              ]
+                              (abs
+                                dead
+                                (type)
+                                {
+                                  [
+                                    [
+                                      [
+                                        {
+                                          [ { Extended_match a } ds ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (lam
+                                          l
+                                          a
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      r
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [
+                                                          [
+                                                            [
+                                                              { compare a } dOrd
+                                                            ]
+                                                            l
+                                                          ]
+                                                          r
+                                                        ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead (type) (error Ordering)
+                                                  )
+                                                ]
+                                                (abs
+                                                  dead (type) (error Ordering)
+                                                )
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        )
+                                      ]
+                                      (abs dead (type) (error Ordering))
+                                    ]
+                                    (abs dead (type) GT)
+                                  ]
+                                  (all dead (type) dead)
+                                }
+                              )
+                            ]
+                            (abs dead (type) LT)
+                          ]
+                          (all dead (type) dead)
+                        }
+                      )
+                    )
+                    {
+                      [
+                        [
+                          [
+                            {
+                              [ { Extended_match a } ds ]
+                              (all dead (type) Ordering)
+                            }
+                            (lam
+                              default_arg0
+                              a
+                              (abs
+                                dead
+                                (type)
+                                {
+                                  [
+                                    [
+                                      [
+                                        {
+                                          [ { Extended_match a } ds ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (lam
+                                          default_arg0
+                                          a
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      default_arg0
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [ fail (con unit ()) ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead
+                                                    (type)
+                                                    [ fail (con unit ()) ]
+                                                  )
+                                                ]
+                                                (abs
+                                                  dead
+                                                  (type)
+                                                  {
+                                                    [
+                                                      [
+                                                        [
+                                                          {
+                                                            [
+                                                              {
+                                                                Extended_match a
+                                                              }
+                                                              ds
+                                                            ]
+                                                            (all
+                                                              dead
+                                                              (type)
+                                                              Ordering
+                                                            )
+                                                          }
+                                                          (lam
+                                                            default_arg0
+                                                            a
+                                                            (abs
+                                                              dead
+                                                              (type)
+                                                              [
+                                                                fail
+                                                                (con unit ())
+                                                              ]
+                                                            )
+                                                          )
+                                                        ]
+                                                        (abs
+                                                          dead
+                                                          (type)
+                                                          [ fail (con unit ()) ]
+                                                        )
+                                                      ]
+                                                      (abs dead (type) EQ)
+                                                    ]
+                                                    (all dead (type) dead)
+                                                  }
+                                                )
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        )
+                                      ]
+                                      (abs dead (type) GT)
+                                    ]
+                                    (abs
+                                      dead
+                                      (type)
+                                      {
+                                        [
+                                          [
+                                            [
+                                              {
+                                                [ { Extended_match a } ds ]
+                                                (all dead (type) Ordering)
+                                              }
+                                              (lam
+                                                default_arg0
+                                                a
+                                                (abs
+                                                  dead
+                                                  (type)
+                                                  [ fail (con unit ()) ]
+                                                )
+                                              )
+                                            ]
+                                            (abs
+                                              dead (type) [ fail (con unit ()) ]
+                                            )
+                                          ]
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      default_arg0
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [ fail (con unit ()) ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead
+                                                    (type)
+                                                    [ fail (con unit ()) ]
+                                                  )
+                                                ]
+                                                (abs dead (type) EQ)
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        ]
+                                        (all dead (type) dead)
+                                      }
+                                    )
+                                  ]
+                                  (all dead (type) dead)
+                                }
+                              )
+                            )
+                          ]
+                          (abs
+                            dead
+                            (type)
+                            {
+                              [
+                                [
+                                  [
+                                    {
+                                      [ { Extended_match a } ds ]
+                                      (all dead (type) Ordering)
+                                    }
+                                    (lam default_arg0 a (abs dead (type) LT))
+                                  ]
+                                  (abs dead (type) EQ)
+                                ]
+                                (abs dead (type) LT)
+                              ]
+                              (all dead (type) dead)
+                            }
+                          )
+                        ]
+                        (abs
+                          dead
+                          (type)
+                          {
+                            [
+                              [
+                                [
+                                  {
+                                    [ { Extended_match a } ds ]
+                                    (all dead (type) Ordering)
+                                  }
+                                  (lam
+                                    default_arg0
+                                    a
+                                    (abs
+                                      dead
+                                      (type)
+                                      {
+                                        [
+                                          [
+                                            [
+                                              {
+                                                [ { Extended_match a } ds ]
+                                                (all dead (type) Ordering)
+                                              }
+                                              (lam
+                                                default_arg0
+                                                a
+                                                (abs
+                                                  dead
+                                                  (type)
+                                                  [ fail (con unit ()) ]
+                                                )
+                                              )
+                                            ]
+                                            (abs
+                                              dead (type) [ fail (con unit ()) ]
+                                            )
+                                          ]
+                                          (abs
+                                            dead
+                                            (type)
+                                            {
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      [
+                                                        { Extended_match a } ds
+                                                      ]
+                                                      (all dead (type) Ordering)
+                                                    }
+                                                    (lam
+                                                      default_arg0
+                                                      a
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [ fail (con unit ()) ]
+                                                      )
+                                                    )
+                                                  ]
+                                                  (abs
+                                                    dead
+                                                    (type)
+                                                    [ fail (con unit ()) ]
+                                                  )
+                                                ]
+                                                (abs dead (type) EQ)
+                                              ]
+                                              (all dead (type) dead)
+                                            }
+                                          )
+                                        ]
+                                        (all dead (type) dead)
+                                      }
+                                    )
+                                  )
+                                ]
+                                (abs dead (type) GT)
+                              ]
+                              (abs
+                                dead
+                                (type)
+                                {
+                                  [
+                                    [
+                                      [
+                                        {
+                                          [ { Extended_match a } ds ]
+                                          (all dead (type) Ordering)
+                                        }
+                                        (lam
+                                          default_arg0
+                                          a
+                                          (abs
+                                            dead (type) [ fail (con unit ()) ]
+                                          )
+                                        )
+                                      ]
+                                      (abs dead (type) [ fail (con unit ()) ])
+                                    ]
+                                    (abs
+                                      dead
+                                      (type)
+                                      {
+                                        [
+                                          [
+                                            [
+                                              {
+                                                [ { Extended_match a } ds ]
+                                                (all dead (type) Ordering)
+                                              }
+                                              (lam
+                                                default_arg0
+                                                a
+                                                (abs
+                                                  dead
+                                                  (type)
+                                                  [ fail (con unit ()) ]
+                                                )
+                                              )
+                                            ]
+                                            (abs
+                                              dead (type) [ fail (con unit ()) ]
+                                            )
+                                          ]
+                                          (abs dead (type) EQ)
+                                        ]
+                                        (all dead (type) dead)
+                                      }
+                                    )
+                                  ]
+                                  (all dead (type) dead)
+                                }
+                              )
+                            ]
+                            (all dead (type) dead)
+                          }
+                        )
+                      ]
+                      (all dead (type) dead)
+                    }
+                  )
+                )
+              )
+            )
+          )
+        )
+        (termbind
+          (strict)
+          (vardecl
+            fOrdUpperBound0_c
+            (all
+              a
+              (type)
+              (fun [ Ord a ] (fun [ UpperBound a ] (fun [ UpperBound a ] Bool)))
+            )
+          )
+          (abs
+            a
+            (type)
+            (lam
+              w
+              [ Ord a ]
+              (lam
+                w
+                [ UpperBound a ]
+                (lam
+                  w
+                  [ UpperBound a ]
+                  [
+                    { [ { UpperBound_match a } w ] Bool }
+                    (lam
+                      ww
+                      [ Extended a ]
+                      (lam
+                        ww
+                        Bool
+                        [
+                          { [ { UpperBound_match a } w ] Bool }
+                          (lam
+                            ww
+                            [ Extended a ]
+                            (lam
+                              ww
+                              Bool
+                              {
+                                [
+                                  [
+                                    [
+                                      {
+                                        [
+                                          Ordering_match
+                                          [
+                                            [ [ { hull_ccompare a } w ] ww ] ww
+                                          ]
+                                        ]
+                                        (all dead (type) Bool)
+                                      }
+                                      (abs
+                                        dead
+                                        (type)
+                                        {
+                                          [
+                                            [
+                                              {
+                                                [ Bool_match ww ]
+                                                (all dead (type) Bool)
+                                              }
+                                              (abs dead (type) ww)
+                                            ]
+                                            (abs dead (type) True)
+                                          ]
+                                          (all dead (type) dead)
+                                        }
+                                      )
+                                    ]
+                                    (abs dead (type) False)
+                                  ]
+                                  (abs dead (type) True)
+                                ]
+                                (all dead (type) dead)
+                              }
+                            )
+                          )
+                        ]
+                      )
+                    )
+                  ]
+                )
+              )
+            )
+          )
+        )
+        (termbind
+          (strict)
+          (vardecl
+            contains
+            (all
+              a
+              (type)
+              (fun [ Ord a ] (fun [ Interval a ] (fun [ Interval a ] Bool)))
+            )
+          )
+          (abs
+            a
+            (type)
+            (lam
+              w
+              [ Ord a ]
+              (lam
+                w
+                [ Interval a ]
+                (lam
+                  w
+                  [ Interval a ]
+                  [
+                    { [ { Interval_match a } w ] Bool }
+                    (lam
+                      ww
+                      [ LowerBound a ]
+                      (lam
+                        ww
+                        [ UpperBound a ]
+                        [
+                          { [ { LowerBound_match a } ww ] Bool }
+                          (lam
+                            ww
+                            [ Extended a ]
+                            (lam
+                              ww
+                              Bool
+                              [
+                                { [ { Interval_match a } w ] Bool }
+                                (lam
+                                  ww
+                                  [ LowerBound a ]
+                                  (lam
+                                    ww
+                                    [ UpperBound a ]
+                                    [
+                                      { [ { LowerBound_match a } ww ] Bool }
+                                      (lam
+                                        ww
+                                        [ Extended a ]
+                                        (lam
+                                          ww
+                                          Bool
+                                          {
+                                            [
+                                              [
+                                                [
+                                                  {
+                                                    [
+                                                      Ordering_match
+                                                      [
+                                                        [
+                                                          [
+                                                            { hull_ccompare a }
+                                                            w
+                                                          ]
+                                                          ww
+                                                        ]
+                                                        ww
+                                                      ]
+                                                    ]
+                                                    (all dead (type) Bool)
+                                                  }
+                                                  (abs
+                                                    dead
+                                                    (type)
+                                                    {
+                                                      [
+                                                        [
+                                                          {
+                                                            [ Bool_match ww ]
+                                                            (all
+                                                              dead (type) Bool
+                                                            )
+                                                          }
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            {
+                                                              [
+                                                                [
+                                                                  {
+                                                                    [
+                                                                      Bool_match
+                                                                      ww
+                                                                    ]
+                                                                    (all
+                                                                      dead
+                                                                      (type)
+                                                                      Bool
+                                                                    )
+                                                                  }
+                                                                  (abs
+                                                                    dead
+                                                                    (type)
+                                                                    [
+                                                                      [
+                                                                        [
+                                                                          {
+                                                                            fOrdUpperBound0_c
+                                                                            a
+                                                                          }
+                                                                          w
+                                                                        ]
+                                                                        ww
+                                                                      ]
+                                                                      ww
+                                                                    ]
+                                                                  )
+                                                                ]
+                                                                (abs
+                                                                  dead
+                                                                  (type)
+                                                                  False
+                                                                )
+                                                              ]
+                                                              (all
+                                                                dead (type) dead
+                                                              )
+                                                            }
+                                                          )
+                                                        ]
+                                                        (abs
+                                                          dead
+                                                          (type)
+                                                          [
+                                                            [
+                                                              [
+                                                                {
+                                                                  fOrdUpperBound0_c
+                                                                  a
+                                                                }
+                                                                w
+                                                              ]
+                                                              ww
+                                                            ]
+                                                            ww
+                                                          ]
+                                                        )
+                                                      ]
+                                                      (all dead (type) dead)
+                                                    }
+                                                  )
+                                                ]
+                                                (abs dead (type) False)
+                                              ]
+                                              (abs
+                                                dead
+                                                (type)
+                                                [
+                                                  [
+                                                    [
+                                                      { fOrdUpperBound0_c a } w
+                                                    ]
+                                                    ww
+                                                  ]
+                                                  ww
+                                                ]
+                                              )
+                                            ]
+                                            (all dead (type) dead)
+                                          }
+                                        )
+                                      )
+                                    ]
+                                  )
+                                )
+                              ]
+                            )
+                          )
+                        ]
+                      )
+                    )
+                  ]
+                )
+              )
+            )
+          )
+        )
+        (termbind
+          (strict)
+          (vardecl
+            toPlutusInterval
+            (all a (type) (fun [ ValidityInterval a ] [ Interval a ]))
+          )
+          (abs
+            a
+            (type)
+            (lam
+              w
+              [ ValidityInterval a ]
+              [
+                { [ { ValidityInterval_match a } w ] [ Interval a ] }
+                (lam
+                  ww
+                  [ Maybe a ]
+                  (lam
+                    ww
+                    [ Maybe a ]
+                    [
+                      [
+                        { Interval a }
+                        {
+                          [
+                            [
+                              {
+                                [ { Maybe_match a } ww ]
+                                (all dead (type) [ LowerBound a ])
+                              }
+                              (lam
+                                v
+                                a
+                                (abs
+                                  dead
+                                  (type)
+                                  [
+                                    [ { LowerBound a } [ { Finite a } v ] ] True
+                                  ]
+                                )
+                              )
+                            ]
+                            (abs
+                              dead
+                              (type)
+                              [ [ { LowerBound a } { NegInf a } ] True ]
+                            )
+                          ]
+                          (all dead (type) dead)
+                        }
+                      ]
+                      {
+                        [
+                          [
+                            {
+                              [ { Maybe_match a } ww ]
+                              (all dead (type) [ UpperBound a ])
+                            }
+                            (lam
+                              v
+                              a
+                              (abs
+                                dead
+                                (type)
+                                [
+                                  [ { UpperBound a } [ { Finite a } v ] ] False
+                                ]
+                              )
+                            )
+                          ]
+                          (abs
+                            dead
+                            (type)
+                            [ [ { UpperBound a } { PosInf a } ] True ]
+                          )
+                        ]
+                        (all dead (type) dead)
+                      }
+                    ]
+                  )
+                )
+              ]
+            )
+          )
+        )
+        (datatypebind
+          (datatype
             (tyvardecl Monoid (fun (type) (type)))
             (tyvardecl a (type))
             Monoid_match
@@ -553,197 +2075,366 @@
           )
           (let
             (nonrec)
-            (datatypebind
-              (datatype
-                (tyvardecl Maybe (fun (type) (type)))
-                (tyvardecl a (type))
-                Maybe_match
-                (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
-              )
-            )
             (termbind
               (strict)
-              (vardecl
-                wtxSignedBy
-                (fun [ List (con bytestring) ] (fun (con bytestring) Bool))
-              )
+              (vardecl txSignedBy (fun TxInfo (fun (con bytestring) Bool)))
               (lam
-                ww
-                [ List (con bytestring) ]
+                ds
+                TxInfo
                 (lam
-                  w
+                  k
                   (con bytestring)
-                  {
-                    [
-                      [
-                        {
-                          [
-                            { Maybe_match (con bytestring) }
+                  [
+                    { [ TxInfo_match ds ] Bool }
+                    (lam
+                      ds
+                      [ List TxInInfo ]
+                      (lam
+                        ds
+                        [ List TxInInfo ]
+                        (lam
+                          ds
+                          [ List TxOut ]
+                          (lam
+                            ds
                             [
                               [
+                                (lam
+                                  k
+                                  (type)
+                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                                )
+                                (con bytestring)
+                              ]
+                              [
                                 [
-                                  {
-                                    {
-                                      fFoldableNil_cfoldMap
-                                      [
-                                        (lam a (type) [ Maybe a ])
-                                        (con bytestring)
-                                      ]
-                                    }
+                                  (lam
+                                    k
+                                    (type)
+                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                                  )
+                                  (con bytestring)
+                                ]
+                                (con integer)
+                              ]
+                            ]
+                            (lam
+                              ds
+                              [
+                                [
+                                  (lam
+                                    k
+                                    (type)
+                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                                  )
+                                  (con bytestring)
+                                ]
+                                [
+                                  [
+                                    (lam
+                                      k
+                                      (type)
+                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                                    )
                                     (con bytestring)
-                                  }
+                                  ]
+                                  (con integer)
+                                ]
+                              ]
+                              (lam
+                                ds
+                                [ List DCert ]
+                                (lam
+                                  ds
                                   [
                                     [
-                                      {
-                                        CConsMonoid
-                                        [
-                                          (lam a (type) [ Maybe a ])
-                                          (con bytestring)
-                                        ]
-                                      }
+                                      (lam
+                                        k
+                                        (type)
+                                        (lam
+                                          v (type) [ List [ [ Tuple2 k ] v ] ]
+                                        )
+                                      )
+                                      StakingCredential
+                                    ]
+                                    (con integer)
+                                  ]
+                                  (lam
+                                    ds
+                                    [ Interval (con integer) ]
+                                    (lam
+                                      ds
+                                      [ List (con bytestring) ]
                                       (lam
                                         ds
                                         [
-                                          (lam a (type) [ Maybe a ])
-                                          (con bytestring)
+                                          [
+                                            (lam
+                                              k
+                                              (type)
+                                              (lam
+                                                v
+                                                (type)
+                                                [ List [ [ Tuple2 k ] v ] ]
+                                              )
+                                            )
+                                            ScriptPurpose
+                                          ]
+                                          (con data)
                                         ]
                                         (lam
-                                          b
+                                          ds
                                           [
-                                            (lam a (type) [ Maybe a ])
-                                            (con bytestring)
-                                          ]
-                                          {
                                             [
-                                              [
-                                                {
-                                                  [
-                                                    {
-                                                      Maybe_match
-                                                      (con bytestring)
-                                                    }
-                                                    ds
-                                                  ]
-                                                  (all
-                                                    dead
-                                                    (type)
-                                                    [
-                                                      (lam a (type) [ Maybe a ])
-                                                      (con bytestring)
-                                                    ]
-                                                  )
-                                                }
+                                              (lam
+                                                k
+                                                (type)
                                                 (lam
-                                                  ipv
-                                                  (con bytestring)
-                                                  (abs dead (type) ds)
+                                                  v
+                                                  (type)
+                                                  [ List [ [ Tuple2 k ] v ] ]
                                                 )
-                                              ]
-                                              (abs dead (type) b)
+                                              )
+                                              (con bytestring)
                                             ]
-                                            (all dead (type) dead)
-                                          }
-                                        )
-                                      )
-                                    ]
-                                    { Nothing (con bytestring) }
-                                  ]
-                                ]
-                                (lam
-                                  x
-                                  (con bytestring)
-                                  {
-                                    [
-                                      [
-                                        {
-                                          [
-                                            Bool_match
-                                            [
+                                            (con data)
+                                          ]
+                                          (lam
+                                            ds
+                                            (con bytestring)
+                                            {
                                               [
                                                 [
-                                                  { (builtin ifThenElse) Bool }
-                                                  [
+                                                  {
                                                     [
-                                                      (builtin equalsByteString)
-                                                      w
+                                                      {
+                                                        Maybe_match
+                                                        (con bytestring)
+                                                      }
+                                                      [
+                                                        [
+                                                          [
+                                                            {
+                                                              {
+                                                                fFoldableNil_cfoldMap
+                                                                [
+                                                                  (lam
+                                                                    a
+                                                                    (type)
+                                                                    [ Maybe a ]
+                                                                  )
+                                                                  (con
+                                                                    bytestring
+                                                                  )
+                                                                ]
+                                                              }
+                                                              (con bytestring)
+                                                            }
+                                                            [
+                                                              [
+                                                                {
+                                                                  CConsMonoid
+                                                                  [
+                                                                    (lam
+                                                                      a
+                                                                      (type)
+                                                                      [
+                                                                        Maybe a
+                                                                      ]
+                                                                    )
+                                                                    (con
+                                                                      bytestring
+                                                                    )
+                                                                  ]
+                                                                }
+                                                                (lam
+                                                                  ds
+                                                                  [
+                                                                    (lam
+                                                                      a
+                                                                      (type)
+                                                                      [
+                                                                        Maybe a
+                                                                      ]
+                                                                    )
+                                                                    (con
+                                                                      bytestring
+                                                                    )
+                                                                  ]
+                                                                  (lam
+                                                                    b
+                                                                    [
+                                                                      (lam
+                                                                        a
+                                                                        (type)
+                                                                        [
+                                                                          Maybe
+                                                                          a
+                                                                        ]
+                                                                      )
+                                                                      (con
+                                                                        bytestring
+                                                                      )
+                                                                    ]
+                                                                    {
+                                                                      [
+                                                                        [
+                                                                          {
+                                                                            [
+                                                                              {
+                                                                                Maybe_match
+                                                                                (con
+                                                                                  bytestring
+                                                                                )
+                                                                              }
+                                                                              ds
+                                                                            ]
+                                                                            (all
+                                                                              dead
+                                                                              (type)
+                                                                              [
+                                                                                (lam
+                                                                                  a
+                                                                                  (type)
+                                                                                  [
+                                                                                    Maybe
+                                                                                    a
+                                                                                  ]
+                                                                                )
+                                                                                (con
+                                                                                  bytestring
+                                                                                )
+                                                                              ]
+                                                                            )
+                                                                          }
+                                                                          (lam
+                                                                            ipv
+                                                                            (con
+                                                                              bytestring
+                                                                            )
+                                                                            (abs
+                                                                              dead
+                                                                              (type)
+                                                                              ds
+                                                                            )
+                                                                          )
+                                                                        ]
+                                                                        (abs
+                                                                          dead
+                                                                          (type)
+                                                                          b
+                                                                        )
+                                                                      ]
+                                                                      (all
+                                                                        dead
+                                                                        (type)
+                                                                        dead
+                                                                      )
+                                                                    }
+                                                                  )
+                                                                )
+                                                              ]
+                                                              {
+                                                                Nothing
+                                                                (con bytestring)
+                                                              }
+                                                            ]
+                                                          ]
+                                                          (lam
+                                                            x
+                                                            (con bytestring)
+                                                            {
+                                                              [
+                                                                [
+                                                                  {
+                                                                    [
+                                                                      Bool_match
+                                                                      [
+                                                                        [
+                                                                          [
+                                                                            {
+                                                                              (builtin
+                                                                                ifThenElse
+                                                                              )
+                                                                              Bool
+                                                                            }
+                                                                            [
+                                                                              [
+                                                                                (builtin
+                                                                                  equalsByteString
+                                                                                )
+                                                                                k
+                                                                              ]
+                                                                              x
+                                                                            ]
+                                                                          ]
+                                                                          True
+                                                                        ]
+                                                                        False
+                                                                      ]
+                                                                    ]
+                                                                    (all
+                                                                      dead
+                                                                      (type)
+                                                                      [
+                                                                        Maybe
+                                                                        (con
+                                                                          bytestring
+                                                                        )
+                                                                      ]
+                                                                    )
+                                                                  }
+                                                                  (abs
+                                                                    dead
+                                                                    (type)
+                                                                    [
+                                                                      {
+                                                                        Just
+                                                                        (con
+                                                                          bytestring
+                                                                        )
+                                                                      }
+                                                                      x
+                                                                    ]
+                                                                  )
+                                                                ]
+                                                                (abs
+                                                                  dead
+                                                                  (type)
+                                                                  {
+                                                                    Nothing
+                                                                    (con
+                                                                      bytestring
+                                                                    )
+                                                                  }
+                                                                )
+                                                              ]
+                                                              (all
+                                                                dead (type) dead
+                                                              )
+                                                            }
+                                                          )
+                                                        ]
+                                                        ds
+                                                      ]
                                                     ]
-                                                    x
-                                                  ]
+                                                    (all dead (type) Bool)
+                                                  }
+                                                  (lam
+                                                    ds
+                                                    (con bytestring)
+                                                    (abs dead (type) True)
+                                                  )
                                                 ]
-                                                True
+                                                (abs dead (type) False)
                                               ]
-                                              False
-                                            ]
-                                          ]
-                                          (all
-                                            dead
-                                            (type)
-                                            [ Maybe (con bytestring) ]
+                                              (all dead (type) dead)
+                                            }
                                           )
-                                        }
-                                        (abs
-                                          dead
-                                          (type)
-                                          [ { Just (con bytestring) } x ]
                                         )
-                                      ]
-                                      (abs
-                                        dead (type) { Nothing (con bytestring) }
                                       )
-                                    ]
-                                    (all dead (type) dead)
-                                  }
-                                )
-                              ]
-                              ww
-                            ]
-                          ]
-                          (all dead (type) Bool)
-                        }
-                        (lam ds (con bytestring) (abs dead (type) True))
-                      ]
-                      (abs dead (type) False)
-                    ]
-                    (all dead (type) dead)
-                  }
-                )
-              )
-            )
-            (termbind
-              (strict)
-              (vardecl
-                compare (all a (type) (fun [ Ord a ] (fun a (fun a Ordering))))
-              )
-              (abs
-                a
-                (type)
-                (lam
-                  v
-                  [ Ord a ]
-                  [
-                    { [ { Ord_match a } v ] (fun a (fun a Ordering)) }
-                    (lam
-                      v
-                      [ (lam a (type) (fun a (fun a Bool))) a ]
-                      (lam
-                        v
-                        (fun a (fun a Ordering))
-                        (lam
-                          v
-                          (fun a (fun a Bool))
-                          (lam
-                            v
-                            (fun a (fun a Bool))
-                            (lam
-                              v
-                              (fun a (fun a Bool))
-                              (lam
-                                v
-                                (fun a (fun a Bool))
-                                (lam
-                                  v
-                                  (fun a (fun a a))
-                                  (lam v (fun a (fun a a)) v)
+                                    )
+                                  )
                                 )
                               )
                             )
@@ -752,1144 +2443,6 @@
                       )
                     )
                   ]
-                )
-              )
-            )
-            (termbind
-              (strict)
-              (vardecl
-                hull_ccompare
-                (all
-                  a
-                  (type)
-                  (fun
-                    [ Ord a ] (fun [ Extended a ] (fun [ Extended a ] Ordering))
-                  )
-                )
-              )
-              (abs
-                a
-                (type)
-                (lam
-                  dOrd
-                  [ Ord a ]
-                  (lam
-                    ds
-                    [ Extended a ]
-                    (lam
-                      ds
-                      [ Extended a ]
-                      (let
-                        (nonrec)
-                        (termbind
-                          (strict)
-                          (vardecl fail (fun (con unit) Ordering))
-                          (lam
-                            ds
-                            (con unit)
-                            {
-                              [
-                                [
-                                  [
-                                    {
-                                      [ { Extended_match a } ds ]
-                                      (all dead (type) Ordering)
-                                    }
-                                    (lam
-                                      default_arg0
-                                      a
-                                      (abs
-                                        dead
-                                        (type)
-                                        {
-                                          [
-                                            [
-                                              [
-                                                {
-                                                  [ { Extended_match a } ds ]
-                                                  (all dead (type) Ordering)
-                                                }
-                                                (lam
-                                                  l
-                                                  a
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    {
-                                                      [
-                                                        [
-                                                          [
-                                                            {
-                                                              [
-                                                                {
-                                                                  Extended_match
-                                                                  a
-                                                                }
-                                                                ds
-                                                              ]
-                                                              (all
-                                                                dead
-                                                                (type)
-                                                                Ordering
-                                                              )
-                                                            }
-                                                            (lam
-                                                              r
-                                                              a
-                                                              (abs
-                                                                dead
-                                                                (type)
-                                                                [
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        compare
-                                                                        a
-                                                                      }
-                                                                      dOrd
-                                                                    ]
-                                                                    l
-                                                                  ]
-                                                                  r
-                                                                ]
-                                                              )
-                                                            )
-                                                          ]
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            (error Ordering)
-                                                          )
-                                                        ]
-                                                        (abs
-                                                          dead
-                                                          (type)
-                                                          (error Ordering)
-                                                        )
-                                                      ]
-                                                      (all dead (type) dead)
-                                                    }
-                                                  )
-                                                )
-                                              ]
-                                              (abs dead (type) (error Ordering))
-                                            ]
-                                            (abs dead (type) GT)
-                                          ]
-                                          (all dead (type) dead)
-                                        }
-                                      )
-                                    )
-                                  ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    {
-                                      [
-                                        [
-                                          [
-                                            {
-                                              [ { Extended_match a } ds ]
-                                              (all dead (type) Ordering)
-                                            }
-                                            (lam
-                                              l
-                                              a
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          r
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              [
-                                                                [
-                                                                  { compare a }
-                                                                  dOrd
-                                                                ]
-                                                                l
-                                                              ]
-                                                              r
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        (error Ordering)
-                                                      )
-                                                    ]
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      (error Ordering)
-                                                    )
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            )
-                                          ]
-                                          (abs dead (type) (error Ordering))
-                                        ]
-                                        (abs dead (type) GT)
-                                      ]
-                                      (all dead (type) dead)
-                                    }
-                                  )
-                                ]
-                                (abs dead (type) LT)
-                              ]
-                              (all dead (type) dead)
-                            }
-                          )
-                        )
-                        (termbind
-                          (strict)
-                          (vardecl fail (fun (con unit) Ordering))
-                          (lam
-                            ds
-                            (con unit)
-                            {
-                              [
-                                [
-                                  [
-                                    {
-                                      [ { Extended_match a } ds ]
-                                      (all dead (type) Ordering)
-                                    }
-                                    (lam
-                                      default_arg0
-                                      a
-                                      (abs
-                                        dead
-                                        (type)
-                                        {
-                                          [
-                                            [
-                                              [
-                                                {
-                                                  [ { Extended_match a } ds ]
-                                                  (all dead (type) Ordering)
-                                                }
-                                                (lam
-                                                  l
-                                                  a
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    {
-                                                      [
-                                                        [
-                                                          [
-                                                            {
-                                                              [
-                                                                {
-                                                                  Extended_match
-                                                                  a
-                                                                }
-                                                                ds
-                                                              ]
-                                                              (all
-                                                                dead
-                                                                (type)
-                                                                Ordering
-                                                              )
-                                                            }
-                                                            (lam
-                                                              r
-                                                              a
-                                                              (abs
-                                                                dead
-                                                                (type)
-                                                                [
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        compare
-                                                                        a
-                                                                      }
-                                                                      dOrd
-                                                                    ]
-                                                                    l
-                                                                  ]
-                                                                  r
-                                                                ]
-                                                              )
-                                                            )
-                                                          ]
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            (error Ordering)
-                                                          )
-                                                        ]
-                                                        (abs
-                                                          dead
-                                                          (type)
-                                                          (error Ordering)
-                                                        )
-                                                      ]
-                                                      (all dead (type) dead)
-                                                    }
-                                                  )
-                                                )
-                                              ]
-                                              (abs dead (type) (error Ordering))
-                                            ]
-                                            (abs dead (type) GT)
-                                          ]
-                                          (all dead (type) dead)
-                                        }
-                                      )
-                                    )
-                                  ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    {
-                                      [
-                                        [
-                                          [
-                                            {
-                                              [ { Extended_match a } ds ]
-                                              (all dead (type) Ordering)
-                                            }
-                                            (lam
-                                              l
-                                              a
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          r
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              [
-                                                                [
-                                                                  { compare a }
-                                                                  dOrd
-                                                                ]
-                                                                l
-                                                              ]
-                                                              r
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        (error Ordering)
-                                                      )
-                                                    ]
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      (error Ordering)
-                                                    )
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            )
-                                          ]
-                                          (abs dead (type) (error Ordering))
-                                        ]
-                                        (abs dead (type) GT)
-                                      ]
-                                      (all dead (type) dead)
-                                    }
-                                  )
-                                ]
-                                (abs dead (type) LT)
-                              ]
-                              (all dead (type) dead)
-                            }
-                          )
-                        )
-                        (termbind
-                          (strict)
-                          (vardecl fail (fun (con unit) Ordering))
-                          (lam
-                            ds
-                            (con unit)
-                            {
-                              [
-                                [
-                                  [
-                                    {
-                                      [ { Extended_match a } ds ]
-                                      (all dead (type) Ordering)
-                                    }
-                                    (lam
-                                      default_arg0
-                                      a
-                                      (abs
-                                        dead
-                                        (type)
-                                        {
-                                          [
-                                            [
-                                              [
-                                                {
-                                                  [ { Extended_match a } ds ]
-                                                  (all dead (type) Ordering)
-                                                }
-                                                (lam
-                                                  l
-                                                  a
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    {
-                                                      [
-                                                        [
-                                                          [
-                                                            {
-                                                              [
-                                                                {
-                                                                  Extended_match
-                                                                  a
-                                                                }
-                                                                ds
-                                                              ]
-                                                              (all
-                                                                dead
-                                                                (type)
-                                                                Ordering
-                                                              )
-                                                            }
-                                                            (lam
-                                                              r
-                                                              a
-                                                              (abs
-                                                                dead
-                                                                (type)
-                                                                [
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        compare
-                                                                        a
-                                                                      }
-                                                                      dOrd
-                                                                    ]
-                                                                    l
-                                                                  ]
-                                                                  r
-                                                                ]
-                                                              )
-                                                            )
-                                                          ]
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            (error Ordering)
-                                                          )
-                                                        ]
-                                                        (abs
-                                                          dead
-                                                          (type)
-                                                          (error Ordering)
-                                                        )
-                                                      ]
-                                                      (all dead (type) dead)
-                                                    }
-                                                  )
-                                                )
-                                              ]
-                                              (abs dead (type) (error Ordering))
-                                            ]
-                                            (abs dead (type) GT)
-                                          ]
-                                          (all dead (type) dead)
-                                        }
-                                      )
-                                    )
-                                  ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    {
-                                      [
-                                        [
-                                          [
-                                            {
-                                              [ { Extended_match a } ds ]
-                                              (all dead (type) Ordering)
-                                            }
-                                            (lam
-                                              l
-                                              a
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          r
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              [
-                                                                [
-                                                                  { compare a }
-                                                                  dOrd
-                                                                ]
-                                                                l
-                                                              ]
-                                                              r
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        (error Ordering)
-                                                      )
-                                                    ]
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      (error Ordering)
-                                                    )
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            )
-                                          ]
-                                          (abs dead (type) (error Ordering))
-                                        ]
-                                        (abs dead (type) GT)
-                                      ]
-                                      (all dead (type) dead)
-                                    }
-                                  )
-                                ]
-                                (abs dead (type) LT)
-                              ]
-                              (all dead (type) dead)
-                            }
-                          )
-                        )
-                        (termbind
-                          (strict)
-                          (vardecl fail (fun (con unit) Ordering))
-                          (lam
-                            ds
-                            (con unit)
-                            {
-                              [
-                                [
-                                  [
-                                    {
-                                      [ { Extended_match a } ds ]
-                                      (all dead (type) Ordering)
-                                    }
-                                    (lam
-                                      default_arg0
-                                      a
-                                      (abs
-                                        dead
-                                        (type)
-                                        {
-                                          [
-                                            [
-                                              [
-                                                {
-                                                  [ { Extended_match a } ds ]
-                                                  (all dead (type) Ordering)
-                                                }
-                                                (lam
-                                                  l
-                                                  a
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    {
-                                                      [
-                                                        [
-                                                          [
-                                                            {
-                                                              [
-                                                                {
-                                                                  Extended_match
-                                                                  a
-                                                                }
-                                                                ds
-                                                              ]
-                                                              (all
-                                                                dead
-                                                                (type)
-                                                                Ordering
-                                                              )
-                                                            }
-                                                            (lam
-                                                              r
-                                                              a
-                                                              (abs
-                                                                dead
-                                                                (type)
-                                                                [
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        compare
-                                                                        a
-                                                                      }
-                                                                      dOrd
-                                                                    ]
-                                                                    l
-                                                                  ]
-                                                                  r
-                                                                ]
-                                                              )
-                                                            )
-                                                          ]
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            (error Ordering)
-                                                          )
-                                                        ]
-                                                        (abs
-                                                          dead
-                                                          (type)
-                                                          (error Ordering)
-                                                        )
-                                                      ]
-                                                      (all dead (type) dead)
-                                                    }
-                                                  )
-                                                )
-                                              ]
-                                              (abs dead (type) (error Ordering))
-                                            ]
-                                            (abs dead (type) GT)
-                                          ]
-                                          (all dead (type) dead)
-                                        }
-                                      )
-                                    )
-                                  ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    {
-                                      [
-                                        [
-                                          [
-                                            {
-                                              [ { Extended_match a } ds ]
-                                              (all dead (type) Ordering)
-                                            }
-                                            (lam
-                                              l
-                                              a
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          r
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              [
-                                                                [
-                                                                  { compare a }
-                                                                  dOrd
-                                                                ]
-                                                                l
-                                                              ]
-                                                              r
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        (error Ordering)
-                                                      )
-                                                    ]
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      (error Ordering)
-                                                    )
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            )
-                                          ]
-                                          (abs dead (type) (error Ordering))
-                                        ]
-                                        (abs dead (type) GT)
-                                      ]
-                                      (all dead (type) dead)
-                                    }
-                                  )
-                                ]
-                                (abs dead (type) LT)
-                              ]
-                              (all dead (type) dead)
-                            }
-                          )
-                        )
-                        {
-                          [
-                            [
-                              [
-                                {
-                                  [ { Extended_match a } ds ]
-                                  (all dead (type) Ordering)
-                                }
-                                (lam
-                                  default_arg0
-                                  a
-                                  (abs
-                                    dead
-                                    (type)
-                                    {
-                                      [
-                                        [
-                                          [
-                                            {
-                                              [ { Extended_match a } ds ]
-                                              (all dead (type) Ordering)
-                                            }
-                                            (lam
-                                              default_arg0
-                                              a
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          default_arg0
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              fail (con unit ())
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        [ fail (con unit ()) ]
-                                                      )
-                                                    ]
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      {
-                                                        [
-                                                          [
-                                                            [
-                                                              {
-                                                                [
-                                                                  {
-                                                                    Extended_match
-                                                                    a
-                                                                  }
-                                                                  ds
-                                                                ]
-                                                                (all
-                                                                  dead
-                                                                  (type)
-                                                                  Ordering
-                                                                )
-                                                              }
-                                                              (lam
-                                                                default_arg0
-                                                                a
-                                                                (abs
-                                                                  dead
-                                                                  (type)
-                                                                  [
-                                                                    fail
-                                                                    (con
-                                                                      unit ()
-                                                                    )
-                                                                  ]
-                                                                )
-                                                              )
-                                                            ]
-                                                            (abs
-                                                              dead
-                                                              (type)
-                                                              [
-                                                                fail
-                                                                (con unit ())
-                                                              ]
-                                                            )
-                                                          ]
-                                                          (abs dead (type) EQ)
-                                                        ]
-                                                        (all dead (type) dead)
-                                                      }
-                                                    )
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            )
-                                          ]
-                                          (abs dead (type) GT)
-                                        ]
-                                        (abs
-                                          dead
-                                          (type)
-                                          {
-                                            [
-                                              [
-                                                [
-                                                  {
-                                                    [ { Extended_match a } ds ]
-                                                    (all dead (type) Ordering)
-                                                  }
-                                                  (lam
-                                                    default_arg0
-                                                    a
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      [ fail (con unit ()) ]
-                                                    )
-                                                  )
-                                                ]
-                                                (abs
-                                                  dead
-                                                  (type)
-                                                  [ fail (con unit ()) ]
-                                                )
-                                              ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          default_arg0
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              fail (con unit ())
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        [ fail (con unit ()) ]
-                                                      )
-                                                    ]
-                                                    (abs dead (type) EQ)
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            ]
-                                            (all dead (type) dead)
-                                          }
-                                        )
-                                      ]
-                                      (all dead (type) dead)
-                                    }
-                                  )
-                                )
-                              ]
-                              (abs
-                                dead
-                                (type)
-                                {
-                                  [
-                                    [
-                                      [
-                                        {
-                                          [ { Extended_match a } ds ]
-                                          (all dead (type) Ordering)
-                                        }
-                                        (lam
-                                          default_arg0 a (abs dead (type) LT)
-                                        )
-                                      ]
-                                      (abs dead (type) EQ)
-                                    ]
-                                    (abs dead (type) LT)
-                                  ]
-                                  (all dead (type) dead)
-                                }
-                              )
-                            ]
-                            (abs
-                              dead
-                              (type)
-                              {
-                                [
-                                  [
-                                    [
-                                      {
-                                        [ { Extended_match a } ds ]
-                                        (all dead (type) Ordering)
-                                      }
-                                      (lam
-                                        default_arg0
-                                        a
-                                        (abs
-                                          dead
-                                          (type)
-                                          {
-                                            [
-                                              [
-                                                [
-                                                  {
-                                                    [ { Extended_match a } ds ]
-                                                    (all dead (type) Ordering)
-                                                  }
-                                                  (lam
-                                                    default_arg0
-                                                    a
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      [ fail (con unit ()) ]
-                                                    )
-                                                  )
-                                                ]
-                                                (abs
-                                                  dead
-                                                  (type)
-                                                  [ fail (con unit ()) ]
-                                                )
-                                              ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                {
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          [
-                                                            { Extended_match a }
-                                                            ds
-                                                          ]
-                                                          (all
-                                                            dead (type) Ordering
-                                                          )
-                                                        }
-                                                        (lam
-                                                          default_arg0
-                                                          a
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              fail (con unit ())
-                                                            ]
-                                                          )
-                                                        )
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        [ fail (con unit ()) ]
-                                                      )
-                                                    ]
-                                                    (abs dead (type) EQ)
-                                                  ]
-                                                  (all dead (type) dead)
-                                                }
-                                              )
-                                            ]
-                                            (all dead (type) dead)
-                                          }
-                                        )
-                                      )
-                                    ]
-                                    (abs dead (type) GT)
-                                  ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    {
-                                      [
-                                        [
-                                          [
-                                            {
-                                              [ { Extended_match a } ds ]
-                                              (all dead (type) Ordering)
-                                            }
-                                            (lam
-                                              default_arg0
-                                              a
-                                              (abs
-                                                dead
-                                                (type)
-                                                [ fail (con unit ()) ]
-                                              )
-                                            )
-                                          ]
-                                          (abs
-                                            dead (type) [ fail (con unit ()) ]
-                                          )
-                                        ]
-                                        (abs
-                                          dead
-                                          (type)
-                                          {
-                                            [
-                                              [
-                                                [
-                                                  {
-                                                    [ { Extended_match a } ds ]
-                                                    (all dead (type) Ordering)
-                                                  }
-                                                  (lam
-                                                    default_arg0
-                                                    a
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      [ fail (con unit ()) ]
-                                                    )
-                                                  )
-                                                ]
-                                                (abs
-                                                  dead
-                                                  (type)
-                                                  [ fail (con unit ()) ]
-                                                )
-                                              ]
-                                              (abs dead (type) EQ)
-                                            ]
-                                            (all dead (type) dead)
-                                          }
-                                        )
-                                      ]
-                                      (all dead (type) dead)
-                                    }
-                                  )
-                                ]
-                                (all dead (type) dead)
-                              }
-                            )
-                          ]
-                          (all dead (type) dead)
-                        }
-                      )
-                    )
-                  )
-                )
-              )
-            )
-            (datatypebind
-              (datatype
-                (tyvardecl Campaign (type))
-
-                Campaign_match
-                (vardecl
-                  Campaign
-                  (fun
-                    (con integer)
-                    (fun (con integer) (fun (con bytestring) Campaign))
-                  )
                 )
               )
             )
@@ -1926,44 +2479,16 @@
                                   [
                                     { [ TxInfo_match ds ] Bool }
                                     (lam
-                                      ww
+                                      ds
                                       [ List TxInInfo ]
                                       (lam
-                                        ww
-                                        [ List TxOut ]
+                                        ds
+                                        [ List TxInInfo ]
                                         (lam
-                                          ww
-                                          [
-                                            [
-                                              (lam
-                                                k
-                                                (type)
-                                                (lam
-                                                  v
-                                                  (type)
-                                                  [ List [ [ Tuple2 k ] v ] ]
-                                                )
-                                              )
-                                              (con bytestring)
-                                            ]
-                                            [
-                                              [
-                                                (lam
-                                                  k
-                                                  (type)
-                                                  (lam
-                                                    v
-                                                    (type)
-                                                    [ List [ [ Tuple2 k ] v ] ]
-                                                  )
-                                                )
-                                                (con bytestring)
-                                              ]
-                                              (con integer)
-                                            ]
-                                          ]
+                                          ds
+                                          [ List TxOut ]
                                           (lam
-                                            ww
+                                            ds
                                             [
                                               [
                                                 (lam
@@ -1996,2159 +2521,295 @@
                                               ]
                                             ]
                                             (lam
-                                              ww
-                                              [ List DCert ]
-                                              (lam
-                                                ww
+                                              ds
+                                              [
                                                 [
-                                                  List
+                                                  (lam
+                                                    k
+                                                    (type)
+                                                    (lam
+                                                      v
+                                                      (type)
+                                                      [
+                                                        List [ [ Tuple2 k ] v ]
+                                                      ]
+                                                    )
+                                                  )
+                                                  (con bytestring)
+                                                ]
+                                                [
                                                   [
-                                                    [ Tuple2 StakingCredential ]
+                                                    (lam
+                                                      k
+                                                      (type)
+                                                      (lam
+                                                        v
+                                                        (type)
+                                                        [
+                                                          List
+                                                          [ [ Tuple2 k ] v ]
+                                                        ]
+                                                      )
+                                                    )
+                                                    (con bytestring)
+                                                  ]
+                                                  (con integer)
+                                                ]
+                                              ]
+                                              (lam
+                                                ds
+                                                [ List DCert ]
+                                                (lam
+                                                  ds
+                                                  [
+                                                    [
+                                                      (lam
+                                                        k
+                                                        (type)
+                                                        (lam
+                                                          v
+                                                          (type)
+                                                          [
+                                                            List
+                                                            [ [ Tuple2 k ] v ]
+                                                          ]
+                                                        )
+                                                      )
+                                                      StakingCredential
+                                                    ]
                                                     (con integer)
                                                   ]
-                                                ]
-                                                (lam
-                                                  ww
-                                                  [ Interval (con integer) ]
                                                   (lam
-                                                    ww
-                                                    [ List (con bytestring) ]
+                                                    ds
+                                                    [ Interval (con integer) ]
                                                     (lam
-                                                      ww
-                                                      [
-                                                        List
+                                                      ds
+                                                      [ List (con bytestring) ]
+                                                      (lam
+                                                        ds
                                                         [
                                                           [
-                                                            Tuple2
-                                                            (con bytestring)
+                                                            (lam
+                                                              k
+                                                              (type)
+                                                              (lam
+                                                                v
+                                                                (type)
+                                                                [
+                                                                  List
+                                                                  [
+                                                                    [ Tuple2 k ]
+                                                                    v
+                                                                  ]
+                                                                ]
+                                                              )
+                                                            )
+                                                            ScriptPurpose
                                                           ]
                                                           (con data)
                                                         ]
-                                                      ]
-                                                      (lam
-                                                        ww
-                                                        (con bytestring)
-                                                        [
-                                                          {
+                                                        (lam
+                                                          ds
+                                                          [
                                                             [
-                                                              {
-                                                                Interval_match
-                                                                (con integer)
-                                                              }
-                                                              ww
-                                                            ]
-                                                            Bool
-                                                          }
-                                                          (lam
-                                                            ww
-                                                            [
-                                                              LowerBound
-                                                              (con integer)
-                                                            ]
-                                                            (lam
-                                                              ww
-                                                              [
-                                                                UpperBound
-                                                                (con integer)
-                                                              ]
-                                                              [
-                                                                {
-                                                                  [
-                                                                    {
-                                                                      LowerBound_match
-                                                                      (con
-                                                                        integer
-                                                                      )
-                                                                    }
-                                                                    ww
-                                                                  ]
-                                                                  Bool
-                                                                }
+                                                              (lam
+                                                                k
+                                                                (type)
                                                                 (lam
-                                                                  ww
+                                                                  v
+                                                                  (type)
                                                                   [
-                                                                    Extended
-                                                                    (con
-                                                                      integer
-                                                                    )
+                                                                    List
+                                                                    [
+                                                                      [
+                                                                        Tuple2 k
+                                                                      ]
+                                                                      v
+                                                                    ]
                                                                   ]
-                                                                  (lam
-                                                                    ww
-                                                                    Bool
-                                                                    {
+                                                                )
+                                                              )
+                                                              (con bytestring)
+                                                            ]
+                                                            (con data)
+                                                          ]
+                                                          (lam
+                                                            ds
+                                                            (con bytestring)
+                                                            {
+                                                              [
+                                                                [
+                                                                  {
+                                                                    [
+                                                                      Bool_match
                                                                       [
                                                                         [
                                                                           [
                                                                             {
-                                                                              [
-                                                                                Ordering_match
-                                                                                [
-                                                                                  [
-                                                                                    [
-                                                                                      {
-                                                                                        hull_ccompare
-                                                                                        (con
-                                                                                          integer
-                                                                                        )
-                                                                                      }
-                                                                                      fOrdPOSIXTime
-                                                                                    ]
-                                                                                    [
-                                                                                      {
-                                                                                        Finite
-                                                                                        (con
-                                                                                          integer
-                                                                                        )
-                                                                                      }
-                                                                                      [
-                                                                                        {
-                                                                                          [
-                                                                                            Campaign_match
-                                                                                            c
-                                                                                          ]
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                        }
-                                                                                        (lam
-                                                                                          ds
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                          (lam
-                                                                                            ds
-                                                                                            (con
-                                                                                              integer
-                                                                                            )
-                                                                                            (lam
-                                                                                              ds
-                                                                                              (con
-                                                                                                bytestring
-                                                                                              )
-                                                                                              ds
-                                                                                            )
-                                                                                          )
-                                                                                        )
-                                                                                      ]
-                                                                                    ]
-                                                                                  ]
-                                                                                  ww
-                                                                                ]
-                                                                              ]
-                                                                              (all
-                                                                                dead
-                                                                                (type)
-                                                                                Bool
+                                                                              contains
+                                                                              (con
+                                                                                integer
                                                                               )
                                                                             }
-                                                                            (abs
-                                                                              dead
-                                                                              (type)
-                                                                              {
-                                                                                [
-                                                                                  [
-                                                                                    {
-                                                                                      [
-                                                                                        Bool_match
-                                                                                        ww
-                                                                                      ]
-                                                                                      (all
-                                                                                        dead
-                                                                                        (type)
-                                                                                        Bool
-                                                                                      )
-                                                                                    }
-                                                                                    (abs
-                                                                                      dead
-                                                                                      (type)
-                                                                                      [
-                                                                                        {
-                                                                                          [
-                                                                                            {
-                                                                                              UpperBound_match
-                                                                                              (con
-                                                                                                integer
-                                                                                              )
-                                                                                            }
-                                                                                            ww
-                                                                                          ]
-                                                                                          Bool
-                                                                                        }
-                                                                                        (lam
-                                                                                          ww
-                                                                                          [
-                                                                                            Extended
-                                                                                            (con
-                                                                                              integer
-                                                                                            )
-                                                                                          ]
-                                                                                          (lam
-                                                                                            ww
-                                                                                            Bool
-                                                                                            {
-                                                                                              [
-                                                                                                [
-                                                                                                  [
-                                                                                                    {
-                                                                                                      [
-                                                                                                        {
-                                                                                                          Extended_match
-                                                                                                          (con
-                                                                                                            integer
-                                                                                                          )
-                                                                                                        }
-                                                                                                        ww
-                                                                                                      ]
-                                                                                                      (all
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        Bool
-                                                                                                      )
-                                                                                                    }
-                                                                                                    (lam
-                                                                                                      default_arg0
-                                                                                                      (con
-                                                                                                        integer
-                                                                                                      )
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        {
-                                                                                                          [
-                                                                                                            [
-                                                                                                              [
-                                                                                                                {
-                                                                                                                  [
-                                                                                                                    {
-                                                                                                                      Extended_match
-                                                                                                                      (con
-                                                                                                                        integer
-                                                                                                                      )
-                                                                                                                    }
-                                                                                                                    ww
-                                                                                                                  ]
-                                                                                                                  (all
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    Bool
-                                                                                                                  )
-                                                                                                                }
-                                                                                                                (lam
-                                                                                                                  l
-                                                                                                                  (con
-                                                                                                                    integer
-                                                                                                                  )
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    {
-                                                                                                                      [
-                                                                                                                        [
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                Ordering_match
-                                                                                                                                [
-                                                                                                                                  [
-                                                                                                                                    fOrdInteger_ccompare
-                                                                                                                                    l
-                                                                                                                                  ]
-                                                                                                                                  [
-                                                                                                                                    {
-                                                                                                                                      [
-                                                                                                                                        Campaign_match
-                                                                                                                                        c
-                                                                                                                                      ]
-                                                                                                                                      (con
-                                                                                                                                        integer
-                                                                                                                                      )
-                                                                                                                                    }
-                                                                                                                                    (lam
-                                                                                                                                      ds
-                                                                                                                                      (con
-                                                                                                                                        integer
-                                                                                                                                      )
-                                                                                                                                      (lam
-                                                                                                                                        ds
-                                                                                                                                        (con
-                                                                                                                                          integer
-                                                                                                                                        )
-                                                                                                                                        (lam
-                                                                                                                                          ds
-                                                                                                                                          (con
-                                                                                                                                            bytestring
-                                                                                                                                          )
-                                                                                                                                          ds
-                                                                                                                                        )
-                                                                                                                                      )
-                                                                                                                                    )
-                                                                                                                                  ]
-                                                                                                                                ]
-                                                                                                                              ]
-                                                                                                                              (all
-                                                                                                                                dead
-                                                                                                                                (type)
-                                                                                                                                Bool
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                            (abs
-                                                                                                                              dead
-                                                                                                                              (type)
-                                                                                                                              {
-                                                                                                                                [
-                                                                                                                                  [
-                                                                                                                                    {
-                                                                                                                                      [
-                                                                                                                                        Bool_match
-                                                                                                                                        ww
-                                                                                                                                      ]
-                                                                                                                                      (all
-                                                                                                                                        dead
-                                                                                                                                        (type)
-                                                                                                                                        Bool
-                                                                                                                                      )
-                                                                                                                                    }
-                                                                                                                                    (abs
-                                                                                                                                      dead
-                                                                                                                                      (type)
-                                                                                                                                      False
-                                                                                                                                    )
-                                                                                                                                  ]
-                                                                                                                                  (abs
-                                                                                                                                    dead
-                                                                                                                                    (type)
-                                                                                                                                    [
-                                                                                                                                      [
-                                                                                                                                        wtxSignedBy
-                                                                                                                                        ww
-                                                                                                                                      ]
-                                                                                                                                      [
-                                                                                                                                        {
-                                                                                                                                          [
-                                                                                                                                            Campaign_match
-                                                                                                                                            c
-                                                                                                                                          ]
-                                                                                                                                          (con
-                                                                                                                                            bytestring
-                                                                                                                                          )
-                                                                                                                                        }
-                                                                                                                                        (lam
-                                                                                                                                          ds
-                                                                                                                                          (con
-                                                                                                                                            integer
-                                                                                                                                          )
-                                                                                                                                          (lam
-                                                                                                                                            ds
-                                                                                                                                            (con
-                                                                                                                                              integer
-                                                                                                                                            )
-                                                                                                                                            (lam
-                                                                                                                                              ds
-                                                                                                                                              (con
-                                                                                                                                                bytestring
-                                                                                                                                              )
-                                                                                                                                              ds
-                                                                                                                                            )
-                                                                                                                                          )
-                                                                                                                                        )
-                                                                                                                                      ]
-                                                                                                                                    ]
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                                (all
-                                                                                                                                  dead
-                                                                                                                                  (type)
-                                                                                                                                  dead
-                                                                                                                                )
-                                                                                                                              }
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                          (abs
-                                                                                                                            dead
-                                                                                                                            (type)
-                                                                                                                            False
-                                                                                                                          )
-                                                                                                                        ]
-                                                                                                                        (abs
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              wtxSignedBy
-                                                                                                                              ww
-                                                                                                                            ]
-                                                                                                                            [
-                                                                                                                              {
-                                                                                                                                [
-                                                                                                                                  Campaign_match
-                                                                                                                                  c
-                                                                                                                                ]
-                                                                                                                                (con
-                                                                                                                                  bytestring
-                                                                                                                                )
-                                                                                                                              }
-                                                                                                                              (lam
-                                                                                                                                ds
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  (con
-                                                                                                                                    integer
-                                                                                                                                  )
-                                                                                                                                  (lam
-                                                                                                                                    ds
-                                                                                                                                    (con
-                                                                                                                                      bytestring
-                                                                                                                                    )
-                                                                                                                                    ds
-                                                                                                                                  )
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                            ]
-                                                                                                                          ]
-                                                                                                                        )
-                                                                                                                      ]
-                                                                                                                      (all
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        dead
-                                                                                                                      )
-                                                                                                                    }
-                                                                                                                  )
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (abs
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                {
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        {
-                                                                                                                          [
-                                                                                                                            Ordering_match
-                                                                                                                            (error
-                                                                                                                              Ordering
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                          (all
-                                                                                                                            dead
-                                                                                                                            (type)
-                                                                                                                            Bool
-                                                                                                                          )
-                                                                                                                        }
-                                                                                                                        (abs
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          (error
-                                                                                                                            Bool
-                                                                                                                          )
-                                                                                                                        )
-                                                                                                                      ]
-                                                                                                                      (abs
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        (error
-                                                                                                                          Bool
-                                                                                                                        )
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (abs
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      (error
-                                                                                                                        Bool
-                                                                                                                      )
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  (all
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    dead
-                                                                                                                  )
-                                                                                                                }
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              False
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (all
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            dead
-                                                                                                          )
-                                                                                                        }
-                                                                                                      )
-                                                                                                    )
-                                                                                                  ]
-                                                                                                  (abs
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    [
-                                                                                                      [
-                                                                                                        wtxSignedBy
-                                                                                                        ww
-                                                                                                      ]
-                                                                                                      [
-                                                                                                        {
-                                                                                                          [
-                                                                                                            Campaign_match
-                                                                                                            c
-                                                                                                          ]
-                                                                                                          (con
-                                                                                                            bytestring
-                                                                                                          )
-                                                                                                        }
-                                                                                                        (lam
-                                                                                                          ds
-                                                                                                          (con
-                                                                                                            integer
-                                                                                                          )
-                                                                                                          (lam
-                                                                                                            ds
-                                                                                                            (con
-                                                                                                              integer
-                                                                                                            )
-                                                                                                            (lam
-                                                                                                              ds
-                                                                                                              (con
-                                                                                                                bytestring
-                                                                                                              )
-                                                                                                              ds
-                                                                                                            )
-                                                                                                          )
-                                                                                                        )
-                                                                                                      ]
-                                                                                                    ]
-                                                                                                  )
-                                                                                                ]
-                                                                                                (abs
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  {
-                                                                                                    [
-                                                                                                      [
-                                                                                                        [
-                                                                                                          {
-                                                                                                            [
-                                                                                                              {
-                                                                                                                Extended_match
-                                                                                                                (con
-                                                                                                                  integer
-                                                                                                                )
-                                                                                                              }
-                                                                                                              ww
-                                                                                                            ]
-                                                                                                            (all
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              Bool
-                                                                                                            )
-                                                                                                          }
-                                                                                                          (lam
-                                                                                                            l
-                                                                                                            (con
-                                                                                                              integer
-                                                                                                            )
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              {
-                                                                                                                [
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      {
-                                                                                                                        [
-                                                                                                                          Ordering_match
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              fOrdInteger_ccompare
-                                                                                                                              l
-                                                                                                                            ]
-                                                                                                                            [
-                                                                                                                              {
-                                                                                                                                [
-                                                                                                                                  Campaign_match
-                                                                                                                                  c
-                                                                                                                                ]
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                              }
-                                                                                                                              (lam
-                                                                                                                                ds
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  (con
-                                                                                                                                    integer
-                                                                                                                                  )
-                                                                                                                                  (lam
-                                                                                                                                    ds
-                                                                                                                                    (con
-                                                                                                                                      bytestring
-                                                                                                                                    )
-                                                                                                                                    ds
-                                                                                                                                  )
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                            ]
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                        (all
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          Bool
-                                                                                                                        )
-                                                                                                                      }
-                                                                                                                      (abs
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        {
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              {
-                                                                                                                                [
-                                                                                                                                  Bool_match
-                                                                                                                                  ww
-                                                                                                                                ]
-                                                                                                                                (all
-                                                                                                                                  dead
-                                                                                                                                  (type)
-                                                                                                                                  Bool
-                                                                                                                                )
-                                                                                                                              }
-                                                                                                                              (abs
-                                                                                                                                dead
-                                                                                                                                (type)
-                                                                                                                                False
-                                                                                                                              )
-                                                                                                                            ]
-                                                                                                                            (abs
-                                                                                                                              dead
-                                                                                                                              (type)
-                                                                                                                              [
-                                                                                                                                [
-                                                                                                                                  wtxSignedBy
-                                                                                                                                  ww
-                                                                                                                                ]
-                                                                                                                                [
-                                                                                                                                  {
-                                                                                                                                    [
-                                                                                                                                      Campaign_match
-                                                                                                                                      c
-                                                                                                                                    ]
-                                                                                                                                    (con
-                                                                                                                                      bytestring
-                                                                                                                                    )
-                                                                                                                                  }
-                                                                                                                                  (lam
-                                                                                                                                    ds
-                                                                                                                                    (con
-                                                                                                                                      integer
-                                                                                                                                    )
-                                                                                                                                    (lam
-                                                                                                                                      ds
-                                                                                                                                      (con
-                                                                                                                                        integer
-                                                                                                                                      )
-                                                                                                                                      (lam
-                                                                                                                                        ds
-                                                                                                                                        (con
-                                                                                                                                          bytestring
-                                                                                                                                        )
-                                                                                                                                        ds
-                                                                                                                                      )
-                                                                                                                                    )
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                              ]
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                          (all
-                                                                                                                            dead
-                                                                                                                            (type)
-                                                                                                                            dead
-                                                                                                                          )
-                                                                                                                        }
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (abs
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      False
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        wtxSignedBy
-                                                                                                                        ww
-                                                                                                                      ]
-                                                                                                                      [
-                                                                                                                        {
-                                                                                                                          [
-                                                                                                                            Campaign_match
-                                                                                                                            c
-                                                                                                                          ]
-                                                                                                                          (con
-                                                                                                                            bytestring
-                                                                                                                          )
-                                                                                                                        }
-                                                                                                                        (lam
-                                                                                                                          ds
-                                                                                                                          (con
-                                                                                                                            integer
-                                                                                                                          )
-                                                                                                                          (lam
-                                                                                                                            ds
-                                                                                                                            (con
-                                                                                                                              integer
-                                                                                                                            )
-                                                                                                                            (lam
-                                                                                                                              ds
-                                                                                                                              (con
-                                                                                                                                bytestring
-                                                                                                                              )
-                                                                                                                              ds
-                                                                                                                            )
-                                                                                                                          )
-                                                                                                                        )
-                                                                                                                      ]
-                                                                                                                    ]
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                                (all
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  dead
-                                                                                                                )
-                                                                                                              }
-                                                                                                            )
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (abs
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          {
-                                                                                                            [
-                                                                                                              [
-                                                                                                                [
-                                                                                                                  {
-                                                                                                                    [
-                                                                                                                      Ordering_match
-                                                                                                                      (error
-                                                                                                                        Ordering
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (all
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      Bool
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    (error
-                                                                                                                      Bool
-                                                                                                                    )
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  (error
-                                                                                                                    Bool
-                                                                                                                  )
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (abs
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                (error
-                                                                                                                  Bool
-                                                                                                                )
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (all
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              dead
-                                                                                                            )
-                                                                                                          }
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        False
-                                                                                                      )
-                                                                                                    ]
-                                                                                                    (all
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      dead
-                                                                                                    )
-                                                                                                  }
-                                                                                                )
-                                                                                              ]
-                                                                                              (all
-                                                                                                dead
-                                                                                                (type)
-                                                                                                dead
-                                                                                              )
-                                                                                            }
-                                                                                          )
-                                                                                        )
-                                                                                      ]
-                                                                                    )
-                                                                                  ]
-                                                                                  (abs
-                                                                                    dead
-                                                                                    (type)
-                                                                                    [
-                                                                                      {
-                                                                                        [
-                                                                                          {
-                                                                                            UpperBound_match
-                                                                                            (con
-                                                                                              integer
-                                                                                            )
-                                                                                          }
-                                                                                          ww
-                                                                                        ]
-                                                                                        Bool
-                                                                                      }
-                                                                                      (lam
-                                                                                        ww
-                                                                                        [
-                                                                                          Extended
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                        ]
-                                                                                        (lam
-                                                                                          ww
-                                                                                          Bool
-                                                                                          {
-                                                                                            [
-                                                                                              [
-                                                                                                [
-                                                                                                  {
-                                                                                                    [
-                                                                                                      {
-                                                                                                        Extended_match
-                                                                                                        (con
-                                                                                                          integer
-                                                                                                        )
-                                                                                                      }
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    (all
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      Bool
-                                                                                                    )
-                                                                                                  }
-                                                                                                  (lam
-                                                                                                    default_arg0
-                                                                                                    (con
-                                                                                                      integer
-                                                                                                    )
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      {
-                                                                                                        [
-                                                                                                          [
-                                                                                                            [
-                                                                                                              {
-                                                                                                                [
-                                                                                                                  {
-                                                                                                                    Extended_match
-                                                                                                                    (con
-                                                                                                                      integer
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                  ww
-                                                                                                                ]
-                                                                                                                (all
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  Bool
-                                                                                                                )
-                                                                                                              }
-                                                                                                              (lam
-                                                                                                                l
-                                                                                                                (con
-                                                                                                                  integer
-                                                                                                                )
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  {
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        [
-                                                                                                                          {
-                                                                                                                            [
-                                                                                                                              Ordering_match
-                                                                                                                              [
-                                                                                                                                [
-                                                                                                                                  fOrdInteger_ccompare
-                                                                                                                                  l
-                                                                                                                                ]
-                                                                                                                                [
-                                                                                                                                  {
-                                                                                                                                    [
-                                                                                                                                      Campaign_match
-                                                                                                                                      c
-                                                                                                                                    ]
-                                                                                                                                    (con
-                                                                                                                                      integer
-                                                                                                                                    )
-                                                                                                                                  }
-                                                                                                                                  (lam
-                                                                                                                                    ds
-                                                                                                                                    (con
-                                                                                                                                      integer
-                                                                                                                                    )
-                                                                                                                                    (lam
-                                                                                                                                      ds
-                                                                                                                                      (con
-                                                                                                                                        integer
-                                                                                                                                      )
-                                                                                                                                      (lam
-                                                                                                                                        ds
-                                                                                                                                        (con
-                                                                                                                                          bytestring
-                                                                                                                                        )
-                                                                                                                                        ds
-                                                                                                                                      )
-                                                                                                                                    )
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                              ]
-                                                                                                                            ]
-                                                                                                                            (all
-                                                                                                                              dead
-                                                                                                                              (type)
-                                                                                                                              Bool
-                                                                                                                            )
-                                                                                                                          }
-                                                                                                                          (abs
-                                                                                                                            dead
-                                                                                                                            (type)
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                [
-                                                                                                                                  {
-                                                                                                                                    [
-                                                                                                                                      Bool_match
-                                                                                                                                      ww
-                                                                                                                                    ]
-                                                                                                                                    (all
-                                                                                                                                      dead
-                                                                                                                                      (type)
-                                                                                                                                      Bool
-                                                                                                                                    )
-                                                                                                                                  }
-                                                                                                                                  (abs
-                                                                                                                                    dead
-                                                                                                                                    (type)
-                                                                                                                                    False
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                                (abs
-                                                                                                                                  dead
-                                                                                                                                  (type)
-                                                                                                                                  [
-                                                                                                                                    [
-                                                                                                                                      wtxSignedBy
-                                                                                                                                      ww
-                                                                                                                                    ]
-                                                                                                                                    [
-                                                                                                                                      {
-                                                                                                                                        [
-                                                                                                                                          Campaign_match
-                                                                                                                                          c
-                                                                                                                                        ]
-                                                                                                                                        (con
-                                                                                                                                          bytestring
-                                                                                                                                        )
-                                                                                                                                      }
-                                                                                                                                      (lam
-                                                                                                                                        ds
-                                                                                                                                        (con
-                                                                                                                                          integer
-                                                                                                                                        )
-                                                                                                                                        (lam
-                                                                                                                                          ds
-                                                                                                                                          (con
-                                                                                                                                            integer
-                                                                                                                                          )
-                                                                                                                                          (lam
-                                                                                                                                            ds
-                                                                                                                                            (con
-                                                                                                                                              bytestring
-                                                                                                                                            )
-                                                                                                                                            ds
-                                                                                                                                          )
-                                                                                                                                        )
-                                                                                                                                      )
-                                                                                                                                    ]
-                                                                                                                                  ]
-                                                                                                                                )
-                                                                                                                              ]
-                                                                                                                              (all
-                                                                                                                                dead
-                                                                                                                                (type)
-                                                                                                                                dead
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                          )
-                                                                                                                        ]
-                                                                                                                        (abs
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          False
-                                                                                                                        )
-                                                                                                                      ]
-                                                                                                                      (abs
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        [
-                                                                                                                          [
-                                                                                                                            wtxSignedBy
-                                                                                                                            ww
-                                                                                                                          ]
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                Campaign_match
-                                                                                                                                c
-                                                                                                                              ]
-                                                                                                                              (con
-                                                                                                                                bytestring
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                            (lam
-                                                                                                                              ds
-                                                                                                                              (con
-                                                                                                                                integer
-                                                                                                                              )
-                                                                                                                              (lam
-                                                                                                                                ds
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  (con
-                                                                                                                                    bytestring
-                                                                                                                                  )
-                                                                                                                                  ds
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (all
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      dead
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                )
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              {
-                                                                                                                [
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      {
-                                                                                                                        [
-                                                                                                                          Ordering_match
-                                                                                                                          (error
-                                                                                                                            Ordering
-                                                                                                                          )
-                                                                                                                        ]
-                                                                                                                        (all
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          Bool
-                                                                                                                        )
-                                                                                                                      }
-                                                                                                                      (abs
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        (error
-                                                                                                                          Bool
-                                                                                                                        )
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (abs
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      (error
-                                                                                                                        Bool
-                                                                                                                      )
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    (error
-                                                                                                                      Bool
-                                                                                                                    )
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                                (all
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  dead
-                                                                                                                )
-                                                                                                              }
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            False
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (all
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          dead
-                                                                                                        )
-                                                                                                      }
-                                                                                                    )
-                                                                                                  )
-                                                                                                ]
-                                                                                                (abs
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  [
-                                                                                                    [
-                                                                                                      wtxSignedBy
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    [
-                                                                                                      {
-                                                                                                        [
-                                                                                                          Campaign_match
-                                                                                                          c
-                                                                                                        ]
-                                                                                                        (con
-                                                                                                          bytestring
-                                                                                                        )
-                                                                                                      }
-                                                                                                      (lam
-                                                                                                        ds
-                                                                                                        (con
-                                                                                                          integer
-                                                                                                        )
-                                                                                                        (lam
-                                                                                                          ds
-                                                                                                          (con
-                                                                                                            integer
-                                                                                                          )
-                                                                                                          (lam
-                                                                                                            ds
-                                                                                                            (con
-                                                                                                              bytestring
-                                                                                                            )
-                                                                                                            ds
-                                                                                                          )
-                                                                                                        )
-                                                                                                      )
-                                                                                                    ]
-                                                                                                  ]
-                                                                                                )
-                                                                                              ]
-                                                                                              (abs
-                                                                                                dead
-                                                                                                (type)
-                                                                                                {
-                                                                                                  [
-                                                                                                    [
-                                                                                                      [
-                                                                                                        {
-                                                                                                          [
-                                                                                                            {
-                                                                                                              Extended_match
-                                                                                                              (con
-                                                                                                                integer
-                                                                                                              )
-                                                                                                            }
-                                                                                                            ww
-                                                                                                          ]
-                                                                                                          (all
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            Bool
-                                                                                                          )
-                                                                                                        }
-                                                                                                        (lam
-                                                                                                          l
-                                                                                                          (con
-                                                                                                            integer
-                                                                                                          )
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            {
-                                                                                                              [
-                                                                                                                [
-                                                                                                                  [
-                                                                                                                    {
-                                                                                                                      [
-                                                                                                                        Ordering_match
-                                                                                                                        [
-                                                                                                                          [
-                                                                                                                            fOrdInteger_ccompare
-                                                                                                                            l
-                                                                                                                          ]
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                Campaign_match
-                                                                                                                                c
-                                                                                                                              ]
-                                                                                                                              (con
-                                                                                                                                integer
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                            (lam
-                                                                                                                              ds
-                                                                                                                              (con
-                                                                                                                                integer
-                                                                                                                              )
-                                                                                                                              (lam
-                                                                                                                                ds
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  (con
-                                                                                                                                    bytestring
-                                                                                                                                  )
-                                                                                                                                  ds
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                      ]
-                                                                                                                      (all
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        Bool
-                                                                                                                      )
-                                                                                                                    }
-                                                                                                                    (abs
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      {
-                                                                                                                        [
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                Bool_match
-                                                                                                                                ww
-                                                                                                                              ]
-                                                                                                                              (all
-                                                                                                                                dead
-                                                                                                                                (type)
-                                                                                                                                Bool
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                            (abs
-                                                                                                                              dead
-                                                                                                                              (type)
-                                                                                                                              False
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                          (abs
-                                                                                                                            dead
-                                                                                                                            (type)
-                                                                                                                            [
-                                                                                                                              [
-                                                                                                                                wtxSignedBy
-                                                                                                                                ww
-                                                                                                                              ]
-                                                                                                                              [
-                                                                                                                                {
-                                                                                                                                  [
-                                                                                                                                    Campaign_match
-                                                                                                                                    c
-                                                                                                                                  ]
-                                                                                                                                  (con
-                                                                                                                                    bytestring
-                                                                                                                                  )
-                                                                                                                                }
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  (con
-                                                                                                                                    integer
-                                                                                                                                  )
-                                                                                                                                  (lam
-                                                                                                                                    ds
-                                                                                                                                    (con
-                                                                                                                                      integer
-                                                                                                                                    )
-                                                                                                                                    (lam
-                                                                                                                                      ds
-                                                                                                                                      (con
-                                                                                                                                        bytestring
-                                                                                                                                      )
-                                                                                                                                      ds
-                                                                                                                                    )
-                                                                                                                                  )
-                                                                                                                                )
-                                                                                                                              ]
-                                                                                                                            ]
-                                                                                                                          )
-                                                                                                                        ]
-                                                                                                                        (all
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          dead
-                                                                                                                        )
-                                                                                                                      }
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    False
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      wtxSignedBy
-                                                                                                                      ww
-                                                                                                                    ]
-                                                                                                                    [
-                                                                                                                      {
-                                                                                                                        [
-                                                                                                                          Campaign_match
-                                                                                                                          c
-                                                                                                                        ]
-                                                                                                                        (con
-                                                                                                                          bytestring
-                                                                                                                        )
-                                                                                                                      }
-                                                                                                                      (lam
-                                                                                                                        ds
-                                                                                                                        (con
-                                                                                                                          integer
-                                                                                                                        )
-                                                                                                                        (lam
-                                                                                                                          ds
-                                                                                                                          (con
-                                                                                                                            integer
-                                                                                                                          )
-                                                                                                                          (lam
-                                                                                                                            ds
-                                                                                                                            (con
-                                                                                                                              bytestring
-                                                                                                                            )
-                                                                                                                            ds
-                                                                                                                          )
-                                                                                                                        )
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                  ]
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (all
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                dead
-                                                                                                              )
-                                                                                                            }
-                                                                                                          )
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        {
-                                                                                                          [
-                                                                                                            [
-                                                                                                              [
-                                                                                                                {
-                                                                                                                  [
-                                                                                                                    Ordering_match
-                                                                                                                    (error
-                                                                                                                      Ordering
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  (all
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    Bool
-                                                                                                                  )
-                                                                                                                }
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  (error
-                                                                                                                    Bool
-                                                                                                                  )
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (abs
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                (error
-                                                                                                                  Bool
-                                                                                                                )
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              (error
-                                                                                                                Bool
-                                                                                                              )
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (all
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            dead
-                                                                                                          )
-                                                                                                        }
-                                                                                                      )
-                                                                                                    ]
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      False
-                                                                                                    )
-                                                                                                  ]
-                                                                                                  (all
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    dead
-                                                                                                  )
-                                                                                                }
-                                                                                              )
-                                                                                            ]
-                                                                                            (all
-                                                                                              dead
-                                                                                              (type)
-                                                                                              dead
-                                                                                            )
-                                                                                          }
-                                                                                        )
-                                                                                      )
-                                                                                    ]
-                                                                                  )
-                                                                                ]
-                                                                                (all
-                                                                                  dead
-                                                                                  (type)
-                                                                                  dead
-                                                                                )
-                                                                              }
-                                                                            )
+                                                                            fOrdPOSIXTime
                                                                           ]
-                                                                          (abs
-                                                                            dead
-                                                                            (type)
-                                                                            False
-                                                                          )
-                                                                        ]
-                                                                        (abs
-                                                                          dead
-                                                                          (type)
                                                                           [
                                                                             {
+                                                                              toPlutusInterval
+                                                                              (con
+                                                                                integer
+                                                                              )
+                                                                            }
+                                                                            [
                                                                               [
                                                                                 {
-                                                                                  UpperBound_match
+                                                                                  WValidityInterval
                                                                                   (con
                                                                                     integer
                                                                                   )
                                                                                 }
-                                                                                ww
-                                                                              ]
-                                                                              Bool
-                                                                            }
-                                                                            (lam
-                                                                              ww
-                                                                              [
-                                                                                Extended
-                                                                                (con
-                                                                                  integer
-                                                                                )
-                                                                              ]
-                                                                              (lam
-                                                                                ww
-                                                                                Bool
-                                                                                {
+                                                                                [
+                                                                                  {
+                                                                                    Just
+                                                                                    (con
+                                                                                      integer
+                                                                                    )
+                                                                                  }
                                                                                   [
-                                                                                    [
+                                                                                    {
                                                                                       [
-                                                                                        {
-                                                                                          [
-                                                                                            {
-                                                                                              Extended_match
-                                                                                              (con
-                                                                                                integer
-                                                                                              )
-                                                                                            }
-                                                                                            ww
-                                                                                          ]
-                                                                                          (all
-                                                                                            dead
-                                                                                            (type)
-                                                                                            Bool
-                                                                                          )
-                                                                                        }
-                                                                                        (lam
-                                                                                          default_arg0
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                          (abs
-                                                                                            dead
-                                                                                            (type)
-                                                                                            {
-                                                                                              [
-                                                                                                [
-                                                                                                  [
-                                                                                                    {
-                                                                                                      [
-                                                                                                        {
-                                                                                                          Extended_match
-                                                                                                          (con
-                                                                                                            integer
-                                                                                                          )
-                                                                                                        }
-                                                                                                        ww
-                                                                                                      ]
-                                                                                                      (all
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        Bool
-                                                                                                      )
-                                                                                                    }
-                                                                                                    (lam
-                                                                                                      l
-                                                                                                      (con
-                                                                                                        integer
-                                                                                                      )
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        {
-                                                                                                          [
-                                                                                                            [
-                                                                                                              [
-                                                                                                                {
-                                                                                                                  [
-                                                                                                                    Ordering_match
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        fOrdInteger_ccompare
-                                                                                                                        l
-                                                                                                                      ]
-                                                                                                                      [
-                                                                                                                        {
-                                                                                                                          [
-                                                                                                                            Campaign_match
-                                                                                                                            c
-                                                                                                                          ]
-                                                                                                                          (con
-                                                                                                                            integer
-                                                                                                                          )
-                                                                                                                        }
-                                                                                                                        (lam
-                                                                                                                          ds
-                                                                                                                          (con
-                                                                                                                            integer
-                                                                                                                          )
-                                                                                                                          (lam
-                                                                                                                            ds
-                                                                                                                            (con
-                                                                                                                              integer
-                                                                                                                            )
-                                                                                                                            (lam
-                                                                                                                              ds
-                                                                                                                              (con
-                                                                                                                                bytestring
-                                                                                                                              )
-                                                                                                                              ds
-                                                                                                                            )
-                                                                                                                          )
-                                                                                                                        )
-                                                                                                                      ]
-                                                                                                                    ]
-                                                                                                                  ]
-                                                                                                                  (all
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    Bool
-                                                                                                                  )
-                                                                                                                }
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  {
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        {
-                                                                                                                          [
-                                                                                                                            Bool_match
-                                                                                                                            ww
-                                                                                                                          ]
-                                                                                                                          (all
-                                                                                                                            dead
-                                                                                                                            (type)
-                                                                                                                            Bool
-                                                                                                                          )
-                                                                                                                        }
-                                                                                                                        (abs
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          False
-                                                                                                                        )
-                                                                                                                      ]
-                                                                                                                      (abs
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        [
-                                                                                                                          [
-                                                                                                                            wtxSignedBy
-                                                                                                                            ww
-                                                                                                                          ]
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                Campaign_match
-                                                                                                                                c
-                                                                                                                              ]
-                                                                                                                              (con
-                                                                                                                                bytestring
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                            (lam
-                                                                                                                              ds
-                                                                                                                              (con
-                                                                                                                                integer
-                                                                                                                              )
-                                                                                                                              (lam
-                                                                                                                                ds
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  (con
-                                                                                                                                    bytestring
-                                                                                                                                  )
-                                                                                                                                  ds
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                            )
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (all
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      dead
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (abs
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                False
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              [
-                                                                                                                [
-                                                                                                                  wtxSignedBy
-                                                                                                                  ww
-                                                                                                                ]
-                                                                                                                [
-                                                                                                                  {
-                                                                                                                    [
-                                                                                                                      Campaign_match
-                                                                                                                      c
-                                                                                                                    ]
-                                                                                                                    (con
-                                                                                                                      bytestring
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                  (lam
-                                                                                                                    ds
-                                                                                                                    (con
-                                                                                                                      integer
-                                                                                                                    )
-                                                                                                                    (lam
-                                                                                                                      ds
-                                                                                                                      (con
-                                                                                                                        integer
-                                                                                                                      )
-                                                                                                                      (lam
-                                                                                                                        ds
-                                                                                                                        (con
-                                                                                                                          bytestring
-                                                                                                                        )
-                                                                                                                        ds
-                                                                                                                      )
-                                                                                                                    )
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                              ]
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (all
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            dead
-                                                                                                          )
-                                                                                                        }
-                                                                                                      )
-                                                                                                    )
-                                                                                                  ]
-                                                                                                  (abs
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    {
-                                                                                                      [
-                                                                                                        [
-                                                                                                          [
-                                                                                                            {
-                                                                                                              [
-                                                                                                                Ordering_match
-                                                                                                                (error
-                                                                                                                  Ordering
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (all
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                Bool
-                                                                                                              )
-                                                                                                            }
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              (error
-                                                                                                                Bool
-                                                                                                              )
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            (error
-                                                                                                              Bool
-                                                                                                            )
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (abs
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            Bool
-                                                                                                          )
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      (all
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        dead
-                                                                                                      )
-                                                                                                    }
-                                                                                                  )
-                                                                                                ]
-                                                                                                (abs
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  False
-                                                                                                )
-                                                                                              ]
-                                                                                              (all
-                                                                                                dead
-                                                                                                (type)
-                                                                                                dead
-                                                                                              )
-                                                                                            }
-                                                                                          )
-                                                                                        )
+                                                                                        Campaign_match
+                                                                                        c
                                                                                       ]
-                                                                                      (abs
-                                                                                        dead
-                                                                                        (type)
-                                                                                        [
-                                                                                          [
-                                                                                            wtxSignedBy
-                                                                                            ww
-                                                                                          ]
-                                                                                          [
-                                                                                            {
-                                                                                              [
-                                                                                                Campaign_match
-                                                                                                c
-                                                                                              ]
-                                                                                              (con
-                                                                                                bytestring
-                                                                                              )
-                                                                                            }
-                                                                                            (lam
-                                                                                              ds
-                                                                                              (con
-                                                                                                integer
-                                                                                              )
-                                                                                              (lam
-                                                                                                ds
-                                                                                                (con
-                                                                                                  integer
-                                                                                                )
-                                                                                                (lam
-                                                                                                  ds
-                                                                                                  (con
-                                                                                                    bytestring
-                                                                                                  )
-                                                                                                  ds
-                                                                                                )
-                                                                                              )
-                                                                                            )
-                                                                                          ]
-                                                                                        ]
+                                                                                      (con
+                                                                                        integer
                                                                                       )
-                                                                                    ]
-                                                                                    (abs
-                                                                                      dead
-                                                                                      (type)
-                                                                                      {
-                                                                                        [
-                                                                                          [
-                                                                                            [
-                                                                                              {
-                                                                                                [
-                                                                                                  {
-                                                                                                    Extended_match
-                                                                                                    (con
-                                                                                                      integer
-                                                                                                    )
-                                                                                                  }
-                                                                                                  ww
-                                                                                                ]
-                                                                                                (all
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  Bool
-                                                                                                )
-                                                                                              }
-                                                                                              (lam
-                                                                                                l
-                                                                                                (con
-                                                                                                  integer
-                                                                                                )
-                                                                                                (abs
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  {
-                                                                                                    [
-                                                                                                      [
-                                                                                                        [
-                                                                                                          {
-                                                                                                            [
-                                                                                                              Ordering_match
-                                                                                                              [
-                                                                                                                [
-                                                                                                                  fOrdInteger_ccompare
-                                                                                                                  l
-                                                                                                                ]
-                                                                                                                [
-                                                                                                                  {
-                                                                                                                    [
-                                                                                                                      Campaign_match
-                                                                                                                      c
-                                                                                                                    ]
-                                                                                                                    (con
-                                                                                                                      integer
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                  (lam
-                                                                                                                    ds
-                                                                                                                    (con
-                                                                                                                      integer
-                                                                                                                    )
-                                                                                                                    (lam
-                                                                                                                      ds
-                                                                                                                      (con
-                                                                                                                        integer
-                                                                                                                      )
-                                                                                                                      (lam
-                                                                                                                        ds
-                                                                                                                        (con
-                                                                                                                          bytestring
-                                                                                                                        )
-                                                                                                                        ds
-                                                                                                                      )
-                                                                                                                    )
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                              ]
-                                                                                                            ]
-                                                                                                            (all
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              Bool
-                                                                                                            )
-                                                                                                          }
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            {
-                                                                                                              [
-                                                                                                                [
-                                                                                                                  {
-                                                                                                                    [
-                                                                                                                      Bool_match
-                                                                                                                      ww
-                                                                                                                    ]
-                                                                                                                    (all
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      Bool
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    False
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      wtxSignedBy
-                                                                                                                      ww
-                                                                                                                    ]
-                                                                                                                    [
-                                                                                                                      {
-                                                                                                                        [
-                                                                                                                          Campaign_match
-                                                                                                                          c
-                                                                                                                        ]
-                                                                                                                        (con
-                                                                                                                          bytestring
-                                                                                                                        )
-                                                                                                                      }
-                                                                                                                      (lam
-                                                                                                                        ds
-                                                                                                                        (con
-                                                                                                                          integer
-                                                                                                                        )
-                                                                                                                        (lam
-                                                                                                                          ds
-                                                                                                                          (con
-                                                                                                                            integer
-                                                                                                                          )
-                                                                                                                          (lam
-                                                                                                                            ds
-                                                                                                                            (con
-                                                                                                                              bytestring
-                                                                                                                            )
-                                                                                                                            ds
-                                                                                                                          )
-                                                                                                                        )
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                  ]
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (all
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                dead
-                                                                                                              )
-                                                                                                            }
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (abs
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          False
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        [
-                                                                                                          [
-                                                                                                            wtxSignedBy
-                                                                                                            ww
-                                                                                                          ]
-                                                                                                          [
-                                                                                                            {
-                                                                                                              [
-                                                                                                                Campaign_match
-                                                                                                                c
-                                                                                                              ]
-                                                                                                              (con
-                                                                                                                bytestring
-                                                                                                              )
-                                                                                                            }
-                                                                                                            (lam
-                                                                                                              ds
-                                                                                                              (con
-                                                                                                                integer
-                                                                                                              )
-                                                                                                              (lam
-                                                                                                                ds
-                                                                                                                (con
-                                                                                                                  integer
-                                                                                                                )
-                                                                                                                (lam
-                                                                                                                  ds
-                                                                                                                  (con
-                                                                                                                    bytestring
-                                                                                                                  )
-                                                                                                                  ds
-                                                                                                                )
-                                                                                                              )
-                                                                                                            )
-                                                                                                          ]
-                                                                                                        ]
-                                                                                                      )
-                                                                                                    ]
-                                                                                                    (all
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      dead
-                                                                                                    )
-                                                                                                  }
-                                                                                                )
-                                                                                              )
-                                                                                            ]
-                                                                                            (abs
-                                                                                              dead
-                                                                                              (type)
-                                                                                              {
-                                                                                                [
-                                                                                                  [
-                                                                                                    [
-                                                                                                      {
-                                                                                                        [
-                                                                                                          Ordering_match
-                                                                                                          (error
-                                                                                                            Ordering
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (all
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          Bool
-                                                                                                        )
-                                                                                                      }
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        (error
-                                                                                                          Bool
-                                                                                                        )
-                                                                                                      )
-                                                                                                    ]
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        Bool
-                                                                                                      )
-                                                                                                    )
-                                                                                                  ]
-                                                                                                  (abs
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      Bool
-                                                                                                    )
-                                                                                                  )
-                                                                                                ]
-                                                                                                (all
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  dead
-                                                                                                )
-                                                                                              }
-                                                                                            )
-                                                                                          ]
-                                                                                          (abs
-                                                                                            dead
-                                                                                            (type)
-                                                                                            False
-                                                                                          )
-                                                                                        ]
-                                                                                        (all
-                                                                                          dead
-                                                                                          (type)
-                                                                                          dead
+                                                                                    }
+                                                                                    (lam
+                                                                                      ds
+                                                                                      (con
+                                                                                        integer
+                                                                                      )
+                                                                                      (lam
+                                                                                        ds
+                                                                                        (con
+                                                                                          integer
                                                                                         )
-                                                                                      }
+                                                                                        (lam
+                                                                                          ds
+                                                                                          (con
+                                                                                            bytestring
+                                                                                          )
+                                                                                          ds
+                                                                                        )
+                                                                                      )
                                                                                     )
                                                                                   ]
-                                                                                  (all
-                                                                                    dead
-                                                                                    (type)
-                                                                                    dead
+                                                                                ]
+                                                                              ]
+                                                                              [
+                                                                                {
+                                                                                  Just
+                                                                                  (con
+                                                                                    integer
                                                                                   )
                                                                                 }
-                                                                              )
-                                                                            )
+                                                                                [
+                                                                                  {
+                                                                                    [
+                                                                                      Campaign_match
+                                                                                      c
+                                                                                    ]
+                                                                                    (con
+                                                                                      integer
+                                                                                    )
+                                                                                  }
+                                                                                  (lam
+                                                                                    ds
+                                                                                    (con
+                                                                                      integer
+                                                                                    )
+                                                                                    (lam
+                                                                                      ds
+                                                                                      (con
+                                                                                        integer
+                                                                                      )
+                                                                                      (lam
+                                                                                        ds
+                                                                                        (con
+                                                                                          bytestring
+                                                                                        )
+                                                                                        ds
+                                                                                      )
+                                                                                    )
+                                                                                  )
+                                                                                ]
+                                                                              ]
+                                                                            ]
                                                                           ]
+                                                                        ]
+                                                                        ds
+                                                                      ]
+                                                                    ]
+                                                                    (all
+                                                                      dead
+                                                                      (type)
+                                                                      Bool
+                                                                    )
+                                                                  }
+                                                                  (abs
+                                                                    dead
+                                                                    (type)
+                                                                    [
+                                                                      [
+                                                                        txSignedBy
+                                                                        ds
+                                                                      ]
+                                                                      [
+                                                                        {
+                                                                          [
+                                                                            Campaign_match
+                                                                            c
+                                                                          ]
+                                                                          (con
+                                                                            bytestring
+                                                                          )
+                                                                        }
+                                                                        (lam
+                                                                          ds
+                                                                          (con
+                                                                            integer
+                                                                          )
+                                                                          (lam
+                                                                            ds
+                                                                            (con
+                                                                              integer
+                                                                            )
+                                                                            (lam
+                                                                              ds
+                                                                              (con
+                                                                                bytestring
+                                                                              )
+                                                                              ds
+                                                                            )
+                                                                          )
                                                                         )
                                                                       ]
-                                                                      (all
-                                                                        dead
-                                                                        (type)
-                                                                        dead
-                                                                      )
-                                                                    }
+                                                                    ]
                                                                   )
+                                                                ]
+                                                                (abs
+                                                                  dead
+                                                                  (type)
+                                                                  False
                                                                 )
                                                               ]
-                                                            )
+                                                              (all
+                                                                dead (type) dead
+                                                              )
+                                                            }
                                                           )
-                                                        ]
+                                                        )
                                                       )
                                                     )
                                                   )
@@ -4168,44 +2829,16 @@
                                 [
                                   { [ TxInfo_match ds ] Bool }
                                   (lam
-                                    ww
+                                    ds
                                     [ List TxInInfo ]
                                     (lam
-                                      ww
-                                      [ List TxOut ]
+                                      ds
+                                      [ List TxInInfo ]
                                       (lam
-                                        ww
-                                        [
-                                          [
-                                            (lam
-                                              k
-                                              (type)
-                                              (lam
-                                                v
-                                                (type)
-                                                [ List [ [ Tuple2 k ] v ] ]
-                                              )
-                                            )
-                                            (con bytestring)
-                                          ]
-                                          [
-                                            [
-                                              (lam
-                                                k
-                                                (type)
-                                                (lam
-                                                  v
-                                                  (type)
-                                                  [ List [ [ Tuple2 k ] v ] ]
-                                                )
-                                              )
-                                              (con bytestring)
-                                            ]
-                                            (con integer)
-                                          ]
-                                        ]
+                                        ds
+                                        [ List TxOut ]
                                         (lam
-                                          ww
+                                          ds
                                           [
                                             [
                                               (lam
@@ -4236,858 +2869,228 @@
                                             ]
                                           ]
                                           (lam
-                                            ww
-                                            [ List DCert ]
-                                            (lam
-                                              ww
+                                            ds
+                                            [
                                               [
-                                                List
+                                                (lam
+                                                  k
+                                                  (type)
+                                                  (lam
+                                                    v
+                                                    (type)
+                                                    [ List [ [ Tuple2 k ] v ] ]
+                                                  )
+                                                )
+                                                (con bytestring)
+                                              ]
+                                              [
                                                 [
-                                                  [ Tuple2 StakingCredential ]
+                                                  (lam
+                                                    k
+                                                    (type)
+                                                    (lam
+                                                      v
+                                                      (type)
+                                                      [
+                                                        List [ [ Tuple2 k ] v ]
+                                                      ]
+                                                    )
+                                                  )
+                                                  (con bytestring)
+                                                ]
+                                                (con integer)
+                                              ]
+                                            ]
+                                            (lam
+                                              ds
+                                              [ List DCert ]
+                                              (lam
+                                                ds
+                                                [
+                                                  [
+                                                    (lam
+                                                      k
+                                                      (type)
+                                                      (lam
+                                                        v
+                                                        (type)
+                                                        [
+                                                          List
+                                                          [ [ Tuple2 k ] v ]
+                                                        ]
+                                                      )
+                                                    )
+                                                    StakingCredential
+                                                  ]
                                                   (con integer)
                                                 ]
-                                              ]
-                                              (lam
-                                                ww
-                                                [ Interval (con integer) ]
                                                 (lam
-                                                  ww
-                                                  [ List (con bytestring) ]
+                                                  ds
+                                                  [ Interval (con integer) ]
                                                   (lam
-                                                    ww
-                                                    [
-                                                      List
+                                                    ds
+                                                    [ List (con bytestring) ]
+                                                    (lam
+                                                      ds
                                                       [
                                                         [
-                                                          Tuple2
-                                                          (con bytestring)
+                                                          (lam
+                                                            k
+                                                            (type)
+                                                            (lam
+                                                              v
+                                                              (type)
+                                                              [
+                                                                List
+                                                                [
+                                                                  [ Tuple2 k ] v
+                                                                ]
+                                                              ]
+                                                            )
+                                                          )
+                                                          ScriptPurpose
                                                         ]
                                                         (con data)
                                                       ]
-                                                    ]
-                                                    (lam
-                                                      ww
-                                                      (con bytestring)
-                                                      [
-                                                        {
+                                                      (lam
+                                                        ds
+                                                        [
                                                           [
-                                                            {
-                                                              Interval_match
-                                                              (con integer)
-                                                            }
-                                                            ww
-                                                          ]
-                                                          Bool
-                                                        }
-                                                        (lam
-                                                          ww
-                                                          [
-                                                            LowerBound
-                                                            (con integer)
-                                                          ]
-                                                          (lam
-                                                            ww
-                                                            [
-                                                              UpperBound
-                                                              (con integer)
-                                                            ]
-                                                            [
-                                                              {
-                                                                [
-                                                                  {
-                                                                    LowerBound_match
-                                                                    (con
-                                                                      integer
-                                                                    )
-                                                                  }
-                                                                  ww
-                                                                ]
-                                                                Bool
-                                                              }
+                                                            (lam
+                                                              k
+                                                              (type)
                                                               (lam
-                                                                ww
+                                                                v
+                                                                (type)
                                                                 [
-                                                                  Extended
-                                                                  (con integer)
+                                                                  List
+                                                                  [
+                                                                    [ Tuple2 k ]
+                                                                    v
+                                                                  ]
                                                                 ]
-                                                                (lam
-                                                                  ww
-                                                                  Bool
-                                                                  {
+                                                              )
+                                                            )
+                                                            (con bytestring)
+                                                          ]
+                                                          (con data)
+                                                        ]
+                                                        (lam
+                                                          ds
+                                                          (con bytestring)
+                                                          {
+                                                            [
+                                                              [
+                                                                {
+                                                                  [
+                                                                    Bool_match
                                                                     [
                                                                       [
                                                                         [
                                                                           {
-                                                                            [
-                                                                              Ordering_match
-                                                                              [
-                                                                                [
-                                                                                  [
-                                                                                    {
-                                                                                      hull_ccompare
-                                                                                      (con
-                                                                                        integer
-                                                                                      )
-                                                                                    }
-                                                                                    fOrdPOSIXTime
-                                                                                  ]
-                                                                                  [
-                                                                                    {
-                                                                                      Finite
-                                                                                      (con
-                                                                                        integer
-                                                                                      )
-                                                                                    }
-                                                                                    [
-                                                                                      {
-                                                                                        [
-                                                                                          Campaign_match
-                                                                                          c
-                                                                                        ]
-                                                                                        (con
-                                                                                          integer
-                                                                                        )
-                                                                                      }
-                                                                                      (lam
-                                                                                        ds
-                                                                                        (con
-                                                                                          integer
-                                                                                        )
-                                                                                        (lam
-                                                                                          ds
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                          (lam
-                                                                                            ds
-                                                                                            (con
-                                                                                              bytestring
-                                                                                            )
-                                                                                            ds
-                                                                                          )
-                                                                                        )
-                                                                                      )
-                                                                                    ]
-                                                                                  ]
-                                                                                ]
-                                                                                ww
-                                                                              ]
-                                                                            ]
-                                                                            (all
-                                                                              dead
-                                                                              (type)
-                                                                              Bool
+                                                                            contains
+                                                                            (con
+                                                                              integer
                                                                             )
                                                                           }
-                                                                          (abs
-                                                                            dead
-                                                                            (type)
-                                                                            {
-                                                                              [
-                                                                                [
-                                                                                  {
-                                                                                    [
-                                                                                      Bool_match
-                                                                                      ww
-                                                                                    ]
-                                                                                    (all
-                                                                                      dead
-                                                                                      (type)
-                                                                                      Bool
-                                                                                    )
-                                                                                  }
-                                                                                  (abs
-                                                                                    dead
-                                                                                    (type)
-                                                                                    [
-                                                                                      {
-                                                                                        [
-                                                                                          {
-                                                                                            UpperBound_match
-                                                                                            (con
-                                                                                              integer
-                                                                                            )
-                                                                                          }
-                                                                                          ww
-                                                                                        ]
-                                                                                        Bool
-                                                                                      }
-                                                                                      (lam
-                                                                                        ww
-                                                                                        [
-                                                                                          Extended
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                        ]
-                                                                                        (lam
-                                                                                          ww
-                                                                                          Bool
-                                                                                          {
-                                                                                            [
-                                                                                              [
-                                                                                                [
-                                                                                                  {
-                                                                                                    [
-                                                                                                      {
-                                                                                                        Extended_match
-                                                                                                        (con
-                                                                                                          integer
-                                                                                                        )
-                                                                                                      }
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    (all
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      Bool
-                                                                                                    )
-                                                                                                  }
-                                                                                                  (lam
-                                                                                                    default_arg0
-                                                                                                    (con
-                                                                                                      integer
-                                                                                                    )
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      {
-                                                                                                        [
-                                                                                                          [
-                                                                                                            [
-                                                                                                              {
-                                                                                                                [
-                                                                                                                  {
-                                                                                                                    Extended_match
-                                                                                                                    (con
-                                                                                                                      integer
-                                                                                                                    )
-                                                                                                                  }
-                                                                                                                  ww
-                                                                                                                ]
-                                                                                                                (all
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  Bool
-                                                                                                                )
-                                                                                                              }
-                                                                                                              (lam
-                                                                                                                default_arg0
-                                                                                                                (con
-                                                                                                                  integer
-                                                                                                                )
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      wtxSignedBy
-                                                                                                                      ww
-                                                                                                                    ]
-                                                                                                                    con
-                                                                                                                  ]
-                                                                                                                )
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (abs
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              [
-                                                                                                                [
-                                                                                                                  wtxSignedBy
-                                                                                                                  ww
-                                                                                                                ]
-                                                                                                                con
-                                                                                                              ]
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            [
-                                                                                                              [
-                                                                                                                wtxSignedBy
-                                                                                                                ww
-                                                                                                              ]
-                                                                                                              con
-                                                                                                            ]
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (all
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          dead
-                                                                                                        )
-                                                                                                      }
-                                                                                                    )
-                                                                                                  )
-                                                                                                ]
-                                                                                                (abs
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  [
-                                                                                                    [
-                                                                                                      wtxSignedBy
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    con
-                                                                                                  ]
-                                                                                                )
-                                                                                              ]
-                                                                                              (abs
-                                                                                                dead
-                                                                                                (type)
-                                                                                                {
-                                                                                                  [
-                                                                                                    [
-                                                                                                      [
-                                                                                                        {
-                                                                                                          [
-                                                                                                            {
-                                                                                                              Extended_match
-                                                                                                              (con
-                                                                                                                integer
-                                                                                                              )
-                                                                                                            }
-                                                                                                            ww
-                                                                                                          ]
-                                                                                                          (all
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            Bool
-                                                                                                          )
-                                                                                                        }
-                                                                                                        (lam
-                                                                                                          default_arg0
-                                                                                                          (con
-                                                                                                            integer
-                                                                                                          )
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            [
-                                                                                                              [
-                                                                                                                wtxSignedBy
-                                                                                                                ww
-                                                                                                              ]
-                                                                                                              con
-                                                                                                            ]
-                                                                                                          )
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      (abs
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        [
-                                                                                                          [
-                                                                                                            wtxSignedBy
-                                                                                                            ww
-                                                                                                          ]
-                                                                                                          con
-                                                                                                        ]
-                                                                                                      )
-                                                                                                    ]
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      [
-                                                                                                        [
-                                                                                                          wtxSignedBy
-                                                                                                          ww
-                                                                                                        ]
-                                                                                                        con
-                                                                                                      ]
-                                                                                                    )
-                                                                                                  ]
-                                                                                                  (all
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    dead
-                                                                                                  )
-                                                                                                }
-                                                                                              )
-                                                                                            ]
-                                                                                            (all
-                                                                                              dead
-                                                                                              (type)
-                                                                                              dead
-                                                                                            )
-                                                                                          }
-                                                                                        )
-                                                                                      )
-                                                                                    ]
-                                                                                  )
-                                                                                ]
-                                                                                (abs
-                                                                                  dead
-                                                                                  (type)
-                                                                                  [
-                                                                                    {
-                                                                                      [
-                                                                                        {
-                                                                                          UpperBound_match
-                                                                                          (con
-                                                                                            integer
-                                                                                          )
-                                                                                        }
-                                                                                        ww
-                                                                                      ]
-                                                                                      Bool
-                                                                                    }
-                                                                                    (lam
-                                                                                      ww
-                                                                                      [
-                                                                                        Extended
-                                                                                        (con
-                                                                                          integer
-                                                                                        )
-                                                                                      ]
-                                                                                      (lam
-                                                                                        ww
-                                                                                        Bool
-                                                                                        {
-                                                                                          [
-                                                                                            [
-                                                                                              [
-                                                                                                {
-                                                                                                  [
-                                                                                                    {
-                                                                                                      Extended_match
-                                                                                                      (con
-                                                                                                        integer
-                                                                                                      )
-                                                                                                    }
-                                                                                                    ww
-                                                                                                  ]
-                                                                                                  (all
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    Bool
-                                                                                                  )
-                                                                                                }
-                                                                                                (lam
-                                                                                                  default_arg0
-                                                                                                  (con
-                                                                                                    integer
-                                                                                                  )
-                                                                                                  (abs
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    {
-                                                                                                      [
-                                                                                                        [
-                                                                                                          [
-                                                                                                            {
-                                                                                                              [
-                                                                                                                {
-                                                                                                                  Extended_match
-                                                                                                                  (con
-                                                                                                                    integer
-                                                                                                                  )
-                                                                                                                }
-                                                                                                                ww
-                                                                                                              ]
-                                                                                                              (all
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                Bool
-                                                                                                              )
-                                                                                                            }
-                                                                                                            (lam
-                                                                                                              default_arg0
-                                                                                                              (con
-                                                                                                                integer
-                                                                                                              )
-                                                                                                              (abs
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                [
-                                                                                                                  [
-                                                                                                                    wtxSignedBy
-                                                                                                                    ww
-                                                                                                                  ]
-                                                                                                                  con
-                                                                                                                ]
-                                                                                                              )
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          (abs
-                                                                                                            dead
-                                                                                                            (type)
-                                                                                                            [
-                                                                                                              [
-                                                                                                                wtxSignedBy
-                                                                                                                ww
-                                                                                                              ]
-                                                                                                              con
-                                                                                                            ]
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        (abs
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          [
-                                                                                                            [
-                                                                                                              wtxSignedBy
-                                                                                                              ww
-                                                                                                            ]
-                                                                                                            con
-                                                                                                          ]
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      (all
-                                                                                                        dead
-                                                                                                        (type)
-                                                                                                        dead
-                                                                                                      )
-                                                                                                    }
-                                                                                                  )
-                                                                                                )
-                                                                                              ]
-                                                                                              (abs
-                                                                                                dead
-                                                                                                (type)
-                                                                                                [
-                                                                                                  [
-                                                                                                    wtxSignedBy
-                                                                                                    ww
-                                                                                                  ]
-                                                                                                  con
-                                                                                                ]
-                                                                                              )
-                                                                                            ]
-                                                                                            (abs
-                                                                                              dead
-                                                                                              (type)
-                                                                                              {
-                                                                                                [
-                                                                                                  [
-                                                                                                    [
-                                                                                                      {
-                                                                                                        [
-                                                                                                          {
-                                                                                                            Extended_match
-                                                                                                            (con
-                                                                                                              integer
-                                                                                                            )
-                                                                                                          }
-                                                                                                          ww
-                                                                                                        ]
-                                                                                                        (all
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          Bool
-                                                                                                        )
-                                                                                                      }
-                                                                                                      (lam
-                                                                                                        default_arg0
-                                                                                                        (con
-                                                                                                          integer
-                                                                                                        )
-                                                                                                        (abs
-                                                                                                          dead
-                                                                                                          (type)
-                                                                                                          [
-                                                                                                            [
-                                                                                                              wtxSignedBy
-                                                                                                              ww
-                                                                                                            ]
-                                                                                                            con
-                                                                                                          ]
-                                                                                                        )
-                                                                                                      )
-                                                                                                    ]
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      [
-                                                                                                        [
-                                                                                                          wtxSignedBy
-                                                                                                          ww
-                                                                                                        ]
-                                                                                                        con
-                                                                                                      ]
-                                                                                                    )
-                                                                                                  ]
-                                                                                                  (abs
-                                                                                                    dead
-                                                                                                    (type)
-                                                                                                    [
-                                                                                                      [
-                                                                                                        wtxSignedBy
-                                                                                                        ww
-                                                                                                      ]
-                                                                                                      con
-                                                                                                    ]
-                                                                                                  )
-                                                                                                ]
-                                                                                                (all
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  dead
-                                                                                                )
-                                                                                              }
-                                                                                            )
-                                                                                          ]
-                                                                                          (all
-                                                                                            dead
-                                                                                            (type)
-                                                                                            dead
-                                                                                          )
-                                                                                        }
-                                                                                      )
-                                                                                    )
-                                                                                  ]
-                                                                                )
-                                                                              ]
-                                                                              (all
-                                                                                dead
-                                                                                (type)
-                                                                                dead
-                                                                              )
-                                                                            }
-                                                                          )
+                                                                          fOrdPOSIXTime
                                                                         ]
-                                                                        (abs
-                                                                          dead
-                                                                          (type)
-                                                                          False
-                                                                        )
-                                                                      ]
-                                                                      (abs
-                                                                        dead
-                                                                        (type)
                                                                         [
                                                                           {
+                                                                            toPlutusInterval
+                                                                            (con
+                                                                              integer
+                                                                            )
+                                                                          }
+                                                                          [
                                                                             [
                                                                               {
-                                                                                UpperBound_match
+                                                                                WValidityInterval
                                                                                 (con
                                                                                   integer
                                                                                 )
                                                                               }
-                                                                              ww
+                                                                              [
+                                                                                {
+                                                                                  Just
+                                                                                  (con
+                                                                                    integer
+                                                                                  )
+                                                                                }
+                                                                                [
+                                                                                  {
+                                                                                    [
+                                                                                      Campaign_match
+                                                                                      c
+                                                                                    ]
+                                                                                    (con
+                                                                                      integer
+                                                                                    )
+                                                                                  }
+                                                                                  (lam
+                                                                                    ds
+                                                                                    (con
+                                                                                      integer
+                                                                                    )
+                                                                                    (lam
+                                                                                      ds
+                                                                                      (con
+                                                                                        integer
+                                                                                      )
+                                                                                      (lam
+                                                                                        ds
+                                                                                        (con
+                                                                                          bytestring
+                                                                                        )
+                                                                                        ds
+                                                                                      )
+                                                                                    )
+                                                                                  )
+                                                                                ]
+                                                                              ]
                                                                             ]
-                                                                            Bool
-                                                                          }
-                                                                          (lam
-                                                                            ww
-                                                                            [
-                                                                              Extended
+                                                                            {
+                                                                              Nothing
                                                                               (con
                                                                                 integer
                                                                               )
-                                                                            ]
-                                                                            (lam
-                                                                              ww
-                                                                              Bool
-                                                                              {
-                                                                                [
-                                                                                  [
-                                                                                    [
-                                                                                      {
-                                                                                        [
-                                                                                          {
-                                                                                            Extended_match
-                                                                                            (con
-                                                                                              integer
-                                                                                            )
-                                                                                          }
-                                                                                          ww
-                                                                                        ]
-                                                                                        (all
-                                                                                          dead
-                                                                                          (type)
-                                                                                          Bool
-                                                                                        )
-                                                                                      }
-                                                                                      (lam
-                                                                                        default_arg0
-                                                                                        (con
-                                                                                          integer
-                                                                                        )
-                                                                                        (abs
-                                                                                          dead
-                                                                                          (type)
-                                                                                          {
-                                                                                            [
-                                                                                              [
-                                                                                                [
-                                                                                                  {
-                                                                                                    [
-                                                                                                      {
-                                                                                                        Extended_match
-                                                                                                        (con
-                                                                                                          integer
-                                                                                                        )
-                                                                                                      }
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    (all
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      Bool
-                                                                                                    )
-                                                                                                  }
-                                                                                                  (lam
-                                                                                                    default_arg0
-                                                                                                    (con
-                                                                                                      integer
-                                                                                                    )
-                                                                                                    (abs
-                                                                                                      dead
-                                                                                                      (type)
-                                                                                                      [
-                                                                                                        [
-                                                                                                          wtxSignedBy
-                                                                                                          ww
-                                                                                                        ]
-                                                                                                        con
-                                                                                                      ]
-                                                                                                    )
-                                                                                                  )
-                                                                                                ]
-                                                                                                (abs
-                                                                                                  dead
-                                                                                                  (type)
-                                                                                                  [
-                                                                                                    [
-                                                                                                      wtxSignedBy
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    con
-                                                                                                  ]
-                                                                                                )
-                                                                                              ]
-                                                                                              (abs
-                                                                                                dead
-                                                                                                (type)
-                                                                                                [
-                                                                                                  [
-                                                                                                    wtxSignedBy
-                                                                                                    ww
-                                                                                                  ]
-                                                                                                  con
-                                                                                                ]
-                                                                                              )
-                                                                                            ]
-                                                                                            (all
-                                                                                              dead
-                                                                                              (type)
-                                                                                              dead
-                                                                                            )
-                                                                                          }
-                                                                                        )
-                                                                                      )
-                                                                                    ]
-                                                                                    (abs
-                                                                                      dead
-                                                                                      (type)
-                                                                                      [
-                                                                                        [
-                                                                                          wtxSignedBy
-                                                                                          ww
-                                                                                        ]
-                                                                                        con
-                                                                                      ]
-                                                                                    )
-                                                                                  ]
-                                                                                  (abs
-                                                                                    dead
-                                                                                    (type)
-                                                                                    {
-                                                                                      [
-                                                                                        [
-                                                                                          [
-                                                                                            {
-                                                                                              [
-                                                                                                {
-                                                                                                  Extended_match
-                                                                                                  (con
-                                                                                                    integer
-                                                                                                  )
-                                                                                                }
-                                                                                                ww
-                                                                                              ]
-                                                                                              (all
-                                                                                                dead
-                                                                                                (type)
-                                                                                                Bool
-                                                                                              )
-                                                                                            }
-                                                                                            (lam
-                                                                                              default_arg0
-                                                                                              (con
-                                                                                                integer
-                                                                                              )
-                                                                                              (abs
-                                                                                                dead
-                                                                                                (type)
-                                                                                                [
-                                                                                                  [
-                                                                                                    wtxSignedBy
-                                                                                                    ww
-                                                                                                  ]
-                                                                                                  con
-                                                                                                ]
-                                                                                              )
-                                                                                            )
-                                                                                          ]
-                                                                                          (abs
-                                                                                            dead
-                                                                                            (type)
-                                                                                            [
-                                                                                              [
-                                                                                                wtxSignedBy
-                                                                                                ww
-                                                                                              ]
-                                                                                              con
-                                                                                            ]
-                                                                                          )
-                                                                                        ]
-                                                                                        (abs
-                                                                                          dead
-                                                                                          (type)
-                                                                                          [
-                                                                                            [
-                                                                                              wtxSignedBy
-                                                                                              ww
-                                                                                            ]
-                                                                                            con
-                                                                                          ]
-                                                                                        )
-                                                                                      ]
-                                                                                      (all
-                                                                                        dead
-                                                                                        (type)
-                                                                                        dead
-                                                                                      )
-                                                                                    }
-                                                                                  )
-                                                                                ]
-                                                                                (all
-                                                                                  dead
-                                                                                  (type)
-                                                                                  dead
-                                                                                )
-                                                                              }
-                                                                            )
-                                                                          )
+                                                                            }
+                                                                          ]
                                                                         ]
-                                                                      )
+                                                                      ]
+                                                                      ds
                                                                     ]
-                                                                    (all
-                                                                      dead
-                                                                      (type)
-                                                                      dead
-                                                                    )
-                                                                  }
+                                                                  ]
+                                                                  (all
+                                                                    dead
+                                                                    (type)
+                                                                    Bool
+                                                                  )
+                                                                }
+                                                                (abs
+                                                                  dead
+                                                                  (type)
+                                                                  [
+                                                                    [
+                                                                      txSignedBy
+                                                                      ds
+                                                                    ]
+                                                                    con
+                                                                  ]
                                                                 )
+                                                              ]
+                                                              (abs
+                                                                dead
+                                                                (type)
+                                                                False
                                                               )
                                                             ]
-                                                          )
+                                                            (all
+                                                              dead (type) dead
+                                                            )
+                                                          }
                                                         )
-                                                      ]
+                                                      )
                                                     )
                                                   )
                                                 )
