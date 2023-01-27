@@ -34,7 +34,7 @@ import Ledger.Typed.Scripts (ScriptContextV2)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value, geq)
-import Plutus.V2.Ledger.Api (ScriptContext (..), TxInfo (..))
+import Plutus.V2.Ledger.Api (txInfoValidRange)
 import Plutus.V2.Ledger.Contexts (txSignedBy, valuePaidTo)
 import Plutus.V2.Ledger.Contexts qualified as V2
 

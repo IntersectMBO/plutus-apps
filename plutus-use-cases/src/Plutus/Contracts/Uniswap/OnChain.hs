@@ -24,10 +24,10 @@ import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateIni
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types
 import Plutus.Script.Utils.Value (AssetClass (..), symbols)
-import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, ScriptContext (..), TokenName, TxInInfo (txInInfoResolved),
-                             TxInfo (txInfoInputs, txInfoMint), TxOut (txOutDatum, txOutValue), Value)
+import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, OutputDatum (..), ScriptContext (..), TokenName,
+                             TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint),
+                             TxOut (txOutDatum, txOutValue), Value)
 import Plutus.V2.Ledger.Contexts qualified as V2
-import Plutus.V2.Ledger.Tx (OutputDatum (..), txOutDatum)
 import PlutusTx qualified
 import PlutusTx.Prelude
 
@@ -217,8 +217,8 @@ validateRemove c lp liquidity ctx =
         NoOutputDatum         -> traceError "pool output witness missing"
         OutputDatumHash dh    -> findPoolDatum info dh
         OutputDatum (Datum d) -> case PlutusTx.unsafeFromBuiltinData d of
-                                  (Pool lp a) -> (lp, a)
-                                  _           -> traceError "error decoding data"
+                                  (Pool lp' a) -> (lp', a)
+                                  _            -> traceError "error decoding data"
 
     lC :: Coin Liquidity
     lC = let AssetClass (cs, _) = unCoin c in mkCoin cs (lpTicker lp)
@@ -260,8 +260,8 @@ validateAdd c lp liquidity ctx =
         NoOutputDatum         -> traceError "pool output datum/hash not found"
         OutputDatumHash dh    -> findPoolDatum info dh
         OutputDatum (Datum d) -> case PlutusTx.unsafeFromBuiltinData d of
-                                  (Pool lp a) -> (lp, a)
-                                  _           -> traceError "error decoding data"
+                                  (Pool lp' a) -> (lp', a)
+                                  _            -> traceError "error decoding data"
 
     inVal, outVal :: Value
     inVal  = valueWithin ownInput

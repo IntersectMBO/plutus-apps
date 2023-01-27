@@ -59,8 +59,8 @@ import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.V2.Ledger.Api (CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), TokenName,
-                             Validator, Value)
-import Plutus.V2.Ledger.Api as V2
+                             TxOutRef, Validator, Value)
+import Plutus.V2.Ledger.Api qualified as V2
 import PlutusTx qualified
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
