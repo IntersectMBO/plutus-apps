@@ -8,7 +8,8 @@ Make sure you have set up the link:./README{outfilesuffix}#prerequisites[prerequ
 
 === How to get a shell environment with tools
 
-You can get an environment for developing the entire project using `nix-shell` in the root directory.
+You can get an environment for developing the entire project using a nix shell.
+To enter the shell, run the `./shell` script or the command `GC_DONT_GC=1 nix-shell`.
 This includes a variety of useful tools:
 
 * The right version of GHC with all the external Haskell dependencies in its package database.
