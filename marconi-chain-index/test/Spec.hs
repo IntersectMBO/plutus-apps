@@ -9,6 +9,7 @@ import Spec.Marconi.ChainIndex.Indexers.ScriptTx qualified as Indexers.ScriptTx
 -- TODO see tests below
 -- import Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as Indexers.EpochStakepoolSize
 import Integration qualified
+import Spec.Marconi.ChainIndex.Indexers.MintBurn qualified as Indexers.MintBurn
 import Spec.Marconi.ChainIndex.Indexers.Utxo qualified as Indexers.Utxo
 
 main :: IO ()
@@ -19,6 +20,7 @@ tests = testGroup "Marconi"
   [ Indexers.Utxo.tests
   , Indexers.ScriptTx.tests
   , Indexers.AddressDatum.tests
+  , Indexers.MintBurn.tests
   -- TODO Enable when test environemnt is reconfigured
   , Integration.tests
   -- , EpochStakepoolSize.tests

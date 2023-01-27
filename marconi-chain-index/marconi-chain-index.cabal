@@ -57,7 +57,6 @@ library
     Marconi.ChainIndex.Indexers.MintBurn
     Marconi.ChainIndex.Indexers.ScriptTx
     Marconi.ChainIndex.Indexers.Utxo
-    Marconi.ChainIndex.Indexers.Common
     Marconi.ChainIndex.Logging
     Marconi.ChainIndex.Orphans
     Marconi.ChainIndex.Types
@@ -215,6 +214,7 @@ test-suite marconi-chain-index-test
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils
     Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Spec.Marconi.ChainIndex.Indexers.MintBurn
     Spec.Marconi.ChainIndex.Indexers.ScriptTx
     Spec.Marconi.ChainIndex.Indexers.Utxo
     Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex
