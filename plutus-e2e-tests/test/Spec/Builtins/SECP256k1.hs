@@ -9,26 +9,19 @@
 module Spec.Builtins.SECP256k1(tests) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Control.Lens ((??))
-import Control.Monad (when)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Either qualified as E
 import Data.Map qualified as Map
-import Data.Maybe qualified as M
-import Plutus.V2.Ledger.Api qualified as PlutusV2
 import Test.Tasty (TestTree, testGroup)
 
 import Hedgehog qualified as H
-import Hedgehog.Extras qualified as H
 import Hedgehog.Extras.Test qualified as HE
 import Test.Base qualified as H
-import Test.Tasty.Hedgehog (fromGroup, testProperty)
+import Test.Tasty.Hedgehog (testProperty)
 
 import Helpers qualified as TN
 import PlutusScripts qualified as PS
 import Testnet.Plutus qualified as TN
 
+testnetOptionsAlonzo, testnetOptionsBabbage7, testnetOptionsBabbage8 :: TN.TestnetOptions
 testnetOptionsAlonzo   = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
 testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
 testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
@@ -46,7 +39,8 @@ tests = testGroup "SECP256k1"
    Steps:
     - spin up a testnet
     - build and submit a transaction to mint a token using the two SECP256k1 builtins
-    - query the ledger to see if mint was successful
+    - if pv8+ then query the ledger to see if mint was successful otherwise expect
+        "forbidden builtin" error when building tx
 -}
 verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
 verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
@@ -64,11 +58,23 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
   let
-    tokenValues = C.valueFromList [(PS.verifySchnorrAssetIdV2, 4), (PS.verifyEcdsaAssetIdV2, 2)]
-    txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
-    mintWitnesses = Map.fromList [PS.verifySchnorrMintWitnessV2 era, PS.verifyEcdsaMintWitnessV2 era]
-    collateral = TN.txInsCollateral era [txIn]
+    (verifySchnorrAssetId, verifyEcdsaAssetId, verifySchnorrMintWitness, verifyEcdsaMintWitness) =
+      case era of
+        C.AlonzoEra  ->
+            ( PS.verifySchnorrAssetIdV1,
+              PS.verifyEcdsaAssetIdV1,
+              PS.verifySchnorrMintWitnessV1,
+              PS.verifyEcdsaMintWitnessV1 )
+        C.BabbageEra ->
+            ( PS.verifySchnorrAssetIdV2,
+              PS.verifyEcdsaAssetIdV2,
+              PS.verifySchnorrMintWitnessV2,
+              PS.verifyEcdsaMintWitnessV2 )
 
+    tokenValues = C.valueFromList [(verifySchnorrAssetId, 4), (verifyEcdsaAssetId, 2)]
+    txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
+    mintWitnesses = Map.fromList [verifySchnorrMintWitness era, verifyEcdsaMintWitness era]
+    collateral = TN.txInsCollateral era [txIn]
     txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]
       , C.txInsCollateral = collateral
@@ -76,26 +82,23 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
       , C.txOuts = [txOut]
       }
 
-  case pv of
-    6 -> do
-      let
-        tokenValuesPv6 = C.valueFromList [(PS.verifySchnorrAssetIdV1, 4), (PS.verifyEcdsaAssetIdV1, 2)]
-        mintWitnessesPv6 = Map.fromList [PS.verifySchnorrMintWitnessV1 era, PS.verifyEcdsaMintWitnessV1 era]
-        txBodyContentPv6 = txBodyContent { C.txMintValue = TN.txMintValue era tokenValuesPv6 mintWitnessesPv6}
-      eitherTx <- TN.buildTx' era txBodyContentPv6 w1Address w1SKey networkId
-      H.assert (E.isLeft eitherTx) -- todo: check for specific plutus error
-      H.success
-
-    7 -> do
+  case (pv < 8) of
+    True -> do
+      -- Assert that "forbidden" error occurs when attempting to use either SECP256k1 builtin
       eitherTx <- TN.buildTx' era txBodyContent w1Address w1SKey networkId
-      H.assert (E.isLeft eitherTx) -- todo: check for prohibited builtin plutus error
+      H.assert $ TN.isTxBodyScriptExecutionError
+        "Forbidden builtin function: (builtin verifySchnorrSecp256k1Signature)" eitherTx
+      H.assert $ TN.isTxBodyScriptExecutionError
+        "Forbidden builtin function: (builtin verifyEcdsaSecp256k1Signature)" eitherTx
       H.success
 
-    8 -> do
+    False -> do
+      -- Build and submit transaction
       signedTx <- TN.buildTx era txBodyContent w1Address w1SKey networkId
       TN.submitTx era localNodeConnectInfo signedTx
       let expectedTxIn = TN.txInFromSignedTx signedTx 0
-      -- 3. query and assert successful mint
+
+      -- Query for txo and assert it contains newly minting tokens to prove successfuluse of SECP256k1 builtins
       resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
       txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
       H.assert txOutHasTokenValue

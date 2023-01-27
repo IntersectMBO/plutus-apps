@@ -33,11 +33,22 @@ import Hedgehog.Extras.Test.Base qualified as H
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
---import Cardano.Streaming qualified as CS
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
 import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.Plutus qualified as TN
+
+unsafeFromEither :: Show l => Either l r -> r
+unsafeFromEither (Left err)    = error (show err)
+unsafeFromEither (Right value) = value
+
+unsafeFromMaybe :: Maybe a -> a
+unsafeFromMaybe Nothing  = error "not just, nothing."
+unsafeFromMaybe (Just a) = a
+
+isTxBodyScriptExecutionError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
+isTxBodyScriptExecutionError expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` (show m)
+isTxBodyScriptExecutionError _ _                                                   = False
 
 getProjectBase :: (MonadIO m, MonadTest m) => m String
 getProjectBase = liftIO . IO.canonicalizePath =<< HE.getProjectBase
