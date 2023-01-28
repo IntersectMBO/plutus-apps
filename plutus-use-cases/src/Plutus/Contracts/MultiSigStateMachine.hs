@@ -40,8 +40,8 @@ import Ledger.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.V1.Contexts (ScriptContext (..), TxInfo (..))
-import Plutus.Script.Utils.V1.Contexts qualified as Validation
+import Plutus.Script.Utils.V2.Contexts qualified as V2
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
 
@@ -166,8 +166,8 @@ isValidProposal vl (Payment amt _ _) = amt `Value.leq` vl
 
 {-# INLINABLE proposalExpired #-}
 -- | Check whether a proposed 'Payment' has expired.
-proposalExpired :: TxInfo -> Payment -> Bool
-proposalExpired TxInfo{txInfoValidRange} Payment{paymentDeadline} =
+proposalExpired :: V2.TxInfo -> Payment -> Bool
+proposalExpired V2.TxInfo{V2.txInfoValidRange} Payment{paymentDeadline} =
     (paymentDeadline - 1) `Interval.before` txInfoValidRange
 
 {-# INLINABLE proposalAccepted #-}
@@ -182,14 +182,14 @@ proposalAccepted (Params signatories numReq) pks =
 -- | @valuePreserved v p@ is true if the pending transaction @p@ pays the amount
 --   @v@ to this script's address. It does not assert the number of such outputs:
 --   this is handled in the generic state machine validator.
-valuePreserved :: Value -> ScriptContext -> Bool
-valuePreserved vl ctx = vl == Validation.valueLockedBy (scriptContextTxInfo ctx) (Validation.ownHash ctx)
+valuePreserved :: Value -> V2.ScriptContext -> Bool
+valuePreserved vl ctx = vl == V2.valueLockedBy (V2.scriptContextTxInfo ctx) (V2.ownHash ctx)
 
 {-# INLINABLE valuePaid #-}
 -- | @valuePaid pm ptx@ is true if the pending transaction @ptx@ pays
 --   the amount specified in @pm@ to the public key address specified in @pm@
-valuePaid :: Payment -> TxInfo -> Bool
-valuePaid (Payment vl addr _) txinfo = vl == Validation.valuePaidTo txinfo addr
+valuePaid :: Payment -> V2.TxInfo -> Bool
+valuePaid (Payment vl addr _) txinfo = vl == V2.valuePaidTo txinfo addr
 
 {-# INLINABLE transition #-}
 transition :: Params -> State MSState -> Input -> Maybe (TxConstraints Void Void, State MSState)
@@ -246,11 +246,11 @@ machine params = SM.mkStateMachine Nothing (transition params) isFinal where
     isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: Params -> Scripts.ValidatorType MultiSigSym
+mkValidator :: Params -> V2.ValidatorType MultiSigSym
 mkValidator params = SM.mkValidator $ machine params
 
-typedValidator :: Params -> Scripts.TypedValidator MultiSigSym
-typedValidator = Scripts.mkTypedValidatorParam @MultiSigSym
+typedValidator :: Params -> V2.TypedValidator MultiSigSym
+typedValidator = V2.mkTypedValidatorParam @MultiSigSym
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where

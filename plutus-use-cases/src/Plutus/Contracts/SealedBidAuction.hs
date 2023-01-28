@@ -43,6 +43,7 @@ import Plutus.Contract.Secrets
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, Void)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
@@ -247,13 +248,13 @@ auctionStateMachine auctionParams =
     isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: AuctionParams -> Scripts.ValidatorType AuctionMachine
+mkValidator :: AuctionParams -> V2.ValidatorType AuctionMachine
 mkValidator = SM.mkValidator . auctionStateMachine
 
 -- | The script instance of the auction state machine. It contains the state
 --   machine compiled to a Plutus core validator script.
-typedValidator :: AuctionParams -> Scripts.TypedValidator AuctionMachine
-typedValidator = Scripts.mkTypedValidatorParam @AuctionMachine
+typedValidator :: AuctionParams -> V2.TypedValidator AuctionMachine
+typedValidator = V2.mkTypedValidatorParam @AuctionMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where

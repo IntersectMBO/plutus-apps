@@ -23,7 +23,7 @@ import Plutus.Contract as Contract
 import Plutus.Contracts.Currency ()
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
-import Plutus.V1.Ledger.Api (Redeemer (Redeemer))
+import Plutus.V2.Ledger.Api (Redeemer (Redeemer))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
 import Prelude as Haskell (Semigroup (..), Show, show)
@@ -68,8 +68,8 @@ badRemove us BadRemoveParams{..} = do
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Remove
 
         lookups  = Constraints.typedValidatorLookups usInst          <>
-                   Constraints.plutusV1OtherScript usScript                  <>
-                   Constraints.plutusV1MintingPolicy (liquidityPolicy us)   <>
+                   Constraints.plutusV2OtherScript usScript                  <>
+                   Constraints.plutusV2MintingPolicy (liquidityPolicy us)   <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScriptWithDatumInTx dat val          <>

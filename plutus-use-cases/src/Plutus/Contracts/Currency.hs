@@ -34,7 +34,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Semigroup (Last (..))
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Contexts qualified as V
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
@@ -43,12 +43,13 @@ import Ledger (CardanoAddress, TxId, TxOutRef (..), getCardanoTxId)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value.CardanoAPI qualified as V
+import Ledger.Value.CardanoAPI qualified as CValue
 import Plutus.Contract as Contract
 import Plutus.Contract.Request (getUnspentOutput)
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.Script.Utils.V2.Scripts qualified as V2
 import Plutus.Script.Utils.Value (CurrencySymbol, TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
+import Plutus.V2.Ledger.Api qualified as V2
 
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
@@ -82,13 +83,13 @@ mkCurrency (TxOutRef h i) amts =
         , curAmounts              = AssocMap.fromList amts
         }
 
-checkPolicy :: OneShotCurrency -> () -> V.ScriptContext -> Bool
-checkPolicy c@(OneShotCurrency (refHash, refIdx) _) _ ctx@V.ScriptContext{V.scriptContextTxInfo=txinfo} =
+checkPolicy :: OneShotCurrency -> () -> V2.ScriptContext -> Bool
+checkPolicy c@(OneShotCurrency (refHash, refIdx) _) _ ctx@V2.ScriptContext{V2.scriptContextTxInfo=txinfo} =
     let
         -- see note [Obtaining the currency symbol]
-        ownSymbol = V.ownCurrencySymbol ctx
+        ownSymbol = V2.ownCurrencySymbol ctx
 
-        minted = V.txInfoMint txinfo
+        minted = V2.txInfoMint txinfo
         expected = currencyValue ownSymbol c
 
         -- True if the pending transaction mints the amount of
@@ -100,13 +101,13 @@ checkPolicy c@(OneShotCurrency (refHash, refIdx) _) _ ctx@V.ScriptContext{V.scri
         -- True if the pending transaction spends the output
         -- identified by @(refHash, refIdx)@
         txOutputSpent =
-            let v = V.spendsOutput txinfo refHash refIdx
+            let v = V2.spendsOutput txinfo refHash refIdx
             in  traceIfFalse "C1" {-"Pending transaction does not spend the designated transaction output"-} v
 
     in mintOK && txOutputSpent
 
 curPolicy :: OneShotCurrency -> MintingPolicy
-curPolicy cur = mkMintingPolicyScript $
+curPolicy cur = V2.mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \c -> Scripts.mkUntypedMintingPolicy (checkPolicy c) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode cur
@@ -119,7 +120,7 @@ for example in 'mintedValue'.
 
 Inside the validator script (on-chain) we can't use 'Ledger.scriptAddress',
 because at that point we don't know the hash of the script yet. That
-is why we use 'V.ownCurrencySymbol', which obtains the hash from the
+is why we use 'V2.ownCurrencySymbol', which obtains the hash from the
 'PolicyCtx' value.
 
 -}
@@ -129,10 +130,10 @@ mintedValue :: OneShotCurrency -> Value
 mintedValue cur = currencyValue (currencySymbol cur) cur
 
 currencySymbol :: OneShotCurrency -> CurrencySymbol
-currencySymbol = PV1.scriptCurrencySymbol . curPolicy
+currencySymbol = V2.scriptCurrencySymbol . curPolicy
 
-currencyPolicyId :: OneShotCurrency -> V.PolicyId
-currencyPolicyId = V.policyId . (`Versioned` PlutusV1) . curPolicy
+currencyPolicyId :: OneShotCurrency -> CValue.PolicyId
+currencyPolicyId = CValue.policyId . (`Versioned` PlutusV2) . curPolicy
 
 newtype CurrencyError =
     CurContractError ContractError
@@ -161,7 +162,7 @@ mintContract addr amounts = mapError (review _CurrencyError) $ do
     utxos <- utxosAt addr
     let theCurrency = mkCurrency txOutRef amounts
         curVali     = curPolicy theCurrency
-        lookups     = Constraints.plutusV1MintingPolicy curVali
+        lookups     = Constraints.plutusV2MintingPolicy curVali
                         <> Constraints.unspentOutputs utxos
         mintTx      = Constraints.mustSpendPubKeyOutput txOutRef
                         <> Constraints.mustMintValue (mintedValue theCurrency)

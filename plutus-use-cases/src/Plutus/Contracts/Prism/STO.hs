@@ -33,12 +33,11 @@ import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Plutus.Script.Utils.Ada (Ada (Lovelace), fromValue)
 import Plutus.Script.Utils.Typed qualified as Scripts
-import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.Script.Utils.V2.Scripts qualified as V2
 import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api (ScriptContext (..), ScriptPurpose (..))
-import Plutus.V1.Ledger.Contexts qualified as Validation
-import Plutus.V1.Ledger.Scripts qualified as Scripts
+import Plutus.V2.Ledger.Api (MintingPolicy, ScriptContext (..), ScriptPurpose (..), mkMintingPolicyScript)
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
@@ -55,23 +54,23 @@ data STOData =
 {-# INLINABLE validateSTO #-}
 validateSTO :: STOData -> () -> ScriptContext -> Bool
 validateSTO STOData{stoIssuer,stoCredentialToken,stoTokenName} _ ScriptContext{scriptContextTxInfo=txInfo,scriptContextPurpose=Minting ownHash} =
-    let tokenOK = stoCredentialToken `Value.leq` Validation.valueSpent txInfo
-        Lovelace paidToIssuer = fromValue (Validation.valuePaidTo txInfo (unPaymentPubKeyHash stoIssuer))
+    let tokenOK = stoCredentialToken `Value.leq` V2.valueSpent txInfo
+        Lovelace paidToIssuer = fromValue (V2.valuePaidTo txInfo (unPaymentPubKeyHash stoIssuer))
         mintOK =
             -- Note that this doesn't prevent any tokens with a name other than
             -- 'stoTokenName' from being minted
-            Value.valueOf (Validation.txInfoMint txInfo) ownHash stoTokenName == paidToIssuer
+            Value.valueOf (V2.txInfoMint txInfo) ownHash stoTokenName == paidToIssuer
     in tokenOK && mintOK
 validateSTO _ _ _ = error ()
 
-policy :: STOData -> Scripts.MintingPolicy
-policy stoData = Scripts.mkMintingPolicyScript $
+policy :: STOData -> MintingPolicy
+policy stoData = mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \c -> Scripts.mkUntypedMintingPolicy (validateSTO c) ||]) `PlutusTx.applyCode` PlutusTx.liftCode stoData
 
 -- | A 'Value' of a number of coins issued in the STO
 coins :: STOData -> Integer -> Value
 coins d@STOData{stoTokenName} n =
-    let sym = Value.mpsSymbol (Scripts.mintingPolicyHash $ policy d)
+    let sym = Value.mpsSymbol (V2.mintingPolicyHash $ policy d)
     in Value.singleton sym stoTokenName n
 
 PlutusTx.makeLift ''STOData

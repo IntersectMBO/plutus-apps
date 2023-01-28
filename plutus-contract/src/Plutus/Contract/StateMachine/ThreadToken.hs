@@ -24,10 +24,10 @@ import GHC.Generics (Generic)
 import Ledger (TxOutRef (..))
 import Ledger.Scripts
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
-import Plutus.Script.Utils.Typed (ScriptContextV1, mkUntypedMintingPolicy)
+import Plutus.Script.Utils.Typed (ScriptContextV2, mkUntypedMintingPolicy)
 import Plutus.Script.Utils.Value (CurrencySymbol, TokenName (..), Value (..))
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Contexts qualified as V
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 import Prelude qualified as Haskell
 
@@ -42,12 +42,12 @@ data ThreadToken = ThreadToken
 PlutusTx.makeIsDataIndexed ''ThreadToken [('ThreadToken,0)]
 PlutusTx.makeLift ''ThreadToken
 
-checkPolicy :: TxOutRef -> (ValidatorHash, MintingPolarity) -> V.ScriptContext -> Bool
-checkPolicy (TxOutRef refHash refIdx) (vHash, mintingPolarity) ctx@V.ScriptContext{V.scriptContextTxInfo=txinfo} =
+checkPolicy :: TxOutRef -> (ValidatorHash, MintingPolarity) -> V2.ScriptContext -> Bool
+checkPolicy (TxOutRef refHash refIdx) (vHash, mintingPolarity) ctx@V2.ScriptContext{V2.scriptContextTxInfo=txinfo} =
     let
-        ownSymbol = V.ownCurrencySymbol ctx
+        ownSymbol = V2.ownCurrencySymbol ctx
 
-        minted = V.txInfoMint txinfo
+        minted = V2.txInfoMint txinfo
         expected = if mintingPolarity == Burn then -1 else 1
 
         -- True if the pending transaction mints the amount of
@@ -59,14 +59,14 @@ checkPolicy (TxOutRef refHash refIdx) (vHash, mintingPolarity) ctx@V.ScriptConte
         -- True if the pending transaction spends the output
         -- identified by @(refHash, refIdx)@
         txOutputSpent =
-            let v = V.spendsOutput txinfo refHash refIdx
+            let v = V2.spendsOutput txinfo refHash refIdx
             in  traceIfFalse "S8" {-"Pending transaction does not spend the designated transaction output"-} v
 
     in mintOK && (if mintingPolarity == Mint then txOutputSpent else True)
 
 curPolicy :: TxOutRef -> MintingPolicy
 curPolicy outRef = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \r -> mkUntypedMintingPolicy @ScriptContextV1 (checkPolicy r) ||])
+    $$(PlutusTx.compile [|| \r -> mkUntypedMintingPolicy @ScriptContextV2 (checkPolicy r) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode outRef
 

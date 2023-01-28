@@ -68,7 +68,7 @@ import Ledger (POSIXTime, Slot, TxOutRef)
 import Ledger qualified
 import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
                            mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
-                           mustSpendPubKeyOutput, plutusV1MintingPolicy)
+                           mustSpendPubKeyOutput, plutusV2MintingPolicy)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
@@ -84,7 +84,7 @@ import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue
                                              StateMachineInstance (StateMachineInstance, stateMachine, typedValidator))
 import Plutus.Contract.StateMachine.OnChain qualified as SM
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
-import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
+import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
@@ -447,7 +447,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
               mustMintValueWithRedeemer red (SM.threadTokenValueOrZero scInstance)
               <> mustSpendPubKeyOutput ttOutRef
           lookups = Constraints.typedValidatorLookups typedValidator
-              <> foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
+              <> foldMap (plutusV2MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
               <> Constraints.unspentOutputs utxo
               <> customLookups
       utx <- mkTxConstraints lookups constraints
@@ -544,7 +544,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                         lookups =
                             Constraints.typedValidatorLookups typedValidator
                             <> Constraints.unspentOutputs utxo
-                            <> if isFinal then foldMap (plutusV1MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine) else mempty
+                            <> if isFinal then foldMap (plutusV2MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine) else mempty
                         red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Burn))
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
                         -- Add the thread token value back to the output

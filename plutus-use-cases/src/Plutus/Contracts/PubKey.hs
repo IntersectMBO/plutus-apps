@@ -25,18 +25,18 @@ import GHC.Generics (Generic)
 
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger hiding (Value, initialise, to)
-import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Contexts qualified as V
-import Plutus.V1.Ledger.Value (Value)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
+import Plutus.V2.Ledger.Api (Value)
+import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 
 import Ledger.Constraints qualified as Constraints
 import Plutus.ChainIndex.Types (Tip (Tip, TipAtGenesis))
 import Plutus.Contract as Contract
 
-mkValidator :: PaymentPubKeyHash -> () -> () -> ScriptContext -> Bool
-mkValidator pk' _ _ p = V.txSignedBy (scriptContextTxInfo p) (unPaymentPubKeyHash pk')
+mkValidator :: PaymentPubKeyHash -> () -> () -> V2.ScriptContext -> Bool
+mkValidator pk' _ _ p = V2.txSignedBy (V2.scriptContextTxInfo p) (unPaymentPubKeyHash pk')
 
 data PubKeyContract
 
@@ -44,8 +44,8 @@ instance Scripts.ValidatorTypes PubKeyContract where
     type instance RedeemerType PubKeyContract = ()
     type instance DatumType PubKeyContract = ()
 
-typedValidator :: PaymentPubKeyHash -> Scripts.TypedValidator PubKeyContract
-typedValidator = Scripts.mkTypedValidatorParam @PubKeyContract
+typedValidator :: PaymentPubKeyHash -> V2.TypedValidator PubKeyContract
+typedValidator = V2.mkTypedValidatorParam @PubKeyContract
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
@@ -71,7 +71,7 @@ pubKeyContract
     )
     => PaymentPubKeyHash
     -> Value
-    -> Contract w s e (TxOutRef, Maybe DecoratedTxOut, TypedValidator PubKeyContract)
+    -> Contract w s e (TxOutRef, Maybe DecoratedTxOut, V2.TypedValidator PubKeyContract)
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     networkId <- pNetworkId <$> getParams
     let inst = typedValidator pk

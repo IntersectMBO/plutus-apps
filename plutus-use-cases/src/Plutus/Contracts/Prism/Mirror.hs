@@ -70,7 +70,7 @@ createTokens ::
 createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
     logInfo @String "Endpoint 'issue' called"
     let pk      = Credential.unCredentialAuthority authority
-        lookups = Constraints.plutusV1MintingPolicy (Credential.policy authority)
+        lookups = Constraints.plutusV2MintingPolicy (Credential.policy authority)
         theToken = Credential.token Credential{credAuthority=authority,credName=coTokenName}
         constraints =
             Constraints.mustMintValue theToken
@@ -89,7 +89,7 @@ revokeToken ::
     -> Promise w s MirrorError ()
 revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenName, coOwner} -> do
     let stateMachine = StateMachine.mkMachineClient authority (mockWalletPaymentPubKeyHash coOwner) coTokenName
-        lookups = Constraints.plutusV1MintingPolicy (Credential.policy authority)
+        lookups = Constraints.plutusV2MintingPolicy (Credential.policy authority)
     t <- mapError StateMachineError $ SM.mkStep stateMachine RevokeCredential
     case t of
         Left{} -> return () -- Ignore invalid transitions

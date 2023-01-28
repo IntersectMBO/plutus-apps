@@ -21,7 +21,7 @@ theContract = do
   pk <- ownFirstPaymentPubKeyHash
   (txOutRef, ciTxOut, pkInst) <- pubKeyContract (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
   let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ciTxOut
-              <> Constraints.plutusV1OtherScript (Scripts.validatorScript pkInst)
+              <> Constraints.plutusV2OtherScript (Scripts.validatorScript pkInst)
   void $ submitTxConstraintsWith @Scripts.Any lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer <> Constraints.mustBeSignedBy pk)
 
 tests :: TestTree
