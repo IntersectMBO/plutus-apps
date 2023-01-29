@@ -9,7 +9,7 @@ import Control.Lens (view)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Ledger (TxIn (txInRef), TxOutRef (..))
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, txOutsWithRef)
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, txOutRefs)
 import Plutus.ChainIndex.Types (Point (..), Tip (..), TxUtxoBalance (..), tubUnspentOutputs)
 import Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
                                     UtxoState (UtxoState, _usTip, _usTxUtxoData), rollbackWith, usTxUtxoData)
@@ -17,7 +17,7 @@ import Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
 fromTx :: ChainIndexTx -> TxUtxoBalance
 fromTx tx =
     TxUtxoBalance
-        { _tubUnspentOutputs = Set.fromList $ fmap snd $ txOutsWithRef tx
+        { _tubUnspentOutputs = Set.fromList $ txOutRefs tx
         , _tubUnmatchedSpentInputs = Set.fromList $ map txInRef (view citxInputs tx)
         }
 

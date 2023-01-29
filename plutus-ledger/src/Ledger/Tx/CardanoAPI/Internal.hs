@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
@@ -105,6 +106,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
+import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
@@ -128,6 +130,7 @@ import Plutus.V1.Ledger.Credential qualified as Credential
 import Plutus.V1.Ledger.Tx qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusTx.AssocMap qualified as PMap
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
@@ -597,11 +600,27 @@ adaToCardanoValue :: P.Ada -> C.Value
 adaToCardanoValue (P.Lovelace n) = C.valueFromList [(C.AdaAssetId, C.Quantity n)]
 
 fromCardanoValue :: C.Value -> Value.Value
-fromCardanoValue (C.valueToList -> list) =
-    foldMap fromSingleton list
+fromCardanoValue (C.valueToList -> list) = toPlutusValueRep list []
   where
-    fromSingleton (fromCardanoAssetId -> assetClass, C.Quantity quantity) =
-        Value.assetClassValue assetClass quantity
+    -- assuming that C.valueToList returns an ordered list according to assetId.
+    -- This is to avoid using unionWith, which is very expensive.
+    toPlutusValueRep :: [(C.AssetId, C.Quantity)] -> [(Value.CurrencySymbol, [(Value.TokenName, Integer)])] -> Value.Value
+    toPlutusValueRep [] res_l =
+      -- reverse list to obtain proper value order
+      Value.Value $ PMap.fromList $ map (\(cs, tn_l) -> (cs, PMap.fromList $ List.reverse tn_l)) $ List.reverse res_l
+    toPlutusValueRep ((assetId, C.Quantity quantity) : xs) res_l =
+      let !(!cs', tn) = Value.unAssetClass $ fromCardanoAssetId assetId
+      in case res_l of
+           [] -> toPlutusValueRep xs [(cs', [(tn, quantity)])]
+           (cs, tn_l) : ts ->
+             if cs' == cs
+             then toPlutusValueRep xs ((cs, (tn, quantity) : tn_l) : ts) -- update existing entry
+             else toPlutusValueRep xs ((cs', [(tn, quantity)]) : res_l) -- add new entry
+
+-- foldMap fromSingleton list
+-- fromSingleton (fromCardanoAssetId -> assetClass, C.Quantity quantity) =
+--   Value.assetClassValue assetClass quantity
+
 
 toCardanoValue :: Value.Value -> Either ToCardanoError C.Value
 toCardanoValue =

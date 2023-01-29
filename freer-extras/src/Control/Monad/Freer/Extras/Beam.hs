@@ -30,6 +30,7 @@ import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.TH (makeEffect)
+import Control.Monad.Reader qualified as ReaderT
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty qualified as L
@@ -46,7 +47,7 @@ import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize, HasSqlValueSyntax)
 import Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
 import Database.Beam.Query.Internal (QNested)
 import Database.Beam.Schema.Tables (FieldsFulfillConstraint)
-import Database.Beam.Sqlite (Sqlite, SqliteM, runBeamSqliteDebug)
+import Database.Beam.Sqlite (Sqlite, SqliteM (..), runBeamSqliteDebug)
 import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
@@ -118,6 +119,11 @@ data BeamEffect r where
     => SqlSelect Sqlite a
     -> BeamEffect (Maybe a)
 
+  SqlCommand :: Sqlite.Query -> BeamEffect ()
+  -- ^ mainly to execute sql commands in between sql queries
+  -- e.g., DROP INDEX AND CREATE INDEX before insertions, delete or updates
+  -- This is necessary on large DB
+
   Combined
     :: [BeamEffect ()]
     -> BeamEffect ()
@@ -138,14 +144,14 @@ handleBeam ::
   ~> Eff effs
 handleBeam trace eff = runBeam trace $ execute eff
   where
-    execute :: BeamEffect ~> SqliteM
+    execute :: BeamEffect ~> (SqliteM)
     execute = \case
         AddRowsInBatches _ _ [] -> pure ()
         AddRowsInBatches n table (splitAt n -> (batch, rest)) -> do
             runInsert $ insertOnConflict table (insertValues batch) anyConflict onConflictDoNothing
             execute $ AddRowsInBatches n table rest
         AddRows    q    -> runInsert q
-        UpdateRows q    -> runUpdate q
+        UpdateRows q -> runUpdate q
         DeleteRows q    -> runDelete q
         SelectList q    -> runSelectReturningList q
         SelectPage pageQuery@PageQuery { pageQuerySize = PageSize ps, pageQueryLastItem } q -> do
@@ -174,8 +180,17 @@ handleBeam trace eff = runBeam trace $ execute eff
                 , nextPageQuery = newPageQuery
                 , pageItems = if isJust lastItemM then init items else items
                 }
-        SelectOne  q    -> runSelectReturningOne  q
+        SelectOne  q  -> runSelectReturningOne q
+        SqlCommand q -> runSqlCommand q
         Combined   effs -> traverse_ execute effs
+
+    runSqlCommand :: Sqlite.Query -> SqliteM ()
+    runSqlCommand q =
+      SqliteM $ do
+       (logger, conn) <- ReaderT.ask
+       liftIO $ do
+         logger $ show q
+         Sqlite.execute_ conn q
 
 runBeam ::
   forall effs.

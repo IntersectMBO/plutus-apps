@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE GADTs             #-}
@@ -14,7 +15,8 @@
 {-| Misc. types used in this package
 -}
 module Plutus.ChainIndex.Types(
-    ChainIndexTx(..)
+    ChainIndexInternalTx(..)
+    , ChainIndexTx(..)
     , ChainIndexTxOutputs(..)
     , ChainIndexTxOut(..)
     , ReferenceScript(..)
@@ -46,6 +48,7 @@ module Plutus.ChainIndex.Types(
     , tobUnspentOutputs
     , tobSpentOutputs
     , ChainSyncBlock(..)
+    , ChainSyncState(..)
     , TxProcessOption(..)
     -- ** Lenses
     , citxTxId
@@ -74,6 +77,7 @@ import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.!=), (.:), (
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as Aeson
 import Data.ByteArray qualified as BA
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
@@ -182,6 +186,35 @@ data ChainIndexTxOutputs =
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makePrisms ''ChainIndexTxOutputs
+
+
+-- | ChainIndexTx representation only to be used to store tx in db
+-- This version will avoid unnecessary encoding and decoding of the scripts
+-- in the TxBody.
+-- The decoding will be performed only on demand for query request only
+data ChainIndexInternalTx = ChainIndexInternalTx {
+    ciitxTxId       :: TxId,
+    -- ^ The id of this transaction.
+    ciitxInputs     :: [TxIn],
+    -- ^ The inputs to this transaction.
+    ciitxOutputs    :: ChainIndexTxOutputs,
+    -- ^ The outputs of this transaction, ordered so they can be referenced by index.
+    ciitxValidRange :: !SlotRange,
+    -- ^ The 'SlotRange' during which this transaction may be validated.
+    ciitxData       :: Map DatumHash Datum,
+    -- ^ Datum objects recorded on this transaction.
+    ciitxRedeemers  :: Redeemers,
+    -- ^ Redeemers of the minting scripts.
+    ciitxScripts    :: Map ScriptHash (Versioned ByteString),
+    -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
+    -- but at ByteString level
+    ciitxCardanoTx  :: Maybe SomeCardanoApiTx
+    -- ^ The full Cardano API tx which was used to populate the rest of the
+    -- 'ChainIndexTx' fields. Useful because 'ChainIndexTx' doesn't have all the
+    -- details of the tx, so we keep it as a safety net. Might be Nothing if we
+    -- are in the emulator.
+    } deriving (Show, Eq, Generic, Serialise)
+
 
 data ChainIndexTx = ChainIndexTx {
     _citxTxId       :: TxId,
@@ -431,8 +464,8 @@ data Diagnostics =
         , numScripts         :: Integer
         , numAddresses       :: Integer
         , numAssetClasses    :: Integer
-        , numUnspentOutputs  :: Int
-        , numUnmatchedInputs :: Int
+        , numUnspentOutputs  :: Integer
+        , numUnmatchedInputs :: Integer
         , someTransactions   :: [TxId]
         , unspentTxOuts      :: [ChainIndexTxOut]
         }
@@ -513,9 +546,9 @@ makeLenses ''TxOutBalance
 -- | The effect of a transaction (or a number of them) on the utxo set.
 data TxUtxoBalance =
     TxUtxoBalance
-        { _tubUnspentOutputs       :: Set TxOutRef
+        { _tubUnspentOutputs       :: !(Set TxOutRef)
         -- ^ Outputs newly added by the transaction(s)
-        , _tubUnmatchedSpentInputs :: Set TxOutRef
+        , _tubUnmatchedSpentInputs :: !(Set TxOutRef)
         -- ^ Outputs spent by the transaction(s) that have no matching unspent output
         }
         deriving stock (Eq, Show, Generic)
@@ -552,9 +585,19 @@ newtype TxProcessOption = TxProcessOption
 instance Default TxProcessOption where
     def = TxProcessOption { tpoStoreTx = True }
 
+
+-- | Info about whether chain-index is synced with node or not
+data ChainSyncState =
+  ChainSynced
+  -- ^ to be used when chain index is fully synced
+  | ChainNotSynced
+  -- ^ to be used when chain index is not synced or is in syncing mode
+  deriving (Show)
+
 -- | A block of transactions to be synced.
-data ChainSyncBlock = Block
-    { blockTip :: Tip
-    , blockTxs :: [(ChainIndexTx, TxProcessOption)]
-    }
-    deriving (Show)
+data ChainSyncBlock =
+  EmulatorBlock Tip  [(ChainIndexTx, TxProcessOption)]
+  -- ^ to be used only by emulator
+  | ChainIndexBlock Tip [(ChainIndexInternalTx, TxProcessOption)]
+    -- ^ to be used only by chain index
+  deriving (Show)

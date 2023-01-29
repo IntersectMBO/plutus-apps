@@ -6,7 +6,7 @@ import Cardano.Api (AsType (..), Block (..), BlockHeader (..), BlockInMode (..),
 import Data.Proxy (Proxy (..))
 import Ledger (BlockId (..), Slot (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
-import Plutus.ChainIndex.Types (BlockNumber (..), Point (..), Tip (..))
+import Plutus.ChainIndex.Types (ChainIndexInternalTx, BlockNumber (..), Point (..), Tip (..))
 import Plutus.Contract.CardanoAPI qualified as C
 
 fromCardanoTip :: ChainTip -> Tip
@@ -60,3 +60,9 @@ fromCardanoBlock
     :: BlockInMode CardanoMode
     -> [ChainIndexTx]
 fromCardanoBlock = C.fromCardanoBlock
+
+
+fromCardanoBlock'
+    :: BlockInMode CardanoMode
+    -> [ChainIndexInternalTx]
+fromCardanoBlock' = C.fromCardanoBlock'

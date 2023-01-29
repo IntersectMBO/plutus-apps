@@ -1,12 +1,17 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiWayIf            #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NumericUnderscores    #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE ViewPatterns          #-}
 
@@ -21,37 +26,34 @@ module Plutus.ChainIndex.Handlers
 
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
-import Control.Lens (Lens', _Just, ix, to, view, (^?))
+import Control.Lens (_Just, ix, to, (^?))
 import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
-import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn, logInfo)
 import Control.Monad.Freer.Extras.Pagination (Page (Page, nextPageQuery, pageItems), PageQuery (..))
 import Control.Monad.Freer.Reader (Reader, ask)
-import Control.Monad.Freer.State (State, get, gets, put)
+import Control.Monad.Freer.State (State, get, put)
 import Data.ByteString (ByteString)
-import Data.FingerTree qualified as FT
 import Data.List qualified as List
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
+import Data.Maybe (catMaybes, fromMaybe, isJust, mapMaybe, maybeToList)
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
-import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
-import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
+import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
                             update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
 import Ledger qualified as L
-import Ledger.Ada qualified as Ada
-import Ledger.Value (AssetClass (AssetClass), flattenValue)
+import Ledger.Value (AssetClass)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
-import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..), RollbackFailed(..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
 import Plutus.ChainIndex.DbSchema
@@ -59,25 +61,35 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Tx
 import Plutus.ChainIndex.Tx qualified as ChainIndex
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, tipAsPoint)
-import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
+import Plutus.ChainIndex.Types (BlockNumber(..), ChainIndexInternalTx (..), ChainSyncBlock (..), ChainSyncState (..), Depth (..),
+                                Diagnostics (..), Point (..), Tip (..),
+                                TxProcessOption (..), TxUtxoBalance (..), fromReferenceScript, pointsToTip, tipAsPoint)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
+import Plutus.Contract.CardanoAPI as CAPI
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V2.Ledger.Api (Credential (..))
 import PlutusTx.Builtins.Internal (emptyByteString)
 
-type ChainIndexState = UtxoIndex TxUtxoBalance
+-- we only require to keep track of the tips to perform block reduction
+-- keep the utxoIndex is not necessary
+-- utxoState is only used when inserting in db
+type ChainIndexState = [Tip]
 
 getResumePoints :: Member BeamEffect effs => Eff effs [C.ChainPoint]
 getResumePoints
     = fmap (mapMaybe (toCardanoPoint . tipAsPoint . fromDbValue . Just))
     . selectList . select . orderBy_ (desc_ . _tipRowSlot) . all_ $ tipRows db
 
+
+-- | returns the current tip only when we are not at genesis
+getCurrentTip :: ChainIndexState -> Maybe Tip
+getCurrentTip [] = Nothing
+getCurrentTip (TipAtGenesis : _) = Nothing
+getCurrentTip (tp : _) = Just tp
+
 handleQuery ::
     ( Member (State ChainIndexState) effs
     , Member BeamEffect effs
-    , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
     ) => ChainIndexQueryEffect
     ~> Eff effs
@@ -90,11 +102,7 @@ handleQuery = \case
     TxFromTxId txId -> getTxFromTxId txId
     TxOutFromRef tor            -> getTxOutFromRef tor
     UnspentTxOutFromRef tor     -> getUtxoutFromRef tor
-    UtxoSetMembership r -> do
-        utxoState <- gets @ChainIndexState UtxoState.utxoState
-        case UtxoState.tip utxoState of
-            TipAtGenesis -> throwError QueryFailedNoTip
-            tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
+    UtxoSetMembership r         -> isUtxoUnspent r
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
     UnspentTxOutSetAtAddress pageQuery cred -> getTxOutSetAtAddress pageQuery cred
     DatumsAtAddress pageQuery cred -> getDatumsAtAddress pageQuery cred
@@ -191,6 +199,29 @@ getUtxoutFromRef txOutRef = do
       Nothing    -> logWarn (TxOutNotFound txOutRef) >> pure Nothing
       Just txout -> makeChainIndexTxOut txout
 
+
+isUtxoUnspent
+  :: forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member BeamEffect effs
+    )
+  => TxOutRef
+  -> Eff effs IsUtxoResponse
+isUtxoUnspent (toDbValue -> utxo) = do
+  indexState <- get @ChainIndexState
+  case getCurrentTip indexState of
+    Nothing -> pure $ IsUtxoResponse TipAtGenesis False
+    Just tp -> do
+      let query = do
+            rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
+            guard_ (isNothing_ utxi)
+            guard_ (rowRef ==. val_ utxo)
+            pure rowRef
+      mTxOut <- selectOne $ select query
+      pure (IsUtxoResponse tp (isJust mTxOut))
+
+
 makeChainIndexTxOut ::
   forall effs.
   ( Member BeamEffect effs
@@ -233,27 +264,25 @@ getUtxoSetAtAddress
   -> Credential
   -> Eff effs UtxosResponse
 getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
-  utxoState <- gets @ChainIndexState UtxoState.utxoState
+  indexState <- get @ChainIndexState
+  case getCurrentTip indexState of
+    Nothing -> do
+      logWarn TipIsGenesis
+      pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
+    Just tp -> do
+      let query = do
+            rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+            rowCred <- leftJoin_
+                       (fmap _addressRowOutRef (filter_ (\row -> _addressRowCred row ==. val_ cred) (all_ (addressRows db))))
+                       (\row -> row ==. rowRef)
+            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
+            guard_ (isNothing_ utxi)
+            guard_ (isJust_ rowCred)
+            pure rowRef
 
-  case UtxoState.tip utxoState of
-      TipAtGenesis -> do
-          logWarn TipIsGenesis
-          pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
-      tp           -> do
-          let query = do
-                rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
-                rowCred <- leftJoin_
-                           (fmap _addressRowOutRef (filter_ (\row -> _addressRowCred row ==. val_ cred) (all_ (addressRows db))))
-                           (\row -> row ==. rowRef)
-                utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
-                guard_ (isNothing_ utxi)
-                guard_ (isJust_ rowCred)
-                pure rowRef
-
-          outRefs <- selectPage (fmap toDbValue pageQuery) query
-          let page = fmap fromDbValue outRefs
-
-          pure (UtxosResponse tp page)
+      outRefs <- selectPage (fmap toDbValue pageQuery) query
+      let page = fmap fromDbValue outRefs
+      pure (UtxosResponse tp page)
 
 
 getTxOutSetAtAddress ::
@@ -286,13 +315,12 @@ getDatumsAtAddress ::
   -> Credential
   -> Eff effs (QueryResponse [Datum])
 getDatumsAtAddress pageQuery (toDbValue -> cred) = do
-  utxoState <- gets @ChainIndexState UtxoState.utxoState
-  case UtxoState.tip utxoState of
-    TipAtGenesis -> do
+  indexState <- get @ChainIndexState
+  case getCurrentTip indexState of
+    Nothing -> do
       logWarn TipIsGenesis
       pure (QueryResponse [] Nothing)
-
-    _             -> do
+    Just _ -> do
       let emptyHash = (toDbValue $ DatumHash emptyByteString)
           queryPage =
             fmap _addressRowOutRef
@@ -327,27 +355,25 @@ getUtxoSetWithCurrency
   -> AssetClass
   -> Eff effs UtxosResponse
 getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
-  utxoState <- gets @ChainIndexState UtxoState.utxoState
+  indexState <- get @ChainIndexState
+  case getCurrentTip indexState of
+    Nothing -> do
+      logWarn TipIsGenesis
+      pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
+    Just tp -> do
+      let query = do
+            rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+            rowClass <- leftJoin_
+                        (fmap _assetClassRowOutRef (filter_ (\row -> _assetClassRowAssetClass row ==. val_ assetClass) (all_ (assetClassRows db))))
+                        (\row -> row ==. rowRef)
+            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
+            guard_ (isNothing_ utxi)
+            guard_ (isJust_ rowClass)
+            pure rowRef
 
-  case UtxoState.tip utxoState of
-      TipAtGenesis -> do
-          logWarn TipIsGenesis
-          pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
-      tp           -> do
-          let query = do
-                rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
-                rowClass <- leftJoin_
-                            (fmap _assetClassRowOutRef (filter_ (\row -> _assetClassRowAssetClass row ==. val_ assetClass) (all_ (assetClassRows db))))
-                            (\row -> row ==. rowRef)
-                utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
-                guard_ (isNothing_ utxi)
-                guard_ (isJust_ rowClass)
-                pure rowRef
-
-          outRefs <- selectPage (fmap toDbValue pageQuery) query
-          let page = fmap fromDbValue outRefs
-
-          pure (UtxosResponse tp page)
+      outRefs <- selectPage (fmap toDbValue pageQuery) query
+      let page = fmap fromDbValue outRefs
+      pure (UtxosResponse tp page)
 
 getTxsFromTxIds
   :: forall effs.
@@ -376,19 +402,35 @@ getTxoSetAtAddress
   -> Credential
   -> Eff effs TxosResponse
 getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
-  utxoState <- gets @ChainIndexState UtxoState.utxoState
-  case UtxoState.tip utxoState of
-      TipAtGenesis -> do
-          logWarn TipIsGenesis
-          pure (TxosResponse (Page pageQuery Nothing []))
-      _           -> do
-          let query =
-                fmap _addressRowOutRef
-                  $ filter_ (\row -> _addressRowCred row ==. val_ cred)
-                  $ all_ (addressRows db)
-          txOutRefs' <- selectPage (fmap toDbValue pageQuery) query
-          let page = fmap fromDbValue txOutRefs'
-          pure $ TxosResponse page
+  indexState <- get @ChainIndexState
+  case getCurrentTip indexState of
+    Nothing -> do
+      logWarn TipIsGenesis
+      pure (TxosResponse (Page pageQuery Nothing []))
+    Just _ -> do
+      let query =
+            fmap _addressRowOutRef
+            $ filter_ (\row -> _addressRowCred row ==. val_ cred)
+            $ all_ (addressRows db)
+      txOutRefs' <- selectPage (fmap toDbValue pageQuery) query
+      let page = fmap fromDbValue txOutRefs'
+      pure $ TxosResponse page
+
+
+-- | drop index commands
+dropIndexCommands :: BeamEffect ()
+dropIndexCommands =
+  let dropIndex1 = "DROP INDEX IF EXISTS unspent_index"
+      dropIndex2 = "DROP INDEX IF EXISTS unmatched_index"
+  in Combined [ SqlCommand dropIndex1, SqlCommand dropIndex2 ]
+
+-- | create index commands
+createIndexCommands :: BeamEffect ()
+createIndexCommands =
+  let createIndex1 = "CREATE INDEX unspent_index on unspent_outputs (output_row_out_ref, output_row_tip__row_slot)"
+      createIndex2 = "CREATE INDEX unmatched_index on unmatched_inputs (input_row_out_ref, input_row_tip__row_slot)"
+  in Combined [ SqlCommand createIndex1, SqlCommand createIndex2 ]
+
 
 appendBlocks ::
     forall effs.
@@ -397,34 +439,51 @@ appendBlocks ::
     , Member BeamEffect effs
     , Member (LogMsg ChainIndexLog) effs
     )
-    => [ChainSyncBlock] -> Eff effs ()
-appendBlocks [] = pure ()
-appendBlocks blocks = do
-    let
-        processBlock (utxoIndexState, txs, utxoStates) (Block tip_ transactions) = do
-            let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
-            case UtxoState.insert newUtxoState utxoIndexState of
-                Left err -> do
-                    logError $ Err $ InsertionFailed err
-                    return (utxoIndexState, txs, utxoStates)
-                Right InsertUtxoSuccess{newIndex, insertPosition} -> do
-                    logDebug $ InsertionSuccess tip_ insertPosition
-                    return (newIndex, transactions ++ txs, newUtxoState : utxoStates)
+    => ChainSyncState -> [ChainSyncBlock] -> Eff effs ()
+appendBlocks _ [] = pure ()
+appendBlocks _syncState blocks = do
+    let processBlock (indexState, txs, utxoStates) (ChainIndexBlock tip_ transactions) = do
+          let newUtxoState = TxUtxoBalance.fromBlock tip_
+                             $ map (\(t, _) -> CAPI.toChainIndexTxEmptyScripts t) transactions
+          -- new tip is added at the beginning
+          return (tip_ : indexState, transactions ++ txs, newUtxoState : utxoStates)
+        processBlock _ (EmulatorBlock _ _) = error "appendBlocks: Unexpected EmulatorBlock in chain-index !!!"
     oldIndex <- get @ChainIndexState
     (newIndex, transactions, utxoStates) <- foldM processBlock (oldIndex, [], []) blocks
     depth <- ask @Depth
-    reduceOldUtxoDbEffect <- case UtxoState.reduceBlockCount depth newIndex of
-      UtxoState.BlockCountNotReduced -> do
-        put newIndex
-        pure $ Combined []
-      lbcResult -> do
-        put $ UtxoState.reducedIndex lbcResult
-        pure $ reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
+    reduceOldUtxoDbEffect <-
+      case reduceBlocks depth newIndex of
+        Nothing -> do
+          put newIndex
+          pure $ Combined []
+        Just (reducedIndex, tp) -> do
+          let !i_nbTips = fromIntegral $ length newIndex
+          logInfo $ BlockReductionPhase i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
+          -- retrieve number of unspent outputs to perform batch updates
+          numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
+          put reducedIndex
+          pure $ reduceOldUtxoDb (fromMaybe updateBatch numUnspentOutputs) tp
     combined
         [ reduceOldUtxoDbEffect
         , insertRows $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
-        , insertUtxoDb (map fst transactions) utxoStates
+        , insertUtxoDb (map (\(t, _) -> CAPI.toChainIndexTxEmptyScripts t) transactions) utxoStates
         ]
+
+  where
+    -- | Reduces the number of tips. The given number corresponds to the node's security parameter.
+    -- The index is reduced when the number of blocks is twice this size.
+    -- Returns the tip at which blocks can be ignored. Note that unlike UtxoState.reduceBlockCount, this function
+    -- considers the proper block number to determine at which tip rollback cannot happen.
+    reduceBlocks :: Depth -> ChainIndexState -> Maybe (ChainIndexState, Tip)
+    reduceBlocks (Depth minCount) indexState =
+      case getCurrentTip indexState of
+        -- assuming 20 slots per block
+        Just (Tip s bi bn) | (length indexState `div` 20) > 2 * minCount ->
+          -- no that ordering on tip only considers block number
+          let bn' = BlockNumber ((unBlockNumber bn) - (fromIntegral $ 2 * minCount))
+              (keep, old) = List.span (\t -> t > (Tip s bi bn')) indexState
+          in fmap (\t -> (keep, t)) $ getCurrentTip old
+        _ -> Nothing
 
 handleControl ::
     forall effs.
@@ -437,56 +496,65 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlocks blocks -> appendBlocks blocks
+    AppendBlocks isSync blocks -> appendBlocks isSync blocks
     Rollback tip_ -> do
-        oldIndex <- get @ChainIndexState
-        case TxUtxoBalance.rollback tip_ oldIndex of
-            Left err -> do
-                let reason = RollbackFailed err
-                logError $ Err reason
-                throwError reason
-            Right RollbackResult{newTip, rolledBackIndex} -> do
-                put rolledBackIndex
-                combined [rollbackUtxoDb $ tipAsPoint newTip]
-                logDebug $ RollbackSuccess newTip
+      oldIndex <- get @ChainIndexState
+      case rollBackChainState tip_ oldIndex of
+        Left err -> do
+          let reason = RollbackFailed err
+          logError $ Err reason
+          throwError reason
+        Right (newTip, rolledBackIndex) -> do
+          put rolledBackIndex
+          combined [rollbackUtxoDb $ tipAsPoint newTip]
+          logDebug $ RollbackSuccess newTip
     ResumeSync tip_ -> do
-        combined [rollbackUtxoDb tip_]
-        newState <- restoreStateFromDb
-        put newState
-    CollectGarbage -> do
-        -- Rebuild the index using only transactions that still have at
-        -- least one output in the UTXO set
-        utxos <- gets $
-            Set.toList
-            . Set.map txOutRefId
-            . TxUtxoBalance.unspentOutputs
-            . UtxoState.utxoState
-        rows <- foldMap fromTx . catMaybes <$> mapM getTxFromTxId utxos
-        combined $
-            [ DeleteRows $ truncateTable (datumRows db)
-            , DeleteRows $ truncateTable (scriptRows db)
-            , DeleteRows $ truncateTable (redeemerRows db)
-            , DeleteRows $ truncateTable (txRows db)
-            , DeleteRows $ truncateTable (utxoOutRefRows db)
-            , DeleteRows $ truncateTable (addressRows db)
-            , DeleteRows $ truncateTable (assetClassRows db)
-            ] ++ getConst (zipTables Proxy (\tbl (InsertRows r) -> Const [AddRowsInBatches batchSize tbl r]) db rows)
-
-        where
-            truncateTable table = delete table (const (val_ True))
+      combined [rollbackUtxoDb tip_]
+      newState <- restoreStateFromDb
+      put newState
+    CollectGarbage -> pure ()
+      -- do nothing as no more required
     GetDiagnostics -> diagnostics
 
 
--- Use a batch size of 200 so that we don't hit the sql too-many-variables
--- limit.
+
+-- | Perform a rollback on the chain index state.
+-- Returns an error when rollback cannot be performed
+rollBackChainState :: Point -> ChainIndexState -> Either RollbackFailed (Tip, ChainIndexState)
+-- forcing re-synchronisation of chain index
+rollBackChainState PointAtGenesis _ = Right (TipAtGenesis, mempty)
+rollBackChainState targetPoint indexState =
+  case getCurrentTip indexState of
+    Nothing -> Right (TipAtGenesis, mempty)
+      -- Partial synchronisation, starting from a given block id.
+    Just currentTip ->
+      -- Already at the target point
+     if | targetPoint `pointsToTip` currentTip -> Right (currentTip, indexState)
+        -- The rollback happened sometimes after the current tip.
+        | not (targetPoint `UtxoState.pointLessThanTip` currentTip) -> Left $ TipMismatch currentTip targetPoint
+        | otherwise ->
+           let (_after, before) = List.break (\t -> targetPoint `UtxoState.pointLessThanTip` t) indexState
+           in case getCurrentTip before of
+                Nothing -> Left $ OldPointNotFound targetPoint
+                Just oldTip | targetPoint `pointsToTip` oldTip -> Right (oldTip, before)
+                Just oldTip -> Left $ TipMismatch oldTip targetPoint
+
+
+-- Use a batch size of 10000 so that we don't hit the sql too-many-variables
+-- limit. The MAX_VARIABLE_NUMBER is now 32766
 batchSize :: Int
-batchSize = 200
+batchSize = 10000
+
+
+updateBatch :: Integer
+updateBatch = 1000000
 
 insertUtxoDb
     :: [ChainIndexTx]
     -> [UtxoState.UtxoState TxUtxoBalance]
     -> BeamEffect ()
 insertUtxoDb txs utxoStates =
+  {-# SCC insertUtxoDb #-}
     let
         go acc (UtxoState.UtxoState _ TipAtGenesis) = acc
         go (tipRows, unspentRows, unmatchedRows) (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip) =
@@ -508,22 +576,22 @@ insertUtxoDb txs utxoStates =
         , utxoOutRefRows = InsertRows $ map (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) outs
         }
 
-reduceOldUtxoDb :: Tip -> BeamEffect ()
-reduceOldUtxoDb TipAtGenesis = Combined []
-reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
+reduceOldUtxoDb :: Integer -> Tip -> BeamEffect ()
+reduceOldUtxoDb _ TipAtGenesis = Combined []
+reduceOldUtxoDb nbUtxosRows (Tip (toDbValue -> slot) _ _) = Combined
     -- Delete all the tips before 'slot'
     [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row <. val_ slot)
     -- Assign all the older utxo changes to 'slot'
-    , UpdateRows $ update
-        (unspentOutputRows db)
-        (\row -> _unspentOutputRowTip row <-. TipRowId (val_ slot))
-        (\row -> unTipRowId (_unspentOutputRowTip row) <. val_ slot)
+    -- dropping index only for update as index is necessary for delete
+    , dropIndexCommands
+    , batchUpdatesForUnspentUtxos
     , UpdateRows $ update
         (unmatchedInputRows db)
         (\row -> _unmatchedInputRowTip row <-. TipRowId (val_ slot))
         (\row -> unTipRowId (_unmatchedInputRowTip row) <. val_ slot)
     -- Among these older changes, delete the matching input/output pairs
     -- We're deleting only the outputs here, the matching input is deleted by a trigger (See Main.hs)
+    , createIndexCommands
     , DeleteRows $ delete
         (utxoOutRefRows db)
         (\utxoRow ->
@@ -541,6 +609,20 @@ reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
                     (_unspentOutputRowOutRef output ==. _unmatchedInputRowOutRef input))
                 (all_ (unmatchedInputRows db))))
     ]
+  where
+    batchUpdatesForUnspentUtxos = Combined $
+      List.replicate ((fromIntegral $ nbUtxosRows `div` updateBatch) + 1) $
+       UpdateRows $ update
+         (unspentOutputRows db)
+         (\row -> _unspentOutputRowTip row <-. TipRowId (val_ slot))
+         (\rowUpdate ->
+            exists_
+             (filter_ (\outerRow ->
+                           ( _unspentOutputRowOutRef rowUpdate ==. _unspentOutputRowOutRef outerRow ))
+              (limit_ updateBatch
+              (filter_ (\row -> (unTipRowId (_unspentOutputRowTip row) <. val_ slot))
+                (all_ (unspentOutputRows db))))))
+
 
 rollbackUtxoDb :: Point -> BeamEffect ()
 rollbackUtxoDb PointAtGenesis = DeleteRows $ delete (tipRows db) (const (val_ True))
@@ -557,25 +639,14 @@ rollbackUtxoDb (Point (toDbValue -> slot) _) = Combined
     , DeleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
     ]
 
-restoreStateFromDb :: Member BeamEffect effs => Eff effs ChainIndexState
+restoreStateFromDb :: forall effs. (Member BeamEffect effs) => Eff effs ChainIndexState
 restoreStateFromDb = do
-    uo <- selectList . select $ all_ (unspentOutputRows db)
-    ui <- selectList . select $ all_ (unmatchedInputRows db)
-    let balances = Map.fromListWith (<>) $ fmap outputToTxUtxoBalance uo ++ fmap inputToTxUtxoBalance ui
-    tips <- selectList . select
-        . orderBy_ (asc_ . _tipRowSlot)
-        $ all_ (tipRows db)
-    pure $ FT.fromList . fmap (toUtxoState balances) $ tips
-    where
-        outputToTxUtxoBalance :: UnspentOutputRow -> (Word64, TxUtxoBalance)
-        outputToTxUtxoBalance (UnspentOutputRow (TipRowId slot) outRef)
-            = (slot, TxUtxoBalance (Set.singleton (fromDbValue outRef)) mempty)
-        inputToTxUtxoBalance :: UnmatchedInputRow -> (Word64, TxUtxoBalance)
-        inputToTxUtxoBalance (UnmatchedInputRow (TipRowId slot) outRef)
-            = (slot, TxUtxoBalance mempty (Set.singleton (fromDbValue outRef)))
-        toUtxoState :: Map.Map Word64 TxUtxoBalance -> TipRow -> UtxoState.UtxoState TxUtxoBalance
-        toUtxoState balances tip@(TipRow slot _ _)
-            = UtxoState.UtxoState (Map.findWithDefault mempty slot balances) (fromDbValue (Just tip))
+  -- tips are kept in descending order, i.e., newest tip first
+  tips <- selectList . select . orderBy_ (desc_ . _tipRowSlot) . all_ $ tipRows db
+  pure $ fmap (fromDbValue . Just) tips
+
+
+
 
 data InsertRows te where
     InsertRows :: BeamableSqlite t => [t Identity] -> InsertRows (TableEntity t)
@@ -588,53 +659,49 @@ instance BeamableSqlite t => Monoid (InsertRows (TableEntity t)) where
 insertRows :: Db InsertRows -> BeamEffect ()
 insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRowsInBatches batchSize tbl rows) db
 
-fromTx :: ChainIndexTx -> Db InsertRows
-fromTx tx = mempty
-    { datumRows = InsertRows . fmap toDbValue $ (Map.toList $ updateMapWithInlineDatum (_citxData tx) (txOuts tx))
-    , scriptRows = fromMap citxScripts
-    , redeemerRows = fromPairs (Map.toList . txRedeemersWithHash)
-    , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
-    , addressRows = InsertRows . fmap toDbValue . (fmap credential . txOutsWithRef) $ tx
-    , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
+
+
+
+credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
+credential (ChainIndexTxOut{citoAddress=Address{addressCredential},citoDatum}, ref) =
+  (addressCredential, ref, getHashFromDatum citoDatum)
+
+
+assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
+assetClasses (ChainIndexTxOut{citoValue}, ref) =
+  -- We don't store the 'AssetClass' when it is the Ada currency.
+  map (, ref) $ CAPI.toNonAdaAssetClassList citoValue
+
+
+updateMapWithInlineDatum :: Map.Map DatumHash Datum -> [ChainIndex.ChainIndexTxOut] -> Map.Map DatumHash Datum
+updateMapWithInlineDatum witness [] = witness
+updateMapWithInlineDatum witness ((ChainIndexTxOut{citoDatum=OutputDatum d}) : tl) =
+  updateMapWithInlineDatum (Map.insert (datumHash d) d witness) tl
+updateMapWithInlineDatum witness (_ : tl) = updateMapWithInlineDatum witness tl
+
+getHashFromDatum :: OutputDatum -> Maybe DatumHash
+getHashFromDatum NoOutputDatum        = Nothing
+getHashFromDatum (OutputDatumHash dh) = Just dh
+getHashFromDatum (OutputDatum d)      = Just (datumHash d)
+-- note that the datum hash for inline datum is implicitly added in datumRows
+
+
+fromTx :: ChainIndexInternalTx -> Db InsertRows
+fromTx tx =
+  mempty
+    { datumRows = InsertRows . fmap toDbValue $ (Map.toList $ updateMapWithInlineDatum (_citxData tx') (txOuts tx'))
+    , scriptRows = InsertRows . fmap toDbValue $ (Map.toList $  ciitxScripts tx)
+    , redeemerRows = InsertRows . fmap toDbValue $ (Map.toList $ txRedeemersWithHash tx')
+    , txRows = InsertRows [toDbValue (_citxTxId tx', tx')]
+    , addressRows = InsertRows . fmap toDbValue $ (fmap credential utxos)
+    , assetClassRows = InsertRows . fmap toDbValue $ (concatMap assetClasses utxos)
     }
-    where
-        credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
-        credential (ChainIndexTxOut{citoAddress=Address{addressCredential},citoDatum}, ref) =
-          (addressCredential, ref, getHashFromDatum citoDatum)
-        assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
-        assetClasses (ChainIndexTxOut{citoValue}, ref) =
-          fmap (\(c, t, _) -> (AssetClass (c, t), ref))
-               -- We don't store the 'AssetClass' when it is the Ada currency.
-               $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
-               $ flattenValue citoValue
-        fromMap
-            :: (BeamableSqlite t, HasDbType (k, v), DbType (k, v) ~ t Identity)
-            => Lens' ChainIndexTx (Map.Map k v)
-            -> InsertRows (TableEntity t)
-        fromMap l = fromPairs (Map.toList . view l)
-        fromPairs
-            :: (BeamableSqlite t, HasDbType (k, v), DbType (k, v) ~ t Identity)
-            => (ChainIndexTx -> [(k, v)])
-            -> InsertRows (TableEntity t)
-        fromPairs l = InsertRows . fmap toDbValue . l $ tx
-
-        updateMapWithInlineDatum :: Map.Map DatumHash Datum -> [ChainIndex.ChainIndexTxOut] -> Map.Map DatumHash Datum
-        updateMapWithInlineDatum witness [] = witness
-        updateMapWithInlineDatum witness ((ChainIndexTxOut{citoDatum=OutputDatum d}) : tl) =
-          updateMapWithInlineDatum (Map.insert (datumHash d) d witness) tl
-        updateMapWithInlineDatum witness (_ : tl) = updateMapWithInlineDatum witness tl
-
-        getHashFromDatum :: OutputDatum -> Maybe DatumHash
-        getHashFromDatum NoOutputDatum        = Nothing
-        getHashFromDatum (OutputDatumHash dh) = Just dh
-        getHashFromDatum (OutputDatum d)      = Just (datumHash d)
-        -- note that the datum hash for inline datum is implicitly added in datumRows
+  where
+    tx' = CAPI.toChainIndexTxEmptyScripts tx
+    !utxos = txOutsWithRef tx'
 
 
-diagnostics ::
-    ( Member BeamEffect effs
-    , Member (State ChainIndexState) effs
-    ) => Eff effs Diagnostics
+diagnostics :: ( Member BeamEffect effs ) => Eff effs Diagnostics
 diagnostics = do
     numTransactions <- selectOne . select $ aggregate_ (const countAll_) (all_ (txRows db))
     txIds <- queryList . select $ _txRowTxId <$> limit_ 10 (all_ (txRows db))
@@ -642,15 +709,16 @@ diagnostics = do
     numScripts <- selectOne . select $ aggregate_ (const countAll_) (all_ (scriptRows db))
     numAddresses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _addressRowCred <$> all_ (addressRows db)
     numAssetClasses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _assetClassRowAssetClass <$> all_ (assetClassRows db)
-    TxUtxoBalance outputs inputs <- UtxoState._usTxUtxoData . UtxoState.utxoState <$> get @ChainIndexState
+    numOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
+    numInputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unmatchedInputRows db))
 
     pure $ Diagnostics
         { numTransactions    = fromMaybe (-1) numTransactions
         , numScripts         = fromMaybe (-1) numScripts
         , numAddresses       = fromMaybe (-1) numAddresses
         , numAssetClasses    = fromMaybe (-1) numAssetClasses
-        , numUnspentOutputs  = length outputs
-        , numUnmatchedInputs = length inputs
+        , numUnspentOutputs  = fromMaybe (-1) numOutputs
+        , numUnmatchedInputs = fromMaybe (-1) numInputs
         , someTransactions   = txIds
         , unspentTxOuts = unspentTxOuts
         }

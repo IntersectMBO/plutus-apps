@@ -38,7 +38,7 @@ import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
-import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
+import Plutus.ChainIndex.Types (ChainSyncBlock, ChainSyncState, Diagnostics, Point, Tip)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                              StakeValidatorHash, Validator, ValidatorHash)
 
@@ -101,7 +101,7 @@ makeEffect ''ChainIndexQueryEffect
 data ChainIndexControlEffect r where
 
     -- | Add new blocks to the chain index.
-    AppendBlocks :: [ChainSyncBlock] -> ChainIndexControlEffect ()
+    AppendBlocks :: ChainSyncState -> [ChainSyncBlock] -> ChainIndexControlEffect ()
 
     -- | Roll back to a previous state (previous tip)
     Rollback    :: Point -> ChainIndexControlEffect ()

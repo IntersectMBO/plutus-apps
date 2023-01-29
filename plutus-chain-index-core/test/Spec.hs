@@ -31,7 +31,7 @@ import Plutus.ChainIndex.TxIdState (dropOlder, increaseDepth, transactionStatus)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TUB
-import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), RollbackState (..), Tip (..), TxConfirmedState (..),
+import Plutus.ChainIndex.Types (ChainSyncState (ChainSynced), BlockNumber (..), Depth (..), RollbackState (..), Tip (..), TxConfirmedState (..),
                                 TxIdState (..), TxOutState (..), TxStatusFailure (..), TxUtxoBalance (..),
                                 liftTxOutStatus, tipAsPoint, txOutStatusTxOutState)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..))
@@ -334,7 +334,7 @@ reduceBlockCount = property $ do
     blocks <- forAll $ Gen.evalTxGenState $ replicateM numBlocks Gen.genNonEmptyBlock
     let utxoIndex = foldMap (FT.singleton . uncurry TUB.fromBlock) blocks
     minCount <- forAll $ Gen.integral (Range.linear 0 numBlocks)
-    case UtxoState.reduceBlockCount (Depth minCount) utxoIndex of
+    case UtxoState.reduceBlockCount ChainSynced (Depth minCount) utxoIndex of
         UtxoState.BlockCountNotReduced -> assert $ UtxoState.utxoBlockCount utxoIndex <= minCount * 2
         UtxoState.ReduceBlockCountResult limitedIndex (UtxoState.UtxoState _ tip) -> do
             UtxoState.utxoState limitedIndex === UtxoState.utxoState utxoIndex

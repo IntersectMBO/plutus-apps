@@ -25,6 +25,7 @@ data ChainIndexLog =
     | TipIsGenesis
     | NoDatumScriptAddr ChainIndexTxOut
     | BeamLogItem BeamLog
+    | BlockReductionPhase {nbTipBeforeReduction :: Integer, nbTipReduced :: Integer }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
 
@@ -45,6 +46,7 @@ instance Pretty ChainIndexLog where
     TipIsGenesis -> "TipIsGenesis"
     NoDatumScriptAddr txout -> "The following transaction output from a script adress does not have a datum:" <+> viaShow txout
     BeamLogItem b -> "BeamLogItem:" <+> pretty b
+    BlockReductionPhase nbTip nbReduced -> "Block reduction phase: Nb Tips before reduction: " <+> viaShow nbTip <+> " Nb tips reduced: " <+> viaShow nbReduced
 
 -- | Outcome of inserting a 'UtxoState' into the utxo index
 data InsertUtxoPosition =

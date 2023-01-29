@@ -62,17 +62,19 @@ import Cardano.BM.Trace (Trace, logDebug, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (atomically, newTVarIO)
 import Control.Concurrent.STM.TBMQueue (TBMQueue, writeTBMQueue)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
-import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, fromCardanoTip, tipFromCardanoBlock)
+import Plutus.ChainIndex.Compatibility (fromCardanoBlock', fromCardanoPoint, fromCardanoTip, tipFromCardanoBlock)
 import Plutus.ChainIndex.Config qualified as Config
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
+import System.Exit (exitFailure)
 
 -- | Generate the requirements to run the chain index effects given logging configuration and chain index configuration.
 withRunRequirements :: CM.Configuration -> Config.ChainIndexConfig -> (RunRequirements -> IO ()) -> IO ()
@@ -93,11 +95,13 @@ withRunRequirements logConfig config cont = do
         \                                 AND input_row_out_ref = old.output_row_out_ref; \
         \END"
 
-    -- creating extra index to optimize utxoSetAtAddress and utxoSetWithCurrency queries
+    -- dropping these indexes if exists on start up
+    -- the creation of these indexes are not performed dynamically accounting to the sync state
+    -- see Handler.hs
     Sqlite.execute_ conn "DROP INDEX IF EXISTS unspent_index"
     Sqlite.execute_ conn "DROP INDEX IF EXISTS unmatched_index"
-    Sqlite.execute_ conn "CREATE INDEX IF NOT EXISTS unspent_index on unspent_outputs (output_row_out_ref, output_row_tip__row_slot)"
-    Sqlite.execute_ conn "CREATE INDEX IF NOT EXISTS unmatched_index on unmatched_inputs (input_row_out_ref, input_row_tip__row_slot)"
+    Sqlite.execute_ conn "CREATE INDEX unspent_index on unspent_outputs (output_row_out_ref, output_row_tip__row_slot)"
+    Sqlite.execute_ conn "CREATE INDEX unmatched_index on unmatched_inputs (input_row_out_ref, input_row_tip__row_slot)"
 
   stateTVar <- newTVarIO mempty
   cont $ RunRequirements trace stateTVar pool (Config.cicSecurityParam config)
@@ -107,6 +111,11 @@ withRunRequirements logConfig config cont = do
         -- Optimize Sqlite for write performance, halves the sync time.
         -- https://sqlite.org/wal.html
         Sqlite.execute_ conn "PRAGMA journal_mode=WAL;"
+        Sqlite.execute_ conn "PRAGMA synchronous = OFF;"
+        -- no need to wait to wait for commit confirmation by OS.
+        -- Waiting time for commit confirmation is significant for large SQL transactions.
+        Sqlite.execute_ conn "PRAGMA page_size = 65536;"
+        Sqlite.execute_ conn "PRAGMA cache_size = 20000;"
         return conn
 
 -- | Generate the requirements to run the chain index effects given default configurations.
@@ -130,12 +139,12 @@ data ChainSyncEvent
     deriving (Show)
 
 toCardanoChainSyncHandler :: ChainSyncHandler -> C.ChainSyncEvent -> IO ()
-toCardanoChainSyncHandler handler = \case
+toCardanoChainSyncHandler handler = {-# SCC toCardanoChainSyncHandler #-} \case
     C.RollBackward cp ct -> handler (RollBackward (fromCardanoPoint cp) (fromCardanoTip ct))
     C.Resume cp -> handler (Resume (fromCardanoPoint cp))
     C.RollForward block ct ->
-        let txs = fromCardanoBlock block
-        in handler (RollForward (CI.Block (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
+        let txs = {-# SCC rollForward_fromCardanoBlock' #-} fromCardanoBlock' block
+        in handler (RollForward (CI.ChainIndexBlock (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
@@ -146,24 +155,24 @@ storeChainSyncHandler eventsQueue = atomically . writeTBMQueue eventsQueue
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler
-storeFromBlockNo storeFrom handler (RollForward (CI.Block blockTip txs) chainTip) =
-    handler (RollForward (CI.Block blockTip (map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && store })) txs)) chainTip)
+storeFromBlockNo storeFrom handler (RollForward (CI.ChainIndexBlock blockTip txs) chainTip) =
+    handler (RollForward (CI.ChainIndexBlock blockTip (map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && store })) txs)) chainTip)
         where store = tipBlockNo blockTip >= storeFrom
 storeFromBlockNo _ handler evt = handler evt
 
 -- | Changes the given @ChainSyncHandler@ to only process and store certain transactions.
 filterTxs
-    :: (CI.ChainIndexTx -> Bool)
+    :: (CI.ChainIndexInternalTx -> Bool)
     -- ^ Only process transactions for which this function returns @True@.
-    -> (CI.ChainIndexTx -> Bool)
+    -> (CI.ChainIndexInternalTx -> Bool)
     -- ^ From those, only store transactions for which this function returns @True@.
     -> ChainSyncHandler
     -- ^ The @ChainSyncHandler@ on which the returned @ChainSyncHandler@ is based.
     -> ChainSyncHandler
-filterTxs isAccepted isStored handler (RollForward (CI.Block blockTip txs) chainTip) =
+filterTxs isAccepted isStored handler (RollForward (CI.ChainIndexBlock blockTip txs) chainTip) =
     let txs' = map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && isStored tx }))
                 $ filter (isAccepted . fst) txs
-    in handler (RollForward (CI.Block blockTip txs') chainTip)
+    in handler (RollForward (CI.ChainIndexBlock blockTip txs') chainTip)
 filterTxs _ _ handler evt = handler evt
 
 -- | Get the slot number of the current tip of the node.
@@ -182,14 +191,21 @@ getTipSlot config = do
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
 syncChainIndex config runReq syncHandler = do
-    Just resumePoints <- runChainIndexDuringSync runReq getResumePoints
-    void $ C.runChainSync
-        (Config.cicSocketPath config)
-        nullTracer
-        (Config.cicSlotConfig config)
-        (Config.cicNetworkId  config)
-        resumePoints
-        (toCardanoChainSyncHandler syncHandler)
+    syncResult <- runChainIndexDuringSync runReq getResumePoints
+    case syncResult of
+      Just resumePoints -> do
+        void $ C.runChainSync
+               (Config.cicSocketPath config)
+               nullTracer
+               (Config.cicSlotConfig config)
+               (Config.cicNetworkId  config)
+               resumePoints
+               (toCardanoChainSyncHandler syncHandler)
+      Nothing -> do
+        putStrLn "\nAn error has occured in chain index. See log trace !!!"
+        -- hack to wait for stdout flush
+        threadDelay 5_000
+        exitFailure
 
 runChainIndexDuringSync
   :: RunRequirements

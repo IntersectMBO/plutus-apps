@@ -40,7 +40,7 @@ period = 2_000_000 -- 2s
 -- It works fine at the beginning of the chain but later blocks grow in their size and the memory
 -- usage grows tremendously.
 measureEventQueueSizeByTxs :: Natural -> ChainSyncEvent -> Natural
-measureEventQueueSizeByTxs maxQueueSize (RollForward (CI.Block syncTip transactions) nodeTip) =
+measureEventQueueSizeByTxs maxQueueSize (RollForward (CI.ChainIndexBlock syncTip transactions) nodeTip) =
     let syncState = getSyncState (tipAsPoint syncTip) (tipAsPoint nodeTip)
         txLen = fromIntegral $ length transactions
      in if isSyncStateSynced syncState
@@ -57,8 +57,9 @@ processEventsQueue trace runReq eventsQueue = forever $ do
     let
       waitUntilEvents = do
         isFull <- atomically $ isFullTBMQueue eventsQueue
-        if isFull then atomically $ flushTBMQueue eventsQueue
-        else threadDelay period >> waitUntilEvents
+        if isFull
+          then atomically $ flushTBMQueue eventsQueue
+          else threadDelay period >> waitUntilEvents
     waitUntilEvents
   processEvents eventsToProcess
   end <- getTime Monotonic
@@ -75,12 +76,19 @@ processEventsQueue trace runReq eventsQueue = forever $ do
         void $ runChainIndexDuringSync runReq $ CI.rollback backwardPoint
         processEvents restEvents
 
-      (RollForward _ _) -> do
+      (RollForward (CI.EmulatorBlock _ _) _) -> error "processEventsQueue: only ChainIndexBlock expected !!!"
+
+      (RollForward (CI.ChainIndexBlock syncTip _) nodeTip) -> do
         let getBlock = \case
               (RollForward block _) -> Just block
               _                     -> Nothing
+            syncState =
+              if isSyncStateSynced $ getSyncState (tipAsPoint syncTip) (tipAsPoint nodeTip)
+              then CI.ChainSynced
+              else CI.ChainNotSynced
             isRollForwardEvt = isJust . getBlock
             (rollForwardEvents, restEvents') = span isRollForwardEvt events
             blocks = catMaybes $ map getBlock rollForwardEvents
-        void $ runChainIndexDuringSync runReq $ CI.appendBlocks blocks
+        void $ runChainIndexDuringSync runReq $ CI.appendBlocks syncState blocks
         processEvents restEvents'
+

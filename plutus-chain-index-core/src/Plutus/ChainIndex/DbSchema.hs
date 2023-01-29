@@ -268,6 +268,7 @@ deriving via Serialisable (Versioned MintingPolicy) instance HasDbType (Versione
 deriving via Serialisable (Versioned StakeValidator) instance HasDbType (Versioned StakeValidator)
 deriving via Serialisable (Versioned Validator) instance HasDbType (Versioned Validator)
 deriving via Serialisable (Versioned Script) instance HasDbType (Versioned Script)
+deriving via Serialisable (Versioned ByteString) instance HasDbType (Versioned ByteString)
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
 deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
@@ -297,8 +298,15 @@ instance HasDbType (DatumHash, Datum) where
     toDbValue (hash, datum) = DatumRow (toDbValue hash) (toDbValue datum)
     fromDbValue (DatumRow hash datum) = (fromDbValue hash, fromDbValue datum)
 
+-- Use only when retrieving info from DB
 instance HasDbType (ScriptHash, Versioned Script) where
     type DbType (ScriptHash, Versioned Script) = ScriptRow
+    toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
+    fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
+
+-- Use only when adding ChainIndexInternalTx in DB
+instance HasDbType (ScriptHash, Versioned ByteString) where
+    type DbType (ScriptHash, Versioned ByteString) = ScriptRow
     toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
     fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
 
