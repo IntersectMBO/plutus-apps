@@ -16,6 +16,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.Credential (Credential (PubKeyCredential), StakingCredential (StakingHash))
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
@@ -106,6 +107,10 @@ w1StakePubKeyHash = Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w1Paymen
 w2StakePubKeyHash :: Ledger.StakePubKeyHash
 w2StakePubKeyHash = Ledger.StakePubKeyHash $ Ledger.unPaymentPubKeyHash w2PaymentPubKeyHash -- fromJust $ stakePubKeyHash $ walletToMockWallet' w2 -- is Nothing
 
+
+w2StakeCredential :: StakingCredential
+w2StakeCredential = StakingHash $ PubKeyCredential $ Ledger.unStakePubKeyHash w2StakePubKeyHash
+
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
     void $ Trace.activateContractWallet w1 contract
@@ -184,7 +189,7 @@ successfulUseOfMustPayToPubKeyAddress submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash adaValue
+                tx1 = Constraints.mustPayToPubKeyAddress w2PaymentPubKeyHash w2StakeCredential adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -219,7 +224,7 @@ successfulUseOfMustPayWithDatumInTxToPubKeyAddress submitTxFromConstraints tc =
                 tx1 =
                     Constraints.mustPayWithDatumInTxToPubKeyAddress
                         w2PaymentPubKeyHash
-                        w2StakePubKeyHash
+                        w2StakeCredential
                         someDatum
                         adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
@@ -237,7 +242,7 @@ phase2FailureWhenUsingUnexpectedPaymentPubKeyHash submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w1PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w1PaymentPubKeyHash w2StakeCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -253,7 +258,7 @@ phase2FailureWhenUsingUnexpectedDatum submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash otherDatum adaValue
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakeCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -269,7 +274,7 @@ phase2FailureWhenUsingUnexpectedValue submitTxFromConstraints tc =
     let onChainConstraint = asRedeemer $ MustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum (Ada.lovelaceValueOf $ adaAmount + 1)
         contract = do
             let lookups1 = mintingPolicy tc $ mustPayToPubKeyAddressPolicy tc
-                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakePubKeyHash someDatum adaValue
+                tx1 = Constraints.mustPayWithDatumInTxToPubKeyAddress w2PaymentPubKeyHash w2StakeCredential someDatum adaValue
                    <> Constraints.mustMintValueWithRedeemer onChainConstraint (tknValue tc)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
@@ -349,21 +354,24 @@ languageContextV2 = LanguageContext
     Constraints.plutusV2MintingPolicy
     PSU.V2.mintingPolicyHash
 
-
+{-# INLINABLE mkMustPayToPubKeyAddressPolicy #-}
 mkMustPayToPubKeyAddressPolicy :: (Constraints.TxConstraints () () -> sc -> Bool) -> ConstraintParams -> sc -> Bool
 mkMustPayToPubKeyAddressPolicy checkScriptContext = \case
     MustPayToPubKey ppkh v ->
         checkScriptContext (Constraints.mustPayToPubKey ppkh v)
     MustPayToPubKeyAddress ppkh spkh v ->
-        checkScriptContext (Constraints.mustPayToPubKeyAddress ppkh spkh v)
+        checkScriptContext (Constraints.mustPayToPubKeyAddress ppkh (toStakeCredential spkh) v)
     MustPayWithDatumInTxToPubKey ppkh d v ->
         checkScriptContext (Constraints.mustPayWithDatumInTxToPubKey ppkh d v)
     MustPayWithDatumInTxToPubKeyAddress ppkh spkh d v ->
-        checkScriptContext (Constraints.mustPayWithDatumInTxToPubKeyAddress ppkh spkh d v)
+        checkScriptContext (Constraints.mustPayWithDatumInTxToPubKeyAddress ppkh (toStakeCredential spkh) d v)
     MustPayWithInlineDatumToPubKey ppkh d v ->
         checkScriptContext (Constraints.mustPayWithInlineDatumToPubKey ppkh d v)
     MustPayWithInlineDatumToPubKeyAddress ppkh spkh d v ->
-        checkScriptContext (Constraints.mustPayWithInlineDatumToPubKeyAddress ppkh spkh d v)
+        checkScriptContext (Constraints.mustPayWithInlineDatumToPubKeyAddress ppkh (toStakeCredential spkh) d v)
+
+  where
+    toStakeCredential spkh = StakingHash $ PubKeyCredential $ Ledger.unStakePubKeyHash spkh
 
 mustPayToPubKeyAddressPolicyHash :: LanguageContext -> Ledger.MintingPolicyHash
 mustPayToPubKeyAddressPolicyHash tc = mintingPolicyHash tc $ mustPayToPubKeyAddressPolicy tc

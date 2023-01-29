@@ -21,7 +21,8 @@ import Data.OpenApi qualified as OpenApi
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType, order)
-import Ledger (PaymentPubKeyHash, StakePubKeyHash, Value)
+import Ledger (PaymentPubKeyHash, StakePubKeyHash (unStakePubKeyHash), Value)
+import Ledger.Credential (Credential (PubKeyCredential), StakingCredential (StakingHash))
 import Ledger.Constraints (mustPayToPubKeyAddress)
 import Playground.Types (FunctionSchema)
 import Plutus.Contract (ContractError, Endpoint, Promise, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints,
@@ -72,7 +73,8 @@ type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 
 payToWallet :: Promise () PayToWalletSchema ContractError ()
 payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh, skh} -> do
-    utx <- mkTxConstraints @Void def mempty (mustPayToPubKeyAddress pkh skh amount)
-    logInfo @String $ show utx
-    adjustUnbalancedTx utx >>= yieldUnbalancedTx
+  let skCred = StakingHash $ PubKeyCredential $ unStakePubKeyHash skh
+  utx <- mkTxConstraints @Void def mempty (mustPayToPubKeyAddress pkh skCred amount)
+  logInfo @String $ show utx
+  adjustUnbalancedTx utx >>= yieldUnbalancedTx
 

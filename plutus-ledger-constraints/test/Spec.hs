@@ -24,7 +24,7 @@ import Language.Haskell.TH.Syntax
 import Ledger qualified (ChainIndexTxOut (ScriptChainIndexTxOut), inputs, paymentPubKeyHash, scriptTxInputs, toTxOut,
                          txInputRef, unitDatum, unitRedeemer)
 import Ledger.Ada qualified as Ada
-import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, xprvToPaymentPubKeyHash,
+import Ledger.Address (StakePubKeyHash (..), addressStakingCredential, xprvToPaymentPubKeyHash,
                        xprvToStakePubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OffChain qualified as OC
@@ -113,7 +113,8 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     [x,y] <- Hedgehog.forAllWith (const "A known key") $ take 2 <$> Gen.shuffle Gen.knownXPrvs
     let pkh = xprvToPaymentPubKeyHash x
         skh = xprvToStakePubKeyHash y
-        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToPubKeyAddress pkh skh (Ada.toValue Ledger.minAdaTxOut))
+        skCred = StakingHash $ PubKeyCredential $ unStakePubKeyHash skh
+        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToPubKeyAddress pkh skCred (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
@@ -135,8 +136,9 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
-    let svh = Ledger.StakeValidatorHash $ examplePlutusScriptAlwaysSucceedsHash WitCtxStake
-        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+    let svh = examplePlutusScriptAlwaysSucceedsHash WitCtxStake
+        skCred = StakingHash $ PubKeyCredential $ PubKeyHash svh
+        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash skCred Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left err -> do
           Hedgehog.annotateShow err
@@ -145,7 +147,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
           let outputs = txOutputs (view OC.tx utx)
           let stakingCreds = mapMaybe stakeValidatorHash outputs
           Hedgehog.assert $ not $ null stakingCreds
-          forM_ stakingCreds ((===) svh)
+          forM_ stakingCreds ((===) (Ledger.StakeValidatorHash svh))
   where
       stakeValidatorHash :: TxOut -> Maybe Ledger.StakeValidatorHash
       stakeValidatorHash tx = do

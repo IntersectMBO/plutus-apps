@@ -63,7 +63,6 @@ import Data.Foldable (traverse_)
 import Data.List qualified as List
 import GHC.Generics (Generic)
 import Ledger (POSIXTimeRange, Params (..), networkIdL)
-import Ledger.Address (pubKeyHashAddress, scriptValidatorHashAddress)
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
@@ -316,25 +315,15 @@ processConstraint = \case
         txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn txo
         unbalancedTx . tx . txInsReference <>= [ txIn ]
 
-    P.MustPayToPubKeyAddress pk mskh md refScriptHashM vl -> do
+    P.MustPayToAddress addr md refScriptHashM vl -> do
         networkId <- use (P.paramsL . networkIdL)
         refScript <- lookupScriptAsReferenceScript refScriptHashM
         out <- throwLeft ToCardanoError $ C.TxOut
-            <$> C.toCardanoAddressInEra networkId (pubKeyHashAddress pk mskh)
+            <$> C.toCardanoAddressInEra networkId addr
             <*> C.toCardanoTxOutValue vl
             <*> pure (toTxOutDatum md)
             <*> pure refScript
 
-        unbalancedTx . tx . txOuts <>= [ out ]
-
-    P.MustPayToOtherScript vlh svhM dv refScriptHashM vl -> do
-        networkId <- use (P.paramsL . networkIdL)
-        refScript <- lookupScriptAsReferenceScript refScriptHashM
-        out <- throwLeft ToCardanoError $ C.TxOut
-            <$> C.toCardanoAddressInEra networkId (scriptValidatorHashAddress vlh svhM)
-            <*> C.toCardanoTxOutValue vl
-            <*> pure (toTxOutDatum $ Just dv)
-            <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]
 
     c -> error $ "Ledger.Tx.Constraints.OffChain: " ++ show c ++ " not implemented yet"

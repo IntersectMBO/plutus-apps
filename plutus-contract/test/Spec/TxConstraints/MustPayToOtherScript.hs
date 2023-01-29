@@ -16,6 +16,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.Credential (Credential (PubKeyCredential), StakingCredential (StakingHash))
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
@@ -393,16 +394,19 @@ phase2ErrorWhenExpectingMoreThanValue submitTxFromConstraints lc =
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest
 
+{-# INLINABLE mkMustPayToOtherScriptPolicy #-}
 mkMustPayToOtherScriptPolicy :: (Constraints.TxConstraints () () -> sc -> Bool) -> ConstraintParams -> sc -> Bool
 mkMustPayToOtherScriptPolicy checkScriptContext t = case t of
     MustPayToOtherScriptWithDatumInTx vh d v ->
         checkScriptContext (Constraints.mustPayToOtherScriptWithDatumInTx vh d v)
-    MustPayToOtherScriptAddressWithDatumInTx vh svh d v ->
-        checkScriptContext (Constraints.mustPayToOtherScriptAddressWithDatumInTx vh svh d v)
+    MustPayToOtherScriptAddressWithDatumInTx vh (Ledger.StakeValidatorHash svh) d v ->
+        let skCred = StakingHash $ PubKeyCredential $ Ledger.PubKeyHash svh
+        in checkScriptContext (Constraints.mustPayToOtherScriptAddressWithDatumInTx vh skCred d v)
     MustPayToOtherScriptWithInlineDatum vh d v ->
         checkScriptContext (Constraints.mustPayToOtherScriptWithInlineDatum vh d v)
-    MustPayToOtherScriptAddressWithInlineDatum vh svh d v ->
-        checkScriptContext (Constraints.mustPayToOtherScriptAddressWithInlineDatum vh svh d v)
+    MustPayToOtherScriptAddressWithInlineDatum vh (Ledger.StakeValidatorHash svh) d v ->
+        let skCred = StakingHash $ PubKeyCredential $ Ledger.PubKeyHash svh
+        in checkScriptContext (Constraints.mustPayToOtherScriptAddressWithInlineDatum vh skCred d v)
 
 mustPayToOtherScriptPolicyV1 :: Ledger.MintingPolicy
 mustPayToOtherScriptPolicyV1 = Ledger.mkMintingPolicyScript $$(PlutusTx.compile [||wrap||])

@@ -21,7 +21,7 @@ import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)),
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateIn, MustPayToAddress),
@@ -31,11 +31,10 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx), getTxOutDatum)
 import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Address qualified as Address
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
                                   TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
                                   TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
-                                  TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue))
+                                  TxOut (TxOut, txOutDatumHash, txOutValue))
 import Plutus.Script.Utils.V1.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Value (leq)

@@ -146,7 +146,7 @@ data ScriptEvent =
         -- ^ Script size (unapplied) in bytes
 
         , seExUnits       :: ExBudget
-        -- ^ Cost of the script 
+        -- ^ Cost of the script
         , seScriptPurpose :: String
         -- ^ Purpose of the script
 
@@ -161,30 +161,29 @@ scriptEvents = preMapMaybe (preview (eteEvent . chainEvent) >=> getEvent) (conca
     extractScripts utxo tx =
         let bd = C.getTxBody tx
             C.ShelleyTx C.ShelleyBasedEraBabbage ltx = tx
-            C.ShelleyTxBody _era txb _scripts (C.TxBodyScriptData _ _ (Alonzo.unRedeemers -> redeemers)) _ _ = bd
+        in case bd of
+             C.ShelleyTxBody _era txb _scripts (C.TxBodyScriptData _ _ (Alonzo.unRedeemers -> redeemers)) _ _ ->
+               let scriptHashes = Alonzo.TxInfo.txscripts utxo ltx
+                   getScriptHash = \case
+                     Alonzo.Tx.Spending txIn -> do
+                       C.TxOut (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) (C.ShelleyAddress _ cred _ )) _ _ _
+                            <- C.fromShelleyTxOut C.ShelleyBasedEraBabbage <$> Shelley.UTxO.txinLookup txIn utxo
+                       case C.fromShelleyPaymentCredential cred of
+                         C.PaymentCredentialByScript hsh -> pure hsh
+                         _ -> Nothing
+                     Alonzo.Tx.Minting (Mary.PolicyID sh) -> Just (C.fromShelleyScriptHash sh)
+                     -- Rewarding and Certifying not supported
+                     _ -> Nothing
+                   getEvent' (ptr, (_dt, Alonzo.TxInfo.transExUnits -> seExUnits)) = do
+                     sp <- strictMaybeToMaybe (Alonzo.Tx.rdptrInv txb ptr)
+                     let seScriptPurpose = show (Alonzo.TxInfo.transScriptPurpose sp)
+                     seScriptHash <- getScriptHash sp
+                     seScript <- Map.lookup (C.toShelleyScriptHash seScriptHash) scriptHashes
+                     let seScriptSize = BS.length (serialize' seScript)
+                     pure ScriptEvent{seScriptPurpose, seExUnits, seScriptHash, seScript, seScriptSize}
 
-            scriptHashes = Alonzo.TxInfo.txscripts utxo ltx
-
-            getScriptHash = \case
-                Alonzo.Tx.Spending txIn -> do
-                    C.TxOut (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) (C.ShelleyAddress _ cred _ )) _ _ _ <- C.fromShelleyTxOut C.ShelleyBasedEraBabbage <$> Shelley.UTxO.txinLookup txIn utxo
-                    case C.fromShelleyPaymentCredential cred of
-                        C.PaymentCredentialByScript hsh -> pure hsh
-                        _ -> Nothing
-                Alonzo.Tx.Minting (Mary.PolicyID sh) -> Just (C.fromShelleyScriptHash sh)
-
-                -- Rewarding and Certifying not supported
-                _ -> Nothing
-            
-            getEvent' (ptr, (_dt, Alonzo.TxInfo.transExUnits -> seExUnits)) = do
-                sp <- strictMaybeToMaybe (Alonzo.Tx.rdptrInv txb ptr)
-                let seScriptPurpose = show (Alonzo.TxInfo.transScriptPurpose sp)
-                seScriptHash <- getScriptHash sp
-                seScript <- Map.lookup (C.toShelleyScriptHash seScriptHash) scriptHashes
-                let seScriptSize = BS.length (serialize' seScript)
-                pure ScriptEvent{seScriptPurpose, seExUnits, seScriptHash, seScript, seScriptSize}
-
-        in mapMaybe getEvent' $ Map.toList redeemers
+               in mapMaybe getEvent' $ Map.toList redeemers
+             _ -> []
 
     getEvent :: ChainEvent -> Maybe [ScriptEvent]
     getEvent = \case
