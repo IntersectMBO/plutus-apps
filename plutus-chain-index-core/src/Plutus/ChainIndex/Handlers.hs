@@ -533,7 +533,7 @@ rollBackChainState targetPoint indexState =
         -- The rollback happened sometimes after the current tip.
         | not (targetPoint `UtxoState.pointLessThanTip` currentTip) -> Left $ TipMismatch currentTip targetPoint
         | otherwise ->
-           let (_after, before) = List.break (\t -> targetPoint `UtxoState.pointLessThanTip` t) indexState
+           let (_after, before) = List.span (\t -> targetPoint `UtxoState.pointLessThanTip` t) indexState
            in case getCurrentTip before of
                 Nothing -> Left $ OldPointNotFound targetPoint
                 Just oldTip | targetPoint `pointsToTip` oldTip -> Right (oldTip, before)
