@@ -50,7 +50,7 @@ import Hedgehog (Property, PropertyT, assert, forAll, property, (===))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Gen
 import Test.Tasty
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 newtype TestRowT f = IntegerRow
     { _testRowInt :: Columnar f Int16
@@ -85,17 +85,22 @@ tests :: TestTree
 tests = do
   testGroup "db store"
     [ testGroup "select page"
-        [ testProperty "size of pageItems of all pages should be less or equal than total number of items in database"
-                       pageItemsSizeLessOrEqualGenItemsSizeSpec
+        [ testPropertyNamed "size of pageItems of all pages should be less or equal than total number of items in database"
+                           "pageItemsSizeLessOrEqualGenItemsSizeSpec"
+                           pageItemsSizeLessOrEqualGenItemsSizeSpec
 
-        , testProperty "last page should have no next page"
-                       lastPageShouldHaveNoNextPageQuerySpec
-        , testProperty "concat items for all pages should be the same as generated items"
-                       pageItemsEqualGenItemsSpec
-        , testProperty "page items should be sorted in ascending order"
-                       pageItemsSortedAscOrderSpec
-        , testProperty "page size equal to total number of items in db should return a single page"
-                       pageSizeEqualToTotalItemsSizeShouldReturnOnePage
+        , testPropertyNamed "last page should have no next page"
+                            "lastPageShouldHaveNoNextPageQuerySpec"
+                            lastPageShouldHaveNoNextPageQuerySpec
+        , testPropertyNamed "concat items for all pages should be the same as generated items"
+                            "pageItemsEqualGenItemsSpec"
+                            pageItemsEqualGenItemsSpec
+        , testPropertyNamed "page items should be sorted in ascending order"
+                            "pageItemsSortedAscOrderSpec"
+                            pageItemsSortedAscOrderSpec
+        , testPropertyNamed "page size equal to total number of items in db should return a single page"
+                            "pageSizeEqualToTotalItemsSizeShouldReturnOnePage"
+                            pageSizeEqualToTotalItemsSizeShouldReturnOnePage
         ]
     ]
 
