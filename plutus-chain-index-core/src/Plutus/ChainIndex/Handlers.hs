@@ -458,7 +458,7 @@ appendBlocks _syncState blocks = do
           pure $ Combined []
         Just (reducedIndex, tp) -> do
           let !i_nbTips = fromIntegral $ length newIndex
-          logInfo $ BlockReductionPhase i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
+          logInfo $ BlockReductionPhase depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
           -- retrieve number of unspent outputs to perform batch updates
           numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
           put reducedIndex
@@ -477,10 +477,10 @@ appendBlocks _syncState blocks = do
     reduceBlocks :: Depth -> ChainIndexState -> Maybe (ChainIndexState, Tip)
     reduceBlocks (Depth minCount) indexState =
       case getCurrentTip indexState of
-        -- assuming 20 slots per block
-        Just (Tip s bi bn) | (length indexState `div` 20) > 2 * minCount ->
+        Just (Tip s bi bn) | (length indexState > 2 * minCount) ->
           -- no that ordering on tip only considers block number
-          let bn' = BlockNumber ((unBlockNumber bn) - (fromIntegral $ 2 * minCount))
+          -- so no need to adjust slot number
+          let bn' = BlockNumber ((unBlockNumber bn) - (fromIntegral minCount))
               (keep, old) = List.span (\t -> t > (Tip s bi bn')) indexState
           in fmap (\t -> (keep, t)) $ getCurrentTip old
         _ -> Nothing
