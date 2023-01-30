@@ -1,17 +1,18 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE PackageImports     #-}
-{-# LANGUAGE PatternSynonyms    #-}
-{-# LANGUAGE QuasiQuotes        #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DerivingStrategies   #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE PackageImports       #-}
+{-# LANGUAGE PatternSynonyms      #-}
+{-# LANGUAGE QuasiQuotes          #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 {-
 -- | Back-end support for Utxo Indexer
@@ -19,57 +20,34 @@
 -- This module will create the SQL tables:
 + table: unspentTransactions
 |---------+------+-------+-----------+-------+-------+------------------+--------------+------+-------------|
-| Address | TxId | TxIdx | DatumHash | Datum | Value | InlineScriptHash | InlineScript | Slot | BlockNumber |
+| Address | TxId | TxIx | DatumHash | Datum | Value | InlineScriptHash | InlineScript | Slot | BlockNumber |
 |---------+------+-------+-----------+-------+-------+------------------+--------------+------+-------------|
 
 + table: spent
-  |------+------|
-  | txId | txIx |
-  |------+------|
+  |------+------|--------+-----------|
+  | txId | txIx | slotNo | blockHash |
+  |------+------|--------+-----------|
 
 -}
-module Marconi.Index.Utxo
-    (addressFilteredRows
-    , Depth (..)
-    , eventAtAddress
-    , getUtxos
-    , getUtxoEvents
-    , open
-    , query
-    , queryPlusVolatile
-    , Result
-    , toRows
-    , toAddr
-    , utxoAddress
-    , utxoEventSlotNo
-    , utxoEventUtxos
-    , utxoRowUtxo
-    , Utxo (..)
-    , UtxoEvent (..)
-    , UtxoRow (..)
-    , UtxoIndex
-    , C.BlockNo (..)
-    , C.SlotNo (..)
-    ) where
+module Marconi.Index.Utxo where
 
-import Codec.Serialise (Serialise (encode), deserialiseOrFail, serialise)
-import Codec.Serialise.Class (Serialise (decode))
 import Control.Concurrent.Async (concurrently_)
 import Control.Exception (bracket_)
-import Control.Lens (filtered, folded, traversed)
 import Control.Lens.Combinators (imap)
-import Control.Lens.Operators ((%~), (&), (^.), (^..))
+import Control.Lens.Operators ((^.))
 import Control.Lens.TH (makeLenses)
 import Control.Monad (unless, when)
-import Data.ByteString (ByteString)
+import Data.Aeson (eitherDecode, encode)
 import Data.ByteString.Lazy (toStrict)
-import Data.Foldable (foldl')
-import Data.List (union)
-import Data.Maybe (fromJust)
+import Data.Foldable (foldl', toList)
+import Data.Functor ((<&>))
+import Data.List (elemIndex)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger, SQLText))
+import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
@@ -77,109 +55,156 @@ import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
 import System.Random.MWC (createSystemRandom, uniformR)
-import Text.ParserCombinators.Parsec (parse)
 import Text.RawString.QQ (r)
 
+import Cardano.Api ()
 import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
-import Cardano.Binary (fromCBOR, toCBOR)
 import Marconi.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
-import RewindableIndex.Index.VSqlite (SqliteIndex)
-import RewindableIndex.Index.VSqlite qualified as Ix
+import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
+                                 QueryInterval (QEverything, QInterval), Queryable (queryStorage),
+                                 Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent,
+                                 StorableMonad, StorablePoint, StorableQuery, StorableResult, emptyState,
+                                 filterWithQueryInterval)
+import RewindableIndex.Storable qualified as Storable
 
-data Utxo                       = Utxo
-    { _utxoAddress          :: !C.AddressAny
-    , _utxoTxId             :: !C.TxId
-    , _utxoTxIx             :: !C.TxIx
-    , _utxoDatum            :: Maybe C.ScriptData
-    , _utxoDatumHash        :: Maybe (C.Hash C.ScriptData)
-    , _utxoValue            :: C.Value
-    , _utxoInlineScript     :: Maybe ByteString
-    , _utxoInlineScriptHash :: Maybe (C.ScriptHash)
-    } deriving (Show, Generic)
 
-$(makeLenses ''Utxo)
 
-instance Eq Utxo where
-    u1 == u2 = (_utxoTxId u1) == (_utxoTxId u2)
+type UtxoIndexer = Storable.State UtxoHandle
 
-instance Ord Utxo where
-    compare u1 u2 = compare (_utxoTxId u1) (_utxoTxId u2)
+data UtxoHandle = UtxoHandle
+  { hdlConnection :: SQL.Connection
+  , hdlDpeth      :: Int
+  }
 
-data UtxoEvent          = UtxoEvent
-    { _utxoEventUtxos   :: [Utxo]
-    , _utxoEventInputs  :: !(Set C.TxIn)
-    , _utxoEventSlotNo  :: !C.SlotNo
-    , _utxoEventBlockNo :: !C.BlockNo
-    } deriving (Show, Eq)
+newtype instance StorableQuery UtxoHandle =
+  UtxoAddress C.AddressAny deriving (Show, Eq)
 
-$(makeLenses ''UtxoEvent)
+type QueryableAddresses = NonEmpty (StorableQuery UtxoHandle)
 
-data UtxoRow            = UtxoRow
-    { _utxoRowUtxo    :: Utxo
-    , _utxoRowSlotNo  :: !C.SlotNo
-    , _utxoRowBlockNo :: !C.BlockNo
-    } deriving (Show, Eq, Ord, Generic)
+type instance StorableMonad UtxoHandle = IO
 
-$(makeLenses ''UtxoRow)
-
-type Result = Maybe [UtxoRow]
-
-type Notification = ()
-
-type UtxoIndex
-    = SqliteIndex
-      UtxoEvent
-      Notification
-      C.AddressAny
-      Result
+type instance StorablePoint UtxoHandle = C.ChainPoint
 
 newtype Depth = Depth Int
 
+data Utxo = Utxo
+  { _address          :: C.AddressAny
+  , _txId             :: !C.TxId
+  , _txIx             :: !C.TxIx
+  , _datum            :: Maybe C.ScriptData
+  , _datumHash        :: Maybe (C.Hash C.ScriptData)
+  , _value            :: C.Value
+  , _inlineScript     :: Maybe Shelley.ScriptInAnyLang -- ByteString -- ^ ReferenceScript
+  , _inlineScriptHash :: Maybe C.ScriptHash
+  } deriving (Show, Eq, Generic)
+
+$(makeLenses ''Utxo)
+
+instance Ord Utxo where
+  left <= right
+    =   _txId left <= _txId right
+    &&  _txIx left <= _txIx right
+
+data UtxoRow = UtxoRow
+  { _urUtxo      :: Utxo
+  , _urBlockNo   :: C.BlockNo
+  , _urSlotNo    :: C.SlotNo
+  , _urBlockHash:: C.Hash C.BlockHeader
+  } deriving (Show, Eq, Ord, Generic)
+
+$(makeLenses ''UtxoRow)
+
+newtype instance  StorableResult UtxoHandle = UtxoResult [UtxoRow] deriving Show
+
+data instance  StorableEvent UtxoHandle = UtxoEvent
+  { ueUtxos       :: !(Set Utxo)
+  , ueInputs      :: Set C.TxIn
+  , ueBlockNo     :: C.BlockNo
+  , ueChainPoint  :: C.ChainPoint
+  } deriving (Show, Generic)
+
+eventIsBefore :: StorableEvent UtxoHandle  -> C.ChainPoint -> Bool
+eventIsBefore (UtxoEvent _ _ _ (C.ChainPoint _ slot)) (C.ChainPoint _ slot') =  slot < slot'
+eventIsBefore _ _                                                            = False
+
+instance Semigroup (StorableEvent UtxoHandle) where
+  e@(UtxoEvent u i b cp) <> (UtxoEvent u' i' _ cp') =
+    if cp == cp' then
+      UtxoEvent (Set.union u u') (Set.union i i') b cp
+    else e -- do not combine events from different chain points
+
+data Spent = Spent
+  { _sTxInTxId  :: C.TxId                 -- ^ from TxIn, containts the Spent txId
+  , _sTxInTxIx  :: C.TxIx
+  , _sSlotNo    :: C.SlotNo
+  , _sBlockHash:: C.Hash C.BlockHeader
+  } deriving (Show, Eq)
+
+$(makeLenses ''Spent)
+
+instance Ord Spent where
+  compare l r =
+      case  (l ^. sTxInTxId) `compare` (r ^. sTxInTxId) of
+        EQ  -> (l ^. sTxInTxIx) `compare` (r ^. sTxInTxIx)
+        neq -> neq
+
+instance HasPoint (StorableEvent UtxoHandle) C.ChainPoint where
+  getPoint (UtxoEvent _ _ _ cp) = cp
+
+---------------------------------------------------------------------------------
+--------------- sql mappings unspent_transactions and Spent tables -------------
+---------------------------------------------------------------------------------
+instance ToField (C.Hash C.BlockHeader) where
+  toField f = toField $ C.serialiseToRawBytes f
+
+instance FromField (C.Hash C.BlockHeader) where
+   fromField f =
+      fromField f <&>
+        fromMaybe (error "Cannot deserialise block hash") .
+          C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
+
 instance FromRow C.TxIn where
-    fromRow = C.TxIn <$> field <*> field
+  fromRow = C.TxIn <$> field <*> field
+
 instance ToRow C.TxIn where
-    toRow (C.TxIn txid txix) = toRow (txid, txix)
+  toRow (C.TxIn txid txix) = toRow (txid, txix)
+
 instance ToRow UtxoRow where
-    toRow u = toRow (
-        (u ^. utxoRowUtxo . utxoAddress)
-        , (u ^. utxoRowUtxo . utxoTxId)
-        , (u ^. utxoRowUtxo . utxoTxIx)
-        , (u ^. utxoRowUtxo . utxoDatum)
-        , (u ^. utxoRowUtxo . utxoDatumHash)
-        , (u ^. utxoRowUtxo . utxoValue)
-        , (u ^. utxoRowUtxo . utxoInlineScript)
-        , (u ^. utxoRowUtxo . utxoInlineScriptHash)
-        , (u ^. utxoRowSlotNo)
-        , (u ^. utxoRowBlockNo))
+  toRow u =
+    [ toField (u ^. urUtxo . address)
+    , toField (u ^. urUtxo . txId)
+    , toField (u ^. urUtxo . txIx)
+    , toField (u ^. urUtxo . datum)
+    , toField (u ^. urUtxo . datumHash)
+    , toField (u ^. urUtxo . value)
+    , toField (u ^. urUtxo . inlineScript)
+    , toField (u ^. urUtxo . inlineScriptHash)
+    , toField (u ^. urBlockNo)
+    , toField (u ^. urSlotNo)
+    , toField (u ^. urBlockHash) ]
 
 instance FromRow UtxoRow where
-    fromRow
-        = UtxoRow
-        <$> (Utxo
-             <$> field
-             <*> field
-             <*> field
-             <*> field
-             <*> field
-             <*> field
-             <*> field
-             <*> field )
-        <*> field
-        <*> field
+  fromRow = UtxoRow
+      <$> (Utxo <$> field <*> field <*> field <*> field
+                <*> field <*> field <*> field <*> field)
+      <*> field <*> field <*> field
 
 instance FromField C.AddressAny where
-  fromField f = fromField f >>=
-      maybe (returnError ConversionFailed f "Cannot deserialise address.")
-          pure . C.deserialiseFromRawBytes C.AsAddressAny
+  fromField f = fromField f >>= \b -> maybe
+    cantDeserialise
+    pure $ C.deserialiseFromRawBytes C.AsAddressAny
+    b
+    where
+      cantDeserialise = returnError SQL.ConversionFailed f "Cannot deserialise address."
 
 instance ToField C.AddressAny where
   toField = SQLBlob . C.serialiseToRawBytes
 
 instance FromField C.TxId where
-  fromField f = fromField f >>=
-      maybe (returnError ConversionFailed f "Cannot deserialise TxId.")
-          pure . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
+  fromField f = fromField f >>= maybe
+    (returnError ConversionFailed f "Cannot deserialise TxId.")
+    pure . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
 
 instance ToField C.TxId where
   toField = SQLBlob . C.serialiseToRawBytes
@@ -191,41 +216,44 @@ instance ToField C.TxIx where
   toField (C.TxIx i) = SQLInteger $ fromIntegral i
 
 instance FromField (C.Hash C.ScriptData) where
-    fromField f = fromField f >>=
-        maybe (returnError ConversionFailed f "Cannot deserialise scriptDataHash.")
-          pure . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
+  fromField f = fromField f >>= either
+    (const $ returnError ConversionFailed f "Cannot deserialise ScriptDataHash.")
+    pure . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
 
 instance ToField (C.Hash C.ScriptData) where
-  toField = SQLBlob . C.serialiseToRawBytes
-
-instance Serialise C.ScriptData where
-  encode = toCBOR
-  decode = fromCBOR
+  toField = SQLBlob . C.serialiseToRawBytesHex
 
 instance FromField C.ScriptData where
-  fromField f = fromField f >>=
-    either (const $ returnError ConversionFailed f "Cannot deserialise scriptdata.")
-    pure . deserialiseOrFail
+  fromField f = fromField f >>= either
+    (const $ returnError ConversionFailed f "Cannot deserialise scriptdata.")
+    pure . C.deserialiseFromCBOR (C.proxyToAsType Proxy)
 
 instance ToField C.ScriptData where
-  toField = SQLBlob . toStrict . serialise
+  toField = SQLBlob . C.serialiseToCBOR
 
 instance ToField C.Value where
-    toField  = SQLText . C.renderValue
+  toField = SQLBlob . toStrict . encode
 
 instance FromField C.Value where
-    fromField f = fromField f >>=
-        either (const $ returnError ConversionFailed f "Cannot deserialise value.") pure
-        . (parse C.parseValue "")
+  fromField f = fromField f >>= either
+    (const $ returnError ConversionFailed f "Cannot deserialise value.")
+    pure . eitherDecode
+
+instance ToField C.ScriptInAnyLang where
+  toField = SQLBlob . toStrict . encode
+
+instance FromField C.ScriptInAnyLang where
+  fromField f = fromField f >>= either
+    (const $ returnError ConversionFailed f "Cannot deserialise value.")
+    pure . eitherDecode
 
 instance ToField C.ScriptHash where
-    toField = SQLBlob . C.serialiseToRawBytes
+  toField = SQLBlob . C.serialiseToRawBytesHex
 
 instance FromField C.ScriptHash where
-    fromField f = fromField f >>=
-        maybe (returnError ConversionFailed f "Cannot deserialise scriptDataHash.")
-          pure . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
-
+  fromField f = fromField f >>= either
+    (const $ returnError ConversionFailed f "Cannot deserialise scriptDataHash.")
+    pure . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
 
 instance FromField C.SlotNo where
   fromField f = C.SlotNo <$> fromField f
@@ -239,227 +267,372 @@ instance FromField C.BlockNo where
 instance ToField C.BlockNo where
   toField (C.BlockNo s) = SQLInteger $ fromIntegral s
 
+instance FromRow Spent where
+  fromRow = Spent <$> field <*> field <*> field <*> field
+
+instance ToRow Spent where
+  toRow s =
+    [ toField (s ^. sTxInTxId)
+    , toField (s ^. sTxInTxIx)
+    , toField (s ^. sSlotNo)
+    , toField (s ^. sBlockHash)
+    ]
+
+---------------------------------------------------------------------------------
+------------------------------- End sql mappings ---------------------------------
+
+-- | Open a connection to DB, and create resources
+-- The parameter ((k + 1) * 2) specifies the amount of events that are buffered.
+-- The larger the number, the more RAM the indexer uses. However, we get improved SQL
+-- queries due to batching more events together.
 open
-  :: FilePath  -- ^ sqlite file path
-  -> Depth
-  -> IO UtxoIndex
+  :: FilePath -- ^ sqlite file path
+  -> Depth    -- ^ The Depth parameter k, the larger K, the more RAM the indexer uses
+  -> IO UtxoIndexer
 open dbPath (Depth k) = do
-  -- The second parameter ((k + 1) * 2) specifies the amount of events that are buffered.
-  -- The larger the number, the more RAM the indexer uses. However, we get improved SQL
-  -- queries due to batching more events together.
-  ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
-  let conn = ix ^. Ix.handle
-  SQL.execute_ conn "DROP TABLE IF EXISTS unspent_transactions"
-  SQL.execute_ conn "DROP TABLE IF EXISTS spent"
-  SQL.execute_ conn [r|CREATE TABLE IF NOT EXISTS unspent_transactions
-                            (address TEXT NOT NULL
-                            ,txId TEXT NOT NULL
-                            , txIx INT NOT NULL
-                            , datum BLOB
-                            , datumHash BLOB
-                            , value TEXT
-                            , inLineScript BLOB
-                            , inLineScriptHash BLOB
-                            , slotNo INT
-                            , blockNo INT)|]
-  SQL.execute_ conn [r|CREATE TABLE IF NOT EXISTS spent
-                            (txId TEXT NOT NULL
-                            , txIx INT NOT NULL)|]
-  SQL.execute_ conn [r|CREATE INDEX IF NOT EXISTS
-                      unspent_transaction_address
-                      ON unspent_transactions (address)|]
-  SQL.execute_ conn [r|CREATE UNIQUE INDEX IF NOT EXISTS
-                      unspent_transaction_txid ON
-                      unspent_transactions (txId)|]
-  pure ix
+  c <- SQL.open dbPath
+  SQL.execute_ c "DROP TABLE IF EXISTS unspent_transactions"
+  SQL.execute_ c "DROP TABLE IF EXISTS spent"
+  SQL.execute_ c [r|CREATE TABLE IF NOT EXISTS unspent_transactions
+                      ( address TEXT NOT NULL
+                      , txId TEXT NOT NULL
+                      , txIx INT NOT NULL
+                      , datum TEXT
+                      , datumHash TEXT
+                      , value BLOB
+                      , inlineScript TEXT
+                      , inlineScriptHash TEXT
+                      , blockNo INT
+                      , slotNo INT
+                      , blockHash BLOB
+                      , UNIQUE (txId, txIx))|]
+  SQL.execute_ c [r|CREATE TABLE IF NOT EXISTS spent
+                      ( txInTxId TEXT PRIMARY KEY NOT NULL UNIQUE
+                      , txInTxIx INT NOT NULL
+                      , slotNo INT NOT NULL
+                      , blockHash BLOB NOT NULL)|]
+  SQL.execute_ c [r|CREATE INDEX IF NOT EXISTS
+                      spent_txid ON spent (slotNo)|]
+  SQL.execute_ c [r|CREATE INDEX IF NOT EXISTS
+                      unspent_transaction_address ON unspent_transactions (address)|]
+  emptyState k (UtxoHandle c (k * 2))
 
-eventAtAddress :: C.AddressAny -> UtxoEvent -> [UtxoEvent]
-eventAtAddress addr event =
-    let
-        utxosAtAddress :: [Utxo]
-        utxosAtAddress = event ^. utxoEventUtxos ^.. folded . filtered (\u -> (u ^. utxoAddress ) == addr)
-    in
-        if null utxosAtAddress  then []
-        else [event { _utxoEventUtxos = utxosAtAddress }]
+eventToSpent :: StorableEvent UtxoHandle -> [Spent]
+eventToSpent (UtxoEvent _ txIns _ cp) = case cp of
+  C.ChainPointAtGenesis -> [] -- There are no Spent in the Genesis block
+  (C.ChainPoint sn bh)  ->  fmap (\(C.TxIn txid txix) -> Spent txid txix sn bh ) . Set.toList $ txIns
 
-findByAddress :: C.AddressAny -> [UtxoEvent] -> [UtxoEvent]
-findByAddress addr = concatMap (eventAtAddress addr)
+-- | Store UtxoEvents
+-- Events are stored in memory and flushed to SQL, disk, when memory buffer has reached capacity
+--
+instance Buffered UtxoHandle where
+  persistToStorage
+    :: Foldable f
+    => f (StorableEvent UtxoHandle) -- ^ ues to store
+    -> UtxoHandle -- ^ handler for storing events
+    -> IO UtxoHandle
+  persistToStorage events h = do
+    let rows = concatMap eventsToRows events
+        spents = concatMap eventToSpent events
+        c = hdlConnection h
+    bracket_
+        (SQL.execute_ c "BEGIN")
+        (SQL.execute_ c "COMMIT")
+        (concurrently_
+         (unless
+          (null rows)
+          (SQL.executeMany c
+            [r|INSERT OR REPLACE INTO unspent_transactions
+                ( address, txId, txIx, datum, datumHash
+                , value , inlineScript, inlineScriptHash
+                , blockNo, slotNo, blockHash
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?)|] rows))
+         (unless
+          (null spents)
+          (SQL.executeMany c
+           [r|INSERT OR REPLACE INTO spent
+               ( txInTxId, txInTxIx, slotNo, blockHash
+               ) VALUES (?,?,?,?)|] spents)))
+  -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
+    rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
+    when (rndCheck == 42) $ do
+      SQL.execute_ c [r|DELETE FROM unspent_transactions
+                          WHERE unspent_transactions.rowid IN
+                            (SELECT unspent_transactions.rowid
+                             FROM unspent_transactions
+                               LEFT JOIN spent ON
+                                 unspent_transactions.txId = spent.txInTxId
+                               AND unspent_transactions.txIx = spent.txInTxIx
+                             WHERE spent.txInTxId IS NOT NULL)|]
+      SQL.execute_ c "VACUUM"
+    pure h
 
--- | remove spent transactions
-rmSpentUtxos :: UtxoEvent -> UtxoEvent
-rmSpentUtxos event =
-    event & utxoEventUtxos %~ (f (event ^. utxoEventInputs) )
-    where
-        f :: (Set C.TxIn) -> [Utxo] -> [Utxo]
-        f txIns utxos = filter (not . isUtxoSpent txIns) utxos
-        isUtxoSpent :: (Set C.TxIn) -> Utxo -> Bool
-        isUtxoSpent txIns u = ( C.TxIn (u ^. utxoTxId)(u ^. utxoTxIx)) `Set.member` txIns
+  getStoredEvents :: UtxoHandle -> IO [StorableEvent UtxoHandle]
+  getStoredEvents (UtxoHandle c sz) =  do
+    sns <- SQL.query c [r|SELECT slotNo FROM unspent_transactions
+                              GROUP BY slotNo
+                              ORDER BY slotNo DESC
+                              LIMIT ?|] (SQL.Only sz) :: IO [[Integer]]
+    -- Take the slot number of the sz'th slot
+    let sn = if null sns
+                then 0
+                else head . last $ take sz sns
+    rows :: [UtxoRow] <- SQL.query c
+                          [r|SELECT address, txId, txIx , datum , datumHash
+                                  , value , inlineScript, inlineScriptHash
+                                  , blockNo, slotNo, blockHash
+                                FROM unspent_transactions
+                                WHERE  slotNo >= ?
+                                GROUP by slotNo
+                                ORDER BY slotNo ASC|] (SQL.Only (sn :: Integer))
+    rowsToEvents (getTxIns c) rows
 
--- | convert utoEvents to utxoRows
-toRows :: UtxoEvent -> [UtxoRow]
-toRows event =  event ^. utxoEventUtxos & traversed %~ f
-    where
-        f :: Utxo -> UtxoRow
-        f  u = UtxoRow u (event ^. utxoEventSlotNo ) (event ^. utxoEventBlockNo)
+getTxIns :: SQL.Connection -> C.ChainPoint -> IO (Set C.TxIn)
+getTxIns _ C.ChainPointAtGenesis = pure Set.empty
+getTxIns c (C.ChainPoint slotNo blockHash) = do
+  let bh = C.serialiseToRawBytes blockHash
+  ins :: [(C.TxId, C.TxIx)] <- SQL.query c
+    "SELECT txInTxId, txInTxIx FROM spent WHERE blockHash=? and slotNo=?" (bh, slotNo)
+  pure . Set.fromList . fmap (uncurry C.TxIn) $ ins
+
+-- | convert UtxoEvents to UtxoRows
+rowsToEvents
+  :: (C.ChainPoint -> IO (Set C.TxIn))  -- ^ function that knows how to get corresponding TxIn
+  -> [UtxoRow]                                    -- ^ UtxoRows, source
+  -> IO [StorableEvent UtxoHandle]                -- ^ UtxoEvents
+rowsToEvents f rows = traverse eventFromRow  rows <&> foldl' g []
+  where
+    g :: [StorableEvent UtxoHandle] -> StorableEvent UtxoHandle -> [StorableEvent UtxoHandle]
+    g es e = case findIndex' e es of
+      Just n  ->
+        take n es <> [es !! n <> e] <> drop (n+1) es
+      Nothing -> e : es
+
+    findIndex' :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle] -> Maybe Int
+    findIndex' x xs = elemIndex (ueChainPoint x) (ueChainPoint <$> xs)
+
+    eventFromRow :: UtxoRow -> IO (StorableEvent UtxoHandle)
+    eventFromRow r = do
+      ins <- f (C.ChainPoint (r ^. urSlotNo)(r ^. urBlockHash) )
+      pure $ UtxoEvent
+        { ueUtxos  = Set.singleton (r ^. urUtxo)
+        , ueInputs = ins
+        , ueBlockNo = r ^. urBlockNo
+        , ueChainPoint = C.ChainPoint (r ^. urSlotNo) (r ^. urBlockHash)
+        }
+
+-- | convert utoEvents to urs
+eventsToRows :: StorableEvent UtxoHandle -> [UtxoRow]
+eventsToRows ( UtxoEvent utxos _ blockno (C.ChainPoint slotno hsh) ) =
+  fmap (\u -> UtxoRow u blockno slotno hsh) . Set.toList $ utxos
+eventsToRows ( UtxoEvent _ _ _ C.ChainPointAtGenesis ) = []
+-- | Filter for events at the given address
+eventsAtAddress
+  :: Foldable f
+  => StorableQuery UtxoHandle       -- ^ Address query
+  -> f (StorableEvent UtxoHandle)   -- ^ Utxo event
+  -> [StorableEvent UtxoHandle]     -- ^ Utxo event at thegiven address
+eventsAtAddress (UtxoAddress addr) = concatMap splitEventAtAddress
+  where
+    splitEventAtAddress :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle]
+    splitEventAtAddress event =
+      let
+        utxosAtAddress :: Set Utxo
+        utxosAtAddress = Set.filter (\u -> (u ^. address) == addr) . ueUtxos $ event
+      in
+        ([event {ueUtxos = utxosAtAddress} | not (null utxosAtAddress)])
+
 
 -- | only store rows in the address list.
-addressFilteredRows :: C.AddressAny -> [UtxoEvent] -> [UtxoRow]
-addressFilteredRows addr = (concatMap toRows ) . findByAddress addr
+addressFilteredRows
+  :: Foldable f
+  => StorableQuery UtxoHandle       -- ^ query
+  -> f (StorableEvent UtxoHandle)   -- ^ Utxo Event
+  -> [UtxoRow]                      -- ^ Rows at the query
+addressFilteredRows addr = concatMap eventsToRows . eventsAtAddress addr . toList
 
 -- | Query the data stored in the indexer
 -- Quries SQL + buffered data, where buffered data is the data that will be batched to SQL
-query
-  :: UtxoIndex                  -- ^ in-memory indexer
-  -> C.AddressAny               -- ^ Address to filter for
-  -> [UtxoEvent]                -- ^ volatile events that may be rollbacked
-  -> IO Result                  -- ^ search results
-query ix addr volatiles = do
-  diskStored <-
-      SQL.query
-        (ix ^. Ix.handle)
-        [r|SELECT u.address
-            , u.txId
-            , u.txIx
-            , u.datum
-            , u.datumHash
-            , u.value
-            , u.inLineScriptHash
-            , u.inLineScriptHash
-            , u.slotNo, u.blockNo
-       FROM unspent_transactions u
-       LEFT JOIN spent s ON u.txId = s.txId
-            AND u.txIx = s.txIx
-       WHERE u.address = ?|]
-       (Only addr) :: IO[UtxoRow]
-  buffered <- Ix.getBuffer $ ix ^. Ix.storage :: IO [UtxoEvent]
-  let events = volatiles ++ buffered
-  pure . Just $
-      ( concatMap toRows . fmap rmSpentUtxos . (findByAddress addr) $ events)
-      `union`
-      diskStored
+instance Queryable UtxoHandle where
+  queryStorage
+    :: Foldable f
+    => QueryInterval C.ChainPoint
+    -> f (StorableEvent UtxoHandle)
+    -> UtxoHandle
+    -> StorableQuery UtxoHandle
+    -> IO (StorableResult UtxoHandle)
+  queryStorage qi es (UtxoHandle c _) q@(UtxoAddress addr) = do
+    persisted <- case qi of
+      QEverything -> SQL.query c
+          [r|SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash
+                  , u.value, u.inlineScript, u.inlineScriptHash
+                  , u.blockNo, u.slotNo, u.blockHash
+             FROM unspent_transactions u
+             LEFT JOIN spent s ON
+                    u.txId = s.txInTxId
+                AND u.txId IS NOT NULL
+                AND u.txIx = s.txInTxIx
+             WHERE u.address = ?
+             ORDER BY u.slotNo ASC|] (Only (C.serialiseToRawBytes addr))
+      QInterval _ (C.ChainPoint sn _) -> SQL.query c
+          [r|SELECT u.address, u.txId, u.txIx , u.datum , u.datumHash
+                  , u.value , u.inlineScript, u.inlineScriptHash
+                  , u.blockNo, u.slotNo, u.blockHash
+             FROM unspent_transactions u
+             LEFT JOIN spent s ON
+                    u.txId = s.txInTxId
+                AND u.txIx = s.txInTxIx
+             WHERE
+                    u.slotNo <= ?
+                AND u.txId IS NOT NULL
+                AND u.address = ?
+             ORDER BY u.slotNo ASC|] (sn, C.serialiseToRawBytes addr)
+      QInterval _ C.ChainPointAtGenesis -> pure []
 
--- | Query the data stored in the indexer as a whole from:
-    -- + volatile  : in-memory, datat that may rollback
-    -- + diskStore : on-disk
-    -- + buffered  : in-memeoy, data that will flush to storage
-queryPlusVolatile
-  :: UtxoIndex                  -- ^ in-memory indexer
-  -> C.AddressAny               -- ^ Address to filter for
-  -> IO Result                  -- ^ search results
-queryPlusVolatile ix addr =
-  Ix.getEvents (ix ^. Ix.storage)  >>= query ix addr
+    es' <- queryBuffer qi es q (getTxIns c)
+    let rows = concatMap eventsToRows es'
+    pure . UtxoResult $ persisted <> rows
 
-onInsert :: UtxoIndex -> UtxoEvent -> IO [Notification]
-onInsert  _ _ =  pure []
+-- | Query the in incomming UtxoEvent
+queryBuffer
+  :: Foldable f
+  => QueryInterval C.ChainPoint
+  -> f (StorableEvent UtxoHandle)         -- ^ Utxo events
+  -> StorableQuery UtxoHandle             -- ^ Query
+  -> (C.ChainPoint -> IO (Set C.TxIn))    -- ^ Function that know how to get TxIns fron ChainPoint
+  -> IO [StorableEvent UtxoHandle]
+queryBuffer qi es q f
+  = filterSpent                   -- filter out the utxo that have had Spent
+  . filterWithQueryInterval qi    -- filter for the given slot interval
+  . eventsAtAddress q             -- query for the given address
+  $ es
+  where
+    filterSpent :: [StorableEvent UtxoHandle] -> IO [StorableEvent UtxoHandle]
+    filterSpent = traverse unspentEvents
 
-store :: UtxoIndex -> IO ()
-store ix = do
-  buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let rows =  (concatMap toRows) $  buffer
-      spent = concatMap (Set.toList . _utxoEventInputs) buffer
-      conn = ix ^. Ix.handle
-  bracket_
-      (SQL.execute_ conn "BEGIN")
-      (SQL.execute_ conn "COMMIT")
-      ( concurrently_
-            (unless (null rows)
-                (SQL.executeMany conn
-                "INSERT OR REPLACE INTO unspent_transactions (address, txId, txIx, datum, datumHash, value, inlineScript, inlineScriptHash, slotNo, blockNo) VALUES (?,?,?,?,?,?,?,?,?,?)"
-                rows))
-            (unless (null spent)
-                (SQL.executeMany conn
-                "INSERT OR REPLACE INTO spent (txId, txIx) VALUES (?, ?)"
-                spent))
-      )
-  -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
-  rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
-  when (rndCheck == 42) $ do
-    SQL.execute_ conn "DELETE FROM unspent_transactions WHERE unspent_transactions.rowid IN (SELECT unspent_transactions.rowid FROM unspent_transactions LEFT JOIN spent on unspent_transactions.txId = spent.txId AND unspent_transactions.txIx = spent.txIx WHERE spent.txId IS NOT NULL)"
-    SQL.execute_ conn "VACUUM"
+    unspentEvents :: StorableEvent UtxoHandle -> IO (StorableEvent UtxoHandle)
+    unspentEvents e = do
+      (txIns :: Set C.TxIn) <- f (ueChainPoint e)
+      let utxos = Set.filter (\(Utxo _ id' ix _ _ _ _ _) ->
+                                notElem (C.TxIn id' ix) txIns) . ueUtxos $ e
+      pure e {ueUtxos = utxos}
 
--- convert to AddressAny from address in any valid cardano era
+instance Rewindable UtxoHandle where
+  rewindStorage :: C.ChainPoint -> UtxoHandle -> IO (Maybe UtxoHandle)
+  rewindStorage (C.ChainPoint sn _) h@(UtxoHandle c _) = do
+    SQL.execute c "DELETE FROM unspent_transactions WHERE slotNo > ?" (SQL.Only sn)
+    SQL.execute c "DELETE FROM spent WHERE slotNo > ?" (SQL.Only sn)
+    pure $ Just h
+  rewindStorage C.ChainPointAtGenesis _ = pure Nothing
+
+-- For resuming we need to provide a list of points where we can resume from.
+instance Resumable UtxoHandle where
+  resumeFromStorage h = do
+    es <- Storable.getStoredEvents h
+    -- The ordering here matters. The node will try to find the first point in the
+    -- ledger, then move to the next and so on, so we will send the latest point
+    -- first.
+    pure $ map ueChainPoint es ++ [C.ChainPointAtGenesis]
+
+-- | convert from AddressInEra of the currentERa to AddressAny
 toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
 toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
 toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
 
--- UtxoIndexer
-getUtxos
-  :: (C.IsCardanoEra era)
-  => Maybe TargetAddresses
-  -> C.Tx era
-  -> [Utxo]
-getUtxos maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) =
-    either (const []) addressDiscriminator (getUtxos' txOuts)
-    where
-        addressDiscriminator :: [Utxo] -> [Utxo]
-        addressDiscriminator = case maybeTargetAddresses of
-            Just targetAddresses -> filter ( isAddressInTarget targetAddresses)
-            _                    -> id
+-- | Extract Utxos payload from Cardano Transaction
+-- Note, these Utxos will be decorated with additional data points to make a UtxoEvent
+--
+getUtxos :: (C.IsCardanoEra era) => Maybe TargetAddresses -> C.Tx era -> [Utxo]
+getUtxos maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent {C.txOuts}) _) =
+  either (const []) addressDiscriminator (getUtxos' txOuts)
+  where
+    addressDiscriminator :: [Utxo] -> [Utxo]
+    addressDiscriminator = case maybeTargetAddresses of
+      Just targetAddresses -> filter (isAddressInTarget targetAddresses)
+      _                    -> id
 
-        getUtxos' :: C.IsCardanoEra era => [C.TxOut C.CtxTx  era] -> Either C.EraCastError [Utxo]
-        getUtxos' = fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
+    getUtxos' :: C.IsCardanoEra era => [C.TxOut C.CtxTx era] -> Either C.EraCastError [Utxo]
+    getUtxos' = fmap (imap txoutToUtxo) . traverse (C.eraCast CurrentEra)
 
-        txoutToUtxo :: Int -> TxOut -> Utxo
-        txoutToUtxo  ix out =
-            let
-                _utxoTxIx = C.TxIx $ fromIntegral ix
-                _utxoTxId = C.getTxId txBody
-                (C.TxOut address' value' datum' refScript ) = out
-                _utxoAddress = toAddr address'
-                _utxoValue = C.txOutValueToValue value'
-                _utxoDatumHash = case datum' of
-                    (C.TxOutDatumHash _ d ) -> Just d
-                    _                       ->  Nothing
-                _utxoDatum = case datum' of
-                    (C.TxOutDatumInline _ d ) -> Just d
-                    _                         ->  Nothing
-                (_utxoInlineScript, _utxoInlineScriptHash) = case refScript of
-                    Shelley.ReferenceScriptNone -> (Nothing, Nothing)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.SimpleScriptLanguage (C.SimpleScriptV1) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.SimpleScriptLanguage (C.SimpleScriptV2) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.PlutusScriptLanguage (C.PlutusScriptV1) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-                    Shelley.ReferenceScript _
-                        (Shelley.ScriptInAnyLang
-                            (C.PlutusScriptLanguage (C.PlutusScriptV2) )
-                            script) -> (Just . C.serialiseToCBOR $ script, Just . C.hashScript $ script)    -- TODO this is hack to get pass build , Just . C.hashScript $ script)
-            in
-                Utxo {..}
+    txoutToUtxo :: Int -> TxOut -> Utxo
+    txoutToUtxo ix out = Utxo {..}
+      where
+        _txIx = C.TxIx $ fromIntegral ix
+        _txId = C.getTxId txBody
+        C.TxOut address' value' datum' refScript = out
+        _address = toAddr address'
+        _value = C.txOutValueToValue value'
+        (_datum, _datumHash) = getScriptDataAndHash datum'
+        (_inlineScript, _inlineScriptHash) =
+            getRefScriptAndHash refScript
+
+-- | get the inlineScript and inlineScriptHash
+--
+getRefScriptAndHash
+  :: Shelley.ReferenceScript era
+  -> (Maybe Shelley.ScriptInAnyLang, Maybe C.ScriptHash)
+getRefScriptAndHash refScript = case refScript of
+  Shelley.ReferenceScriptNone -> (Nothing, Nothing)
+  Shelley.ReferenceScript _ s@(Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV1) script) ->
+      ( Just  s
+      , Just . C.hashScript $ script)
+  Shelley.ReferenceScript _ s@(Shelley.ScriptInAnyLang (C.SimpleScriptLanguage C.SimpleScriptV2) script)->
+    ( Just s
+    , Just . C.hashScript $ script)
+  Shelley.ReferenceScript _ s@(Shelley.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) script)->
+    ( Just s
+    , Just . C.hashScript $ script)
+  Shelley.ReferenceScript _ s@(Shelley.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) script)->
+    ( Just s
+    , Just . C.hashScript $ script)
+
+-- | get the inlineDatum and inlineDatumHash
+getScriptDataAndHash
+  :: C.TxOutDatum ctx era
+  -> (Maybe C.ScriptData, Maybe (C.Hash C.ScriptData))
+getScriptDataAndHash (C.TxOutDatumHash _ h) = (Nothing, Just h)
+getScriptDataAndHash (C.TxOutDatumInline _ d) =
+  (Just d, (Just . C.hashScriptData) d)
+getScriptDataAndHash _ = (Nothing, Nothing)
+
+-- | remove spent transactions
+rmSpent :: Set C.TxIn -> [Utxo] -> [Utxo]
+rmSpent txins = filter (not . isUtxoSpent txins)
+  where
+    isUtxoSpent :: Set C.TxIn -> Utxo -> Bool
+    isUtxoSpent txIns u =
+        C.TxIn (u ^. txId) (u ^. txIx) `Set.member` txIns
+
+-- | Extract UtxoEvents from Cardano Transactions
 getUtxoEvents
   :: C.IsCardanoEra era
-  => Maybe TargetAddresses              -- ^ target addresses to filter for
-  -> C.SlotNo
-  -> C.BlockNo
+  => Maybe TargetAddresses -- ^ target addresses to filter for
   -> [C.Tx era]
-  -> Maybe UtxoEvent               -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
-getUtxoEvents maybeTargetAddresses slotNo blkNo txs =
-    let
-        utxos = (concat . fmap (getUtxos maybeTargetAddresses) $ txs )
-        ins  = foldl' Set.union Set.empty $ getInputs <$> txs
-    in
-        if null utxos then
-            Nothing
-        else
-            Just (UtxoEvent utxos ins slotNo blkNo)
+  -> C.BlockNo
+  -> C.ChainPoint
+  -> Maybe (StorableEvent UtxoHandle) -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
+getUtxoEvents maybeTargetAddresses txs blkNo cp =
+  let
+    utxos = Set.fromList(concatMap (getUtxos maybeTargetAddresses) txs)
+    ins = foldl' Set.union Set.empty $ getInputs <$> txs
+  in
+    if null utxos then Nothing
+    else Just (UtxoEvent utxos ins blkNo cp)
 
-getInputs
-  :: C.Tx era
-  -> Set C.TxIn
-getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCollateral}) _) =
-  let inputs = case txScriptValidityToScriptValidity txScriptValidity of
-        C.ScriptValid -> fst <$> txIns
-        C.ScriptInvalid -> case txInsCollateral of
-                                C.TxInsCollateralNone     -> []
-                                C.TxInsCollateral _ txins -> txins
-  in Set.fromList inputs
+getInputs :: C.Tx era -> Set C.TxIn
+getInputs (C.Tx (C.TxBody C.TxBodyContent
+                 { C.txIns
+                 , C.txScriptValidity
+                 , C.txInsCollateral
+                 }) _) =
+  let
+    inputs = case txScriptValidityToScriptValidity txScriptValidity of
+      C.ScriptValid -> fst <$> txIns
+      C.ScriptInvalid -> case txInsCollateral of
+        C.TxInsCollateralNone     -> []
+        C.TxInsCollateral _ txins -> txins
+  in
+    Set.fromList inputs
 
 -- | Duplicated from cardano-api (not exposed in cardano-api)
 -- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
@@ -469,11 +642,11 @@ txScriptValidityToScriptValidity C.TxScriptValidityNone                = C.Scrip
 txScriptValidityToScriptValidity (C.TxScriptValidity _ scriptValidity) = scriptValidity
 
 -- | does the transaction contain a targetAddress
-isAddressInTarget
-    :: TargetAddresses
-    -> Utxo
-    -> Bool
+isAddressInTarget :: TargetAddresses -> Utxo -> Bool
 isAddressInTarget targetAddresses utxo =
-    case (utxo ^. utxoAddress) of
-        C.AddressByron _      -> False
-        C.AddressShelley addr -> addr `elem` targetAddresses
+    case utxo ^. address  of
+      C.AddressByron _       -> False
+      C.AddressShelley addr' -> addr' `elem` targetAddresses
+
+mkQueryableAddresses :: TargetAddresses -> QueryableAddresses
+mkQueryableAddresses = fmap (UtxoAddress . C.toAddressAny)

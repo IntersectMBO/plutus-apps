@@ -40,7 +40,7 @@ genTest commands = do
   goldenVsStringDiff
     ( T.unpack $ T.unwords commands)
     (\expected actual -> ["diff", "--color=always", expected, actual])
-    (goldenFile)
+    goldenFile
     (generateHelpScreen commands)
 
 -- | Test generate  cli tests and parse the help screen.

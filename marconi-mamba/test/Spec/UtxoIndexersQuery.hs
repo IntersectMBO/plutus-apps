@@ -1,22 +1,23 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms   #-}
 {-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
+
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Spec.UtxoIndexersQuery (tests) where
 
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar)
 import Control.Lens.Operators ((^.))
-import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.STM (STM)
 import Data.List (nub)
 import Data.List.NonEmpty (fromList)
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, mapMaybe)
+import Data.Proxy (Proxy (Proxy))
+import Data.Set qualified as Set
 
 import Hedgehog (Gen, Property, forAll, property, (===))
+import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
@@ -24,79 +25,128 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 
 import Cardano.Api qualified as C
 import Gen.Cardano.Api.Typed qualified as CGen
-import Marconi.Api.Types (DBQueryEnv (DBQueryEnv), UtxoQueryTMVar (UtxoQueryTMVar))
-import Marconi.Api.UtxoIndexersQuery qualified as QApi
-import Marconi.Index.Utxo (Depth (Depth), open)
+import Marconi.Api.Types (HasUtxoIndexerEnv (uiIndexer))
+
+import Marconi.Api.UtxoIndexersQuery qualified as UIQ
 import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Types ()
-import RewindableIndex.Index.VSplit qualified as Ix
+import Marconi.Types (TargetAddresses)
+import RewindableIndex.Storable (StorableEvent)
+import RewindableIndex.Storable qualified as Storable
 
+genSlotNo :: Hedgehog.MonadGen m => m C.SlotNo
+genSlotNo = C.SlotNo <$> Gen.word64 (Range.linear 10 1000)
 
-tests :: TestTree
-tests = testGroup "marconi-mamba query specs" $
-    [testPropertyNamed "marconi-mamba query" "Spec. round-trip store and query utxos " queryUtxoTest
-    ]
-dbpath :: FilePath
-dbpath  = ":memory:"
+genBlockNo :: Hedgehog.MonadGen m => m C.BlockNo
+genBlockNo = C.BlockNo <$> Gen.word64 (Range.linear 100 1000)
 
--- | generate some Utxo events, store them and fetch them.
+genBlockHeader
+  :: Hedgehog.MonadGen m
+  => m C.BlockNo
+  -> m C.SlotNo
+  -> m C.BlockHeader
+genBlockHeader genB genS = do
+  let validByteSizeLength = 32
+  bs <- Gen.bytes(Range.singleton validByteSizeLength)
+  sn <- genS
+  bn <- genB
+  let (hsh :: C.Hash C.BlockHeader) =  fromJust $ C.deserialiseFromRawBytes(C.proxyToAsType Proxy) bs
+  pure (C.BlockHeader sn hsh bn)
+
+genChainPoint'
+  :: Hedgehog.MonadGen m
+  => m C.BlockNo
+  -> m C.SlotNo
+  -> m C.ChainPoint
+genChainPoint' genB genS = do
+  (C.BlockHeader sn hsh _) <- genBlockHeader genB genS
+  pure $ C.ChainPoint sn hsh
+
+genChainPoint :: Hedgehog.MonadGen m => m C.ChainPoint
+genChainPoint = genChainPoint' genBlockNo genSlotNo
+
+genTxIndex :: Gen C.TxIx
+genTxIndex = C.TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
+
+genShelleyUtxo :: Gen Utxo.Utxo
+genShelleyUtxo = do
+  _address          <- fmap  C.toAddressAny  CGen.genAddressShelley
+  _txId             <- CGen.genTxId
+  _txIx             <- genTxIndex
+  sc <- CGen.genTxOutDatumHashTxContext C.BabbageEra
+  let (_datum, _datumHash)  = Utxo.getScriptDataAndHash sc
+  script <- CGen.genReferenceScript C.ShelleyEra
+  _value            <- CGen.genValueForTxOut
+  let (_inlineScript, _inlineScriptHash)=  Utxo.getRefScriptAndHash script
+  pure $ Utxo.Utxo {..}
+
+genShelleyEvents :: Gen (Utxo.StorableEvent Utxo.UtxoHandle)
+genShelleyEvents = do
+  ueUtxos <- Gen.set (Range.linear 1 3) genShelleyUtxo
+  ueInputs <- Gen.set (Range.linear 1 2) CGen.genTxIn
+  ueBlockNo <- genBlockNo
+  ueChainPoint <- genChainPoint
+  pure $ Utxo.UtxoEvent {..}
+
+deriving instance Eq (StorableEvent Utxo.UtxoHandle)
+deriving instance Ord (StorableEvent Utxo.UtxoHandle)
+
+-- | Proves two list are equivalant, but not identical
 --
-queryUtxoTest :: Property
-queryUtxoTest = property $ do
-    qTMVar <- liftIO $ atomically (newEmptyTMVar :: STM (TMVar Utxo.UtxoIndex) )
-    let
-        callback :: QApi.UtxoIndex -> IO QApi.UtxoIndex
-        callback index = (atomically $ QApi.writeTMVar qTMVar  index ) >> pure index
-        utxoQueryTMVar = UtxoQueryTMVar qTMVar
-
-    depth <- forAll $ Gen.int (Range.linear 1  5) -- get some DB writes
-    ix <- liftIO $ open dbpath (Depth depth)
-    event <- forAll $ genEvents
-    let
-        rows :: [Utxo.UtxoRow]
-        rows = Utxo.toRows event
-        addresses :: [C.AddressAny]
-        addresses = nub . fmap (\r -> r ^. Utxo.utxoRowUtxo . Utxo.utxoAddress ) $ rows
-        targetAddressPairs :: [(C.AddressAny, C.Address C.ShelleyAddr)]
-        targetAddressPairs
-            = fmap (\(a, s) -> (a, fromJust s))
-            . filter (\(_ ,s) -> isJust s)
-            . (zip addresses)
-            . fmap addressAnyToShelley
-            $ addresses
-        targetAddresses = snd <$> targetAddressPairs
-        addressesAny = fst <$> targetAddressPairs
-        rowsInserted =
-            filter (\r -> (r ^. Utxo.utxoRowUtxo . Utxo.utxoAddress) `elem` addressesAny) rows
-        env = DBQueryEnv utxoQueryTMVar (fromList targetAddresses )
-    liftIO . void . mocUtxoWorker callback ix $ event
-    rowsRetrieved <-
-        liftIO
-        . fmap (concat )
-        . traverse (QApi.findByCardanoAddress env)
-        . fmap fst
-        $ targetAddressPairs
-    rowsRetrieved === rowsInserted
+equivalentLists :: Eq a => [a] -> [a] -> Bool
+equivalentLists us us' =
+  length us == length us'
+  &&
+  all (const True) [u `elem` us'| u <- us]
+  &&
+  all (const True) [u `elem` us| u <- us']
 
 -- | Insert events, and do the callback
 mocUtxoWorker
-    :: (QApi.UtxoIndex -> IO (QApi.UtxoIndex))
-    -> QApi.UtxoIndex
-    -> Utxo.UtxoEvent
-    -> IO ()
-mocUtxoWorker callback ix event =
-     void (Ix.insert event ix >>= callback)
+  :: (UIQ.UtxoIndexer -> IO ())
+  -> [Utxo.StorableEvent Utxo.UtxoHandle]
+  -> Utxo.Depth
+  -> IO ()
+mocUtxoWorker callback events depth =
+  Utxo.open ":memory:" depth >>= Storable.insertMany events >>= callback
 
-genBlockNo :: Gen C.BlockNo
-genBlockNo = C.BlockNo <$> Gen.word64 Range.constantBounded
+tests :: TestTree
+tests = testGroup "marconi-mamba query Api Specs"
+    [testPropertyNamed
+     "marconi-mamba query-target-addresses"
+     "Spec. Insert events and query for utxo's with address in the generated ShelleyEra targetAddresses"
+     queryTargetAddressTest
+    ]
 
-genEvents :: Gen Utxo.UtxoEvent
-genEvents = do
-    slotNo <- CGen.genSlotNo
-    blockNo  <- genBlockNo
-    txs <- Gen.list (Range.linear 3 10)(CGen.genTx C.ShelleyEra)
-    pure . fromJust $ Utxo.getUtxoEvents Nothing slotNo blockNo txs
+-- | generate some Utxo events, store them and fetch them.
+--
+queryTargetAddressTest :: Property
+queryTargetAddressTest = property $ do
+  events <- forAll $ Gen.list (Range.linear 1 3) genShelleyEvents
+  depth <- forAll $ Gen.int (Range.linear 6 9) -- force DB writes
+  let
+    targetAddresses :: TargetAddresses
+    targetAddresses
+      = fromList
+      . mapMaybe addressAnyToShelley
+      . nub
+      . fmap Utxo._address
+      . concatMap (Set.toList . Utxo.ueUtxos)
+      $ events
+  env <- liftIO . UIQ.bootstrap $ targetAddresses
+  let
+    callback :: Utxo.UtxoIndexer -> IO ()
+    callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer)
+  liftIO . mocUtxoWorker callback events $ Utxo.Depth depth
+  fetchedRows <-
+    liftIO
+    . fmap (nub . concat)
+    . traverse (UIQ.findByCardanoAddress env)
+    . fmap C.toAddressAny
+    $ targetAddresses
+  let rows = nub . concatMap Utxo.eventsToRows $ events
+  length fetchedRows === length rows
+  Hedgehog.diff fetchedRows equivalentLists rows
 
 addressAnyToShelley :: C.AddressAny -> Maybe (C.Address C.ShelleyAddr)
-addressAnyToShelley  (C.AddressShelley a )=Just a
+addressAnyToShelley  (C.AddressShelley a ) = Just a
 addressAnyToShelley  _                     = Nothing

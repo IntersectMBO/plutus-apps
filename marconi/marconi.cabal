@@ -82,10 +82,10 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , aeson
     , async
     , base
     , bytestring
-    , cardano-crypto-class
     , containers
     , filepath
     , lens
@@ -93,7 +93,6 @@ library
     , optparse-applicative
     , ouroboros-consensus-cardano
     , ouroboros-consensus-shelley
-    , parsec
     , prettyprinter
     , raw-strings-qq
     , serialise
@@ -185,7 +184,6 @@ test-suite marconi-test
     , stm
     , streaming
     , tasty
-    , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
     , temporary

@@ -9,6 +9,7 @@ import Control.Exception (catch)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
 import Data.Text (pack)
+import Network.Wai.Handler.Warp (defaultSettings, setPort)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
@@ -18,12 +19,11 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Marconi.Api.HttpServer qualified as Http
-import Marconi.Api.Types (CliArgs (CliArgs), HasDBQueryEnv (queryTMVar), HasJsonRpcEnv (queryEnv),
-                          JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber, TargetAddresses,
-                          UtxoQueryTMVar (UtxoQueryTMVar))
-import Marconi.Api.UtxoIndexersQuery qualified as QApi
+import Marconi.Api.Types (CliArgs (CliArgs), HasJsonRpcEnv (queryEnv), HasUtxoIndexerEnv (uiIndexer),
+                          JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber)
+import Marconi.Api.UtxoIndexersQuery (UtxoIndexer, bootstrap, writeTMVar')
 import Marconi.Indexers (mkIndexerStream, startIndexers, utxoWorker)
-import Network.Wai.Handler.Warp (defaultSettings, setPort)
+import Marconi.Types (TargetAddresses)
 
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache
@@ -33,7 +33,7 @@ bootstrapJsonRpc
     -> TargetAddresses
     -> IO JsonRpcEnv
 bootstrapJsonRpc maybePort targetAddresses = do
-    queryenv <- QApi.bootstrap targetAddresses
+    queryenv <- bootstrap targetAddresses
     let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
     pure $ JsonRpcEnv
         { _httpSettings = httpsettings
@@ -51,9 +51,8 @@ bootstrapUtxoIndexers
     -> JsonRpcEnv
     -> IO ()
 bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
-  let (UtxoQueryTMVar qTMVar) = env ^. queryEnv . queryTMVar
-      callbackIndexer :: QApi.UtxoIndex -> IO QApi.UtxoIndex
-      callbackIndexer index = atomically $ QApi.writeTMVar qTMVar index >> pure index
+  let callbackIndexer :: UtxoIndexer -> IO ()
+      callbackIndexer = atomically . writeTMVar' (env ^. queryEnv . uiIndexer)
   (_, coordinator) <-
       startIndexers [( utxoWorker callbackIndexer (Just targetAddresses)
                      , dbPath )]

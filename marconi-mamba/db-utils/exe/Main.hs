@@ -5,11 +5,9 @@ import Marconi.DB.SqlUtils (bootstrap, freqShelleyTable, freqUtxoTable)
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, showDefault, strOption, value,
                             (<**>))
 
-data CliOptions = CliOptions
+newtype CliOptions = CliOptions
     { utxoPath  :: FilePath -- ^ path to utxo sqlite database
     }
-
--- |
 
 cliParser :: Parser CliOptions
 cliParser = CliOptions
@@ -17,7 +15,7 @@ cliParser = CliOptions
                               <> short 'd'
                               <> metavar "FILENAME"
                               <>  showDefault
-                              <> value "./.marconidb/4/utxo-db"
+                              <> value "./.marconidb/utxodb"
                               <> help "Path to the marconi database.")
 main :: IO ()
 main  = do

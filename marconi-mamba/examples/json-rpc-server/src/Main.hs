@@ -15,12 +15,12 @@ import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, strOption, (<**>))
 
-import Marconi.Api.Types (DBQueryEnv, HasDBQueryEnv (queryTMVar), HasJsonRpcEnv (queryEnv), TargetAddresses,
-                          unUtxoIndex)
-import Marconi.Api.UtxoIndexersQuery (writeTMVar)
+import Marconi.Api.Types (UtxoIndexerEnv, queryEnv, uiIndexer)
+import Marconi.Api.UtxoIndexersQuery qualified as UIQ
 import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc)
 import Marconi.CLI (multiString)
-import Marconi.Index.Utxo (Depth (Depth), open)
+import Marconi.Index.Utxo qualified as Utxo
+import Marconi.Types (TargetAddresses)
 
 
 data CliOptions = CliOptions
@@ -51,9 +51,10 @@ main = do
 -- | moc marconi utxo indexer.
 -- This will allow us to use the UtxoIndexer query interface without having cardano-node or marconi online
 -- Effectively we are going to query SQLite only
-mocUtxoIndexer :: FilePath -> DBQueryEnv -> IO ()
+mocUtxoIndexer :: FilePath -> UtxoIndexerEnv -> IO ()
 mocUtxoIndexer dbpath env =
-        open dbpath (Depth 4) >>= atomically . (writeTMVar utxoIndexer) >> innerLoop
+        Utxo.open dbpath (Utxo.Depth 4) >>= callback >> innerLoop
     where
-        utxoIndexer = unUtxoIndex $ env ^. queryTMVar
-        innerLoop = threadDelay 1000000 >> innerLoop -- create some latency
+      callback :: Utxo.UtxoIndexer -> IO ()
+      callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer)
+      innerLoop = threadDelay 1000000 >> innerLoop -- create some latency

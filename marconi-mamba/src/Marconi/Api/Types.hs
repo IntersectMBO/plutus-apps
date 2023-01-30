@@ -17,32 +17,19 @@
 
 -- |
 -- This module provides support for writing handlers for JSON-RPC endpoints
-module Marconi.Api.Types
-    (TargetAddresses
-    , RpcPortNumber
-    , CliArgs (..)
-    , DBQueryEnv (..)
-    , HasDBQueryEnv (..)
-    , JsonRpcEnv (..)
-    , HasJsonRpcEnv (..)
-    , UtxoRowWrapper (..)
-    , UtxoTxOutReport (..)
-    , UtxoQueryTMVar (..)
-    , QueryExceptions (..)
-                         )  where
+module Marconi.Api.Types  where
+
+import Control.Concurrent.STM.TMVar (TMVar)
 import Control.Exception (Exception)
 import Control.Lens (makeClassy)
-import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding)
-import Data.Aeson qualified
-import Data.ByteString (ByteString)
-import Data.Text (Text, pack)
-import Data.Text.Encoding (decodeLatin1)
+import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding, object, (.=))
+import Data.Aeson qualified as Aeson
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (Settings)
 
 import Cardano.Api qualified as C
-import Marconi.Index.Utxo (Utxo, UtxoRow)
-import Marconi.Indexers (UtxoQueryTMVar (UtxoQueryTMVar, unUtxoIndex))
+import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types as Export (TargetAddresses)
 
 -- | Type represents http port for JSON-RPC
@@ -56,28 +43,49 @@ data CliArgs = CliArgs
   , targetAddresses :: TargetAddresses      -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
 
-data DBQueryEnv = DBQueryEnv
-    { _queryTMVar     :: UtxoQueryTMVar
-    , _queryAddresses :: TargetAddresses        -- ^ user provided addresses to filter
+newtype UtxoIndexerWrapper = UtxoIndexerWrapper
+    { unWrap :: TMVar Utxo.UtxoIndexer           -- ^ for query thread to access in-memory utxos
     }
-makeClassy ''DBQueryEnv
+
+data UtxoIndexerEnv = UtxoIndexerEnv
+    { _uiIndexer    :: UtxoIndexerWrapper
+    , _uiQaddresses :: TargetAddresses        -- ^ user provided addresses to filter
+    }
+makeClassy ''UtxoIndexerEnv
 
 -- | JSON-RPC configuration
 data JsonRpcEnv = JsonRpcEnv
     { _httpSettings :: Settings               -- ^ HTTP server setting
-    , _queryEnv     :: DBQueryEnv             -- ^ used for query sqlite
+    , _queryEnv     :: UtxoIndexerEnv         -- ^ used for query sqlite
     }
 makeClassy ''JsonRpcEnv
 
-data UtxoTxOutReport = UtxoTxOutReport
-    { bech32Address :: Text
-    , utxoReport    :: [UtxoRow]
+instance ToJSON C.ScriptData where
+  toJSON = C.scriptDataToJson C.ScriptDataJsonDetailedSchema
+
+
+instance ToJSON Utxo.Utxo where
+  toJSON (Utxo.Utxo addr tId tIx dtum dtumHash val scrpt scrptHash) = object
+    ["address"            .=  addr
+    , "txId"              .= tId
+    , "txIx"              .= tIx
+    , "datum"             .= dtum
+    , "datumHash"         .= dtumHash
+    , "value"             .= val
+    , "inlineScript"      .= scrpt
+    , "inlineScriptHash"  .= scrptHash
+    ]
+
+data UtxoReport = UtxoReport
+    { urAddress :: Text
+    , urReport  :: [Utxo.UtxoRow]
     } deriving (Eq, Ord, Generic)
 
-instance ToJSON UtxoTxOutReport where
+instance ToJSON UtxoReport where
     toEncoding = genericToEncoding defaultOptions
 
-newtype UtxoRowWrapper = UtxoRowWrapper UtxoRow deriving (Eq, Ord, Show, Generic)
+newtype UtxoRowWrapper = UtxoRowWrapper Utxo.UtxoRow
+  deriving (Eq, Ord, Show, Generic)
 
 instance ToJSON UtxoRowWrapper where
     toEncoding = genericToEncoding defaultOptions
@@ -90,17 +98,20 @@ data QueryExceptions
     deriving stock Show
     deriving anyclass  Exception
 
+
 instance ToJSON C.AddressAny where
-    toJSON = Data.Aeson.String . C.serialiseAddress
+    toJSON  = Aeson.String . C.serialiseAddress
 
-instance ToJSON C.ScriptData where
-    toJSON = Data.Aeson.String . pack . show
+-- instance ToJSON ByteString where toJSON = Data.Aeson.String . decodeUtf8
 
-instance ToJSON ByteString where
-    toJSON = Data.Aeson.String . decodeLatin1
-
-instance ToJSON Utxo
+instance ToJSON (Utxo.StorableQuery Utxo.UtxoHandle) where
+  toJSON (Utxo.UtxoAddress addr) = toJSON addr
 
 instance ToJSON C.BlockNo
 
-instance ToJSON UtxoRow
+instance ToJSON Utxo.UtxoRow where
+  toJSON (Utxo.UtxoRow u b s h) = object
+    [ "utxo" .= u
+    ,  "blockNo" .= b
+    ,  "slotNo" .= s
+    ,  "blockHeaderHash" .= h]

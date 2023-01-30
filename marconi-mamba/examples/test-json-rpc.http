@@ -23,9 +23,9 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReport"
-, "params": "addr_test1qqwh05w69g95065zlr4fef4yfpjkv8r3dr9h3pu0egy5n7pwhxp4f95svdjr9dmtqumqcs6v49s6pe7ap4h2nv8rcaasgrkndk"
-, "id": 91
+, "method": "utxoJsonReport"
+, "params": "addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0"
+, "id": 2
 }
 #
 # lookup fot txoutrefs , should return result, high
@@ -33,7 +33,7 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReport"
+, "method": "utxoJsonReport"
 , "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"
 , "id": 92
 }
@@ -43,20 +43,31 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReport"
-, "params": "addr1q86naxdettc4r8rhls2xqs97kpkd79tvkplrv5lf8e6tfyygy9uwd947cp8mqh8kl04pazxjs9tmyystyv0nhpmc852srht88w"
-, "id":19
+, "method": "utxoJsonReport"
+, "params": "addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj"
+, "id":21
 }
 #
-# fetch 100 rows from sqlite
-# Note: this may break the applicaiton depending on how large the database is
-# We have a todo item to convert this endpoint to streams
-# This version of marconi-mamba simply ignores `100` and returns all rows from database. This is a todo item for next release
+# addresses with non null dautm
+#
+# "addr_test1wqnp362vmvr8jtc946d3a3utqgclfdl5y9d3kn849e359hst7hkqk"
+# addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj
+# addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0
+#
+# WHERE datum  IS NOT NULL AND inLineScript IS NOT NULL
+#
+#addr_test1wqnp362vmvr8jtc946d3a3utqgclfdl5y9d3kn849e359hst7hkqk
+#addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj
+#addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0
+
+#
+# issue non-existing mthode
+# it should fail with code -32601, unknown method
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoTxOutReports"
+, "method": "utxoJsonReports"
 , "params": 100
 , "id": 14
 }

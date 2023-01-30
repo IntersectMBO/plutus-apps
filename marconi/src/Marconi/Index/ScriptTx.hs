@@ -32,7 +32,7 @@ import Cardano.Ledger.Crypto qualified as LedgerCrypto
 import Cardano.Ledger.Keys qualified as LedgerShelley
 import Cardano.Ledger.Shelley.Scripts qualified as LedgerShelley
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as Timelock
-
+import Marconi.Types ()
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
                                  Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent,
@@ -151,11 +151,6 @@ instance SQL.FromField (Hash BlockHeader) where
       SQL.fromField f <&>
         fromMaybe (error "Cannot deserialise block hash") .
           C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
-
-instance Ord ChainPoint where
-   ChainPointAtGenesis <= _                = True
-   _ <= ChainPointAtGenesis                = False
-   (ChainPoint sn _) <= (ChainPoint sn' _) = sn <= sn'
 
 -- * Indexer
 
