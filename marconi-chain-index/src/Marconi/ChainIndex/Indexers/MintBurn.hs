@@ -9,6 +9,20 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -Wno-orphans     #-}
 
+{- | Mint/burn event indexer, the result of which is an sqlite database
+   'mintburn.db' which has a table 'minting_policy_events' with the
+   following fields:
+
+     - slotNo          INT NOT NULL
+     - blockHeaderHash INT NOT NULL
+     - txId            BLOB NOT NULL
+     - policyId        BLOB NOT NULL
+     - assetName       TEXT NOT NULL
+     - quantity        INT NOT NULL
+     - redeemerIx      INT NOT NULL
+     - redeemerData    BLOB NOT NULL
+-}
+
 module Marconi.ChainIndex.Indexers.MintBurn where
 
 import Control.Lens (view, (&), (^.))
