@@ -63,17 +63,17 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
         C.AlonzoEra  ->
             ( PS.verifySchnorrAssetIdV1,
               PS.verifyEcdsaAssetIdV1,
-              PS.verifySchnorrMintWitnessV1,
-              PS.verifyEcdsaMintWitnessV1 )
+              PS.verifySchnorrMintWitnessV1 era,
+              PS.verifyEcdsaMintWitnessV1 era )
         C.BabbageEra ->
             ( PS.verifySchnorrAssetIdV2,
               PS.verifyEcdsaAssetIdV2,
-              PS.verifySchnorrMintWitnessV2,
-              PS.verifyEcdsaMintWitnessV2 )
+              PS.verifySchnorrMintWitnessV2 era,
+              PS.verifyEcdsaMintWitnessV2 era )
 
     tokenValues = C.valueFromList [(verifySchnorrAssetId, 4), (verifyEcdsaAssetId, 2)]
     txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
-    mintWitnesses = Map.fromList [verifySchnorrMintWitness era, verifyEcdsaMintWitness era]
+    mintWitnesses = Map.fromList [verifySchnorrMintWitness, verifyEcdsaMintWitness]
     collateral = TN.txInsCollateral era [txIn]
     txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]

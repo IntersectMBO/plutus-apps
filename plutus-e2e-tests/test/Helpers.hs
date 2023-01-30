@@ -38,33 +38,41 @@ import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.Plutus qualified as TN
 
-unsafeFromEither :: Show l => Either l r -> r
-unsafeFromEither (Left err)    = error (show err)
-unsafeFromEither (Right value) = value
+-- | Right from Either or throw Left error
+unsafeFromRight :: Show l => Either l r -> r
+unsafeFromRight (Left err)    = error (show err)
+unsafeFromRight (Right value) = value
 
+-- | Maybe throw error
 unsafeFromMaybe :: Maybe a -> a
 unsafeFromMaybe Nothing  = error "not just, nothing."
 unsafeFromMaybe (Just a) = a
 
+-- | Check whether the auto-balancing txbody build (constructBalancedTx) resulted in an error
 isTxBodyScriptExecutionError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
-isTxBodyScriptExecutionError expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` (show m)
-isTxBodyScriptExecutionError _ _                                                   = False
+isTxBodyScriptExecutionError
+  expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` (show m)
+isTxBodyScriptExecutionError _ _                        = False
 
+-- | Get path to where cardano-testnet files are
 getProjectBase :: (MonadIO m, MonadTest m) => m String
 getProjectBase = liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
+-- | Any CardanoEra with CardanoMode
 toEraInCardanoMode :: C.CardanoEra era -> (C.EraInMode era C.CardanoMode)
 toEraInCardanoMode era = fromMaybe $ C.toEraInMode era C.CardanoMode
   where
     fromMaybe Nothing    = error $ "No mode for this era " ++ show era ++ " in CardanoMode"
     fromMaybe (Just eim) = eim
 
+-- | Any CardanoEra to one that supports tokens. Used for building TxOut.
 multiAssetSupportedInEra :: C.CardanoEra era -> C.MultiAssetSupportedInEra era
 multiAssetSupportedInEra era = fromEither $ C.multiAssetSupportedInEra era
   where
     fromEither (Left _)  = error $ "Era must support MA"
     fromEither (Right m) = m
 
+-- | Treat CardanoEra as ShelleyBased to satisfy constraint on constructBalancedTx.
 withIsShelleyBasedEra :: C.CardanoEra era -> (C.IsShelleyBasedEra era => r) -> r
 withIsShelleyBasedEra era r =
     case era of
@@ -72,7 +80,7 @@ withIsShelleyBasedEra era r =
         C.BabbageEra -> r
         _            -> error "Must use Alonzo or Babbage era"
 
--- | Maybe converts a C.CardanoEra to a C.ShelleyBasedEra.
+-- | Converts a C.CardanoEra to a C.ShelleyBasedEra. Used for querying in Shelley-based era.
 cardanoEraToShelleyBasedEra :: C.CardanoEra era -> C.ShelleyBasedEra era
 cardanoEraToShelleyBasedEra cEra = case cEra of
     C.AlonzoEra  -> C.ShelleyBasedEraAlonzo
@@ -100,7 +108,7 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
 
--- | Start a testnet.
+-- | Start a testnet with provided testnet options (including era and protocol version)
 startTestnet :: C.CardanoEra era
   -> TN.TestnetOptions
   -> FilePath
@@ -114,10 +122,9 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
       Nothing
   tn <- TN.testnet testnetOptions conf
 
-  -- Boilerplate codecs used for protocol serialisation.  The number
-  -- of epochSlots is specific to each blockchain instance. This value
-  -- what the cardano main and testnet uses. Only applies to the Byron
-  -- era.
+  -- Boilerplate codecs used for protocol serialisation. The number of epochSlots is specific
+  -- to each blockchain instance. This value is used by cardano mainnet/testnet and only applies
+  -- to the Byron era.
   socketPathAbs <- getPoolSocketPathAbs conf tn
   let epochSlots = C.EpochSlots 21600
       localNodeConnectInfo =
@@ -131,9 +138,11 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
   pure (localNodeConnectInfo, pparams, networkId)
 
+-- | Network ID of the testnet
 getNetworkId :: TN.TestnetRuntime -> C.NetworkId
 getNetworkId tn = C.Testnet $ C.NetworkMagic $ fromIntegral (TN.testnetMagic tn)
 
+-- | Path to a pool node's unix socket
 getPoolSocketPathAbs :: (MonadTest m, MonadIO m) => TC.Conf -> TN.TestnetRuntime -> m FilePath
 getPoolSocketPathAbs conf tn = do
   let tempAbsPath = TC.tempAbsPath conf
@@ -141,6 +150,7 @@ getPoolSocketPathAbs conf tn = do
   socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
   pure socketPathAbs
 
+-- | Query network's protocol parameters
 getProtocolParams :: (MonadIO m, MonadTest m) => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
 getProtocolParams era localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
   $ C.queryNodeLocalState localNodeConnectInfo Nothing
@@ -151,6 +161,7 @@ readAs as path = do
   path' <- H.note path
   H.leftFailM . liftIO $ C.readFileTextEnvelope as path'
 
+-- | Signing key and address for wallet 1
 w1 :: (MonadIO m, MonadTest m)
   => FilePath
   -> C.NetworkId
@@ -171,6 +182,7 @@ w1 tempAbsPath' networkId = do
 
   return (genesisSKey, address)
 
+-- | Build TxOut for spending or minting with no datum or reference script present
 txOutNoDatumOrRefScript :: C.CardanoEra era
   -> C.Value
   -> C.Address C.ShelleyAddr
@@ -184,6 +196,24 @@ txOutNoDatumOrRefScript era value address = C.TxOut
     fromMaybe Nothing    = error $ "Era must be ShelleyBased"
     fromMaybe (Just aie) = aie
 
+-- | Build TxOut with a reference script present
+txOutWithRefScript :: C.CardanoEra era
+  -> C.Value
+  -> C.Address C.ShelleyAddr
+  -> C.Script lang
+  -> C.TxOut ctx era
+txOutWithRefScript era value address script = C.TxOut
+    (fromMaybe $ C.anyAddressInEra era $ C.toAddressAny address)
+    (C.TxOutValue (multiAssetSupportedInEra era) value)
+    C.TxOutDatumNone
+    (case era of
+      C.BabbageEra ->
+        C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra $ C.toScriptInAnyLang script)
+  where
+    fromMaybe Nothing    = error $ "Era must be ShelleyBased"
+    fromMaybe (Just aie) = aie
+
+-- | Find the first UTxO at address and return as TxIn. Used for txbody's txIns.
 firstTxIn :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> C.LocalNodeConnectInfo C.CardanoMode
@@ -191,22 +221,26 @@ firstTxIn :: (MonadIO m, MonadTest m)
   -> m C.TxIn
 firstTxIn era = txInFromUtxo era 0
 
+-- | Find UTxO at address by index and return as TxIn. Used for txbody's txIns.
 txInFromUtxo :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
-  -> Int -> C.LocalNodeConnectInfo C.CardanoMode
+  -> Int
+  -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> m C.TxIn
-txInFromUtxo era i localNodeConnectInfo address = do
-  atM i =<< txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
+txInFromUtxo era idx localNodeConnectInfo address = do
+  atM idx =<< txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
   where
     atM :: (MonadTest m) => Int -> [a] -> m a
     atM i' l = return $ l !! i'
 
+-- | Get TxIns from all UTxOs
 txInsFromUtxo :: (MonadIO m) => C.UTxO era -> m [C.TxIn]
 txInsFromUtxo utxos = do
   let (txIns, _) = unzip $ Map.toList $ C.unUTxO utxos
   return txIns
 
+-- | Query ledger for UTxOs at address
 findUTxOByAddress
   :: (MonadIO m, MonadTest m)
   => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
@@ -241,7 +275,7 @@ getAddressTxInsValue era con address = do
     values = map (\case C.TxOut _ v _ _ -> C.txOutValueToValue v) txOuts
   pure (txIns, (mconcat values))
 
--- | An empty transaction
+-- | Empty transaction body to begin building from.
 emptyTxBodyContent :: C.CardanoEra era -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx era
 emptyTxBodyContent era pparams = C.TxBodyContent
   { C.txIns              = []
@@ -270,11 +304,14 @@ emptyTxBodyContent era pparams = C.TxBodyContent
     fromTxFeesExplicit (Left _)    = error "Era must support explicit fees"
     fromTxFeesExplicit (Right tfe) = tfe
 
+-- | Produce collateral inputs if era supports it. Used for building txbody.
 txInsCollateral :: C.CardanoEra era -> [C.TxIn] -> C.TxInsCollateral era
 txInsCollateral era txIns = case C.collateralSupportedInEra era of
     Nothing        -> error "era supporting collateral only"
     Just supported -> C.TxInsCollateral supported txIns
 
+-- | Get TxId from a signed transaction to produce a TxIn.
+--   Useful for asserting expected TxOut is onchain after submitting transaction.
 txInFromSignedTx :: C.Tx era -> Int -> C.TxIn
 txInFromSignedTx signedTx txIx = C.TxIn (C.getTxId $ C.getTxBody signedTx) (C.TxIx $ fromIntegral txIx)
 

@@ -9,6 +9,7 @@
 module Main(main) where
 
 import Spec.Builtins.SECP256k1 qualified
+import Spec.ReferenceScript qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -17,4 +18,5 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "Plutus E2E" [
     Spec.Builtins.SECP256k1.tests
+  , Spec.ReferenceScript.tests
     ]

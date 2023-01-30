@@ -107,6 +107,7 @@ test-suite plutus-e2e-tests-test
     Helpers
     PlutusScripts
     Spec.Builtins.SECP256k1
+    Spec.ReferenceScript
 
   --------------------
   -- Local components
