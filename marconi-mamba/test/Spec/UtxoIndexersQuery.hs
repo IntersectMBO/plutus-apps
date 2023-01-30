@@ -122,7 +122,7 @@ tests = testGroup "marconi-mamba query Api Specs"
 queryTargetAddressTest :: Property
 queryTargetAddressTest = property $ do
   events <- forAll $ Gen.list (Range.linear 1 3) genShelleyEvents
-  depth <- forAll $ Gen.int (Range.linear 6 9 ) -- force DB writes
+  depth <- forAll $ Gen.int (Range.linear 6 9) -- force DB writes
   let
     targetAddresses :: TargetAddresses
     targetAddresses
@@ -143,7 +143,7 @@ queryTargetAddressTest = property $ do
     . traverse (UIQ.findByCardanoAddress env)
     . fmap C.toAddressAny
     $ targetAddresses
-  let rows = nub . concatMap Utxo.toUtxoRows $ events
+  let rows = nub . concatMap Utxo.eventsToRows $ events
   length fetchedRows === length rows
   Hedgehog.diff fetchedRows equivalentLists rows
 

@@ -9,7 +9,8 @@ module Spec.Utxo (tests) where
 import Control.Lens (filtered, folded, toListOf, traversed)
 import Control.Lens.Operators ((%~), (^.))
 import Control.Monad.IO.Class (liftIO)
-import Data.List (nub)
+import Data.ByteString (ByteString)
+import Data.List (nub, sort)
 import Data.List.NonEmpty (nonEmpty, toList)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Proxy (Proxy (Proxy))
@@ -27,7 +28,7 @@ import Cardano.Api qualified as C
 import Gen.Cardano.Api.Typed qualified as CGen
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types (CurrentEra, TargetAddresses)
-import RewindableIndex.Storable (StorableEvent, StorableQuery)
+import RewindableIndex.Storable (StorableEvent, StorableQuery, resume)
 import RewindableIndex.Storable qualified as Storable
 
 genSlotNo :: Hedgehog.MonadGen m => m C.SlotNo
@@ -36,17 +37,20 @@ genSlotNo = C.SlotNo <$> Gen.word64 (Range.linear 10 1000)
 genBlockNo :: Hedgehog.MonadGen m => m C.BlockNo
 genBlockNo = C.BlockNo <$> Gen.word64 (Range.linear 100 1000)
 
+validByteSizeLength :: Int
+validByteSizeLength = 32
+
 genBlockHeader
   :: Hedgehog.MonadGen m
   => m C.BlockNo
   -> m C.SlotNo
   -> m C.BlockHeader
 genBlockHeader genB genS = do
-  let validByteSizeLength = 32
   bs <- Gen.bytes(Range.singleton validByteSizeLength)
   sn <- genS
   bn <- genB
-  let (hsh :: C.Hash C.BlockHeader) =  fromJust $ C.deserialiseFromRawBytes(C.proxyToAsType Proxy) bs
+  let (hsh :: C.Hash C.BlockHeader) =
+        fromJust $ C.deserialiseFromRawBytes(C.proxyToAsType Proxy) bs
   pure (C.BlockHeader sn hsh bn)
 
 genChainPoint'
@@ -59,13 +63,17 @@ genChainPoint' genB genS = do
   pure $ C.ChainPoint sn hsh
 
 genChainPoint :: Hedgehog.MonadGen m => m C.ChainPoint
-genChainPoint = genChainPoint' genBlockNo genSlotNo
+genChainPoint =
+  Gen.frequency
+  [ (95, genChainPoint' genBlockNo genSlotNo)
+  , (5, pure C.ChainPointAtGenesis)
+  ]
 
 genTxIndex :: Gen C.TxIx
 genTxIndex = C.TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genUtxo :: Gen Utxo.Utxo
-genUtxo = C.toAddressAny <$> CGen.genAddressShelley >>= genUtxo'
+genUtxo = CGen.genAddressShelley >>= genUtxo' . C.toAddressAny
 
 genUtxo' :: C.AddressAny -> Gen Utxo.Utxo
 genUtxo' _address = do
@@ -77,6 +85,13 @@ genUtxo' _address = do
   _value            <- CGen.genValueForTxOut
   let (_inlineScript, _inlineScriptHash)=  Utxo.getRefScriptAndHash script
   pure $ Utxo.Utxo {..}
+
+genEventAtChainPoint :: C.ChainPoint -> Gen (Utxo.StorableEvent Utxo.UtxoHandle)
+genEventAtChainPoint ueChainPoint = do
+  ueUtxos <- Gen.set (Range.linear 1 3) genUtxo
+  ueInputs <- Gen.set (Range.linear 1 2) CGen.genTxIn
+  ueBlockNo <- genBlockNo
+  pure $ Utxo.UtxoEvent {..}
 
 genEvents :: Gen (Utxo.StorableEvent Utxo.UtxoHandle)
 genEvents = do
@@ -92,32 +107,12 @@ genEvents' ueUtxos = do
   ueChainPoint <- genChainPoint
   pure $ Utxo.UtxoEvent {..}
 
-tests :: TestTree
-tests = testGroup "Marconi.Utxo.Indexer.Specs are:"
-    [
-     testPropertyNamed "marconi-utxo split-by-address property"
-     "filter UtxoEvent for Utxos with address in the TargetAddress"
-     eventsAtAddressTest
+instance Eq (Utxo.StorableEvent Utxo.UtxoHandle) where
+  (Utxo.UtxoEvent u i b c) == (Utxo.UtxoEvent u' i' b' c')  =
+    u == u' && i == i' && b == b' && c == c'
 
-    , testPropertyNamed "marconi-utxo event-to-sqlRows property"
-      "Roundtrip UtxoEvents to UtxoRows converion"
-     eventsToRowsRoundTrip
-
-    , testPropertyNamed "marconi-utxo storable-query address property"
-      "Compute StorableQuery addresses from computed Utxo and generated Cardano.Api.Tx"
-     txAddressToUtxoAddressTest
-
-    , testPropertyNamed "marconi-utxo storage-roundtrip property"
-      "Roundtrip storage test"
-      utxoStorageTest
-
-    , testPropertyNamed "marconi-utxo insert-query property"
-      "Insert Events, and then query for events by address test"
-      utxoInsertAndQueryTest
-    ]
-
-deriving instance Eq (StorableEvent Utxo.UtxoHandle)
-deriving instance Ord (StorableEvent Utxo.UtxoHandle)
+instance Ord (Utxo.StorableEvent Utxo.UtxoHandle) where
+  compare l r = Utxo.ueChainPoint l `compare` Utxo.ueChainPoint r
 
 -- | Proves two list are equivalant, but not identical
 
@@ -135,17 +130,49 @@ equivalentLists us us' =
   &&
   all (const True) [u `elem` us| u <- us']
 
--- convert events to sql rows and back to events.
---
-eventsToRowsRoundTrip :: Property
-eventsToRowsRoundTrip  = property $ do
+tests :: TestTree
+tests = testGroup "Marconi.Utxo.Indexer.Specs are:"
+    [
+     testPropertyNamed "marconi-utxo split-by-address property"
+     "filter UtxoEvent for Utxos with address in the TargetAddress"
+     eventsAtAddressTest
+
+    , testPropertyNamed "marconi-utxo event-to-sqlRows property"
+      "Roundtrip UtxoEvents to UtxoRows converion"
+     eventsToRowsRoundTripTest
+
+    , testPropertyNamed "marconi-utxo storable-query address property"
+      "Compute StorableQuery addresses from computed Utxo and generated Cardano.Api.Tx"
+     txAddressToUtxoAddressTest
+
+    , testPropertyNamed "marconi-utxo storage-roundtrip property"
+      "Roundtrip storage test"
+      utxoStorageTest
+
+    , testPropertyNamed "marconi-utxo insert-query property"
+      "Insert Events, and then query for events by address test"
+      utxoInsertAndQueryTest
+
+    , testPropertyNamed "marconi-utxo rewind property"
+      "Insert Events, and rewind to some prvious chainpoint"
+      rewindTest
+
+    , testPropertyNamed "marconi-utxo query-interval property"
+      "Insert Events, and query for the events by address and chainpoint interval"
+      utxoQueryIntervalTest]
+
+
+eventsToRowsRoundTripTest :: Property
+eventsToRowsRoundTripTest  = property $ do
   events <- forAll $ Gen.list (Range.linear 1 5 )genEvents
   let f :: C.ChainPoint -> IO (Set C.TxIn)
-      f _ = pure . Utxo.ueInputs $ head events
-      rows = concatMap Utxo.toUtxoRows events
+      f C.ChainPointAtGenesis = pure  Set.empty
+      f _                     = pure . Utxo.ueInputs $ head events
+      rows = concatMap Utxo.eventsToRows events
   computedEvent <- liftIO . Utxo.rowsToEvents f $ rows
-  length computedEvent === (length . fmap Utxo.ueChainPoint $ events)
-  Hedgehog.assert (equivalentLists computedEvent events)
+  let postGenesisEvents = filter (\e -> C.ChainPointAtGenesis /= Utxo.ueChainPoint e )  events
+  length computedEvent === (length . fmap Utxo.ueChainPoint $ postGenesisEvents)
+  Hedgehog.assert (equivalentLists computedEvent postGenesisEvents)
 
 -- Insert Utxo events in storage, and retreive the events
 --
@@ -153,12 +180,12 @@ utxoStorageTest :: Property
 utxoStorageTest = property $ do
   events <- forAll $ Gen.list (Range.linear 1 5) genEvents
   (storedEvents :: [StorableEvent Utxo.UtxoHandle]) <-
-    (liftIO . Utxo.open ":memory:") (Utxo.Depth  10)
+    (liftIO . Utxo.open ":memory:") (Utxo.Depth 10)
      >>= liftIO . Storable.insertMany events
      >>= liftIO . Storable.getEvents
   Hedgehog.assert (equivalentLists storedEvents events)
 
--- Insert Utxo events in storage, and retreive the events by address
+-- Insert Utxo events in storage, and retrieve the events by address
 --
 utxoInsertAndQueryTest :: Property
 utxoInsertAndQueryTest = property $ do
@@ -173,12 +200,32 @@ utxoInsertAndQueryTest = property $ do
   let rows = concatMap (\(Utxo.UtxoResult rs) -> rs ) results
   computedEvent <-
     liftIO . Utxo.rowsToEvents (Utxo.getTxIns (getConn indexer) ) $ rows
-  Hedgehog.assert (equivalentLists computedEvent events)
+  Hedgehog.assert (equivalentLists
+                   computedEvent
+                   (filter (\e -> Utxo.ueChainPoint e /= C.ChainPointAtGenesis) events) )
 
--- This test is in supporto TargetAddresses user's may have entered through CLI
--- Remove from UtxoEvent Utxos with address not in TargetAddress list
--- TODO cleaner approach
--- Generate Addresse -> generate Utxos -> generateEvents and use a subset of those addresses to filter in/out
+-- Insert Utxo events in storage, and retreive the events by address and query interval
+--
+utxoQueryIntervalTest :: Property
+utxoQueryIntervalTest = property $ do
+  event0 <- forAll $ genEventAtChainPoint C.ChainPointAtGenesis
+  event1 <- forAll $ genEventAtChainPoint (head chainpoints)
+  event2 <- forAll $ genEventAtChainPoint (chainpoints !! 1)
+  event3 <- forAll $ genEventAtChainPoint (chainpoints !! 2)
+  let events = [event0, event1, event2, event3]
+  indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 2)
+             >>= liftIO . Storable.insertMany [event0, event1, event2, event3]
+  let
+    qs :: [StorableQuery Utxo.UtxoHandle]
+    qs = fmap (Utxo.UtxoAddress . Utxo._address) . concatMap (Set.toList . Utxo.ueUtxos) $ events
+  results <- liftIO . traverse (Storable.query (Storable.QInterval (head chainpoints)(chainpoints !! 1)) indexer) $ qs
+  let rows = concatMap (\(Utxo.UtxoResult rs) -> rs ) results
+  computedEvent <-
+    liftIO . Utxo.rowsToEvents (Utxo.getTxIns (getConn indexer) ) $ rows
+  Hedgehog.assert (equivalentLists computedEvent [event0,event1])
+
+-- TargetAddresses are the addresses in UTXO that we filter for.
+-- Puporse of this test is to filter out utxos that have a different address than those in the TargetAddress list.
 eventsAtAddressTest :: Property
 eventsAtAddressTest = property $ do
     event <- forAll genEvents
@@ -202,12 +249,12 @@ eventsAtAddressTest = property $ do
             $ Utxo.ueUtxos event
     computedAddresses === actualAddresses
 
--- Test to make sure we only make Utxo's from chain events for the TargetAddresses user has provided thrugh CLI
+-- Test to make sure we only make Utxo's from chain events for the TargetAddresses user has provided through CLI
 --
 txAddressToUtxoAddressTest ::  Property
 txAddressToUtxoAddressTest = property $ do
     t@(C.Tx (C.TxBody C.TxBodyContent{C.txOuts}) _)  <- forAll $ CGen.genTx C.BabbageEra
-    let (targetAddresses :: Maybe TargetAddresses ) = addressesFromTxOuts txOuts
+    let (targetAddresses :: Maybe TargetAddresses ) = mkTargetAddressFromTxOut txOuts
     let (utxos :: [Utxo.Utxo]) = Utxo.getUtxos targetAddresses t
     case targetAddresses of
         Nothing         ->  length utxos === length txOuts
@@ -215,17 +262,39 @@ txAddressToUtxoAddressTest = property $ do
             ( nub
               . mapMaybe (\x -> addressAnyToShelley (x ^. Utxo.address))
               $ utxos) === (nub . toList $ targets)
+chainpoints :: [C.ChainPoint]
+chainpoints =
+  let
+    bs::ByteString
+    bs::ByteString = "00000000000000000000000000000000"
+    blockhash :: C.Hash C.BlockHeader
+    blockhash = fromJust $ C.deserialiseFromRawBytes(C.proxyToAsType Proxy) bs
+  in
+    flip C.ChainPoint blockhash <$> [1 .. 3]
+
+rewindTest :: Property
+rewindTest = property $ do
+  event0 <- forAll $ genEventAtChainPoint C.ChainPointAtGenesis
+  event1 <- forAll $ genEventAtChainPoint (head chainpoints )
+  event2 <- forAll $ genEventAtChainPoint (chainpoints !! 1)
+  event3 <- forAll $ genEventAtChainPoint (chainpoints !! 2)
+  indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 2)
+             >>= liftIO . Storable.insertMany [event0, event1, event2, event3]
+  cps' <- liftIO . resume $ indexer
+  -- we should only see points up to depth: Genesis and the first insert
+  sort cps' ===  [C.ChainPointAtGenesis, head chainpoints]
+
 
 -- create TargetAddresses
-addressesFromTxOuts
+-- We use TxOut to create a valid and relevant TargetAddress. This garnteed that the targetAddress is among the generated events.
+mkTargetAddressFromTxOut
   :: [C.TxOut C.CtxTx CurrentEra]
   -> Maybe TargetAddresses
-addressesFromTxOuts [C.TxOut addressInEra _ _ _]
+mkTargetAddressFromTxOut [C.TxOut addressInEra _ _ _]
     = nonEmpty
-    . nub
     . mapMaybe (addressAnyToShelley . Utxo.toAddr)
     $ [addressInEra]
-addressesFromTxOuts _ = Nothing
+mkTargetAddressFromTxOut _ = Nothing
 
 addressAnyToShelley
   :: C.AddressAny
