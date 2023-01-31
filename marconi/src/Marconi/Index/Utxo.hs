@@ -297,22 +297,24 @@ open dbPath (Depth k) = do
                       ( address TEXT NOT NULL
                       , txId TEXT NOT NULL
                       , txIx INT NOT NULL
-                      , datum TEXT
-                      , datumHash TEXT
+                      , datum BLOB
+                      , datumHash BLOB
                       , value BLOB
-                      , inlineScript TEXT
-                      , inlineScriptHash TEXT
+                      , inlineScript BLOB
+                      , inlineScriptHash BLOB
                       , blockNo INT
                       , slotNo INT
                       , blockHash BLOB
                       , UNIQUE (txId, txIx))|]
   SQL.execute_ c [r|CREATE TABLE IF NOT EXISTS spent
-                      ( txInTxId TEXT PRIMARY KEY NOT NULL UNIQUE
+                      ( txInTxId TEXT PRIMARY KEY NOT NULL
                       , txInTxIx INT NOT NULL
                       , slotNo INT NOT NULL
-                      , blockHash BLOB NOT NULL)|]
+                      , blockHash BLOB NOT NULL
+                      , UNIQUE (txInTxId, txInTxIx))|]
+
   SQL.execute_ c [r|CREATE INDEX IF NOT EXISTS
-                      spent_txid ON spent (slotNo)|]
+                      spent_slotNo ON spent (slotNo)|]
   SQL.execute_ c [r|CREATE INDEX IF NOT EXISTS
                       unspent_transaction_address ON unspent_transactions (address)|]
   emptyState k (UtxoHandle c (k * 2))

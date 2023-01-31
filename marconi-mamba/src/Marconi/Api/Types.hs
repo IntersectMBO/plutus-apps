@@ -24,11 +24,17 @@ import Control.Exception (Exception)
 import Control.Lens (makeClassy)
 import Data.Aeson (ToJSON (toEncoding, toJSON), defaultOptions, genericToEncoding, object, (.=))
 import Data.Aeson qualified as Aeson
+import Data.ByteString (ByteString)
+import Data.ByteString.Base16 qualified as Base16
+import Data.Char qualified as Char
 import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (Settings)
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as Shelley
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types as Export (TargetAddresses)
 
@@ -60,19 +66,36 @@ data JsonRpcEnv = JsonRpcEnv
     }
 makeClassy ''JsonRpcEnv
 
-instance ToJSON C.ScriptData where
-  toJSON = C.scriptDataToJson C.ScriptDataJsonDetailedSchema
 
+data QueryExceptions
+    = AddressNotInListError QueryExceptions
+    | AddressConversionError QueryExceptions
+    | TxRefConversionError QueryExceptions
+    | QueryError String
+    deriving stock Show
+    deriving anyclass  Exception
+
+-- from cardano-node: https://github.com/input-output-hk/cardano-node/blob/master/cardano-api/src/Cardano/Api/ScriptData.hs#L444-L447
+-- | JSON strings that are base16 encoded and prefixed with 'bytesPrefix' will
+-- be encoded as CBOR bytestrings.
+bytesPrefix :: Text
+bytesPrefix = "0x"
+
+instance ToJSON ByteString  where
+  toJSON bs
+      | Right s <- Text.decodeUtf8' bs, Text.all Char.isPrint s = Aeson.String s
+      | otherwise
+      = Aeson.String (bytesPrefix <> Text.decodeLatin1 (Base16.encode bs))
 
 instance ToJSON Utxo.Utxo where
   toJSON (Utxo.Utxo addr tId tIx dtum dtumHash val scrpt scrptHash) = object
     ["address"            .=  addr
     , "txId"              .= tId
     , "txIx"              .= tIx
-    , "datum"             .= dtum
+    , "datum"             .= (C.serialiseToCBOR <$> dtum)
     , "datumHash"         .= dtumHash
     , "value"             .= val
-    , "inlineScript"      .= scrpt
+    , "inlineScript"      .= (scriptToCBOR <$>scrpt)
     , "inlineScriptHash"  .= scrptHash
     ]
 
@@ -84,25 +107,8 @@ data UtxoReport = UtxoReport
 instance ToJSON UtxoReport where
     toEncoding = genericToEncoding defaultOptions
 
-newtype UtxoRowWrapper = UtxoRowWrapper Utxo.UtxoRow
-  deriving (Eq, Ord, Show, Generic)
-
-instance ToJSON UtxoRowWrapper where
-    toEncoding = genericToEncoding defaultOptions
-
-data QueryExceptions
-    = AddressNotInListError QueryExceptions
-    | AddressConversionError QueryExceptions
-    | TxRefConversionError QueryExceptions
-    | QueryError String
-    deriving stock Show
-    deriving anyclass  Exception
-
-
 instance ToJSON C.AddressAny where
     toJSON  = Aeson.String . C.serialiseAddress
-
--- instance ToJSON ByteString where toJSON = Data.Aeson.String . decodeUtf8
 
 instance ToJSON (Utxo.StorableQuery Utxo.UtxoHandle) where
   toJSON (Utxo.UtxoAddress addr) = toJSON addr
@@ -115,3 +121,14 @@ instance ToJSON Utxo.UtxoRow where
     ,  "blockNo" .= b
     ,  "slotNo" .= s
     ,  "blockHeaderHash" .= h]
+
+-- | convert to Script to CBOR bytestring
+scriptToCBOR :: Shelley.ScriptInAnyLang -> ByteString
+scriptToCBOR (Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV1) script) =
+  C.serialiseToCBOR script
+scriptToCBOR (Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV2) script) =
+  C.serialiseToCBOR script
+scriptToCBOR (Shelley.ScriptInAnyLang(C.PlutusScriptLanguage C.PlutusScriptV1) script) =
+  C.serialiseToCBOR script
+scriptToCBOR (Shelley.ScriptInAnyLang(C.PlutusScriptLanguage C.PlutusScriptV2) script) =
+  C.serialiseToCBOR script

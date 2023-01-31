@@ -95,6 +95,8 @@ library
     , aeson
     , async
     , base                  >=4.9 && <5
+    , base16-bytestring
+    , bytestring
     , lens
     , optparse-applicative
     , prettyprinter
