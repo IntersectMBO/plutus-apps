@@ -146,25 +146,6 @@ source-repository-package
       lib/text-class
 
 
--- --  Pinning cardano-base for plutus-core-1.0.0.0
--- source-repository-package
---   type: git
---   location: https://github.com/input-output-hk/cardano-base
---   tag: cc049d7c9b9a0129c15b1355fd1dff9e1a1a551c
---   --sha256:sha256-4b0keLjRaVSdEwfBXB1iT3QPlsutdxSltGfBufT4Clw=
---   subdir:
---     base-deriving-via
---     binary
---     binary/test
---     cardano-crypto-class
---     cardano-crypto-praos
---     cardano-crypto-tests
---     measures
---     orphans-deriving-via
---     slotting
---     strict-containers
-
-
 -- Direct dependency.
 source-repository-package
   type: git

@@ -12,6 +12,7 @@
   # Whether to set the `defer-plugin-errors` flag on those packages that need
   # it. If set to true, we will also build the haddocks for those packages.
 , deferPluginErrors
+, CHaP
 }:
 let
   project = haskell-nix.cabalProject' ({ pkgs, config, ... }: {
