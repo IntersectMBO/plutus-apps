@@ -52,6 +52,7 @@ let
         ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
           packages = {
             # Things that need plutus-tx-plugin
+            freer-extras.package.buildable = false;
             cardano-streaming.package.buildable = false;
             marconi.package.buildable = false;
             pab-blockfrost.package.buildable = false;
