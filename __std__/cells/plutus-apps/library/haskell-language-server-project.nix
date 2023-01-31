@@ -1,4 +1,4 @@
-# TODO(std) DUP(except the constratins and the actual version)
+# TODO(std) DUP
 
 { inputs, cell }:
 
@@ -14,13 +14,11 @@ cell.library.pkgs.haskell-nix.cabalProject' {
   #    tools which HLS uses explicitly
   # b) Pull out the tools themselves from the HLS project so we can use
   #    them elsewhere
-
   # cabalProjectLocal = ''
   #   constraints: stylish-haskell==0.14.2.0, hlint==3.4.1
   # '';
 
   src = inputs.haskell-language-server;
-
   sha256map = {
     "https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ="; # editorconfig-checker-disable-line
   };
