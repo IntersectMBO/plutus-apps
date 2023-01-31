@@ -104,6 +104,28 @@ library
     , transformers
     , vector-map
 
+library json-rpc
+  import:          lang
+  visibility:      public
+  hs-source-dirs:  json-rpc/src
+  exposed-modules:
+    Marconi.Client.Types
+    Marconi.JsonRpc.Types
+    Marconi.Server.Types
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                 >=4.9 && <5
+    , containers
+    , http-media
+    , servant
+    , servant-client-core
+    , servant-server
+    , text
+
 executable marconi
   import:         lang
   hs-source-dirs: app
