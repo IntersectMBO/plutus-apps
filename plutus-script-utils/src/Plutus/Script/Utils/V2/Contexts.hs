@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -fno-strictness #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 module Plutus.Script.Utils.V2.Contexts
     ( module Contexts
     , findTxInByTxOutRef

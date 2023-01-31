@@ -79,7 +79,8 @@ import System.Exit (exitFailure)
 -- | Generate the requirements to run the chain index effects given logging configuration and chain index configuration.
 withRunRequirements :: CM.Configuration -> Config.ChainIndexConfig -> (RunRequirements -> IO ()) -> IO ()
 withRunRequirements logConfig config cont = do
-  pool <- Pool.createPool (Sqlite.open (Config.cicDbPath config) >>= setupConn) Sqlite.close 5 1_000_000 5
+  let cfg = Pool.PoolConfig (Sqlite.open (Config.cicDbPath config) >>= setupConn) Sqlite.close 1_000_000 (5 * 5)
+  pool <- Pool.newPool cfg
   (trace :: Trace IO (PrettyObject ChainIndexLog), _) <- setupTrace_ logConfig "chain-index"
   Pool.withResource pool $ \conn -> do
     Sqlite.runBeamSqliteDebug (logDebug (convertLog PrettyObject trace) . (BeamLogItem . SqlLog)) conn $ do
