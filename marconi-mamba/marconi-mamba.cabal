@@ -56,8 +56,8 @@ library
   --------------------
   build-depends:
     , cardano-streaming
-    , rewindable-index
     , marconi:{marconi, json-rpc}
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
@@ -111,8 +111,8 @@ executable examples-json-rpc-server
   -- Local components
   --------------------
   build-depends:
-    , marconi:{marconi, json-rpc}
     , marconi-mamba
+    , marconi:{marconi, json-rpc}
 
   ------------------------
   -- Non-IOG dependencies
@@ -129,18 +129,13 @@ executable examples-json-rpc-client
   hs-source-dirs: examples/json-rpc-client/src
   main-is:        Main.hs
 
-  --------------------
-  -- Local components
-  --------------------
-  build-depends:
-    , marconi:{marconi, json-rpc}
-
-  ------------------------
+  --------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base            >=4.9 && <5
+    , base                         >=4.9 && <5
     , http-client
+    , marconi:{marconi, json-rpc}
     , servant
     , servant-client
 
@@ -194,8 +189,8 @@ test-suite marconi-mamba-test
   -- Local components
   --------------------
   build-depends:
-    , marconi
     , marconi-mamba
+    , marconi:{marconi, marconi-test-lib}
     , rewindable-index
 
   ------------------------

@@ -155,19 +155,24 @@ executable marconi
 
 library marconi-test-lib
   import:          lang
+  visibility:      public
   hs-source-dirs:  test-lib
-  exposed-modules: Helpers
+  exposed-modules:
+    Gen.Marconi.Types
+    Helpers
 
   --------------------
   -- Local components
   --------------------
-  build-depends:   cardano-streaming
+  build-depends:
+    , cardano-streaming
+    , marconi
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
+    , cardano-api:{cardano-api, gen}
     , cardano-testnet
     , ouroboros-network
 
