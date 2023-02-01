@@ -45,7 +45,7 @@
       flake = false;
     };
     haskell-language-server = {
-      url = "github:haskell/haskell-language-server?ref=1.9.0.0";
+      url = "github:haskell/haskell-language-server?ref=1.8.0.0";
       flake = false;
     };
     plutus-core = {

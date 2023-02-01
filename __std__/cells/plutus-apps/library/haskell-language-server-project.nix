@@ -14,16 +14,16 @@ cell.library.pkgs.haskell-nix.cabalProject' {
   #    tools which HLS uses explicitly
   # b) Pull out the tools themselves from the HLS project so we can use
   #    them elsewhere
-  # cabalProjectLocal = ''
-  #   constraints: stylish-haskell==0.14.2.0, hlint==3.4.1
-  # '';
+  cabalProjectLocal = ''
+    constraints: stylish-haskell==0.13.0.0, hlint==3.2.8
+  '';
 
   src = inputs.haskell-language-server;
   sha256map = {
     "https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ="; # editorconfig-checker-disable-line
   };
 
-  # compiler-nix-name = cell.library.ghc-compiler-nix-name;
+  compiler-nix-name = cell.library.ghc-compiler-nix-name;
 
   modules = [{
     # See https://github.com/haskell/haskell-language-server/pull/1382#issuecomment-780472005
