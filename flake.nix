@@ -98,6 +98,8 @@
       {
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
+
+        hydraJobs = import ./hydraJobs.nix { inherit system; };
       }));
 
   nixConfig = {
