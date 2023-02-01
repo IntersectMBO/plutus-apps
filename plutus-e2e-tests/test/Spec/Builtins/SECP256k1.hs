@@ -61,15 +61,15 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
     (verifySchnorrAssetId, verifyEcdsaAssetId, verifySchnorrMintWitness, verifyEcdsaMintWitness) =
       case era of
         C.AlonzoEra  ->
-            ( PS.verifySchnorrAssetIdV1,
-              PS.verifyEcdsaAssetIdV1,
-              PS.verifySchnorrMintWitnessV1 era,
-              PS.verifyEcdsaMintWitnessV1 era )
+          ( PS.verifySchnorrAssetIdV1,
+            PS.verifyEcdsaAssetIdV1,
+            PS.verifySchnorrMintWitnessV1 era,
+            PS.verifyEcdsaMintWitnessV1 era )
         C.BabbageEra ->
-            ( PS.verifySchnorrAssetIdV2,
-              PS.verifyEcdsaAssetIdV2,
-              PS.verifySchnorrMintWitnessV2 era,
-              PS.verifyEcdsaMintWitnessV2 era )
+          ( PS.verifySchnorrAssetIdV2,
+            PS.verifyEcdsaAssetIdV2,
+            PS.verifySchnorrMintWitnessV2 era,
+            PS.verifyEcdsaMintWitnessV2 era )
 
     tokenValues = C.valueFromList [(verifySchnorrAssetId, 4), (verifyEcdsaAssetId, 2)]
     txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
@@ -96,7 +96,7 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
       -- Build and submit transaction
       signedTx <- TN.buildTx era txBodyContent w1Address w1SKey networkId
       TN.submitTx era localNodeConnectInfo signedTx
-      let expectedTxIn = TN.txInFromSignedTx signedTx 0
+      let expectedTxIn = TN.txIn (TN.txId signedTx) 0
 
       -- Query for txo and assert it contains newly minting tokens to prove successfuluse of SECP256k1 builtins
       resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn

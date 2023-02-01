@@ -106,8 +106,8 @@ test-suite plutus-e2e-tests-test
   other-modules:
     Helpers
     PlutusScripts
+    Spec.BabbageFeatures
     Spec.Builtins.SECP256k1
-    Spec.ReferenceScript
 
   --------------------
   -- Local components

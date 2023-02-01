@@ -14,6 +14,7 @@ import Data.Function ((&))
 import Data.List as List
 import Data.Map qualified as Map
 import Data.Map.Lazy (isSubmapOf)
+import Data.Maybe as M
 import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
 import Streaming.Prelude qualified as S
@@ -174,13 +175,18 @@ w1 tempAbsPath' networkId = do
 
   let
     paymentKey = C.castVerificationKey genesisVKey :: C.VerificationKey C.PaymentKey
-    address :: C.Address C.ShelleyAddr
-    address = C.makeShelleyAddress
-      networkId
-      (C.PaymentCredentialByKey (C.verificationKeyHash paymentKey :: C.Hash C.PaymentKey))
-      C.NoStakeAddress :: C.Address C.ShelleyAddr
+    address = makeAddress (Left paymentKey) networkId
 
   return (genesisSKey, address)
+
+-- | Make a payment or script address
+makeAddress :: (Either (C.VerificationKey C.PaymentKey) C.ScriptHash)
+  -> C.NetworkId
+  -> C.Address C.ShelleyAddr
+makeAddress (Left paymentKey)  nId =
+    C.makeShelleyAddress nId (C.PaymentCredentialByKey $ C.verificationKeyHash paymentKey) C.NoStakeAddress
+makeAddress (Right scriptHash) nId =
+    C.makeShelleyAddress nId (C.PaymentCredentialByScript scriptHash) C.NoStakeAddress
 
 -- | Build TxOut for spending or minting with no datum or reference script present
 txOutNoDatumOrRefScript :: C.CardanoEra era
@@ -188,13 +194,39 @@ txOutNoDatumOrRefScript :: C.CardanoEra era
   -> C.Address C.ShelleyAddr
   -> C.TxOut ctx era
 txOutNoDatumOrRefScript era value address = C.TxOut
-    (fromMaybe $ C.anyAddressInEra era $ C.toAddressAny address)
+    (maybeAnyAddressInEra $ C.anyAddressInEra era $ C.toAddressAny address)
     (C.TxOutValue (multiAssetSupportedInEra era) value)
     C.TxOutDatumNone
     C.ReferenceScriptNone
+
+-- | Build TxOut with option of including reference script and inline datum
+txOutWithRefScriptAndInlineDatum' :: C.CardanoEra era
+  -> C.Value
+  -> C.Address C.ShelleyAddr
+  -> Maybe C.ScriptData
+  -> Maybe (C.Script lang)
+  -> C.TxOut ctx era
+txOutWithRefScriptAndInlineDatum' era value address mDatum mScript =
+  C.TxOut
+    (maybeAnyAddressInEra $ C.anyAddressInEra era $ C.toAddressAny address)
+    (C.TxOutValue (multiAssetSupportedInEra era) value)
+    (maybe C.TxOutDatumNone
+      (C.TxOutDatumInline referenceTxInsScriptsInlineDatumsSupportedInEra) mDatum)
+    (maybe C.ReferenceScriptNone
+      (C.ReferenceScript referenceTxInsScriptsInlineDatumsSupportedInEra . C.toScriptInAnyLang) mScript)
   where
-    fromMaybe Nothing    = error $ "Era must be ShelleyBased"
-    fromMaybe (Just aie) = aie
+    referenceTxInsScriptsInlineDatumsSupportedInEra = case era of
+          C.BabbageEra -> C.ReferenceTxInsScriptsInlineDatumsInBabbageEra
+
+-- | Build TxOut with reference script and inline datum present
+txOutWithRefScriptAndInlineDatum :: C.CardanoEra era
+  -> C.Value
+  -> C.Address C.ShelleyAddr
+  -> C.ScriptData
+  -> C.Script lang
+  -> C.TxOut ctx era
+txOutWithRefScriptAndInlineDatum era value address datum script =
+    txOutWithRefScriptAndInlineDatum' era value address (Just datum) (Just script)
 
 -- | Build TxOut with a reference script present
 txOutWithRefScript :: C.CardanoEra era
@@ -202,16 +234,20 @@ txOutWithRefScript :: C.CardanoEra era
   -> C.Address C.ShelleyAddr
   -> C.Script lang
   -> C.TxOut ctx era
-txOutWithRefScript era value address script = C.TxOut
-    (fromMaybe $ C.anyAddressInEra era $ C.toAddressAny address)
-    (C.TxOutValue (multiAssetSupportedInEra era) value)
-    C.TxOutDatumNone
-    (case era of
-      C.BabbageEra ->
-        C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra $ C.toScriptInAnyLang script)
-  where
-    fromMaybe Nothing    = error $ "Era must be ShelleyBased"
-    fromMaybe (Just aie) = aie
+txOutWithRefScript era value address script =
+    txOutWithRefScriptAndInlineDatum' era value address Nothing (Just script)
+
+-- | Build TxOut with inline datum present
+txOutWithInlineDatum :: C.CardanoEra era
+  -> C.Value
+  -> C.Address C.ShelleyAddr
+  -> C.ScriptData
+  -> C.TxOut ctx era
+txOutWithInlineDatum era value address datum =
+    txOutWithRefScriptAndInlineDatum' era value address (Just datum) Nothing
+
+maybeAnyAddressInEra Nothing    = error $ "Era must be ShelleyBased"
+maybeAnyAddressInEra (Just aie) = aie
 
 -- | Find the first UTxO at address and return as TxIn. Used for txbody's txIns.
 firstTxIn :: (MonadIO m, MonadTest m)
@@ -310,13 +346,27 @@ txInsCollateral era txIns = case C.collateralSupportedInEra era of
     Nothing        -> error "era supporting collateral only"
     Just supported -> C.TxInsCollateral supported txIns
 
--- | Get TxId from a signed transaction to produce a TxIn.
---   Useful for asserting expected TxOut is onchain after submitting transaction.
-txInFromSignedTx :: C.Tx era -> Int -> C.TxIn
-txInFromSignedTx signedTx txIx = C.TxIn (C.getTxId $ C.getTxBody signedTx) (C.TxIx $ fromIntegral txIx)
+-- | Get TxId from a signed transaction.
+--  Useful for producing TxIn for building subsequant transaction.
+txId :: C.Tx era -> C.TxId
+txId = C.getTxId . C.getTxBody
+
+-- | Build TxIn from TxId and index. Useful for waiting for or asserting expected TxOut is
+--   onchain after submitting transaction.
+txIn :: C.TxId -> Int -> C.TxIn
+txIn txId txIx = C.TxIn txId (C.TxIx $ fromIntegral txIx)
 
 pubkeyTxIns  :: [C.TxIn] -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))]
-pubkeyTxIns txIns = map (\txIn -> (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) txIns
+pubkeyTxIns txIns = map (\txIn -> txInWitness txIn $ C.KeyWitness C.KeyWitnessForSpending) txIns
+
+txInWitness :: C.TxIn -> (C.Witness C.WitCtxTxIn era) -> (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))
+txInWitness txIn wit = (txIn, C.BuildTxWith wit)
+
+txInsReference :: C.CardanoEra era
+  -> [C.TxIn]
+  -> C.TxInsReference build era
+txInsReference era txIns = case era of
+    C.BabbageEra -> C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txIns
 
 txMintValue :: C.CardanoEra era
   -> C.Value
@@ -349,7 +399,7 @@ buildTx' :: (MonadIO m, MonadTest m)
   -> m (Either C.TxBodyErrorAutoBalance (C.Tx era))
 buildTx' era txBody changeAddress sKey networkId = do
   (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <- H.leftFailM . liftIO $
-    C.queryStateForBalancedTx era networkId (fst <$> C.txIns txBody)
+    C.queryStateForBalancedTx era networkId allInputs
 
   return $ withIsShelleyBasedEra era $ C.constructBalancedTx
     (toEraInCardanoMode era)
@@ -362,6 +412,13 @@ buildTx' era txBody changeAddress sKey networkId = do
     systemStart
     stakePools
     [C.WitnessPaymentKey $ C.castSigningKey sKey]
+  where
+    allInputs :: [C.TxIn]
+    allInputs = do
+      let txIns = (fst <$> C.txIns txBody)
+      case C.txInsReference txBody of
+        C.TxInsReferenceNone        -> txIns
+        C.TxInsReference _ refTxIns -> txIns ++ refTxIns
 
 submitTx :: (MonadIO m, MonadTest m)
   => C.CardanoEra era

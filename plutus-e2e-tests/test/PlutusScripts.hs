@@ -12,6 +12,10 @@ module PlutusScripts (
   , alwaysSucceedAssetIdV2
   , alwaysSucceedMintWitnessV2
 
+  , alwaysSucceedSpendScriptV2
+  , alwaysSucceedSpendScriptHashV2
+  , alwaysSucceedSpendWitnessV2
+
   , verifySchnorrAssetIdV1
   , verifySchnorrAssetIdV2
   , verifySchnorrMintWitnessV1
@@ -22,6 +26,7 @@ module PlutusScripts (
   , verifyEcdsaMintWitnessV1
   , verifyEcdsaMintWitnessV2
 
+  , toScriptData
   , unPlutusScriptV2
   ) where
 
@@ -32,7 +37,9 @@ import Data.ByteString qualified as BS (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Plutus.Script.Utils.Typed as PSU (IsScriptContext (mkUntypedMintingPolicy))
-import Plutus.V1.Ledger.Api (MintingPolicy, mkMintingPolicyScript, unMintingPolicyScript)
+import Plutus.Script.Utils.V2.Address as PSU.V2
+import Plutus.V1.Ledger.Api (Address, MintingPolicy (MintingPolicy), Validator (Validator), mkMintingPolicyScript,
+                             mkValidatorScript, unMintingPolicyScript, unValidatorScript)
 import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Bytes qualified as P (bytes, fromHex)
 import Plutus.V2.Ledger.Api qualified as PlutusV2
@@ -66,7 +73,7 @@ plutusL2 = C.PlutusScriptLanguage C.PlutusScriptV2
 --   Provide either the script or TxIn for reference script to include in witness
 mintScriptWitness :: C.CardanoEra era
   -> C.ScriptLanguage lang
-  -> Either (C.PlutusScript lang) (C.TxIn, C.PolicyId) -- either script or reference to script
+  -> Either (C.PlutusScript lang) C.TxIn -- either script or reference to script
   -> C.ScriptData
   -> C.ScriptWitness C.WitCtxMint era
 -- V1 script
@@ -78,9 +85,20 @@ mintScriptWitness era lang@(C.PlutusScriptLanguage C.PlutusScriptV2) (Left scrip
     C.PlutusScriptWitness (maybeScriptWitness era lang $ C.scriptLanguageSupportedInEra era lang)
       C.PlutusScriptV2 (C.PScript script) C.NoScriptDatumForMint redeemer defExecutionUnits
 -- V2 reference script
-mintScriptWitness era lang@(C.PlutusScriptLanguage C.PlutusScriptV2) (Right (refTxIn, pid)) redeemer = do
+mintScriptWitness era lang@(C.PlutusScriptLanguage C.PlutusScriptV2) (Right refTxIn) redeemer = do
     C.PlutusScriptWitness (maybeScriptWitness era lang $ C.scriptLanguageSupportedInEra era lang)
-      C.PlutusScriptV2 (C.PReferenceScript refTxIn (Just $ C.unPolicyId pid)) C.NoScriptDatumForMint redeemer defExecutionUnits
+      C.PlutusScriptV2 (C.PReferenceScript refTxIn Nothing) C.NoScriptDatumForMint redeemer defExecutionUnits
+
+spendScriptWitness :: C.CardanoEra era
+  -> C.ScriptLanguage lang
+  -> Either (C.PlutusScript lang) C.TxIn -- either script or reference to script
+  -> (C.ScriptDatum C.WitCtxTxIn)
+  -> C.ScriptData
+  -> C.ScriptWitness C.WitCtxTxIn era
+-- V2 reference script
+spendScriptWitness era lang@(C.PlutusScriptLanguage C.PlutusScriptV2) (Right refTxIn) datumWit redeemer = do
+    C.PlutusScriptWitness (maybeScriptWitness era lang $ C.scriptLanguageSupportedInEra era lang)
+      C.PlutusScriptV2 (C.PReferenceScript refTxIn Nothing) datumWit redeemer defExecutionUnits -- tried with (Just scriptHash) instead of Nothing because hash isn't needed?
 
 -- | Produce ScriptLanguageInEra. Throw error when era doesn't support the script language.
 maybeScriptWitness :: C.CardanoEra era
@@ -94,6 +112,10 @@ maybeScriptWitness _ _ (Just p) = p
 -- | Serialised plutus script from minting policy
 policyScript :: MintingPolicy -> C.PlutusScript lang
 policyScript = C.PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . unMintingPolicyScript
+
+-- | Serialised plutus script from validator
+validatorScript :: Validator -> C.PlutusScript lang
+validatorScript = C.PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . unValidatorScript
 
 -- | V1 Plutus Script to general Script, Needed for producing reference script.
 unPlutusScriptV1 :: C.PlutusScript C.PlutusScriptV1 -> C.Script C.PlutusScriptV1
@@ -111,9 +133,7 @@ policyIdV1 = C.scriptPolicyId . unPlutusScriptV1 . policyScript
 policyIdV2 :: MintingPolicy -> C.PolicyId
 policyIdV2 = C.scriptPolicyId . unPlutusScriptV2 . policyScript
 
----- AlwaysSucceeds ----
-
--- minting policy --
+-- AlwaysSucceeds minting policy --
 
 alwaysSucceedPolicy :: MintingPolicy
 alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
@@ -134,7 +154,28 @@ alwaysSucceedMintWitnessV2 era Nothing =
      mintScriptWitness era plutusL2 (Left alwaysSucceedPolicyScriptV2) (toScriptData ()))
 alwaysSucceedMintWitnessV2 era (Just refTxIn) =
     (policyIdV2 alwaysSucceedPolicy,
-     mintScriptWitness era plutusL2 (Right (refTxIn, policyIdV2 alwaysSucceedPolicy)) (toScriptData ()))
+     mintScriptWitness era plutusL2 (Right refTxIn) (toScriptData ()))
+
+-- AlwaysSucceeds validator --
+
+alwaysSucceedSpend :: Validator
+alwaysSucceedSpend = mkValidatorScript $$(PlutusTx.compile [|| \_ _ _ -> () ||])
+
+alwaysSucceedSpendScriptV2 :: C.PlutusScript C.PlutusScriptV2
+alwaysSucceedSpendScriptV2 = validatorScript alwaysSucceedSpend
+
+alwaysSucceedSpendScriptHashV2 :: C.ScriptHash
+alwaysSucceedSpendScriptHashV2 = C.hashScript $ C.PlutusScript C.PlutusScriptV2 alwaysSucceedSpendScriptV2
+
+alwaysSucceedSpendWitnessV2 :: C.CardanoEra era -- TODO: also support not using inline datum (ScriptDatumForTxIn)
+  -> Maybe C.TxIn -- maybe reference input
+  -> C.Witness C.WitCtxTxIn era
+alwaysSucceedSpendWitnessV2 era Nothing =
+  C.ScriptWitness C.ScriptWitnessForSpending $
+    spendScriptWitness era plutusL2 (Left alwaysSucceedSpendScriptV2) C.InlineScriptDatum (toScriptData ())
+alwaysSucceedSpendWitnessV2 era (Just refTxIn) =
+  C.ScriptWitness C.ScriptWitnessForSpending $
+    spendScriptWitness era plutusL2 (Right refTxIn) C.InlineScriptDatum (toScriptData ())
 
 ---- SECP256k1 ----
 
