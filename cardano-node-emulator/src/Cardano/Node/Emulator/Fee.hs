@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
 import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams, pNetworkId), emulatorEraHistory,
                                      emulatorGlobals, pProtocolParams)
 import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
+import Control.Arrow ((&&&))
 import Control.Lens (over, (&))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (bimap, first)
@@ -323,14 +324,17 @@ selectCoinSingle
     -> ([(a, C.Value)], C.Value) -- ^ The chosen inputs and the remainder
 selectCoinSingle assetId fnds' vl =
     let
+        pick v = C.selectAsset v assetId
         -- We only want the values that contain the given asset class,
         -- and want the single currency values first,
         -- so that we're picking inputs that contain *only* the given asset class when possible.
-        fnds = sortOn (length . C.valueToList . snd) $ filter (\(_, v) -> C.selectAsset v assetId > 0) fnds'
-        -- Given the funds of a wallet, we take enough just enough from
+        -- That being equal we want the input with the largest amount of the given asset class,
+        -- to reduce the amount of inputs required. (Particularly useful to prevent hitting MaxCollateralInputs)
+        fnds = sortOn (length . C.valueToList . snd &&& Down . pick . snd) $ filter (\(_, v) -> pick v > 0) fnds'
+        -- Given the funds of a wallet, we take just enough from
         -- the target value such that the asset class value of the remainder is <= 0.
         fundsWithRemainder = zip fnds (drop 1 $ scanl (\l r -> l <> C.negateValue r) vl $ fmap snd fnds)
-        fundsToSpend       = takeUntil (\(_, v) -> C.selectAsset v assetId <= 0) fundsWithRemainder
+        fundsToSpend       = takeUntil (\(_, v) -> pick v <= 0) fundsWithRemainder
         remainder          = maybe vl snd $ listToMaybe $ reverse fundsToSpend
     in (fst <$> fundsToSpend, remainder)
 
