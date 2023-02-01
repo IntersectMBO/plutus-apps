@@ -23,7 +23,7 @@ let
       sha256 = "04w1dy83ml7wgm5ay1rd4kiwfmdd9sc2y8bp3l0ja7xwvh4fgkmr";
     };
     # Cabal is a boot library, so haskell.nix would normally use the one coming
-    # from the compiler-nix-name (currently 3.2). However cabal-fmt depends on 
+    # from the compiler-nix-name (currently 3.2). However cabal-fmt depends on
     # Cabal library version 3.6, hence we add this line.
     modules = [{ reinstallableLibGhc = true; }];
     inherit compiler-nix-name index-state;
@@ -52,7 +52,9 @@ let
     #    tools which HLS uses explicitly
     # b) Pull out the tools themselves from the HLS project so we can use
     #    them elsewhere
-
+    cabalProjectLocal = ''
+      constraints: stylish-haskell==0.13.0.0, hlint==3.2.8
+    '';
 
     src = sources.haskell-language-server;
     sha256map = {
