@@ -11,7 +11,7 @@ let
     then __trace ("found job " + prefix + n) v
     else __trace ("looking in " + prefix + n) traceNames (prefix + n + ".") v
     else v);
-  inherit (import (sources.plutus-core + "/nix/lib/ci.nix")) stripAttrsForHydra filterDerivations derivationAggregate;
+  inherit (import (sources.plutus-core + "./nix/lib/ci.nix")) stripAttrsForHydra filterDerivations derivationAggregate;
 
   ci = import ./ci.nix {
     inherit supportedSystems rootsOnly sourcesOverride sources;
