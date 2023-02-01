@@ -37,6 +37,7 @@
       flake = false;
     };
     haskell-language-server = {
+      # TODO Upgrade to 1.9.0.0 once plutus-apps hits GHC 9.2
       url = "github:haskell/haskell-language-server?ref=1.8.0.0";
       flake = false;
     };
