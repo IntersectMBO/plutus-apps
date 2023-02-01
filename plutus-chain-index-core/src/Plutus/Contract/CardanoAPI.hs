@@ -218,8 +218,8 @@ fromLedgerPlutusScript' Alonzo.TimelockScript {} = Nothing
 fromLedgerPlutusScript' (Alonzo.PlutusScript Alonzo.PlutusV1 bs) =
   let csh = C.PlutusScript C.PlutusScriptV1 (C.PlutusScriptSerialised bs)
       sh = P.ScriptHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes $ C.hashScript csh
-  in Just (sh, P.Versioned (SBS.fromShort bs) P.PlutusV1)
+  in Just (sh, P.Versioned (BSL.fromStrict $ SBS.fromShort bs) P.PlutusV1)
 fromLedgerPlutusScript' (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
   let csh = C.PlutusScript C.PlutusScriptV2 (C.PlutusScriptSerialised bs)
       sh = P.ScriptHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes $ C.hashScript csh
-  in Just (sh, P.Versioned (SBS.fromShort bs) P.PlutusV2)
+  in Just (sh, P.Versioned (BSL.fromStrict $ SBS.fromShort bs) P.PlutusV2)
