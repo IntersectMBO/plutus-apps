@@ -8,17 +8,13 @@
 , plutus-apps-commit ? { outPath = ./.; rev = "abcdef"; }
 }:
 let
-  # pkgs that we only use for lib
-  libPkgs = (import ./default.nix {
-    system = "x86_64-linux";
-  }).pkgs;
-  inherit (libPkgs.callPackage ./nix/lib/ci.nix { }) dimension platformFilterGeneric filterAttrsOnlyRecursive filterSystems;
+  inherit (import (sources.plutus-core + "/nix/lib/ci.nix")) dimension platformFilterGeneric filterAttrsOnlyRecursive filterSystems;
   # limit supportedSystems to what the CI can actually build
   # currently that is linux and darwin.
   systems = filterSystems supportedSystems;
   crossSystems =
-    # System doesn't matter as long as we only use lib
-    { inherit (libPkgs.lib.systems.examples) mingwW64; };
+    let pkgs = (import ./default.nix { }).pkgs;
+    in { inherit (pkgs.lib.systems.examples) mingwW64; };
 
   # Collects haskell derivations and builds an attrset:
   #
