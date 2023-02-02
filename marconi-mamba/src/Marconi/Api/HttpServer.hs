@@ -5,9 +5,10 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 
-module Marconi.Api.HttpServer(
-    bootstrap
-    ) where
+module Marconi.Api.HttpServer
+  ( bootstrap
+  , marconiApp
+  ) where
 
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
@@ -17,7 +18,7 @@ import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Network.Wai.Handler.Warp (runSettings)
 import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
-import Servant.Server (Handler, Server, serve)
+import Servant.Server (Application, Handler, Server, serve)
 
 import Cardano.Api ()
 import Marconi.Api.Routes (API)
@@ -29,9 +30,12 @@ import Marconi.Server.Types ()
 
 -- | bootstraps the he http server
 bootstrap :: JsonRpcEnv -> IO ()
-bootstrap env =  runSettings
-        (env ^. httpSettings)
-        (serve (Proxy @API) (server (env ^. queryEnv ) ) )
+bootstrap env =  runSettings (env ^. httpSettings) $ marconiApp (env ^. queryEnv)
+        -- (serve (Proxy @API) (server (env ^. queryEnv)))
+
+-- | Implement marconi API and pruduce the Wai Application
+marconiApp :: UtxoIndexerEnv -> Application
+marconiApp env = serve (Proxy @API) (server env )
 
 server
   :: UtxoIndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread

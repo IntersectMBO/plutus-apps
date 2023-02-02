@@ -95,7 +95,7 @@ data Utxo = Utxo
   , _datum            :: Maybe C.ScriptData
   , _datumHash        :: Maybe (C.Hash C.ScriptData)
   , _value            :: C.Value
-  , _inlineScript     :: Maybe Shelley.ScriptInAnyLang -- ByteString -- ^ ReferenceScript
+  , _inlineScript     :: Maybe Shelley.ScriptInAnyLang
   , _inlineScriptHash :: Maybe C.ScriptHash
   } deriving (Show, Eq, Generic)
 

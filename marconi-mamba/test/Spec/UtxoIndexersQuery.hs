@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -34,17 +33,7 @@ import RewindableIndex.Storable qualified as Storable
 deriving instance Eq (StorableEvent Utxo.UtxoHandle)
 deriving instance Ord (StorableEvent Utxo.UtxoHandle)
 
--- | Proves two list are equivalant, but not identical
---
-equivalentLists :: Eq a => [a] -> [a] -> Bool
-equivalentLists us us' =
-  length us == length us'
-  &&
-  all (const True) [u `elem` us'| u <- us]
-  &&
-  all (const True) [u `elem` us| u <- us']
-
--- | Insert events, and do the callback
+-- | Insert events, and perfrom the callback
 mocUtxoWorker
   :: (UIQ.UtxoIndexer -> IO ())
   -> [Utxo.StorableEvent Utxo.UtxoHandle]
@@ -54,9 +43,9 @@ mocUtxoWorker callback events depth =
   Utxo.open ":memory:" depth >>= Storable.insertMany events >>= callback
 
 tests :: TestTree
-tests = testGroup "marconi-mamba query Api Specs"
+tests = testGroup "marconi-mamba-utxo query Api Specs"
     [testPropertyNamed
-     "marconi-mamba query-target-addresses"
+     "marconi-mamba-utxo query-target-addresses"
      "Spec. Insert events and query for utxo's with address in the generated ShelleyEra targetAddresses"
      queryTargetAddressTest
     ]
@@ -65,8 +54,8 @@ tests = testGroup "marconi-mamba query Api Specs"
 --
 queryTargetAddressTest :: Property
 queryTargetAddressTest = property $ do
-  events <- forAll $ Gen.list (Range.linear 1 3) genEvents
-  depth <- forAll $ Gen.int (Range.linear 6 9) -- force DB writes
+  events <- forAll $ Gen.list (Range.linear 1 19) genEvents
+  depth <- forAll $ Gen.int (Range.linear 2 4) -- force DB writes
   let
     targetAddresses :: TargetAddresses
     targetAddresses
@@ -79,17 +68,16 @@ queryTargetAddressTest = property $ do
   env <- liftIO . UIQ.bootstrap $ targetAddresses
   let
     callback :: Utxo.UtxoIndexer -> IO ()
-    callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer)
+    callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer) -- update the indexer
   liftIO . mocUtxoWorker callback events $ Utxo.Depth depth
   fetchedRows <-
     liftIO
-    . fmap (nub . concat)
+    . fmap concat
     . traverse (UIQ.findByCardanoAddress env)
     . fmap C.toAddressAny
     $ targetAddresses
-  let rows = nub . concatMap Utxo.eventsToRows $ events
-  length fetchedRows === length rows
-  Hedgehog.diff fetchedRows equivalentLists rows
+  let rows = concatMap Utxo.eventsToRows events
+  fetchedRows === rows
 
 addressAnyToShelley :: C.AddressAny -> Maybe (C.Address C.ShelleyAddr)
 addressAnyToShelley  (C.AddressShelley a ) = Just a

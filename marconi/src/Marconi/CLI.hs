@@ -16,10 +16,10 @@ module Marconi.CLI
 
 import Control.Applicative (optional, some)
 import Data.ByteString.Char8 qualified as C8
-import Data.List (nub)
 import Data.List.NonEmpty (fromList)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
+import Data.Set qualified as Set
 import Data.Text (pack)
 import Options.Applicative qualified as Opt
 import System.Environment (lookupEnv)
@@ -78,15 +78,17 @@ pTestnetMagic = C.NetworkMagic <$> Opt.option Opt.auto
 multiString :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser TargetAddresses
 multiString desc = fromList . concat <$> some single
   where
-    single = Opt.option (Opt.str >>= (pure . parseCardanoAddresses)) desc
+    single = Opt.option (fmap parseCardanoAddresses Opt.str ) desc
 
 parseCardanoAddresses :: String -> [C.Address C.ShelleyAddr]
-parseCardanoAddresses =  nub
-    . fromJustWithError
-    . traverse (deserializeToCardano . pack)
-    . words
-    where
-        deserializeToCardano = C.deserialiseFromBech32 (C.proxyToAsType Proxy)
+parseCardanoAddresses
+  = Set.toList
+  . Set.fromList
+  . fromJustWithError
+  . traverse (deserializeToCardano . pack)
+  . words
+  where
+    deserializeToCardano = C.deserialiseFromBech32 (C.proxyToAsType Proxy)
 
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -120,7 +122,7 @@ parseOptions = do
     where
         programParser sha =
             Opt.info (Opt.helper
-                      <*> (versionOption sha)
+                      <*> versionOption sha
                       <*> optionsParser)
             (Opt.fullDesc
                 <> Opt.progDesc "marconi"
