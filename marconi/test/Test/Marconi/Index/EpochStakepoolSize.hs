@@ -4,7 +4,7 @@
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module EpochStakepoolSize where
+module Test.Marconi.Index.EpochStakepoolSize (tests) where
 
 import Control.Concurrent qualified as IO
 import Control.Concurrent.Async qualified as IO

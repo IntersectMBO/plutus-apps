@@ -197,9 +197,10 @@ test-suite marconi-test
   main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
-    EpochStakepoolSize
     Integration
-    Spec.Utxo
+    Test.Marconi.Index.EpochStakepoolSize
+    Test.Marconi.Index.ScriptTx
+    Test.Marconi.Index.Utxo
 
   --------------------
   -- Local components

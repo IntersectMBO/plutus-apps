@@ -1,10 +1,9 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Spec.Utxo (tests) where
+module Test.Marconi.Index.Utxo (tests) where
 
 import Control.Lens (filtered, folded, toListOf, traversed)
 import Control.Lens.Operators ((%~), (^.))
@@ -17,6 +16,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Database.SQLite.Simple qualified as SQL
+
 import Hedgehog (Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen

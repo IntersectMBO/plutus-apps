@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns  #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Gen.Marconi.Types
@@ -7,19 +8,26 @@ module Gen.Marconi.Types
   , genChainPoint'
   , genEvents
   , genEventAtChainPoint
+  , genExecutionUnits
   , genSlotNo
+  , genTxBodyContentWithTxInsCollateral
+  , genTxBodyWithTxIns
   , genTxIndex
   , genUtxo
+  , genWitnessAndHashInEra
   ) where
 
 import Cardano.Api qualified as C
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
-import Gen.Cardano.Api.Typed qualified as CGen
+
 import Hedgehog (Gen, MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+
+import Cardano.Api.Shelley qualified as Shelley
+import Gen.Cardano.Api.Typed qualified as CGen
 import Marconi.Index.Utxo qualified as Utxo
 
 
@@ -99,22 +107,51 @@ genEvents' ueUtxos = do
   ueChainPoint <- genChainPoint
   pure $ Utxo.UtxoEvent {..}
 
--- genShelleyUtxo :: Gen Utxo.Utxo
--- genShelleyUtxo = do
---   _address          <- C.toAddressAny <$> CGen.genAddressShelley
---   _txId             <- CGen.genTxId
---   _txIx             <- genTxIndex
---   sc <- CGen.genTxOutDatumHashTxContext C.BabbageEra
---   let (_datum, _datumHash)  = Utxo.getScriptDataAndHash sc
---   script <- CGen.genReferenceScript C.ShelleyEra
---   _value            <- CGen.genValueForTxOut
---   let (_inlineScript, _inlineScriptHash)=  Utxo.getRefScriptAndHash script
---   pure $ Utxo.Utxo {..}
+genTxBodyWithTxIns
+  :: C.IsCardanoEra era
+  => C.CardanoEra era
+  -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))]
+  -> C.TxInsCollateral era
+  -> Gen (C.TxBody era)
+genTxBodyWithTxIns era txIns txInsCollateral = do
+  txBodyContent <- genTxBodyContentWithTxInsCollateral era txIns txInsCollateral
+  case C.makeTransactionBody txBodyContent of
+    Left err     -> fail $ C.displayError err
+    Right txBody -> pure txBody
 
--- genShelleyEvents :: Gen (Utxo.StorableEvent Utxo.UtxoHandle)
--- genShelleyEvents = do
---   ueUtxos <- Gen.set (Range.linear 1 3) genShelleyUtxo
---   ueInputs <- Gen.set (Range.linear 1 2) CGen.genTxIn
---   ueBlockNo <- genBlockNo
---   ueChainPoint <- genChainPoint
---   pure $ Utxo.UtxoEvent {..}
+genTxBodyContentWithTxInsCollateral
+  :: C.CardanoEra era
+  -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))]
+  -> C.TxInsCollateral era
+  -> Gen (C.TxBodyContent C.BuildTx era)
+genTxBodyContentWithTxInsCollateral era txIns txInsCollateral = do
+  txbody <- CGen.genTxBodyContent era
+  txProtocolParams <- C.BuildTxWith . Just <$> CGen.genProtocolParameters
+  pure $ txbody
+    { C.txIns
+    , C.txInsCollateral
+    , C.txProtocolParams
+    }
+
+genWitnessAndHashInEra :: C.CardanoEra era -> Gen (C.Witness C.WitCtxTxIn era, C.ScriptHash)
+genWitnessAndHashInEra era = do
+  C.ScriptInEra scriptLanguageInEra script <- CGen.genScriptInEra era
+  witness :: C.Witness C.WitCtxTxIn era1 <- C.ScriptWitness C.ScriptWitnessForSpending <$> case script of
+    C.PlutusScript version plutusScript -> do
+      scriptData <- CGen.genScriptData
+      executionUnits <- genExecutionUnits
+      pure $ C.PlutusScriptWitness
+        scriptLanguageInEra
+        version
+        (Shelley.PScript plutusScript)
+        (C.ScriptDatumForTxIn scriptData)
+        scriptData
+        executionUnits
+    C.SimpleScript version simpleScript ->
+      pure $ C.SimpleScriptWitness scriptLanguageInEra version (Shelley.SScript simpleScript)
+  pure (witness, C.hashScript script)
+
+-- | TODO Copy-paste from cardano-node: cardano-api/gen/Gen/Cardano/Api/Typed.hs
+genExecutionUnits :: Gen C.ExecutionUnits
+genExecutionUnits = C.ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
+                                     <*> Gen.integral (Range.constant 0 1000)
