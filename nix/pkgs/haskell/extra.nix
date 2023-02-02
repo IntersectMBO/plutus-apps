@@ -15,12 +15,12 @@
 }:
 let
   # TODO Remove this patch once the PR gets merged upstream.
-  # See https://github.com/phadej/cabal-fmt/pull/45
+  # See https://github.com/phadej/cabal-fmt/pull/68
   cabalFmtProject = haskell-nix.cabalProject' {
     src = buildPackages.fetchgit {
       url = "https://github.com/zeme-iohk/cabal-fmt.git";
-      rev = "7b5c9b4fac55aad15a0b33bcd22b40a244bf30af";
-      sha256 = "04w1dy83ml7wgm5ay1rd4kiwfmdd9sc2y8bp3l0ja7xwvh4fgkmr";
+      rev = "22ee9ffcad6735a8b913fbc211816a55e67a9205";
+      sha256 = "sha256-+1pGc3agcAeOhQxe3zOZbx/z2++5pzdSoVlfdl1CBvQ=";
     };
     # Cabal is a boot library, so haskell.nix would normally use the one coming
     # from the compiler-nix-name (currently 3.2). However cabal-fmt depends on
