@@ -1,10 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
@@ -12,14 +9,11 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 module Spec.Emulator(tests) where
 
-import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Chain qualified as Chain
 import Cardano.Node.Emulator.Fee (selectCoin)
 import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.Params (Params (Params, pNetworkId))
-import Cardano.Node.Emulator.Validation qualified as Validation
-import Control.Lens ((&), (.~), (^.))
+import Control.Lens ((&), (.~))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff
 import Control.Monad.Freer.Extras.Log (LogLevel (Debug))
@@ -28,30 +22,21 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Default (Default (def))
 import Data.Foldable (fold)
-import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as Text
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), Language (PlutusV1), OnChainTx (Valid), PaymentPubKeyHash, ScriptError (EvaluationError),
-               Tx (txMint), TxInType (ScriptAddress), TxOut (TxOut), Validator, Versioned (Versioned), cardanoTxMap,
-               getCardanoTxOutRefs, getCardanoTxOutputs, mkValidatorCardanoAddress, mkValidatorScript, onCardanoTx,
-               outputs, txOutValue, unitDatum, unitRedeemer, unspentOutputs)
+import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint), cardanoTxMap, unspentOutputs)
 import Ledger.Index qualified as Index
-import Ledger.Tx.CardanoAPI (fromPlutusIndex, toCardanoTxOutDatumInTx, toCardanoTxOutValue)
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Contexts (ScriptContext)
-import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
-import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.Hedgehog (testPropertyNamed)
