@@ -37,8 +37,8 @@
       flake = false;
     };
     haskell-language-server = {
-      # Pinned to a release
-      url = "github:haskell/haskell-language-server?ref=1.5.1";
+      # TODO Upgrade to 1.9.0.0 once plutus-apps hits GHC 9.2
+      url = "github:haskell/haskell-language-server?ref=1.8.0.0";
       flake = false;
     };
     iohk-nix = {
