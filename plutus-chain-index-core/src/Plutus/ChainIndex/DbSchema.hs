@@ -268,7 +268,6 @@ deriving via Serialisable Datum instance HasDbType Datum
 deriving via Serialisable Redeemer instance HasDbType Redeemer
 deriving via Serialisable (Versioned MintingPolicy) instance HasDbType (Versioned MintingPolicy)
 deriving via Serialisable (Versioned StakeValidator) instance HasDbType (Versioned StakeValidator)
-deriving via Serialisable (Versioned Validator) instance HasDbType (Versioned Validator)
 deriving via Serialisable (Versioned ByteString) instance HasDbType (Versioned ByteString)
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
 deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
@@ -317,6 +316,15 @@ instance HasDbType (Versioned Script) where
           $ deserialiseOrFail
           $ BSL.fromStrict b
     in (Versioned script l)
+
+-- Need a specific instance to properly decode ByteString into Script and then to Validator
+-- Use only when retrieving info from DB
+instance HasDbType (Versioned Validator) where
+  type DbType (Versioned Validator) = ByteString
+  toDbValue (Versioned v l) = toDbValue (Versioned (P.getValidator v) l)
+  fromDbValue bs =
+    let (Versioned s l) = fromDbValue @(Versioned Script) bs
+    in (Versioned (P.Validator s) l)
 
 
 -- Use only when retrieving info from DB
