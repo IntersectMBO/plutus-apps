@@ -104,6 +104,28 @@ library
     , transformers
     , vector-map
 
+library json-rpc
+  import:          lang
+  visibility:      public
+  hs-source-dirs:  json-rpc/src
+  exposed-modules:
+    Marconi.Client.Types
+    Marconi.JsonRpc.Types
+    Marconi.Server.Types
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                 >=4.9 && <5
+    , containers
+    , http-media
+    , servant
+    , servant-client-core
+    , servant-server
+    , text
+
 executable marconi
   import:         lang
   hs-source-dirs: app
@@ -131,6 +153,38 @@ executable marconi
     , directory
     , prettyprinter
 
+library marconi-test-lib
+  import:          lang
+  hs-source-dirs:  test-lib
+  exposed-modules: Helpers
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:   cardano-streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-testnet
+    , ouroboros-network
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , async
+    , base             >=4.9 && <5
+    , containers
+    , directory
+    , filepath
+    , hedgehog
+    , hedgehog-extras
+    , streaming
+    , temporary
+
 test-suite marconi-test
   import:         lang
   ghc-options:    -Wno-unused-packages
@@ -139,7 +193,6 @@ test-suite marconi-test
   hs-source-dirs: test
   other-modules:
     EpochStakepoolSize
-    Helpers
     Integration
     Spec.Utxo
 
@@ -149,6 +202,7 @@ test-suite marconi-test
   build-depends:
     , cardano-streaming
     , marconi
+    , marconi-test-lib
     , rewindable-index
 
   --------------------------
@@ -158,7 +212,6 @@ test-suite marconi-test
     , cardano-api:{cardano-api, gen}
     , cardano-testnet
     , iohk-monitoring
-    , ouroboros-network
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
@@ -169,7 +222,7 @@ test-suite marconi-test
   build-depends:
     , aeson
     , async
-    , base                  >=4.9 && <5
+    , base             >=4.9 && <5
     , bytestring
     , containers
     , directory
@@ -177,7 +230,6 @@ test-suite marconi-test
     , hedgehog
     , hedgehog-extras
     , lens
-    , optparse-applicative
     , prettyprinter
     , serialise
     , sqlite-simple
@@ -185,6 +237,3 @@ test-suite marconi-test
     , streaming
     , tasty
     , tasty-hedgehog
-    , tasty-hunit
-    , temporary
-    , text

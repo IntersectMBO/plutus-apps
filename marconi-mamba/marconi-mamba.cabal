@@ -40,27 +40,6 @@ common lang
     -Wnoncanonical-monad-instances -Wredundant-constraints
     -Wunused-packages
 
-library json-rpc
-  import:          lang
-  hs-source-dirs:  json-rpc/src
-  exposed-modules:
-    Marconi.Client.Types
-    Marconi.JsonRpc.Types
-    Marconi.Server.Types
-
-  ------------------------
-  -- Non-IOG dependencies
-  ------------------------
-  build-depends:
-    , aeson
-    , base                 >=4.9 && <5
-    , containers
-    , http-media
-    , servant
-    , servant-client-core
-    , servant-server
-    , text
-
 library
   import:          lang
   hs-source-dirs:  src
@@ -77,8 +56,7 @@ library
   --------------------
   build-depends:
     , cardano-streaming
-    , json-rpc
-    , marconi
+    , marconi:{marconi, json-rpc}
     , rewindable-index
 
   --------------------------
@@ -154,9 +132,7 @@ executable examples-json-rpc-client
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , json-rpc
-    , marconi
+  build-depends:  marconi:{marconi, json-rpc}
 
   ------------------------
   -- Non-IOG dependencies
