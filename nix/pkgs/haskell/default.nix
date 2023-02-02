@@ -36,6 +36,7 @@ let
       inherit compiler-nix-name gitignore-nix;
       inherit enableHaskellProfiling;
       inherit deferPluginErrors;
+      inherit (sources) CHaP;
     };
   project = baseProject { deferPluginErrors = false; };
   # The same as above, but this time with we defer plugin errors so that we

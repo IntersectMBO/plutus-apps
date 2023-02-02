@@ -32,7 +32,7 @@ import Data.Monoid (Last (..), Sum (..))
 import Data.Text (unpack)
 import Ledger (Block, Slot (..), TxId (..))
 import Ledger.TimeSlot qualified as TimeSlot
-import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
+import Plutus.ChainIndex (BlockNumber (..), ChainSyncState (ChainSynced), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
                           InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..), RollbackFailed (..),
                           RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance,
                           TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx, insert,
@@ -299,7 +299,7 @@ updateEmulatorTransactionState
       trimIx :: Monoid a => Maybe Int -> UtxoIndex a -> UtxoIndex a
       trimIx Nothing                uix = uix
       trimIx (Just rollbackHistory) uix =
-        case reduceBlockCount (Depth rollbackHistory) uix of
+        case reduceBlockCount ChainSynced (Depth rollbackHistory) uix of
           BlockCountNotReduced          -> uix
           ReduceBlockCountResult uix' _ -> uix'
 

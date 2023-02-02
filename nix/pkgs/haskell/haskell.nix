@@ -12,6 +12,7 @@
   # Whether to set the `defer-plugin-errors` flag on those packages that need
   # it. If set to true, we will also build the haddocks for those packages.
 , deferPluginErrors
+, CHaP
 }:
 let
   project = haskell-nix.cabalProject' ({ pkgs, config, ... }: {
@@ -26,6 +27,9 @@ let
         name = "plutus-apps";
       };
     sha256map = import ./sha256map.nix;
+    inputMap = {
+      "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+    };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
     # after cabal has been configured.
@@ -48,6 +52,7 @@ let
         ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
           packages = {
             # Things that need plutus-tx-plugin
+            freer-extras.package.buildable = false;
             cardano-streaming.package.buildable = false;
             marconi.package.buildable = false;
             pab-blockfrost.package.buildable = false;

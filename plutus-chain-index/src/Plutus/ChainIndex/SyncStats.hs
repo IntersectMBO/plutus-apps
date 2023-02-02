@@ -122,9 +122,10 @@ getSyncState chainIndexSyncPoint nodePoint =
              in Syncing pct
 
 convertEventToSyncStats :: ChainSyncEvent -> SyncStats
-convertEventToSyncStats (RollForward (CI.Block chainSyncTip _) nodeTip) =
+convertEventToSyncStats (RollForward (CI.ChainIndexBlock chainSyncTip _) nodeTip) =
     SyncStats 1 0 (tipAsPoint chainSyncTip) (tipAsPoint nodeTip)
 convertEventToSyncStats (RollBackward chainSyncPoint nodeTip) =
     SyncStats 0 1 chainSyncPoint (tipAsPoint nodeTip)
 convertEventToSyncStats (Resume chainSyncPoint) =
     SyncStats 0 0 chainSyncPoint mempty
+convertEventToSyncStats (RollForward (CI.EmulatorBlock _  _) _) = error "convertEventToSyncStats: Unexpected EmulatorBlock in chain index !!!"

@@ -11,7 +11,6 @@ module Plutus.PAB.Events.ContractInstanceState(
     , hasActiveRequests
     ) where
 
-import Control.Monad.Freer.Extras.Log (LogMessage)
 import Data.Aeson (FromJSON, ToJSON (..), Value)
 import Data.Aeson.Encode.Pretty qualified as JSON
 import Data.ByteString.Lazy.Char8 qualified as BS8
@@ -27,8 +26,6 @@ import Prettyprinter
 data PartiallyDecodedResponse v =
     PartiallyDecodedResponse
         { hooks           :: [Contract.Request v]
-        , logs            :: [LogMessage Value]
-        , lastLogs        :: [LogMessage Value] -- The log messages returned by the last step ('lastLogs' is a suffix of 'logs')
         , err             :: Maybe Value
         , observableState :: Value
         }
@@ -36,8 +33,8 @@ data PartiallyDecodedResponse v =
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 fromResp :: Contract.ContractResponse Value Value s v -> PartiallyDecodedResponse v
-fromResp Contract.ContractResponse{Contract.hooks, Contract.logs, Contract.err, Contract.lastLogs, Contract.newState = Contract.State{Contract.observableState}} =
-    PartiallyDecodedResponse{hooks, logs, err, observableState, lastLogs}
+fromResp Contract.ContractResponse{Contract.hooks, Contract.err, Contract.newState = Contract.State{Contract.observableState}} =
+    PartiallyDecodedResponse{hooks, err, observableState}
 
 instance Pretty v => Pretty (PartiallyDecodedResponse v) where
     pretty PartiallyDecodedResponse {hooks, observableState} =

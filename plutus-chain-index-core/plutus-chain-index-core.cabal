@@ -83,6 +83,7 @@ library
     , cardano-api                  >=1.35
     , cardano-ledger-byron
     , cardano-ledger-core
+    , cardano-ledger-alonzo
     , io-classes
     , iohk-monitoring
     , ouroboros-consensus

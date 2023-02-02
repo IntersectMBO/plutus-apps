@@ -194,7 +194,8 @@ runBeamEffectInGenTestDb
     -> (a -> PropertyT IO ())
     -> PropertyT IO ()
 runBeamEffectInGenTestDb items effect runTest = do
-  pool <- liftIO $ Pool.createPool (Sqlite.open ":memory:") Sqlite.close 1 1_000_000 1
+  let cfg = Pool.PoolConfig (Sqlite.open ":memory:") Sqlite.close 1_000_000 1
+  pool <- liftIO $ Pool.newPool cfg
   result <- liftIO $ do
     Pool.withResource pool $ \conn -> Sqlite.runBeamSqlite conn $ do
       autoMigrate Sqlite.migrationBackend checkedSqliteDb

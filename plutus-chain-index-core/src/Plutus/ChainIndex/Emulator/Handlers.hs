@@ -277,17 +277,18 @@ appendBlocks ::
 appendBlocks [] = pure ()
 appendBlocks blocks = do
     let
-        processBlock (utxoIndexState, txs) (Block tip_ transactions) = do
-            if null transactions then return (utxoIndexState, txs)
+        processBlock (utxoIndexState, txs) (EmulatorBlock tip_ transactions) = do
+          if null transactions then return (utxoIndexState, txs)
             else do
-                case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) utxoIndexState of
-                    Left err -> do
-                        let reason = InsertionFailed err
-                        logError $ Err reason
-                        return (utxoIndexState, txs)
-                    Right InsertUtxoSuccess{newIndex, insertPosition} -> do
-                        logDebug $ InsertionSuccess tip_ insertPosition
-                        return (newIndex, transactions ++ txs)
+            case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) utxoIndexState of
+              Left err -> do
+                let reason = InsertionFailed err
+                logError $ Err reason
+                return (utxoIndexState, txs)
+              Right InsertUtxoSuccess{newIndex, insertPosition} -> do
+                logDebug $ InsertionSuccess tip_ insertPosition
+                return (newIndex, transactions ++ txs)
+        processBlock _ (ChainIndexBlock _ _) = error "appendBlocks: Unexpected ChainIndexBlock in emulator !!!"
     oldState <- get @ChainIndexEmulatorState
     (newIndex, transactions) <- foldM processBlock (view utxoIndex oldState, []) blocks
     put $ oldState
@@ -304,7 +305,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlocks blocks -> appendBlocks blocks
+    AppendBlocks _ blocks -> appendBlocks blocks
     Rollback tip_ -> do
         oldState <- get @ChainIndexEmulatorState
         case TxUtxoBalance.rollback tip_ (view utxoIndex oldState) of
@@ -336,6 +337,6 @@ diagnostics :: ChainIndexEmulatorState -> Diagnostics
 diagnostics (ChainIndexEmulatorState ds ui) =
     let TxUtxoBalance outputs inputs = UtxoState._usTxUtxoData $ UtxoState.utxoState ui
     in (DiskState.diagnostics ds)
-        { numUnspentOutputs  = length outputs
-        , numUnmatchedInputs = length inputs
+        { numUnspentOutputs  = fromIntegral $ length outputs
+        , numUnmatchedInputs = fromIntegral $ length inputs
         }

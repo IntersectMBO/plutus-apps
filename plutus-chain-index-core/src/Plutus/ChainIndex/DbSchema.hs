@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# options_ghc -Wno-missing-signatures #-}
@@ -37,7 +38,8 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (BlockId (..), ChainIndexTxOut (..), Slot, Versioned)
+import Ledger (BlockId (..), ChainIndexTxOut (..), Slot, Versioned (..))
+import Ledger qualified as P
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Tx qualified as CI
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
@@ -266,8 +268,7 @@ deriving via Serialisable Datum instance HasDbType Datum
 deriving via Serialisable Redeemer instance HasDbType Redeemer
 deriving via Serialisable (Versioned MintingPolicy) instance HasDbType (Versioned MintingPolicy)
 deriving via Serialisable (Versioned StakeValidator) instance HasDbType (Versioned StakeValidator)
-deriving via Serialisable (Versioned Validator) instance HasDbType (Versioned Validator)
-deriving via Serialisable (Versioned Script) instance HasDbType (Versioned Script)
+deriving via Serialisable (Versioned ByteString) instance HasDbType (Versioned ByteString)
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
 deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
@@ -297,8 +298,44 @@ instance HasDbType (DatumHash, Datum) where
     toDbValue (hash, datum) = DatumRow (toDbValue hash) (toDbValue datum)
     fromDbValue (DatumRow hash datum) = (fromDbValue hash, fromDbValue datum)
 
+
+-- Need a specific instance to properly decode ByteString into Script
+instance HasDbType (Versioned Script) where
+  type DbType (Versioned Script) = ByteString
+  toDbValue (Versioned s P.PlutusV1) =
+    let b_s = BSL.toStrict $ serialise s
+    in toDbValue (Versioned b_s P.PlutusV1)
+  toDbValue (Versioned s P.PlutusV2) =
+    let b_s = BSL.toStrict $ serialise s
+    in toDbValue (Versioned b_s P.PlutusV2)
+
+  fromDbValue bs =
+    let (Versioned b l) = fromDbValue @(Versioned ByteString) bs
+        script =
+          fromRight (error "Deserialisation script failed. Delete your chain index database and resync.")
+          $ deserialiseOrFail
+          $ BSL.fromStrict b
+    in (Versioned script l)
+
+-- Need a specific instance to properly decode ByteString into Script and then to Validator
+-- Use only when retrieving info from DB
+instance HasDbType (Versioned Validator) where
+  type DbType (Versioned Validator) = ByteString
+  toDbValue (Versioned v l) = toDbValue (Versioned (P.getValidator v) l)
+  fromDbValue bs =
+    let (Versioned s l) = fromDbValue @(Versioned Script) bs
+    in (Versioned (P.Validator s) l)
+
+
+-- Use only when retrieving info from DB
 instance HasDbType (ScriptHash, Versioned Script) where
     type DbType (ScriptHash, Versioned Script) = ScriptRow
+    toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
+    fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
+
+-- Use only when adding ChainIndexInternalTx in DB
+instance HasDbType (ScriptHash, Versioned ByteString) where
+    type DbType (ScriptHash, Versioned ByteString) = ScriptRow
     toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
     fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
 

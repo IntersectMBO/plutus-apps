@@ -20,7 +20,7 @@ import Data.Maybe (isJust)
 import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
-import Plutus.ChainIndex (ChainIndexLog, ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
+import Plutus.ChainIndex (ChainIndexLog, ChainSyncBlock (EmulatorBlock), ChainSyncState(ChainSynced), Page (pageItems), PageQuery (PageQuery),
                           TxProcessOption (TxProcessOption, tpoStoreTx), appendBlocks, citxTxId, txFromTxId,
                           unspentTxOutFromRef, utxoSetMembership, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
@@ -64,7 +64,7 @@ txFromTxIdSpec = property $ do
   (tip, block@(fstTx:_)) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
   unknownTxId <- forAll Gen.genRandomTxId
   txs <- liftIO $ runEmulatedChainIndex mempty $ do
-    appendBlocks [Block tip (map (, def) block)]
+    appendBlocks ChainSynced [EmulatorBlock tip (map (, def) block)]
     tx <- txFromTxId (view citxTxId fstTx)
     tx' <- txFromTxId unknownTxId
     pure (tx, tx')
@@ -82,7 +82,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlocks [Block tip (map (, def) block)]
+    appendBlocks ChainSynced [EmulatorBlock tip (map (, def) block)]
     utxoSetFromBlockAddrs block
 
   case result of
@@ -98,7 +98,7 @@ eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlocks [Block tip (map (, def) block)]
+    appendBlocks ChainSynced [EmulatorBlock tip (map (, def) block)]
     utxos <- utxoSetFromBlockAddrs block
     traverse unspentTxOutFromRef (concat utxos)
 
@@ -120,7 +120,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlocks [Block tip (map (, def) block)]
+    appendBlocks ChainSynced [EmulatorBlock tip (map (, def) block)]
 
     forM assetClasses $ \ac -> do
       let pq = PageQuery 200 Nothing
@@ -140,7 +140,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlocks [Block tip (map (, def) block)]
+    appendBlocks ChainSynced [EmulatorBlock tip (map (, def) block)]
 
     let pq = PageQuery 200 Nothing
     UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass ("", ""))
@@ -157,7 +157,7 @@ doNotStoreTxs :: Property
 doNotStoreTxs = property $ do
   ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
   result <- liftIO $ runEmulatedChainIndex mempty $ do
-    appendBlocks [Block tip (map (, TxProcessOption{tpoStoreTx=False}) block)]
+    appendBlocks ChainSynced [EmulatorBlock tip (map (, TxProcessOption{tpoStoreTx=False}) block)]
     tx <- txFromTxId (view citxTxId (head block))
     utxosFromAddr <- utxoSetFromBlockAddrs block
     utxosStored <- traverse utxoSetMembership (S.toList (view Gen.txgsUtxoSet state))

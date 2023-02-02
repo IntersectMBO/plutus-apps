@@ -81,6 +81,10 @@
       url = "github:input-output-hk/purescript-web-common";
       flake = false;
     };
+    CHaP = {
+      url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
   };
 
   outputs = { self, flake-utils, ... }@inputs:
@@ -94,15 +98,18 @@
       {
         packages = topLevel.bitte-packages;
         legacyPackages = topLevel;
+
+        hydraJobs = import ./hydraJobs.nix { inherit system; };
       }));
 
   nixConfig = {
     extra-substituters = [
       "https://cache.iog.io"
-      "https://hydra.iohk.io"
+      "https://cache.zw3rk.com"
     ];
     extra-trusted-public-keys = [
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk="
     ];
     allow-import-from-derivation = true;
     accept-flake-config = true;

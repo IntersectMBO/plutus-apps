@@ -47,7 +47,7 @@ import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
 import Plutus.ChainIndex.ChainIndexError (InsertUtxoFailed (..), RollbackFailed (..))
 import Plutus.ChainIndex.ChainIndexLog (InsertUtxoPosition (..))
-import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), pointsToTip)
+import Plutus.ChainIndex.Types (ChainSyncState (..), Depth (..), Point (..), Tip (..), pointsToTip)
 import Prettyprinter (Pretty (..))
 
 -- | UTXO / ledger state, kept in memory. We are only interested in the UTXO set, everything else is stored
@@ -161,9 +161,9 @@ data ReduceBlockCountResult a
 
 -- | Reduce the number of 'UtxoState's. The given number is the minimum, the index is reduced when it larger than twice that size.
 -- The new index is prefixed with one 'UtxoState' that contains the combined state of the removed 'UtxoState's.
-reduceBlockCount :: Monoid a => Depth -> UtxoIndex a -> ReduceBlockCountResult a
-reduceBlockCount (Depth minCount) ix
-    | utxoBlockCount ix <= 2 * minCount = BlockCountNotReduced
+reduceBlockCount :: Monoid a => ChainSyncState -> Depth -> UtxoIndex a -> ReduceBlockCountResult a
+reduceBlockCount syncState (Depth minCount) ix
+    | utxoBlockCount ix <= 2 * (syncCount syncState) = BlockCountNotReduced
     | otherwise =
         let (old, keep) = FT.split ((> (utxoBlockCount ix - minCount)) . getBlockCount . fst) ix
             combinedState = utxoState old
@@ -171,6 +171,10 @@ reduceBlockCount (Depth minCount) ix
             { reducedIndex = combinedState FT.<| keep
             , combinedState = combinedState
             }
+  where
+    syncCount = \case
+      ChainSynced -> minCount
+      ChainNotSynced -> minCount + 40000
 
 -- | Is the given point earlier than the provided tip. Yes, if the point is
 -- the genersis point, no if the tip is the genesis point, otherwise, just

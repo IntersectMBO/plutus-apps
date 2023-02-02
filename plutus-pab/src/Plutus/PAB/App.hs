@@ -304,7 +304,8 @@ runBeamMigration trace conn = Sqlite.runBeamSqliteDebug (logDebugString trace . 
 -- | Connect to the database.
 dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Sqlite.Connection)
 dbConnect trace DbConfig {dbConfigFile, dbConfigPoolSize} = do
-  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
+  let cfg = Pool.PoolConfig (Sqlite.open $ unpack dbConfigFile) Sqlite.close 5_000_000 (dbConfigPoolSize * 5)
+  pool <- Pool.newPool cfg
   logDebugString trace $ "Connecting to DB: " <> dbConfigFile
   return pool
 
