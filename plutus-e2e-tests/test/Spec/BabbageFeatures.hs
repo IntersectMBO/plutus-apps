@@ -21,13 +21,20 @@ import Helpers qualified as TN
 import PlutusScripts qualified as PS
 import Testnet.Plutus qualified as TN
 
-testnetOptionsBabbage8 :: TN.TestnetOptions
+testnetOptionsBabbage7, testnetOptionsBabbage8 :: TN.TestnetOptions
+testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
 testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
 
 tests :: TestTree
 tests = testGroup "reference script"
-  [ testProperty "mint a token with a reference script" (referenceScriptMint testnetOptionsBabbage8)
-  , testProperty "spend locked funds with a reference script" (referenceScriptInlineDatumSpend testnetOptionsBabbage8)
+  [ testProperty "mint a token with a reference script in Babbage PV7" (referenceScriptMint testnetOptionsBabbage7)
+  , testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint testnetOptionsBabbage8)
+
+  , testProperty "spend locked funds with a reference script using inline datum in Babbage PV7" (referenceScriptInlineDatumSpend testnetOptionsBabbage7)
+  , testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend testnetOptionsBabbage8)
+
+  , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV7" (referenceScriptDatumHashSpend testnetOptionsBabbage7)
+  , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend testnetOptionsBabbage8)
   ]
 
 referenceScriptMint :: TN.TestnetOptions -> H.Property
@@ -85,6 +92,7 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
   H.assert txOutHasTokenValue
   H.success
 
+
 referenceScriptInlineDatumSpend :: TN.TestnetOptions -> H.Property
 referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
 
@@ -121,7 +129,7 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
 -- 3: build a transaction to mint token using reference script
 
   let
-    scriptTxIn = TN.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn))
+    scriptTxIn = TN.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) Nothing)
     collateral = TN.txInsCollateral era [otherTxIn]
     adaValue = C.lovelaceToValue 4_200_000
     txOut = TN.txOut era adaValue w1Address
@@ -141,6 +149,7 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
   txOutHasAdaValue <- TN.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
   H.success
+
 
 referenceScriptDatumHashSpend :: TN.TestnetOptions -> H.Property
 referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
@@ -161,7 +170,8 @@ referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies .
                      (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
     otherTxOut    = TN.txOut era (C.lovelaceToValue 5_000_000) w1Address
     scriptAddress = TN.makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
-    scriptTxOut   = TN.txOutWithInlineDatum era (C.lovelaceToValue 10_000_000) scriptAddress (PS.toScriptData ())
+    datum         = PS.toScriptData ()
+    scriptTxOut   = TN.txOutWithDatumHash era (C.lovelaceToValue 10_000_000) scriptAddress datum
 
     txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]
@@ -178,7 +188,7 @@ referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies .
 -- 3: build a transaction to mint token using reference script
 
   let
-    scriptTxIn = TN.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn))
+    scriptTxIn = TN.txInWitness txInAtScript $ PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) (Just datum)
     collateral = TN.txInsCollateral era [otherTxIn]
     adaValue = C.lovelaceToValue 4_200_000
     txOut = TN.txOut era adaValue w1Address
@@ -198,8 +208,6 @@ referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies .
   txOutHasAdaValue <- TN.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
   H.success
-
-  -- TODO: referenceScriptDatumHashSpendTest
 
   -- TODO: datumHashSpendTest (no reference script)
   -- TODO: inlineDatumSpendTest (no reference script)

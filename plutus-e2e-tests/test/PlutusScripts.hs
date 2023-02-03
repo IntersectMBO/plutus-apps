@@ -167,15 +167,15 @@ alwaysSucceedSpendScriptV2 = validatorScript alwaysSucceedSpend
 alwaysSucceedSpendScriptHashV2 :: C.ScriptHash
 alwaysSucceedSpendScriptHashV2 = C.hashScript $ C.PlutusScript C.PlutusScriptV2 alwaysSucceedSpendScriptV2
 
-alwaysSucceedSpendWitnessV2 :: C.CardanoEra era -- TODO: also support not using inline datum (ScriptDatumForTxIn)
-  -> Maybe C.TxIn -- maybe reference input
+alwaysSucceedSpendWitnessV2 :: C.CardanoEra era
+  -> Maybe C.TxIn
+  -> Maybe C.ScriptData
   -> C.Witness C.WitCtxTxIn era
-alwaysSucceedSpendWitnessV2 era Nothing =
-  C.ScriptWitness C.ScriptWitnessForSpending $
-    spendScriptWitness era plutusL2 (Left alwaysSucceedSpendScriptV2) C.InlineScriptDatum (toScriptData ())
-alwaysSucceedSpendWitnessV2 era (Just refTxIn) =
-  C.ScriptWitness C.ScriptWitnessForSpending $
-    spendScriptWitness era plutusL2 (Right refTxIn) C.InlineScriptDatum (toScriptData ())
+alwaysSucceedSpendWitnessV2 era mRefScript mDatum =
+    C.ScriptWitness C.ScriptWitnessForSpending $ spendScriptWitness era plutusL2
+      (maybe (Left alwaysSucceedSpendScriptV2) (\refScript -> Right refScript) mRefScript) -- script or reference script
+      (maybe C.InlineScriptDatum (\datum -> C.ScriptDatumForTxIn datum) mDatum) -- inline datum or datum value
+      (toScriptData ()) -- redeemer
 
 ---- SECP256k1 ----
 

@@ -203,7 +203,6 @@ source-repository-package
 
 -- Includes cardano-testnet fix for Babbage era on fork of 1.35.4
 -- PR for master branch: https://github.com/input-output-hk/cardano-node/pull/4729
--- STABLE TAG: eb44c868fa4af3cbc9024421393880b6bef49811
 source-repository-package
     type: git
     location: https://github.com/james-iohk/cardano-node

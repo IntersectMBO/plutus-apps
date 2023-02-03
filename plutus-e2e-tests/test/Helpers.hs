@@ -188,30 +188,11 @@ makeAddress (Left paymentKey)  nId =
 makeAddress (Right scriptHash) nId =
     C.makeShelleyAddress nId (C.PaymentCredentialByScript scriptHash) C.NoStakeAddress
 
--- -- | Build TxOut with option of including reference script and inline datum
--- txOutWithRefScriptAndInlineDatum' :: C.CardanoEra era
---   -> C.Value
---   -> C.Address C.ShelleyAddr
---   -> Maybe C.ScriptData
---   -> Maybe (C.Script lang)
---   -> C.TxOut ctx era
--- txOutWithRefScriptAndInlineDatum' era value address mDatum mScript =
---   C.TxOut
---     (maybeAnyAddressInEra $ C.anyAddressInEra era $ C.toAddressAny address)
---     (C.TxOutValue (multiAssetSupportedInEra era) value)
---     (maybe C.TxOutDatumNone
---       (C.TxOutDatumInline referenceTxInsScriptsInlineDatumsSupportedInEra) mDatum)
---     (maybe C.ReferenceScriptNone
---       (C.ReferenceScript referenceTxInsScriptsInlineDatumsSupportedInEra . C.toScriptInAnyLang) mScript)
---   where
---     referenceTxInsScriptsInlineDatumsSupportedInEra = case era of
---           C.BabbageEra -> C.ReferenceTxInsScriptsInlineDatumsInBabbageEra
-
 -- | Build TxOut for spending or minting with no datum or reference script present
 txOut :: C.CardanoEra era
   -> C.Value
   -> C.Address C.ShelleyAddr
-  -> C.TxOut ctx era
+  -> C.TxOut C.CtxTx era
 txOut era value address = C.TxOut
     (maybeAnyAddressInEra $ C.anyAddressInEra era $ C.toAddressAny address)
     (C.TxOutValue (multiAssetSupportedInEra era) value)
@@ -221,40 +202,58 @@ txOut era value address = C.TxOut
     maybeAnyAddressInEra Nothing    = error $ "Era must be ShelleyBased"
     maybeAnyAddressInEra (Just aie) = aie
 
+-- | Build TxOut with a reference script
 txOutWithRefScript :: C.CardanoEra era
   -> C.Value
   -> C.Address C.ShelleyAddr
   -> C.Script lang
-  -> C.TxOut ctx era
+  -> C.TxOut C.CtxTx era
 txOutWithRefScript era value address script = withRefScript era script $ txOut era value address
 
-txOutWithInlineDatum :: C.CardanoEra era
+txOutWithInlineDatum, txOutWithDatumHash, txOutWithDatumInTx :: C.CardanoEra era
   -> C.Value
   -> C.Address C.ShelleyAddr
   -> C.ScriptData
-  -> C.TxOut ctx era
+  -> C.TxOut C.CtxTx era
+-- | Build TxOut with inline datum
 txOutWithInlineDatum era value address datum = withInlineDatum era datum $ txOut era value address
+-- | Build TxOut with datum hash
+txOutWithDatumHash era value address datum = withDatumHash era datum $ txOut era value address
+-- | Build TxOut with datum hash whilst including datum value in txbody
+txOutWithDatumInTx era value address datum = withDatumInTx era datum $ txOut era value address
 
 -- | Add reference script to TxOut
 withRefScript :: C.CardanoEra era
   -> C.Script lang
-  -> C.TxOut ctx era
-  -> C.TxOut ctx era
+  -> C.TxOut C.CtxTx era
+  -> C.TxOut C.CtxTx era
 withRefScript era script (C.TxOut e v d _) =
     C.TxOut e v d (C.ReferenceScript (refInsScriptsAndInlineDatsSupportedInEra era) (C.toScriptInAnyLang script))
 
--- | Add inline datum to TxOut
-withInlineDatum :: C.CardanoEra era
+withInlineDatum, withDatumHash, withDatumInTx :: C.CardanoEra era
   -> C.ScriptData
-  -> C.TxOut ctx era
-  -> C.TxOut ctx era
+  -> C.TxOut C.CtxTx era
+  -> C.TxOut C.CtxTx era
+-- | Add inline datum to TxOut
 withInlineDatum era datum (C.TxOut e v _ rs) =
     C.TxOut e v (C.TxOutDatumInline (refInsScriptsAndInlineDatsSupportedInEra era) datum) rs
+-- | Add datum hash to TxOut
+withDatumHash era datum (C.TxOut e v _ rs) =
+    C.TxOut e v (C.TxOutDatumHash (scriptDataSupportedInEra era) (C.hashScriptData datum)) rs
+-- | Add datum hash to TxOut whilst including datum value in txbody
+withDatumInTx era datum (C.TxOut e v _ rs) =
+    C.TxOut e v (C.TxOutDatumInTx (scriptDataSupportedInEra era) datum)  rs
 
 refInsScriptsAndInlineDatsSupportedInEra :: C.CardanoEra era -> C.ReferenceTxInsScriptsInlineDatumsSupportedInEra era
 refInsScriptsAndInlineDatsSupportedInEra = fromMaybe . C.refInsScriptsAndInlineDatsSupportedInEra
   where
     fromMaybe Nothing  = error "Era must support reference inputs"
+    fromMaybe (Just e) = e
+
+scriptDataSupportedInEra :: C.CardanoEra era -> C.ScriptDataSupportedInEra era
+scriptDataSupportedInEra = fromMaybe . C.scriptDataSupportedInEra
+  where
+    fromMaybe Nothing  = error "Era must support script data"
     fromMaybe (Just e) = e
 
 -- | Find the first UTxO at address and return as TxIn. Used for txbody's txIns.
@@ -294,8 +293,6 @@ findUTxOByAddress era localNodeConnectInfo address = let
   in
   H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
     C.QueryInEra (toEraInCardanoMode era) query
-  where
-    fromMaybe Nothing = error
 
 -- | Get [TxIn] and total lovelace value for an address.
 getAddressTxInsLovelaceValue
