@@ -33,7 +33,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Cons
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertUnbalancedTx, assertValidatedTransactionCount,
+import Plutus.Contract.Test (assertFailedTransaction, assertUnbalancedTx, assertValidatedTransactionCount,
                              assertValidatedTransactionCountOfTotal, checkPredicateOptions, defaultCheckOptions,
                              emulatorConfig, mockWalletAddress, w1, w2, (.&&.))
 import Plutus.Script.Utils.Ada qualified as Ada
@@ -113,12 +113,10 @@ mustUseOutputAsCollateralContract submitTxFromConstraints lc numberOfCollateralI
     let collateralUtxos = M.keys $ M.take (fromIntegral numberOfCollateralInputs) pubKeyUtxos
         lookups1 = Cons.unspentOutputs pubKeyUtxos
                 <> mintingPolicy lc (mustUseOutputAsCollateralPolicy lc)
-        tx1 = mconcat (mustUseOutputsAsCollateral collateralUtxos)
+        tx1 = foldMap Cons.mustUseOutputAsCollateral collateralUtxos
            <> Cons.mustMintValueWithRedeemer (asRedeemer collateralUtxos) (tknValue lc)
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-    where
-        mustUseOutputsAsCollateral utxos = Cons.mustUseOutputAsCollateral <$> utxos
 
 -- | Valid scenario using offchain and onchain constraint mustUseOutputAsCollateral to select
 -- a specific utxo to use as collateral input
@@ -247,20 +245,20 @@ ledgerValidationErrorWhenUsingMustUseOutputAsCollateralWithScriptUtxo submitTxFr
                 "correct number of collateral inputs")
         (void $ trace contract)
 
--- | Ledger validation error scenario when offchain constraint mustUseOutputAsCollateral is used
+-- | Balancing error scenario when offchain constraint mustUseOutputAsCollateral is used
 -- to exceed allowed maximum collatereal inputs (network protocol param)
 ledgerValidationErrorWhenMustUseOutputAsCollateralExceedsMaximumCollateralInputs
     :: SubmitTx
     -> PSU.Language
     -> TestTree
 ledgerValidationErrorWhenMustUseOutputAsCollateralExceedsMaximumCollateralInputs submitTxFromConstraints lc =
-    let moreThanMaximumCollateralInputs = (succ maximumCollateralInputs)
+    let moreThanMaximumCollateralInputs = succ maximumCollateralInputs
         contract = mustUseOutputAsCollateralContract submitTxFromConstraints lc
                     moreThanMaximumCollateralInputs w1Address
     in checkPredicateOptions defaultCheckOptions
-    ("Ledger error when offchain mustUseOutputAsCollateralToSatisfyAllCollateral is used more " ++
+    ("Balancing error when offchain mustUseOutputAsCollateralToSatisfyAllCollateral is used more " ++
      "than maximum number of allowed collateral inputs (TooManyCollateralInputs)")
-    (assertValidatedTransactionCountOfTotal 0 1 .&&.
+    (assertFailedTransaction (const (== L.MaxCollateralInputsExceeded)) .&&.
         assertUnbalancedTx contract
             (Trace.walletInstanceTag w1)
             (\unT ->
