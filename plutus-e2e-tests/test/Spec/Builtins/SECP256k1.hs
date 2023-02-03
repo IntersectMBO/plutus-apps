@@ -72,7 +72,7 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
             PS.verifyEcdsaMintWitnessV2 era )
 
     tokenValues = C.valueFromList [(verifySchnorrAssetId, 4), (verifyEcdsaAssetId, 2)]
-    txOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
+    txOut = TN.txOut era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
     mintWitnesses = Map.fromList [verifySchnorrMintWitness, verifyEcdsaMintWitness]
     collateral = TN.txInsCollateral era [txIn]
     txBodyContent = (TN.emptyTxBodyContent era pparams)

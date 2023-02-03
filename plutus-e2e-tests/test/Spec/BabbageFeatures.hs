@@ -45,8 +45,9 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
   let
-    refScriptTxOut = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address (PS.unPlutusScriptV2 PS.alwaysSucceedPolicyScriptV2)
-    otherTxOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 5_000_000) w1Address
+    refScriptTxOut = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
+      (PS.unPlutusScriptV2 PS.alwaysSucceedPolicyScriptV2)
+    otherTxOut = TN.txOut era (C.lovelaceToValue 5_000_000) w1Address
 
     txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]
@@ -65,14 +66,14 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
     tokenValues = C.valueFromList [(PS.alwaysSucceedAssetIdV2, 6)]
     mintWitnesses = Map.fromList [PS.alwaysSucceedMintWitnessV2 era (Just refScriptTxIn)]
     collateral = TN.txInsCollateral era [otherTxIn]
-    txOut3 = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
+    txOut = TN.txOut era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
 
     txBodyContent2 = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [otherTxIn]
       , C.txInsCollateral = collateral
       , C.txInsReference = TN.txInsReference era [refScriptTxIn]
       , C.txMintValue = TN.txMintValue era tokenValues mintWitnesses
-      , C.txOuts = [txOut3]
+      , C.txOuts = [txOut]
       }
 
   signedTx2 <- TN.buildTx era txBodyContent2 w1Address w1SKey networkId
@@ -99,10 +100,11 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
   let
-    refTxOut = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
-    otherTxOut = TN.txOutNoDatumOrRefScript era (C.lovelaceToValue 5_000_000) w1Address
+    refTxOut      = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
+                     (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
+    otherTxOut    = TN.txOut era (C.lovelaceToValue 5_000_000) w1Address
     scriptAddress = TN.makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
-    scriptTxOut = TN.txOutWithInlineDatum era (C.lovelaceToValue 10_000_000) scriptAddress (PS.toScriptData ())
+    scriptTxOut   = TN.txOutWithInlineDatum era (C.lovelaceToValue 10_000_000) scriptAddress (PS.toScriptData ())
 
     txBodyContent = (TN.emptyTxBodyContent era pparams)
       { C.txIns = TN.pubkeyTxIns [txIn]
@@ -122,7 +124,64 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
     scriptTxIn = TN.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn))
     collateral = TN.txInsCollateral era [otherTxIn]
     adaValue = C.lovelaceToValue 4_200_000
-    txOut = TN.txOutNoDatumOrRefScript era adaValue w1Address
+    txOut = TN.txOut era adaValue w1Address
+
+    txBodyContent2 = (TN.emptyTxBodyContent era pparams)
+      { C.txIns = [scriptTxIn]
+      , C.txInsReference = TN.txInsReference era [refScriptTxIn]
+      , C.txInsCollateral = collateral
+      , C.txOuts = [txOut]
+      }
+
+  signedTx2 <- TN.buildTx era txBodyContent2 w1Address w1SKey networkId
+  TN.submitTx era localNodeConnectInfo signedTx2
+  let expectedTxIn = TN.txIn (TN.txId signedTx2) 0
+  -- Query for txo and assert it contains newly minted token
+  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
+  txOutHasAdaValue <- TN.txOutHasValue resultTxOut adaValue
+  H.assert txOutHasAdaValue
+  H.success
+
+referenceScriptDatumHashSpend :: TN.TestnetOptions -> H.Property
+referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
+
+  C.AnyCardanoEra era <- return $ TN.era testnetOptions
+
+-- 1: spin up a testnet
+  base <- TN.getProjectBase
+  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
+
+-- 2: build a transaction to hold reference script
+
+  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
+
+  let
+    refTxOut      = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
+                     (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
+    otherTxOut    = TN.txOut era (C.lovelaceToValue 5_000_000) w1Address
+    scriptAddress = TN.makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
+    scriptTxOut   = TN.txOutWithInlineDatum era (C.lovelaceToValue 10_000_000) scriptAddress (PS.toScriptData ())
+
+    txBodyContent = (TN.emptyTxBodyContent era pparams)
+      { C.txIns = TN.pubkeyTxIns [txIn]
+      , C.txOuts = [refTxOut, otherTxOut, scriptTxOut]
+      }
+
+  signedTx <- TN.buildTx era txBodyContent w1Address w1SKey networkId
+  TN.submitTx era localNodeConnectInfo signedTx
+  let refScriptTxIn = TN.txIn (TN.txId signedTx) 0
+      otherTxIn     = TN.txIn (TN.txId signedTx) 1
+      txInAtScript  = TN.txIn (TN.txId signedTx) 2
+  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
+
+-- 3: build a transaction to mint token using reference script
+
+  let
+    scriptTxIn = TN.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn))
+    collateral = TN.txInsCollateral era [otherTxIn]
+    adaValue = C.lovelaceToValue 4_200_000
+    txOut = TN.txOut era adaValue w1Address
 
     txBodyContent2 = (TN.emptyTxBodyContent era pparams)
       { C.txIns = [scriptTxIn]
