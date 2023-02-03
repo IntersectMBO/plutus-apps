@@ -21,7 +21,7 @@ import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withCha
 import Marconi.ChainIndex.Indexers (mkIndexerStream, startIndexers, utxoWorker)
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Mamba.Api.HttpServer qualified as Http
-import Marconi.Mamba.Api.Query.UtxoIndexer (UtxoIndexer, initializeEnv, writeTMVar')
+import Marconi.Mamba.Api.Query.Indexers.Utxo (UtxoIndexer, initializeEnv, writeTMVar')
 import Marconi.Mamba.Api.Types (CliArgs (CliArgs), HasIndexerEnv (uiIndexer), HasMambaEnv (queryEnv),
                                 MambaEnv (MambaEnv, _httpSettings, _queryEnv))
 

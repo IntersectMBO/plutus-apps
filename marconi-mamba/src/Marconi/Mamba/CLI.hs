@@ -13,14 +13,14 @@ import Marconi.Mamba.Api.Types (CliArgs (CliArgs))
 --
 parserCliArgs :: Parser CliArgs
 parserCliArgs = CliArgs
-  <$> strOption (long "socket-path" <> metavar "FILE" <> help "Socket path to node")
-  <*> strOption (long "utxo-db" <> metavar "FILE" <> help "Path to the utxo database.")
+  <$> strOption (long "socket-path" <> metavar "FILE-PATH" <> help "Socket path to node")
+  <*> strOption (long "utxo-db" <> metavar "FILE-PATH" <> help "Path to the utxo database.")
   <*> (optional . option  auto) (
         long "http-port" <> metavar "HTTP-PORT" <> help "JSON-RPC http port number, default is port 3000.")
   <*> pNetworkId
-  <*> multiString (long "addresses-to-index"
-                        <> help ("Bech32 Shelley addresses to index."
-                                 <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+  <*> multiString (long "addresses-to-index" <> metavar "BECH32-ADDRESS "
+                   <> help ("Bech32 Shelley addresses to index."
+                            <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
 
 parserOpts  :: String -> ParserInfo CliArgs
 parserOpts sha =

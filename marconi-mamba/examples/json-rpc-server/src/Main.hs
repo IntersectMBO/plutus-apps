@@ -18,7 +18,7 @@ import Options.Applicative (Parser, execParser, help, helper, info, long, metava
 import Marconi.ChainIndex.CLI (multiString)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
-import Marconi.Mamba.Api.Query.UtxoIndexer qualified as UIQ
+import Marconi.Mamba.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Mamba.Api.Types (IndexerEnv, queryEnv, uiIndexer)
 import Marconi.Mamba.Bootstrap (bootstrapHttp, initializeIndexerEnv)
 
