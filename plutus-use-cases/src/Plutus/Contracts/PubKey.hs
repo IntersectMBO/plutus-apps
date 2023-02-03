@@ -31,7 +31,7 @@ import Plutus.V2.Ledger.Api (Value)
 import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
 
-import Ledger.Constraints qualified as Constraints
+import Ledger.Tx.Constraints qualified as Constraints
 import Plutus.ChainIndex.Types (Tip (Tip, TipAtGenesis))
 import Plutus.Contract as Contract
 

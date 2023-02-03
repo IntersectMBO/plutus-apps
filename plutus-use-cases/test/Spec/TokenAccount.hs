@@ -12,15 +12,14 @@ import Control.Monad.Freer.Error (runError)
 import Data.Default (Default (..))
 import Plutus.Contract (Contract)
 import Plutus.Contract.Test
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (TokenName, Value)
-import Streaming.Prelude qualified as S
-import Wallet.Emulator.Stream (foldEmulatorStreamM, takeUntilSlot)
-
 import Plutus.Contracts.TokenAccount (Account (..), TokenAccountError, TokenAccountSchema, tokenAccountContract)
 import Plutus.Contracts.TokenAccount qualified as Accounts
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Trace.Emulator qualified as Trace
+import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds
+import Wallet.Emulator.Stream (foldEmulatorStreamM, takeUntilSlot)
 
 tests :: TestTree
 tests = testGroup "token account"

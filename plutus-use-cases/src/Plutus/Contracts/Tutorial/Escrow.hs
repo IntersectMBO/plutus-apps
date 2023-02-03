@@ -52,9 +52,9 @@ import GHC.Generics (Generic)
 
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger qualified
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), txSignedBy)

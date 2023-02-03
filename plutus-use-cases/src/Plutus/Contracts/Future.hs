@@ -52,11 +52,11 @@ import PlutusTx qualified
 import PlutusTx.Prelude
 
 import Ledger (Address, POSIXTime, PaymentPubKey, PaymentPubKeyHash)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.TxConstraints (TxConstraints)
-import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Scripts (unitDatum)
 import Ledger.Tokens
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))

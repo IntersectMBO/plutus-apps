@@ -37,7 +37,7 @@ import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Monoid (Last (..))
 import GHC.Generics (Generic)
-import Ledger.Constraints (TxConstraints)
+import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed (ScriptContextV2)

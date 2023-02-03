@@ -37,7 +37,7 @@ import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
-import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1), adjustTxOut,
+import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1), adjustCardanoTxOut,
                      minAdaTxOutEstimated)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx, TxOut, TxOutRef)
 import Ledger.Tx qualified as Tx
@@ -249,7 +249,7 @@ calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
         then pure (neg, pos, Nothing)
         else do
             let txOut = C.TxOut addr (CardanoAPI.toCardanoTxOutValue pos) C.TxOutDatumNone C.Api.ReferenceScriptNone
-            (missing, extraTxOut) <- adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
+            (missing, extraTxOut) <- adjustCardanoTxOut (emulatorPParams params) (Tx.TxOut txOut)
             let missingValue = lovelaceToValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)

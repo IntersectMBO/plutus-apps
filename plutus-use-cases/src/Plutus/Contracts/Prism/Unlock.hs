@@ -29,9 +29,9 @@ import Control.Monad (forever)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKeyHash)
-import Ledger.Constraints (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
-import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (getCardanoTxId)
+import Ledger.Tx.Constraints (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
+import Ledger.Tx.Constraints qualified as Constraints
 import Plutus.Contract
 import Plutus.Contract.StateMachine (InvalidTransition, SMContractError, StateMachine, StateMachineTransition (..))
 import Plutus.Contract.StateMachine qualified as SM

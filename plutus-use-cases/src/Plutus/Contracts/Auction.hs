@@ -35,9 +35,9 @@ import Data.Monoid (Last (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, toPlutusAddress)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.TxConstraints (TxConstraints)
-import Ledger.Constraints.ValidityInterval qualified as Interval
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,

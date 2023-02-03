@@ -138,10 +138,10 @@ import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
                cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Tx.Constraints.OffChain qualified as Tx.Constraints
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Plutus.Contract.Util (loopM)

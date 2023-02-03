@@ -27,9 +27,9 @@ import GHC.Generics (Generic)
 
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger qualified
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Interval (after, before)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts (ScriptContextV2)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
@@ -132,7 +132,7 @@ lockEp = endpoint @"lock" $ \params -> do
   let valRange = Interval.lessThan (Haskell.pred $ Haskell.pred $ deadline params)
       tx = Constraints.mustPayToTheScriptWithDatumInTx params (paying params)
             <> Constraints.mustValidateInTimeRange valRange
-  void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
+  void $ mkCardanoTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
          >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Attempts to redeem the 'Value' locked into this script by paying in from
@@ -157,7 +157,7 @@ redeemEp = endpoint @"redeem" redeem
       if time >= deadline params
       then throwing _RedeemFailed DeadlinePassed
       else do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+        utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups escrowInstance
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx >>= adjustUnbalancedTx
         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
@@ -175,7 +175,7 @@ refundEp = endpoint @"refund" refund
 
       if Constraints.modifiesUtxoSet tx
       then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+        utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups escrowInstance
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx >>= adjustUnbalancedTx
         RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx

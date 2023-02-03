@@ -22,7 +22,7 @@ import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKeyHash)
-import Ledger.Constraints qualified as Constraints
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError (..), SMContractError, StateMachineTransition (..))
@@ -77,7 +77,7 @@ createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenNa
             <> Constraints.mustBeSignedBy pk
             <> Constraints.mustPayToPubKey pk (Ada.lovelaceValueOf 1)   -- Add self-spend to force an input
     _ <- mapError CreateTokenTxError $ do
-            mkTxConstraints @Scripts.Any lookups constraints
+            mkCardanoTxConstraints @Scripts.Any lookups constraints
               >>= adjustUnbalancedTx >>= submitTxConfirmed
     let stateMachine = StateMachine.mkMachineClient authority (mockWalletPaymentPubKeyHash coOwner) coTokenName
     void $ mapError StateMachineError $ SM.runInitialise stateMachine Active theToken
@@ -94,7 +94,7 @@ revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenNa
     case t of
         Left{} -> return () -- Ignore invalid transitions
         Right StateMachineTransition{smtConstraints=constraints, smtLookups=lookups'} -> do
-            mkTxConstraints (lookups <> lookups') constraints
+            mkCardanoTxConstraints (lookups <> lookups') constraints
               >>= adjustUnbalancedTx >>= submitTxConfirmed
 
 ---

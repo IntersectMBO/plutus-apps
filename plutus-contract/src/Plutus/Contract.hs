@@ -93,6 +93,7 @@ module Plutus.Contract(
     , Request.submitBalancedTx
     , Request.balanceTx
     , Request.mkTxConstraints
+    , Request.mkCardanoTxConstraints
     , Request.yieldUnbalancedTx
     -- ** Tx confirmation
     , Request.awaitTxConfirmed

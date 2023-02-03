@@ -14,9 +14,9 @@ import Control.Monad (void)
 
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger (PaymentPubKeyHash)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
