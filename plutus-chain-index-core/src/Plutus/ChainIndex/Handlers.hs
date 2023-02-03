@@ -54,7 +54,7 @@ import Ledger.Value (AssetClass)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..), RollbackFailed(..))
-import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
+import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..), BlockReductionState(..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
 import Plutus.ChainIndex.DbSchema
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
@@ -451,21 +451,19 @@ appendBlocks _syncState blocks = do
     oldIndex <- get @ChainIndexState
     (newIndex, transactions, utxoStates) <- foldM processBlock (oldIndex, [], []) blocks
     depth <- ask @Depth
-    reduceOldUtxoDbEffect <-
-      case reduceBlocks depth newIndex of
-        Nothing -> do
-          put newIndex
-          pure $ Combined []
-        Just (reducedIndex, tp) -> do
-          let !i_nbTips = fromIntegral $ length newIndex
-          logInfo $ BlockReductionPhase depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
-          -- retrieve number of unspent outputs to perform batch updates
-          numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
-          put reducedIndex
-          pure $ reduceOldUtxoDb (fromMaybe updateBatch numUnspentOutputs) tp
+    case reduceBlocks depth newIndex of
+      Nothing -> do
+        put newIndex
+      Just (reducedIndex, tp) -> do
+        let !i_nbTips = fromIntegral $ length newIndex
+        logInfo $ BlockReductionPhase BeginReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
+        -- retrieve number of unspent outputs to perform batch updates
+        numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
+        put reducedIndex
+        combined [ reduceOldUtxoDb (fromMaybe updateBatch numUnspentOutputs) tp ]
+        logInfo $ BlockReductionPhase EndReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
     combined
-        [ reduceOldUtxoDbEffect
-        , insertRows $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
+        [ insertRows $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
         , insertUtxoDb (map (\(t, _) -> CAPI.toChainIndexTxEmptyScripts t) transactions) utxoStates
         ]
 

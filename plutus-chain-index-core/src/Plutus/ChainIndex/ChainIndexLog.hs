@@ -2,7 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
-module Plutus.ChainIndex.ChainIndexLog (ChainIndexLog(..), InsertUtxoPosition(..)) where
+module Plutus.ChainIndex.ChainIndexLog (ChainIndexLog(..), InsertUtxoPosition(..), BlockReductionState(..)) where
 
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Control.Monad.Freer.Extras.Beam (BeamLog)
@@ -25,7 +25,7 @@ data ChainIndexLog =
     | TipIsGenesis
     | NoDatumScriptAddr ChainIndexTxOut
     | BeamLogItem BeamLog
-    | BlockReductionPhase {securityParams :: Depth, nbTipBeforeReduction :: Integer, nbTipReduced :: Integer }
+    | BlockReductionPhase {status :: BlockReductionState, securityParams :: Depth, nbTipBeforeReduction :: Integer, nbTipReduced :: Integer }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
 
@@ -46,8 +46,9 @@ instance Pretty ChainIndexLog where
     TipIsGenesis -> "TipIsGenesis"
     NoDatumScriptAddr txout -> "The following transaction output from a script adress does not have a datum:" <+> viaShow txout
     BeamLogItem b -> "BeamLogItem:" <+> pretty b
-    BlockReductionPhase d nbTip nbReduced ->
-      "Block reduction phase: security parameter: " <+> pretty d
+    BlockReductionPhase s d nbTip nbReduced ->
+      "Block reduction phase: status: " <+> pretty s
+      <+> " security parameter: " <+> pretty d
       <+> " Nb Tips before reduction: " <+> viaShow nbTip <+> " Nb tips reduced: " <+> viaShow nbReduced
 
 -- | Outcome of inserting a 'UtxoState' into the utxo index
@@ -61,3 +62,15 @@ instance Pretty InsertUtxoPosition where
   pretty = \case
     InsertAtEnd     -> "UTxO state was added to the end."
     InsertBeforeEnd -> "UTxO state was added somewhere before the end."
+
+-- | Status of block reduction phase
+data BlockReductionState =
+  BeginReduction -- ^ when block reduction has started
+  | EndReduction -- ^ when block reduction ends
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Pretty BlockReductionState where
+  pretty = \case
+    BeginReduction -> "Reduction started"
+    EndReduction -> "Reduction ended"
