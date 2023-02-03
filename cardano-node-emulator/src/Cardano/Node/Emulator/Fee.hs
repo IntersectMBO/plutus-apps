@@ -37,8 +37,8 @@ import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
-import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1),
-                     adjustCardanoTxOut, minAdaTxOutEstimated)
+import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1), adjustCardanoTxOut,
+                     minAdaTxOutEstimated)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx, TxOut, TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
