@@ -571,10 +571,10 @@ insertUtxoDb reducedTip txs utxoStates =
     let
         go acc (UtxoState.UtxoState _ TipAtGenesis) = acc
         go (tipRows, unspentRows, unmatchedRows) (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip) =
-            let
+            let !slot' = updateSlot (tipSlot tip) reducedTip
                 newTips = if slotLessThanReducedTip (tipSlot tip) reducedTip then [] else [tip]
-                newUnspent = map (\o -> (updateSlot (tipSlot tip) reducedTip, o)) $ Set.toList outputs
-                newUnmatched = map (\i -> (updateSlot (tipSlot tip) reducedTip, i)) $ Set.toList inputs
+                newUnspent = map (\o -> (slot', o)) $ Set.toList outputs
+                newUnmatched = map (\i -> (slot', i)) $ Set.toList inputs
             in
             ( newTips ++ tipRows
             , newUnspent ++ unspentRows
@@ -602,12 +602,12 @@ insertUtxoDb reducedTip txs utxoStates =
       | reducedTipIsSet reducedTip =
           -- ignore unspent outputs with a matching spent input before reduced tip
           let !s_umr = Set.fromList umr
-              !(!delete_ur, !keep_ur) = Set.partition (\e@(s, _) -> Set.member e s_umr && isReducedTip s reducedTip) $ Set.fromList ur
+              !(!delete_ur, !keep_ur) = List.partition (\e@(s, _) -> Set.member e s_umr && isReducedTip s reducedTip) ur
               -- ignore spent input for which unspent outputs have been deleted
-              !(delete_umr, keep_umr) = Set.partition (\e -> Set.member e delete_ur) s_umr
+              !(delete_umr, keep_umr) = List.partition (\e -> Set.member e (Set.fromList delete_ur)) umr
               -- ignored txouts with a matching spent input before reduced tip
-              outs' = List.filter (\(_, r) -> List.any (\(_, i) -> i == r) delete_umr) outs
-          in (Set.toList keep_ur, Set.toList keep_umr, outs')
+              outs' = List.filter (\(_, r) -> Set.member r (Set.fromList $ snd <$> delete_umr)) outs
+          in (keep_ur, keep_umr, outs')
       | otherwise = (ur, umr, outs)
 
      reducedTipIsSet :: Maybe Tip -> Bool
