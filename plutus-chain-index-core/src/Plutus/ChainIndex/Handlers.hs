@@ -50,7 +50,7 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
 import Ledger qualified as L
-import Ledger.Value (AssetClass)
+import Ledger.Value (AssetClass, assetClassValueOf)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..), RollbackFailed(..))
@@ -300,8 +300,11 @@ getTxOutSetAtAddress pageQuery cred = do
     TipAtGenesis -> do
       pure (QueryResponse [] Nothing)
     _             -> do
-      mtxouts <- mapM getUtxoutFromRef (pageItems page)
-      let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
+      mtxouts <- mapM (\t -> do
+                          mo <- getUtxoutFromRef t
+                          pure (t, mo)
+                      ) (pageItems page)
+      let txouts = [ (t, o) | (t, mo) <- mtxouts, o <- maybeToList mo]
       pure $ QueryResponse txouts (nextPageQuery page)
 
 
@@ -354,26 +357,29 @@ getUtxoSetWithCurrency
   => PageQuery TxOutRef
   -> AssetClass
   -> Eff effs UtxosResponse
-getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
+getUtxoSetWithCurrency pageQuery assetClass = do
   indexState <- get @ChainIndexState
   case getCurrentTip indexState of
     Nothing -> do
       logWarn TipIsGenesis
       pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
-    Just tp -> do
+    Just tip -> do
       let query = do
             rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
-            rowClass <- leftJoin_
-                        (fmap _assetClassRowOutRef (filter_ (\row -> _assetClassRowAssetClass row ==. val_ assetClass) (all_ (assetClassRows db))))
-                        (\row -> row ==. rowRef)
             utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
             guard_ (isNothing_ utxi)
-            guard_ (isJust_ rowClass)
             pure rowRef
 
       outRefs <- selectPage (fmap toDbValue pageQuery) query
       let page = fmap fromDbValue outRefs
-      pure (UtxosResponse tp page)
+      mtxouts <- mapM (\t -> do
+                         mo <- getUtxoutFromRef t
+                         pure (t, mo)
+                      ) (pageItems page)
+      let txrefs = [ t | (t, mo) <- mtxouts, o <- maybeToList mo,
+                     (assetClassValueOf (L._ciTxOutValue o) assetClass) > 0 ]
+      pure $ UtxosResponse tip (page {pageItems = txrefs})
+
 
 getTxsFromTxIds
   :: forall effs.
@@ -658,17 +664,9 @@ insertRows :: Db InsertRows -> BeamEffect ()
 insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRowsInBatches batchSize tbl rows) db
 
 
-
-
 credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
 credential (ChainIndexTxOut{citoAddress=Address{addressCredential},citoDatum}, ref) =
   (addressCredential, ref, getHashFromDatum citoDatum)
-
-
-assetClasses :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
-assetClasses (ChainIndexTxOut{citoValue}, ref) =
-  -- We don't store the 'AssetClass' when it is the Ada currency.
-  map (, ref) $ CAPI.toNonAdaAssetClassList citoValue
 
 
 updateMapWithInlineDatum :: Map.Map DatumHash Datum -> [ChainIndex.ChainIndexTxOut] -> Map.Map DatumHash Datum
@@ -692,7 +690,6 @@ fromTx tx =
     , redeemerRows = InsertRows . fmap toDbValue $ (Map.toList $ txRedeemersWithHash tx')
     , txRows = InsertRows [toDbValue (_citxTxId tx', tx')]
     , addressRows = InsertRows . fmap toDbValue $ (fmap credential utxos)
-    , assetClassRows = InsertRows . fmap toDbValue $ (concatMap assetClasses utxos)
     }
   where
     tx' = CAPI.toChainIndexTxEmptyScripts tx
@@ -706,7 +703,6 @@ diagnostics = do
     unspentTxOuts <- queryList . select $ _utxoRowTxOut <$> limit_ 10 (all_ (utxoOutRefRows db))
     numScripts <- selectOne . select $ aggregate_ (const countAll_) (all_ (scriptRows db))
     numAddresses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _addressRowCred <$> all_ (addressRows db)
-    numAssetClasses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _assetClassRowAssetClass <$> all_ (assetClassRows db)
     numOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
     numInputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unmatchedInputRows db))
 
@@ -714,7 +710,7 @@ diagnostics = do
         { numTransactions    = fromMaybe (-1) numTransactions
         , numScripts         = fromMaybe (-1) numScripts
         , numAddresses       = fromMaybe (-1) numAddresses
-        , numAssetClasses    = fromMaybe (-1) numAssetClasses
+        , numAssetClasses    = -1
         , numUnspentOutputs  = fromMaybe (-1) numOutputs
         , numUnmatchedInputs = fromMaybe (-1) numInputs
         , someTransactions   = txIds
