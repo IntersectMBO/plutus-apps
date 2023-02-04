@@ -48,7 +48,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isJust_
                             update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
+import Ledger (Datum, DatumHash (..), Slot, TxId, TxOutRef (..))
 import Ledger qualified as L
 import Ledger.Value (AssetClass, assetClassValueOf)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
@@ -457,20 +457,23 @@ appendBlocks _syncState blocks = do
     oldIndex <- get @ChainIndexState
     (newIndex, transactions, utxoStates) <- foldM processBlock (oldIndex, [], []) blocks
     depth <- ask @Depth
-    case reduceBlocks depth newIndex of
-      Nothing -> do
-        put newIndex
-      Just (reducedIndex, tp) -> do
-        let !i_nbTips = fromIntegral $ length newIndex
-        logInfo $ BlockReductionPhase BeginReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
-        -- retrieve number of unspent outputs to perform batch updates
-        numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
-        put reducedIndex
-        combined [ reduceOldUtxoDb (fromMaybe updateBatch numUnspentOutputs) tp ]
-        logInfo $ BlockReductionPhase EndReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
+    reducedTip <-
+      case reduceBlocks depth newIndex of
+        Nothing -> do
+          put newIndex
+          pure Nothing
+        Just (reducedIndex, tp) -> do
+          let !i_nbTips = fromIntegral $ length newIndex
+          logInfo $ BlockReductionPhase BeginReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
+          -- retrieve number of unspent outputs to perform batch updates
+          numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
+          put reducedIndex
+          combined [ reduceOldUtxoDb (fromMaybe updateBatch numUnspentOutputs) tp ]
+          logInfo $ BlockReductionPhase EndReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
+          pure $ Just tp
     combined
         [ insertRows $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
-        , insertUtxoDb (map (\(t, _) -> CAPI.toChainIndexTxEmptyScripts t) transactions) utxoStates
+        , insertUtxoDb reducedTip (map (\(t, _) -> CAPI.toChainIndexTxEmptyScripts t) transactions) utxoStates
         ]
 
   where
@@ -553,32 +556,80 @@ batchSize = 10000
 updateBatch :: Integer
 updateBatch = 1000000
 
+-- | insertUtxoDb also performes block reduction when reduced tip is specified
+-- Note that ignoring spent utxo and unspent utxos is safe for reduced blocks as
+--  - an unspent utxo can be ignored only when the corresponding spent one is also in the list of blocks being handled,
+--    i.e., the unspent utxo cannot reference a spent utxo on disk (not possible)
+--  - spent utxo can be ignored only when the corresponding unspent is deleted due to the reason mentioned above.
 insertUtxoDb
-    :: [ChainIndexTx]
+    :: Maybe Tip
+    -- ^ reference tip to be used when performing block reduction on acquired state
+    -> [ChainIndexTx]
     -> [UtxoState.UtxoState TxUtxoBalance]
     -> BeamEffect ()
-insertUtxoDb txs utxoStates =
-  {-# SCC insertUtxoDb #-}
+insertUtxoDb reducedTip txs utxoStates =
     let
         go acc (UtxoState.UtxoState _ TipAtGenesis) = acc
         go (tipRows, unspentRows, unmatchedRows) (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip) =
             let
-                tipRowId = TipRowId (toDbValue (tipSlot tip))
-                newTips = catMaybes [toDbValue tip]
-                newUnspent = UnspentOutputRow tipRowId . toDbValue <$> Set.toList outputs
-                newUnmatched = UnmatchedInputRow tipRowId . toDbValue <$> Set.toList inputs
+                newTips = if slotLessThanReducedTip (tipSlot tip) reducedTip then [] else [tip]
+                newUnspent = map (\o -> (updateSlot (tipSlot tip) reducedTip, o)) $ Set.toList outputs
+                newUnmatched = map (\i -> (updateSlot (tipSlot tip) reducedTip, i)) $ Set.toList inputs
             in
             ( newTips ++ tipRows
             , newUnspent ++ unspentRows
             , newUnmatched ++ unmatchedRows)
-        (tr, ur, umr) = foldl go ([] :: [TipRow], [] :: [UnspentOutputRow], [] :: [UnmatchedInputRow]) utxoStates
+        (tr, ur, umr) = foldl go ([], [], []) utxoStates
         outs = concatMap txOutsWithRef txs
-    in insertRows $ mempty
-        { tipRows = InsertRows tr
-        , unspentOutputRows = InsertRows ur
-        , unmatchedInputRows = InsertRows umr
-        , utxoOutRefRows = InsertRows $ map (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) outs
+        (ur', umr', outs') = performReduction ur umr outs
+    in
+      insertRows $ mempty
+        { tipRows = InsertRows $ catMaybes $ toDbValue <$> tr
+        , unspentOutputRows = InsertRows $ map (\(s, o) -> UnspentOutputRow (TipRowId (toDbValue s)) (toDbValue o)) ur'
+        , unmatchedInputRows = InsertRows $ map (\(s, i) -> UnmatchedInputRow (TipRowId (toDbValue s)) (toDbValue i)) umr'
+        , utxoOutRefRows = InsertRows $ map (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) outs'
         }
+   where
+     performReduction
+       :: [(Slot, TxOutRef)]
+       -- ^ unspent utxos
+       -> [(Slot, TxOutRef)]
+       -- ^ spent utxos
+       -> [(ChainIndexTxOut, TxOutRef)]
+       -- ^ txouts
+       -> ([(Slot, TxOutRef)], [(Slot, TxOutRef)], [(ChainIndexTxOut, TxOutRef)])
+     performReduction ur umr outs
+      | reducedTipIsSet reducedTip =
+          -- ignore unspent outputs with a matching spent input before reduced tip
+          let (delete_ur, keep_ur) = List.partition (\e@(s, _) -> e `List.elem` umr && isReducedTip s reducedTip) ur
+              -- ignore spent input for which unspent outputs have been deleted
+              (delete_umr, keep_umr) = List.partition (`List.elem` delete_ur) umr
+              -- ignored txouts with a matching spent input before reduced tip
+              outs' = List.filter (\(_, r) -> List.any (\(_, i) -> i == r) delete_umr) outs
+          in (keep_ur, keep_umr, outs')
+      | otherwise = (ur, umr, outs)
+
+     reducedTipIsSet :: Maybe Tip -> Bool
+     reducedTipIsSet Nothing = False
+     reducedTipIsSet (Just TipAtGenesis) = False
+     reducedTipIsSet _ = True
+
+     slotLessThanReducedTip :: Slot -> Maybe Tip -> Bool
+     slotLessThanReducedTip _ Nothing = False
+     slotLessThanReducedTip _ (Just TipAtGenesis) = False
+     slotLessThanReducedTip s (Just (Tip tSlot _ _ )) = s < tSlot
+
+     isReducedTip :: Slot -> Maybe Tip -> Bool
+     isReducedTip _ Nothing = False
+     isReducedTip _ (Just TipAtGenesis) = False
+     isReducedTip s (Just (Tip tSlot _ _ )) = s == tSlot
+
+     updateSlot :: Slot -> Maybe Tip -> Slot
+     updateSlot s Nothing = s
+     updateSlot s (Just TipAtGenesis) = s
+     updateSlot s (Just (Tip tSlot _ _ ))
+      | s < tSlot = tSlot
+      | otherwise = s
 
 reduceOldUtxoDb :: Integer -> Tip -> BeamEffect ()
 reduceOldUtxoDb _ TipAtGenesis = Combined []
