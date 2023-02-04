@@ -601,12 +601,13 @@ insertUtxoDb reducedTip txs utxoStates =
      performReduction ur umr outs
       | reducedTipIsSet reducedTip =
           -- ignore unspent outputs with a matching spent input before reduced tip
-          let (delete_ur, keep_ur) = List.partition (\e@(s, _) -> e `List.elem` umr && isReducedTip s reducedTip) ur
+          let !s_umr = Set.fromList umr
+              !(!delete_ur, !keep_ur) = Set.partition (\e@(s, _) -> Set.member e s_umr && isReducedTip s reducedTip) $ Set.fromList ur
               -- ignore spent input for which unspent outputs have been deleted
-              (delete_umr, keep_umr) = List.partition (`List.elem` delete_ur) umr
+              !(delete_umr, keep_umr) = Set.partition (\e -> Set.member e delete_ur) s_umr
               -- ignored txouts with a matching spent input before reduced tip
               outs' = List.filter (\(_, r) -> List.any (\(_, i) -> i == r) delete_umr) outs
-          in (keep_ur, keep_umr, outs')
+          in (Set.toList keep_ur, Set.toList keep_umr, outs')
       | otherwise = (ur, umr, outs)
 
      reducedTipIsSet :: Maybe Tip -> Bool
