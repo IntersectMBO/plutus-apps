@@ -89,12 +89,6 @@ withRunRequirements logConfig config cont = do
     -- Automatically delete the input when an output from a matching input/output pair is deleted.
     -- See reduceOldUtxoDb in Plutus.ChainIndex.Handlers
     Sqlite.execute_ conn "DROP TRIGGER IF EXISTS delete_matching_input"
-    Sqlite.execute_ conn
-        "CREATE TRIGGER delete_matching_input AFTER DELETE ON unspent_outputs \
-        \BEGIN \
-        \  DELETE FROM unmatched_inputs WHERE input_row_tip__row_slot = old.output_row_tip__row_slot \
-        \                                 AND input_row_out_ref = old.output_row_out_ref; \
-        \END"
 
     -- dropping these indexes if exists on start up
     -- the creation of these indexes are not performed dynamically accounting to the sync state
