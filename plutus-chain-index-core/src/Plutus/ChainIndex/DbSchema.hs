@@ -48,7 +48,6 @@ import Plutus.V1.Ledger.Api (Credential, Datum, DatumHash (..), MintingPolicy, M
                              RedeemerHash (..), Script, StakeValidator, StakeValidatorHash (..), TxId (..),
                              TxOutRef (..), Validator, ValidatorHash (..))
 import Plutus.V1.Ledger.Scripts (ScriptHash (..))
-import Plutus.V1.Ledger.Value (AssetClass)
 import PlutusTx.Builtins qualified as PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinByteString (..), emptyByteString)
 
@@ -112,20 +111,6 @@ instance Table AddressRowT where
     data PrimaryKey AddressRowT f = AddressRowId (Columnar f ByteString) (Columnar f ByteString) (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey (AddressRow c o d) = AddressRowId c o d
 
-data AssetClassRowT f = AssetClassRow
-    { _assetClassRowAssetClass :: Columnar f ByteString
-    , _assetClassRowOutRef     :: Columnar f ByteString
-    } deriving (Generic, Beamable)
-
-type AssetClassRow = AssetClassRowT Identity
-
-instance Table AssetClassRowT where
-    -- We also need an index on just the _assetClassRowAssetClass column, but the primary key index provides this
-    -- as long as _assetClassRowAssetClass is the first column in the primary key.
-    data PrimaryKey AssetClassRowT f = AssetClassRowId (Columnar f ByteString)
-                                                       (Columnar f ByteString)
-      deriving (Generic, Beamable)
-    primaryKey (AssetClassRow c o) = AssetClassRowId c o
 
 data TipRowT f = TipRow
     { _tipRowSlot        :: Columnar f Word64
@@ -189,7 +174,6 @@ data Db f = Db
     , txRows             :: f (TableEntity TxRowT)
     , utxoOutRefRows     :: f (TableEntity UtxoRowT)
     , addressRows        :: f (TableEntity AddressRowT)
-    , assetClassRows     :: f (TableEntity AssetClassRowT)
     , tipRows            :: f (TableEntity TipRowT)
     , unspentOutputRows  :: f (TableEntity UnspentOutputRowT)
     , unmatchedInputRows :: f (TableEntity UnmatchedInputRowT)
@@ -202,7 +186,6 @@ type AllTables (c :: * -> Constraint) f =
     , c (f (TableEntity TxRowT))
     , c (f (TableEntity UtxoRowT))
     , c (f (TableEntity AddressRowT))
-    , c (f (TableEntity AssetClassRowT))
     , c (f (TableEntity TipRowT))
     , c (f (TableEntity UnspentOutputRowT))
     , c (f (TableEntity UnmatchedInputRowT))
@@ -222,7 +205,6 @@ checkedSqliteDb = defaultMigratableDbSettings
     , txRows = renameCheckedEntity (const "txs")
     , utxoOutRefRows = renameCheckedEntity (const "utxo_out_refs")
     , addressRows = renameCheckedEntity (const "addresses")
-    , assetClassRows = renameCheckedEntity (const "asset_classes")
     , tipRows     = renameCheckedEntity (const "tips")
     , unspentOutputRows  = renameCheckedEntity (const "unspent_outputs")
     , unmatchedInputRows = renameCheckedEntity (const "unmatched_inputs")
@@ -274,7 +256,6 @@ deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
 deriving via Serialisable CI.ChainIndexTxOut instance HasDbType CI.ChainIndexTxOut
 deriving via Serialisable Credential instance HasDbType Credential
-deriving via Serialisable AssetClass instance HasDbType AssetClass
 
 instance HasDbType Slot where
     type DbType Slot = Word64 -- In Plutus Slot is Integer, but in the Cardano API it is Word64, so this is safe
@@ -359,9 +340,3 @@ instance HasDbType (Credential, TxOutRef, Maybe DatumHash) where
         (fromDbValue cred, fromDbValue outRef, Nothing)
       else
         (fromDbValue cred, fromDbValue outRef, Just dh')
-
-
-instance HasDbType (AssetClass, TxOutRef) where
-    type DbType (AssetClass, TxOutRef) = AssetClassRow
-    toDbValue (ac, outRef) = AssetClassRow (toDbValue ac) (toDbValue outRef)
-    fromDbValue (AssetClassRow ac outRef) = (fromDbValue ac, fromDbValue outRef)
