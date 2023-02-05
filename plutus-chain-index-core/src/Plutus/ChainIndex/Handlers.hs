@@ -45,7 +45,7 @@ import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, al
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
-                            update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
+                            (&&.), (/=.), (<=.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), Slot, TxId, TxOutRef (..))
@@ -423,21 +423,6 @@ getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
       pure $ TxosResponse page
 
 
--- | drop index commands
-dropIndexCommands :: BeamEffect ()
-dropIndexCommands =
-  let dropIndex1 = "DROP INDEX IF EXISTS unspent_index"
-      dropIndex2 = "DROP INDEX IF EXISTS unmatched_index"
-  in Combined [ SqlCommand dropIndex1, SqlCommand dropIndex2 ]
-
--- | create index commands
-createIndexCommands :: BeamEffect ()
-createIndexCommands =
-  let createIndex1 = "CREATE INDEX unspent_index on unspent_outputs (output_row_out_ref, output_row_tip__row_slot)"
-      createIndex2 = "CREATE INDEX unmatched_index on unmatched_inputs (input_row_out_ref, input_row_tip__row_slot)"
-  in Combined [ SqlCommand createIndex1, SqlCommand createIndex2 ]
-
-
 appendBlocks ::
     forall effs.
     ( Member (State ChainIndexState) effs
@@ -465,10 +450,8 @@ appendBlocks _syncState blocks = do
         Just (reducedIndex, tp) -> do
           let !i_nbTips = fromIntegral $ length newIndex
           logInfo $ BlockReductionPhase BeginReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
-          -- retrieve number of unspent outputs to perform batch updates
-          numUnspentOutputs <- selectOne . select $ aggregate_ (const countAll_) (all_ (unspentOutputRows db))
           put reducedIndex
-          combined [ reduceOldUtxoDb (fromMaybe updateBatch numUnspentOutputs) tp ]
+          combined [ reduceOldUtxoDb tp ]
           logInfo $ BlockReductionPhase EndReduction depth i_nbTips (i_nbTips - (fromIntegral $ length reducedIndex))
           pure $ Just tp
     combined
@@ -552,10 +535,6 @@ rollBackChainState targetPoint indexState =
 batchSize :: Int
 batchSize = 10000
 
-
-updateBatch :: Integer
-updateBatch = 1000000
-
 -- | insertUtxoDb also performes block reduction when reduced tip is specified
 -- Note that ignoring spent utxo and unspent utxos is safe for reduced blocks as
 --  - an unspent utxo can be ignored only when the corresponding spent one is also in the list of blocks being handled,
@@ -572,7 +551,7 @@ insertUtxoDb reducedTip txs utxoStates =
         go acc (UtxoState.UtxoState _ TipAtGenesis) = acc
         go (tipRows, unspentRows, unmatchedRows) (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip) =
             let !slot' = updateSlot (tipSlot tip) reducedTip
-                newTips = if slotLessThanReducedTip (tipSlot tip) reducedTip then [] else [tip]
+                newTips = if slotLeqReducedTip (tipSlot tip) reducedTip then [] else [tip]
                 newUnspent = map (\o -> (slot', o)) $ Set.toList outputs
                 newUnmatched = map (\i -> (slot', i)) $ Set.toList inputs
             in
@@ -600,12 +579,13 @@ insertUtxoDb reducedTip txs utxoStates =
        -> ([(Slot, TxOutRef)], [(Slot, TxOutRef)], [(ChainIndexTxOut, TxOutRef)])
      performReduction ur umr outs
       | reducedTipIsSet reducedTip =
-          -- ignore unspent outputs with a matching spent input before reduced tip
+          -- ignore unspent outputs with a matching spent input before or at reduced tip
           let !s_umr = Set.fromList umr
-              !(!delete_ur, !keep_ur) = List.partition (\e@(s, _) -> Set.member e s_umr && isReducedTip s reducedTip) ur
-              -- ignore spent input for which unspent outputs have been deleted
-              !(delete_umr, keep_umr) = List.partition (\e -> Set.member e (Set.fromList delete_ur)) umr
-              -- ignored txouts with a matching spent input before reduced tip
+              !keep_ur = List.filter (\e@(s, _) -> Set.member e s_umr && isReducedTip s reducedTip) ur
+              -- ignore spent input with slot set to reduced tip
+              -- Indeed the unspent output must either be in the same block or in a block before
+              !(delete_umr, keep_umr) = List.partition (\(s, _) -> isReducedTip s reducedTip) umr
+              -- ignored txouts with a matching spent input before or at reduced tip
               outs' = List.filter (\(_, r) -> Set.member r (Set.fromList $ snd <$> delete_umr)) outs
           in (keep_ur, keep_umr, outs')
       | otherwise = (ur, umr, outs)
@@ -615,10 +595,10 @@ insertUtxoDb reducedTip txs utxoStates =
      reducedTipIsSet (Just TipAtGenesis) = False
      reducedTipIsSet _ = True
 
-     slotLessThanReducedTip :: Slot -> Maybe Tip -> Bool
-     slotLessThanReducedTip _ Nothing = False
-     slotLessThanReducedTip _ (Just TipAtGenesis) = False
-     slotLessThanReducedTip s (Just (Tip tSlot _ _ )) = s < tSlot
+     slotLeqReducedTip :: Slot -> Maybe Tip -> Bool
+     slotLeqReducedTip _ Nothing = False
+     slotLeqReducedTip _ (Just TipAtGenesis) = False
+     slotLeqReducedTip s (Just (Tip tSlot _ _ )) = s <= tSlot
 
      isReducedTip :: Slot -> Maybe Tip -> Bool
      isReducedTip _ Nothing = False
@@ -629,56 +609,40 @@ insertUtxoDb reducedTip txs utxoStates =
      updateSlot s Nothing = s
      updateSlot s (Just TipAtGenesis) = s
      updateSlot s (Just (Tip tSlot _ _ ))
-      | s < tSlot = tSlot
+      | s <= tSlot = tSlot
       | otherwise = s
 
-reduceOldUtxoDb :: Integer -> Tip -> BeamEffect ()
-reduceOldUtxoDb _ TipAtGenesis = Combined []
-reduceOldUtxoDb nbUtxosRows (Tip (toDbValue -> slot) _ _) = Combined
-    -- Delete all the tips before 'slot'
-    [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row <. val_ slot)
-    -- Assign all the older utxo changes to 'slot'
-    -- dropping index only for update as index is necessary for delete
-    , dropIndexCommands
-    , batchUpdatesForUnspentUtxos
-    , UpdateRows $ update
-        (unmatchedInputRows db)
-        (\row -> _unmatchedInputRowTip row <-. TipRowId (val_ slot))
-        (\row -> unTipRowId (_unmatchedInputRowTip row) <. val_ slot)
-    -- Among these older changes, delete the matching input/output pairs
-    -- We're deleting only the outputs here, the matching input is deleted by a trigger (See Main.hs)
-    , createIndexCommands
+reduceOldUtxoDb :: Tip -> BeamEffect ()
+reduceOldUtxoDb TipAtGenesis = Combined []
+reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
+    -- Delete all the tips before or equal to 'slot'
+    -- Indeed, reduceBlocks returns the first tip from which we have to perform reduction.
+    [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row <=. val_ slot)
+    -- Delete all TxOut and unspent utxos for which a matching input with a slot less than or equal to reduced slot can bd found
     , DeleteRows $ delete
         (utxoOutRefRows db)
         (\utxoRow ->
             exists_ (filter_
                 (\input ->
-                    (unTipRowId (_unmatchedInputRowTip input) ==. val_ slot) &&.
+                    (unTipRowId (_unmatchedInputRowTip input) <=. val_ slot) &&.
                     (_utxoRowOutRef utxoRow ==. _unmatchedInputRowOutRef input))
                 (all_ (unmatchedInputRows db))))
     , DeleteRows $ delete
         (unspentOutputRows db)
-        (\output -> unTipRowId (_unspentOutputRowTip output) ==. val_ slot &&.
+        (\output -> unTipRowId (_unspentOutputRowTip output) <=. val_ slot &&.
             exists_ (filter_
                 (\input ->
-                    (unTipRowId (_unmatchedInputRowTip input) ==. val_ slot) &&.
+                    (unTipRowId (_unmatchedInputRowTip input) <=. val_ slot) &&.
                     (_unspentOutputRowOutRef output ==. _unmatchedInputRowOutRef input))
                 (all_ (unmatchedInputRows db))))
+    -- We can now safely delete all spent utxo with a slot less than or equal to reduced slot
+    -- Indeed, if a utxo is spent then it has certainly been produced within
+    -- the same block or even before.
+    -- Note also that the delete trigger has to be removed as no more required.
+    , DeleteRows $ delete
+        (unmatchedInputRows db)
+        (\input -> unTipRowId (_unmatchedInputRowTip input) <=. val_ slot)
     ]
-  where
-    batchUpdatesForUnspentUtxos = Combined $
-      List.replicate ((fromIntegral $ nbUtxosRows `div` updateBatch) + 1) $
-       UpdateRows $ update
-         (unspentOutputRows db)
-         (\row -> _unspentOutputRowTip row <-. TipRowId (val_ slot))
-         (\rowUpdate ->
-            exists_
-             (filter_ (\outerRow ->
-                           ( _unspentOutputRowOutRef rowUpdate ==. _unspentOutputRowOutRef outerRow ))
-              (limit_ updateBatch
-              (filter_ (\row -> (unTipRowId (_unspentOutputRowTip row) <. val_ slot))
-                (all_ (unspentOutputRows db))))))
-
 
 rollbackUtxoDb :: Point -> BeamEffect ()
 rollbackUtxoDb PointAtGenesis = DeleteRows $ delete (tipRows db) (const (val_ True))
