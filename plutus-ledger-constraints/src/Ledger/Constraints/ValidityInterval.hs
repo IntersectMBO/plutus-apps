@@ -9,7 +9,14 @@
 {-# LANGUAGE NoImplicitPrelude  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
-module Ledger.Constraints.ValidityInterval where
+module Ledger.Constraints.ValidityInterval
+  ( ValidityInterval(..)
+  , interval
+  , from
+  , lessThan
+  , fromPlutusInterval
+  , toPlutusInterval
+  ) where
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)

@@ -40,8 +40,8 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
 import Ledger (CardanoAddress, TxId, TxOutRef (..), getCardanoTxId)
-import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as CValue
 import Plutus.Contract as Contract

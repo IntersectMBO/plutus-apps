@@ -55,9 +55,11 @@ import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, Slot (..), SlotRange)
-import Ledger.Constraints.OffChain (UnbalancedTx, adjustUnbalancedTx)
+import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
+import Ledger.Tx.Constraints (UnbalancedTx)
+import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as ChainIndexEff
 import Plutus.ChainIndex.Types (Tip (..))
@@ -307,6 +309,10 @@ handleAdjustUnbalancedTx =
     RequestHandler $ \utx ->
         surroundDebug @Text "handleAdjustUnbalancedTx" $ do
             params <- getClientParams
+            let
+                adjustUnbalancedTx = case Constraints.unBalancedTxTx utx of
+                    Left _  -> Tx.Constraints.adjustUnbalancedTx
+                    Right _ -> Constraints.adjustUnbalancedTx
             forM (adjustUnbalancedTx (emulatorPParams params) utx) $ \(missingAdaCosts, adjusted) -> do
                 logDebug $ AdjustingUnbalancedTx missingAdaCosts
                 pure adjusted

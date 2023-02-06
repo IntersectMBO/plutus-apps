@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
 import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams, pNetworkId), emulatorEraHistory,
                                      emulatorGlobals, pProtocolParams)
 import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
+import Control.Arrow ((&&&))
 import Control.Lens (over, (&))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (bimap, first)
@@ -36,7 +37,7 @@ import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
-import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (TxOutRefNotFound), ValidationPhase (Phase1), adjustTxOut,
+import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1), adjustCardanoTxOut,
                      minAdaTxOutEstimated)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx, TxOut, TxOutRef)
 import Ledger.Tx qualified as Tx
@@ -103,6 +104,9 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) cChangeAd
       cChangeAddr
       Nothing
 
+-- | A utxo provider returns outputs that cover at least the given value,
+-- and return the change, i.e. how much the outputs overshoot the given value.
+type UtxoProvider m = C.Value -> m ([(TxOutRef, TxOut)], C.Value)
 
 -- | Creates a balanced transaction by calculating the execution units, the fees and then the balance.
 -- If the balance is negative the utxo provider is asked to pick extra inputs to make the balance is positive,
@@ -114,9 +118,7 @@ makeAutoBalancedTransactionWithUtxoProvider
     => Params
     -> UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
     -> CardanoAddress -- ^ Change address
-    -> (C.Value -> m ([(TxOutRef, TxOut)], C.Value))
-    -- ^ The utxo provider, it return outputs that cover at least the given value,
-    -- and return the change, i.e. how much the outputs overshoot the given value.
+    -> UtxoProvider m
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> CardanoBuildTx
     -> m (C.Tx C.BabbageEra)
@@ -153,7 +155,7 @@ handleBalanceTx
     => Params
     -> Map.Map TxOutRef TxOut -- ^ Just the transaction inputs, not the entire 'UTxO'.
     -> C.AddressInEra C.BabbageEra -- ^ Change address
-    -> (C.Value -> m ([(TxOutRef, TxOut)], C.Value)) -- ^ The utxo provider
+    -> UtxoProvider m -- ^ The utxo provider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> C.Lovelace -- ^ Estimated fee value to use.
     -> C.TxBodyContent C.BuildTx C.BabbageEra
@@ -206,6 +208,12 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
 
         ((negColl, newColInputs), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ split collBalance
 
+        case C.Api.protocolParamMaxCollateralInputs $ pProtocolParams params of
+            Just maxInputs
+                | length collateral + length newColInputs > fromIntegral maxInputs
+                -> errorReporter (Left (Phase1, MaxCollateralInputsExceeded))
+            _ -> pure ()
+
         newTxInsColl <- traverse (either (errorReporter . Right) pure . CardanoAPI.toCardanoTxIn . fst) newColInputs
 
         let txWithCollateralInputs = if isZero negColl
@@ -230,7 +238,7 @@ calculateTxChanges
     :: Monad m
     => Params
     -> C.AddressInEra C.BabbageEra -- ^ The address for the change output
-    -> (C.Value -> m ([(TxOutRef, TxOut)], C.Value)) -- ^ The utxo provider
+    -> UtxoProvider m -- ^ The utxo provider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> (C.Value, C.Value) -- ^ The unbalanced tx's negative and positive balance.
     -> m ((C.Value, [(TxOutRef, TxOut)]), (C.Value, Maybe TxOut))
@@ -241,7 +249,7 @@ calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
         then pure (neg, pos, Nothing)
         else do
             let txOut = C.TxOut addr (CardanoAPI.toCardanoTxOutValue pos) C.TxOutDatumNone C.Api.ReferenceScriptNone
-            (missing, extraTxOut) <- adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
+            (missing, extraTxOut) <- adjustCardanoTxOut (emulatorPParams params) (Tx.TxOut txOut)
             let missingValue = lovelaceToValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
@@ -278,8 +286,7 @@ utxoProviderFromWalletOutputs
     :: Map.Map TxOutRef TxOut
     -- ^ The unspent transaction outputs.
     -- Make sure that this doesn't contain any inputs from the transaction being balanced.
-    -> C.Value
-    -> Either BalancingError ([(TxOutRef, TxOut)], C.Value)
+    -> UtxoProvider (Either BalancingError)
 utxoProviderFromWalletOutputs walletUtxos value =
     let outRefsWithValue = (\p -> (p, Tx.txOutValue (snd p))) <$> Map.toList walletUtxos
     in selectCoin outRefsWithValue value
@@ -317,14 +324,17 @@ selectCoinSingle
     -> ([(a, C.Value)], C.Value) -- ^ The chosen inputs and the remainder
 selectCoinSingle assetId fnds' vl =
     let
+        pick v = C.selectAsset v assetId
         -- We only want the values that contain the given asset class,
         -- and want the single currency values first,
         -- so that we're picking inputs that contain *only* the given asset class when possible.
-        fnds = sortOn (length . C.valueToList . snd) $ filter (\(_, v) -> C.selectAsset v assetId > 0) fnds'
-        -- Given the funds of a wallet, we take enough just enough from
+        -- That being equal we want the input with the largest amount of the given asset class,
+        -- to reduce the amount of inputs required. (Particularly useful to prevent hitting MaxCollateralInputs)
+        fnds = sortOn (length . C.valueToList . snd &&& Down . pick . snd) $ filter (\(_, v) -> pick v > 0) fnds'
+        -- Given the funds of a wallet, we take just enough from
         -- the target value such that the asset class value of the remainder is <= 0.
         fundsWithRemainder = zip fnds (drop 1 $ scanl (\l r -> l <> C.negateValue r) vl $ fmap snd fnds)
-        fundsToSpend       = takeUntil (\(_, v) -> C.selectAsset v assetId <= 0) fundsWithRemainder
+        fundsToSpend       = takeUntil (\(_, v) -> pick v <= 0) fundsWithRemainder
         remainder          = maybe vl snd $ listToMaybe $ reverse fundsToSpend
     in (fst <$> fundsToSpend, remainder)
 

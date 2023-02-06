@@ -58,11 +58,12 @@ import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap
 
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.ValidityInterval qualified as Interval
+import Ledger qualified
 import Ledger.Interval (after, before)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
@@ -263,7 +264,7 @@ pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
           <> Constraints.mustValidateInTimeRange (Interval.interval 1 (1 + escrowDeadline escrow))
-    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    mkCardanoTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx
         >>= submitUnbalancedTx
         >>= return . getCardanoTxId
@@ -307,7 +308,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
           tx = Constraints.collectFromTheScript unspentOutputs Redeem
                   <> foldMap mkTx (escrowTargets escrow)
                   <> Constraints.mustValidateInTimeRange validityTimeRange
-      utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+      utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups inst
                             <> Constraints.unspentOutputs unspentOutputs
                              ) tx
       adjusted <- adjustUnbalancedTx utx
@@ -344,7 +345,7 @@ refund inst escrow = do
                 <> Constraints.mustValidateInTimeRange (Interval.from $ escrowDeadline escrow)
     if Constraints.modifiesUtxoSet tx'
     then do
-        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+        utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx'
         adjusted <- adjustUnbalancedTx utx

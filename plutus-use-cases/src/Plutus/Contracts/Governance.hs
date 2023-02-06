@@ -39,9 +39,9 @@ import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime)
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.ValidityInterval qualified as Interval
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
@@ -175,7 +175,7 @@ transition Params{..} State{ stateData = s, stateValue} i = case (s, i) of
         let (total, constraints) = foldMap
                 (\(addr, nm) -> let v = votingValue mph nm in (v, Constraints.mustPayToAddress addr v))
                 (zip initialHolders tokenNames)
-        in Just (constraints <> Constraints.mustMintValue total, State s stateValue)
+        in Just (constraints <> Constraints.mustMintValue (Value.noAdaValue total), State s stateValue)
 
     (GovState law mph Nothing, ProposeChange owner proposal@Proposal{tokenName}) ->
         let constraints = ownsVotingToken owner mph tokenName

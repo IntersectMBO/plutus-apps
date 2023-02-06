@@ -53,7 +53,7 @@ import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 
-import Ledger.Constraints
+import Ledger.Tx.Constraints
 
 import Spec.Uniswap.Endpoints
 

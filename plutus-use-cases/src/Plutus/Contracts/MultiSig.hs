@@ -28,7 +28,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger
-import Ledger.Constraints qualified as Constraints
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
@@ -82,7 +82,7 @@ lock = endpoint @"lock" $ \(ms, vl) -> do
     let inst = typedValidator ms
     let tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
         lookups = Constraints.typedValidatorLookups inst
-    mkTxConstraints lookups tx
+    mkCardanoTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 -- | The @"unlock"@ endpoint, unlocking some funds with a list
@@ -96,5 +96,5 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
                 <> foldMap Constraints.mustBeSignedBy pks
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
-    mkTxConstraints lookups tx
+    mkCardanoTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx

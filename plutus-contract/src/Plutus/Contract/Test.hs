@@ -127,7 +127,6 @@ import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
-import Ledger.Tx (Tx, onCardanoTx)
 import Ledger.Value.CardanoAPI (fromCardanoValue, lovelaceToValue, toCardanoValue)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
@@ -685,13 +684,13 @@ assertChainEvents' logMsg predicate = TracePredicate $
 
 -- | Assert that at least one transaction failed to validate, and that all
 --   transactions that failed meet the predicate.
-assertFailedTransaction :: (Tx -> ValidationError -> Bool) -> TracePredicate
+assertFailedTransaction :: (Ledger.CardanoTx -> ValidationError -> Bool) -> TracePredicate
 assertFailedTransaction predicate = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> do
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
-        xs -> pure (all (\(_, t, e, _, _) -> onCardanoTx (\t' -> predicate t' e) (const True) t) xs)
+        xs -> pure (all (\(_, t, e, _, _) -> predicate t e) xs)
 
 -- | Assert that at least one transaction failed to validate with an EvaluationError
 -- containing the given text.

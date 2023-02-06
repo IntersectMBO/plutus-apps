@@ -43,6 +43,8 @@ data ValidationError =
     -- ^ For pay-to-script outputs: evaluation of the validator script failed.
     | CardanoLedgerValidationError Text
     -- ^ An error from Cardano.Ledger validation
+    | MaxCollateralInputsExceeded
+    -- ^ Balancing failed, it needed more than the maximum number of collateral inputs
     deriving (Eq, Show, Generic)
 makeClassyPrisms ''ValidationError
 

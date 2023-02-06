@@ -46,8 +46,8 @@ import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime)
 import Ledger.Address.Orphans ()
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints qualified as Constraints
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, Promise, endpoint,
                         selectList, type (.\/))

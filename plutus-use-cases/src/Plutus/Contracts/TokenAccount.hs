@@ -46,14 +46,14 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty)
 
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint,
-                        adjustUnbalancedTx, endpoint, logInfo, mapError, mkTxConstraints, selectList,
+                        adjustUnbalancedTx, endpoint, logInfo, mapError, mkCardanoTxConstraints, selectList,
                         submitUnbalancedTx, type (.\/), utxosAt)
 import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
 import Ledger (CardanoAddress, toPlutusAddress)
-import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (CardanoTx, decoratedTxOutPlutusValue)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contracts.Currency qualified as Currency
@@ -163,7 +163,7 @@ pay account vl = do
         <> " into "
         <> show account
     mapError (review _TAContractError) $
-          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
+          mkCardanoTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
       >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
@@ -200,7 +200,7 @@ redeem
   -> Contract w s e CardanoTx
 redeem pk account = mapError (review _TokenAccountError) $ do
     (constraints, lookups) <- redeemTx account pk
-    mkTxConstraints lookups constraints >>= adjustUnbalancedTx >>= submitUnbalancedTx
+    mkCardanoTxConstraints lookups constraints >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | @balance account@ returns the value of all unspent outputs that can be
 --   unlocked with @accountToken account@
