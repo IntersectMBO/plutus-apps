@@ -44,7 +44,7 @@ import Data.Set qualified as Set
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
-import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
+import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isNothing_, leftJoin_, orderBy_,
                             (&&.), (/=.), (<=.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
@@ -270,14 +270,13 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
       logWarn TipIsGenesis
       pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
     Just tp -> do
+      -- select address txout first to optimize query
+      address_out_refs <- selectList $ select (fmap _addressRowOutRef (filter_ (\row -> _addressRowCred row ==. val_ cred) (all_ (addressRows db))))
       let query = do
-            rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
-            rowCred <- leftJoin_
-                       (fmap _addressRowOutRef (filter_ (\row -> _addressRowCred row ==. val_ cred) (all_ (addressRows db))))
-                       (\row -> row ==. rowRef)
+            rowRef <- fmap _unspentOutputRowOutRef
+                      (filter_ (\output -> _unspentOutputRowOutRef output `in_` fmap val_ address_out_refs) (all_ (unspentOutputRows db)))
             utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
             guard_ (isNothing_ utxi)
-            guard_ (isJust_ rowCred)
             pure rowRef
 
       outRefs <- selectPage (fmap toDbValue pageQuery) query
