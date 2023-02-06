@@ -41,7 +41,9 @@ import Control.Lens (makeLenses, view)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.FingerTree (FingerTree, Measured (..))
 import Data.FingerTree qualified as FT
+import Data.Foldable (toList)
 import Data.Function (on)
+import Data.List qualified as List
 import Data.Monoid (Sum (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
@@ -141,7 +143,7 @@ rollbackWith f targetPoint idx@(viewTip -> currentTip)
         Right RollbackResult{newTip=currentTip, rolledBackIndex=idx}
     -- The rollback happened sometime after the current tip.
     | not (targetPoint `pointLessThanTip` currentTip) =
-        Left TipMismatch{foundTip=currentTip, targetPoint}
+        Left TipMismatch{foundTip=currentTip, targetPoint=targetPoint, tipList = List.take 10 $ _usTip <$> toList idx}
     | otherwise = do
         let (before, after) = FT.split ((targetPoint `pointLessThanTip`) . tip . snd) idx
 
@@ -150,7 +152,7 @@ rollbackWith f targetPoint idx@(viewTip -> currentTip)
             oldTip | targetPoint `pointsToTip` oldTip ->
                        Right RollbackResult{newTip=oldTip, rolledBackIndex=f before after}
                    | otherwise                        ->
-                       Left  TipMismatch{foundTip=oldTip, targetPoint=targetPoint}
+                       Left RollbackTipMismatch {foundTip=oldTip, targetPoint=targetPoint, tipList = List.take 10 $ _usTip <$> toList idx}
 
 data ReduceBlockCountResult a
     = BlockCountNotReduced

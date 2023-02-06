@@ -521,13 +521,13 @@ rollBackChainState targetPoint indexState =
       -- Already at the target point
      if | targetPoint `pointsToTip` currentTip -> Right (currentTip, indexState)
         -- The rollback happened sometimes after the current tip.
-        | not (targetPoint `UtxoState.pointLessThanTip` currentTip) -> Left $ TipMismatch currentTip targetPoint
+        | not (targetPoint `UtxoState.pointLessThanTip` currentTip) -> Left $ TipMismatch currentTip targetPoint (List.take 10 indexState)
         | otherwise ->
            let (_after, before) = List.span (\t -> targetPoint `UtxoState.pointLessThanTip` t) indexState
            in case getCurrentTip before of
                 Nothing -> Left $ OldPointNotFound targetPoint
                 Just oldTip | targetPoint `pointsToTip` oldTip -> Right (oldTip, before)
-                Just oldTip -> Left $ TipMismatch oldTip targetPoint
+                Just oldTip -> Left $ RollbackTipMismatch oldTip targetPoint (List.take 10 indexState)
 
 
 -- Use a batch size of 10000 so that we don't hit the sql too-many-variables

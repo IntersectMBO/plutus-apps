@@ -44,7 +44,12 @@ instance Pretty InsertUtxoFailed where
 -- | Reason why the 'rollback' operation failed
 data RollbackFailed =
     RollbackNoTip  -- ^ Rollback failed because the utxo index had no tip (not synchronised)
-    | TipMismatch { foundTip :: Tip, targetPoint :: Point } -- ^ Unable to roll back to 'expectedTip' because the tip at that position was different
+    | TipMismatch { foundTip :: Tip, targetPoint :: Point, tipList :: [Tip] }
+      -- ^ When current tip is less than target rollback tip
+      -- With tipList containing the last 10 tips
+    | RollbackTipMismatch { foundTip :: Tip, targetPoint :: Point, tipList :: [Tip] }
+      -- ^ When rollback tip found does not coincide with the target rollback tip
+      -- With tipList containing the last 10 tips
     | OldPointNotFound Point -- ^ Unable to find the old tip
     deriving stock (Eq, Ord, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -53,9 +58,18 @@ instance Pretty RollbackFailed where
   pretty = \case
     RollbackNoTip -> "UTxO index had no tip (not synchronised)"
     TipMismatch{..} ->
-          "Unable to rollback to"
+      "Target rollback tip"
       <+> pretty targetPoint
-      <+> "because the tip at that position"
+      <+> "is greater than current tip"
       <+> pretty foundTip
-      <+> "was different"
+      <+> "with 10 last tip"
+      <+> pretty tipList
+    RollbackTipMismatch{..} ->
+      "Unable to find rollback tip"
+      <+> pretty targetPoint
+      <+> "because tip at that position"
+      <+> pretty foundTip
+      <+> "is different"
+      <+> "with 10 last tip"
+      <+> pretty tipList
     OldPointNotFound t -> "Unable to find the old tip" <+> pretty t
