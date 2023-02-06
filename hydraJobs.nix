@@ -4,6 +4,8 @@ let
 
   top-level = import ./default.nix { inherit system; };
 
+  nix-shell = import ./shell.nix { inherit system; };
+
   pkgs = top-level.pkgs;
 
   make-haskell-jobs = project:
@@ -26,7 +28,10 @@ let
 
   windows-plutus-apps-jobs = make-haskell-jobs plutus-project.projectCross.mingwW64;
 
-  other-jobs = { inherit (top-level) tests docs plutus-use-cases; };
+  other-jobs = {
+    inherit (top-level) tests docs plutus-use-cases;
+    inherit nix-shell;
+  };
 
   jobs =
     { native = native-plutus-apps-jobs; } //
