@@ -458,6 +458,8 @@ appendBlocks _syncState blocks = do
         [ insertRows $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
         , insertUtxoDb reducedTip (map (\(t, _) -> CAPI.toChainIndexTxEmptyScripts t) transactions) utxoStates
         ]
+    newIndex' <- get @ChainIndexState
+    logDebug $ AppendBlockSuccess $ List.take 10 newIndex'
 
   where
     -- | Reduces the number of tips. The given number corresponds to the node's security parameter.
