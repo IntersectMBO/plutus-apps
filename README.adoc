@@ -49,7 +49,7 @@ The generated Haskell API documentation (haddocks) are here:
 
 === Specifications and design
 
-- https://hydra.iohk.io/job/Cardano/plutus/linux.docs.plutus-report/latest/download-by-type/doc-pdf/plutus[Plutus Technical Report] (draft)
+- https://ci.zw3rk.com/job/input-output-hk-plutus/master/x86_64-linux.plutus-report/latest/download/1[Plutus Technical Report (draft)]
 
 == Branching, Versioning and Releases
 
