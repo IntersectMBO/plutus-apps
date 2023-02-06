@@ -3,9 +3,6 @@
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-
-
 -- | This module provides several type aliases and utility functions to deal with them.
 module Marconi.Types
        (
@@ -22,9 +19,7 @@ module Marconi.Types
        ) where
 
 import Cardano.Api qualified as C
-
 import Data.List.NonEmpty (NonEmpty)
-
 
 -- | Typre represents non empty list of Bech32 Shelley compatable addresses
 type TargetAddresses = NonEmpty (C.Address C.ShelleyAddr)
@@ -48,8 +43,3 @@ type TxOutRef = C.TxIn
 
 txOutRef :: C.TxId -> C.TxIx -> C.TxIn
 txOutRef = C.TxIn
-
-instance Ord C.ChainPoint where
-   C.ChainPointAtGenesis <= _                  = True
-   _ <= C.ChainPointAtGenesis                  = False
-   (C.ChainPoint sn _) <= (C.ChainPoint sn' _) = sn <= sn'
