@@ -11,9 +11,6 @@
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 {-
 -- | Back-end support for Utxo Indexer
 
@@ -37,19 +34,14 @@ import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((^.))
 import Control.Lens.TH (makeLenses)
 import Control.Monad (unless, when)
-import Data.Aeson (eitherDecode, encode)
-import Data.ByteString.Lazy (toStrict)
 import Data.Foldable (foldl', toList)
 import Data.Functor ((<&>))
 import Data.List (elemIndex)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Maybe (fromMaybe)
-import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Database.SQLite.Simple (Only (Only), SQLData (SQLBlob, SQLInteger))
+import Database.SQLite.Simple (Only (Only))
 import Database.SQLite.Simple qualified as SQL
-import Database.SQLite.Simple.FromField (FromField (fromField), ResultError (ConversionFailed), returnError)
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
@@ -60,6 +52,7 @@ import Text.RawString.QQ (r)
 import Cardano.Api ()
 import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Marconi.Orphans ()
 import Marconi.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
 import RewindableIndex.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                  QueryInterval (QEverything, QInterval), Queryable (queryStorage),
@@ -144,9 +137,9 @@ data Spent = Spent
 $(makeLenses ''Spent)
 
 instance Ord Spent where
-  compare l r =
-      case  (l ^. sTxInTxId) `compare` (r ^. sTxInTxId) of
-        EQ  -> (l ^. sTxInTxIx) `compare` (r ^. sTxInTxIx)
+  compare spent spent' =
+      case  (spent ^. sTxInTxId) `compare` (spent' ^. sTxInTxId) of
+        EQ  -> (spent ^. sTxInTxIx) `compare` (spent' ^. sTxInTxIx)
         neq -> neq
 
 instance HasPoint (StorableEvent UtxoHandle) C.ChainPoint where
@@ -155,21 +148,6 @@ instance HasPoint (StorableEvent UtxoHandle) C.ChainPoint where
 ---------------------------------------------------------------------------------
 --------------- sql mappings unspent_transactions and Spent tables -------------
 ---------------------------------------------------------------------------------
-instance ToField (C.Hash C.BlockHeader) where
-  toField f = toField $ C.serialiseToRawBytes f
-
-instance FromField (C.Hash C.BlockHeader) where
-   fromField f =
-      fromField f <&>
-        fromMaybe (error "Cannot deserialise block hash") .
-          C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
-
-instance FromRow C.TxIn where
-  fromRow = C.TxIn <$> field <*> field
-
-instance ToRow C.TxIn where
-  toRow (C.TxIn txid txix) = toRow (txid, txix)
-
 instance ToRow UtxoRow where
   toRow u =
     [ toField (u ^. urUtxo . address)
@@ -189,83 +167,6 @@ instance FromRow UtxoRow where
       <$> (Utxo <$> field <*> field <*> field <*> field
                 <*> field <*> field <*> field <*> field)
       <*> field <*> field <*> field
-
-instance FromField C.AddressAny where
-  fromField f = fromField f >>= \b -> maybe
-    cantDeserialise
-    pure $ C.deserialiseFromRawBytes C.AsAddressAny
-    b
-    where
-      cantDeserialise = returnError SQL.ConversionFailed f "Cannot deserialise address."
-
-instance ToField C.AddressAny where
-  toField = SQLBlob . C.serialiseToRawBytes
-
-instance FromField C.TxId where
-  fromField f = fromField f >>= maybe
-    (returnError ConversionFailed f "Cannot deserialise TxId.")
-    pure . C.deserialiseFromRawBytes (C.proxyToAsType Proxy)
-
-instance ToField C.TxId where
-  toField = SQLBlob . C.serialiseToRawBytes
-
-instance FromField C.TxIx where
-  fromField = fmap C.TxIx . fromField
-
-instance ToField C.TxIx where
-  toField (C.TxIx i) = SQLInteger $ fromIntegral i
-
-instance FromField (C.Hash C.ScriptData) where
-  fromField f = fromField f >>= either
-    (const $ returnError ConversionFailed f "Cannot deserialise ScriptDataHash.")
-    pure . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
-
-instance ToField (C.Hash C.ScriptData) where
-  toField = SQLBlob . C.serialiseToRawBytesHex
-
-instance FromField C.ScriptData where
-  fromField f = fromField f >>= either
-    (const $ returnError ConversionFailed f "Cannot deserialise scriptdata.")
-    pure . C.deserialiseFromCBOR (C.proxyToAsType Proxy)
-
-instance ToField C.ScriptData where
-  toField = SQLBlob . C.serialiseToCBOR
-
-instance ToField C.Value where
-  toField = SQLBlob . toStrict . encode
-
-instance FromField C.Value where
-  fromField f = fromField f >>= either
-    (const $ returnError ConversionFailed f "Cannot deserialise value.")
-    pure . eitherDecode
-
-instance ToField C.ScriptInAnyLang where
-  toField = SQLBlob . toStrict . encode
-
-instance FromField C.ScriptInAnyLang where
-  fromField f = fromField f >>= either
-    (const $ returnError ConversionFailed f "Cannot deserialise value.")
-    pure . eitherDecode
-
-instance ToField C.ScriptHash where
-  toField = SQLBlob . C.serialiseToRawBytesHex
-
-instance FromField C.ScriptHash where
-  fromField f = fromField f >>= either
-    (const $ returnError ConversionFailed f "Cannot deserialise scriptDataHash.")
-    pure . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
-
-instance FromField C.SlotNo where
-  fromField f = C.SlotNo <$> fromField f
-
-instance ToField C.SlotNo where
-  toField (C.SlotNo s) = SQLInteger $ fromIntegral s
-
-instance FromField C.BlockNo where
-  fromField f = C.BlockNo <$> fromField f
-
-instance ToField C.BlockNo where
-  toField (C.BlockNo s) = SQLInteger $ fromIntegral s
 
 instance FromRow Spent where
   fromRow = Spent <$> field <*> field <*> field <*> field
@@ -414,13 +315,13 @@ rowsToEvents f rows = traverse eventFromRow  rows <&> foldl' g []
     findIndex' x xs = elemIndex (ueChainPoint x) (ueChainPoint <$> xs)
 
     eventFromRow :: UtxoRow -> IO (StorableEvent UtxoHandle)
-    eventFromRow r = do
-      ins <- f (C.ChainPoint (r ^. urSlotNo)(r ^. urBlockHash) )
+    eventFromRow utxoRow = do
+      ins <- f (C.ChainPoint (utxoRow ^. urSlotNo) (utxoRow ^. urBlockHash) )
       pure $ UtxoEvent
-        { ueUtxos  = Set.singleton (r ^. urUtxo)
+        { ueUtxos  = Set.singleton (utxoRow ^. urUtxo)
         , ueInputs = ins
-        , ueBlockNo = r ^. urBlockNo
-        , ueChainPoint = C.ChainPoint (r ^. urSlotNo) (r ^. urBlockHash)
+        , ueBlockNo = utxoRow ^. urBlockNo
+        , ueChainPoint = C.ChainPoint (utxoRow ^. urSlotNo) (utxoRow ^. urBlockHash)
         }
 
 -- | convert utoEvents to urs

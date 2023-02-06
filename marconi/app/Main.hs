@@ -25,6 +25,7 @@ main = do
   c <- defaultConfigStdout
   withTrace c "marconi" $ \trace -> do
     let indexers = filterIndexers (Cli.utxoDbPath o)
+                                  (Cli.addressDatumDbPath o)
                                   (Cli.datumDbPath o)
                                   (Cli.scriptTxDbPath o)
                                   (Cli.epochStakepoolSizeDbPath o)

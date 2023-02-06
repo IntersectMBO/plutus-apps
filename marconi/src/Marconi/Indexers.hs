@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
 
@@ -27,10 +26,12 @@ import Streaming.Prelude qualified as S
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
-import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Cardano.Streaming qualified as CS
+import Marconi.Index.AddressDatum (AddressDatumDepth (AddressDatumDepth), AddressDatumHandle, AddressDatumIndex)
+import Marconi.Index.AddressDatum qualified as AddressDatum
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.EpochStakepoolSize qualified as EpochStakepoolSize
@@ -153,11 +154,62 @@ utxoWorker callback maybeTargetAddresses coordinator path = do
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
+addressDatumWorker
+  :: (Storable.StorableEvent AddressDatumHandle -> IO [()])
+  -> Maybe TargetAddresses
+  -> Worker
+addressDatumWorker onInsert targetAddresses coordinator path = do
+  workerChannel <- atomically . dupTChan $ _channel coordinator
+  (loop, ix) <-
+      addressDatumWorker_
+        onInsert
+        targetAddresses
+        (AddressDatumDepth 2160)
+        coordinator
+        workerChannel
+        path
+  void . forkIO $ loop
+  readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
+
+addressDatumWorker_
+    :: (Storable.StorableEvent AddressDatumHandle -> IO [()])
+    -> Maybe TargetAddresses  -- ^ Target addresses to filter for
+    -> AddressDatumDepth
+    -> Coordinator
+    -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+    -> FilePath
+    -> IO (IO (), MVar AddressDatumIndex)
+addressDatumWorker_ onInsert targetAddresses depth Coordinator{_barrier} ch path = do
+    index <- AddressDatum.open path depth
+    mIndex <- newMVar index
+    pure (innerLoop mIndex, mIndex)
+  where
+    innerLoop :: MVar AddressDatumIndex -> IO ()
+    innerLoop index = do
+      signalQSemN _barrier 1
+      event <- atomically $ readTChan ch
+      case event of
+        RollForward (BlockInMode (Block (BlockHeader slotNo bh _) txs) _) _ -> do
+            -- TODO Redo. Inefficient filtering
+            let addressFilter = case targetAddresses of
+                    Just targetAddrs -> Just $ \addr ->  addr `elem` targetAddrs
+                    _                -> Nothing -- no filtering is applied
+                addressDatumIndexEvent =
+                    AddressDatum.toAddressDatumIndexEvent addressFilter txs (C.ChainPoint slotNo bh)
+            modifyMVar_ index (Storable.insert addressDatumIndexEvent)
+            void $ onInsert addressDatumIndexEvent
+            innerLoop index
+        RollBackward cp _ct -> do
+          modifyMVar_ index $ \ix -> fromMaybe ix <$> Storable.rewind cp ix
+          innerLoop index
 
 scriptTxWorker_
   :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> ScriptTx.Depth
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), MVar ScriptTx.ScriptTxIndexer)
+  -> Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO (IO (), MVar ScriptTx.ScriptTxIndexer)
 scriptTxWorker_ onInsert depth Coordinator{_barrier} ch path = do
   indexer <- ScriptTx.open path depth
   mIndexer <- newMVar indexer
@@ -214,10 +266,18 @@ filterIndexers
   -> Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> Maybe TargetAddresses
   -> Maybe FilePath
   -> [(Worker, FilePath)]
-filterIndexers utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTargetAddresses maybeConfigPath =
+filterIndexers
+    utxoPath
+    addressDatumPath
+    datumPath
+    scriptTxPath
+    epochStakepoolSizePath
+    maybeTargetAddresses
+    maybeConfigPath =
   mapMaybe liftMaybe pairs
   where
     liftMaybe (worker, maybePath) = case maybePath of
@@ -228,10 +288,11 @@ filterIndexers utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTarge
       _               -> []
 
     pairs =
-      [(utxoWorker (\_ -> pure ()) maybeTargetAddresses, utxoPath)
-      , (datumWorker, datumPath)
-      , (scriptTxWorker (\_ -> pure []), scriptTxPath)
-      ] <> epochStakepoolSizeIndexer
+        [ (utxoWorker (\_ -> pure ()) maybeTargetAddresses, utxoPath)
+        , (addressDatumWorker (\_ -> pure []) maybeTargetAddresses, addressDatumPath)
+        , (datumWorker, datumPath)
+        , (scriptTxWorker (\_ -> pure []), scriptTxPath)
+        ] <> epochStakepoolSizeIndexer
 
 startIndexers
   :: [(Worker, FilePath)]

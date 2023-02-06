@@ -9,6 +9,7 @@ module Marconi.CLI
     , optionsParser
     , parseOptions
     , utxoDbPath
+    , addressDatumDbPath
     , datumDbPath
     , scriptTxDbPath
     , epochStakepoolSizeDbPath
@@ -104,6 +105,7 @@ data Options = Options
     optionsChainPoint           :: ChainPoint,
     optionsDbPath               :: FilePath,    -- ^ SQLite database directory path
     optionsDisableUtxo          :: Bool,
+    optionsDisableAddressDatum  :: Bool,
     optionsDisableDatum         :: Bool,
     optionsDisableScript        :: Bool,
     optionsDisableStakepoolSize :: Bool,
@@ -144,6 +146,10 @@ optionsParser =
                       <> Opt.help "disable utxo indexers."
                       <> Opt.showDefault
                      )
+    <*> Opt.switch (Opt.long "disable-address-datum"
+                      <> Opt.help "disable address->datum indexers."
+                      <> Opt.showDefault
+                     )
     <*> Opt.switch (Opt.long "disable-datum"
                       <> Opt.help "disable datum indexers."
                       <> Opt.showDefault
@@ -172,6 +178,9 @@ optAddressesParser =  optional . multiString
 utxoDbName :: FilePath
 utxoDbName = "utxo.db"
 
+addressDatumDbName :: FilePath
+addressDatumDbName = "addressdatum.db"
+
 datumDbName :: FilePath
 datumDbName = "datum.db"
 
@@ -183,6 +192,9 @@ epochStakepoolSizeDbName = "epochstakepool.db"
 
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
+
+addressDatumDbPath :: Options -> Maybe FilePath
+addressDatumDbPath o = if optionsDisableAddressDatum o then Nothing; else Just (optionsDbPath o </> addressDatumDbName)
 
 datumDbPath :: Options -> Maybe FilePath
 datumDbPath o = if optionsDisableDatum o then Nothing; else Just (optionsDbPath o </> datumDbName)
