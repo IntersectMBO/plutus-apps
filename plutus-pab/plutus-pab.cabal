@@ -129,6 +129,7 @@ library
   build-depends:
     , cardano-node-emulator      >=1.1.0
     , freer-extras               >=1.1.0
+    , marconi-core
     , pab-blockfrost             >=1.1.0
     , plutus-chain-index         >=1.1.0
     , plutus-chain-index-core    >=1.1.0
@@ -136,7 +137,6 @@ library
     , plutus-ledger              >=1.1.0
     , plutus-ledger-constraints  >=1.1.0
     , plutus-script-utils        >=1.1.0
-    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies

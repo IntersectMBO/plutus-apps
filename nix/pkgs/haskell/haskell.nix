@@ -55,9 +55,10 @@ let
             freer-extras.package.buildable = false;
             cardano-node-emulator.package.buildable = false;
             cardano-streaming.package.buildable = false;
-            marconi.package.buildable = false;
-            pab-blockfrost.package.buildable = false;
+            marconi-chain-index.package.buildable = false;
+            marconi-core.package.buildable = false;
             marconi-mamba.package.buildable = false;
+            pab-blockfrost.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
             plutus-chain-index-core.package.buildable = false;
@@ -117,8 +118,11 @@ let
         })
         ({ pkgs, config, ... }: {
           packages = {
-            marconi.doHaddock = deferPluginErrors;
-            marconi.flags.defer-plugin-errors = deferPluginErrors;
+            marconi-core.doHaddock = deferPluginErrors;
+            marconi-core.flags.defer-plugin-errors = deferPluginErrors;
+
+            marconi-chain-index.doHaddock = deferPluginErrors;
+            marconi-chain-index.flags.defer-plugin-errors = deferPluginErrors;
 
             # The lines `export CARDANO_NODE=...` and `export CARDANO_CLI=...`
             # is necessary to prevent the error
@@ -131,7 +135,7 @@ let
             # `configuration/defaults/byron-mainnet` directory.
             # Else, we'll get the error
             # `/nix/store/ls0ky8x6zi3fkxrv7n4vs4x9czcqh1pb-plutus-apps/marconi/test/configuration.yaml: openFile: does not exist (No such file or directory)`
-            marconi.preCheck = "
+            marconi-chain-index.preCheck = "
               export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
               export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
               export CARDANO_NODE_SRC=${src}
@@ -186,9 +190,10 @@ let
 
             # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
             cardano-streaming.ghcOptions = [ "-Werror" ];
-            marconi.ghcOptions = [ "-Werror" ];
-            pab-blockfrost.ghcOptions = [ "-Werror" ];
+            marconi-chain-index.ghcOptions = [ "-Werror" ];
+            marconi-core.ghcOptions = [ "-Werror" ];
             marconi-mamba.ghcOptions = [ "-Werror" ];
+            pab-blockfrost.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
             plutus-contract.ghcOptions = [ "-Werror" ];
@@ -201,7 +206,6 @@ let
             plutus-script-utils.ghcOptions = [ "-Werror" ];
             plutus-tx-constraints.ghcOptions = [ "-Werror" ];
             plutus-use-cases.ghcOptions = [ "-Werror" ];
-            rewindable-index.ghcOptions = [ "-Werror" ];
 
             # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
             # This will go away when we upgrade nixpkgs and things use ieee754 anyway.

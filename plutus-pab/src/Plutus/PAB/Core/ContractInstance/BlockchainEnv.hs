@@ -34,6 +34,7 @@ import Data.Maybe (fromMaybe, maybeToList)
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (Text, unpack)
 import Ledger (Block, Slot (..), TxId (..))
+import Marconi.Core.Index.VSqlite qualified as Ix
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
                           InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..), RollbackFailed (..),
                           RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance,
@@ -55,7 +56,6 @@ import Plutus.PAB.Types (Config (Config, dbConfig), DbConfig (..),
                          WebserverConfig (WebserverConfig, enableMarconi), developmentOptions, nodeServerConfig,
                          pabWebserverConfig)
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
-import RewindableIndex.Index.VSqlite qualified as Ix
 import System.Random
 
 -- | Connect to the node and write node updates to the blockchain

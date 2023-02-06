@@ -34,8 +34,8 @@ import Plutus.ChainIndex.Types (BlockNumber (BlockNumber),
                                 TxConfirmedState (TxConfirmedState, blockAdded, timesConfirmed, validity),
                                 TxValidity (TxValid))
 
-import RewindableIndex.Index.VSqlite (SqliteIndex)
-import RewindableIndex.Index.VSqlite qualified as Ix
+import Marconi.Core.Index.VSqlite (SqliteIndex)
+import Marconi.Core.Index.VSqlite qualified as Ix
 
 type Result = Maybe TxConfirmedState
 
