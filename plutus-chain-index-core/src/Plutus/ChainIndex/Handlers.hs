@@ -28,11 +28,12 @@ import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
 import Control.Lens (_Just, ix, to, (^?))
 import Control.Monad (foldM, void)
+import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn, logInfo)
-import Control.Monad.Freer.Extras.Pagination (Page (Page, nextPageQuery, pageItems), PageQuery (..), PageSize (..))
+import Control.Monad.Freer.Extras.Pagination (Page (Page, pageItems), PageQuery (..), PageSize (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State (State, get, put)
 import Data.ByteString (ByteString)
@@ -281,6 +282,12 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
       pure (UtxosResponse tp page)
 
 
+createNextPageQuery :: [(TxOutRef, a)] -> PageSize -> Maybe (PageQuery TxOutRef)
+createNextPageQuery items p@(PageSize ps)
+ | length items > fromIntegral ps = Just $ PageQuery p (listToMaybe $ List.tail $ List.reverse $ fst <$> items)
+ | otherwise = Nothing
+
+
 getTxOutSetAtAddress ::
   forall effs.
   ( Member (State ChainIndexState) effs
@@ -290,7 +297,7 @@ getTxOutSetAtAddress ::
   => PageQuery TxOutRef
   -> Credential
   -> Eff effs (QueryResponse [(TxOutRef, L.ChainIndexTxOut)])
-getTxOutSetAtAddress PageQuery { pageQuerySize = PageSize ps, pageQueryLastItem } (toDbValue -> cred) = do
+getTxOutSetAtAddress PageQuery { pageQuerySize = p@(PageSize ps), pageQueryLastItem } (toDbValue -> cred) = do
   indexState <- get @ChainIndexState
   case getCurrentTip indexState of
     Nothing -> do
@@ -314,13 +321,11 @@ getTxOutSetAtAddress PageQuery { pageQuerySize = PageSize ps, pageQueryLastItem 
                                        (\lastItem -> ref >. val_ lastItem)
                                        (fmap toDbValue pageQueryLastItem)
                          ) query
-      pure $ QueryResponse (utxos) (createNextPageQuery utxos)
-
-  where
-    createNextPageQuery :: [(TxOutRef, L.ChainIndexTxOut)] -> Maybe (PageQuery TxOutRef)
-    createNextPageQuery items
-     | length items > fromIntegral ps = Just $ PageQuery (PageSize ps) (listToMaybe $ List.tail $ List.reverse $ fst <$> items)
-     | otherwise = Nothing
+      utxos' <- mapMaybeM (\(r, o) -> do
+                              mo <- makeChainIndexTxOut o
+                              pure $ maybe Nothing (\o' -> Just (r, o')) mo
+                          ) utxos
+      pure $ QueryResponse utxos' (createNextPageQuery utxos p)
 
 
 getDatumsAtAddress ::
@@ -332,7 +337,7 @@ getDatumsAtAddress ::
   => PageQuery TxOutRef
   -> Credential
   -> Eff effs (QueryResponse [Datum])
-getDatumsAtAddress pageQuery (toDbValue -> cred) = do
+getDatumsAtAddress PageQuery { pageQuerySize = p@(PageSize ps), pageQueryLastItem } (toDbValue -> cred) = do
   indexState <- get @ChainIndexState
   case getCurrentTip indexState of
     Nothing -> do
@@ -340,27 +345,25 @@ getDatumsAtAddress pageQuery (toDbValue -> cred) = do
       pure (QueryResponse [] Nothing)
     Just _ -> do
       let emptyHash = (toDbValue $ DatumHash emptyByteString)
-          queryPage =
-            fmap _addressRowOutRef
-            $ filter_ (\row ->
-                         ( _addressRowCred row ==. val_ cred )
-                         &&. (_addressRowDatumHash row /=. val_ emptyHash) )
-            $ all_ (addressRows db)
-          queryAll =
-            select
-            $ filter_ (\row -> _addressRowCred row ==. val_ cred
-                       &&. (_addressRowDatumHash row /=. val_ emptyHash ) )
-            $ all_ (addressRows db)
-      pRefs <- selectPage (fmap toDbValue pageQuery) queryPage
-      let page = fmap fromDbValue pRefs
-      row_l <- List.filter (\(_, t, _) -> List.elem t (pageItems page)) <$> queryList queryAll
-      datums <- catMaybes <$> mapM f_map row_l
-      pure $ QueryResponse datums (nextPageQuery page)
+          query = do
+            addrRow <- filter_ (\row ->
+                                  ( _addressRowCred row ==. val_ cred )
+                                  &&. (_addressRowDatumHash row /=. val_ emptyHash) )
+                       $ all_ (addressRows db)
+            datumRow <- fmap _datumRowDatum $ join_ (datumRows db) (\row -> _datumRowHash row ==. _addressRowDatumHash addrRow)
+            pure (_addressRowOutRef addrRow, datumRow)
+      let ps' = fromIntegral ps
+      res <- fmap (fmap (\(r, d) -> (fromDbValue r, fromDbValue d)))
+             $ selectList
+             $ select
+             $ limit_ (ps' + 1)
+             $ orderBy_ (asc_ . fst)
+             $ filter_ (\(ref, _) -> maybe (val_ True)
+                                     (\lastItem -> ref >. val_ lastItem)
+                                     (fmap toDbValue pageQueryLastItem)
+                       ) query
+      pure $ QueryResponse (snd <$> res) (createNextPageQuery res p)
 
-  where
-    f_map :: (Credential, TxOutRef, Maybe DatumHash) -> Eff effs (Maybe Datum)
-    f_map (_, _, Nothing) = pure Nothing
-    f_map (_, _, Just dh) = getDatumFromHash dh
 
 
 getUtxoSetWithCurrency
