@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Spec.Marconi.Mamba.Api.UtxoIndexersQuery (tests) where
+module Spec.Marconi.Mamba.Api.Query.UtxoIndexer (tests) where
 
 import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
@@ -25,13 +25,13 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 
 import Cardano.Api qualified as C
 import Gen.Cardano.Api.Typed qualified as CGen
-import Marconi.Mamba.Api.Types (HasUtxoIndexerEnv (uiIndexer))
+import Marconi.Mamba.Api.Types (HasIndexerEnv (uiIndexer))
 
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Storable (StorableEvent)
 import Marconi.Core.Storable qualified as Storable
-import Marconi.Mamba.Api.UtxoIndexersQuery qualified as UIQ
+import Marconi.Mamba.Api.Query.UtxoIndexer qualified as UIQ
 
 genSlotNo :: Hedgehog.MonadGen m => m C.SlotNo
 genSlotNo = C.SlotNo <$> Gen.word64 (Range.linear 10 1000)
@@ -132,7 +132,7 @@ queryTargetAddressTest = property $ do
       . fmap Utxo._address
       . concatMap (Set.toList . Utxo.ueUtxos)
       $ events
-  env <- liftIO . UIQ.bootstrap $ targetAddresses
+  env <- liftIO . UIQ.initializeEnv $ targetAddresses
   let
     callback :: Utxo.UtxoIndexer -> IO ()
     callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer)
@@ -140,7 +140,7 @@ queryTargetAddressTest = property $ do
   fetchedRows <-
     liftIO
     . fmap (nub . concat)
-    . traverse (UIQ.findByCardanoAddress env)
+    . traverse (UIQ.findByAddress env)
     . fmap C.toAddressAny
     $ targetAddresses
   let rows = nub . concatMap Utxo.eventsToRows $ events

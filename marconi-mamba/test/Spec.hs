@@ -2,11 +2,11 @@ module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
-import Spec.Marconi.Mamba.Api.UtxoIndexersQuery qualified as Spec.UtxoIndexersQuery
+import Spec.Marconi.Mamba.Api.Query.UtxoIndexer qualified as Spec.Query.UtxoIndexer
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "marconi-mamba"
-  [Spec.UtxoIndexersQuery.tests]
+  [Spec.Query.UtxoIndexer.tests]

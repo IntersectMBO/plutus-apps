@@ -16,82 +16,73 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Network.Wai.Handler.Warp (runSettings)
-import Servant.API (NoContent (NoContent), (:<|>) ((:<|>)))
+import Servant.API ((:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
 
 import Cardano.Api ()
+import Marconi.Mamba.Api.Query.UtxoIndexer qualified as Q.Utxo
 import Marconi.Mamba.Api.Routes (API)
-import Marconi.Mamba.Api.Types (HasJsonRpcEnv (httpSettings, queryEnv), JsonRpcEnv, QueryExceptions, UtxoIndexerEnv,
-                                UtxoReport)
-import Marconi.Mamba.Api.UtxoIndexersQuery qualified as Q.Utxo
+import Marconi.Mamba.Api.Types (HasMambaEnv (httpSettings, queryEnv), IndexerEnv, MambaEnv, QueryExceptions,
+                                UtxoQueryResult)
 import Network.JsonRpc.Server.Types ()
 import Network.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, errorMessage), parseErrorCode)
 
 -- | Bootstraps the HTTP server
-bootstrap :: JsonRpcEnv -> IO ()
+bootstrap :: MambaEnv -> IO ()
 bootstrap env =  runSettings
         (env ^. httpSettings)
         (serve (Proxy @API) (server (env ^. queryEnv ) ) )
 
 server
-  :: UtxoIndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
+  :: IndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
   -> Server API
-server env
-    = ( echo
-        :<|> utxoJsonReport env
-        :<|> targetAddressesReport env
-        :<|> printMessage env )
-      :<|> (getTime
-            :<|> getTargetAddresses env
-            :<|> printMessage env)
+server env = jsonRpcServer :<|> restApiServer
+ where
+     jsonRpcServer =
+              echo
+         :<|> getUtxoFromAddressHandler env
+         :<|> getTargetAddressesQueryHandler env
 
--- | prints message to console
---  Used for testing the server from console
-printMessage
-    :: UtxoIndexerEnv    -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
-    -> String
-    -> Handler NoContent
-printMessage env msg = NoContent <$  (
-    liftIO $ do
-            putStrLn msg
-            putStrLn "\n"
-            print (Q.Utxo.reportBech32Addresses env)
-    )
+     restApiServer =
+              getTimeHandler
+         :<|> getTargetAddressesHandler env
 
--- | echos message back as a jsonrpc response
---  Used for testing the server
+-- | Echos message back as a Jsonrpc response. Used for testing the server.
 echo
     :: String
     ->  Handler (Either (JsonRpcErr String) String)
-echo  = return . Right
+echo = return . Right
 
--- | echos current time as REST response
---  Used for testing the http server outside of jsonrpc protocol
-getTime :: Handler String
-getTime = timeString <$> liftIO getCurrentTime
+-- | Echos current time as REST response. Used for testing the http server outside of jsonrpc
+-- protocol.
+getTimeHandler :: Handler String
+getTimeHandler = timeString <$> liftIO getCurrentTime
     where
     timeString = formatTime defaultTimeLocale "%T"
 
-getTargetAddresses
-    :: UtxoIndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
+-- | prints TargetAddresses Bech32 representation to the console
+getTargetAddressesHandler
+    :: IndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
     -> Handler [Text]
-getTargetAddresses =  pure . Q.Utxo.reportBech32Addresses
+getTargetAddressesHandler =  pure . Q.Utxo.reportBech32Addresses
 
--- | Retrieves a set of TxOutRef
-utxoJsonReport
-    :: UtxoIndexerEnv   -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
-    -> String           -- ^ bech32 addressCredential
-    -> Handler (Either (JsonRpcErr String) UtxoReport)
-utxoJsonReport env address = liftIO $
-    first toRpcErr <$> (Q.Utxo.findByAddress env . pack $ address)
+-- | Handler for retrieving UTXOs by Address
+getUtxoFromAddressHandler
+    :: IndexerEnv       -- ^ Utxo Environment to access Utxo Storage running on the marconi thread
+    -> String           -- ^ Bech32 addressCredential
+    -> Handler (Either (JsonRpcErr String) UtxoQueryResult)
+getUtxoFromAddressHandler env address = liftIO $
+    first toRpcErr <$> (Q.Utxo.findByBech32Address env . pack $ address)
 
-targetAddressesReport
-    :: UtxoIndexerEnv                   -- ^ database configuration
-    -> Int                              -- ^ limit, for now we are ignoring returning everyting
-    -> Handler (Either (JsonRpcErr String) [Text] )
-targetAddressesReport env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env
+-- | prints TargetAddresses Bech32 representation as thru JsonRpc
+getTargetAddressesQueryHandler
+    :: IndexerEnv -- ^ database configuration
+    -> String
+    -- ^ Will always be an empty string as we are ignoring this param, and returning everything
+    -> Handler (Either (JsonRpcErr String) [Text])
+getTargetAddressesQueryHandler env _ = pure . Right . Q.Utxo.reportBech32Addresses $ env
 
--- | convert form to jsonrpc protocal error
+-- | convert form to Jsonrpc protocal error
 toRpcErr
     :: QueryExceptions
     -> JsonRpcErr String

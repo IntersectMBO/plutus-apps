@@ -52,6 +52,8 @@ import Text.RawString.QQ (r)
 import Cardano.Api ()
 import Cardano.Api qualified as C
 import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Data.Aeson (ToJSON (toJSON), object, (.=))
+import Data.ByteString (ByteString)
 import Marconi.ChainIndex.Orphans ()
 import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
 import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
@@ -98,6 +100,29 @@ instance Ord Utxo where
     =   _txId left <= _txId right
     &&  _txIx left <= _txIx right
 
+instance ToJSON Utxo where
+  toJSON (Utxo addr tId tIx dtum dtumHash val scrpt scrptHash) = object
+    [ "address"           .= addr
+    , "txId"              .= tId
+    , "txIx"              .= tIx
+    , "datum"             .= (C.serialiseToCBOR <$> dtum)
+    , "datumHash"         .= dtumHash
+    , "value"             .= val
+    , "inlineScript"      .= (scriptToCBOR <$> scrpt)
+    , "inlineScriptHash"  .= scrptHash
+    ]
+
+-- | convert to Script to CBOR bytestring
+scriptToCBOR :: Shelley.ScriptInAnyLang -> ByteString
+scriptToCBOR (Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV1) script) =
+  C.serialiseToCBOR script
+scriptToCBOR (Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV2) script) =
+  C.serialiseToCBOR script
+scriptToCBOR (Shelley.ScriptInAnyLang(C.PlutusScriptLanguage C.PlutusScriptV1) script) =
+  C.serialiseToCBOR script
+scriptToCBOR (Shelley.ScriptInAnyLang(C.PlutusScriptLanguage C.PlutusScriptV2) script) =
+  C.serialiseToCBOR script
+
 data UtxoRow = UtxoRow
   { _urUtxo      :: Utxo
   , _urBlockNo   :: C.BlockNo
@@ -106,6 +131,14 @@ data UtxoRow = UtxoRow
   } deriving (Show, Eq, Ord, Generic)
 
 $(makeLenses ''UtxoRow)
+
+instance ToJSON UtxoRow where
+  toJSON (UtxoRow u b s h) = object
+    [ "utxo" .= u
+    , "blockNo" .= b
+    , "slotNo" .= s
+    , "blockHeaderHash" .= h
+    ]
 
 newtype instance  StorableResult UtxoHandle = UtxoResult [UtxoRow] deriving Show
 

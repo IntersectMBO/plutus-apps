@@ -45,9 +45,9 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Marconi.Mamba.Api.HttpServer
+    Marconi.Mamba.Api.Query.UtxoIndexer
     Marconi.Mamba.Api.Routes
     Marconi.Mamba.Api.Types
-    Marconi.Mamba.Api.UtxoIndexersQuery
     Marconi.Mamba.Bootstrap
     Marconi.Mamba.CLI
 
@@ -71,10 +71,7 @@ library
   ------------------------
   build-depends:
     , aeson
-    , async
     , base                  >=4.9 && <5
-    , base16-bytestring
-    , bytestring
     , lens
     , optparse-applicative
     , prettyprinter
@@ -187,7 +184,7 @@ test-suite marconi-mamba-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Spec.Marconi.Mamba.Api.UtxoIndexersQuery
+  other-modules:  Spec.Marconi.Mamba.Api.Query.UtxoIndexer
 
   --------------------
   -- Local components
