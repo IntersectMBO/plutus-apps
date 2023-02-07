@@ -18,6 +18,7 @@ import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
 data ChainIndexLog =
     InsertionSuccess Tip InsertUtxoPosition
     | ConversionFailed FromCardanoError
+    | AppendBlockSuccess [Tip]
     | RollbackSuccess Tip
     | Err ChainIndexError
     | TxNotFound TxId
@@ -38,6 +39,7 @@ instance Pretty ChainIndexLog where
       <+> pretty t
       <> "."
       <+> pretty p
+    AppendBlockSuccess tips -> "AppendBlockSuccess: Last 10 inserted tips: " <+> pretty tips
     RollbackSuccess t -> "RollbackSuccess: New tip is" <+> pretty t
     ConversionFailed cvError -> "Conversion failed: " <+> pretty cvError
     Err ciError -> "ChainIndexError:" <+> pretty ciError

@@ -109,6 +109,7 @@ library
     , containers
     , contra-tracer
     , cryptonite
+    , extra
     , data-default
     , exceptions
     , fingertree

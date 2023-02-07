@@ -24,6 +24,7 @@ import Plutus.ChainIndex.UtxoState as Export
 
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent.STM (TVar, atomically, readTVarIO, writeTVar)
+import Control.Monad (when)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
@@ -73,5 +74,9 @@ handleChainIndexEffects RunRequirements{trace, stateTVar, pool, securityParam} a
         $ interpret handleQuery
         -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.
         $ raiseMUnderN @[_,_,_,_,_] @[_,_,_] action
-    liftIO $ atomically $ writeTVar stateTVar newState
+    -- only update stateTVar when state has been updated
+    -- This is mainly to ensure that a handleQuery will not override the state provide
+    -- from a handleControl running at the same time
+    when (state /= newState) $ do
+      liftIO $ atomically $ writeTVar stateTVar newState
     pure result
