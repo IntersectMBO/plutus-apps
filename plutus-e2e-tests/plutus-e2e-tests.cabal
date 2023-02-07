@@ -88,7 +88,6 @@ test-suite plutus-e2e-tests-test
     PlutusScripts
     Spec.BabbageFeatures
     Spec.Builtins.SECP256k1
-    Typed
 
   --------------------
   -- Local components
