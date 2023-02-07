@@ -27,7 +27,7 @@ module Plutus.ChainIndex.Handlers
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
 import Control.Lens (_Just, ix, to, (^?))
-import Control.Monad (foldM)
+import Control.Monad (foldM, void)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
@@ -44,8 +44,8 @@ import Data.Set qualified as Set
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
-import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isNothing_, leftJoin_, orderBy_,
-                            (&&.), (/=.), (<=.), (==.), (>.), (>=.))
+import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isNothing_, join_, leftJoin_, orderBy_,
+                            (&&.), (/=.), (<=.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), Slot, TxId, TxOutRef (..))
@@ -270,31 +270,15 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
       logWarn TipIsGenesis
       pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
     Just tp -> do
-      -- select address txout first to optimize query
-      -- trick as a replacement for IN clause on SELECT
-      -- which is currently not supported by Beam.
-      moutRef <- selectOne
-                 $ select
-                 $ fmap _addressRowOutRef
-                 $ limit_ 1
-                 ( orderBy_ (asc_ . _addressRowOutRef)
-                   (filter_ (\row -> _addressRowCred row ==. val_ cred) (all_ (addressRows db))))
-      case moutRef of
-        Nothing -> do
-          -- no value found
-          pure (UtxosResponse tp (Page pageQuery Nothing []))
-        Just addr_out_ref -> do
-          let query = do
-                rowRef <- fmap _unspentOutputRowOutRef
-                          -- trick to force use of SEARCH TABLE on unspent_outputs
-                          (filter_ (\output -> _unspentOutputRowOutRef output >=. val_ addr_out_ref) (all_ (unspentOutputRows db)))
-                utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
-                guard_ (isNothing_ utxi)
-                pure rowRef
-
-          outRefs <- selectPage (fmap toDbValue pageQuery) query
-          let page = fmap fromDbValue outRefs
-          pure (UtxosResponse tp page)
+      let query = do
+            unspent <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+            void $ join_ (addressRows db) (\row -> (_addressRowOutRef row ==. unspent) &&. (_addressRowCred row ==. val_ cred))
+            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> unspent ==. utxi)
+            guard_ (isNothing_ utxi)
+            pure $ unspent
+      outRefs <- selectPage (fmap toDbValue pageQuery) query
+      let page = fmap fromDbValue outRefs
+      pure (UtxosResponse tp page)
 
 
 getTxOutSetAtAddress ::
