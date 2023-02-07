@@ -256,7 +256,12 @@ getEvents s = do
 
 {- This function is used to add a checkpoint to the in-memory part of event indexers.
    You can use checkpoints to add synthetic events to the memory buffer. Filling the
-   memory buffer will flush the real events to disk faster than not using checkpoints.
+   memory buffer with synthetic events will cause the real events to be flushed to
+   disk when the number of blocks have been received, regardless of whether they are
+   filtered or not.
+
+   Note that the developer will have to use the `checkpoint` function to add synthetic
+   events manually whenever the indexer event is filtered out.
 
    This is useful if the number of events is small and you run the risk of never
    storing them on-disk. When that happens, if the indexer is restarted it will
