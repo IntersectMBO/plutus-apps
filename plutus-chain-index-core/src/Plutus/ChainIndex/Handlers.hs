@@ -33,13 +33,13 @@ import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn, logInfo)
-import Control.Monad.Freer.Extras.Pagination (Page (Page, pageItems), PageQuery (..), PageSize (..))
+import Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..), PageSize (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State (State, get, put)
 import Data.ByteString (ByteString)
 import Data.List qualified as List
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, listToMaybe, mapMaybe, maybeToList)
+import Data.Maybe (catMaybes, fromMaybe, isJust, listToMaybe, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
@@ -365,7 +365,6 @@ getDatumsAtAddress PageQuery { pageQuerySize = p@(PageSize ps), pageQueryLastIte
       pure $ QueryResponse (snd <$> res) (createNextPageQuery res p)
 
 
-
 getUtxoSetWithCurrency
   :: forall effs.
     ( Member (State ChainIndexState) effs
@@ -375,28 +374,35 @@ getUtxoSetWithCurrency
   => PageQuery TxOutRef
   -> AssetClass
   -> Eff effs UtxosResponse
-getUtxoSetWithCurrency pageQuery assetClass = do
+getUtxoSetWithCurrency pq@(PageQuery { pageQuerySize = p@(PageSize ps), pageQueryLastItem }) assetClass = do
   indexState <- get @ChainIndexState
   case getCurrentTip indexState of
     Nothing -> do
       logWarn TipIsGenesis
-      pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
+      pure (UtxosResponse TipAtGenesis (Page pq Nothing []))
     Just tip -> do
       let query = do
-            rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
-            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
+            unspent <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+            txout <- fmap _utxoRowTxOut $ join_ (utxoOutRefRows db) (\row -> (_utxoRowOutRef row ==. unspent))
+            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> unspent ==. utxi)
             guard_ (isNothing_ utxi)
-            pure rowRef
-
-      outRefs <- selectPage (fmap toDbValue pageQuery) query
-      let page = fmap fromDbValue outRefs
-      mtxouts <- mapM (\t -> do
-                         mo <- getUtxoutFromRef t
-                         pure (t, mo)
-                      ) (pageItems page)
-      let txrefs = [ t | (t, mo) <- mtxouts, o <- maybeToList mo,
-                     (assetClassValueOf (L._ciTxOutValue o) assetClass) > 0 ]
-      pure $ UtxosResponse tip (page {pageItems = txrefs})
+            pure (unspent, txout)
+      let ps' = fromIntegral ps
+      utxos <- fmap (fmap (\(r, o) -> (fromDbValue r, fromDbValue o)))
+               $ selectList
+               $ select
+               $ limit_ (ps' + 1)
+               $ orderBy_ (asc_ . fst)
+               $ filter_ (\(ref, _) -> maybe (val_ True)
+                                       (\lastItem -> ref >. val_ lastItem)
+                                       (fmap toDbValue pageQueryLastItem)
+                         ) query
+      utxos' <- mapMaybeM (\(r, o) -> do
+                              mo <- makeChainIndexTxOut o
+                              pure $ maybe Nothing (\o' -> Just (r, o')) mo
+                          ) utxos
+      let txrefs = [ t | (t, o) <- utxos', (assetClassValueOf (L._ciTxOutValue o) assetClass) > 0 ]
+      pure $ UtxosResponse tip (Page pq (createNextPageQuery utxos p) txrefs)
 
 
 getTxsFromTxIds
