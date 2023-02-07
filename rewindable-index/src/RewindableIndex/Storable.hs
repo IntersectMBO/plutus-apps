@@ -20,11 +20,14 @@ module RewindableIndex.Storable
   , StorableMonad
     -- * API
   , QueryInterval(..)
+  , SyntheticEvent(..)
   , Buffered(..)
   , Queryable(..)
   , Resumable(..)
   , Rewindable(..)
   , HasPoint(..)
+  , syntheticPoint
+  , foldEvents
   , insert
   , insertMany
   , rewind
@@ -36,7 +39,7 @@ import Control.Applicative ((<|>))
 import Control.Lens.Operators ((%~), (.~), (^.))
 import Control.Lens.TH qualified as Lens
 import Control.Monad.Primitive (PrimMonad, PrimState)
-import Data.Foldable (foldlM)
+import Data.Foldable (foldl', foldlM)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Vector qualified as V
@@ -189,16 +192,31 @@ newtype Config = Config
   } deriving (Show, Eq)
 $(Lens.makeLenses ''Config)
 
+data SyntheticEvent e p =
+    Event     !e
+  | Synthetic !p
+
+syntheticPoint :: HasPoint e p => SyntheticEvent e p -> p
+syntheticPoint (Event e)     = getPoint e
+syntheticPoint (Synthetic p) = p
+
+foldEvents :: forall f h. Foldable f => f (SyntheticEvent (StorableEvent h) (StorablePoint h)) -> [StorableEvent h]
+foldEvents = reverse . foldl' unwrap []
+  where
+    unwrap :: [StorableEvent h] -> SyntheticEvent (StorableEvent h) (StorablePoint h) -> [StorableEvent h]
+    unwrap acc (Synthetic _) = acc
+    unwrap acc (Event e)     = e : acc
+
 data Storage h = Storage
-  { _events :: VM.MVector (PrimState (StorableMonad h)) (StorableEvent h)
-  , _cursor :: Int
+  { _events :: !(VM.MVector (PrimState (StorableMonad h)) (SyntheticEvent (StorableEvent h) (StorablePoint h)))
+  , _cursor :: !Int
   }
 $(Lens.makeLenses ''Storage)
 
 data State h = State
-  { _config  :: Config
-  , _storage :: Storage h
-  , _handle  :: h
+  { _config  :: !Config
+  , _storage :: !(Storage h)
+  , _handle  :: !h
   }
 $(Lens.makeLenses ''State)
 
@@ -220,7 +238,7 @@ emptyState memBuf hdl = do
 -- Get events from the memory buffer.
 getMemoryEvents
   :: Storage h
-  -> V.MVector (PrimState (StorableMonad h)) (StorableEvent h)
+  -> V.MVector (PrimState (StorableMonad h)) (SyntheticEvent (StorableEvent h) (StorablePoint h))
 getMemoryEvents s = VM.slice 0 (s ^. cursor) (s ^. events)
 
 -- Get events from memory buffer and disk buffer.
@@ -231,7 +249,7 @@ getEvents
   -> StorableMonad h [StorableEvent h]
 getEvents s = do
   memoryEs <- getMemoryEvents (s ^. storage)
-              & V.freeze <&> V.toList
+              & V.freeze <&> foldEvents . V.toList
   diskEs   <- getStoredEvents (s ^. handle)
   pure $ diskEs ++ memoryEs
 
@@ -243,12 +261,12 @@ insert
   -> StorableMonad h (State h)
 insert e s = do
   state'   <- flushBuffer s
-  storage' <- appendEvent e (state' ^. storage)
+  storage' <- appendEvent (Event e) (state' ^. storage)
   pure $ state' { _storage = storage' }
 
 appendEvent
   :: PrimMonad (StorableMonad h)
-  => StorableEvent h
+  => SyntheticEvent (StorableEvent h) (StorablePoint h)
   -> Storage h
   -> StorableMonad h (Storage h)
 appendEvent e s = do
@@ -267,8 +285,8 @@ flushBuffer s = do
       mx = s ^. config . memoryBufferSize
   if mx == cr
   then do
-    v  <- V.freeze es
-    h' <- persistToStorage v (s ^. handle)
+    es' <- foldEvents <$> V.freeze es
+    h' <- persistToStorage es' (s ^. handle)
     pure $ s & storage . cursor .~ 0
              & handle .~ h'
   else pure s
@@ -304,7 +322,7 @@ rewind p s = do
     rewindMemory = do
       v <- V.freeze $ VM.slice 0 (s ^. storage . cursor) (s ^. storage . events)
       pure $ do
-        ix   <- VG.findIndex (\e -> getPoint e == p) v
+        ix   <- VG.findIndex (\e -> syntheticPoint e == p) v
         pure $ s & storage . cursor .~ (ix + 1)
     resetMemory :: State h -> h -> State h
     resetMemory s' h =
@@ -356,5 +374,5 @@ query
   -> StorableQuery h
   -> StorableMonad h (StorableResult h)
 query qi s q = do
-  es  <- getMemoryEvents (s ^. storage) & V.freeze <&> V.toList
+  es  <- getMemoryEvents (s ^. storage) & V.freeze <&> foldEvents . V.toList
   queryStorage qi (filterWithQueryInterval qi es) (s ^. handle) q

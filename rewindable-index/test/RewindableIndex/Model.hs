@@ -266,7 +266,7 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
---   another implmentation is confirming.
+--   another implmentation is conforming.
 prop_observeInsert
   :: forall e a n m. (Monad m, Eq a)
   => Conversion m a e n
