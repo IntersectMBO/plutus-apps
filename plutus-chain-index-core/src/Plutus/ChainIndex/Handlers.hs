@@ -32,19 +32,19 @@ import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn, logInfo)
-import Control.Monad.Freer.Extras.Pagination (Page (Page, nextPageQuery, pageItems), PageQuery (..))
+import Control.Monad.Freer.Extras.Pagination (Page (Page, nextPageQuery, pageItems), PageQuery (..), PageSize (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State (State, get, put)
 import Data.ByteString (ByteString)
 import Data.List qualified as List
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, mapMaybe, maybeToList)
+import Data.Maybe (catMaybes, fromMaybe, isJust, listToMaybe, mapMaybe, maybeToList)
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
-import Database.Beam.Query (HasSqlEqualityCheck, desc_, exists_, guard_, isNothing_, join_, leftJoin_, orderBy_,
+import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isNothing_, join_, leftJoin_, orderBy_,
                             (&&.), (/=.), (<=.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
@@ -290,18 +290,37 @@ getTxOutSetAtAddress ::
   => PageQuery TxOutRef
   -> Credential
   -> Eff effs (QueryResponse [(TxOutRef, L.ChainIndexTxOut)])
-getTxOutSetAtAddress pageQuery cred = do
-  (UtxosResponse tip page) <- getUtxoSetAtAddress pageQuery cred
-  case tip of
-    TipAtGenesis -> do
+getTxOutSetAtAddress PageQuery { pageQuerySize = PageSize ps, pageQueryLastItem } (toDbValue -> cred) = do
+  indexState <- get @ChainIndexState
+  case getCurrentTip indexState of
+    Nothing -> do
+      logWarn TipIsGenesis
       pure (QueryResponse [] Nothing)
-    _             -> do
-      mtxouts <- mapM (\t -> do
-                          mo <- getUtxoutFromRef t
-                          pure (t, mo)
-                      ) (pageItems page)
-      let txouts = [ (t, o) | (t, mo) <- mtxouts, o <- maybeToList mo]
-      pure $ QueryResponse txouts (nextPageQuery page)
+    Just _ -> do
+      let query = do
+            unspent <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+            void $ join_ (addressRows db) (\row -> (_addressRowOutRef row ==. unspent) &&. (_addressRowCred row ==. val_ cred))
+            txout <- fmap _utxoRowTxOut $ join_ (utxoOutRefRows db) (\row -> (_utxoRowOutRef row ==. unspent))
+            utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> unspent ==. utxi)
+            guard_ (isNothing_ utxi)
+            pure (unspent, txout)
+      let ps' = fromIntegral ps
+      utxos <- fmap (fmap (\(r, o) -> (fromDbValue r, fromDbValue o)))
+               $ selectList
+               $ select
+               $ limit_ (ps' + 1)
+               $ orderBy_ (asc_ . fst)
+               $ filter_ (\(ref, _) -> maybe (val_ True)
+                                       (\lastItem -> ref >. val_ lastItem)
+                                       (fmap toDbValue pageQueryLastItem)
+                         ) query
+      pure $ QueryResponse (utxos) (createNextPageQuery utxos)
+
+  where
+    createNextPageQuery :: [(TxOutRef, L.ChainIndexTxOut)] -> Maybe (PageQuery TxOutRef)
+    createNextPageQuery items
+     | length items > fromIntegral ps = Just $ PageQuery (PageSize ps) (listToMaybe $ List.tail $ List.reverse $ fst <$> items)
+     | otherwise = Nothing
 
 
 getDatumsAtAddress ::
