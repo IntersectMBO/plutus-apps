@@ -34,21 +34,26 @@ import Control.Monad.Reader qualified as ReaderT
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty qualified as L
+import Data.List qualified as List
+import Data.ByteString.Builder (toLazyByteString)
+import Data.ByteString.Lazy.Char8 qualified as BL
+import Data.DList qualified as D
 import Data.Maybe (isJust, listToMaybe)
 import Data.Pool (Pool)
 import Data.Pool qualified as Pool
+import Data.String (fromString)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Database.Beam (Beamable, DatabaseEntity, FromBackendRow, Identity, MonadIO (liftIO), Q, QBaseScope, QExpr,
-                      SqlDelete, SqlInsert, SqlSelect, SqlUpdate, TableEntity, asc_, filter_, insertValues, limit_,
+import Database.Beam (Columnar, Beamable, DatabaseEntity, FromBackendRow, HasSqlEqualityCheck, Identity, MonadIO (liftIO), Q, QBaseScope, QExpr,
+                      SqlDelete (..), SqlInsert, SqlSelect (..), SqlUpdate, TableEntity, asc_, delete, filter_, insertValues, limit_,
                       orderBy_, runDelete, runInsert, runSelectReturningList, runSelectReturningOne, runUpdate, select,
-                      val_, (>.))
-import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize, HasSqlValueSyntax)
+                      val_, (>.), (==.))
+import Database.Beam.Backend.SQL (deleteCmd, selectCmd, BeamSqlBackendCanSerialize, HasSqlValueSyntax)
 import Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
 import Database.Beam.Query.Internal (QNested)
 import Database.Beam.Schema.Tables (FieldsFulfillConstraint)
 import Database.Beam.Sqlite (Sqlite, SqliteM (..), runBeamSqliteDebug)
-import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
+import Database.Beam.Sqlite.Syntax (fromSqliteCommand, withPlaceholders, SqliteSyntax(..), SqliteValueSyntax)
 import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (..), colon, (<+>))
@@ -102,6 +107,29 @@ data BeamEffect r where
     => SqlDelete Sqlite table
     -> BeamEffect ()
 
+  DeleteRowsInClause
+   :: ( FromBackendRow Sqlite value,
+        HasSqlEqualityCheck Sqlite value,
+        BeamSqlBackendCanSerialize Sqlite value,
+        BeamableSqlite table
+      )
+   => DatabaseEntity Sqlite db (TableEntity table)
+   -- ^ table to delete from
+   -> (forall f. table f -> Columnar f value)
+   -- ^ column to be used for the IN clause
+   -> SqlSelect Sqlite value
+   -- ^ select statement to be used after IN Clause
+   -> BeamEffect ()
+   -- ^ To properly handle DELETE statements where
+   -- an IN CLAUSE on a SELECT statement is required
+   -- Database.Beam currently does not support such construct
+   -- Indeed, in_ predicate only accepts a list of values and
+   -- not an sql statement. E.g.
+   -- DELETE FROM table1
+   --  WHERE key IN
+   --  ( SELECT snd_key FROM table2
+   --    WHERE blabla )
+   --
   SelectList
     :: FromBackendRow Sqlite a
     => SqlSelect Sqlite a
@@ -153,6 +181,25 @@ handleBeam trace eff = runBeam trace $ execute eff
         AddRows    q    -> runInsert q
         UpdateRows q -> runUpdate q
         DeleteRows q    -> runDelete q
+        DeleteRowsInClause table getKey (SqlSelect s) ->
+          SqliteM $ do
+           (logger, conn) <- ReaderT.ask
+           -- introducing fake equality to be replaced in command afterwards
+           let (SqlDelete _ d) = delete table (\row -> getKey row ==. getKey row)
+           let (SqliteSyntax delCmd _) = fromSqliteCommand $ deleteCmd d
+           let (SqliteSyntax selCmd vals) = fromSqliteCommand $ selectCmd s
+           let delCmdString = BL.unpack (toLazyByteString (withPlaceholders delCmd))
+           let selCmdString = BL.unpack (toLazyByteString (withPlaceholders selCmd))
+           let dropDummyEquality [] = []
+               dropDummyEquality str@(c:cs)
+                 | "=" `List.isPrefixOf` str = []
+                 | otherwise = c : dropDummyEquality cs
+           let cmdString = (dropDummyEquality delCmdString) ++ " IN ( " ++ selCmdString ++ " )"
+           liftIO $ do
+             logger $ cmdString ++ ";\n-- With values: " ++ show (D.toList vals)
+             Sqlite.execute conn (fromString cmdString) (D.toList vals)
+
+
         SelectList q    -> runSelectReturningList q
         SelectPage pageQuery@PageQuery { pageQuerySize = PageSize ps, pageQueryLastItem } q -> do
           let ps' = fromIntegral ps

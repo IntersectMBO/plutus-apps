@@ -45,7 +45,7 @@ import Data.Set qualified as Set
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
-import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isNothing_, join_, leftJoin_, orderBy_,
+import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, guard_, isNothing_, join_, leftJoin_, orderBy_,
                             (&&.), (/=.), (<=.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
@@ -645,22 +645,21 @@ reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
     -- Indeed, reduceBlocks returns the first tip from which we have to perform reduction.
     [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row <=. val_ slot)
     -- Delete all TxOut and unspent utxos for which a matching input with a slot less than or equal to reduced slot can bd found
-    , DeleteRows $ delete
-        (utxoOutRefRows db)
-        (\utxoRow ->
-            exists_ (filter_
-                (\input ->
-                    (unTipRowId (_unmatchedInputRowTip input) <=. val_ slot) &&.
-                    (_utxoRowOutRef utxoRow ==. _unmatchedInputRowOutRef input))
-                (all_ (unmatchedInputRows db))))
-    , DeleteRows $ delete
-        (unspentOutputRows db)
-        (\output -> unTipRowId (_unspentOutputRowTip output) <=. val_ slot &&.
-            exists_ (filter_
-                (\input ->
-                    (unTipRowId (_unmatchedInputRowTip input) <=. val_ slot) &&.
-                    (_unspentOutputRowOutRef output ==. _unmatchedInputRowOutRef input))
-                (all_ (unmatchedInputRows db))))
+    , DeleteRowsInClause
+      (utxoOutRefRows db)
+      _utxoRowOutRef
+      ( select
+        $ fmap _unmatchedInputRowOutRef
+        (filter_ (\input -> unTipRowId (_unmatchedInputRowTip input) <=. val_ slot) (all_ (unmatchedInputRows db))) )
+    , DeleteRowsInClause
+      (unspentOutputRows db)
+      _unspentOutputRowOutRef
+      -- no need to check that _unspentOutputRowTip is less than slot
+      -- as if an entry in unmatchedInput is found we know for sure that the utxo
+      -- was produced before it was consumed.
+      ( select
+        $ fmap _unmatchedInputRowOutRef
+        (filter_  (\input -> unTipRowId (_unmatchedInputRowTip input) <=. val_ slot) (all_ (unmatchedInputRows db))) )
     -- We can now safely delete all spent utxo with a slot less than or equal to reduced slot
     -- Indeed, if a utxo is spent then it has certainly been produced within
     -- the same block or even before.
@@ -674,13 +673,12 @@ rollbackUtxoDb :: Point -> BeamEffect ()
 rollbackUtxoDb PointAtGenesis = DeleteRows $ delete (tipRows db) (const (val_ True))
 rollbackUtxoDb (Point (toDbValue -> slot) _) = Combined
     [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row >. val_ slot)
-    , DeleteRows $ delete (utxoOutRefRows db)
-        (\utxoRow ->
-            exists_ (filter_
-                (\output ->
-                    (unTipRowId (_unspentOutputRowTip output) >. val_ slot) &&.
-                    (_utxoRowOutRef utxoRow ==. _unspentOutputRowOutRef output))
-                (all_ (unspentOutputRows db))))
+    , DeleteRowsInClause
+      (utxoOutRefRows db)
+       _utxoRowOutRef
+      ( select
+        $ fmap _unspentOutputRowOutRef
+        (filter_ (\output -> unTipRowId (_unspentOutputRowTip output) >. val_ slot) (all_ (unspentOutputRows db))) )
     , DeleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
     , DeleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
     ]

@@ -60,8 +60,10 @@ library
     , base           >=4.7 && <5
     , beam-core
     , beam-sqlite
+    , bytestring
     , containers
     , data-default
+    , dlist
     , freer-simple
     , lens
     , mtl
