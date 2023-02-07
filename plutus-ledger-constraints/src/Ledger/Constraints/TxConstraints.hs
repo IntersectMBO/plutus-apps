@@ -407,6 +407,11 @@ mustPayToTheScriptWithInlineDatum :: o -> Value -> TxConstraints i o
 mustPayToTheScriptWithInlineDatum dt vl =
     mempty { txOwnOutputs = [ScriptOutputConstraint (TxOutDatumInline dt) vl Nothing] }
 
+{-# INLINABLE mustPayToTheScriptWithReferenceScript #-}
+mustPayToTheScriptWithReferenceScript :: ScriptHash -> TxOutDatum o -> Value -> TxConstraints i o
+mustPayToTheScriptWithReferenceScript sh dt vl =
+    mempty { txOwnOutputs = [ScriptOutputConstraint dt vl (Just sh)] }
+
 {-# INLINABLE mustPayToPubKey #-}
 -- | @mustPayToPubKey pkh v@ is the same as
 -- 'mustPayToPubKeyAddressWithDatumHash', but without any staking key hash and datum.

@@ -49,6 +49,7 @@ import Control.Lens (_1, has, makeClassyPrisms, only, review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
 import GHC.Generics (Generic)
 
 import PlutusTx qualified
@@ -71,7 +72,7 @@ import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), scriptOutputsAt, txInfoValidRange, txSignedBy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
+import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, ScriptHash (ScriptHash), ValidatorHash (ValidatorHash))
 import Plutus.V2.Ledger.Contexts (valuePaidTo)
 import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatumHash))
 
@@ -262,7 +263,8 @@ pay ::
     -> Contract w s e TxId
 pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
-    let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
+    let ValidatorHash sh = Scripts.tvValidatorHash inst
+    let tx = Constraints.mustPayToTheScriptWithReferenceScript (ScriptHash sh) (Constraints.TxOutDatumInTx pk) vl
           <> Constraints.mustValidateInTimeRange (Interval.interval 1 (1 + escrowDeadline escrow))
     mkCardanoTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx
@@ -305,7 +307,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     else do
       let
           validityTimeRange = Interval.lessThan $ Haskell.pred $ escrowDeadline escrow
-          tx = Constraints.collectFromTheScript unspentOutputs Redeem
+          tx = collectFromTheScriptWithRefScript (\_ _ -> True) unspentOutputs Redeem
                   <> foldMap mkTx (escrowTargets escrow)
                   <> Constraints.mustValidateInTimeRange validityTimeRange
       utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups inst
@@ -340,7 +342,7 @@ refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     let pkh = datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
-        tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
+        tx' = collectFromTheScriptWithRefScript flt unspentOutputs Refund
                 <> Constraints.mustBeSignedBy pk
                 <> Constraints.mustValidateInTimeRange (Interval.from $ escrowDeadline escrow)
     if Constraints.modifiesUtxoSet tx'
@@ -379,3 +381,12 @@ payRedeemRefund params vl = do
 
 covIdx :: CoverageIndex
 covIdx = getCovIdx $$(PlutusTx.compile [|| validate ||])
+
+collectFromTheScriptWithRefScript
+    :: (Tx.TxOutRef -> Tx.DecoratedTxOut -> Bool)
+    -> Map.Map Tx.TxOutRef Tx.DecoratedTxOut
+    -> i
+    -> TxConstraints i o
+collectFromTheScriptWithRefScript flt utxos red = foldMap
+    (\utxo -> mempty { Constraints.txOwnInputs = [Constraints.ScriptInputConstraint red utxo (Just utxo)] })
+    (Map.keys $ Map.filterWithKey flt utxos)
