@@ -9,6 +9,7 @@ module Ledger.Tx.Constraints(
     , TC.mustPayToTheScriptWithDatumHash
     , TC.mustPayToTheScriptWithDatumInTx
     , TC.mustPayToTheScriptWithInlineDatum
+    , TC.mustPayToTheScriptWithReferenceScript
     , TC.mustPayToAddress
     , TC.mustPayToAddressWithDatumHash
     , TC.mustPayToAddressWithDatumInTx

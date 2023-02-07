@@ -115,7 +115,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Redeemer (Redeemer), decoratedTxOutReferenceScript)
 import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
-import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
+import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icReferenceTxOutRef, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                          TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateInTimeRange),
                                          TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
@@ -139,7 +139,6 @@ import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Valida
 import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Tx qualified as PV2
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
@@ -469,17 +468,22 @@ cleaningMustSpendConstraints (x:xs) = (x :) <$> cleaningMustSpendConstraints xs
 
 
 prepareConstraints
-    :: ( ToData (DatumType a)
+    :: ( FromData (DatumType a)
+       , ToData (DatumType a)
+       , ToData (RedeemerType a)
        , MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
+       , MonadState ConstraintProcessingState m
        )
-    => [ScriptOutputConstraint (DatumType a)]
+    => [ScriptInputConstraint (RedeemerType a)]
+    -> [ScriptOutputConstraint (DatumType a)]
     -> [TxConstraint]
     -> m [TxConstraint]
-prepareConstraints ownOutputs constraints = do
-    ownOutputConstraints <- concat <$> traverse addOwnOutput ownOutputs
+prepareConstraints ownInputs ownOutputs constraints = do
+    ownInputConstraints <- traverse addOwnInput ownInputs
+    ownOutputConstraints <- traverse addOwnOutput ownOutputs
     cleanedConstraints <- cleaningMustSpendConstraints constraints
-    pure (cleanedConstraints <> ownOutputConstraints)
+    pure (cleanedConstraints <> ownOutputConstraints <> ownInputConstraints)
 
 -- | Resolve some 'TxConstraints' by modifying the 'UnbalancedTx' in the
 --   'ConstraintProcessingState'
@@ -495,10 +499,9 @@ processLookupsAndConstraints
     -> m ()
 processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
     flip runReaderT lookups $ do
-         constraints <- prepareConstraints txOwnOutputs txConstraints
+         constraints <- prepareConstraints txOwnInputs txOwnOutputs txConstraints
          traverse_ processConstraint constraints
          traverse_ processConstraintFun txCnsFuns
-         traverse_ addOwnInput txOwnInputs
          checkValueSpent
          updateUtxoIndex
 
@@ -575,8 +578,8 @@ addOwnInput
        , ToData (RedeemerType a)
        )
     => ScriptInputConstraint (RedeemerType a)
-    -> m ()
-addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
+    -> m TxConstraint
+addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef, icReferenceTxOutRef} = do
     ScriptLookups{slTxOutputs, slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     typedOutRef <-
@@ -588,16 +591,8 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
                                 datum <- ciTxOut ^? Tx.decoratedTxOutDatum . _2 . Tx.datumInDatumFromQuery
                                 pure (Tx.toTxInfoTxOut ciTxOut, datum)
           Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
-    let vl = PV2.txOutValue $ Typed.tyTxOutTxOut $ Typed.tyTxOutRefOut typedOutRef
-    valueSpentInputs <>= provided vl
-    case typedOutRef of
-        Typed.TypedScriptTxOutRef{Typed.tyTxOutRefRef, Typed.tyTxOutRefOut} -> do
-            let datum = Datum $ toBuiltinData $ Typed.tyTxOutData tyTxOutRefOut
-            unbalancedTx . tx %= Tx.addScriptTxInput
-                                      tyTxOutRefRef
-                                      (Typed.vValidatorScript inst)
-                                      (Redeemer $ toBuiltinData icRedeemer)
-                                      (Just datum)
+    let red = Redeemer $ toBuiltinData icRedeemer
+    pure $ MustSpendScriptOutput (Typed.tyTxOutRefRef typedOutRef) red icReferenceTxOutRef
 
 -- | Convert a @ScriptOutputConstraint@ into a @TxConstraint@.
 addOwnOutput
@@ -606,12 +601,12 @@ addOwnOutput
        , ToData (DatumType a)
        )
     => ScriptOutputConstraint (DatumType a)
-    -> m [TxConstraint]
+    -> m TxConstraint
 addOwnOutput ScriptOutputConstraint{ocDatum, ocValue, ocReferenceScriptHash} = do
     ScriptLookups{slTypedValidator} <- ask
     inst <- maybe (throwError TypedValidatorMissing) pure slTypedValidator
     let dsV = fmap (Datum . toBuiltinData) ocDatum
-    pure [ MustPayToAddress (validatorAddress inst) (Just dsV) ocReferenceScriptHash ocValue ]
+    pure $ MustPayToAddress (validatorAddress inst) (Just dsV) ocReferenceScriptHash ocValue
 
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m
