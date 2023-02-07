@@ -4,9 +4,9 @@ let
 
   top-level = import ./default.nix { inherit system; };
 
-  nix-shell = import ./shell.nix { inherit system; };
-
   pkgs = top-level.pkgs;
+
+  nix-shell = import ./shell.nix { inherit (pkgs) system; };
 
   make-haskell-jobs = project:
     let
