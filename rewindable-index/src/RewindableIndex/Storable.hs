@@ -29,6 +29,7 @@ module RewindableIndex.Storable
   , syntheticPoint
   , foldEvents
   , insert
+  , checkpoint
   , insertMany
   , rewind
   , resume
@@ -252,6 +253,38 @@ getEvents s = do
               & V.freeze <&> foldEvents . V.toList
   diskEs   <- getStoredEvents (s ^. handle)
   pure $ diskEs ++ memoryEs
+
+{- This function is used to add a checkpoint to the in-memory part of event indexers.
+   You can use checkpoints to add synthetic events to the memory buffer. Filling the
+   memory buffer will flush the real events to disk faster than not using checkpoints.
+
+   This is useful if the number of events is small and you run the risk of never
+   storing them on-disk. When that happens, if the indexer is restarted it will
+   resume from the Genesis block, which is something that is not an expected
+   behaviour.
+
+   Possible future uses of checkpoints:
+
+   * We currently assume that the indexer has processed blocks up to the latest event
+     processed. In case there are very few events this assumption introduces a big
+     error. We may eventually use checkpoints to signal to the indexer that the latest
+     block is more recent than the latest event processed.
+
+   * Currently synthetic events cannot be stored in the persistent database. We may
+     decide to offer this option to implementers if there is interest. This would
+     allow for faster resumes if the last stored event is a lot older than the
+     currently processed block (similar to the in-memory description of checkpoints).
+-}
+checkpoint
+  :: Buffered h
+  => PrimMonad (StorableMonad h)
+  => StorablePoint h
+  -> State h
+  -> StorableMonad h (State h)
+checkpoint p s = do
+  state'   <- flushBuffer s
+  storage' <- appendEvent (Synthetic p) (state' ^. storage)
+  pure $ state' { _storage = storage' }
 
 insert
   :: Buffered h
