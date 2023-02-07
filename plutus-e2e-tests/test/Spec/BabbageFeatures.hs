@@ -17,13 +17,10 @@ import Hedgehog.Extras.Test qualified as HE
 import Test.Base qualified as H
 import Test.Tasty.Hedgehog (testProperty)
 
+import Helpers (testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers qualified as TN
 import PlutusScripts qualified as PS
 import Testnet.Plutus qualified as TN
-
-testnetOptionsBabbage7, testnetOptionsBabbage8 :: TN.TestnetOptions
-testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
-testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
 
 tests :: TestTree
 tests = testGroup "reference script"
@@ -42,12 +39,12 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
 
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
--- 1: spin up a testnet
+  -- 1: spin up a testnet
   base <- TN.getProjectBase
   (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
--- 2: build a transaction to hold reference script
+  -- 2: build a transaction to hold reference script
 
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
@@ -67,7 +64,7 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
       otherTxIn   = TN.txIn (TN.txId signedTx) 1
   TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
 
--- 3: build a transaction to mint token using reference script
+  -- 3: build a transaction to mint token using reference script
 
   let
     tokenValues = C.valueFromList [(PS.alwaysSucceedAssetIdV2, 6)]
@@ -98,12 +95,12 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
 
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
--- 1: spin up a testnet
+  -- 1: spin up a testnet
   base <- TN.getProjectBase
   (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
--- 2: build a transaction to hold reference script
+  -- 2: build a transaction to hold reference script
 
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
@@ -126,7 +123,7 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
       txInAtScript  = TN.txIn (TN.txId signedTx) 2
   TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
 
--- 3: build a transaction to mint token using reference script
+  -- 3: build a transaction to mint token using reference script
 
   let
     scriptTxIn = TN.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) Nothing)
@@ -156,12 +153,12 @@ referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies .
 
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
--- 1: spin up a testnet
+  -- 1: spin up a testnet
   base <- TN.getProjectBase
   (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
--- 2: build a transaction to hold reference script
+  -- 2: build a transaction to hold reference script
 
   txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
 
@@ -185,7 +182,7 @@ referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies .
       txInAtScript  = TN.txIn (TN.txId signedTx) 2
   TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
 
--- 3: build a transaction to mint token using reference script
+  -- 3: build a transaction to mint token using reference script
 
   let
     scriptTxIn = TN.txInWitness txInAtScript $ PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) (Just datum)
@@ -209,5 +206,4 @@ referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies .
   H.assert txOutHasAdaValue
   H.success
 
-  -- TODO: datumHashSpendTest (no reference script)
   -- TODO: inlineDatumSpendTest (no reference script)

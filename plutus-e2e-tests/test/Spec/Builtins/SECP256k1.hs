@@ -17,18 +17,14 @@ import Hedgehog.Extras.Test qualified as HE
 import Test.Base qualified as H
 import Test.Tasty.Hedgehog (testProperty)
 
+import Helpers (testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers qualified as TN
 import PlutusScripts qualified as PS
 import Testnet.Plutus qualified as TN
 
-testnetOptionsAlonzo, testnetOptionsBabbage7, testnetOptionsBabbage8 :: TN.TestnetOptions
-testnetOptionsAlonzo   = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
-testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
-testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
-
 tests :: TestTree
 tests = testGroup "SECP256k1"
-  [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo)
+  [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo6)
   , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsa testnetOptionsBabbage7)
   , testProperty "can use SECP256k1 builtins in Babbage PV8" (verifySchnorrAndEcdsa testnetOptionsBabbage8)
   ]

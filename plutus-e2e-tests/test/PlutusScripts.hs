@@ -36,7 +36,7 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as BS (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Plutus.Script.Utils.Typed as PSU (IsScriptContext (mkUntypedMintingPolicy))
+import Plutus.Script.Utils.Typed (IsScriptContext (mkUntypedMintingPolicy))
 import Plutus.Script.Utils.V2.Address as PSU.V2
 import Plutus.V1.Ledger.Api (Address, MintingPolicy (MintingPolicy), Validator (Validator), mkMintingPolicyScript,
                              mkValidatorScript, unMintingPolicyScript, unValidatorScript)
@@ -196,11 +196,11 @@ mkVerifySchnorrPolicy (v, m, s) _sc = BI.verifySchnorrSecp256k1Signature v m s
 
 verifySchnorrPolicyV1 :: MintingPolicy
 verifySchnorrPolicyV1 = mkMintingPolicyScript
-  $$(PlutusTx.compile [||PSU.mkUntypedMintingPolicy @PlutusV1.ScriptContext mkVerifySchnorrPolicy||])
+  $$(PlutusTx.compile [||mkUntypedMintingPolicy @PlutusV1.ScriptContext mkVerifySchnorrPolicy||])
 
 verifySchnorrPolicyV2 :: MintingPolicy
 verifySchnorrPolicyV2 = mkMintingPolicyScript
-  $$(PlutusTx.compile [||PSU.mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySchnorrPolicy||])
+  $$(PlutusTx.compile [||mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySchnorrPolicy||])
 
 verifySchnorrPolicyScriptV1 :: C.PlutusScript C.PlutusScriptV1
 verifySchnorrPolicyScriptV1 = policyScript verifySchnorrPolicyV1
@@ -250,11 +250,11 @@ mkVerifyEcdsaPolicy (v, m, s) _sc = BI.verifyEcdsaSecp256k1Signature v m s
 
 verifyEcdsaPolicyV1 :: MintingPolicy
 verifyEcdsaPolicyV1 = mkMintingPolicyScript
-  $$(PlutusTx.compile [||PSU.mkUntypedMintingPolicy @PlutusV1.ScriptContext mkVerifyEcdsaPolicy||])
+  $$(PlutusTx.compile [||mkUntypedMintingPolicy @PlutusV1.ScriptContext mkVerifyEcdsaPolicy||])
 
 verifyEcdsaPolicyV2 :: MintingPolicy
 verifyEcdsaPolicyV2 = mkMintingPolicyScript
-  $$(PlutusTx.compile [||PSU.mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifyEcdsaPolicy||])
+  $$(PlutusTx.compile [||mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifyEcdsaPolicy||])
 
 verifyEcdsaPolicyScriptV1 :: C.PlutusScript C.PlutusScriptV1
 verifyEcdsaPolicyScriptV1 = policyScript verifyEcdsaPolicyV1

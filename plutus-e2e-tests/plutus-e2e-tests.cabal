@@ -44,26 +44,6 @@ common lang
     -Wnoncanonical-monad-instances -Wredundant-constraints
     -Wunused-packages
 
-  -- library
-  --   import:          lang
-  --   hs-source-dirs:  src
-  --   exposed-modules:
-  --     Marconi.CLI
-  --     Marconi.Index.Datum
-  --     Marconi.Index.ScriptTx
-  --     Marconi.Index.Utxo
-  --     Marconi.Indexers
-  --     Marconi.Logging
-  --     Marconi.Orphans
-  --     Marconi.Types
-
-  --------------------
-  -- Local components
-  --------------------
-  --   build-depends:
-  --     , cardano-streaming
-  --     , rewindable-index
-
   --------------------------
   -- Other IOG dependencies
   --------------------------
@@ -108,15 +88,12 @@ test-suite plutus-e2e-tests-test
     PlutusScripts
     Spec.BabbageFeatures
     Spec.Builtins.SECP256k1
+    Typed
 
   --------------------
   -- Local components
   --------------------
   build-depends:  plutus-script-utils
-
-  --     , cardano-streaming
-  --     , marconi
-  --     , rewindable-index
 
   --------------------------
   -- Other IOG dependencies

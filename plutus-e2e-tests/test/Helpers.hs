@@ -39,6 +39,11 @@ import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.Plutus qualified as TN
 
+testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8 :: TN.TestnetOptions
+testnetOptionsAlonzo6   = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
+testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
+testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
+
 -- | Right from Either or throw Left error
 unsafeFromRight :: Show l => Either l r -> r
 unsafeFromRight (Left err)    = error (show err)
@@ -454,7 +459,6 @@ waitForTxIdAtAddress era localNodeConnectInfo address txId = do
         when (not $ txId `elem` txIds) loop
   loop
 
---TODO: loop timeout
 waitForTxInAtAddress :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> C.LocalNodeConnectInfo C.CardanoMode
@@ -462,10 +466,14 @@ waitForTxInAtAddress :: (MonadIO m, MonadTest m)
   -> C.TxIn
   -> m ()
 waitForTxInAtAddress era localNodeConnectInfo address txIn = do
-  let loop = do
+  let timeoutSeconds = 30
+      loop i = do
+        if i == 0
+          then error "waitForTxInAtAddress timeout"
+          else HE.threadDelay 1000000
         utxos <- findUTxOByAddress era localNodeConnectInfo address
-        when (Map.notMember txIn $ C.unUTxO utxos) loop
-  loop
+        when (Map.notMember txIn $ C.unUTxO utxos) (loop $ pred i)
+  loop timeoutSeconds
 
 -- | Get tx out at address is for general use when txo is expected
 getTxOutAtAddress :: (MonadIO m, MonadTest m)

@@ -19,4 +19,4 @@ tests :: TestTree
 tests = testGroup "Plutus E2E" [
     Spec.Builtins.SECP256k1.tests
   , Spec.BabbageFeatures.tests
-    ]
+  ]
