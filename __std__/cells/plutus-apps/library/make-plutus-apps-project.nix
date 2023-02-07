@@ -130,7 +130,7 @@ let
             # The lines `export CARDANO_NODE=...` and `export CARDANO_CLI=...`
             # is necessary to prevent the error
             # `../dist-newstyle/cache/plan.json: openBinaryFile: does not exist (No such file or directory)`.
-            # See https://github.com/input-output-hk/cardano-node/issues/4194
+            # See https://github.com/input-output-hk/cardano-node/issues/4194.
             #
             # The line 'export CARDANO_NODE_SRC=...' is used to specify the
             # root folder used to fetch the `configuration.yaml` file (in
