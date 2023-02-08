@@ -39,7 +39,7 @@ tests = testGroup "SECP256k1"
         "forbidden builtin" error when building tx
 -}
 verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
-verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
+verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
 
   let pv = TN.protocolVersion testnetOptions
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
