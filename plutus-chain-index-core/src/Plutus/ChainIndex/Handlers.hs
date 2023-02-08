@@ -556,11 +556,6 @@ rollBackChainState targetPoint indexState =
                 Just oldTip -> Left $ RollbackTipMismatch oldTip targetPoint (List.take 10 indexState)
 
 
--- Use a batch size of 10000 so that we don't hit the sql too-many-variables
--- limit. The MAX_VARIABLE_NUMBER is now 32766
-batchSize :: Int
-batchSize = 10000
-
 -- | insertUtxoDb also performes block reduction when reduced tip is specified
 -- Note that ignoring spent utxo and unspent utxos is safe for reduced blocks as
 --  - an unspent utxo can be ignored only when the corresponding spent one is also in the list of blocks being handled,
@@ -705,8 +700,9 @@ instance Semigroup (InsertRows te) where
 instance BeamableSqlite t => Monoid (InsertRows (TableEntity t)) where
     mempty = InsertRows []
 
+
 insertRows :: Db InsertRows -> BeamEffect ()
-insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRowsInBatches batchSize tbl rows) db
+insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRowsPreparedStatement tbl rows) db
 
 
 credential :: (ChainIndex.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef, Maybe DatumHash)
