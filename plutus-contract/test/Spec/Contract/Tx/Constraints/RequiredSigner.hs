@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.RequiredSigner(tests) where
 
-import Control.Lens ((??))
 import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
@@ -35,25 +34,12 @@ import Spec.Contract.Error (cardanoLedgerErrorContaining)
 import Wallet.Emulator.Wallet (signPrivateKeys, walletToMockWallet)
 
 tests :: TestTree
-tests =
-    testGroup "Required signer"
-        [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
-        , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
-        ]
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-tests' :: SubmitTx -> [TestTree]
-tests' sub =
-    [ ownWallet
+tests = testGroup "Required signer" [ ownWallet
     , otherWallet
     , otherWalletNoSigningProcess
     , phase2FailureMustBeSignedBy
     , withoutOffChainMustBeSignedBy
-    ] ?? sub
+    ]
 
 w1PubKey :: Ledger.PaymentPubKeyHash
 w1PubKey = mockWalletPaymentPubKeyHash w1
@@ -61,14 +47,14 @@ w1PubKey = mockWalletPaymentPubKeyHash w1
 w2PubKey :: Ledger.PaymentPubKeyHash
 w2PubKey = mockWalletPaymentPubKeyHash w2
 
-mustBeSignedByContract :: SubmitTx -> Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
-mustBeSignedByContract submitTxFromConstraints paymentPubKey signedPubKey = do
+mustBeSignedByContract :: Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
+mustBeSignedByContract paymentPubKey signedPubKey = do
     params <- getParams
     let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
                 (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt $ Scripts.validatorCardanoAddress (Params.pNetworkId params) mustBeSignedByTypedValidator
@@ -81,17 +67,17 @@ mustBeSignedByContract submitTxFromConstraints paymentPubKey signedPubKey = do
             <> Constraints.mustIncludeDatumInTx unitDatum
             <> Constraints.mustBeSignedBy signedPubKey
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
-    ledgerTx2 <- submitTxFromConstraints lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
-withoutOffChainMustBeSignedByContract :: SubmitTx -> Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
-withoutOffChainMustBeSignedByContract submitTxFromConstraints paymentPubKey signedPubKey = do
+withoutOffChainMustBeSignedByContract :: Ledger.PaymentPubKeyHash -> Ledger.PaymentPubKeyHash -> Contract () Empty ContractError ()
+withoutOffChainMustBeSignedByContract paymentPubKey signedPubKey = do
     params <- getParams
     let lookups1 = Constraints.typedValidatorLookups mustBeSignedByTypedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 ()
                 (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt $ Scripts.validatorCardanoAddress (Params.pNetworkId params) mustBeSignedByTypedValidator
@@ -103,46 +89,46 @@ withoutOffChainMustBeSignedByContract submitTxFromConstraints paymentPubKey sign
             Constraints.collectFromTheScript utxos signedPubKey
             <> Constraints.mustIncludeDatumInTx unitDatum
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
-    ledgerTx2 <- submitTxFromConstraints lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
-ownWallet :: SubmitTx -> TestTree
-ownWallet sub =
+ownWallet :: TestTree
+ownWallet =
     let trace = do
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract sub w1PubKey w1PubKey
+            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "own wallet's signature passes on-chain mustBeSignedBy validation" (assertValidatedTransactionCount 2) (void trace)
 
-otherWallet :: SubmitTx -> TestTree -- must use Trace.setSigningProcess for w2
-otherWallet sub =
+otherWallet :: TestTree -- must use Trace.setSigningProcess for w2
+otherWallet =
     let trace = do
             Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey $ fromJust $ walletToMockWallet w1, CW.paymentPrivateKey $ fromJust $ walletToMockWallet w2])
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract sub w2PubKey w2PubKey
+            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "other wallet's signature passes on-chain mustBeSignedBy validation" (assertValidatedTransactionCount 2) (void trace)
 
-otherWalletNoSigningProcess :: SubmitTx -> TestTree
-otherWalletNoSigningProcess sub =
+otherWalletNoSigningProcess :: TestTree
+otherWalletNoSigningProcess =
     let trace = do
-            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract sub w2PubKey w2PubKey
+            void $ Trace.activateContractWallet w1 $ mustBeSignedByContract w2PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without Trace.setSigningProcess fails phase-1 validation"
     (assertFailedTransaction (const $ cardanoLedgerErrorContaining "MissingRequiredSigners"))
     (void trace)
 
-withoutOffChainMustBeSignedBy :: SubmitTx -> TestTree -- there's no "required signer" in the txbody logs but still passes phase-2 so it must be there. Raised https://github.com/input-output-hk/plutus-apps/issues/645. It'd be good to check log output for expected required signer pubkey in these tests.
-withoutOffChainMustBeSignedBy sub =
+withoutOffChainMustBeSignedBy :: TestTree
+withoutOffChainMustBeSignedBy =
     let trace = do
-            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract sub w1PubKey w1PubKey
+            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "without mustBeSignedBy off-chain constraint required signer is not included in txbody so phase-2 validation fails"
     (assertEvaluationError "L4")
     (void trace)
 
-phase2FailureMustBeSignedBy :: SubmitTx -> TestTree
-phase2FailureMustBeSignedBy sub =
+phase2FailureMustBeSignedBy :: TestTree
+phase2FailureMustBeSignedBy =
     let trace = do
-            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract sub w1PubKey w2PubKey
+            void $ Trace.activateContractWallet w1 $ withoutOffChainMustBeSignedByContract w1PubKey w2PubKey
             void Trace.nextSlot
     in checkPredicateOptions defaultCheckOptions "with wrong pubkey fails on-chain mustBeSignedBy constraint validation"
     (assertEvaluationError "L4")

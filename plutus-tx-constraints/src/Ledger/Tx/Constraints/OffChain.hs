@@ -58,7 +58,7 @@ import Control.Lens
 import Control.Lens.Extras (is)
 import Control.Monad.Except (Except, MonadError (catchError), guard, lift, mapExcept, runExcept, throwError, unless,
                              withExcept)
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), mapReaderT)
+import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), ask, mapReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, execStateT, gets, mapStateT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
@@ -74,7 +74,9 @@ import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint, ScriptOutputConstraint, TxConstraint,
-                                         TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs),
+                                         TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
+                                         TxConstraintFuns (TxConstraintFuns),
+                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Ledger.Constraints.ValidityInterval (toPlutusInterval)
 import Plutus.Script.Utils.Value qualified as Value
@@ -241,15 +243,46 @@ processLookupsAndConstraints
     => P.ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> StateT P.ConstraintProcessingState (Except MkTxError) ()
-processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} = do
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txConstraintFuns = TxConstraintFuns txCnsFuns, txOwnOutputs} = do
         flip runReaderT lookups $ do
             sortedConstraints <- prepareConstraints txOwnInputs txOwnOutputs txConstraints
             traverse_ processConstraint (otherConstraints sortedConstraints)
-            -- traverse_ P.processConstraintFun txCnsFuns
-            -- P.addMintingRedeemers
+            traverse_ processConstraintFun txCnsFuns
             checkValueSpent
             mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
             lift $ setValidityRange (rangeConstraints sortedConstraints)
+
+processConstraintFun
+    :: TxConstraintFun
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) ()
+processConstraintFun = \case
+    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
+        P.ScriptLookups{P.slTxOutputs} <- ask
+        -- TODO: Need to precalculate the validator hash or else this won't work
+        -- with PlutusV2 validator. This means changing `DecoratedTxOut` to
+        -- include the hash.
+        let matches (Just (_, d, value)) = datumPred (P.getDatum d) && valuePred value
+            matches Nothing              = False
+
+        opts <- fmap (Map.toList . Map.filter matches)
+                $ traverse (mapLedgerMkTxError . P.resolveScriptTxOut)
+                $ Map.filter ((== Just vh) . preview Tx.decoratedTxOutValidatorHash) slTxOutputs
+        case opts of
+            [] -> throwError $ LedgerMkTxError $ P.NoMatchingOutputFound vh
+            [(ref, Just (validator, datum, value))] -> do
+                mkWitness <- throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
+                let witness
+                        = C.ScriptWitness C.ScriptWitnessForSpending $
+                            mkWitness
+                            (C.toCardanoDatumWitness $ P.datumWitness datum)
+                            (C.toCardanoScriptData (getRedeemer red))
+                            C.zeroExecutionUnits
+
+                unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith witness)]
+
+                P.valueSpentInputs <>= P.provided value
+            _ -> throwError $ LedgerMkTxError $ P.MultipleMatchingOutputsFound vh
 
 checkValueSpent
     :: ( MonadReader (P.ScriptLookups a) m

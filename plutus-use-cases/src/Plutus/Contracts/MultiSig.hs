@@ -82,7 +82,7 @@ lock = endpoint @"lock" $ \(ms, vl) -> do
     let inst = typedValidator ms
     let tx = Constraints.mustPayToTheScriptWithDatumInTx () vl
         lookups = Constraints.typedValidatorLookups inst
-    mkCardanoTxConstraints lookups tx
+    mkTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 -- | The @"unlock"@ endpoint, unlocking some funds with a list
@@ -96,5 +96,5 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
                 <> foldMap Constraints.mustBeSignedBy pks
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
-    mkCardanoTxConstraints lookups tx
+    mkTxConstraints lookups tx
         >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
