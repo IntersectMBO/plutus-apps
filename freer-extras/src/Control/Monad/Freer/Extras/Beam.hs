@@ -25,7 +25,7 @@ import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Trace (Trace, logDebug)
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception, throw, try)
-import Control.Monad (guard)
+import Control.Monad (guard, forM_, void)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
 import Control.Monad.Freer.Reader (Reader, ask)
@@ -45,16 +45,18 @@ import Data.String (fromString)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Database.Beam (Columnar, Beamable, DatabaseEntity, FromBackendRow, HasSqlEqualityCheck, Identity, MonadIO (liftIO), Q, QBaseScope, QExpr,
-                      SqlDelete (..), SqlInsert, SqlSelect (..), SqlUpdate, TableEntity, asc_, delete, filter_, insertValues, limit_,
-                      orderBy_, runDelete, runInsert, runSelectReturningList, runSelectReturningOne, runUpdate, select,
-                      val_, (>.), (==.))
-import Database.Beam.Backend.SQL (deleteCmd, selectCmd, BeamSqlBackendCanSerialize, HasSqlValueSyntax)
+                      SqlDelete (..), SqlInsert (..), SqlInsertValues (..), SqlSelect (..), SqlUpdate,
+                      TableEntity, asc_, delete, filter_, insertValues, limit_, orderBy_, runDelete, runInsert,
+                      runSelectReturningList, runSelectReturningOne, runUpdate, select, val_, (>.), (==.))
+import Database.Beam.Backend.SQL (deleteCmd, selectCmd, insertCmd, BeamSqlBackendCanSerialize, HasSqlValueSyntax)
 import Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
 import Database.Beam.Query.Internal (QNested)
 import Database.Beam.Schema.Tables (FieldsFulfillConstraint)
 import Database.Beam.Sqlite (Sqlite, SqliteM (..), runBeamSqliteDebug)
-import Database.Beam.Sqlite.Syntax (fromSqliteCommand, withPlaceholders, SqliteSyntax(..), SqliteValueSyntax)
+import Database.Beam.Sqlite.Syntax (fromSqliteCommand, fromSqliteExpression, withPlaceholders,
+                                    SqliteInsertValuesSyntax (..), SqliteSyntax(..), SqliteValueSyntax)
 import Database.SQLite.Simple qualified as Sqlite
+import Database.SQLite3 qualified as SBase
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (..), colon, (<+>))
 
@@ -96,6 +98,14 @@ data BeamEffect r where
     :: BeamableSqlite table
     => SqlInsert Sqlite table
     -> BeamEffect ()
+
+  AddRowsPreparedStatement
+    :: BeamableSqlite table
+    => DatabaseEntity Sqlite db (TableEntity table)
+    -> [table Identity]
+    -> BeamEffect ()
+    -- ^ special insertion using prepared statements
+    -- to accelerate insertion at DB level
 
   UpdateRows
     :: Beamable table
@@ -178,9 +188,36 @@ handleBeam trace eff = runBeam trace $ execute eff
         AddRowsInBatches n table (splitAt n -> (batch, rest)) -> do
             runInsert $ insertOnConflict table (insertValues batch) anyConflict onConflictDoNothing
             execute $ AddRowsInBatches n table rest
-        AddRows    q    -> runInsert q
+        AddRows q -> runInsert q
+        AddRowsPreparedStatement table values ->
+          -- using prepared statements to accelerate insertion
+          SqliteM $ do
+           (logger, conn) <- ReaderT.ask
+           let sqlValues =
+                 case insertValues @Sqlite values of
+                   SqlInsertValuesEmpty -> []
+                   SqlInsertValues (SqliteInsertFromSql _) -> [] -- cannot happen if insertValues is called
+                   SqlInsertValues (SqliteInsertExpressions es) -> es
+           -- creating a select statement with only the necessary placeholders for one row
+           case (insertOnConflict table (insertValues (take 1 values)) anyConflict onConflictDoNothing) of
+             (SqlInsert _ i) -> do
+               let (SqliteSyntax instCmd _) = fromSqliteCommand (insertCmd i)
+               let instCmdString = BL.unpack (toLazyByteString (withPlaceholders instCmd))
+               let toParams e =
+                     let (SqliteSyntax _ vals') = fromSqliteExpression e
+                     in D.toList vals'
+               let paramRows = map (\row -> (foldMap toParams row)) sqlValues
+               liftIO $ do
+                 Sqlite.withStatement conn (fromString instCmdString) $ \stmt@(Sqlite.Statement pstmt) -> do
+                   forM_ paramRows $ \params -> do
+                     logger $ "Prepared Statement: " ++ instCmdString ++ ";\n -- With values: " ++ show params
+                     Sqlite.withBind stmt (Sqlite.toRow params) (void . SBase.step $ pstmt )
+             _ ->
+               -- cannot happen if we use insertOnConflict : do nothing
+               pure ()
+
         UpdateRows q -> runUpdate q
-        DeleteRows q    -> runDelete q
+        DeleteRows q -> runDelete q
         DeleteRowsInClause table getKey (SqlSelect s) ->
           SqliteM $ do
            (logger, conn) <- ReaderT.ask
@@ -198,8 +235,6 @@ handleBeam trace eff = runBeam trace $ execute eff
            liftIO $ do
              logger $ cmdString ++ ";\n-- With values: " ++ show (D.toList vals)
              Sqlite.execute conn (fromString cmdString) (D.toList vals)
-
-
         SelectList q    -> runSelectReturningList q
         SelectPage pageQuery@PageQuery { pageQuerySize = PageSize ps, pageQueryLastItem } q -> do
           let ps' = fromIntegral ps
