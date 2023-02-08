@@ -86,13 +86,7 @@ withRunRequirements logConfig config cont = do
     Sqlite.runBeamSqliteDebug (logDebug (convertLog PrettyObject trace) . (BeamLogItem . SqlLog)) conn $ do
         autoMigrate Sqlite.migrationBackend checkedSqliteDb
 
-    -- Automatically delete the input when an output from a matching input/output pair is deleted.
-    -- See reduceOldUtxoDb in Plutus.ChainIndex.Handlers
-    Sqlite.execute_ conn "DROP TRIGGER IF EXISTS delete_matching_input"
-
     -- dropping these indexes if exists on start up
-    -- the creation of these indexes are not performed dynamically accounting to the sync state
-    -- see Handler.hs
     Sqlite.execute_ conn "DROP INDEX IF EXISTS unspent_index"
     Sqlite.execute_ conn "DROP INDEX IF EXISTS unmatched_index"
     Sqlite.execute_ conn "CREATE INDEX unspent_index on unspent_outputs (output_row_out_ref, output_row_tip__row_slot)"
