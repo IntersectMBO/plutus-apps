@@ -53,8 +53,10 @@ let
 
   scriv = pkgs.python3Packages.callPackage ./scriv { };
 
-  # We need to import nix-pre-commit-hooks as a flake to avoid evaluations of builtins.currentSystem,
-  # which fails when using flakes.
+  # Hydra is using flakes to build hydraJobs.nix, which includes the shell from shell.nix, 
+  # which includes nix-pre-commit-hook, which at some point during evaluation was hitting
+  # builtins.currentSystem, which is undefined when using flakes.
+  # In order to avoid this problem we need to import nix-pre-commit-hooks as a flake.
   nix-pre-commit-hooks = (import sources.flake-compat {
     inherit pkgs;
     src = builtins.fetchTree

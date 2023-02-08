@@ -51,7 +51,7 @@
     };
     pre-commit-hooks-nix = {
       url = "github:cachix/pre-commit-hooks.nix";
-      flake = true;
+      flake = false;
     };
     spago2nix = {
       url = "github:justinwoo/spago2nix";
@@ -76,7 +76,7 @@
     };
     cardano-node = {
       url = "github:input-output-hk/cardano-node?ref=1.35.4";
-      flake = true;
+      flake = false;
     };
   };
 
