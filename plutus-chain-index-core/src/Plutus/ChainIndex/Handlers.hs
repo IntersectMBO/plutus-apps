@@ -613,7 +613,7 @@ insertUtxoDb reducedTip txs utxoStates =
               -- We can only delete a spent input if the unspent output is also in the list of acquired blocks
               -- Otherwise, the unspent output in DB will never be deleted. This will create an inconsistency
               !s_dur = Set.fromList delete_ur
-              !(!delete_umr, !keep_umr) = List.partition (e -> Set.member e s_dur) umr
+              !(!delete_umr, !keep_umr) = List.partition (\e -> Set.member e s_dur) umr
               -- ignored txouts with a matching deleted spent input before or at reduced tip
               !s_dumr = Set.fromList $ snd <$> delete_umr
               outs' = List.filter (\(_, r) -> not (Set.member r s_dumr)) outs
