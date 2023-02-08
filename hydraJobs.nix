@@ -6,7 +6,7 @@ let
 
   pkgs = top-level.pkgs;
 
-  nix-shell = import ./shell.nix { inherit (pkgs) system; };
+  nix-shell = import ./shell.nix { inherit system; };
 
   make-haskell-jobs = project:
     let

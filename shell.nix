@@ -4,7 +4,7 @@
 , sources ? import ./nix/sources.nix { inherit system; } // sourcesOverride
 , packages ? import ./. { inherit system enableHaskellProfiling sources sourcesOverride; }
 }:
-let   
+let
   inherit (packages) pkgs plutus-apps docs;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt glibcLocales;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji scriv nix-pre-commit-hooks cabal-fmt;
@@ -24,7 +24,17 @@ let
       };
   }).defaultNix;
 
-  cardano-node = (import sources.cardano-node {}).defaultNix;
+  cardano-node = (import sources.flake-compat {
+    inherit pkgs;
+    src = builtins.fetchTree
+      {
+        type = "github";
+        owner = "input-output-hk";
+        repo = "cardano-node";
+        rev = "ebc7be471b30e5931b35f9bbc236d21c375b91bb";
+        narHash = "sha256-WRRzfpDc+YVmTNbN9LNYY4dS8o21p/6NoKxtcZmoAcg=";
+      };
+  }).defaultNix;
 
   # For Sphinx, scriv, and ad-hoc usage
   pythonTools = python3.withPackages (ps: [
@@ -103,8 +113,8 @@ let
   # local build inputs ( -> ./nix/pkgs/default.nix )
   localInputs = (with plutus-apps; [
     cabal-install
-    cardano-node.cardano-cli
-    cardano-node.cardano-node
+    cardano-node.packages.${pkgs.system}.cardano-cli
+    cardano-node.packages.${pkgs.system}.cardano-node
     cardano-wallet.packages.${pkgs.system}.cardano-wallet
     cardano-repo-tool
     docs.build-and-serve-docs
