@@ -7,7 +7,6 @@ let
   inherit (pkgs) lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell;
 
-  # TODO(std) this is duplicated in shell.nix
   # Feed cardano-wallet, cardano-cli & cardano-node to our shell.
   # This is stable as it doesn't mix dependencies with this code-base;
   # the fetched binaries are the "standard" builds that people test.
