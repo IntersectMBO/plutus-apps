@@ -473,7 +473,6 @@ prepareConstraints
        , ToData (RedeemerType a)
        , MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
-       , MonadState ConstraintProcessingState m
        )
     => [ScriptInputConstraint (RedeemerType a)]
     -> [ScriptOutputConstraint (DatumType a)]
@@ -572,7 +571,6 @@ updateUtxoIndex = do
 addOwnInput
     :: ( MonadReader (ScriptLookups a) m
        , MonadError MkTxError m
-       , MonadState ConstraintProcessingState m
        , FromData (DatumType a)
        , ToData (DatumType a)
        , ToData (RedeemerType a)
