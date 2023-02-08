@@ -90,7 +90,6 @@ constraints:
   , aeson >= 2
 
   , hedgehog >= 1.1
-  , hedgehog-extra >= 0.3.0.1
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which
