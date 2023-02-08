@@ -35,7 +35,7 @@ tests = testGroup "reference script"
   ]
 
 referenceScriptMint :: TN.TestnetOptions -> H.Property
-referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
+referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
@@ -91,7 +91,7 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
 
 
 referenceScriptInlineDatumSpend :: TN.TestnetOptions -> H.Property
-referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
+referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
@@ -149,7 +149,7 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
 
 
 referenceScriptDatumHashSpend :: TN.TestnetOptions -> H.Property
-referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath -> do
+referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
