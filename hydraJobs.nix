@@ -6,6 +6,8 @@ let
 
   pkgs = top-level.pkgs;
 
+  nix-shell = import ./shell.nix { inherit system; };
+
   make-haskell-jobs = project:
     let
       packages = pkgs.haskell-nix.haskellLib.selectProjectPackages project.hsPkgs;
@@ -26,7 +28,10 @@ let
 
   windows-plutus-apps-jobs = make-haskell-jobs plutus-project.projectCross.mingwW64;
 
-  other-jobs = { inherit (top-level) tests docs plutus-use-cases; };
+  other-jobs = {
+    inherit (top-level) tests docs plutus-use-cases;
+    inherit nix-shell;
+  };
 
   jobs =
     { native = native-plutus-apps-jobs; } //

@@ -66,6 +66,7 @@ let
             plutus-chain-index-core.package.buildable = false;
             plutus-contract.package.buildable = false;
             plutus-contract-certification.package.buildable = false;
+            plutus-e2e-tests.package.buildable = false;
             plutus-errors.package.buildable = false;
             plutus-ledger.package.buildable = false;
             plutus-ledger-constraints.package.buildable = false;
@@ -144,6 +145,16 @@ let
 
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
+
+            plutus-e2e-tests.doHaddock = deferPluginErrors;
+            plutus-e2e-tests.flags.defer-plugin-errors = deferPluginErrors;
+            plutus-e2e-tests.preCheck = "
+              export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+              export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
+              export CARDANO_NODE_SRC=${src}
+            ";
+            plutus-e2e-tests.components.tests.plutus-e2e-tests-test.build-tools =
+              lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
 
             plutus-use-cases.doHaddock = deferPluginErrors;
             plutus-use-cases.flags.defer-plugin-errors = deferPluginErrors;

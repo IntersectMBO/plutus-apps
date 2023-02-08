@@ -53,13 +53,21 @@ let
 
   scriv = pkgs.python3Packages.callPackage ./scriv { };
 
-  # By default pre-commit-hooks.nix uses its own pinned version of nixpkgs. In order to
-  # to get it to use our version we have to (somewhat awkwardly) use `nix/default.nix`
-  # to which both `nixpkgs` and `system` can be passed.
-  nix-pre-commit-hooks = (pkgs.callPackage (sources.pre-commit-hooks-nix + "/nix/default.nix") {
-    inherit system;
-    inherit (sources) nixpkgs;
-  });
+  # Hydra is using flakes to build hydraJobs.nix, which includes the shell from shell.nix, 
+  # which includes nix-pre-commit-hook, which at some point during evaluation was hitting
+  # builtins.currentSystem, which is undefined when using flakes.
+  # In order to avoid this problem we need to import nix-pre-commit-hooks as a flake.
+  nix-pre-commit-hooks = (import sources.flake-compat {
+    inherit pkgs;
+    src = builtins.fetchTree
+      {
+        type = "github";
+        owner = "cachix";
+        repo = "pre-commit-hooks.nix";
+        rev = "ab608394886fb04b8a5df3cb0bab2598400e3634";
+        narHash = "sha256-oit/SxMk0B380ASuztBGQLe8TttO1GJiXF8aZY9AYEc=";
+      };
+  }).defaultNix.lib.${pkgs.system};
 
   # sphinx haddock support
   sphinxcontrib-haddock = pkgs.callPackage (sources.sphinxcontrib-haddock) { pythonPackages = pkgs.python3Packages; };
