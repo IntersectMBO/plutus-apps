@@ -51,7 +51,7 @@
     };
     pre-commit-hooks-nix = {
       url = "github:cachix/pre-commit-hooks.nix";
-      flake = false;
+      flake = true;
     };
     spago2nix = {
       url = "github:justinwoo/spago2nix";
@@ -73,6 +73,10 @@
       url = "github:input-output-hk/tullia";
       # Can't follow since nixpkgs is set to flake=false here
       # inputs.nixpkgs.follows = "nixpkgs";
+    };
+    cardano-node = {
+      url = "github:input-output-hk/cardano-node?ref=1.35.4";
+      flake = true;
     };
   };
 
