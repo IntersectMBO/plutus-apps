@@ -63,7 +63,7 @@ let
       {
         type = "github";
         owner = "cachix";
-        repo = "nix-pre-commit-hooks";
+        repo = "pre-commit-hooks.nix";
         rev = "ab608394886fb04b8a5df3cb0bab2598400e3634";
         narHash = "sha256-oit/SxMk0B380ASuztBGQLe8TttO1GJiXF8aZY9AYEc=";
       };
