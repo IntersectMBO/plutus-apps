@@ -50,6 +50,7 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Marconi.ChainIndex.CLI
+    Marconi.ChainIndex.CNLib
     Marconi.ChainIndex.Indexers
     Marconi.ChainIndex.Indexers.AddressDatum
     Marconi.ChainIndex.Indexers.Datum
@@ -77,6 +78,7 @@ library
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
+    , cardano-node
     , iohk-monitoring
 
   ------------------------
