@@ -39,19 +39,20 @@ tests = testGroup "SECP256k1"
         "forbidden builtin" error when building tx
 -}
 verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
-verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
+verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "jamesman" $ \tempAbsPath -> do
 
   let pv = TN.protocolVersion testnetOptions
   C.AnyCardanoEra era <- return $ TN.era testnetOptions
 
 -- 1: spin up a testnet
-  base <- TN.getProjectBase
-  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+--   base <- TN.getProjectBase
+--   (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+  (localNodeConnectInfo, pparams, networkId) <- TN.connectToLocalNode era tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
 
-  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
+  txIn <- TN.adaOnlyTxInFromUtxo era localNodeConnectInfo w1Address
 
   let
     (verifySchnorrAssetId, verifyEcdsaAssetId, verifySchnorrMintWitness, verifyEcdsaMintWitness) =

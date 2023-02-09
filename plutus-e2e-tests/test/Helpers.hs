@@ -144,6 +144,36 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
   pure (localNodeConnectInfo, pparams, networkId)
 
+connectToLocalNode :: C.CardanoEra era
+  -> FilePath
+  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+connectToLocalNode era tempAbsPath = do
+  let localEnvDir = "/home/james/dev/environments/preview" -- todo: use env var
+
+  HE.createDirectoryIfMissing (tempAbsPath </> "utxo-keys")
+  HE.createDirectoryIfMissing (tempAbsPath </> "sockets")
+
+  HE.createFileLink (localEnvDir </> "test.skey") (tempAbsPath </> "utxo-keys/utxo1.skey")
+  HE.createFileLink (localEnvDir </> "test.vkey") (tempAbsPath </> "utxo-keys/utxo1.vkey")
+  HE.createFileLink (localEnvDir </> "ipc/node.socket") (tempAbsPath </> "sockets/node.socket")
+
+  let socketPathAbs = tempAbsPath </> "sockets/node.socket"
+      networkId = C.Testnet $ C.NetworkMagic $ fromIntegral 2 -- todo: query for
+
+  -- Boilerplate codecs used for protocol serialisation. The number of epochSlots is specific
+  -- to each blockchain instance. This value is used by cardano mainnet/testnet and only applies
+  -- to the Byron era.
+  let epochSlots = C.EpochSlots 21600
+      localNodeConnectInfo =
+        C.LocalNodeConnectInfo
+          { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+          , C.localNodeNetworkId = networkId
+          , C.localNodeSocketPath = socketPathAbs
+          }
+  pparams <- getProtocolParams era localNodeConnectInfo
+  liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
+  pure (localNodeConnectInfo, pparams, networkId)
+
 -- | Network ID of the testnet
 getNetworkId :: TN.TestnetRuntime -> C.NetworkId
 getNetworkId tn = C.Testnet $ C.NetworkMagic $ fromIntegral (TN.testnetMagic tn)
@@ -162,27 +192,45 @@ getProtocolParams era localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
   $ C.queryNodeLocalState localNodeConnectInfo Nothing
   $ C.QueryInEra (toEraInCardanoMode era) $ C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) C.QueryProtocolParameters
 
+-- | Read file text envelope as a specific type (e.g. C.VerificationKey C.GenesisUTxOKey)
+--   and throw error on failure
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = do
   path' <- H.note path
   H.leftFailM . liftIO $ C.readFileTextEnvelope as path'
 
+-- | Same as readAs but return Nothing on error
+maybeReadAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m (Maybe a)
+maybeReadAs as path = do
+  path' <- H.note path
+  maybeEither . liftIO $ C.readFileTextEnvelope as path'
+  where
+    maybeEither m = m >>= return . either (const Nothing) Just
+
 -- | Signing key and address for wallet 1
+--   Handles two key types: GenesisUTxOKey and PaymentKey
 w1 :: (MonadIO m, MonadTest m)
   => FilePath
   -> C.NetworkId
-  -> m (C.SigningKey C.GenesisUTxOKey, C.Address C.ShelleyAddr)
+  -> m (C.SigningKey C.PaymentKey, C.Address C.ShelleyAddr)
 w1 tempAbsPath' networkId = do
-  genesisVKey :: C.VerificationKey C.GenesisUTxOKey <-
-    readAs (C.AsVerificationKey C.AsGenesisUTxOKey) $ tempAbsPath' </> "utxo-keys/utxo1.vkey"
-  genesisSKey :: C.SigningKey C.GenesisUTxOKey <-
-    readAs (C.AsSigningKey C.AsGenesisUTxOKey) $ tempAbsPath' </> "utxo-keys/utxo1.skey"
+  -- GenesisUTxOKey comes from cardano-testnet
+  mGenesisVKey :: Maybe (C.VerificationKey C.GenesisUTxOKey) <-
+    maybeReadAs (C.AsVerificationKey C.AsGenesisUTxOKey) $ tempAbsPath' </> "utxo-keys/utxo1.vkey"
+  mGenesisSKey :: Maybe (C.SigningKey C.GenesisUTxOKey) <-
+    maybeReadAs (C.AsSigningKey C.AsGenesisUTxOKey) $ tempAbsPath' </> "utxo-keys/utxo1.skey"
+  -- PaymentKey comes from cardano-cli (the likely type for a locally created wallet)
+  mPaymentVKey :: Maybe (C.VerificationKey C.PaymentKey) <-
+    maybeReadAs (C.AsVerificationKey C.AsPaymentKey) $ tempAbsPath' </> "utxo-keys/utxo1.vkey"
+  mPaymentSKey :: Maybe (C.SigningKey C.PaymentKey) <-
+    maybeReadAs (C.AsSigningKey C.AsPaymentKey) $ tempAbsPath' </> "utxo-keys/utxo1.skey"
 
   let
-    paymentKey = C.castVerificationKey genesisVKey :: C.VerificationKey C.PaymentKey
-    address = makeAddress (Left paymentKey) networkId
+    vKey :: C.VerificationKey C.PaymentKey = maybe (fromJust mPaymentVKey) (C.castVerificationKey) mGenesisVKey
+    sKey :: C.SigningKey C.PaymentKey = maybe (fromJust mPaymentSKey) (C.castSigningKey) mGenesisSKey
+    address = makeAddress (Left vKey) networkId
 
-  return (genesisSKey, address)
+  return (sKey, address)
 
 -- | Make a payment or script address
 makeAddress :: (Either (C.VerificationKey C.PaymentKey) C.ScriptHash)
@@ -281,6 +329,25 @@ txInFromUtxo era idx localNodeConnectInfo address = do
   where
     atM :: (MonadTest m) => Int -> [a] -> m a
     atM i' l = return $ l !! i'
+
+-- | Find the TxIn at address which is ada-only and has the most ada
+adaOnlyTxInFromUtxo :: (MonadIO m, MonadTest m)
+  => C.CardanoEra era
+  -> C.LocalNodeConnectInfo C.CardanoMode
+  -> C.Address C.ShelleyAddr
+  -> m C.TxIn
+adaOnlyTxInFromUtxo era localNodeConnectInfo address = do
+  utxo <- findUTxOByAddress era localNodeConnectInfo address
+  let utxoList = Map.toList $ C.unUTxO utxo
+  return $ fst $ head $ sortByMostAda $ filterAdaOnly utxoList
+  where
+    filterAdaOnly utxoList' = filter
+      (\(_, C.TxOut _ (C.TxOutValue C.MultiAssetInBabbageEra v) _ _) -> (length $ C.valueToList v) == 1) utxoList'
+
+    sortByMostAda = sortBy
+      (\(_, C.TxOut _ (C.TxOutValue C.MultiAssetInBabbageEra v1) _ _)
+        (_, C.TxOut _ (C.TxOutValue C.MultiAssetInBabbageEra v2) _ _) ->
+          compare (snd $ head $ C.valueToList v2) (snd $ head $ C.valueToList v1))
 
 -- | Get TxIns from all UTxOs
 txInsFromUtxo :: (MonadIO m) => C.UTxO era -> m [C.TxIn]
@@ -388,7 +455,7 @@ buildTx :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> C.TxBodyContent C.BuildTx era
   -> C.Address C.ShelleyAddr
-  -> C.SigningKey C.GenesisUTxOKey
+  -> C.SigningKey C.PaymentKey
   -> C.NetworkId
   -> m (C.Tx era)
 buildTx era txBody changeAddress sKey networkId = do
@@ -404,7 +471,7 @@ buildTx' :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> C.TxBodyContent C.BuildTx era
   -> C.Address C.ShelleyAddr
-  -> C.SigningKey C.GenesisUTxOKey
+  -> C.SigningKey C.PaymentKey
   -> C.NetworkId
   -> m (Either C.TxBodyErrorAutoBalance (C.Tx era))
 buildTx' era txBody changeAddress sKey networkId = do
@@ -421,7 +488,7 @@ buildTx' era txBody changeAddress sKey networkId = do
     eraHistory
     systemStart
     stakePools
-    [C.WitnessPaymentKey $ C.castSigningKey sKey]
+    [C.WitnessPaymentKey sKey]
   where
     allInputs :: [C.TxIn]
     allInputs = do
@@ -466,7 +533,7 @@ waitForTxInAtAddress :: (MonadIO m, MonadTest m)
   -> C.TxIn
   -> m ()
 waitForTxInAtAddress era localNodeConnectInfo address txIn = do
-  let timeoutSeconds = 30
+  let timeoutSeconds = 90
       loop i = do
         if i == 0
           then error "waitForTxInAtAddress timeout"
