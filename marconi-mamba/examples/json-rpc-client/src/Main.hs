@@ -9,10 +9,10 @@ module Main where
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Proxy (Proxy (Proxy))
-import Marconi.Client.Types (JsonRpcResponse)
-import Marconi.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
-import Marconi.Types (TxOutRef)
+import Marconi.ChainIndex.Types (TxOutRef)
 import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Network.JsonRpc.Client.Types (JsonRpcResponse)
+import Network.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
 import Servant.API (Get, NoContent, PlainText, Post, ReqBody, (:<|>) ((:<|>)), (:>))
 import Servant.Client (ClientM, client, mkClientEnv, parseBaseUrl, runClientM)
 

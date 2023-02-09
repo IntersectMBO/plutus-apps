@@ -35,7 +35,7 @@ The interface for Marconi-Mamba uses [JSON-RPC](http://www.simple-is-better.org/
 * Enable [IOHK's binary cache](https://iohk.zendesk.com/hc/en-us/articles/900000673963-Installing-Nix-on-Linux-distribution-and-setting-up-IOHK-binaries)
 
 ## Building from source
-To build Marconi-Mamba from the source files, use the following commands: 
+To build Marconi-Mamba from the source files, use the following commands:
 
 ``` sh
 git clone git@github.com:input-output-hk/plutus-apps.git
@@ -53,7 +53,7 @@ The above process will build the executable in your local environment at this lo
 
 ## Command line summary
 
-The following is a general synopsis of the command line options: 
+The following is a general synopsis of the command line options:
 
 ``` sh
 $(cabal exec -- which marconi-mamba) --help
@@ -77,16 +77,16 @@ Available options:
 
 ## Example of using Marconi-Mamba
 
-To use Marconi-Mamba, follow these steps: 
+To use Marconi-Mamba, follow these steps:
 1. Invoke the JSON-RPC server
 2. Interrogate the JSON-RPC endpoints
 3. Interrogate the REST endpoints
 
-These steps are described in more detail below. 
+These steps are described in more detail below.
 
 ## Invoking the JSON-RPC server
 
-The following is an example shell script for executing Marconi-Mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet). 
+The following is an example shell script for executing Marconi-Mamba in [preview-testnet](https://book.world.dev.cardano.org/environments.html#preview-testnet).
 
 ### Requirement
 
@@ -124,8 +124,8 @@ $(cabal exec -- which marconi-mamba) \
 |-----------+-----------+------------------------+---------------------------------------------|
 | HTTP Verb | Endpoints | RPC method             | Description                                 |
 |-----------+-----------+------------------------+---------------------------------------------|
-| POST      | json-rpc  | addresseesBech32Report | Retrieves user provided addresses           |
-| POST      | json-rpc  | utxoJsonReport         | Retrieves TxRefs for an address             |
+| POST      | json-rpc  | getTargetAddresses     | Retrieves user provided addresses           |
+| POST      | json-rpc  | getUtxoFromAddress     | Retrieves TxRefs for an address             |
 | POST      | JSON-rpc  | echo                   | echo's user input to console                |
 |-----------+-----------+------------------------+---------------------------------------------|
 ```
@@ -146,14 +146,14 @@ $(cabal exec -- which marconi-mamba) \
 Here is a curl script to exploit the JSON-RPC server:
 
 ``` sh
-curl -d '{"jsonrpc": "2.0" , "method": "utxoJsonReport" , "params": "addr_test1qzzxxkwnz4k60fjdjqspt58c8xe069kemfw4gljnnqtc4aarszs09x52vy8kfknj0rrr9400e39ufz5tuct74h52kcrqaytqk7", "id": 19}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+curl -d '{"jsonrpc": "2.0" , "method": "getUtxoFromAddress" , "params": "addr_test1qzzxxkwnz4k60fjdjqspt58c8xe069kemfw4gljnnqtc4aarszs09x52vy8kfknj0rrr9400e39ufz5tuct74h52kcrqaytqk7", "id": 19}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 
 {
   "id": 19,
   "jsonrpc": "2.0",
   "result": {
-    "urAddress": "addr_test1qzzxxkwnz4k60fjdjqspt58c8xe069kemfw4gljnnqtc4aarszs09x52vy8kfknj0rrr9400e39ufz5tuct74h52kcrqaytqk7",
-    "urReport": [
+    "uqAddress": "addr_test1qzzxxkwnz4k60fjdjqspt58c8xe069kemfw4gljnnqtc4aarszs09x52vy8kfknj0rrr9400e39ufz5tuct74h52kcrqaytqk7",
+    "uqResults": [
       {
         "_urBlockHash": "8ccc256dda1f8c499dd91beb9e19e0a794463e876c5602b74c82997e31f16bde",
         "_urBlockNo": {

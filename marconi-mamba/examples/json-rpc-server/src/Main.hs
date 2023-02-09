@@ -15,12 +15,12 @@ import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, strOption, (<**>))
 
-import Marconi.Api.Types (UtxoIndexerEnv, queryEnv, uiIndexer)
-import Marconi.Api.UtxoIndexersQuery qualified as UIQ
-import Marconi.Bootstrap (bootstrapHttp, bootstrapJsonRpc)
-import Marconi.CLI (multiString)
-import Marconi.Index.Utxo qualified as Utxo
-import Marconi.Types (TargetAddresses)
+import Marconi.ChainIndex.CLI (multiString)
+import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
+import Marconi.ChainIndex.Types (TargetAddresses)
+import Marconi.Mamba.Api.Query.UtxoIndexer qualified as UIQ
+import Marconi.Mamba.Api.Types (IndexerEnv, queryEnv, uiIndexer)
+import Marconi.Mamba.Bootstrap (bootstrapHttp, initializeIndexerEnv)
 
 
 data CliOptions = CliOptions
@@ -45,13 +45,13 @@ main = do
         <>"\nport =" <> show (3000 :: Int)
         <> "\nmarconi-db-dir =" <> dbpath
         <> "\nnumber of addresses to index = " <> show (length addresses)
-    env <- bootstrapJsonRpc Nothing addresses
+    env <- initializeIndexerEnv Nothing addresses
     race_ (bootstrapHttp env) (mocUtxoIndexer dbpath (env ^. queryEnv) )
 
 -- | moc marconi utxo indexer.
 -- This will allow us to use the UtxoIndexer query interface without having cardano-node or marconi online
 -- Effectively we are going to query SQLite only
-mocUtxoIndexer :: FilePath -> UtxoIndexerEnv -> IO ()
+mocUtxoIndexer :: FilePath -> IndexerEnv -> IO ()
 mocUtxoIndexer dbpath env =
         Utxo.open dbpath (Utxo.Depth 4) >>= callback >> innerLoop
     where
