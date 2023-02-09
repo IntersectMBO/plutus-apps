@@ -9,7 +9,7 @@ import Control.Exception (catch)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
 import Data.Text (pack)
-import Network.Wai.Handler.Warp (defaultSettings, setPort)
+import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
 
@@ -21,36 +21,36 @@ import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withCha
 import Marconi.ChainIndex.Indexers (mkIndexerStream, startIndexers, utxoWorker)
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Mamba.Api.HttpServer qualified as Http
-import Marconi.Mamba.Api.Types (CliArgs (CliArgs), HasJsonRpcEnv (queryEnv), HasUtxoIndexerEnv (uiIndexer),
-                                JsonRpcEnv (JsonRpcEnv, _httpSettings, _queryEnv), RpcPortNumber)
-import Marconi.Mamba.Api.UtxoIndexersQuery (UtxoIndexer, bootstrap, writeTMVar')
+import Marconi.Mamba.Api.Query.UtxoIndexer (UtxoIndexer, initializeEnv, writeTMVar')
+import Marconi.Mamba.Api.Types (CliArgs (CliArgs), HasIndexerEnv (uiIndexer), HasMambaEnv (queryEnv),
+                                MambaEnv (MambaEnv, _httpSettings, _queryEnv))
 
 
 -- | Bootstraps the JSON-RPC  http server with appropriate settings and marconi cache
 -- this is just a wrapper for the bootstrapHttp in json-rpc package
-bootstrapJsonRpc
-    :: Maybe RpcPortNumber
+initializeIndexerEnv
+    :: Maybe Port
     -> TargetAddresses
-    -> IO JsonRpcEnv
-bootstrapJsonRpc maybePort targetAddresses = do
-    queryenv <- bootstrap targetAddresses
+    -> IO MambaEnv
+initializeIndexerEnv maybePort targetAddresses = do
+    queryenv <- initializeEnv targetAddresses
     let httpsettings =  maybe defaultSettings (flip setPort defaultSettings ) maybePort
-    pure $ JsonRpcEnv
+    pure $ MambaEnv
         { _httpSettings = httpsettings
         , _queryEnv = queryenv
         }
 
 bootstrapHttp
-    :: JsonRpcEnv
+    :: MambaEnv
     -> IO ()
 bootstrapHttp  = Http.bootstrap
 
--- |  marconi cardano blockchain indexer
-bootstrapUtxoIndexers
+-- |  Marconi cardano blockchain indexer
+bootstrapIndexers
     :: CliArgs
-    -> JsonRpcEnv
+    -> MambaEnv
     -> IO ()
-bootstrapUtxoIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
+bootstrapIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
   let callbackIndexer :: UtxoIndexer -> IO ()
       callbackIndexer = atomically . writeTMVar' (env ^. queryEnv . uiIndexer)
   (_, coordinator) <-

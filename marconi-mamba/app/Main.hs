@@ -2,7 +2,7 @@ module Main where
 
 import Control.Concurrent.Async (race_)
 import Marconi.Mamba.Api.Types (CliArgs (CliArgs))
-import Marconi.Mamba.Bootstrap (bootstrapHttp, bootstrapJsonRpc, bootstrapUtxoIndexers)
+import Marconi.Mamba.Bootstrap (bootstrapHttp, bootstrapIndexers, initializeIndexerEnv)
 import Marconi.Mamba.CLI (parseCli)
 
 -- | concurrently start:
@@ -13,7 +13,8 @@ import Marconi.Mamba.CLI (parseCli)
 main :: IO ()
 main = do
     cli@(CliArgs _ _ maybePort _ tAddress)  <- parseCli
-    rpcEnv <- bootstrapJsonRpc maybePort tAddress
+    rpcEnv <- initializeIndexerEnv maybePort tAddress
+
     race_
        (bootstrapHttp rpcEnv)                            -- start http server
-       (bootstrapUtxoIndexers cli rpcEnv)
+       (bootstrapIndexers cli rpcEnv)

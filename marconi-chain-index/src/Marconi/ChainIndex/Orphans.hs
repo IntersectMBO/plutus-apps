@@ -10,11 +10,18 @@ import Cardano.Api (BlockHeader, BlockNo (BlockNo), ChainPoint (ChainPoint, Chai
 import Cardano.Api qualified as C
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (decode, encode), deserialiseOrFail, serialise)
+import Data.Aeson (ToJSON)
 import Data.Aeson qualified as Aeson
+import Data.ByteString (ByteString)
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (toStrict)
+import Data.Char qualified as Char
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
@@ -67,6 +74,8 @@ instance SQL.FromField C.BlockNo where
 instance SQL.ToField C.BlockNo where
   toField (C.BlockNo s) = SQL.SQLInteger $ fromIntegral s
 
+instance ToJSON C.BlockNo
+
 -- * C.AddressAny
 
 instance SQL.FromField C.AddressAny where
@@ -80,6 +89,9 @@ instance SQL.FromField C.AddressAny where
 
 instance SQL.ToField C.AddressAny where
   toField = SQL.SQLBlob . C.serialiseToRawBytes
+
+instance ToJSON C.AddressAny where
+    toJSON  = Aeson.String . C.serialiseAddress
 
 -- * C.Hash C.ScriptData
 
@@ -149,3 +161,14 @@ instance SQL.FromField C.ScriptHash where
     (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise scriptDataHash.")
     pure . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
 
+instance ToJSON ByteString  where
+  toJSON bs
+      | Right s <- Text.decodeUtf8' bs, Text.all Char.isPrint s = Aeson.String s
+      | otherwise
+      = Aeson.String (bytesPrefix <> Text.decodeLatin1 (Base16.encode bs))
+
+-- from cardano-node: https://github.com/input-output-hk/cardano-node/blob/master/cardano-api/src/Cardano/Api/ScriptData.hs#L444-L447
+-- | JSON strings that are base16 encoded and prefixed with 'bytesPrefix' will
+-- be encoded as CBOR bytestrings.
+bytesPrefix :: Text
+bytesPrefix = "0x"

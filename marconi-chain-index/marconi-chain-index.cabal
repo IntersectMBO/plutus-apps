@@ -86,6 +86,7 @@ library
     , aeson
     , async
     , base
+    , base16-bytestring
     , bytestring
     , containers
     , filepath

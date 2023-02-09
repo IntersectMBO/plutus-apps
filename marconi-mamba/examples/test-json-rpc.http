@@ -12,41 +12,48 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
 #
-# should print message on the console
-POST http://localhost:3000/json-rpc
-Content-Type: application/json-rpc
-{"jsonrpc": "2.0", "method": "print", "params": "print me", "id": 0}
-#
-#
-# lookup fot txoutrefs , should return result, low
+# should fail, Unknown method: unknownMethod
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoJsonReport"
+, "method": "unknownMethod"
 , "params": "addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0"
 , "id": 2
 }
 #
-# lookup fot txoutrefs , should return result, high
+# lookup for UTXOs , should return result lots of data
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoJsonReport"
+, "method": "getUtxoFromAddress"
 , "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"
 , "id": 92
 }
 #
-# lookup fot txoutrefs, should generate error if the address is not in the target list
+# lookup for UTXOs, should generate error if the address is not in the target list
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoJsonReport"
+, "method": "getUtxoFromAddress"
 , "params": "addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj"
 , "id":21
 }
+
+#
+# lookup for UTXOs, should generate error if the address is not in the target list
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "getUtxoFromAddress"
+, "params": ["addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj"]
+, "id":21
+}
+
+
 #
 # addresses with non null dautm
 #
@@ -61,13 +68,12 @@ Content-Type: application/json
 #addr_test1wz3937ykmlcaqxkf4z7stxpsfwfn4re7ncy48yu8vutcpxgnj28k0
 
 #
-# issue non-existing mthode
-# it should fail with code -32601, unknown method
+# it should fail, "Error in $: expected String, but encountered Number"
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "utxoJsonReports"
+, "method": "getUtxoFromAddress"
 , "params": 100
 , "id": 14
 }
@@ -78,21 +84,11 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json
 {
 "jsonrpc": "2.0"
-, "method": "addressesBech32Report"
-, "params": 100
+, "method": "getTargetAddresses"
+, "params": ""
 , "id": 11
 }
 #
-#
-# get the top 100 utxos, sorted by ledger.Address
-POST http://localhost:3000/json-rpc
-Content-Type: application/json
-{
-"jsonrpc": "2.0"
-, "method": "utxosReport"
-, "params": 100
-, "id": 14
-}
 #
 ####  REST calls ####
 #

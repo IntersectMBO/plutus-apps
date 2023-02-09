@@ -1,34 +1,45 @@
+-- | Defines REST and JSON-RPC routes
+
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Marconi.Mamba.Api.Routes where
+module Marconi.Mamba.Api.Routes (
+  API
+  ) where
 
 import Data.Text (Text)
-import Marconi.Mamba.Api.Types (UtxoReport)
-import Network.JsonRpc.Types (JsonRpc, JsonRpcNotification, RawJsonRpc)
-import Servant.API (Get, JSON, NoContent, PlainText, Post, ReqBody, (:<|>), (:>))
+import Marconi.Mamba.Api.Types (UtxoQueryResult)
+import Network.JsonRpc.Types (JsonRpc, RawJsonRpc)
+import Servant.API (Get, JSON, PlainText, (:<|>), (:>))
 
-  --  RPC method parameter(s) return-type
-type Echo = JsonRpc "echo" String String String
+------------------------------------------
+  --  RPC types
+  --  methodName -> parameter(s) -> return-type
+------------------------------------------
+type RpcEcho = JsonRpc "echo" String String String
 
-type UtxoJsonReport = JsonRpc "utxoJsonReport" String String UtxoReport
+type RpcUtxoQueryResult = JsonRpc "getUtxoFromAddress" String String UtxoQueryResult
 
-type TargetAddressesReport  = JsonRpc "addressesBech32Report" Int String [Text]
+type RpcTargetAddresses = JsonRpc "getTargetAddresses" String String [Text]
 
-type Print    = JsonRpcNotification "print" String
+-- | Rpc routes
+type RpcAPI
+  = RpcEcho
+  :<|> RpcUtxoQueryResult
+  :<|> RpcTargetAddresses
 
-type RpcAPI = Echo :<|> UtxoJsonReport :<|> TargetAddressesReport :<|> Print
-
+-- | JSON-RPC API, endpoint
 type JsonRpcAPI = "json-rpc" :> RawJsonRpc RpcAPI
 
+--------------------
+--- REST related ---
+--------------------
 type GetTime = "time" :> Get '[PlainText] String
 
 type GetTargetAddresses = "addresses" :> Get '[JSON] [Text]
 
-type PrintMessage = "print" :> ReqBody '[PlainText] String :> Post '[PlainText] NoContent
+-- | REST API, endpoints
+type RestAPI = "rest" :> (GetTime :<|> GetTargetAddresses)
 
-type RestAPI = "rest" :> (GetTime :<|> GetTargetAddresses :<|> PrintMessage)
-
+-- | marconi-mamba APIs
 type API = JsonRpcAPI :<|> RestAPI
-
-type NonEndpoint = "json-rpc" :> RawJsonRpc (JsonRpc "launch-missles" Int String Bool)
