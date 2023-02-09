@@ -23,14 +23,18 @@ let
         narHash = "sha256-3Rnj/g3KLzOW5YSieqsUa9IF1Td22Eskk5KuVsOFgEQ=";
       };
   }).defaultNix;
-  cardano-node = import
-    (pkgs.fetchgit {
-      url = "https://github.com/input-output-hk/cardano-node";
-      # A standard release compatible with the cardano-wallet commit above is always preferred.
-      rev = "1.35.4";
-      sha256 = "1j01m2cp2vdcl26zx9xmipr551v3b2rz9kfn9ik8byfwj1z7652r";
-    })
-    { };
+
+  cardano-node = (import sources.flake-compat {
+    inherit pkgs;
+    src = builtins.fetchTree
+      {
+        type = "github";
+        owner = "input-output-hk";
+        repo = "cardano-node";
+        rev = "ebc7be471b30e5931b35f9bbc236d21c375b91bb";
+        narHash = "sha256-WRRzfpDc+YVmTNbN9LNYY4dS8o21p/6NoKxtcZmoAcg=";
+      };
+  }).defaultNix;
 
   # For Sphinx, scriv, and ad-hoc usage
   pythonTools = python3.withPackages (ps: [
@@ -109,8 +113,8 @@ let
   # local build inputs ( -> ./nix/pkgs/default.nix )
   localInputs = (with plutus-apps; [
     cabal-install
-    cardano-node.cardano-cli
-    cardano-node.cardano-node
+    cardano-node.packages.${pkgs.system}.cardano-cli
+    cardano-node.packages.${pkgs.system}.cardano-node
     cardano-wallet.packages.${pkgs.system}.cardano-wallet
     cardano-repo-tool
     docs.build-and-serve-docs
