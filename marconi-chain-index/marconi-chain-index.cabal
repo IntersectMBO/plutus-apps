@@ -1,0 +1,250 @@
+cabal-version: 3.0
+name:          marconi-chain-index
+version:       1.1.0.0
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+author:        Markus Läll
+maintainer:    markus.lall@iohk.io
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
+description:
+  Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>.
+
+build-type:    Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveAnyClass
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    FlexibleInstances
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    InstanceSigs
+    MultiParamTypeClasses
+    ScopedTypeVariables
+    StandaloneDeriving
+    TypeApplications
+    TypeFamilies
+
+  ghc-options:
+    -Wall -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wmissing-import-lists
+    -Wnoncanonical-monad-instances -Wredundant-constraints
+    -Wunused-packages
+
+library
+  import:          lang
+  hs-source-dirs:  src
+  exposed-modules:
+    Marconi.ChainIndex.CLI
+    Marconi.ChainIndex.Indexers
+    Marconi.ChainIndex.Indexers.AddressDatum
+    Marconi.ChainIndex.Indexers.Datum
+    Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Marconi.ChainIndex.Indexers.ScriptTx
+    Marconi.ChainIndex.Indexers.Utxo
+    Marconi.ChainIndex.Logging
+    Marconi.ChainIndex.Orphans
+    Marconi.ChainIndex.Types
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , cardano-streaming
+    , marconi-core
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-binary
+    , cardano-ledger-alonzo
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , iohk-monitoring
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , async
+    , base
+    , bytestring
+    , containers
+    , filepath
+    , lens
+    , mwc-random
+    , optparse-applicative
+    , ouroboros-consensus-cardano
+    , ouroboros-consensus-shelley
+    , prettyprinter
+    , raw-strings-qq
+    , serialise
+    , sqlite-simple
+    , stm
+    , streaming
+    , text
+    , time
+    , transformers
+    , vector-map
+
+library json-rpc
+  import:          lang
+  visibility:      public
+  hs-source-dirs:  json-rpc/src
+  exposed-modules:
+    Network.JsonRpc.Client.Types
+    Network.JsonRpc.Server.Types
+    Network.JsonRpc.Types
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , base                 >=4.9 && <5
+    , containers
+    , http-media
+    , servant
+    , servant-client-core
+    , servant-server
+    , text
+
+executable marconi-chain-index
+  import:         lang
+  hs-source-dirs: app
+  main-is:        Main.hs
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , cardano-streaming
+    , marconi-chain-index
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , iohk-monitoring
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , base           >=4.9 && <5
+    , directory
+    , prettyprinter
+
+library marconi-chain-index-test-lib
+  import:          lang
+  hs-source-dirs:  test-lib
+  exposed-modules: Helpers
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:   cardano-streaming
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-testnet
+    , ouroboros-network
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , async
+    , base             >=4.9 && <5
+    , containers
+    , directory
+    , filepath
+    , hedgehog
+    , hedgehog-extras
+    , streaming
+    , temporary
+
+test-suite marconi-chain-index-test
+  import:         lang
+  ghc-options:    -Wno-unused-packages
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+  other-modules:
+    EpochStakepoolSize
+    Integration
+    Spec.Marconi.ChainIndex.Indexers.AddressDatum
+    Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndex
+    Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndexEvent
+    Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators
+    Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils
+    Spec.Utxo
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , cardano-streaming
+    , marconi-chain-index
+    , marconi-chain-index-test-lib
+    , marconi-core
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api:{cardano-api, gen}
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-ledger-core
+    , cardano-testnet
+    , iohk-monitoring
+    , ouroboros-network
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , async
+    , base             >=4.9 && <5
+    , bytestring
+    , containers
+    , directory
+    , filepath
+    , hedgehog
+    , hedgehog-extras
+    , lens
+    , prettyprinter
+    , serialise
+    , sqlite-simple
+    , stm
+    , streaming
+    , tasty
+    , tasty-hedgehog

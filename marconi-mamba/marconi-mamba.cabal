@@ -44,20 +44,20 @@ library
   import:          lang
   hs-source-dirs:  src
   exposed-modules:
-    Marconi.Api.HttpServer
-    Marconi.Api.Routes
-    Marconi.Api.Types
-    Marconi.Api.UtxoIndexersQuery
-    Marconi.Bootstrap
-    Marconi.MambaCli
+    Marconi.Mamba.Api.HttpServer
+    Marconi.Mamba.Api.Routes
+    Marconi.Mamba.Api.Types
+    Marconi.Mamba.Api.UtxoIndexersQuery
+    Marconi.Mamba.Bootstrap
+    Marconi.Mamba.CLI
 
   --------------------
   -- Local components
   --------------------
   build-depends:
     , cardano-streaming
-    , marconi:{marconi, json-rpc}
-    , rewindable-index
+    , marconi-chain-index:{marconi-chain-index, json-rpc}
+    , marconi-core
 
   --------------------------
   -- Other IOG dependencies
@@ -111,7 +111,7 @@ executable examples-json-rpc-server
   -- Local components
   --------------------
   build-depends:
-    , marconi
+    , marconi-chain-index
     , marconi-mamba
 
   ------------------------
@@ -132,7 +132,7 @@ executable examples-json-rpc-client
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi:{marconi, json-rpc}
+  build-depends:  marconi-chain-index:{marconi-chain-index, json-rpc}
 
   ------------------------
   -- Non-IOG dependencies
@@ -187,15 +187,15 @@ test-suite marconi-mamba-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Spec.UtxoIndexersQuery
+  other-modules:  Spec.Marconi.Mamba.Api.UtxoIndexersQuery
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , marconi
+    , marconi-chain-index
+    , marconi-core
     , marconi-mamba
-    , rewindable-index
 
   ------------------------
   -- Non-IOG dependencies

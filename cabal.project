@@ -23,7 +23,8 @@ packages: cardano-node-emulator
           cardano-streaming
           doc
           freer-extras
-          marconi
+          marconi-chain-index
+          marconi-core
           marconi-mamba
           pab-blockfrost
           plutus-chain-index
@@ -39,7 +40,6 @@ packages: cardano-node-emulator
           plutus-script-utils
           plutus-tx-constraints
           plutus-use-cases
-          rewindable-index
 
 -- We never, ever, want this.
 write-ghc-environment-files: never

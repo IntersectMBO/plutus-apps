@@ -53,6 +53,7 @@ import Data.Monoid (Sum (Sum))
 import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
 import Ledger (TxId, TxOutRef (..))
+import Marconi.Core.Index.VSplit qualified as Ix
 import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxOutState (..),
                           TxOutStatus, TxStatus, TxValidity (..), transactionOutputState)
 import Plutus.ChainIndex.UtxoState (UtxoState (_usTxUtxoData), utxoState)
@@ -78,7 +79,6 @@ import Plutus.PAB.Effects.UUID (UUIDEffect, uuidNextRandom)
 import Plutus.PAB.Events.Contract (ContractInstanceId (ContractInstanceId))
 import Plutus.PAB.Types (PABError)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
-import RewindableIndex.Index.VSplit qualified as Ix
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Emulator.Wallet qualified as Wallet
