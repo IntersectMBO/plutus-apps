@@ -24,8 +24,9 @@ addr1qxyxudgzljnnaqghm8hlnpp36uvfr68a8k6uemumgjdcua4y7d04xcx9hnk05lnl6m9ptd9h3pj
 addr1qytr6ma495fkqpfnd7gk5kwmtfdh084xvzn7rv83ha87qq6yfm3y8yv39lcrqc6ej3zdzvef4aj3dv3pq2snakkcwscsfyrn3g|2317
 addr1qxt2ggq005kfm3uwe89emy3ka2zgdtrpxfarvz6033l3fqvk5ssq7lfvnhrcajwtnkfrd65ys6kxzvn6xc95lrrlzjqsjttk32|1353
 addr1qyhat6v7w65799pkc8ff3mjcwk79kqs8gv8t4expd67f9seqksv3earfx6skxkdhe4hcekjkj0x333dd76u8re8cmg2qwrdzn2|1155
-
 ```
+
+The data above were acquired from the Cardano mainnet.
 
 ### Why do we need this
 The need for this utility is from the desire to test marconi-mamba in a live network with valid addresses that may potentially correspond to a large list of Utxos.  Here are the high level requirements:

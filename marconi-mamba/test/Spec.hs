@@ -11,4 +11,5 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "marconi-mamba"
   [ Api.Query.Indexers.Utxo.tests
-  , CLI.tests]
+  , CLI.tests
+  ]
