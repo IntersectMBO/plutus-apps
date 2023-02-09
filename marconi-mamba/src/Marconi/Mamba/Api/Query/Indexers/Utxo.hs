@@ -1,4 +1,4 @@
-module Marconi.Mamba.Api.Query.UtxoIndexer
+module Marconi.Mamba.Api.Query.Indexers.Utxo
     ( initializeEnv
     , findByAddress
     , findByBech32Address
@@ -11,8 +11,7 @@ module Marconi.Mamba.Api.Query.UtxoIndexer
     , writeTMVar'
     ) where
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, takeTMVar, tryTakeTMVar)
-import Control.Exception (bracket)
+import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, tryReadTMVar, tryTakeTMVar)
 import Control.Lens ((^.))
 import Control.Monad.STM (STM)
 import Data.Functor ((<&>))
@@ -44,16 +43,16 @@ initializeEnv targetAddresses = do
 -- | Query utxos by Address
 --  Address conversion error from Bech32 may occur
 findByAddress
-    :: IndexerEnv               -- ^ Query run time environment
-    -> C.AddressAny                 -- ^ Cardano address to query
+    :: IndexerEnv           -- ^ Query run time environment
+    -> C.AddressAny         -- ^ Cardano address to query
     -> IO [Utxo.UtxoRow]
 findByAddress  = withQueryAction
 
 -- | Retrieve Utxos associated with the given address
 -- We return an empty list if no address is found
 findByBech32Address
-    :: IndexerEnv                          -- ^ Query run time environment
-    -> Text                                    -- ^ Bech32 Address
+    :: IndexerEnv         -- ^ Query run time environment
+    -> Text               -- ^ Bech32 Address
     -> IO (Either QueryExceptions UtxoQueryResult)  -- ^ To Plutus address conversion error may occure
 findByBech32Address env addressText =
     let
@@ -78,17 +77,12 @@ withQueryAction
     -> C.AddressAny     -- ^ Cardano address to query
     -> IO [Utxo.UtxoRow]
 withQueryAction env address =
-    let
-        utxoIndexer = unWrapUtxoIndexer $ env ^. uiIndexer
-        action :: Utxo.UtxoIndexer -> IO [Utxo.UtxoRow]
-        action indexer = do
+  (atomically . tryReadTMVar . unWrapUtxoIndexer $ env ^. uiIndexer) >>= action
+  where
+    action Nothing = pure [] -- may occures at startup before marconi-chain-index gets to update the indexer
+    action (Just indexer) = do
             Utxo.UtxoResult rows <- Storable.query Storable.QEverything indexer (Utxo.UtxoAddress address)
             pure rows
-    in
-        bracket
-          (atomically . takeTMVar $ utxoIndexer)
-          (atomically . putTMVar utxoIndexer)
-          action
 
 -- | report target addresses
 -- Used by JSON-RPC
@@ -116,5 +110,5 @@ reportBech32Addresses env
 writeTMVar :: TMVar a -> a -> STM ()
 writeTMVar t new = tryTakeTMVar t >> putTMVar t new
 
-writeTMVar' :: IndexerWrapper-> Utxo.UtxoIndexer -> STM ()
+writeTMVar' :: IndexerWrapper -> Utxo.UtxoIndexer -> STM ()
 writeTMVar' (IndexerWrapper t) =  writeTMVar t

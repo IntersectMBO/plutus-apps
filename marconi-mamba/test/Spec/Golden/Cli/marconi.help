@@ -1,0 +1,8 @@
+Missing: 
+--socket-path FILE-PATH --utxo-db FILE-PATH 
+  (--mainnet | --testnet-magic NATURAL) (--addresses-to-index BECH32-ADDRESS )
+
+Usage: marconi-mamba --socket-path FILE-PATH --utxo-db FILE-PATH 
+                     [--http-port HTTP-PORT] 
+                     (--mainnet | --testnet-magic NATURAL)
+                     (--addresses-to-index BECH32-ADDRESS )
