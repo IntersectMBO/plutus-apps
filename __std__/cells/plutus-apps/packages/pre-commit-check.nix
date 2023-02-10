@@ -33,7 +33,6 @@ inputs.pre-commit-hooks-nix.lib.run {
       excludes =
         [
           ".*nix/pkgs/haskell/materialized.*/.*"
-          ".*/spago-packages.nix$"
           ".*/packages.nix$"
         ];
     };
