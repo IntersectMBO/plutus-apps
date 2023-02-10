@@ -26,27 +26,29 @@ tests :: TestTree
 tests = testGroup "reference script"
   [ testProperty "mint a token with a reference script in Babbage PV7" (referenceScriptMint testnetOptionsBabbage7)
   , testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint testnetOptionsBabbage8)
+  --, testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint localNodeOptionsPreview)
 
   , testProperty "spend locked funds with a reference script using inline datum in Babbage PV7" (referenceScriptInlineDatumSpend testnetOptionsBabbage7)
   , testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend testnetOptionsBabbage8)
+  --, testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend localNodeOptionsPreview)
 
   , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV7" (referenceScriptDatumHashSpend testnetOptionsBabbage7)
   , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend testnetOptionsBabbage8)
+  --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend localNodeOptionsPreview)
   ]
 
-referenceScriptMint :: TN.TestnetOptions -> H.Property
-referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
+referenceScriptMint :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
+referenceScriptMint networkOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
-  C.AnyCardanoEra era <- return $ TN.era testnetOptions
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
-  -- 1: spin up a testnet
-  base <- TN.getProjectBase
-  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+  -- 1: spin up a testnet or use local node connected to public testnet
+  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
 
-  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
+  txIn <- TN.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
   let
     refScriptTxOut = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
@@ -90,19 +92,18 @@ referenceScriptMint testnetOptions = H.integration . HE.runFinallies . TN.worksp
   H.success
 
 
-referenceScriptInlineDatumSpend :: TN.TestnetOptions -> H.Property
-referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
+referenceScriptInlineDatumSpend :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
+referenceScriptInlineDatumSpend networkOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
-  C.AnyCardanoEra era <- return $ TN.era testnetOptions
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
-  -- 1: spin up a testnet
-  base <- TN.getProjectBase
-  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+  -- 1: spin up a testnet or use local node connected to public testnet
+  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
 
-  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
+  txIn <- TN.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
   let
     refTxOut      = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
@@ -148,19 +149,18 @@ referenceScriptInlineDatumSpend testnetOptions = H.integration . HE.runFinallies
   H.success
 
 
-referenceScriptDatumHashSpend :: TN.TestnetOptions -> H.Property
-referenceScriptDatumHashSpend testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
+referenceScriptDatumHashSpend :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
+referenceScriptDatumHashSpend networkOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
-  C.AnyCardanoEra era <- return $ TN.era testnetOptions
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
-  -- 1: spin up a testnet
-  base <- TN.getProjectBase
-  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+  -- 1: spin up a testnet or use local node connected to public testnet
+  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
 
-  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
+  txIn <- TN.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
   let
     refTxOut      = TN.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address

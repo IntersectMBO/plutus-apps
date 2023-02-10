@@ -27,6 +27,7 @@ tests = testGroup "SECP256k1"
   [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo6)
   , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsa testnetOptionsBabbage7)
   , testProperty "can use SECP256k1 builtins in Babbage PV8" (verifySchnorrAndEcdsa testnetOptionsBabbage8)
+  --, testProperty "can use SECP256k1 builtins in Babbage PV8 (on preview testnet)" (verifySchnorrAndEcdsa localNodeOptionsPreview)
   ]
 
 {- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can only
@@ -38,21 +39,19 @@ tests = testGroup "SECP256k1"
     - if pv8+ then query the ledger to see if mint was successful otherwise expect
         "forbidden builtin" error when building tx
 -}
-verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
-verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "jamesman" $ \tempAbsPath -> do
+verifySchnorrAndEcdsa :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
+verifySchnorrAndEcdsa networkOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
-  let pv = TN.protocolVersion testnetOptions
-  C.AnyCardanoEra era <- return $ TN.era testnetOptions
+  pv <- TN.pvFromOptions networkOptions
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
--- 1: spin up a testnet
---   base <- TN.getProjectBase
---   (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
-  (localNodeConnectInfo, pparams, networkId) <- TN.connectToLocalNode era tempAbsPath
+  -- 1: spin up a testnet or use local node connected to public testnet
+  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
 
-  txIn <- TN.adaOnlyTxInFromUtxo era localNodeConnectInfo w1Address
+  txIn <- TN.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
   let
     (verifySchnorrAssetId, verifyEcdsaAssetId, verifySchnorrMintWitness, verifyEcdsaMintWitness) =

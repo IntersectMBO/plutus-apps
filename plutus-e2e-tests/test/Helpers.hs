@@ -39,10 +39,31 @@ import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.Plutus qualified as TN
 
-testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8 :: TN.TestnetOptions
-testnetOptionsAlonzo6   = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
-testnetOptionsBabbage7 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
-testnetOptionsBabbage8 = TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
+data LocalNodeOptions = LocalNodeOptions
+  { eraL             :: C.AnyCardanoEra
+  , protocolVersionL :: Int
+  , localEnvDir      :: FilePath -- path to directory containing 'utxo-keys' and 'ipc' directories
+  , testnetMagic     :: Int
+  }
+
+localNodeOptionsPreview :: Either LocalNodeOptions TN.TestnetOptions
+localNodeOptionsPreview = Left $ LocalNodeOptions
+  { eraL = C.AnyCardanoEra C.BabbageEra
+  , protocolVersionL = 8
+  , localEnvDir = "/tmp/preview"
+  , testnetMagic = 2
+  }
+
+testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8 :: Either LocalNodeOptions TN.TestnetOptions
+testnetOptionsAlonzo6  = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
+testnetOptionsBabbage7 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
+testnetOptionsBabbage8 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
+
+eraFromOptions :: (MonadTest m) => Either LocalNodeOptions TN.TestnetOptions -> m C.AnyCardanoEra
+eraFromOptions = return . either eraL TN.era
+
+pvFromOptions :: (MonadTest m) => Either LocalNodeOptions TN.TestnetOptions -> m Int
+pvFromOptions = return . either protocolVersionL TN.protocolVersion
 
 -- | Right from Either or throw Left error
 unsafeFromRight :: Show l => Either l r -> r
@@ -145,10 +166,11 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
   pure (localNodeConnectInfo, pparams, networkId)
 
 connectToLocalNode :: C.CardanoEra era
+  -> LocalNodeOptions
   -> FilePath
   -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
-connectToLocalNode era tempAbsPath = do
-  let localEnvDir = "/home/james/dev/environments/preview" -- todo: use env var
+connectToLocalNode era localNodeOptions tempAbsPath = do
+  localEnvDir <- return $ localEnvDir localNodeOptions
 
   HE.createDirectoryIfMissing (tempAbsPath </> "utxo-keys")
   HE.createDirectoryIfMissing (tempAbsPath </> "sockets")
@@ -158,7 +180,7 @@ connectToLocalNode era tempAbsPath = do
   HE.createFileLink (localEnvDir </> "ipc/node.socket") (tempAbsPath </> "sockets/node.socket")
 
   let socketPathAbs = tempAbsPath </> "sockets/node.socket"
-      networkId = C.Testnet $ C.NetworkMagic $ fromIntegral 2 -- todo: query for
+      networkId = C.Testnet $ C.NetworkMagic $ fromIntegral (testnetMagic localNodeOptions)
 
   -- Boilerplate codecs used for protocol serialisation. The number of epochSlots is specific
   -- to each blockchain instance. This value is used by cardano mainnet/testnet and only applies
@@ -173,6 +195,21 @@ connectToLocalNode era tempAbsPath = do
   pparams <- getProtocolParams era localNodeConnectInfo
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
   pure (localNodeConnectInfo, pparams, networkId)
+
+-- | Start testnet with cardano-testnet or use local node that's already
+--   connected to a public testnet
+setupTestEnvironment :: Either LocalNodeOptions TN.TestnetOptions
+  -> FilePath
+  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+setupTestEnvironment options tempAbsPath = do
+  case options of
+    Left localNodeOptions -> do
+      C.AnyCardanoEra era <- return $ eraL localNodeOptions
+      pure =<< connectToLocalNode era localNodeOptions tempAbsPath
+    Right testnetOptions -> do
+      C.AnyCardanoEra era <- return $ TN.era testnetOptions
+      base <- getProjectBase
+      pure =<< startTestnet era testnetOptions base tempAbsPath
 
 -- | Network ID of the testnet
 getNetworkId :: TN.TestnetRuntime -> C.NetworkId
@@ -315,39 +352,39 @@ firstTxIn :: (MonadIO m, MonadTest m)
   -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> m C.TxIn
-firstTxIn era = txInFromUtxo era 0
+firstTxIn era = txInAtAddressByIndex era 0
 
 -- | Find UTxO at address by index and return as TxIn. Used for txbody's txIns.
-txInFromUtxo :: (MonadIO m, MonadTest m)
+txInAtAddressByIndex :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> Int
   -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> m C.TxIn
-txInFromUtxo era idx localNodeConnectInfo address = do
+txInAtAddressByIndex era idx localNodeConnectInfo address = do
   atM idx =<< txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
   where
     atM :: (MonadTest m) => Int -> [a] -> m a
     atM i' l = return $ l !! i'
 
 -- | Find the TxIn at address which is ada-only and has the most ada
-adaOnlyTxInFromUtxo :: (MonadIO m, MonadTest m)
+adaOnlyTxInAtAddress :: (MonadIO m, MonadTest m)
   => C.CardanoEra era
   -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> m C.TxIn
-adaOnlyTxInFromUtxo era localNodeConnectInfo address = do
+adaOnlyTxInAtAddress era localNodeConnectInfo address = do
   utxo <- findUTxOByAddress era localNodeConnectInfo address
-  let utxoList = Map.toList $ C.unUTxO utxo
-  return $ fst $ head $ sortByMostAda $ filterAdaOnly utxoList
+  return $ fst $ head $ sortByMostAda $ adaOnly $ Map.toList $ C.unUTxO utxo
   where
-    filterAdaOnly utxoList' = filter
-      (\(_, C.TxOut _ (C.TxOutValue C.MultiAssetInBabbageEra v) _ _) -> (length $ C.valueToList v) == 1) utxoList'
-
+    adaOnly = filter
+      (\(_, C.TxOut _ (C.TxOutValue _ v) _ _) ->
+        ((length $ C.valueToList v) == 1) &&
+        ((fst $ head $ C.valueToList v) == C.AdaAssetId))
     sortByMostAda = sortBy
-      (\(_, C.TxOut _ (C.TxOutValue C.MultiAssetInBabbageEra v1) _ _)
-        (_, C.TxOut _ (C.TxOutValue C.MultiAssetInBabbageEra v2) _ _) ->
-          compare (snd $ head $ C.valueToList v2) (snd $ head $ C.valueToList v1))
+      (\(_, C.TxOut _ (C.TxOutValue _ v1) _ _)
+        (_, C.TxOut _ (C.TxOutValue _ v2) _ _) ->
+            compare (snd $ head $ C.valueToList v2) (snd $ head $ C.valueToList v1))
 
 -- | Get TxIns from all UTxOs
 txInsFromUtxo :: (MonadIO m) => C.UTxO era -> m [C.TxIn]
