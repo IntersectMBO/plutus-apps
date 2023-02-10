@@ -12,13 +12,16 @@ import Data.Text (pack)
 import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
+import System.FilePath ((</>))
 
-import Cardano.Api (AsType (AsShelleyAddress), ChainPoint (ChainPointAtGenesis), deserialiseFromBech32)
+import Cardano.Api (AsType (AsShelleyAddress), deserialiseFromBech32)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
+import Data.Maybe (fromMaybe)
 import Marconi.ChainIndex.Indexers (mkIndexerStream, startIndexers, utxoWorker)
+import Marconi.ChainIndex.Logging (logging)
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Mamba.Api.HttpServer qualified as Http
 import Marconi.Mamba.Api.Query.Indexers.Utxo (UtxoIndexer, initializeEnv, writeTMVar')
@@ -30,7 +33,7 @@ import Marconi.Mamba.Api.Types (CliArgs (CliArgs), HasIndexerEnv (uiIndexer), Ha
 -- this is just a wrapper for the bootstrapHttp in json-rpc package
 initializeIndexerEnv
     :: Maybe Port
-    -> TargetAddresses
+    -> Maybe TargetAddresses
     -> IO MambaEnv
 initializeIndexerEnv maybePort targetAddresses = do
     queryenv <- initializeEnv targetAddresses
@@ -50,23 +53,29 @@ bootstrapIndexers
     :: CliArgs
     -> MambaEnv
     -> IO ()
-bootstrapIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
+bootstrapIndexers (CliArgs socket dbPath utxoDbFileName _ networkId targetAddresses) env = do
   let callbackIndexer :: UtxoIndexer -> IO ()
       callbackIndexer = atomically . writeTMVar' (env ^. queryEnv . uiIndexer)
-  (_, coordinator) <-
-      startIndexers [( utxoWorker callbackIndexer (Just targetAddresses)
-                     , dbPath )]
-  let indexers   = mkIndexerStream coordinator
-      chainPoint = ChainPointAtGenesis
+  (chainPointsToResumeFrom, coordinator) <-
+      startIndexers
+          [ ( utxoWorker callbackIndexer targetAddresses
+            , dbPath </> fromMaybe "utxo.db" utxoDbFileName
+            )
+          ]
+  let indexers = mkIndexerStream coordinator
   c <- defaultConfigStdout
   withTrace c "marconi-mamba" $ \trace ->
-    withChainSyncEventStream socket networkId [chainPoint] indexers
+    withChainSyncEventStream
+        socket
+        networkId
+        chainPointsToResumeFrom
+        (indexers . logging trace)
     `catch` \NoIntersectionFound ->
       logError trace $
           renderStrict $
               layoutPretty defaultLayoutOptions $
-                  "No intersection found when looking for the chain point"
-                  <+> (pretty . show  $ chainPoint)  <> "."
+                  "No intersection found when looking for the chain points"
+                  <+> (pretty . show  $ chainPointsToResumeFrom)  <> "."
                   <+> "Please check the slot number and the block hash do belong to the chain"
 
 -- | parses a white space separated address list

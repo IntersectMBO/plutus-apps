@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -11,7 +10,7 @@ import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.List (nub)
-import Data.List.NonEmpty (fromList)
+import Data.List.NonEmpty (nonEmpty, toList)
 import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 
@@ -59,9 +58,9 @@ queryTargetAddressTest = property $ do
   events <- forAll $ Gen.list (Range.linear 2 5) genEvents
   depth <- forAll $ Gen.int (Range.linear 5 7)
   let
-    targetAddresses :: TargetAddresses
+    targetAddresses :: Maybe TargetAddresses
     targetAddresses
-      = fromList
+      = nonEmpty
       . mapMaybe addressAnyToShelley
       . nub -- required to remove the potential duplicate addresses
       . fmap Utxo._address
@@ -77,6 +76,7 @@ queryTargetAddressTest = property $ do
     . fmap concat
     . traverse (UIQ.findByAddress env)
     . fmap C.toAddressAny
+    . maybe [] toList
     $ targetAddresses
   let rows = concatMap Utxo.eventsToRows events
   fetchedRows === rows

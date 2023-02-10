@@ -24,14 +24,14 @@ import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Storable qualified as Storable
 import Marconi.Mamba.Api.Types (HasIndexerEnv (uiIndexer, uiQaddresses),
                                 IndexerEnv (IndexerEnv, _uiIndexer, _uiQaddresses),
-                                IndexerWrapper (IndexerWrapper, unWrapUtxoIndexer),
-                                QueryExceptions (AddressNotInListError, QueryError), UtxoQueryResult (UtxoQueryResult))
+                                IndexerWrapper (IndexerWrapper, unWrapUtxoIndexer), QueryExceptions (QueryError),
+                                UtxoQueryResult (UtxoQueryResult))
 
 -- | Bootstraps the utxo query environment.
 -- The module is responsible for accessing SQLite for quries.
 -- The main issue we try to avoid here is mixing inserts and quries in SQLite to avoid locking the database
 initializeEnv
-    :: TargetAddresses      -- ^ user provided target addresses
+    :: Maybe TargetAddresses      -- ^ user provided target addresses
     -> IO IndexerEnv        -- ^ returns Query runtime environment
 initializeEnv targetAddresses = do
     ix <- atomically (newEmptyTMVar :: STM (TMVar Utxo.UtxoIndexer) )
@@ -51,22 +51,18 @@ findByAddress  = withQueryAction
 -- | Retrieve Utxos associated with the given address
 -- We return an empty list if no address is found
 findByBech32Address
-    :: IndexerEnv         -- ^ Query run time environment
-    -> Text               -- ^ Bech32 Address
-    -> IO (Either QueryExceptions UtxoQueryResult)  -- ^ To Plutus address conversion error may occure
+    :: IndexerEnv -- ^ Query run time environment
+    -> Text -- ^ Bech32 Address
+    -> IO (Either QueryExceptions UtxoQueryResult)  -- ^ Plutus address conversion error may occur
 findByBech32Address env addressText =
     let
         f :: Either C.Bech32DecodeError (C.Address C.ShelleyAddr) -> IO (Either QueryExceptions UtxoQueryResult)
-        f (Right address)
-            | address `elem` (env ^. uiQaddresses) = -- allow for targetAddress search only
-              (pure . C.toAddressAny $ address)
-              >>= findByAddress env
-              <&> Right . UtxoQueryResult addressText
-            | otherwise = pure . Left . AddressNotInListError . QueryError $
-              unpack addressText <> " not in the provided target addresses"
-        f (Left e) = pure . Left $ QueryError (unpack  addressText
-                     <> " generated error: "
-                     <> show e)
+        f (Right address) =
+            (pure . C.toAddressAny $ address)
+                >>= findByAddress env
+                <&> Right . UtxoQueryResult addressText
+        f (Left e) = pure . Left
+                   $ QueryError (unpack  addressText <> " generated error: " <> show e)
     in
         f $ C.deserialiseFromBech32 C.AsShelleyAddress addressText
 
@@ -89,18 +85,14 @@ withQueryAction env address =
 reportQueryAddresses
     :: IndexerEnv
     -> IO [C.Address C.ShelleyAddr]
-reportQueryAddresses env
-    = pure
-    . NonEmpty.toList
-    $ (env ^. uiQaddresses )
+reportQueryAddresses env = pure $ maybe [] NonEmpty.toList (env ^. uiQaddresses)
 
 reportBech32Addresses
     :: IndexerEnv
     -> [Text]
-reportBech32Addresses env
-    = NonEmpty.toList
-    . fmap C.serialiseAddress
-    $ (env ^. uiQaddresses )
+reportBech32Addresses env =
+    let addrs = maybe [] NonEmpty.toList (env ^. uiQaddresses)
+     in fmap C.serialiseAddress addrs
 
 -- | Non-blocking write of a new value to a 'TMVar'
 -- Puts if empty. Replaces if populated.
