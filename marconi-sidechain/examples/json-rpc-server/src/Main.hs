@@ -16,6 +16,7 @@ import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, optional, short, strOption, (<**>))
+import System.FilePath ((</>))
 
 import Marconi.ChainIndex.CLI (multiString)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
@@ -24,18 +25,19 @@ import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Sidechain.Api.Types (IndexerEnv, queryEnv, uiIndexer)
 import Marconi.Sidechain.Bootstrap (bootstrapHttp, initializeIndexerEnv)
 
-
 data CliOptions = CliOptions
-    { _utxoPath  :: FilePath -- ^ Filepath to utxo sqlite database
-    , _addresses :: Maybe TargetAddresses
+    { _utxoDirPath :: FilePath -- ^ Filepath to utxo sqlite database
+    , _addresses   :: Maybe TargetAddresses
     }
 
+utxoDbFileName :: String
+utxoDbFileName = "utxodb"
 cliParser :: Parser CliOptions
 cliParser = CliOptions
     <$> strOption (long "utxo-db"
                               <> short 'd'
-                              <> metavar "FILENAME"
-                              <> help "Path to the utxo SQLite database.")
+                              <> metavar "PATH"
+                              <> help "directory path to the utxo SQLite database.")
      <*> (optional . multiString)
             ( long "addresses-to-index"
            <> help ( "Bech32 Shelley addresses to index."
@@ -45,11 +47,12 @@ cliParser = CliOptions
 
 main :: IO ()
 main = do
-    (CliOptions dbpath addresses) <- execParser $ info (cliParser <**> helper) mempty
+    (CliOptions dbDirPath addresses) <- execParser $ info (cliParser <**> helper) mempty
+    let dbpath = dbDirPath </> utxoDbFileName
     putStrLn $ "Starting the Example RPC http-server:"
         <>"\nport =" <> show (3000 :: Int)
         <> "\nmarconi-db-dir =" <> dbpath
-        <> "\nnumber of addresses to index = " <> show (length addresses)
+        <> "\nnumber of addresses to index = " <> show (length <$> addresses)
     env <- initializeIndexerEnv Nothing addresses
     race_ (bootstrapHttp env) (mocUtxoIndexer dbpath (env ^. queryEnv) )
 
