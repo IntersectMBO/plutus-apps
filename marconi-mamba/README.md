@@ -39,7 +39,7 @@ To build Marconi-Mamba from the source files, use the following commands:
 
 ``` sh
 git clone git@github.com:input-output-hk/plutus-apps.git
-nix-shell
+nix develop
 cabal clean
 cabal update
 cabal build marconi-mamba

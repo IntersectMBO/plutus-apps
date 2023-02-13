@@ -2,7 +2,7 @@
 
 ## Get `cardano-node` onto the path
 
-The easiest way of doing this is to enter this repository's `nix-shell`, where one is already there by default. Other alternatives include downloading pre-built binaries, running Docker, running a Nix shell or building from source. See [the node's repository](https://github.com/input-output-hk/cardano-node) for more information.
+The easiest way of doing this is to enter this repository's `nix develop`, where one is already there by default. Other alternatives include downloading pre-built binaries, running Docker, running a Nix shell or building from source. See [the node's repository](https://github.com/input-output-hk/cardano-node) for more information.
 
 ## Download the node configurations
 

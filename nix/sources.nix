@@ -2,7 +2,7 @@
 # in a flake.lock.
 { system }:
 let
-  lock = builtins.fromJSON (builtins.readFile ../flake.lock);
+  lock = builtins.fromJSON (builtins.readFile ../old_flake.lock);
 
   inherit (lock.nodes.${lock.root}) inputs;
 
