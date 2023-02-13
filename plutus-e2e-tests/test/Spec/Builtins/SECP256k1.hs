@@ -27,6 +27,7 @@ tests = testGroup "SECP256k1"
   [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo6)
   , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsa testnetOptionsBabbage7)
   , testProperty "can use SECP256k1 builtins in Babbage PV8" (verifySchnorrAndEcdsa testnetOptionsBabbage8)
+  --, testProperty "can use SECP256k1 builtins in Babbage PV8 (on preview testnet)" (verifySchnorrAndEcdsa localNodeOptionsPreview) -- uncomment to use local node on preview testnet
   ]
 
 {- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can only
@@ -38,20 +39,19 @@ tests = testGroup "SECP256k1"
     - if pv8+ then query the ledger to see if mint was successful otherwise expect
         "forbidden builtin" error when building tx
 -}
-verifySchnorrAndEcdsa :: TN.TestnetOptions -> H.Property
-verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
+verifySchnorrAndEcdsa :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
+verifySchnorrAndEcdsa networkOptions = H.integration . HE.runFinallies . TN.workspace "." $ \tempAbsPath -> do
 
-  let pv = TN.protocolVersion testnetOptions
-  C.AnyCardanoEra era <- return $ TN.era testnetOptions
+  pv <- TN.pvFromOptions networkOptions
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
--- 1: spin up a testnet
-  base <- TN.getProjectBase
-  (localNodeConnectInfo, pparams, networkId) <- TN.startTestnet era testnetOptions base tempAbsPath
+  -- 1: spin up a testnet or use local node connected to public testnet
+  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
 
-  txIn <- TN.firstTxIn era localNodeConnectInfo w1Address
+  txIn <- TN.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
   let
     (verifySchnorrAssetId, verifyEcdsaAssetId, verifySchnorrMintWitness, verifyEcdsaMintWitness) =
@@ -78,7 +78,7 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
       , C.txOuts = [txOut]
       }
 
-  case (pv < 8) of
+  case pv < 8 of
     True -> do
       -- Assert that "forbidden" error occurs when attempting to use either SECP256k1 builtin
       eitherTx <- TN.buildTx' era txBodyContent w1Address w1SKey networkId
@@ -95,7 +95,7 @@ verifySchnorrAndEcdsa testnetOptions = H.integration . HE.runFinallies . TN.work
       let expectedTxIn = TN.txIn (TN.txId signedTx) 0
 
       -- Query for txo and assert it contains newly minting tokens to prove successfuluse of SECP256k1 builtins
-      resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
+      resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "TN.getTxOutAtAddress"
       txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
       H.assert txOutHasTokenValue
       H.success

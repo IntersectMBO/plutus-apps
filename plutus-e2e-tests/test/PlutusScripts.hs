@@ -37,9 +37,8 @@ import Data.ByteString qualified as BS (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Plutus.Script.Utils.Typed (IsScriptContext (mkUntypedMintingPolicy))
-import Plutus.Script.Utils.V2.Address as PSU.V2
-import Plutus.V1.Ledger.Api (Address, MintingPolicy (MintingPolicy), Validator (Validator), mkMintingPolicyScript,
-                             mkValidatorScript, unMintingPolicyScript, unValidatorScript)
+import Plutus.V1.Ledger.Api (MintingPolicy, Validator, mkMintingPolicyScript, mkValidatorScript, unMintingPolicyScript,
+                             unValidatorScript)
 import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Bytes qualified as P (bytes, fromHex)
 import Plutus.V2.Ledger.Api qualified as PlutusV2
