@@ -2,9 +2,10 @@
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use if" #-}
 
 module Spec.Builtins.SECP256k1(tests) where
 
@@ -19,7 +20,7 @@ import Test.Tasty.Hedgehog (testProperty)
 
 import Helpers (testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers qualified as TN
-import PlutusScripts qualified as PS
+import PlutusScripts.SECP256k1 qualified as PS
 import Testnet.Plutus qualified as TN
 
 tests :: TestTree
@@ -47,7 +48,7 @@ verifySchnorrAndEcdsa networkOptions = H.integration . HE.runFinallies . TN.work
 
   -- 1: spin up a testnet or use local node connected to public testnet
   (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
 

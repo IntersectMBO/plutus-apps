@@ -85,7 +85,11 @@ test-suite plutus-e2e-tests-test
   hs-source-dirs: test
   other-modules:
     Helpers
-    PlutusScripts
+    PlutusScripts.AlwaysSucceeds
+    PlutusScripts.Helpers
+    PlutusScripts.SECP256k1
+    PlutusScripts.V1TxInfo
+    Spec.AlonzoFeatures
     Spec.BabbageFeatures
     Spec.Builtins.SECP256k1
 
@@ -103,6 +107,7 @@ test-suite plutus-e2e-tests-test
     , iohk-monitoring
     , ouroboros-network
     , plutus-core                     ==1.0.0.1
+    , plutus-ledger                   >=1.0.0
     , plutus-ledger-api               ==1.0.0.1
     , plutus-tx                       ==1.0.0.0
     , plutus-tx-plugin                ==1.0.0.0

@@ -11,6 +11,8 @@
 
 module Helpers where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.List as List
@@ -18,23 +20,19 @@ import Data.Map qualified as Map
 import Data.Maybe as M
 import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
-import System.Directory qualified as IO
-import System.Environment qualified as IO
-import System.FilePath ((</>))
-import System.IO qualified as IO
-import System.IO.Temp qualified as IO
-import System.Info qualified as IO
-
 import Hedgehog (MonadTest)
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.CallStack qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFail, SubmitSuccess))
+import System.Directory qualified as IO
+import System.Environment qualified as IO
+import System.FilePath ((</>))
+import System.IO qualified as IO
+import System.IO.Temp qualified as IO
+import System.Info qualified as IO
 import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 import Testnet.Plutus qualified as TN
@@ -55,7 +53,7 @@ localNodeOptionsPreview = Left $ LocalNodeOptions
   }
 
 testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8 :: Either LocalNodeOptions TN.TestnetOptions
-testnetOptionsAlonzo6  = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra,  TN.protocolVersion = 6}
+testnetOptionsAlonzo6 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra, TN.protocolVersion = 6}
 testnetOptionsBabbage7 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 7}
 testnetOptionsBabbage8 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
 
@@ -77,9 +75,8 @@ unsafeFromMaybe (Just a) = a
 
 -- | Check whether the auto-balancing txbody build (constructBalancedTx) resulted in an error
 isTxBodyScriptExecutionError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
-isTxBodyScriptExecutionError
-  expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` (show m)
-isTxBodyScriptExecutionError _ _                        = False
+isTxBodyScriptExecutionError expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` (show m)
+isTxBodyScriptExecutionError _ _                                                   = False
 
 -- | Get path to where cardano-testnet files are
 getProjectBase :: (MonadIO m, MonadTest m) => m String
@@ -102,17 +99,17 @@ multiAssetSupportedInEra era = fromEither $ C.multiAssetSupportedInEra era
 -- | Treat CardanoEra as ShelleyBased to satisfy constraint on constructBalancedTx.
 withIsShelleyBasedEra :: C.CardanoEra era -> (C.IsShelleyBasedEra era => r) -> r
 withIsShelleyBasedEra era r =
-    case era of
-        C.AlonzoEra  -> r
-        C.BabbageEra -> r
-        _            -> error "Must use Alonzo or Babbage era"
+  case era of
+    C.AlonzoEra  -> r
+    C.BabbageEra -> r
+    _            -> error "Must use Alonzo or Babbage era"
 
 -- | Converts a C.CardanoEra to a C.ShelleyBasedEra. Used for querying in Shelley-based era.
 cardanoEraToShelleyBasedEra :: C.CardanoEra era -> C.ShelleyBasedEra era
 cardanoEraToShelleyBasedEra cEra = case cEra of
-    C.AlonzoEra  -> C.ShelleyBasedEraAlonzo
-    C.BabbageEra -> C.ShelleyBasedEraBabbage
-    _            -> error "Must use Alonzo or Babbage era"
+  C.AlonzoEra  -> C.ShelleyBasedEraAlonzo
+  C.BabbageEra -> C.ShelleyBasedEraBabbage
+  _            -> error "Must use Alonzo or Babbage era"
 
 -- | This is a copy of the workspace from
 -- hedgehog-extras:Hedgehog.Extras.Test.Base, which for darwin sets
@@ -136,17 +133,15 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
 
 -- | Start a testnet with provided testnet options (including era and protocol version)
-startTestnet :: C.CardanoEra era
-  -> TN.TestnetOptions
-  -> FilePath
-  -> FilePath
-  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+startTestnet ::
+  C.CardanoEra era ->
+  TN.TestnetOptions ->
+  FilePath ->
+  FilePath ->
+  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
 startTestnet era testnetOptions base tempAbsBasePath' = do
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf :: TC.Conf <- HE.noteShowM $
-    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
-      (tempAbsBasePath' <> "/")
-      Nothing
+  conf :: TC.Conf <- HE.noteShowM $ TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate) (tempAbsBasePath' <> "/") Nothing
   tn <- TN.testnet testnetOptions conf
 
   -- Boilerplate codecs used for protocol serialisation. The number of epochSlots is specific
@@ -165,10 +160,11 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
   pure (localNodeConnectInfo, pparams, networkId)
 
-connectToLocalNode :: C.CardanoEra era
-  -> LocalNodeOptions
-  -> FilePath
-  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+connectToLocalNode ::
+  C.CardanoEra era ->
+  LocalNodeOptions ->
+  FilePath ->
+  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
 connectToLocalNode era localNodeOptions tempAbsPath = do
   let localEnvDir' = localEnvDir localNodeOptions
 
@@ -188,9 +184,9 @@ connectToLocalNode era localNodeOptions tempAbsPath = do
   let epochSlots = C.EpochSlots 21600
       localNodeConnectInfo =
         C.LocalNodeConnectInfo
-          { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-          , C.localNodeNetworkId = networkId
-          , C.localNodeSocketPath = socketPathAbs
+          { C.localConsensusModeParams = C.CardanoModeParams epochSlots,
+            C.localNodeNetworkId = networkId,
+            C.localNodeSocketPath = socketPathAbs
           }
   pparams <- getProtocolParams era localNodeConnectInfo
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
@@ -198,9 +194,10 @@ connectToLocalNode era localNodeOptions tempAbsPath = do
 
 -- | Start testnet with cardano-testnet or use local node that's already
 --   connected to a public testnet
-setupTestEnvironment :: Either LocalNodeOptions TN.TestnetOptions
-  -> FilePath
-  -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+setupTestEnvironment ::
+  Either LocalNodeOptions TN.TestnetOptions ->
+  FilePath ->
+  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
 setupTestEnvironment options tempAbsPath = do
   case options of
     Left localNodeOptions -> do
@@ -224,9 +221,10 @@ getPoolSocketPathAbs conf tn = do
 
 -- | Query network's protocol parameters
 getProtocolParams :: (MonadIO m, MonadTest m) => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
-getProtocolParams era localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
-  $ C.queryNodeLocalState localNodeConnectInfo Nothing
-  $ C.QueryInEra (toEraInCardanoMode era) $ C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) C.QueryProtocolParameters
+getProtocolParams era localNodeConnectInfo =
+  H.leftFailM . H.leftFailM . liftIO $
+    C.queryNodeLocalState localNodeConnectInfo Nothing $
+      C.QueryInEra (toEraInCardanoMode era) $ C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) C.QueryProtocolParameters
 
 -- | Read file text envelope as a specific type (e.g. C.VerificationKey C.GenesisUTxOKey)
 --   and throw error on failure
@@ -245,10 +243,11 @@ maybeReadAs as path = do
 
 -- | Signing key and address for wallet 1
 --   Handles two key types: GenesisUTxOKey and PaymentKey
-w1 :: (MonadIO m, MonadTest m)
-  => FilePath
-  -> C.NetworkId
-  -> m (C.SigningKey C.PaymentKey, C.Address C.ShelleyAddr)
+w1 ::
+  (MonadIO m, MonadTest m) =>
+  FilePath ->
+  C.NetworkId ->
+  m (C.SigningKey C.PaymentKey, C.VerificationKey C.PaymentKey, C.Address C.ShelleyAddr)
 w1 tempAbsPath' networkId = do
   -- GenesisUTxOKey comes from cardano-testnet
   mGenesisVKey :: Maybe (C.VerificationKey C.GenesisUTxOKey) <-
@@ -261,28 +260,30 @@ w1 tempAbsPath' networkId = do
   mPaymentSKey :: Maybe (C.SigningKey C.PaymentKey) <-
     maybeReadAs (C.AsSigningKey C.AsPaymentKey) $ tempAbsPath' </> "utxo-keys/utxo1.skey"
 
-  let
-    vKey :: C.VerificationKey C.PaymentKey = maybe (fromJust mPaymentVKey) (C.castVerificationKey) mGenesisVKey
-    sKey :: C.SigningKey C.PaymentKey = maybe (fromJust mPaymentSKey) (C.castSigningKey) mGenesisSKey
-    address = makeAddress (Left vKey) networkId
+  let vKey :: C.VerificationKey C.PaymentKey = maybe (fromJust mPaymentVKey) (C.castVerificationKey) mGenesisVKey
+      sKey :: C.SigningKey C.PaymentKey = maybe (fromJust mPaymentSKey) (C.castSigningKey) mGenesisSKey
+      address = makeAddress (Left vKey) networkId
 
-  return (sKey, address)
+  return (sKey, vKey, address)
 
 -- | Make a payment or script address
-makeAddress :: (Either (C.VerificationKey C.PaymentKey) C.ScriptHash)
-  -> C.NetworkId
-  -> C.Address C.ShelleyAddr
-makeAddress (Left paymentKey)  nId =
-    C.makeShelleyAddress nId (C.PaymentCredentialByKey $ C.verificationKeyHash paymentKey) C.NoStakeAddress
+makeAddress ::
+  (Either (C.VerificationKey C.PaymentKey) C.ScriptHash) ->
+  C.NetworkId ->
+  C.Address C.ShelleyAddr
+makeAddress (Left paymentKey) nId =
+  C.makeShelleyAddress nId (C.PaymentCredentialByKey $ C.verificationKeyHash paymentKey) C.NoStakeAddress
 makeAddress (Right scriptHash) nId =
-    C.makeShelleyAddress nId (C.PaymentCredentialByScript scriptHash) C.NoStakeAddress
+  C.makeShelleyAddress nId (C.PaymentCredentialByScript scriptHash) C.NoStakeAddress
 
 -- | Build TxOut for spending or minting with no datum or reference script present
-txOut :: C.CardanoEra era
-  -> C.Value
-  -> C.Address C.ShelleyAddr
-  -> C.TxOut C.CtxTx era
-txOut era value address = C.TxOut
+txOut ::
+  C.CardanoEra era ->
+  C.Value ->
+  C.Address C.ShelleyAddr ->
+  C.TxOut C.CtxTx era
+txOut era value address =
+  C.TxOut
     (maybeAnyAddressInEra $ C.anyAddressInEra era $ C.toAddressAny address)
     (C.TxOutValue (multiAssetSupportedInEra era) value)
     C.TxOutDatumNone
@@ -292,18 +293,22 @@ txOut era value address = C.TxOut
     maybeAnyAddressInEra (Just aie) = aie
 
 -- | Build TxOut with a reference script
-txOutWithRefScript :: C.CardanoEra era
-  -> C.Value
-  -> C.Address C.ShelleyAddr
-  -> C.Script lang
-  -> C.TxOut C.CtxTx era
+txOutWithRefScript ::
+  C.CardanoEra era ->
+  C.Value ->
+  C.Address C.ShelleyAddr ->
+  C.Script lang ->
+  C.TxOut C.CtxTx era
 txOutWithRefScript era value address script = withRefScript era script $ txOut era value address
 
-txOutWithInlineDatum, txOutWithDatumHash, txOutWithDatumInTx :: C.CardanoEra era
-  -> C.Value
-  -> C.Address C.ShelleyAddr
-  -> C.ScriptData
-  -> C.TxOut C.CtxTx era
+txOutWithInlineDatum,
+  txOutWithDatumHash,
+  txOutWithDatumInTx ::
+    C.CardanoEra era ->
+    C.Value ->
+    C.Address C.ShelleyAddr ->
+    C.ScriptData ->
+    C.TxOut C.CtxTx era
 -- | Build TxOut with inline datum
 txOutWithInlineDatum era value address datum = withInlineDatum era datum $ txOut era value address
 -- | Build TxOut with datum hash
@@ -312,26 +317,30 @@ txOutWithDatumHash era value address datum = withDatumHash era datum $ txOut era
 txOutWithDatumInTx era value address datum = withDatumInTx era datum $ txOut era value address
 
 -- | Add reference script to TxOut
-withRefScript :: C.CardanoEra era
-  -> C.Script lang
-  -> C.TxOut C.CtxTx era
-  -> C.TxOut C.CtxTx era
+withRefScript ::
+  C.CardanoEra era ->
+  C.Script lang ->
+  C.TxOut C.CtxTx era ->
+  C.TxOut C.CtxTx era
 withRefScript era script (C.TxOut e v d _) =
-    C.TxOut e v d (C.ReferenceScript (refInsScriptsAndInlineDatsSupportedInEra era) (C.toScriptInAnyLang script))
+  C.TxOut e v d (C.ReferenceScript (refInsScriptsAndInlineDatsSupportedInEra era) (C.toScriptInAnyLang script))
 
-withInlineDatum, withDatumHash, withDatumInTx :: C.CardanoEra era
-  -> C.ScriptData
-  -> C.TxOut C.CtxTx era
-  -> C.TxOut C.CtxTx era
+withInlineDatum,
+  withDatumHash,
+  withDatumInTx ::
+    C.CardanoEra era ->
+    C.ScriptData ->
+    C.TxOut C.CtxTx era ->
+    C.TxOut C.CtxTx era
 -- | Add inline datum to TxOut
 withInlineDatum era datum (C.TxOut e v _ rs) =
-    C.TxOut e v (C.TxOutDatumInline (refInsScriptsAndInlineDatsSupportedInEra era) datum) rs
+  C.TxOut e v (C.TxOutDatumInline (refInsScriptsAndInlineDatsSupportedInEra era) datum) rs
 -- | Add datum hash to TxOut
 withDatumHash era datum (C.TxOut e v _ rs) =
-    C.TxOut e v (C.TxOutDatumHash (scriptDataSupportedInEra era) (C.hashScriptData datum)) rs
+  C.TxOut e v (C.TxOutDatumHash (scriptDataSupportedInEra era) (C.hashScriptData datum)) rs
 -- | Add datum hash to TxOut whilst including datum value in txbody
 withDatumInTx era datum (C.TxOut e v _ rs) =
-    C.TxOut e v (C.TxOutDatumInTx (scriptDataSupportedInEra era) datum)  rs
+  C.TxOut e v (C.TxOutDatumInTx (scriptDataSupportedInEra era) datum) rs
 
 refInsScriptsAndInlineDatsSupportedInEra :: C.CardanoEra era -> C.ReferenceTxInsScriptsInlineDatumsSupportedInEra era
 refInsScriptsAndInlineDatsSupportedInEra = fromMaybe . C.refInsScriptsAndInlineDatsSupportedInEra
@@ -346,20 +355,22 @@ scriptDataSupportedInEra = fromMaybe . C.scriptDataSupportedInEra
     fromMaybe (Just e) = e
 
 -- | Find the first UTxO at address and return as TxIn. Used for txbody's txIns.
-firstTxIn :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> C.LocalNodeConnectInfo C.CardanoMode
-  -> C.Address C.ShelleyAddr
-  -> m C.TxIn
+firstTxIn ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address C.ShelleyAddr ->
+  m C.TxIn
 firstTxIn era = txInAtAddressByIndex era 0
 
 -- | Find UTxO at address by index and return as TxIn. Used for txbody's txIns.
-txInAtAddressByIndex :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> Int
-  -> C.LocalNodeConnectInfo C.CardanoMode
-  -> C.Address C.ShelleyAddr
-  -> m C.TxIn
+txInAtAddressByIndex ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  Int ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address C.ShelleyAddr ->
+  m C.TxIn
 txInAtAddressByIndex era idx localNodeConnectInfo address = do
   atM idx =<< txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
   where
@@ -367,23 +378,28 @@ txInAtAddressByIndex era idx localNodeConnectInfo address = do
     atM i' l = return $ l !! i'
 
 -- | Find the TxIn at address which is ada-only and has the most ada
-adaOnlyTxInAtAddress :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> C.LocalNodeConnectInfo C.CardanoMode
-  -> C.Address C.ShelleyAddr
-  -> m C.TxIn
+adaOnlyTxInAtAddress ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address C.ShelleyAddr ->
+  m C.TxIn
 adaOnlyTxInAtAddress era localNodeConnectInfo address = do
   utxo <- findUTxOByAddress era localNodeConnectInfo address
   return $ fst $ head $ sortByMostAda $ adaOnly $ Map.toList $ C.unUTxO utxo
   where
-    adaOnly = filter
-      (\(_, C.TxOut _ (C.TxOutValue _ v) _ _) ->
-        ((length $ C.valueToList v) == 1) &&
-        ((fst $ head $ C.valueToList v) == C.AdaAssetId))
-    sortByMostAda = sortBy
-      (\(_, C.TxOut _ (C.TxOutValue _ v1) _ _)
-        (_, C.TxOut _ (C.TxOutValue _ v2) _ _) ->
-            compare (snd $ head $ C.valueToList v2) (snd $ head $ C.valueToList v1))
+    adaOnly =
+      filter
+        ( \(_, C.TxOut _ (C.TxOutValue _ v) _ _) ->
+            ((length $ C.valueToList v) == 1)
+              && ((fst $ head $ C.valueToList v) == C.AdaAssetId)
+        )
+    sortByMostAda =
+      sortBy
+        ( \(_, C.TxOut _ (C.TxOutValue _ v1) _ _)
+           (_, C.TxOut _ (C.TxOutValue _ v2) _ _) ->
+              compare (snd $ head $ C.valueToList v2) (snd $ head $ C.valueToList v1)
+        )
 
 -- | Get TxIns from all UTxOs
 txInsFromUtxo :: (MonadIO m) => C.UTxO era -> m [C.TxIn]
@@ -392,72 +408,106 @@ txInsFromUtxo utxos = do
   return txIns
 
 -- | Query ledger for UTxOs at address
-findUTxOByAddress
-  :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO era)
-findUTxOByAddress era localNodeConnectInfo address = let
-  query = C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) $ C.QueryUTxO $
-    C.QueryUTxOByAddress $ Set.singleton (C.toAddressAny address)
-  in
-  H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra (toEraInCardanoMode era) query
+findUTxOByAddress ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address a ->
+  m (C.UTxO era)
+findUTxOByAddress era localNodeConnectInfo address =
+  let query =
+        C.QueryInShelleyBasedEra (cardanoEraToShelleyBasedEra era) $
+          C.QueryUTxO $
+            C.QueryUTxOByAddress $ Set.singleton (C.toAddressAny address)
+   in H.leftFailM . H.leftFailM . liftIO $
+        C.queryNodeLocalState localNodeConnectInfo Nothing $
+          C.QueryInEra (toEraInCardanoMode era) query
 
 -- | Get [TxIn] and total lovelace value for an address.
-getAddressTxInsLovelaceValue
-  :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Lovelace)
+getAddressTxInsLovelaceValue ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address a ->
+  m ([C.TxIn], C.Lovelace)
 getAddressTxInsLovelaceValue era con address = do
   utxo <- findUTxOByAddress era con address
-  let
-    (txIns, txOuts) = unzip $ Map.toList $ C.unUTxO utxo
-    values = map (\case C.TxOut _ v _ _ -> C.txOutValueToLovelace v) txOuts
+  let (txIns, txOuts) = unzip $ Map.toList $ C.unUTxO utxo
+      values = map (\case C.TxOut _ v _ _ -> C.txOutValueToLovelace v) txOuts
   pure (txIns, sum values)
 
 -- | Get [TxIn] and value for an address (including assets).
-getAddressTxInsValue
-  :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Value)
+getAddressTxInsValue ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address a ->
+  m ([C.TxIn], C.Value)
 getAddressTxInsValue era con address = do
   utxo <- findUTxOByAddress era con address
-  let
-    (txIns, txOuts) = unzip $ Map.toList $ C.unUTxO utxo
-    values = map (\case C.TxOut _ v _ _ -> C.txOutValueToValue v) txOuts
+  let (txIns, txOuts) = unzip $ Map.toList $ C.unUTxO utxo
+      values = map (\case C.TxOut _ v _ _ -> C.txOutValueToValue v) txOuts
   pure (txIns, (mconcat values))
 
 -- | Empty transaction body to begin building from.
 emptyTxBodyContent :: C.CardanoEra era -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx era
-emptyTxBodyContent era pparams = C.TxBodyContent
-  { C.txIns              = []
-  , C.txInsCollateral    = C.TxInsCollateralNone
-  , C.txInsReference     = C.TxInsReferenceNone
-  , C.txOuts             = []
-  , C.txTotalCollateral  = C.TxTotalCollateralNone
-  , C.txReturnCollateral = C.TxReturnCollateralNone
-  , C.txFee              = C.TxFeeExplicit (fromTxFeesExplicit $ C.txFeesExplicitInEra era) 0
-  , C.txValidityRange    = (C.TxValidityNoLowerBound,(C.TxValidityNoUpperBound $
-                             fromNoUpperBoundMaybe $ C.validityNoUpperBoundSupportedInEra era))
-  , C.txMetadata         = C.TxMetadataNone
-  , C.txAuxScripts       = C.TxAuxScriptsNone
-  , C.txExtraKeyWits     = C.TxExtraKeyWitnessesNone
-  , C.txProtocolParams   = C.BuildTxWith $ Just pparams
-  , C.txWithdrawals      = C.TxWithdrawalsNone
-  , C.txCertificates     = C.TxCertificatesNone
-  , C.txUpdateProposal   = C.TxUpdateProposalNone
-  , C.txMintValue        = C.TxMintNone
-  , C.txScriptValidity   = C.TxScriptValidityNone
-  }
+emptyTxBodyContent era pparams =
+  C.TxBodyContent
+    { C.txIns = [],
+      C.txInsCollateral = C.TxInsCollateralNone,
+      C.txInsReference = C.TxInsReferenceNone,
+      C.txOuts = [],
+      C.txTotalCollateral = C.TxTotalCollateralNone,
+      C.txReturnCollateral = C.TxReturnCollateralNone,
+      C.txFee = C.TxFeeExplicit (fromTxFeesExplicit $ C.txFeesExplicitInEra era) 0,
+      C.txValidityRange =
+        ( C.TxValidityNoLowerBound,
+          C.TxValidityNoUpperBound $
+              fromNoUpperBoundMaybe $ C.validityNoUpperBoundSupportedInEra era
+        ),
+      C.txMetadata = C.TxMetadataNone,
+      C.txAuxScripts = C.TxAuxScriptsNone,
+      C.txExtraKeyWits = C.TxExtraKeyWitnessesNone,
+      C.txProtocolParams = C.BuildTxWith $ Just pparams,
+      C.txWithdrawals = C.TxWithdrawalsNone,
+      C.txCertificates = C.TxCertificatesNone,
+      C.txUpdateProposal = C.TxUpdateProposalNone,
+      C.txMintValue = C.TxMintNone,
+      C.txScriptValidity = C.TxScriptValidityNone
+    }
   where
     fromNoUpperBoundMaybe Nothing    = error "Era must support no upper bound"
     fromNoUpperBoundMaybe (Just nub) = nub
 
-    fromTxFeesExplicit (Left _)    = error "Era must support explicit fees"
-    fromTxFeesExplicit (Right tfe) = tfe
+txFee :: C.CardanoEra era -> C.Lovelace -> C.TxFee era
+txFee era = C.TxFeeExplicit (fromTxFeesExplicit $ C.txFeesExplicitInEra era)
+
+txExtraKeyWits :: C.CardanoEra era -> [C.VerificationKey C.PaymentKey] -> C.TxExtraKeyWitnesses era
+txExtraKeyWits era pk = case C.extraKeyWitnessesSupportedInEra era of
+    Nothing        -> error "era supporting extra key witnesses only"
+    Just supported -> C.TxExtraKeyWitnesses supported $ C.verificationKeyHash <$> pk
+
+fromTxFeesExplicit :: Either imp exp -> exp
+fromTxFeesExplicit (Left _)    = error "Era must support explicit fees"
+fromTxFeesExplicit (Right tfe) = tfe
 
 -- | Produce collateral inputs if era supports it. Used for building txbody.
 txInsCollateral :: C.CardanoEra era -> [C.TxIn] -> C.TxInsCollateral era
 txInsCollateral era txIns = case C.collateralSupportedInEra era of
-    Nothing        -> error "era supporting collateral only"
-    Just supported -> C.TxInsCollateral supported txIns
+  Nothing        -> error "era supporting collateral only"
+  Just supported -> C.TxInsCollateral supported txIns
+
+txValidityRange :: C.CardanoEra era -> C.SlotNo -> C.SlotNo -> (C.TxValidityLowerBound era, C.TxValidityUpperBound era)
+txValidityRange era lowerSlot upperSlot =
+  (C.TxValidityLowerBound validityLowerBoundSupportedInEra lowerSlot,
+   C.TxValidityUpperBound validityUpperBoundSupportedInEra upperSlot)
+  where
+    validityLowerBoundSupportedInEra = case C.validityLowerBoundSupportedInEra era of
+        Nothing   -> error "era must support lower bound"
+        (Just lb) -> lb
+    validityUpperBoundSupportedInEra = case C.validityUpperBoundSupportedInEra era of
+        Nothing   -> error "era must support upper bound"
+        (Just ub) -> ub
 
 -- | Get TxId from a signed transaction.
 --  Useful for producing TxIn for building subsequant transaction.
@@ -475,56 +525,63 @@ pubkeyTxIns = map (\txIn -> txInWitness txIn $ C.KeyWitness C.KeyWitnessForSpend
 txInWitness :: C.TxIn -> (C.Witness C.WitCtxTxIn era) -> (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))
 txInWitness txIn wit = (txIn, C.BuildTxWith wit)
 
-txInsReference :: C.CardanoEra era
-  -> [C.TxIn]
-  -> C.TxInsReference build era
+txInsReference ::
+  C.CardanoEra era ->
+  [C.TxIn] ->
+  C.TxInsReference build era
 txInsReference era txIns = case era of
-    C.BabbageEra -> C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txIns
+  C.BabbageEra -> C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txIns
 
-txMintValue :: C.CardanoEra era
-  -> C.Value
-  -> Map.Map C.PolicyId (C.ScriptWitness C.WitCtxMint era)
-  -> C.TxMintValue C.BuildTx era
+txMintValue ::
+  C.CardanoEra era ->
+  C.Value ->
+  Map.Map C.PolicyId (C.ScriptWitness C.WitCtxMint era) ->
+  C.TxMintValue C.BuildTx era
 txMintValue era tv m = C.TxMintValue (multiAssetSupportedInEra era) tv (C.BuildTxWith m)
 
-buildTx :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> C.TxBodyContent C.BuildTx era
-  -> C.Address C.ShelleyAddr
-  -> C.SigningKey C.PaymentKey
-  -> C.NetworkId
-  -> m (C.Tx era)
+buildTx ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.TxBodyContent C.BuildTx era ->
+  C.Address C.ShelleyAddr ->
+  C.SigningKey C.PaymentKey ->
+  C.NetworkId ->
+  m (C.Tx era)
 buildTx era txBody changeAddress sKey networkId = do
-    eitherTx <- buildTx' era txBody changeAddress sKey networkId
-    return $ fromEither eitherTx
-    where
-      fromEither (Left e)   = error $ show e
-      fromEither (Right tx) = tx
+  eitherTx <- buildTx' era txBody changeAddress sKey networkId
+  return $ fromEither eitherTx
+  where
+    fromEither (Left e)   = error $ show e
+    fromEither (Right tx) = tx
 
 -- | Maybe build signed transaction using convenience functions for calculating fees and exunits.
 --   Useful for asserting for error.
-buildTx' :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> C.TxBodyContent C.BuildTx era
-  -> C.Address C.ShelleyAddr
-  -> C.SigningKey C.PaymentKey
-  -> C.NetworkId
-  -> m (Either C.TxBodyErrorAutoBalance (C.Tx era))
+buildTx' ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.TxBodyContent C.BuildTx era ->
+  C.Address C.ShelleyAddr ->
+  C.SigningKey C.PaymentKey ->
+  C.NetworkId ->
+  m (Either C.TxBodyErrorAutoBalance (C.Tx era))
 buildTx' era txBody changeAddress sKey networkId = do
-  (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <- H.leftFailM . liftIO $
-    C.queryStateForBalancedTx era networkId allInputs
+  (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <-
+    H.leftFailM . liftIO $
+      C.queryStateForBalancedTx era networkId allInputs
 
-  return $ withIsShelleyBasedEra era $ C.constructBalancedTx
-    (toEraInCardanoMode era)
-    txBody
-    (C.shelleyAddressInEra changeAddress)
-    Nothing -- Override key witnesses
-    nodeEraUtxo -- tx inputs
-    pparams
-    eraHistory
-    systemStart
-    stakePools
-    [C.WitnessPaymentKey sKey]
+  return $
+    withIsShelleyBasedEra era $
+      C.constructBalancedTx
+        (toEraInCardanoMode era)
+        txBody
+        (C.shelleyAddressInEra changeAddress)
+        Nothing -- Override key witnesses
+        nodeEraUtxo -- tx inputs
+        pparams
+        eraHistory
+        systemStart
+        stakePools
+        [C.WitnessPaymentKey sKey]
   where
     allInputs :: [C.TxIn]
     allInputs = do
@@ -533,11 +590,28 @@ buildTx' era txBody changeAddress sKey networkId = do
         C.TxInsReferenceNone        -> txIns
         C.TxInsReference _ refTxIns -> txIns ++ refTxIns
 
-submitTx :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> C.LocalNodeConnectInfo C.CardanoMode
-  -> C.Tx era
-  -> m ()
+-- | Build txbody with no calculated change, fees or execution unit
+buildRawTx :: (MonadTest m) =>
+  C.CardanoEra era ->
+  C.TxBodyContent C.BuildTx era ->
+  m (C.TxBody era)
+buildRawTx era = withIsShelleyBasedEra era $ HE.leftFail . C.makeTransactionBody -- TODO: handle error
+
+-- | Witness txbody with signing key when not using convenience build function
+signTx :: (MonadIO m) =>
+  C.CardanoEra  era ->
+  C.TxBody era ->
+  C.SigningKey C.PaymentKey ->
+  m (C.KeyWitness era)
+signTx era txbody skey = return $
+  withIsShelleyBasedEra era $ C.makeShelleyKeyWitness txbody (C.WitnessPaymentKey skey)
+
+submitTx ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Tx era ->
+  m ()
 submitTx era localNodeConnectInfo tx = do
   submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
     liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (toEraInCardanoMode era)
@@ -549,12 +623,13 @@ submitTx era localNodeConnectInfo tx = do
       SubmitSuccess     -> pure ()
 
 --TODO: loop timeout
-waitForTxIdAtAddress :: (MonadIO m, MonadTest m)
-  => C.CardanoEra era
-  -> C.LocalNodeConnectInfo C.CardanoMode
-  -> C.Address C.ShelleyAddr
-  -> C.TxId
-  -> m ()
+waitForTxIdAtAddress ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Address C.ShelleyAddr ->
+  C.TxId ->
+  m ()
 waitForTxIdAtAddress era localNodeConnectInfo address txId = do
   let loop = do
         txIns <- txInsFromUtxo =<< findUTxOByAddress era localNodeConnectInfo address
