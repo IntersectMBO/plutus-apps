@@ -53,10 +53,6 @@
       url = "github:cachix/pre-commit-hooks.nix";
       flake = false;
     };
-    spago2nix = {
-      url = "github:justinwoo/spago2nix";
-      flake = false;
-    };
     sphinxcontrib-haddock = {
       url = "github:michaelpj/sphinxcontrib-haddock";
       flake = false;

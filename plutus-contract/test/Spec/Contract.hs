@@ -287,7 +287,7 @@ tests =
               _ <- activateContract w1 c tag
               void (Trace.waitNSlots 2)
 
-        , let submitCardanoTxConstraintsWith sl constraints = do
+        , let submitTxConstraintsWith sl constraints = do
                 unbalancedTx <- mkTxConstraints @Void sl constraints
                 tx <- balanceTx unbalancedTx
                 submitBalancedTx $ Ledger.CardanoApiTx $ tx ^?! Ledger.cardanoApiTx
@@ -296,7 +296,7 @@ tests =
                 let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
                 let payment = Constraints.mustPayToPubKey w2PubKeyHash
                                                           (Ada.adaValueOf 10)
-                tx <- submitCardanoTxConstraintsWith mempty payment
+                tx <- submitTxConstraintsWith mempty payment
                 -- There should be 2 utxos. We suppose the first belongs to W2
                 -- and the second one belongs to the wallet calling the contract.
                 let utxo = (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
@@ -311,7 +311,7 @@ tests =
                 pubKeyHash <- ownFirstPaymentPubKeyHash
                 ciTxOutM <- unspentTxOutFromRef utxo
                 let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
-                submitCardanoTxConstraintsWith lookups $ Constraints.mustSpendPubKeyOutput utxo
+                submitTxConstraintsWith lookups $ Constraints.mustSpendPubKeyOutput utxo
                                                       <> Constraints.mustBeSignedBy pubKeyHash
                 s <- awaitTxOutStatusChange utxo
                 tell [s]
