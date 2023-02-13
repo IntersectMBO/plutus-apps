@@ -26,15 +26,15 @@ tests :: TestTree
 tests = testGroup "reference script"
   [ testProperty "mint a token with a reference script in Babbage PV7" (referenceScriptMint testnetOptionsBabbage7)
   , testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint testnetOptionsBabbage8)
-  --, testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint localNodeOptionsPreview)
+  --, testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint localNodeOptionsPreview) -- uncomment to use local node on preview testnet
 
   , testProperty "spend locked funds with a reference script using inline datum in Babbage PV7" (referenceScriptInlineDatumSpend testnetOptionsBabbage7)
   , testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend testnetOptionsBabbage8)
-  --, testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend localNodeOptionsPreview)
+  --, testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend localNodeOptionsPreview) -- uncomment to use local node on preview testnet
 
   , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV7" (referenceScriptDatumHashSpend testnetOptionsBabbage7)
   , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend testnetOptionsBabbage8)
-  --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend localNodeOptionsPreview)
+  --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend localNodeOptionsPreview) -- uncomment to use local node on preview testnet
   ]
 
 referenceScriptMint :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property

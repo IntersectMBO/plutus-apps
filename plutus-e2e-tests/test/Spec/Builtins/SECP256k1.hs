@@ -27,7 +27,7 @@ tests = testGroup "SECP256k1"
   [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsa testnetOptionsAlonzo6)
   , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsa testnetOptionsBabbage7)
   , testProperty "can use SECP256k1 builtins in Babbage PV8" (verifySchnorrAndEcdsa testnetOptionsBabbage8)
-  --, testProperty "can use SECP256k1 builtins in Babbage PV8 (on preview testnet)" (verifySchnorrAndEcdsa localNodeOptionsPreview)
+  --, testProperty "can use SECP256k1 builtins in Babbage PV8 (on preview testnet)" (verifySchnorrAndEcdsa localNodeOptionsPreview) -- uncomment to use local node on preview testnet
   ]
 
 {- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can only

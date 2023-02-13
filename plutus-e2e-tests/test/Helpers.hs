@@ -4,20 +4,20 @@
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-missing-import-lists #-}
+
 module Helpers where
 
-import Control.Concurrent qualified as IO
-import Control.Concurrent.Async qualified as IO
-import Control.Monad (join, void, when)
+import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Function ((&))
 import Data.List as List
 import Data.Map qualified as Map
-import Data.Map.Lazy (isSubmapOf)
 import Data.Maybe as M
 import Data.Set qualified as Set
 import GHC.Stack qualified as GHC
-import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
 import System.Environment qualified as IO
 import System.FilePath ((</>))
@@ -40,16 +40,16 @@ import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlF
 import Testnet.Plutus qualified as TN
 
 data LocalNodeOptions = LocalNodeOptions
-  { eraL             :: C.AnyCardanoEra
-  , protocolVersionL :: Int
-  , localEnvDir      :: FilePath -- path to directory containing 'utxo-keys' and 'ipc' directories
-  , testnetMagic     :: Int
+  { era             :: C.AnyCardanoEra
+  , protocolVersion :: Int
+  , localEnvDir     :: FilePath -- path to directory containing 'utxo-keys' and 'ipc' directories
+  , testnetMagic    :: Int
   }
 
 localNodeOptionsPreview :: Either LocalNodeOptions TN.TestnetOptions
 localNodeOptionsPreview = Left $ LocalNodeOptions
-  { eraL = C.AnyCardanoEra C.BabbageEra
-  , protocolVersionL = 8
+  { era = C.AnyCardanoEra C.BabbageEra
+  , protocolVersion = 8
   , localEnvDir = "/tmp/preview"
   , testnetMagic = 2
   }
@@ -60,10 +60,10 @@ testnetOptionsBabbage7 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardano
 testnetOptionsBabbage8 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.BabbageEra, TN.protocolVersion = 8}
 
 eraFromOptions :: (MonadTest m) => Either LocalNodeOptions TN.TestnetOptions -> m C.AnyCardanoEra
-eraFromOptions = return . either eraL TN.era
+eraFromOptions = return . either era TN.era
 
 pvFromOptions :: (MonadTest m) => Either LocalNodeOptions TN.TestnetOptions -> m Int
-pvFromOptions = return . either protocolVersionL TN.protocolVersion
+pvFromOptions = return . either protocolVersion TN.protocolVersion
 
 -- | Right from Either or throw Left error
 unsafeFromRight :: Show l => Either l r -> r
@@ -170,14 +170,14 @@ connectToLocalNode :: C.CardanoEra era
   -> FilePath
   -> H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
 connectToLocalNode era localNodeOptions tempAbsPath = do
-  localEnvDir <- return $ localEnvDir localNodeOptions
+  let localEnvDir' = localEnvDir localNodeOptions
 
   HE.createDirectoryIfMissing (tempAbsPath </> "utxo-keys")
   HE.createDirectoryIfMissing (tempAbsPath </> "sockets")
 
-  HE.createFileLink (localEnvDir </> "test.skey") (tempAbsPath </> "utxo-keys/utxo1.skey")
-  HE.createFileLink (localEnvDir </> "test.vkey") (tempAbsPath </> "utxo-keys/utxo1.vkey")
-  HE.createFileLink (localEnvDir </> "ipc/node.socket") (tempAbsPath </> "sockets/node.socket")
+  HE.createFileLink (localEnvDir' </> "test.skey") (tempAbsPath </> "utxo-keys/utxo1.skey")
+  HE.createFileLink (localEnvDir' </> "test.vkey") (tempAbsPath </> "utxo-keys/utxo1.vkey")
+  HE.createFileLink (localEnvDir' </> "ipc/node.socket") (tempAbsPath </> "sockets/node.socket")
 
   let socketPathAbs = tempAbsPath </> "sockets/node.socket"
       networkId = C.Testnet $ C.NetworkMagic $ fromIntegral (testnetMagic localNodeOptions)
@@ -204,12 +204,12 @@ setupTestEnvironment :: Either LocalNodeOptions TN.TestnetOptions
 setupTestEnvironment options tempAbsPath = do
   case options of
     Left localNodeOptions -> do
-      C.AnyCardanoEra era <- return $ eraL localNodeOptions
-      pure =<< connectToLocalNode era localNodeOptions tempAbsPath
+      C.AnyCardanoEra era <- return $ era localNodeOptions
+      connectToLocalNode era localNodeOptions tempAbsPath
     Right testnetOptions -> do
       C.AnyCardanoEra era <- return $ TN.era testnetOptions
       base <- getProjectBase
-      pure =<< startTestnet era testnetOptions base tempAbsPath
+      startTestnet era testnetOptions base tempAbsPath
 
 -- | Network ID of the testnet
 getNetworkId :: TN.TestnetRuntime -> C.NetworkId
@@ -220,8 +220,7 @@ getPoolSocketPathAbs :: (MonadTest m, MonadIO m) => TC.Conf -> TN.TestnetRuntime
 getPoolSocketPathAbs conf tn = do
   let tempAbsPath = TC.tempAbsPath conf
   socketPath <- IO.sprocketArgumentName <$> H.headM (TN.poolNodeSprocket <$> TN.poolNodes tn)
-  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
-  pure socketPathAbs
+  H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
 
 -- | Query network's protocol parameters
 getProtocolParams :: (MonadIO m, MonadTest m) => C.CardanoEra era -> C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
@@ -471,7 +470,7 @@ txIn :: C.TxId -> Int -> C.TxIn
 txIn txId txIx = C.TxIn txId (C.TxIx $ fromIntegral txIx)
 
 pubkeyTxIns  :: [C.TxIn] -> [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))]
-pubkeyTxIns txIns = map (\txIn -> txInWitness txIn $ C.KeyWitness C.KeyWitnessForSpending) txIns
+pubkeyTxIns = map (\txIn -> txInWitness txIn $ C.KeyWitness C.KeyWitnessForSpending)
 
 txInWitness :: C.TxIn -> (C.Witness C.WitCtxTxIn era) -> (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn era))
 txInWitness txIn wit = (txIn, C.BuildTxWith wit)
@@ -570,7 +569,7 @@ waitForTxInAtAddress :: (MonadIO m, MonadTest m)
   -> C.TxIn
   -> m ()
 waitForTxInAtAddress era localNodeConnectInfo address txIn = do
-  let timeoutSeconds = 90
+  let timeoutSeconds = 90 :: Int
       loop i = do
         if i == 0
           then error "waitForTxInAtAddress timeout"
@@ -605,7 +604,7 @@ getTxOutAtAddress' era localNodeConnectInfo address txIn = do
   utxos <- findUTxOByAddress era localNodeConnectInfo address
   return $ Map.lookup txIn $ C.unUTxO utxos
 
-txOutHasValue :: (MonadIO m, MonadTest m)
+txOutHasValue :: (MonadIO m)
   => C.TxOut C.CtxUTxO era
   -> C.Value
   -> m Bool
