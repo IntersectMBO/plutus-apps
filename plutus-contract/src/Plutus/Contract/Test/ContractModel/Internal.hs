@@ -178,13 +178,8 @@ instance HasChainIndex (EmulatorTraceWithInstances state) where
     -- Note, we don't store the genesis transaction in the index but put it in the before state
     -- instead to avoid showing that as a balance change in the models.
     where chainStateToChainIndex nid cs =
-            ChainIndex { before = beforeState
-                       , after  = CM.ChainState
-                                    { slot = fromInteger . toInteger $ _chainCurrentSlot cs
-                                    , utxo = makeUTxOs $ Index.initialise (_chainNewestFirst cs)
-                                    }
-                       -- The Backwards order
-                       , transactions = fst $ foldr addBlock ([], beforeState)
+            ChainIndex { -- The Backwards order
+                         transactions = fst $ foldr addBlock ([], beforeState)
                                                              ( reverse
                                                              . drop 1
                                                              . reverse
