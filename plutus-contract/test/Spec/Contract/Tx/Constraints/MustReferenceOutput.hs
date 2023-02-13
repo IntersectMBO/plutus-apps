@@ -30,7 +30,6 @@ import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
 import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidatorHash)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as Tx.Cons
 import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
@@ -38,7 +37,7 @@ import Plutus.ChainIndex.Emulator (diskState)
 import Plutus.ChainIndex.Emulator.DiskState (addressMap, unCredentialMap)
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
-                             checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
+                             checkPredicateOptions, defaultCheckOptions, w1)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts qualified as PSU
 import Plutus.Script.Utils.Typed (Any)
@@ -55,36 +54,32 @@ import Wallet.Emulator.Wallet qualified as Wallet
 makeClassyPrisms ''L.ScriptError
 
 tests :: TestTree
-tests =
-    testGroup "MustReferenceOutput"
-      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? submitTxConstraintsWith
-      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? submitCardanoTxConstraintsWith
-      ]
+tests = testGroup "MustReferenceOutput" [v1Tests, v2Tests]
 
-v1Tests :: SubmitTx -> TestTree
-v1Tests sub = testGroup "Plutus V1" $
+v1Tests :: TestTree
+v1Tests = testGroup "Plutus V1" $
    [ v1FeaturesNotAvailableTests
-   ] ?? sub ?? PSU.PlutusV1
+   ] ?? PSU.PlutusV1
 
-v2Tests :: SubmitTx -> TestTree
-v2Tests sub = testGroup "Plutus V2" $
+v2Tests :: TestTree
+v2Tests = testGroup "Plutus V2" $
   [ v2FeaturesTests
-  ] ?? sub ?? PSU.PlutusV2
+  ] ?? PSU.PlutusV2
 
-v1FeaturesNotAvailableTests :: SubmitTx -> PSU.Language -> TestTree
-v1FeaturesNotAvailableTests sub t = testGroup "Plutus V1 features" $
+v1FeaturesNotAvailableTests :: PSU.Language -> TestTree
+v1FeaturesNotAvailableTests t = testGroup "Plutus V1 features" $
     [ ledgerValidationtErrorWhenUsingV1Script
     , phase2FailureWhenUsingV1Script
-    ] ?? sub ?? t
+    ] ?? t
 
-v2FeaturesTests :: SubmitTx -> PSU.Language -> TestTree
-v2FeaturesTests sub t = testGroup "Plutus V2 features" $
+v2FeaturesTests :: PSU.Language -> TestTree
+v2FeaturesTests t = testGroup "Plutus V2 features" $
     [ mustReferenceOutputWithSinglePubkeyOutput
     , mustReferenceOutputWithMultiplePubkeyOutputs
     , mustReferenceOutputWithSingleScriptOutput
     , ledgerValidationErrorWhenReferencingNonExistingTxo
     , phase2FailureWhenUsingV2Script
-    ] ?? sub ?? t
+    ] ?? t
 
 tknValue :: PSU.Language -> C.Value
 tknValue l = Value.singleton (Value.policyId $ getVersionedScript MustReferenceOutputPolicy l) "mint-me" 1
@@ -101,18 +96,17 @@ defTrace contract = do
 -- | Contract to a single transaction with mustSpendScriptOutputs offchain
 -- constraint and mint with policy using matching onchain constraint.
 mustReferenceOutputContract
-    :: SubmitTx
-    -> PSU.Language
+    :: PSU.Language
     -> [Tx.TxOutRef]
     -> [Tx.TxOutRef]
     -> Contract () Empty ContractError ()
-mustReferenceOutputContract submitTxFromConstraints l offChainTxoRefs onChainTxoRefs = do
+mustReferenceOutputContract l offChainTxoRefs onChainTxoRefs = do
     lookups <- traverse (\ref -> fmap (ref ,) <$> unspentTxOutFromRef ref) offChainTxoRefs
     let lookups1 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
             <> Cons.unspentOutputs (M.fromList $ catMaybes lookups)
         tx1 = mconcat mustReferenceOutputs
            <> Cons.mustMintValueWithRedeemer (asRedeemer onChainTxoRefs) (Value.fromCardanoValue $ tknValue l)
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
         where
         mustReferenceOutputs :: [Cons.TxConstraints [Tx.TxOutRef] ()]
@@ -125,9 +119,9 @@ txoRefsFromWalletState w = let
 
 -- | Ledger validation error occurs when attempting use of offchain mustReferenceOutput
 --   constraint with V1 script
-ledgerValidationtErrorWhenUsingV1Script :: SubmitTx -> PSU.Language -> TestTree
-ledgerValidationtErrorWhenUsingV1Script submitTxFromConstraints l =
-    let contract = mustReferenceOutputContract submitTxFromConstraints l
+ledgerValidationtErrorWhenUsingV1Script :: PSU.Language -> TestTree
+ledgerValidationtErrorWhenUsingV1Script l =
+    let contract = mustReferenceOutputContract l
                     [nonExistentTxoRef] [nonExistentTxoRef]
 
     in checkPredicateOptions defaultCheckOptions
@@ -138,24 +132,24 @@ ledgerValidationtErrorWhenUsingV1Script submitTxFromConstraints l =
 
 -- | Phase-2 validation error occurs when attempting to use onchain mustReferenceOutput
 -- constraint with V1 script
-phase2FailureWhenUsingV1Script :: SubmitTx -> PSU.Language -> TestTree
+phase2FailureWhenUsingV1Script :: PSU.Language -> TestTree
 phase2FailureWhenUsingV1Script = phase2FailureWithMustReferenceOutput
     ("Phase-2 validation error occurs when attempting to use onchain mustReferenceOutput " ++
     "constraint with V1 script")
 
 -- | Phase-2 validation error occurs when using onchain mustReferenceOutput
 -- constraint with V2 script and and reference input is not in txbody
-phase2FailureWhenUsingV2Script :: SubmitTx -> PSU.Language -> TestTree
+phase2FailureWhenUsingV2Script :: PSU.Language -> TestTree
 phase2FailureWhenUsingV2Script = phase2FailureWithMustReferenceOutput
     ("Phase-2 validation error occurs when using onchain mustReferenceOutput" ++
     "constraint with V2 script and and reference input is not in txbody")
 
-phase2FailureWithMustReferenceOutput :: String -> SubmitTx -> PSU.Language -> TestTree
-phase2FailureWithMustReferenceOutput testDescription submitTxFromConstraints l =
+phase2FailureWithMustReferenceOutput :: String -> PSU.Language -> TestTree
+phase2FailureWithMustReferenceOutput testDescription l =
     let contractWithoutOffchainConstraint = do
             let lookups1 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
                 tx1 = Cons.mustMintValueWithRedeemer (asRedeemer [nonExistentTxoRef]) (Value.fromCardanoValue $ tknValue l)
-            ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicateOptions defaultCheckOptions
@@ -165,15 +159,13 @@ phase2FailureWithMustReferenceOutput testDescription submitTxFromConstraints l =
 
 -- | Valid scenario using offchain and onchain constraint
 -- mustReferenceOutput once for a single pubkey output.
-mustReferenceOutputWithSinglePubkeyOutput :: SubmitTx -> PSU.Language -> TestTree
-mustReferenceOutputWithSinglePubkeyOutput submitTxFromConstraints l =
+mustReferenceOutputWithSinglePubkeyOutput :: PSU.Language -> TestTree
+mustReferenceOutputWithSinglePubkeyOutput l =
     let trace = do
             w1State <- Trace.agentState w1
             let w1TxoRefs = txoRefsFromWalletState w1State
                 w1MiddleTxoRef = [S.elemAt (length w1TxoRefs `div` 2) w1TxoRefs]
-                contract =
-                    mustReferenceOutputContract submitTxFromConstraints l
-                        w1MiddleTxoRef w1MiddleTxoRef
+                contract = mustReferenceOutputContract l w1MiddleTxoRef w1MiddleTxoRef
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 1
 
@@ -185,13 +177,12 @@ mustReferenceOutputWithSinglePubkeyOutput submitTxFromConstraints l =
 
 -- | Valid scenario using offchain and onchain constraint
 -- mustReferenceOutput once for multiple pubkey outputs.
-mustReferenceOutputWithMultiplePubkeyOutputs :: SubmitTx -> PSU.Language -> TestTree
-mustReferenceOutputWithMultiplePubkeyOutputs submitTxFromConstraints l =
+mustReferenceOutputWithMultiplePubkeyOutputs :: PSU.Language -> TestTree
+mustReferenceOutputWithMultiplePubkeyOutputs l =
     let trace = do
             w1State <- Trace.agentState w1
             let w1TxoRefs = S.toList $ txoRefsFromWalletState w1State
-                contract =
-                    mustReferenceOutputContract submitTxFromConstraints l w1TxoRefs w1TxoRefs
+                contract = mustReferenceOutputContract l w1TxoRefs w1TxoRefs
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 1
 
@@ -203,8 +194,8 @@ mustReferenceOutputWithMultiplePubkeyOutputs submitTxFromConstraints l =
 
 -- | Valid scenario using offchain and onchain constraint
 -- mustReferenceOutput once for a single script output.
-mustReferenceOutputWithSingleScriptOutput :: SubmitTx -> PSU.Language -> TestTree
-mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
+mustReferenceOutputWithSingleScriptOutput :: PSU.Language -> TestTree
+mustReferenceOutputWithSingleScriptOutput l =
     let contractWithScriptOutput = do
             params <- getParams
             let tx1 = Cons.mustPayToOtherScriptWithDatumHash someValidatorHash
@@ -218,7 +209,7 @@ mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
                         <> Cons.unspentOutputs scriptUtxos
                 tx2 = Cons.mustReferenceOutput scriptUtxo
                    <> Cons.mustMintValueWithRedeemer (asRedeemer [scriptUtxo]) (Value.fromCardanoValue $ tknValue l)
-            ledgerTx2 <- submitTxFromConstraints lookups2 tx2
+            ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
     in checkPredicateOptions defaultCheckOptions
@@ -229,9 +220,9 @@ mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
 
 -- | Ledger validation error occurs when attempting use of offchain mustReferenceOutput
 --   constraint with a txo that doesn't exist
-ledgerValidationErrorWhenReferencingNonExistingTxo :: SubmitTx -> PSU.Language -> TestTree
-ledgerValidationErrorWhenReferencingNonExistingTxo submitTxFromConstraints l =
-    let contract = mustReferenceOutputContract submitTxFromConstraints l
+ledgerValidationErrorWhenReferencingNonExistingTxo :: PSU.Language -> TestTree
+ledgerValidationErrorWhenReferencingNonExistingTxo l =
+    let contract = mustReferenceOutputContract l
                     [nonExistentTxoRef] [nonExistentTxoRef]
 
     in checkPredicateOptions defaultCheckOptions
@@ -274,20 +265,6 @@ getScript MustReferenceOutputPolicy PSU.PlutusV2 = mustReferenceOutputPolicyV2
 
 getVersionedScript :: Script a -> PSU.Language -> PSU.Versioned a
 getVersionedScript script l = PSU.Versioned (getScript script l) l
-
-type SubmitTx
-  =  Cons.ScriptLookups UnitTest
-  -> Cons.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-cardanoSubmitTx :: SubmitTx
-cardanoSubmitTx lookups tx = let
-  p = defaultCheckOptions ^. emulatorConfig . Trace.params
-  in submitUnbalancedTx $ either (error . show) id $ Tx.Cons.mkTx @UnitTest p lookups tx
-
-ledgerSubmitTx :: SubmitTx
-ledgerSubmitTx = submitTxConstraintsWith
-
 
 mkMustReferenceOutputV2Validator :: Tx.TxOutRef -> () -> PV2.ScriptContext -> Bool
 mkMustReferenceOutputV2Validator txOutRef _ =

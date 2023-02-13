@@ -77,7 +77,7 @@ createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenNa
             <> Constraints.mustBeSignedBy pk
             <> Constraints.mustPayToPubKey pk (Ada.lovelaceValueOf 1)   -- Add self-spend to force an input
     _ <- mapError CreateTokenTxError $ do
-            mkCardanoTxConstraints @Scripts.Any lookups constraints
+            mkTxConstraints @Scripts.Any lookups constraints
               >>= adjustUnbalancedTx >>= submitTxConfirmed
     let stateMachine = StateMachine.mkMachineClient authority (mockWalletPaymentPubKeyHash coOwner) coTokenName
     void $ mapError StateMachineError $ SM.runInitialise stateMachine Active theToken
@@ -94,7 +94,7 @@ revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenNa
     case t of
         Left{} -> return () -- Ignore invalid transitions
         Right StateMachineTransition{smtConstraints=constraints, smtLookups=lookups'} -> do
-            mkCardanoTxConstraints (lookups <> lookups') constraints
+            mkTxConstraints (lookups <> lookups') constraints
               >>= adjustUnbalancedTx >>= submitTxConfirmed
 
 ---

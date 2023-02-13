@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.Contract.Tx.Constraints.MustSpendAtLeast(tests) where
 
-import Control.Lens (has, (??))
+import Control.Lens (has)
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
@@ -31,36 +31,24 @@ import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
 
 tests :: TestTree
-tests =
-    testGroup "MustSpendAtLeast"
-        [ testGroup "ledger constraints" $ tests' submitTxConstraintsWith
-        , testGroup "cardano constraints" $ tests' submitCardanoTxConstraintsWith
-        ]
-
-type SubmitTx
-  =  Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-tests' :: SubmitTx -> [TestTree]
-tests' sub =
+tests = testGroup "MustSpendAtLeast"
     [ entireScriptBalance
     , lessThanScriptBalance
     , higherThanScriptBalance
     , phase2Failure
-    ] ?? sub
+    ]
 
 scriptBalance :: Integer
 scriptBalance = 25_000_000
 
-mustSpendAtLeastContract :: SubmitTx -> Integer -> Integer -> Contract () Empty ContractError ()
-mustSpendAtLeastContract submitTxFromConstraints offAmt onAmt = do
+mustSpendAtLeastContract :: Integer -> Integer -> Contract () Empty ContractError ()
+mustSpendAtLeastContract offAmt onAmt = do
     params <- getParams
     let lookups1 = Constraints.typedValidatorLookups typedValidator
         tx1 = Constraints.mustPayToTheScriptWithDatumInTx
                 onAmt
                 (Ada.lovelaceValueOf scriptBalance)
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt $ scrAddress (Params.pNetworkId params)
@@ -70,7 +58,7 @@ mustSpendAtLeastContract submitTxFromConstraints offAmt onAmt = do
             Constraints.collectFromTheScript utxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
             <> Constraints.mustSpendAtLeast (Ada.lovelaceValueOf offAmt)
-    ledgerTx2 <- submitTxFromConstraints lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 trace :: Contract () Empty ContractError () -> Trace.EmulatorTrace ()
@@ -78,29 +66,29 @@ trace contract = do
     void $ Trace.activateContractWallet w1 contract
     void Trace.nextSlot
 
-entireScriptBalance :: SubmitTx -> TestTree
-entireScriptBalance sub =
-    let contract = mustSpendAtLeastContract sub scriptBalance scriptBalance
+entireScriptBalance :: TestTree
+entireScriptBalance =
+    let contract = mustSpendAtLeastContract scriptBalance scriptBalance
     in  checkPredicateOptions
             defaultCheckOptions
             "Successful use of mustSpendAtLeast at script's exact balance"
             (assertValidatedTransactionCount 2)
             (void $ trace contract)
 
-lessThanScriptBalance :: SubmitTx -> TestTree
-lessThanScriptBalance sub =
+lessThanScriptBalance :: TestTree
+lessThanScriptBalance =
     let amt = scriptBalance - 1
-        contract = mustSpendAtLeastContract sub amt amt
+        contract = mustSpendAtLeastContract amt amt
     in  checkPredicateOptions
             defaultCheckOptions
             "Successful use of mustSpendAtLeast below script's balance"
             (assertValidatedTransactionCount 2)
             (void $ trace contract )
 
-higherThanScriptBalance :: SubmitTx -> TestTree
-higherThanScriptBalance sub =
+higherThanScriptBalance :: TestTree
+higherThanScriptBalance =
     let amt = scriptBalance + 5_000_000
-        contract = mustSpendAtLeastContract sub amt amt
+        contract = mustSpendAtLeastContract amt amt
     in  checkPredicateOptions
             defaultCheckOptions
             "Validation pass when mustSpendAtLeast is greater than script's balance and wallet's pubkey is included in the lookup"
@@ -109,11 +97,11 @@ higherThanScriptBalance sub =
             .&&. assertValidatedTransactionCount 1)
             (void $ trace contract)
 
-phase2Failure :: SubmitTx -> TestTree
-phase2Failure sub =
+phase2Failure :: TestTree
+phase2Failure =
     let offAmt = scriptBalance
         onAmt  = scriptBalance + 1
-        contract = mustSpendAtLeastContract sub offAmt onAmt
+        contract = mustSpendAtLeastContract offAmt onAmt
     in  checkPredicateOptions
             defaultCheckOptions
             "Fail phase-2 validation when on-chain mustSpendAtLeast is greater than script's balance"

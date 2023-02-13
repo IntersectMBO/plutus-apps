@@ -642,7 +642,7 @@ mkMustSpendScriptOutputWithMatchingDatumAndValuePolicy checkScriptContext constr
         (checkScriptContext mustSpendScriptOutputsWithMatchingDatumAndValue ctx)
     where
         mustSpendScriptOutputsWithMatchingDatumAndValue = P.foldMap (\(vh, datum, value, redeemer) ->
-            Cons.mustSpendScriptOutputWithMatchingDatumAndValue vh (P.== datum) (P.==  value) redeemer) constraintParams
+            Cons.mustSpendScriptOutputWithMatchingDatumAndValue vh (P.== datum) (P.== value) redeemer) constraintParams
 
 mkMustSpendScriptOutputWithReferencePolicy
     :: (Cons.TxConstraints () () -> sc -> Bool)

@@ -20,8 +20,8 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Ledger qualified
 import Ledger.Constraints qualified as TC
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), ScriptLookups,
-                                                             mintingPolicy, typedValidatorLookups, unspentOutputs)
+import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), mintingPolicy,
+                                                             typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
 import Ledger.Constraints.OnChain.V2 qualified as TCV2
 import Ledger.Constraints.TxConstraints qualified as Constraints
@@ -50,30 +50,22 @@ import PlutusTx qualified
 import Prelude hiding (not)
 
 tests :: TestTree
-tests = testGroup "MustMint"
-      [ testGroup "ledger constraints" $ [v1Tests, v2Tests] ?? submitTxConstraintsWith
-      , testGroup "cardano constraints" $ [v1Tests, v2Tests] ?? submitCardanoTxConstraintsWith
-      ]
+tests = testGroup "MustMint" $ [v1Tests, v2Tests]
 
-type SubmitTx
-  = Constraints.ScriptLookups UnitTest
-  -> Constraints.TxConstraints (Scripts.RedeemerType UnitTest) (Scripts.DatumType UnitTest)
-  -> Contract () Empty ContractError Tx.CardanoTx
-
-v1Tests :: SubmitTx -> TestTree
-v1Tests submitTxFromConstraints = testGroup "Plutus V1" $
+v1Tests :: TestTree
+v1Tests = testGroup "Plutus V1" $
    [ v1FeaturesTests
    , v2FeaturesNotAvailableTests
-   ] ?? submitTxFromConstraints ?? Ledger.PlutusV1
+   ] ?? Ledger.PlutusV1
 
 
-v2Tests :: SubmitTx -> TestTree
-v2Tests submitTxFromConstraints = testGroup "Plutus V2 features" $
+v2Tests :: TestTree
+v2Tests = testGroup "Plutus V2 features" $
      [ v1FeaturesTests
-     ] ?? submitTxFromConstraints ?? Ledger.PlutusV2
+     ] ?? Ledger.PlutusV2
 
-v1FeaturesTests :: SubmitTx -> Ledger.Language -> TestTree
-v1FeaturesTests submitTxFromConstraints lang =
+v1FeaturesTests :: Ledger.Language -> TestTree
+v1FeaturesTests lang =
     testGroup "Plutus V1 features" $
         [ mustMintCurrencyWithRedeemerSuccessfulMint
         , mustMintCurrencyWithRedeemerSuccessfulBurn
@@ -84,18 +76,18 @@ v1FeaturesTests submitTxFromConstraints lang =
         , mustMintValueWithRedeemerSuccessfulMint
         , mustMintValueWithRedeemerSuccessfulBurn
         , mustMintValueSuccessfulMint
-        ] ?? submitTxFromConstraints ?? lang
+        ] ?? lang
 
-v2FeaturesNotAvailableTests :: SubmitTx -> Ledger.Language -> TestTree
-v2FeaturesNotAvailableTests submitTxFromConstraints lang = testGroup "Plutus V2 features not available in V1" $
+v2FeaturesNotAvailableTests :: Ledger.Language -> TestTree
+v2FeaturesNotAvailableTests lang = testGroup "Plutus V2 features not available in V1" $
     [ mustMintWithReferenceV1Failure
-    ] ?? submitTxFromConstraints ?? lang
+    ] ?? lang
 
-v2FeaturesTests :: SubmitTx -> Ledger.Language -> TestTree
-v2FeaturesTests submitTxFromConstraints lang = testGroup "Plutus V2 features" $
+v2FeaturesTests :: Ledger.Language -> TestTree
+v2FeaturesTests lang = testGroup "Plutus V2 features" $
     [ mustMintWithReferenceSuccessful
     , mustMintWithReferencePhase2Failure
-    ] ?? submitTxFromConstraints ?? lang
+    ] ?? lang
 
 trace ::  Contract () Empty ContractError () -> Trace.EmulatorTrace ()
 trace contract = do
@@ -128,29 +120,28 @@ tknAssetClass lang = C.AssetId (coinMintingPolicyId lang) assetName
 
 -- | Valid Contract using a minting policy with mustMintCurrencyWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
 mustMintCurrencyWithRedeemerContract
-    :: SubmitTx
-    -> Ledger.Language
+    :: Ledger.Language
     -> Integer
     -> TokenName
     -> Contract () Empty ContractError ()
-mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang mintAmount onChainTokenName = do
+mustMintCurrencyWithRedeemerContract lang mintAmount onChainTokenName = do
     let redeemer = asRedeemer $ MustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer onChainTokenName mintAmount
         lookups1 = Constraints.mintingPolicy (mustMintPolicy lang)
                 <> Constraints.mintingPolicy (coinMintingPolicy lang)
         tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
            <> Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName mintAmount
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintCurrency onchain constraint to check that tokens are correctly minted with the other policy
-mustMintCurrencyContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
-mustMintCurrencyContract submitTxFromConstraints lang = do
+mustMintCurrencyContract :: Ledger.Language -> Contract () Empty ContractError ()
+mustMintCurrencyContract lang = do
     let redeemer = asRedeemer $ MustMintCurrency (coinMintingPolicyHash lang) tknName tknAmount
         lookups1 = Constraints.mintingPolicy (mustMintPolicy lang)
                 <> Constraints.mintingPolicy (coinMintingPolicy lang)
         tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
            <> Constraints.mustMintCurrency (coinMintingPolicyHash lang) tknName tknAmount
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 {-# INLINABLE mkMustReferenceOutputV2Validator #-}
@@ -169,8 +160,8 @@ mustReferenceOutputV2ValidatorAddress :: Address
 mustReferenceOutputV2ValidatorAddress =
     PV2.mkValidatorAddress mustReferenceOutputV2Validator
 
-mustMintValueWithReferenceContract :: SubmitTx -> Ledger.Language -> Bool -> Contract () Empty ContractError ()
-mustMintValueWithReferenceContract submitTxFromConstraints lang failPhase2 = do
+mustMintValueWithReferenceContract :: Ledger.Language -> Bool -> Contract () Empty ContractError ()
+mustMintValueWithReferenceContract lang failPhase2 = do
     utxos <- ownUtxos
     myAddr <- Con.ownAddress
     let (utxoRef, utxo) = Map.toList utxos !! 5
@@ -181,7 +172,7 @@ mustMintValueWithReferenceContract submitTxFromConstraints lang failPhase2 = do
                 (ScriptHash mph)
                 Nothing
                 (Ada.adaValueOf 35)
-    ledgerTx0 <- submitTxFromConstraints lookups0 tx0
+    ledgerTx0 <- submitTxConstraintsWith @UnitTest lookups0 tx0
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx0
 
     utxos' <- ownUtxos
@@ -192,11 +183,11 @@ mustMintValueWithReferenceContract submitTxFromConstraints lang failPhase2 = do
                 <> Constraints.mintingPolicy (mustMintPolicy lang)
         tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
            <> Constraints.mustMintValueWithReference refScriptUtxo (fromCardanoValue $ tknValue lang)
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
-mustMintValueWithReferenceContractV1Failure  :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
-mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang = do
+mustMintValueWithReferenceContractV1Failure  :: Ledger.Language -> Contract () Empty ContractError ()
+mustMintValueWithReferenceContractV1Failure lang = do
     utxos <- ownUtxos
     myAddr <- Con.ownAddress
     let (utxoRef, utxo) = Map.toList utxos !! 5
@@ -207,7 +198,7 @@ mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang = do
                 (ScriptHash mph)
                 Nothing
                 (Ada.adaValueOf 30)
-    ledgerTx0 <- submitTxFromConstraints lookups0 tx0
+    ledgerTx0 <- submitTxConstraintsWith @UnitTest lookups0 tx0
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx0
 
     utxos' <- ownUtxos
@@ -215,43 +206,43 @@ mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang = do
         refScriptUtxo = head . Map.keys . Map.filter (has $ Tx.decoratedTxOutReferenceScript . _Just) $ utxos'
         lookups1 = Constraints.unspentOutputs (Map.singleton utxoRef utxo <> utxos')
         tx1 = Constraints.mustMintCurrencyWithReference refScriptUtxo (coinMintingPolicyHash lang) tknName tknAmount
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintValueWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
-mustMintValueWithRedeemerContract :: SubmitTx -> Ledger.Language -> Value.Value -> Contract () Empty ContractError ()
-mustMintValueWithRedeemerContract submitTxFromConstraints lang mintValue = do
+mustMintValueWithRedeemerContract :: Ledger.Language -> Value.Value -> Contract () Empty ContractError ()
+mustMintValueWithRedeemerContract lang mintValue = do
     let redeemer = asRedeemer $ MustMintValueWithRedeemer unitRedeemer mintValue
         lookups1 = Constraints.mintingPolicy (mustMintPolicy lang)
                 <> Constraints.mintingPolicy (coinMintingPolicy lang)
         tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
            <> Constraints.mustMintValueWithRedeemer unitRedeemer mintValue
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintValue onchain constraint to check that tokens are correctly minted with the other policy
-mustMintValueContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
-mustMintValueContract submitTxFromConstraints lang = do
+mustMintValueContract :: Ledger.Language -> Contract () Empty ContractError ()
+mustMintValueContract lang = do
     let redeemer = asRedeemer $ MustMintValue (fromCardanoValue $ tknValue lang)
         lookups1 = Constraints.mintingPolicy (mustMintPolicy lang)
                  <> Constraints.mintingPolicy (coinMintingPolicy lang)
         tx1 = Constraints.mustMintCurrencyWithRedeemer (mustMintPolicyHash lang) redeemer tknName 1
            <> Constraints.mustMintValue (fromCardanoValue $ tknValue lang)
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to mint tokens
-mustMintCurrencyWithRedeemerSuccessfulMint :: SubmitTx -> Ledger.Language -> TestTree
-mustMintCurrencyWithRedeemerSuccessfulMint submitTxFromConstraints lang =
+mustMintCurrencyWithRedeemerSuccessfulMint :: Ledger.Language -> TestTree
+mustMintCurrencyWithRedeemerSuccessfulMint lang =
     checkPredicateOptions
     defaultCheckOptions
     "Successful spend of tokens using mustMintCurrencyWithRedeemer"
     (assertValidatedTransactionCount 1)
-    (void $ trace $ mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang tknAmount tknName)
+    (void $ trace $ mustMintCurrencyWithRedeemerContract lang tknAmount tknName)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to burn tokens
-mustMintCurrencyWithRedeemerSuccessfulBurn :: SubmitTx -> Ledger.Language -> TestTree
-mustMintCurrencyWithRedeemerSuccessfulBurn submitTxFromConstraints lang =
+mustMintCurrencyWithRedeemerSuccessfulBurn :: Ledger.Language -> TestTree
+mustMintCurrencyWithRedeemerSuccessfulBurn lang =
     let tknBurnAmount = -1000
         options = defaultCheckOptions & changeInitialWalletValue w1 (tknValue lang <>)
     in checkPredicateOptions
@@ -259,14 +250,14 @@ mustMintCurrencyWithRedeemerSuccessfulBurn submitTxFromConstraints lang =
        "Successful token burn using mustMintCurrencyWithRedeemer"
        (walletFundsAssetClassChange w1 (tknAssetClass lang) tknBurnAmount
        .&&. assertValidatedTransactionCount 1)
-       (void $ trace $ mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang tknBurnAmount tknName)
+       (void $ trace $ mustMintCurrencyWithRedeemerContract lang tknBurnAmount tknName)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer to burn more tokens than the wallet holds, asserts script evaluation error.
-mustMintCurrencyWithRedeemerBurnTooMuch :: SubmitTx -> Ledger.Language -> TestTree
-mustMintCurrencyWithRedeemerBurnTooMuch submitTxFromConstraints lang =
+mustMintCurrencyWithRedeemerBurnTooMuch :: Ledger.Language -> TestTree
+mustMintCurrencyWithRedeemerBurnTooMuch lang =
     let tknBurnAmount = negate (tknAmount + 1)
         options = defaultCheckOptions & changeInitialWalletValue w1 (tknValue lang <>)
-        contract = mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang tknBurnAmount tknName
+        contract = mustMintCurrencyWithRedeemerContract lang tknBurnAmount tknName
     in checkPredicateOptions
        options
        "Contract error when burning more than total amount of tokens in wallet balance"
@@ -275,11 +266,11 @@ mustMintCurrencyWithRedeemerBurnTooMuch submitTxFromConstraints lang =
        (void $ trace contract)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer but with a contract that is missing lookup for the minting policy, asserts contract error.
-mustMintCurrencyWithRedeemerMissingPolicyLookup :: SubmitTx -> Ledger.Language -> TestTree
-mustMintCurrencyWithRedeemerMissingPolicyLookup submitTxFromConstraints lang =
+mustMintCurrencyWithRedeemerMissingPolicyLookup :: Ledger.Language -> TestTree
+mustMintCurrencyWithRedeemerMissingPolicyLookup lang =
     let contract :: Contract () Empty ContractError () = do
             let tx1 = Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName tknAmount
-            ledgerTx1 <- submitTxFromConstraints mempty tx1
+            ledgerTx1 <- submitTxConstraintsWith @UnitTest mempty tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     in checkPredicateOptions
@@ -296,20 +287,20 @@ mustMintCurrencyWithRedeemerMissingPolicyLookup submitTxFromConstraints lang =
     (void $ trace contract)
 
 -- | Uses onchain and offchain constraint mustMintCurrencyWithRedeemer but with a token name mismatch, asserts script evaluation error.
-mustMintCurrencyWithRedeemerPhase2Failure :: SubmitTx -> Ledger.Language -> TestTree
-mustMintCurrencyWithRedeemerPhase2Failure submitTxFromConstraints lang =
+mustMintCurrencyWithRedeemerPhase2Failure :: Ledger.Language -> TestTree
+mustMintCurrencyWithRedeemerPhase2Failure lang =
     checkPredicate
     "Phase 2 failure when policy mints with unexpected token name"
     (assertEvaluationError "L9")
-    (void $ trace $ mustMintCurrencyWithRedeemerContract submitTxFromConstraints lang tknAmount $ TokenName "WrongToken")
+    (void $ trace $ mustMintCurrencyWithRedeemerContract lang tknAmount $ TokenName "WrongToken")
 
 -- | Contract without the required minting policy lookup. Uses mustMintCurrencyWithRedeemer constraint.
-mustMintCurrencyWithRedeemerMissingPolicyContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
-mustMintCurrencyWithRedeemerMissingPolicyContract submitTxFromConstraints lang = do
+mustMintCurrencyWithRedeemerMissingPolicyContract :: Ledger.Language -> Contract () Empty ContractError ()
+mustMintCurrencyWithRedeemerMissingPolicyContract lang = do
     networkId <- Params.pNetworkId <$> getParams
     let lookups1 = Constraints.typedValidatorLookups $ mustMintCurrencyWithRedeemerTypedValidator tknName
         tx1 = Constraints.mustPayToTheScriptWithDatumHash () (Ada.lovelaceValueOf 25_000_000)
-    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
     utxos <- utxosAt (Typed.validatorCardanoAddress networkId $ mustMintCurrencyWithRedeemerTypedValidator tknName)
@@ -319,7 +310,7 @@ mustMintCurrencyWithRedeemerMissingPolicyContract submitTxFromConstraints lang =
         tx2 =
             Constraints.collectFromTheScript utxos () <>
             Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName tknAmount
-    ledgerTx2 <- submitTxFromConstraints lookups2 tx2
+    ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 {-# INLINEABLE mustMintCurrencyWithRedeemerValidator #-}
@@ -339,26 +330,26 @@ mustMintCurrencyWithRedeemerTypedValidator tn = Scripts.mkTypedValidator @UnitTe
         wrap = Scripts.mkUntypedValidator
 
 -- | Uses onchain and offchain constraint mustMintCurrency to mint tokens
-mustMintCurrencySuccessfulMint :: SubmitTx -> Ledger.Language -> TestTree
-mustMintCurrencySuccessfulMint submitTxFromConstraints lang =
+mustMintCurrencySuccessfulMint :: Ledger.Language -> TestTree
+mustMintCurrencySuccessfulMint lang =
     checkPredicateOptions
     defaultCheckOptions
     "Successful spend of tokens using mustMintCurrency"
     (assertValidatedTransactionCount 1)
-    (void $ trace $ mustMintCurrencyContract submitTxFromConstraints lang)
+    (void $ trace $ mustMintCurrencyContract lang)
 
 -- | Uses onchain and offchain constraint mustMintValueWithRedeemer to mint tokens
-mustMintValueWithRedeemerSuccessfulMint :: SubmitTx -> Ledger.Language -> TestTree
-mustMintValueWithRedeemerSuccessfulMint submitTxFromConstraints lang =
+mustMintValueWithRedeemerSuccessfulMint :: Ledger.Language -> TestTree
+mustMintValueWithRedeemerSuccessfulMint lang =
     checkPredicateOptions
     defaultCheckOptions
     "Successful spend of tokens using mustMintValueWithRedeemer"
     (assertValidatedTransactionCount 1)
-    (void $ trace $ mustMintValueWithRedeemerContract submitTxFromConstraints lang $ fromCardanoValue $ tknValue lang)
+    (void $ trace $ mustMintValueWithRedeemerContract lang $ fromCardanoValue $ tknValue lang)
 
 -- | Uses onchain and offchain constraint mustMintValueWithRedeemer to burn tokens
-mustMintValueWithRedeemerSuccessfulBurn :: SubmitTx -> Ledger.Language -> TestTree
-mustMintValueWithRedeemerSuccessfulBurn submitTxFromConstraints lang =
+mustMintValueWithRedeemerSuccessfulBurn :: Ledger.Language -> TestTree
+mustMintValueWithRedeemerSuccessfulBurn lang =
     let tknBurnAmount = -1000
         options = defaultCheckOptions & changeInitialWalletValue w1 (tknValue lang <>)
     in checkPredicateOptions
@@ -366,50 +357,49 @@ mustMintValueWithRedeemerSuccessfulBurn submitTxFromConstraints lang =
        "Successful token burn using mustMintValueWithRedeemer"
        (walletFundsAssetClassChange w1 (tknAssetClass lang) tknBurnAmount
        .&&. assertValidatedTransactionCount 1)
-       (void $ trace $ mustMintValueWithRedeemerContract submitTxFromConstraints lang (fromCardanoValue $ tknValue' lang tknBurnAmount))
+       (void $ trace $ mustMintValueWithRedeemerContract lang (fromCardanoValue $ tknValue' lang tknBurnAmount))
 
 -- | Uses onchain and offchain constraint mustMintValue to mint tokens
-mustMintValueSuccessfulMint :: SubmitTx -> Ledger.Language -> TestTree
-mustMintValueSuccessfulMint submitTxFromConstraints lang =
+mustMintValueSuccessfulMint :: Ledger.Language -> TestTree
+mustMintValueSuccessfulMint lang =
     checkPredicateOptions
     defaultCheckOptions
     "Successful spend of tokens using mustMintValue"
     (assertValidatedTransactionCount 1)
-    (void $ trace $ mustMintValueContract submitTxFromConstraints lang)
+    (void $ trace $ mustMintValueContract lang)
 
-mustMintWithReferenceV1Failure :: SubmitTx -> Ledger.Language -> TestTree
-mustMintWithReferenceV1Failure submitTxFromConstraints lang =
+mustMintWithReferenceV1Failure :: Ledger.Language -> TestTree
+mustMintWithReferenceV1Failure lang =
     checkPredicateOptions
     defaultCheckOptions
     "MustMintValue with reference fails because v1 is not supported"
     (assertFailedTransaction (const $ cardanoLedgerErrorContaining "ReferenceInputsNotSupported"))
-    (void $ trace $ mustMintValueWithReferenceContractV1Failure submitTxFromConstraints lang)
+    (void $ trace $ mustMintValueWithReferenceContractV1Failure lang)
 
-mustMintWithReferencePhase2Failure :: SubmitTx -> Ledger.Language -> TestTree
-mustMintWithReferencePhase2Failure submitTxFromConstraints lang =
+mustMintWithReferencePhase2Failure :: Ledger.Language -> TestTree
+mustMintWithReferencePhase2Failure lang =
     checkPredicateOptions
     defaultCheckOptions
     "MustMintValue with reference fails phase 2 validation error"
     (assertEvaluationError "L9")
-    (void $ trace $ mustMintValueWithReferenceContract submitTxFromConstraints lang True)
+    (void $ trace $ mustMintValueWithReferenceContract lang True)
 
-mustMintWithReferenceSuccessful :: SubmitTx -> Ledger.Language -> TestTree
-mustMintWithReferenceSuccessful submitTxFromConstraints lang =
+mustMintWithReferenceSuccessful :: Ledger.Language -> TestTree
+mustMintWithReferenceSuccessful lang =
     checkPredicateOptions
     defaultCheckOptions
     "Successful mustMintValue with reference"
     (assertValidatedTransactionCount 2)
-    (void $ trace $ mustMintValueWithReferenceContract submitTxFromConstraints lang False)
+    (void $ trace $ mustMintValueWithReferenceContract lang False)
 
 
 -- | Valid Contract using a minting policy with mustMintCurrencyWithRedeemer onchain constraint to check that tokens are correctly minted with the other policy
 mustMintCurrencyWithRedeemerTxContract
-    :: SubmitTx
-    -> Ledger.Language
+    :: Ledger.Language
     -> Integer
     -> TokenName
     -> Contract () Empty ContractError ()
-mustMintCurrencyWithRedeemerTxContract submitTxFromConstraints lang mintAmount onChainTokenName = do
+mustMintCurrencyWithRedeemerTxContract lang mintAmount onChainTokenName = do
     utxos <- ownUtxos
     let utxoRefForBalance1 = fst $ Map.toList utxos !! 2
         redeemer = asRedeemer $ MustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer onChainTokenName mintAmount
@@ -420,12 +410,12 @@ mustMintCurrencyWithRedeemerTxContract submitTxFromConstraints lang mintAmount o
            <> Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName mintAmount
            <> Constraints.mustSpendPubKeyOutput utxoRefForBalance1
            <> Constraints.mustUseOutputAsCollateral utxoRefForBalance1
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 -- | Valid Contract using a minting policy with mustMintCurrency onchain constraint to check that tokens are correctly minted with the other policy
-mustMintCurrencyTxContract :: SubmitTx -> Ledger.Language -> Contract () Empty ContractError ()
-mustMintCurrencyTxContract submitTxFromConstraints lang = do
+mustMintCurrencyTxContract :: Ledger.Language -> Contract () Empty ContractError ()
+mustMintCurrencyTxContract lang = do
     utxos <- ownUtxos
     let utxoRefForBalance1 = fst $ Map.toList utxos !! 2
         redeemer = asRedeemer $ MustMintCurrency (coinMintingPolicyHash lang) tknName tknAmount
@@ -435,7 +425,7 @@ mustMintCurrencyTxContract submitTxFromConstraints lang = do
            <> Constraints.mustMintCurrency (coinMintingPolicyHash lang) tknName tknAmount
            <> Constraints.mustSpendPubKeyOutput utxoRefForBalance1
            <> Constraints.mustUseOutputAsCollateral utxoRefForBalance1
-    ledgerTx1 <- submitTxFromConstraints lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
 
