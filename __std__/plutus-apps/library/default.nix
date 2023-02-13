@@ -19,4 +19,6 @@
   cabal-project-index-state = import ./cabal-project-index-state.nix block;
 
   cardano-node = import ./cardano-node.nix block;
+
+  bitte-packages = import ./bitte-packages.nix block;
 }

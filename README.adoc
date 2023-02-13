@@ -22,15 +22,14 @@ The rest of this README is focussed on people who want to develop or contribute 
 For people who want to *use* the Framework, please consult the <<user-documentation>>.
 ====
 
-[[cache-warning]]
-[IMPORTANT]
-====
-DO NOT IGNORE THIS
+== Development
 
-If you want to use Nix with this project, make sure to set up the xref:iohk-binary-cache[IOHK binary cache].
-If you do not do this, you will end up building GHC, which takes several hours.
-If you find yourself building GHC, STOP and fix the cache.
-====
+[[how-to-develop]]
+=== How to develop and contribute to the project
+
+Run `nix develop` to enter the development shell and you will be presented with a list of available commands.
+
+**Please see link:CONTRIBUTING{outfilesuffix}[CONTRIBUTING] for comprehensive documentation on how to contribute to the project, including development and submitting changes*
 
 == Documentation
 
@@ -114,111 +113,6 @@ So for the time being, you need to:
 . Copy additional stanzas from our `cabal.project` as you need, e.g. you may need some of the `allow-newer` stanzas.
 
 The https://github.com/input-output-hk/plutus-starter[plutus-starter] project provides an example.
-
-=== How to build the project's artifacts
-
-This section contains information about how to build the project's artifacts for independent usage.
-For development work see <<how-to-develop>> for more information.
-
-[[prerequisites]]
-==== Prerequisites
-
-The Haskell libraries in the Plutus Platform are built with `cabal` and Nix.
-The other artifacts (docs etc.) are also most easily built with Nix.
-
-===== Nix
-
-Install https://nixos.org/nix/[Nix] (recommended). following the instructions on the https://nixos.org/nix/[Nix website].
-
-Make sure you have read and understood the xref:cache-warning[cache warning].
-DO NOT IGNORE THIS.
-
-See <<nix-advice>> for further advice on using Nix.
-
-===== Non-Nix
-
-You can build some of the Haskell packages without Nix, but this is not recommended and we don't guarantee that these prerequisites are sufficient.
-For instance, you would have to build and install this fork of https://github.com/input-output-hk/libsodium/commit/66f017f16633f2060db25e17c170c2afa0f2a8a1[`libsodium`] from source.
-If you use Nix, these tools are provided for you via `shell.nix`, and you do *not* need to install them yourself.
-
-* If you want to build our Haskell packages with https://www.haskell.org/cabal/[`cabal`], then install it.
-* If you want to build our Haskell packages with https://haskellstack.org/[`stack`], then install it.
-
-[[building-with-nix]]
-==== How to build the Haskell packages and other artifacts with Nix
-
-Run `nix build -f default.nix plutus-apps.haskell.packages.plutus-pab.components.library` from the root to build the Plutus PAB library.
-
-See <<nix-build-attributes>> to find out what other attributes you can build.
-
-==== How to build the Haskell packages with `cabal`
-
-The Haskell packages can be built directly with `cabal`.
-We do this during development (see <<how-to-develop>>).
-The best way is to do this is inside a `nix-shell`.
-
-[NOTE]
-====
-For fresh development setups, you also need to run `cabal update`.
-====
-
-Run `cabal build plutus-pab` from the root to build the Plutus PAB library.
-
-See the link:./cabal.project[cabal project file] to see the other packages that you can build with `cabal`.
-
-[[nix-advice]]
-== Nix
-
-[[iohk-binary-cache]]
-=== How to set up the IOHK binary caches
-
-Adding the IOHK binary cache to your Nix configuration will speed up
-builds a lot, since many things will have been built already by our CI.
-
-If you find you are building packages that are not defined in this
-repository, or if the build seems to take a very long time then you may
-not have this set up properly.
-
-To set up the cache:
-
-. On non-NixOS, edit `/etc/nix/nix.conf` and add the following lines:
-+
-----
-substituters = https://cache.zw3rk.com https://cache.iog.io https://cache.nixos.org/
-trusted-public-keys = loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-extra-experimental-features = nix-command flakes
-----
-+
-[NOTE]
-====
-If you don't have an `/etc/nix/nix.conf` or don't want to edit it, you may add the `nix.conf` lines to `~/.config/nix/nix.conf` instead.
-You must be a https://nixos.org/nix/manual/#ssec-multi-user[trusted user] to do this.
-====
-. On NixOS, set the following NixOS options:
-+
-----
-nix = {
-  binaryCaches          = [ "https://cache.zw3rk.com" "https://cache.iog.io" ];
-  binaryCachePublicKeys = [ "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
-};
-----
-
-[[nix-build-attributes]]
-=== Which attributes to use to build different artifacts
-
-link:./default.nix[`default.nix`] defines a package set with attributes for all the artifacts you can build from this repository.
-These can be built using `nix build`.
-For example:
-
-----
-nix build -f default.nix docs.site
-----
-
-.Example attributes
-* Project packages: defined inside `plutus-apps.haskell.packages`
-** e.g. `plutus-apps.haskell.packages.plutus-pab.components.library`
-
-There are other attributes defined in link:./default.nix[`default.nix`].
 
 == Licensing
 

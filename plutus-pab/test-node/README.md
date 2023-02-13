@@ -17,7 +17,7 @@ You will need ~6 terminals to run all the different components.
 
 1. Install `cardano-node` & `cardano-wallet`:
 
-  The easiest way of doing this is to enter this repository's `nix-shell`, where the executables are already there. Other alternatives include downloading pre-built binaries, running Docker, running a Nix shell or building from source. See [the node's repository](https://github.com/input-output-hk/cardano-node) and [the wallet's repository](https://github.com/input-output-hk/cardano-wallet) for more information.
+  The easiest way of doing this is to enter this repository's `nix develop`, where the executables are already there. Other alternatives include downloading pre-built binaries, running Docker, running a Nix shell or building from source. See [the node's repository](https://github.com/input-output-hk/cardano-node) and [the wallet's repository](https://github.com/input-output-hk/cardano-wallet) for more information.
 
   Please make sure that the binary that you are executing is indeed that one that
   you installed by using the command: `which cardano-node && which cardano-wallet`.

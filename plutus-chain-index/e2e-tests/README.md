@@ -8,7 +8,7 @@
 - Update URL in environment file if needed
 
 ### Run tests:
-- `nvm use` (not required for `nix-shell` users)
+- `nvm use` (not required for `nix develop` users)
 - `npm i`
 - `npm test`
 

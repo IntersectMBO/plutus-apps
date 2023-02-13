@@ -2,10 +2,8 @@
 
 let
 
-  inherit (inputs.cells.plutus) library;
-  inherit (library) pkgs;
+  inherit (inputs.cells.plutus-apps.library) plutus-apps-project pkgs;
   inherit (pkgs.stdenv) system;
-  inherit (pkgs) lib;
 
   make-haskell-jobs = project:
     let
@@ -21,18 +19,18 @@ let
       plan-nix = project.plan-nix;
     };
 
-  plutus-project = top-level.plutus-apps.haskell.project;
+  native-plutus-apps-jobs = make-haskell-jobs plutus-apps-project;
 
-  native-plutus-apps-jobs = make-haskell-jobs plutus-project;
+  windows-plutus-apps-jobs = make-haskell-jobs plutus-apps-project.projectCross.mingwW64;
 
-  windows-plutus-apps-jobs = make-haskell-jobs plutus-project.projectCross.mingwW64;
-
-  other-jobs = { inherit (top-level) tests docs plutus-use-cases; };
+  other-jobs = inputs.cells.plutus-apps.devshells // inputs.cells.plutus-apps.packages;
 
   jobs =
     { native = native-plutus-apps-jobs; } //
     # Only cross-compile to windows from linux
     pkgs.lib.optionalAttrs (system == "x86_64-linux") { mingwW64 = windows-plutus-apps-jobs; } //
+    # Devcontainer is only available on linux
+    pkgs.lib.optionalAttrs (system == "x86_64-linux") inputs.cells.plutus-apps.devcontainer //
     other-jobs;
 
   # Hydra doesn't like these attributes hanging around in "jobsets": it thinks they're jobs!

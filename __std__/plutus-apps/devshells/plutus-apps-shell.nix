@@ -8,13 +8,6 @@ let
   plutus-apps-project = cell.library.plutus-apps-project;
 
   plutus-apps-devshell = pkgs.haskell-nix.haskellLib.devshellFor plutus-apps-project.shell;
-
-  # TODO(std)
-  # devcontainer = import ./nix/devcontainer/plutus-devcontainer.nix { inherit pkgs plutus-apps; };
-
-  # build-and-push-devcontainer-script = import ./nix/devcontainer/deploy/default.nix { inherit pkgs plutus-apps; };
-
-  # bitte-packages = import ./bitte { inherit docs pkgs; };
 in
 
 inputs.std.lib.dev.mkShell {
@@ -115,6 +108,7 @@ inputs.std.lib.dev.mkShell {
     cell.packages.cabal-install
     cell.packages.cabal-fmt
     cell.packages.plutus-use-cases
+    cell.packages.cardano-wallet
 
     cell.library.cardano-node.cardano-node
     cell.library.cardano-node.cardano-cli
@@ -150,10 +144,5 @@ inputs.std.lib.dev.mkShell {
       value = pkgs.lib.optionalString
         (pkgs.stdenv.hostPlatform.libc == "glibc") "${pkgs.glibcLocales}/lib/locale/locale-archive";
     }
-    # TODO(std) most likely we don't need this
-    # {
-    #   name = "PYTHONPATH";
-    #   value = "";
-    # }
   ];
 }
