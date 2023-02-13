@@ -13,14 +13,34 @@ import Marconi.Mamba.Api.Types (CliArgs (CliArgs))
 --
 parserCliArgs :: Parser CliArgs
 parserCliArgs = CliArgs
-  <$> strOption (long "socket-path" <> metavar "FILE" <> help "Socket path to node")
-  <*> strOption (long "utxo-db" <> metavar "FILE" <> help "Path to the utxo database.")
-  <*> (optional . option  auto) (
-        long "http-port" <> metavar "HTTP-PORT" <> help "JSON-RPC http port number, default is port 3000.")
+  <$> strOption
+      (  long "socket-path"
+      <> metavar "FILE-PATH"
+      <> help "Socket path to node"
+      )
+  <*> strOption
+      (  long "db-dir"
+      <> metavar "DIR"
+      <> help "Directory path that will contain all the SQLite databases"
+      )
+  <*> (optional . strOption)
+      (  long "utxo-db-fname"
+      <> metavar "FILE-NAME"
+      <> help "File name of the utxo database."
+      )
+  <*> (optional . option  auto)
+      (  long "http-port"
+      <> metavar "HTTP-PORT"
+      <> help "JSON-RPC http port number, default is port 3000."
+      )
   <*> pNetworkId
-  <*> multiString (long "addresses-to-index"
-                        <> help ("Bech32 Shelley addresses to index."
-                                 <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+  <*> (optional . multiString)
+        (  long "addresses-to-index"
+        <> metavar "BECH32-ADDRESS"
+        <> help (  "Bech32 Shelley addresses to index."
+                <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\""
+                )
+        )
 
 parserOpts  :: String -> ParserInfo CliArgs
 parserOpts sha =
@@ -33,9 +53,10 @@ parserOpts sha =
           "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
     )
     where
-        versionOption  =
-            infoOption sha (long "version"
-                            <> help "Show git SHA")
+        versionOption =
+            infoOption sha ( long "version"
+                          <> help "Show git SHA"
+                           )
 
 parseCli :: IO CliArgs
 parseCli = do

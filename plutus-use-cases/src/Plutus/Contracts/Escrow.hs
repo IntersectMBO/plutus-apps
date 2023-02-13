@@ -264,7 +264,7 @@ pay inst escrow vl = do
     pk <- ownFirstPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScriptWithDatumInTx pk vl
           <> Constraints.mustValidateInTimeRange (Interval.interval 1 (1 + escrowDeadline escrow))
-    mkCardanoTxConstraints (Constraints.typedValidatorLookups inst) tx
+    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
         >>= adjustUnbalancedTx
         >>= submitUnbalancedTx
         >>= return . getCardanoTxId
@@ -308,7 +308,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
           tx = Constraints.collectFromTheScript unspentOutputs Redeem
                   <> foldMap mkTx (escrowTargets escrow)
                   <> Constraints.mustValidateInTimeRange validityTimeRange
-      utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups inst
+      utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                             <> Constraints.unspentOutputs unspentOutputs
                              ) tx
       adjusted <- adjustUnbalancedTx utx
@@ -345,7 +345,7 @@ refund inst escrow = do
                 <> Constraints.mustValidateInTimeRange (Interval.from $ escrowDeadline escrow)
     if Constraints.modifiesUtxoSet tx'
     then do
-        utx <- mkCardanoTxConstraints ( Constraints.typedValidatorLookups inst
+        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx'
         adjusted <- adjustUnbalancedTx utx

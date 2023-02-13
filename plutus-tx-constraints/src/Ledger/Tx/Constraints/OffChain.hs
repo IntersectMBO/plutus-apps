@@ -73,13 +73,13 @@ import Ledger (Datum, Language (PlutusV2), MintingPolicy, MintingPolicyHash, POS
 import Ledger.Constraints qualified as P
 import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unBalancedTxTx, unbalancedTx)
 import Ledger.Constraints.OffChain qualified as P
-import Ledger.Constraints.TxConstraints (ScriptOutputConstraint, TxConstraint,
-                                         TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs),
+import Ledger.Constraints.TxConstraints (ScriptInputConstraint, ScriptOutputConstraint, TxConstraint,
+                                         TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
+                                         TxConstraintFuns (TxConstraintFuns),
+                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
                                          TxOutDatum (TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline))
 import Ledger.Constraints.ValidityInterval (toPlutusInterval)
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Tx qualified as PV2
 
 import Ledger.Interval ()
 import Ledger.Orphans ()
@@ -87,8 +87,8 @@ import Ledger.Scripts (ScriptHash, getRedeemer, getValidator)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), toCardanoMintWitness, toCardanoPolicyId)
 import Ledger.Tx.CardanoAPI qualified as C
-import Ledger.Typed.Scripts (ConnectionError (UnknownRef), ValidatorTypes (DatumType, RedeemerType))
-import PlutusTx (FromData, ToData (toBuiltinData))
+import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
+import PlutusTx (FromData, ToData)
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), MeetSemiLattice ((/\)))
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
@@ -213,17 +213,22 @@ data SortedConstraints
    }
 
 prepareConstraints
-    :: ToData (DatumType a)
-    => [ScriptOutputConstraint (DatumType a)]
+    ::
+    ( FromData (DatumType a)
+    , ToData (DatumType a)
+    , ToData (RedeemerType a)
+    )
+    => [ScriptInputConstraint (RedeemerType a)]
+    -> [ScriptOutputConstraint (DatumType a)]
     -> [TxConstraint]
     -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) SortedConstraints
-prepareConstraints ownOutputs constraints = do
+prepareConstraints ownInputs ownOutputs constraints = do
     let
       extractPosixTimeRange = \case
         P.MustValidateInTimeRange range -> Left $ toPlutusInterval range
         other                           -> Right other
       (ranges, nonRangeConstraints) = partitionEithers $ extractPosixTimeRange <$> constraints
-    other <- mapLedgerMkTxError $ P.prepareConstraints ownOutputs nonRangeConstraints
+    other <- mapLedgerMkTxError $ P.prepareConstraints ownInputs ownOutputs nonRangeConstraints
     pure $ MkSortedConstraints ranges other
 
 
@@ -238,16 +243,46 @@ processLookupsAndConstraints
     => P.ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> StateT P.ConstraintProcessingState (Except MkTxError) ()
-processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} = do
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txConstraintFuns = TxConstraintFuns txCnsFuns, txOwnOutputs} = do
         flip runReaderT lookups $ do
-            sortedConstraints <- prepareConstraints txOwnOutputs txConstraints
+            sortedConstraints <- prepareConstraints txOwnInputs txOwnOutputs txConstraints
             traverse_ processConstraint (otherConstraints sortedConstraints)
-            -- traverse_ P.processConstraintFun txCnsFuns
-            traverse_ addOwnInput txOwnInputs
-            -- P.addMintingRedeemers
+            traverse_ processConstraintFun txCnsFuns
             checkValueSpent
             mapReaderT (mapStateT (withExcept LedgerMkTxError)) P.updateUtxoIndex
             lift $ setValidityRange (rangeConstraints sortedConstraints)
+
+processConstraintFun
+    :: TxConstraintFun
+    -> ReaderT (P.ScriptLookups a) (StateT P.ConstraintProcessingState (Except MkTxError)) ()
+processConstraintFun = \case
+    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
+        P.ScriptLookups{P.slTxOutputs} <- ask
+        -- TODO: Need to precalculate the validator hash or else this won't work
+        -- with PlutusV2 validator. This means changing `DecoratedTxOut` to
+        -- include the hash.
+        let matches (Just (_, d, value)) = datumPred (P.getDatum d) && valuePred value
+            matches Nothing              = False
+
+        opts <- fmap (Map.toList . Map.filter matches)
+                $ traverse (mapLedgerMkTxError . P.resolveScriptTxOut)
+                $ Map.filter ((== Just vh) . preview Tx.decoratedTxOutValidatorHash) slTxOutputs
+        case opts of
+            [] -> throwError $ LedgerMkTxError $ P.NoMatchingOutputFound vh
+            [(ref, Just (validator, datum, value))] -> do
+                mkWitness <- throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
+                let witness
+                        = C.ScriptWitness C.ScriptWitnessForSpending $
+                            mkWitness
+                            (C.toCardanoDatumWitness $ P.datumWitness datum)
+                            (C.toCardanoScriptData (getRedeemer red))
+                            C.zeroExecutionUnits
+
+                unbalancedTx . tx . txIns <>= [(txIn, C.BuildTxWith witness)]
+
+                P.valueSpentInputs <>= P.provided value
+            _ -> throwError $ LedgerMkTxError $ P.MultipleMatchingOutputsFound vh
 
 checkValueSpent
     :: ( MonadReader (P.ScriptLookups a) m
@@ -440,42 +475,6 @@ toTxOutDatum = \case
     Just (TxOutDatumHash d)   -> C.toCardanoTxOutDatumHashFromDatum d
     Just (TxOutDatumInTx d)   -> C.toCardanoTxOutDatumInTx d
     Just (TxOutDatumInline d) -> C.toCardanoTxOutDatumInline d
-
--- | Add a typed input, checking the type of the output it spends. Return the value
---   of the spent output.
-addOwnInput
-    :: ( MonadReader (P.ScriptLookups a) m
-       , MonadError MkTxError m
-       , MonadState P.ConstraintProcessingState m
-       , FromData (DatumType a)
-       , ToData (DatumType a)
-       , ToData (RedeemerType a)
-       )
-    => P.ScriptInputConstraint (RedeemerType a)
-    -> m ()
-addOwnInput P.ScriptInputConstraint{P.icRedeemer, P.icTxOutRef} = do
-    P.ScriptLookups{P.slTxOutputs, P.slTypedValidator} <- ask
-    inst <- maybe (throwError $ LedgerMkTxError P.TypedValidatorMissing) pure slTypedValidator
-    Typed.TypedScriptTxOutRef{Typed.tyTxOutRefRef, Typed.tyTxOutRefOut} <-
-      either (throwError . LedgerMkTxError . P.TypeCheckFailed) pure
-      $ runExcept @Typed.ConnectionError
-      $ do
-          (txOut, datum) <- maybe (throwError $ UnknownRef icTxOutRef) pure $ do
-                                ciTxOut <- Map.lookup icTxOutRef slTxOutputs
-                                datum <- ciTxOut ^? Tx.decoratedTxOutDatum . _2 . Tx.datumInDatumFromQuery
-                                pure (Tx.toTxInfoTxOut ciTxOut, datum)
-          Typed.typeScriptTxOutRef inst icTxOutRef txOut datum
-    let vl = PV2.txOutValue $ Typed.tyTxOutTxOut tyTxOutRefOut
-    P.valueSpentInputs <>= P.provided vl
-    let datum = C.ScriptDatumForTxIn $ C.toCardanoScriptData $ toBuiltinData $ Typed.tyTxOutData tyTxOutRefOut
-    txIn <- either (throwError . ToCardanoError) pure $ C.toCardanoTxIn tyTxOutRefRef
-    mkWitness <- either (throwError . ToCardanoError) pure
-                     $ C.toCardanoTxInScriptWitnessHeader $ fmap getValidator $ Typed.vValidatorScript inst
-    let witIn = C.ScriptWitness
-                    C.ScriptWitnessForSpending
-                    $ mkWitness datum (C.toCardanoScriptData $ toBuiltinData icRedeemer) C.zeroExecutionUnits
-    unbalancedTx . tx .txIns <>= [(txIn, C.BuildTxWith witIn)]
-    pure ()
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).

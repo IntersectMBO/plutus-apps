@@ -6,8 +6,8 @@
 [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Contract log: String "Locking Lovelace {getLovelace = 10000000}"
 [INFO] Slot 1: W[1]: Balancing an unbalanced transaction:
-                       Tx:
-                         Tx c852ff384797c8e77af1c66f3393834cb283db911661a1a5ff3b4d811e059072:
+                       Tx (cardano-api Representation):
+                         Tx 7733b05c8a3d6eb7ade1182beea8b1c1ad7440e7400ef238f7ffeab21e94cd9c:
                            {inputs:
                            reference inputs:
                            collateral inputs:
@@ -17,8 +17,6 @@
                                with datum hash 43492163ee71f886ebc65c85f3dfa8db313f00d701b433b539811464d4355873
                            mint: 
                            fee: 0 lovelace
-                           mps:
-                           signatures:
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                            data:
                              ( 43492163ee71f886ebc65c85f3dfa8db313f00d701b433b539811464d4355873
@@ -26,8 +24,8 @@
                              <>>,
                              <<"\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167">,
                              <>>,
-                             10000000> )}
-                       Requires signatures:
+                             10000000> )
+                           redeemers:}
                        Utxo index:
 [INFO] Slot 1: W[1]: Finished balancing:
                        Tx 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f:
@@ -62,11 +60,11 @@
 [INFO] Slot 2: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Receive endpoint call on 'unlock' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "unlock")]),Object (fromList [("unEndpointValue",Object (fromList [("recipient1Address",String "addr_test1vz3vyrrh3pavu8xescvnunn4h27cny70645etn2ulnnqnssrz8utc"),("recipient2Address",String "addr_test1vzq2fazm26ug6yfemg3mcnpuwhkx6v558sy87fgtscvnefckqs3wk"),("totalAda",Object (fromList [("getLovelace",Number 1.0e7)]))]))])]),("tag",String "ExposeEndpointResp")])
 [INFO] Slot 2: W[1]: Balancing an unbalanced transaction:
-                       Tx:
-                         Tx 19cc5599d2a460b5825b161b6cf05756c402a2b0021eeb73ca717f56331ce575:
+                       Tx (cardano-api Representation):
+                         Tx 726adfb9e7c9773f7639540b564cbf67dbb897efcb011739e38e2816ff08e1e5:
                            {inputs:
                               - 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
-                                <>
+
                            reference inputs:
                            collateral inputs:
                            outputs:
@@ -76,8 +74,6 @@
                                PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
                            mint: 
                            fee: 0 lovelace
-                           mps:
-                           signatures:
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                            data:
                              ( 43492163ee71f886ebc65c85f3dfa8db313f00d701b433b539811464d4355873
@@ -86,10 +82,7 @@
                              <<"\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167">,
                              <>>,
                              10000000> )
-                           attached scripts:
-                             ( 3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908
-                             , Plutus V1 )}
-                       Requires signatures:
+                           redeemers:}
                        Utxo index:
                          ( 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
                          , - 10000000 lovelace addressed to

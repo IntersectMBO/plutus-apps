@@ -127,7 +127,7 @@ data UtxoRow = UtxoRow
   { _urUtxo      :: Utxo
   , _urBlockNo   :: C.BlockNo
   , _urSlotNo    :: C.SlotNo
-  , _urBlockHash:: C.Hash C.BlockHeader
+  , _urBlockHash :: C.Hash C.BlockHeader
   } deriving (Show, Eq, Ord, Generic)
 
 $(makeLenses ''UtxoRow)
@@ -163,7 +163,7 @@ data Spent = Spent
   { _sTxInTxId  :: C.TxId                 -- ^ from TxIn, containts the Spent txId
   , _sTxInTxIx  :: C.TxIx
   , _sSlotNo    :: C.SlotNo
-  , _sBlockHash:: C.Hash C.BlockHeader
+  , _sBlockHash :: C.Hash C.BlockHeader
   } deriving (Show, Eq)
 
 $(makeLenses ''Spent)

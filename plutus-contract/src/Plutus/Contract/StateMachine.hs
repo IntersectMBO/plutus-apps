@@ -77,7 +77,7 @@ import Plutus.Contract (AsContractError (_ContractError), Contract, ContractErro
                         awaitPromise, isSlot, isTime, logWarn, mapError, never, ownFirstPaymentPubKeyHash, ownUtxos,
                         promiseBind, select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt,
                         utxosTxOutTxFromTx)
-import Plutus.Contract.Request (getUnspentOutput, mkCardanoTxConstraints)
+import Plutus.Contract.Request (getUnspentOutput, mkTxConstraints)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
 import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
                                              StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
@@ -450,7 +450,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
               <> foldMap (plutusV2MintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
               <> Constraints.unspentOutputs utxo
               <> customLookups
-      utx <- mkCardanoTxConstraints lookups constraints
+      utx <- mkTxConstraints lookups constraints
       adjustedUtx <- adjustUnbalancedTx utx
       unless (utx == adjustedUtx) $
         logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "
@@ -499,7 +499,7 @@ runGuardedStepWith userLookups userConstraints smc input guard =
     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
         pk <- ownFirstPaymentPubKeyHash
         let lookups = smtLookups { Constraints.slOwnPaymentPubKeyHash = Just pk }
-        utx <- mkCardanoTxConstraints (lookups <> userLookups) (smtConstraints <> userConstraints)
+        utx <- mkTxConstraints (lookups <> userLookups) (smtConstraints <> userConstraints)
         adjustedUtx <- adjustUnbalancedTx utx
         unless (utx == adjustedUtx) $
           logWarn @Text $ "Plutus.Contract.StateMachine.runStep: "

@@ -157,19 +157,24 @@ executable marconi-chain-index
 
 library marconi-chain-index-test-lib
   import:          lang
+  visibility:      public
   hs-source-dirs:  test-lib
-  exposed-modules: Helpers
+  exposed-modules:
+    Gen.Marconi.ChainIndex.Types
+    Helpers
 
   --------------------
   -- Local components
   --------------------
-  build-depends:   cardano-streaming
+  build-depends:
+    , cardano-streaming
+    , marconi-chain-index
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
+    , cardano-api:{cardano-api, gen}
     , cardano-testnet
     , ouroboros-network
 
@@ -194,14 +199,15 @@ test-suite marconi-chain-index-test
   main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
-    EpochStakepoolSize
     Integration
     Spec.Marconi.ChainIndex.Indexers.AddressDatum
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndex
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndexEvent
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils
-    Spec.Utxo
+    Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Spec.Marconi.ChainIndex.Indexers.ScriptTx
+    Spec.Marconi.ChainIndex.Indexers.Utxo
 
   --------------------
   -- Local components

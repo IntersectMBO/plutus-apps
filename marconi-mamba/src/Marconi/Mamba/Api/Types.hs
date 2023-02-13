@@ -34,11 +34,12 @@ import Marconi.ChainIndex.Types as Export (TargetAddresses)
 -- | Type represents http port for JSON-RPC
 
 data CliArgs = CliArgs
-  { socket          :: FilePath             -- ^ POSIX socket file to communicate with cardano node
-  , dbPath          :: FilePath             -- ^ filepath to local sqlite for utxo index table
-  , httpPort        :: Maybe Int            -- ^ optional tcp/ip port number for JSON-RPC http server
-  , networkId       :: C.NetworkId          -- ^ cardano network id
-  , targetAddresses :: TargetAddresses      -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
+  { socket          :: FilePath -- ^ POSIX socket file to communicate with cardano node
+  , dbDir           :: FilePath -- ^ Directory path containing the SQLite database files
+  , utxoDbFileName  :: Maybe FilePath -- ^ File name of the local SQLite for the UTXO index table
+  , httpPort        :: Maybe Int -- ^ optional tcp/ip port number for JSON-RPC http server
+  , networkId       :: C.NetworkId -- ^ cardano network id
+  , targetAddresses :: Maybe TargetAddresses -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses
   } deriving (Show)
 
 -- | Should contain all the indexers required by Mamba
@@ -48,7 +49,7 @@ newtype IndexerWrapper = IndexerWrapper
 
 data IndexerEnv = IndexerEnv
     { _uiIndexer    :: IndexerWrapper
-    , _uiQaddresses :: TargetAddresses        -- ^ user provided addresses to filter
+    , _uiQaddresses :: Maybe TargetAddresses        -- ^ user provided addresses to filter
     }
 makeClassy ''IndexerEnv
 
@@ -60,9 +61,7 @@ data MambaEnv = MambaEnv
 makeClassy ''MambaEnv
 
 data QueryExceptions
-    = AddressNotInListError QueryExceptions
-    | AddressConversionError QueryExceptions
-    | TxRefConversionError QueryExceptions
+    = AddressConversionError QueryExceptions
     | QueryError String
     deriving stock Show
     deriving anyclass  Exception

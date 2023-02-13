@@ -26,7 +26,7 @@ let
       "https://github.com/input-output-hk/cardano-wallet"."18a931648550246695c790578d4a55ee2f10463e" = "0i40hp1mdbljjcj4pn3n6zahblkb2jmpm8l4wnb36bya1pzf66fx";
       "https://github.com/Quviq/quickcheck-contractmodel"."5cd16ba995f1cd48c2b5f885c702ca6f2a2abbaa" = "sha256-rVVdr68f+xEOV4s27Ix+wdBznSVFvq+Q2ZBo0SEnkp0=";
       "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
-      "https://github.com/james-iohk/cardano-node"."edb6e6965ba799fc8950b0925ad5d1ced3a5b9eb" = "1pxblcbkcrj32r2ixrbnl4ywgr40qcac4swi583nsq4irbapzm7y";
+      "https://github.com/james-iohk/cardano-node"."9e2426a89204b339d0cc6d848dba13719014fadc" = "00ax9dvr256kdr0c6i7kafhxra2hk7xywgl8k4wgq14wxv56gfzq";
       "https://github.com/james-iohk/cardano-node"."2b6978583b306ad28f7e1226b5d1ad604919c98a" = "06nggf0kpdh3whn6kqpw8s0484xw1q9r964rv125grbmpdx86dah";
     };
 
@@ -130,7 +130,7 @@ let
             # The lines `export CARDANO_NODE=...` and `export CARDANO_CLI=...`
             # is necessary to prevent the error
             # `../dist-newstyle/cache/plan.json: openBinaryFile: does not exist (No such file or directory)`.
-            # See https://github.com/input-output-hk/cardano-node/issues/4194
+            # See https://github.com/input-output-hk/cardano-node/issues/4194.
             #
             # The line 'export CARDANO_NODE_SRC=...' is used to specify the
             # root folder used to fetch the `configuration.yaml` file (in

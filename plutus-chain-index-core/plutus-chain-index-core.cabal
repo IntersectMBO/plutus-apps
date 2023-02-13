@@ -102,7 +102,7 @@ library
   ------------------------
   build-depends:
     , aeson
-    , base                       >=4.8     && <5
+    , base                       >=4.9     && <5
     , beam-core
     , beam-migrate
     , beam-sqlite

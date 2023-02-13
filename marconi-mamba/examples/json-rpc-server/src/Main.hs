@@ -13,19 +13,19 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
-import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, short, strOption, (<**>))
+import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, optional, short, strOption, (<**>))
 
 import Marconi.ChainIndex.CLI (multiString)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
-import Marconi.Mamba.Api.Query.UtxoIndexer qualified as UIQ
+import Marconi.Mamba.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Mamba.Api.Types (IndexerEnv, queryEnv, uiIndexer)
 import Marconi.Mamba.Bootstrap (bootstrapHttp, initializeIndexerEnv)
 
 
 data CliOptions = CliOptions
-    { _utxoPath  :: FilePath -- ^ path to utxo sqlite database
-    , _addresses :: TargetAddresses
+    { _utxoPath  :: FilePath -- ^ Filepath to utxo sqlite database
+    , _addresses :: Maybe TargetAddresses
     }
 
 cliParser :: Parser CliOptions
@@ -34,9 +34,12 @@ cliParser = CliOptions
                               <> short 'd'
                               <> metavar "FILENAME"
                               <> help "Path to the utxo SQLite database.")
-     <*> multiString (long "addresses-to-index"
-                        <> help ("Bech32 Shelley addresses to index."
-                                 <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+     <*> (optional . multiString)
+            ( long "addresses-to-index"
+           <> help ( "Bech32 Shelley addresses to index."
+                  <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\""
+                   )
+            )
 
 main :: IO ()
 main = do

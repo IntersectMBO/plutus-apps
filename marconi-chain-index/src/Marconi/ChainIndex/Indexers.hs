@@ -304,7 +304,8 @@ startIndexers indexers = do
   -- We want to use the set of points that are common to all indexers
   -- giving priority to recent ones.
   pure ( foldl1' intersect startingPoints
-       , coordinator )
+       , coordinator
+       )
 
 mkIndexerStream
   :: Coordinator

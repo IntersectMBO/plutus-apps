@@ -20,7 +20,7 @@ import Servant.API ((:<|>) ((:<|>)))
 import Servant.Server (Handler, Server, serve)
 
 import Cardano.Api ()
-import Marconi.Mamba.Api.Query.UtxoIndexer qualified as Q.Utxo
+import Marconi.Mamba.Api.Query.Indexers.Utxo qualified as Q.Utxo
 import Marconi.Mamba.Api.Routes (API)
 import Marconi.Mamba.Api.Types (HasMambaEnv (httpSettings, queryEnv), IndexerEnv, MambaEnv, QueryExceptions,
                                 UtxoQueryResult)

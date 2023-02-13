@@ -45,7 +45,7 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Marconi.Mamba.Api.HttpServer
-    Marconi.Mamba.Api.Query.UtxoIndexer
+    Marconi.Mamba.Api.Query.Indexers.Utxo
     Marconi.Mamba.Api.Routes
     Marconi.Mamba.Api.Types
     Marconi.Mamba.Bootstrap
@@ -72,6 +72,7 @@ library
   build-depends:
     , aeson
     , base                  >=4.9 && <5
+    , filepath
     , lens
     , optparse-applicative
     , prettyprinter
@@ -184,26 +185,35 @@ test-suite marconi-mamba-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Spec.Marconi.Mamba.Api.Query.UtxoIndexer
+  other-modules:
+    Spec.Marconi.Mamba.Api.Query.Indexers.Utxo
+    Spec.Marconi.Mamba.CLI
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , marconi-chain-index
+    , marconi-chain-index:{marconi-chain-index, marconi-chain-index-test-lib}
     , marconi-core
     , marconi-mamba
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:  cardano-api:{cardano-api, gen}
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base                            >=4.9 && <5
-    , cardano-api:{cardano-api, gen}
+    , base                  >=4.9 && <5
+    , bytestring
     , containers
     , hedgehog
     , lens
+    , optparse-applicative
     , stm
     , tasty
+    , tasty-golden
     , tasty-hedgehog
     , text
