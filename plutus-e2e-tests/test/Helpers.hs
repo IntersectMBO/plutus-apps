@@ -567,12 +567,13 @@ waitForTxInAtAddress :: (MonadIO m, MonadTest m)
   -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> C.TxIn
+  -> String -- temp debug text for intermittent timeout failure
   -> m ()
-waitForTxInAtAddress era localNodeConnectInfo address txIn = do
+waitForTxInAtAddress era localNodeConnectInfo address txIn debugStr = do
   let timeoutSeconds = 90 :: Int
       loop i = do
         if i == 0
-          then error "waitForTxInAtAddress timeout"
+          then error ("waitForTxInAtAddress timeout. Debug: " ++ debugStr)
           else HE.threadDelay 1000000
         utxos <- findUTxOByAddress era localNodeConnectInfo address
         when (Map.notMember txIn $ C.unUTxO utxos) (loop $ pred i)
@@ -584,9 +585,10 @@ getTxOutAtAddress :: (MonadIO m, MonadTest m)
   -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> C.TxIn
+  -> String -- temp debug text for intermittent timeout failure (waitForTxInAtAddress)
   -> m (C.TxOut C.CtxUTxO era)
-getTxOutAtAddress era localNodeConnectInfo address txIn = do
-    maybeTxOut <- getTxOutAtAddress' era localNodeConnectInfo address txIn
+getTxOutAtAddress era localNodeConnectInfo address txIn debugStr = do
+    maybeTxOut <- getTxOutAtAddress' era localNodeConnectInfo address txIn debugStr
     return $ fromMaybe maybeTxOut
     where
       fromMaybe Nothing    = error $ "txIn " ++ show txIn ++ " is not at address " ++ show address
@@ -598,9 +600,10 @@ getTxOutAtAddress' :: (MonadIO m, MonadTest m)
   -> C.LocalNodeConnectInfo C.CardanoMode
   -> C.Address C.ShelleyAddr
   -> C.TxIn
+  -> String -- temp debug text for intermittent timeout failure (waitForTxInAtAddress)
   -> m (Maybe (C.TxOut C.CtxUTxO era))
-getTxOutAtAddress' era localNodeConnectInfo address txIn = do
-  waitForTxInAtAddress era localNodeConnectInfo address txIn
+getTxOutAtAddress' era localNodeConnectInfo address txIn debugStr = do
+  waitForTxInAtAddress era localNodeConnectInfo address txIn debugStr
   utxos <- findUTxOByAddress era localNodeConnectInfo address
   return $ Map.lookup txIn $ C.unUTxO utxos
 

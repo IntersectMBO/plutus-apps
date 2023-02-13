@@ -64,7 +64,7 @@ referenceScriptMint networkOptions = H.integration . HE.runFinallies . TN.worksp
   TN.submitTx era localNodeConnectInfo signedTx
   let refScriptTxIn = TN.txIn (TN.txId signedTx) 0
       otherTxIn   = TN.txIn (TN.txId signedTx) 1
-  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
+  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "TN.waitForTxInAtAddress"
 
   -- 3: build a transaction to mint token using reference script
 
@@ -86,7 +86,7 @@ referenceScriptMint networkOptions = H.integration . HE.runFinallies . TN.worksp
   TN.submitTx era localNodeConnectInfo signedTx2
   let expectedTxIn = TN.txIn (TN.txId signedTx2) 0
   -- Query for txo and assert it contains newly minted token
-  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
+  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "TN.getTxOutAtAddress"
   txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
   H.success
@@ -122,7 +122,7 @@ referenceScriptInlineDatumSpend networkOptions = H.integration . HE.runFinallies
   let refScriptTxIn = TN.txIn (TN.txId signedTx) 0
       otherTxIn     = TN.txIn (TN.txId signedTx) 1
       txInAtScript  = TN.txIn (TN.txId signedTx) 2
-  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
+  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "TN.waitForTxInAtAddress"
 
   -- 3: build a transaction to mint token using reference script
 
@@ -143,7 +143,7 @@ referenceScriptInlineDatumSpend networkOptions = H.integration . HE.runFinallies
   TN.submitTx era localNodeConnectInfo signedTx2
   let expectedTxIn = TN.txIn (TN.txId signedTx2) 0
   -- Query for txo and assert it contains newly minted token
-  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
+  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "TN.getTxOutAtAddress"
   txOutHasAdaValue <- TN.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
   H.success
@@ -180,7 +180,7 @@ referenceScriptDatumHashSpend networkOptions = H.integration . HE.runFinallies .
   let refScriptTxIn = TN.txIn (TN.txId signedTx) 0
       otherTxIn     = TN.txIn (TN.txId signedTx) 1
       txInAtScript  = TN.txIn (TN.txId signedTx) 2
-  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn
+  TN.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "TN.waitForTxInAtAddress"
 
   -- 3: build a transaction to mint token using reference script
 
@@ -201,7 +201,7 @@ referenceScriptDatumHashSpend networkOptions = H.integration . HE.runFinallies .
   TN.submitTx era localNodeConnectInfo signedTx2
   let expectedTxIn = TN.txIn (TN.txId signedTx2) 0
   -- Query for txo and assert it contains newly minted token
-  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn
+  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "TN.getTxOutAtAddress"
   txOutHasAdaValue <- TN.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
   H.success
