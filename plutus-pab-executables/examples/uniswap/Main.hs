@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE TypeApplications   #-}
@@ -12,6 +13,7 @@ module Main
     ( main
     ) where
 
+import Cardano.Node.Emulator (increaseTransactionLimits)
 import Control.Monad (forM, void)
 import Control.Monad.Freer (interpret)
 import Control.Monad.IO.Class (MonadIO (..))
@@ -70,7 +72,7 @@ main = void $ Simulator.runSimulationWith handlers $ do
         logString @(Builtin UniswapContracts) $ "initial funds in wallet " ++ show w ++ ": " ++ show v
         return (w, cid)
 
-    let cp = Uniswap.CreateParams ada (coins Map.! "A") 100000 500000
+    let cp = Uniswap.CreateParams ada (coins Map.! "A") 20_000_000 500000
     logString @(Builtin UniswapContracts) $ "creating liquidity pool: " ++ show (encode cp)
     let cid2 = cids Map.! knownWallet 2
     Simulator.waitForEndpoint cid2 "create"
@@ -102,5 +104,5 @@ instance HasDefinitions UniswapContracts where
 
 handlers :: SimulatorEffectHandlers (Builtin UniswapContracts)
 handlers =
-    Simulator.mkSimulatorHandlers def
+    Simulator.mkSimulatorHandlers (iterate increaseTransactionLimits def !! 4)
     $ interpret (contractHandler (Builtin.handleBuiltin @UniswapContracts))
