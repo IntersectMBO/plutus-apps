@@ -2,7 +2,7 @@
 let
   inherit (cell.library) pkgs;
 
-  dockerImage = cell.packages.devcontainer-docker-image;
+  dockerImage = cell.devcontainer.devcontainer-docker-image;
 
   imageRef = dockerImage.imageName + ":" + dockerImage.imageTag;
 
