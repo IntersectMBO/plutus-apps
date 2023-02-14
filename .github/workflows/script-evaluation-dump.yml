@@ -19,10 +19,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3.3.0
 
-      - name: Run
+      - name: Quick Install Nix
+        uses: nixbuild/nix-quick-install-action@v21 
+        with: 
+          nix_conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true 
+
+      - name: Create Dump
         # TODO(std) change to nix develop after https://github.com/input-output-hk/plutus-apps/pull/951
         run: |
-          nix-shell --run "./scripts/create-dump.sh"
+          nix-shell --run ./scripts/create-dump.sh
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -32,3 +39,14 @@ jobs:
           NODE_BIN_DIR: ../cardano-node-bin
           S3_DUMP_DIR: s3://plutus/mainnet-script-dump/
           LOCAL_DUMP_DIR: ../mainnet-script-dump 
+
+      - name: Upload Dump
+        # TODO(std) change to nix develop after https://github.com/input-output-hk/plutus-apps/pull/951
+        run: |
+          nix-shell --run ./scripts/upload-event-dump.sh ../mainnet-script-dump/*
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: https://s3.devx.iog.io
+          S3_DUMP_DIR: s3://plutus/mainnet-script-dump/
