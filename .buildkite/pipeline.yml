@@ -1,3 +1,4 @@
+# TODO(std) remove this after https://github.com/input-output-hk/plutus-apps/pull/951
 steps:
   - label: ':shipit: deploy devcontainer image for plutus-starter'
     # For example, "v0.1.0" will match, but not "plutus-starter-devcontainer/v0.1.0" or "v0.1.0-rc1"
