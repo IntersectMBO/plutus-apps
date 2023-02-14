@@ -1097,23 +1097,6 @@
         "type": "github"
       }
     },
-    "plutus-core": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1655562446,
-        "narHash": "sha256-Cu4RYwr6ZnL/1WDHJfZFI90xvZ1/PgBrr7jkQhoWTfk=",
-        "owner": "input-output-hk",
-        "repo": "plutus",
-        "rev": "ab3d01280109c1b5d1522f9bae475f5984fbc055",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "plutus",
-        "rev": "ab3d01280109c1b5d1522f9bae475f5984fbc055",
-        "type": "github"
-      }
-    },
     "pre-commit-hooks-nix": {
       "inputs": {
         "flake-compat": "flake-compat_4",
@@ -1149,7 +1132,6 @@
         "haskell-nix": "haskell-nix",
         "iohk-nix": "iohk-nix",
         "nixpkgs": "nixpkgs_5",
-        "plutus-core": "plutus-core",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "sphinxcontrib-haddock": "sphinxcontrib-haddock",
         "std": "std_2"
