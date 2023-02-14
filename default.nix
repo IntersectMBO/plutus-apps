@@ -40,7 +40,7 @@ rec {
 
   plutus-chain-index = plutus-apps.haskell.packages.plutus-chain-index.components.exes.plutus-chain-index;
 
-  marconi = plutus-apps.haskell.packages.marconi-core.components.exes.marconi-chain-index;
+  marconi = plutus-apps.haskell.packages.marconi-chain-index.components.exes.marconi-chain-index;
 
   marconi-mamba = plutus-apps.haskell.packages.marconi-mamba.components.exes.marconi-mamba;
 
