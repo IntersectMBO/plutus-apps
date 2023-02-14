@@ -81,7 +81,7 @@
         #     Hydra jobsets and GHA tasks
         #   plutus
         #     Devshell, tooling and packages for plutus and its documentation
-        cellsFrom = ./__std__;
+        cellsFrom = ./__std__/cells;
 
         # Each cell contains "cell blocks".
         # Block names are arbitrary.
