@@ -1,0 +1,35 @@
+# A nightly job that runs a cardano node and dumps Plutus script evaluation events
+name: Script Evaluation Dump
+on:
+  schedule:
+    - cron: 0 0 * * * # midnight every day
+  workflow_dispatch:
+
+concurrency:
+  group: script-evaluation-dump
+  # We only want at most one evaluation test running at a time
+  cancel-in-progress: true
+
+jobs:
+  script-evaluation-dump:
+    runs-on: [ubuntu-latest]
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.3.0
+
+      - name: Run
+        # TODO(std) change to nix develop after https://github.com/input-output-hk/plutus-apps/pull/951
+        run: |
+          nix-shell --run "./scripts/create-dump.sh"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: https://s3.devx.iog.io
+          NODE_DIR: ../cardano-node-files
+          NODE_BIN_DIR: ../cardano-node-bin
+          S3_DUMP_DIR: s3://plutus/mainnet-script-dump/
+          LOCAL_DUMP_DIR: ../mainnet-script-dump 
+          S3_DUMP_DIR: s3://plutus/mainnet-event-dump
