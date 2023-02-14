@@ -47,7 +47,7 @@ import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (CardanoAddress, DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutPlutusValue,
                decoratedTxOutScriptDatum)
-import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
+import Ledger.Tx.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Contract
 import Plutus.Contract.Test.Coverage.Analysis

@@ -14,9 +14,9 @@ import Cardano.Node.Emulator.Params qualified as Params
 import Control.Monad (void)
 import Data.Void (Void)
 import Ledger qualified
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicate,

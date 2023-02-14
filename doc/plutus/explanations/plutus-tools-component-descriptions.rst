@@ -146,25 +146,7 @@ It provides the Contract API interface for writing the off-chain part of a Plutu
 is an application for indexing data from the Cardano blockchain that is used in the Contract Monad. 
 The main design goal is to keep the size of the indexed information proportional to the UTXO set. 
 
-9. Plutus ledger constraints
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-+--------------+--------------------------------------------+
-| Plutus ledger constraints                                 |
-+==============+============================================+
-| Location     | ``plutus-apps/plutus-ledger-constraints``  |
-+--------------+--------------------------------------------+
-
-`Plutus ledger constraints <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-ledger-constraints>`_ contains a constraints-based API that can be used to generate on-chain validation functions and to build transactions by providing a list of constraints. 
-The main design goal is to be able to use the same constraints on-chain and off-chain in a Plutus application. 
-The off-chain part generates transactions based on types in `Plutus ledger <https://github.com/input-output-hk/plutus-apps/tree/main/plutus-ledger>`_. 
-
-For example:
-
-   * ``checkScriptContext (MustSpendAtLeast 10Ada, MustProduceOutput myOutput, …)``
-   * ``mkTx (MustSpendAtLeast 10Ada, MustProduceOutput myOutput, …)``
-
-10. Plutus Tx constraints 
+9. Plutus Tx constraints
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 +--------------+--------------------------------------------+
@@ -183,7 +165,7 @@ For example:
    * ``checkScriptContext (MustSpendAtLeast 10Ada, MustProduceOutput myOutput, …)``
    * ``mkTx (MustSpendAtLeast 10Ada, MustProduceOutput myOutput, …)``
 
-11. Plutus ledger
+10. Plutus ledger
 ~~~~~~~~~~~~~~~~~~~~
 
 +--------------+--------------------------------------------+
@@ -197,7 +179,7 @@ It is intended to be a comprehensive, easy-to-use set of types that replicate th
 It currently considers only the last era. 
 Plutus ledger contains data types and functions that complement `cardano-ledger <https://github.com/input-output-hk/cardano-ledger>`_ related to Plutus. 
 
-12. Plutus script utils
+11. Plutus script utils
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 +--------------+--------------------------------------------+

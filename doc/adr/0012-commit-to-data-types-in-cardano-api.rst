@@ -83,7 +83,7 @@ Decision
   For instance, the ``plutus-contract`` emulator and types in the
   ``Plutus.Contract.Request`` module of ``plutus-contract`` will be updated to
   use ``cardano-api`` types.
-  However, the data types in ``Ledger.Constraints.TxConstraints`` will continue
+  However, the data types in ``Ledger.Tx.Constraints.TxConstraints`` will continue
   to use ``plutus-ledger-api`` types because the constraints are used to
   generate both Plutus scripts and transactions.
   Therefore, there should be no breaking change on the API for writing Plutus

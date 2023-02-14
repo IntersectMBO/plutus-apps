@@ -67,7 +67,6 @@ let
             plutus-e2e-tests.package.buildable = false;
             plutus-errors.package.buildable = false;
             plutus-ledger.package.buildable = false;
-            plutus-ledger-constraints.package.buildable = false;
             plutus-pab.package.buildable = false;
             plutus-pab-executables.package.buildable = false;
             plutus-script-utils.package.buildable = false;
@@ -200,7 +199,6 @@ let
             plutus-doc.ghcOptions = [ "-Werror" ];
             plutus-example.ghcOptions = [ "-Werror" ];
             plutus-ledger.ghcOptions = [ "-Werror" ];
-            plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
             plutus-pab.ghcOptions = [ "-Werror" ];
             plutus-pab-executables.ghcOptions = [ "-Werror" ];
             plutus-script-utils.ghcOptions = [ "-Werror" ];

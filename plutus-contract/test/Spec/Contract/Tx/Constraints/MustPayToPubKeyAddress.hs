@@ -15,12 +15,12 @@ import Test.Tasty (TestTree, testGroup)
 
 
 import Ledger qualified
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.OnChain.V1 qualified as Constraints
-import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Test (asDatum, asRedeemer)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints qualified as Tx.Constraints
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Constraints
+import Ledger.Tx.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,

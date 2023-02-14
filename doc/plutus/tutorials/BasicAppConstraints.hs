@@ -19,9 +19,9 @@ module BasicAppConstraints where
 import BasicApps (Split, SplitData (SplitData, amount, recipient1, recipient2), SplitSchema, mkSplitData)
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger (PaymentPubKeyHash, ScriptContext, TxOutRef)
-import Ledger.Constraints (MkTxError, TxConstraints, UnbalancedTx)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.OnChain.V1 qualified as Constraints
+import Ledger.Tx.Constraints (MkTxError, TxConstraints, UnbalancedTx)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Promise, endpoint, getParams, submitTxConstraintsSpending, utxosAt)
 import Plutus.Script.Utils.Ada qualified as Ada

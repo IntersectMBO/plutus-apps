@@ -24,20 +24,21 @@ import Data.Maybe (isJust)
 import GHC.Generics (Generic)
 import Ledger (unitDatum)
 import Ledger qualified as L
-import Ledger.Constraints.OffChain qualified as Cons (ScriptLookups, mintingPolicy, plutusV1MintingPolicy,
-                                                      plutusV2MintingPolicy)
-import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
-import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustBeSignedBy, mustIncludeDatumInTx,
-                                                           mustMintValue, mustMintValueWithRedeemer,
-                                                           mustPayToOtherScriptWithDatumHash,
-                                                           mustPayToOtherScriptWithDatumInTx, mustPayToPubKey,
-                                                           mustPayToTheScriptWithDatumHash, mustProduceAtLeast,
-                                                           mustSatisfyAnyOf, mustSpendAtLeast, mustValidateInTimeRange)
-import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Test (asDatum, asRedeemer, someValidatorHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
+import Ledger.Tx.Constraints.OffChain qualified as Cons (ScriptLookups, mintingPolicy, plutusV1MintingPolicy,
+                                                         plutusV2MintingPolicy)
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Cons.V1
+import Ledger.Tx.Constraints.OnChain.V2 qualified as Cons.V2
+import Ledger.Tx.Constraints.TxConstraints qualified as Cons (TxConstraints, mustBeSignedBy, mustIncludeDatumInTx,
+                                                              mustMintValue, mustMintValueWithRedeemer,
+                                                              mustPayToOtherScriptWithDatumHash,
+                                                              mustPayToOtherScriptWithDatumInTx, mustPayToPubKey,
+                                                              mustPayToTheScriptWithDatumHash, mustProduceAtLeast,
+                                                              mustSatisfyAnyOf, mustSpendAtLeast,
+                                                              mustValidateInTimeRange)
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertValidatedTransactionCount, checkPredicateOptions,

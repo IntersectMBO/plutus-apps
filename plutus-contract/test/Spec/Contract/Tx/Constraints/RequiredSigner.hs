@@ -15,10 +15,10 @@ import Cardano.Node.Emulator.Params qualified as Params
 import Data.Maybe (fromJust)
 import Ledger qualified
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Constraints.OffChain qualified as Constraints hiding (requiredSignatories)
-import Ledger.Constraints.OnChain.V2 qualified as Constraints
-import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints.OffChain qualified as Constraints
+import Ledger.Tx.Constraints.OnChain.V2 qualified as Constraints
+import Ledger.Tx.Constraints.TxConstraints qualified as Constraints
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)

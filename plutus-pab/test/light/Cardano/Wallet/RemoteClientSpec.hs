@@ -26,7 +26,7 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog (Property, (===))
 import Hedgehog qualified
 import Ledger (Slot)
-import Ledger.Constraints.OffChain (emptyUnbalancedTx)
+import Ledger.Tx.Constraints.OffChain (emptyUnbalancedTx)
 import Plutus.Contract (WalletAPIError)
 import Plutus.PAB.Core.ContractInstance.STM (InstancesState, emptyInstanceState, emptyInstancesState, insertInstance,
                                              instanceState, yieldedExportTxs)
@@ -55,7 +55,7 @@ yieldToInstanceState = Hedgehog.property $ do
     sl <- Hedgehog.forAll Gen.genSlot
     cid <- liftIO randomID
 
-    let utx = emptyUnbalancedTx
+    let utx = emptyUnbalancedTx params
     result <- liftIO $ do
       iss <- emptyInstancesState
       is <- STM.atomically $ emptyInstanceState
@@ -78,7 +78,7 @@ yieldNoCid = Hedgehog.property $ do
     sl <- Hedgehog.forAll Gen.genSlot
     result <- liftIO $ do
         iss <- emptyInstancesState
-        runRemoteWalletEffects params sl iss Nothing (YieldUnbalancedTx emptyUnbalancedTx)
+        runRemoteWalletEffects params sl iss Nothing (YieldUnbalancedTx $ emptyUnbalancedTx params)
     case result of
       Left (OtherError _) -> Hedgehog.assert True
       _                   -> Hedgehog.assert False

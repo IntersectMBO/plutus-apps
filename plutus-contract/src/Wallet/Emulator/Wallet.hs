@@ -59,12 +59,12 @@ import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, Pa
                        cardanoAddressCredential)
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue, getRequiredSigners)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx.Constraints.OffChain qualified as U
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (UtxosResponse (page))

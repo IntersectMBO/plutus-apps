@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-module Ledger.Constraints.OnChain.V1
+module Ledger.Tx.Constraints.OnChain.V1
     ( checkScriptContext
     , checkOwnInputConstraint
     , checkOwnOutputConstraint
@@ -21,15 +21,15 @@ import PlutusTx.Prelude (Bool (False, True), Eq ((==)), Functor (fmap), Maybe (J
 
 import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icReferenceTxOutRef, icTxOutRef),
-                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateInTimeRange),
-                                         TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
-                                         TxConstraintFuns (TxConstraintFuns),
-                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
-                                         TxOutDatum (TxOutDatumHash, TxOutDatumInTx))
-import Ledger.Constraints.ValidityInterval (toPlutusInterval)
 import Ledger.Credential (Credential (ScriptCredential))
+import Ledger.Tx.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icReferenceTxOutRef, icTxOutRef),
+                                            ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
+                                            TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateInTimeRange),
+                                            TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
+                                            TxConstraintFuns (TxConstraintFuns),
+                                            TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs),
+                                            TxOutDatum (TxOutDatumHash, TxOutDatumInTx))
+import Ledger.Tx.Constraints.ValidityInterval (toPlutusInterval)
 import Plutus.Script.Utils.V1.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
                                         TxInInfo (TxInInfo, txInInfoResolved),
                                         TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
