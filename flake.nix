@@ -14,7 +14,7 @@
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix/e601c9ce609af07a78edf1c57f5985931788aeb2";
+      url = "github:input-output-hk/haskell.nix/7075077d46e684d50e1b00759bb4590426c99c70";
       inputs = {
         hackage.follows = "hackage-nix";
         nixpkgs.follows = "nixpkgs";
