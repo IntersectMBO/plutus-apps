@@ -32,4 +32,3 @@ jobs:
           NODE_BIN_DIR: ../cardano-node-bin
           S3_DUMP_DIR: s3://plutus/mainnet-script-dump/
           LOCAL_DUMP_DIR: ../mainnet-script-dump 
-          S3_DUMP_DIR: s3://plutus/mainnet-event-dump
