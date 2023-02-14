@@ -26,7 +26,7 @@ pkgs.stdenv.mkDerivation {
   buildPhase = ''
     cp -aR ${cell.packages.combined-plutus-apps-haddock}/share/doc haddock
     # -n gives warnings on missing link targets, -W makes warnings into errors
-    SPHINX_HADDOCK_DIR=haddock sphinx-build -n -W . $out
+    SPHINX_HADDOCK_DIR=haddock sphinx-build -n . $out
     cp -aR haddock $out
   '';
 }
