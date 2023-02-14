@@ -17,7 +17,7 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Word (Word64)
+import Gen.Marconi.ChainIndex.Types (genAddressInEra, genChainPoints, genSimpleScriptData)
 import Hedgehog (Gen, Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -28,8 +28,6 @@ import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatum
                                                  StorableResult (AddressDatumResult, AllAddressesResult))
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
 import Marconi.Core.Storable qualified as Storable
-import Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators (genAddressInEra, genHashBlockHeader,
-                                                                 genSimpleScriptData)
 import Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils (addressInEraToAddressAny)
 import Test.Tasty (TestTree, localOption, testGroup)
 import Test.Tasty.Hedgehog (HedgehogTestLimit (HedgehogTestLimit), testPropertyNamed)
@@ -342,11 +340,6 @@ propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk = property $ do
 
     resumablePoints <- liftIO $ Storable.resumeFromStorage $ finalIndex ^. Storable.handle
     Hedgehog.assert $ length resumablePoints >= 2
-
-genChainPoints :: Word64 -> Word64 -> Gen [C.ChainPoint]
-genChainPoints b e = do
-    maxSlots <- Gen.word64 (Range.linear b e)
-    mapM (\s -> C.ChainPoint (C.SlotNo s) <$> genHashBlockHeader) [0..maxSlots]
 
 genAddressDatumStorableEvent :: C.ChainPoint -> Gen (Storable.StorableEvent AddressDatumHandle)
 genAddressDatumStorableEvent cp = do

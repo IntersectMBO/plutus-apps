@@ -1,61 +1,61 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections  #-}
+
 module Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators
-    ( genAddressInEra
-    , genSimpleScriptData
-    , genChainPoint
-    , genHashBlockHeader
+    ( genTxBodyContentWithPlutusScripts
     )
 where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
-import Data.ByteString.Short qualified as BSS
-import Data.Word (Word64)
-
 import Gen.Cardano.Api.Typed qualified as CGen
+import Gen.Marconi.ChainIndex.Types (genProtocolParametersForPlutusScripts, genTxOutTxContext)
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 
--- Copied from cardano-api. Delete when this function is reexported
-genAddressInEra :: C.CardanoEra era -> Gen (C.AddressInEra era)
-genAddressInEra era =
-  case C.cardanoEraStyle era of
-    C.LegacyByronEra ->
-      C.byronAddressInEra <$> CGen.genAddressByron
+genTxBodyContentWithPlutusScripts :: Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
+genTxBodyContentWithPlutusScripts = do
+  txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) CGen.genTxIn
+  txInsCollateral <- C.TxInsCollateral C.CollateralInBabbageEra <$> Gen.list (Range.linear 1 10) CGen.genTxIn
+  let txInsReference = C.TxInsReferenceNone
+  txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext C.BabbageEra)
+  let txTotalCollateral = C.TxTotalCollateralNone
+  let txReturnCollateral = C.TxReturnCollateralNone
+  txFee <- genTxFee C.BabbageEra
+  let txValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+  let txMetadata = C.TxMetadataNone
+  let txAuxScripts = C.TxAuxScriptsNone
+  let txExtraKeyWits = C.TxExtraKeyWitnessesNone
+  txProtocolParams <- C.BuildTxWith . Just <$> genProtocolParametersForPlutusScripts
+  let txWithdrawals = C.TxWithdrawalsNone
+  let txCertificates = C.TxCertificatesNone
+  let txUpdateProposal = C.TxUpdateProposalNone
+  let txMintValue = C.TxMintNone
+  let txScriptValidity = C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra C.ScriptValid
 
-    C.ShelleyBasedEra _ ->
-      Gen.choice
-        [ C.byronAddressInEra   <$> CGen.genAddressByron
-        , C.shelleyAddressInEra <$> CGen.genAddressShelley
-        ]
-
--- Copied from cardano-api, but removed the recursive construction because it is time consuming ,
--- about a factor of 20 when compared to this simple generator.
-genSimpleScriptData :: Gen C.ScriptData
-genSimpleScriptData =
-    Gen.choice
-        [ C.ScriptDataNumber <$> genInteger
-        , C.ScriptDataBytes  <$> genByteString
-        , C.ScriptDataConstructor <$> genInteger <*> pure []
-        , pure $ C.ScriptDataList []
-        , pure $ C.ScriptDataMap []
-        ]
-  where
-    genInteger :: Gen Integer
-    genInteger = Gen.integral
-                  (Range.linear
-                    0
-                    (fromIntegral (maxBound :: Word64) :: Integer))
-
-    genByteString :: Gen ByteString
-    genByteString = BS.pack <$> Gen.list (Range.linear 0 64)
-                                         (Gen.word8 Range.constantBounded)
-
-genChainPoint :: Gen C.ChainPoint
-genChainPoint = do
-    C.ChainPoint <$> CGen.genSlotNo <*> genHashBlockHeader
-
-genHashBlockHeader :: Gen (C.Hash C.BlockHeader)
-genHashBlockHeader = C.HeaderHash . BSS.toShort <$> Gen.bytes (Range.singleton 32)
+  pure $ C.TxBodyContent
+    { C.txIns
+    , C.txInsCollateral
+    , C.txInsReference
+    , C.txOuts
+    , C.txTotalCollateral
+    , C.txReturnCollateral
+    , C.txFee
+    , C.txValidityRange
+    , C.txMetadata
+    , C.txAuxScripts
+    , C.txExtraKeyWits
+    , C.txProtocolParams
+    , C.txWithdrawals
+    , C.txCertificates
+    , C.txUpdateProposal
+    , C.txMintValue
+    , C.txScriptValidity
+    }
+ where
+    -- Copied from cardano-api. Delete when this function is reexported
+    genTxFee :: C.CardanoEra era -> Gen (C.TxFee era)
+    genTxFee era =
+      case C.txFeesExplicitInEra era of
+        Left supported  -> pure (C.TxFeeImplicit supported)
+        Right supported -> C.TxFeeExplicit supported <$> CGen.genLovelace

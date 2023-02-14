@@ -1,8 +1,6 @@
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
-
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
@@ -18,7 +16,7 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [Indexers.Utxo.tests
+  [ Indexers.Utxo.tests
   , Indexers.ScriptTx.tests
   , Indexers.AddressDatum.tests
   -- TODO Enable when test environemnt is reconfigured

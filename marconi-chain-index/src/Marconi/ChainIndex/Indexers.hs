@@ -134,12 +134,12 @@ utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = 
       readMVar index >>= callback -- refresh the query STM/CPS with new storage pointers/counters state
       event <- atomically . readTChan $ ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo hsh blkNo) txs) _) _ct ->
-            case Utxo.getUtxoEvents maybeTargetAddresses txs blkNo (C.ChainPoint slotNo hsh) of
+        RollForward (BlockInMode (Block (BlockHeader slotNo hsh _) txs) _) _ct ->
+            case Utxo.getUtxoEvents maybeTargetAddresses txs (C.ChainPoint slotNo hsh) of
               Just u -> do
                 modifyMVar_ index (Storable.insert u)
                 loop index
-              _      -> loop index
+              Nothing -> loop index
 
         RollBackward cp _ct -> do
           modifyMVar_ index $ \ix -> fromMaybe ix <$> Storable.rewind cp ix

@@ -206,6 +206,7 @@ test-suite marconi-mamba-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , aeson
     , base                  >=4.9 && <5
     , bytestring
     , containers
