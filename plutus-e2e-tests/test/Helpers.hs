@@ -573,7 +573,8 @@ waitForTxInAtAddress era localNodeConnectInfo address txIn debugStr = do
   let timeoutSeconds = 90 :: Int
       loop i = do
         if i == 0
-          then error ("waitForTxInAtAddress timeout. Debug: " ++ debugStr)
+          then error ("waitForTxInAtAddress timeout. \n-- Debug --\nTest function: " ++ debugStr
+                    ++ "\nAddress: " ++ show address ++ "\nTxIn: " ++ show txIn)
           else HE.threadDelay 1000000
         utxos <- findUTxOByAddress era localNodeConnectInfo address
         when (Map.notMember txIn $ C.unUTxO utxos) (loop $ pred i)
