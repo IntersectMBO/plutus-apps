@@ -301,6 +301,7 @@ instance Resumable ScriptTxHandle where
 open :: FilePath -> Depth -> IO ScriptTxIndexer
 open dbPath (Depth k) = do
   c <- SQL.open dbPath
+  SQL.execute_ c "PRAGMA journal_mode=WAL"
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS script_transactions (scriptAddress TEXT NOT NULL, txCbor BLOB NOT NULL, slotNo INT NOT NULL, blockHash BLOB NOT NULL)"
   -- Add this index for normal queries.
   SQL.execute_ c "CREATE INDEX IF NOT EXISTS script_address ON script_transactions (scriptAddress)"

@@ -304,6 +304,7 @@ instance RI.Rewindable MintBurnHandle where
 
 open :: FilePath -> Int -> IO MintBurnIndexer
 open dbPath bufferSize = do
-  sqlCon <- SQL.open dbPath
-  sqliteInit sqlCon
-  RI.emptyState bufferSize (MintBurnHandle sqlCon bufferSize)
+  c <- SQL.open dbPath
+  SQL.execute_ c "PRAGMA journal_mode=WAL"
+  sqliteInit c
+  RI.emptyState bufferSize (MintBurnHandle c bufferSize)

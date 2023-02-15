@@ -490,7 +490,7 @@ open
   -> IO AddressDatumIndex
 open dbPath (AddressDatumDepth k) = do
     c <- SQL.open dbPath
-
+    SQL.execute_ c "PRAGMA journal_mode=WAL"
     SQL.execute_ c
         [r|CREATE TABLE IF NOT EXISTS address_datums
             ( address TEXT NOT NULL
