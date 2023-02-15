@@ -4,7 +4,7 @@
 
 let
 
-  inherit (cell.library.haskell-nix) haskellLib;
+  inherit (cell.library.pkgs.haskell-nix) haskellLib;
 
   toHaddock = haskellLib.collectComponents' "library"
     (haskellLib.selectProjectPackages cell.library.plutus-apps-project.hsPkgs);

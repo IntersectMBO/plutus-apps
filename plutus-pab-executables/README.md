@@ -17,7 +17,7 @@ $ cabal build
 ### Nix
 
 ```
-$ nix-build ../default.nix -A plutus-apps.haskell.packages.plutus-pab
+$ nix build .#plutus-pab-examples
 ```
 
 ## PAB Components

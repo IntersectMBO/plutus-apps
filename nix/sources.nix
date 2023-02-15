@@ -2,7 +2,9 @@
 # in a flake.lock.
 { system }:
 let
-  lock = builtins.fromJSON (builtins.readFile ../flake.lock);
+  # TODO(std) keeping the old_flake for BW compatibility.
+  # Remove this file and all other nix files not in __std__ in the final PR.
+  lock = builtins.fromJSON (builtins.readFile ../old_flake.lock);
 
   inherit (lock.nodes.${lock.root}) inputs;
 

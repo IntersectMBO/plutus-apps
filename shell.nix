@@ -128,6 +128,15 @@ let
     stylish-haskell
   ]);
 
+  deprecation-warning = ''
+    echo -e "\033[0;33m*********************************************************************"
+    echo -e "* nix-shell is deprecated and will be gone on March 13th 2023.      *"
+    echo -e "* Please exit this shell and run 'nix develop' instead.             *"
+    echo -e "* For any problem with the new shell please notify @zeme-iohk       *"
+    echo -e "* and revert to using 'nix-shell' until fixed.                      *"
+    echo -e "*********************************************************************\033[0m"
+  '';
+
 in
 haskell.project.shellFor {
   nativeBuildInputs = nixpkgsInputs ++ localInputs ++ [ pythonTools ];
@@ -137,6 +146,7 @@ haskell.project.shellFor {
 
   shellHook = ''
     ${pre-commit-check.shellHook}
+    ${deprecation-warning}
   ''
   # Work around https://github.com/NixOS/nix/issues/3345, which makes
   # tests etc. run single-threaded in a nix-shell.
@@ -149,9 +159,9 @@ haskell.project.shellFor {
   + ''
     export GITHUB_SHA=$(git rev-parse HEAD)
 
-    # This is probably set by haskell.nix's shellFor, but it interferes 
+    # This is probably set by haskell.nix's shellFor, but it interferes
     # with the pythonTools in nativeBuildInputs above.
-    # This workaround will become obsolete soon once this respository 
+    # This workaround will become obsolete soon once this respository
     # is migrated to Standard.
     export PYTHONPATH=
   '';

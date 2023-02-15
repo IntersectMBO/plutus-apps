@@ -14,7 +14,8 @@ cell.library.pkgs.writeShellApplication {
     root="$(repo-root)"
 
     shell_fragments=$(
-      find \
+      find . \
+        # TODO(std) rename to $root/nix when std'ization finished
         "$root/__std__/cells" \
         -name "*.nix" \
         -and -not -name "*default.nix" \
@@ -28,7 +29,7 @@ cell.library.pkgs.writeShellApplication {
     done
 
     derivation_fragments=$(
-      find \
+      find . \
         "$root/__std__/cells" \
         -name "*.nix" \
         -and -not -name "*default.nix" \

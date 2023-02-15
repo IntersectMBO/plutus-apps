@@ -1,5 +1,4 @@
 # TODO(std) DUP 
-
 { inputs, cell }:
 
 { ghc
@@ -39,11 +38,13 @@ cell.library.pkgs.runCommand "combine-haddock"
   mkdir -p "$out/share/doc"
 
   for pkg in $hsdocsRec; do
-    files=($pkg/share/doc/*)
-    if [ ''${#files[@]} -gt 0 ]; then
-      cp -R ''${files[@]} "$out/share/doc"
+    if [ -d "$pkg/share/doc/ghc" ]; then
+      echo "Skipping GHC :'("
+    elif [ -d "$pkg/share/doc" ]; then
+      cp -r "$pkg/share/doc/." "$out/share/doc"
     fi
   done
+
   # We're going to sed all the files so they'd better be writable!
   chmod -R +w $out/share/doc
 
