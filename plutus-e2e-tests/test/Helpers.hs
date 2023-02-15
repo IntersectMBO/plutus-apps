@@ -578,7 +578,7 @@ waitForTxInAtAddress era localNodeConnectInfo address txIn debugStr = do
           else HE.threadDelay 1000000
         utxos <- findUTxOByAddress era localNodeConnectInfo address
         when (Map.notMember txIn $ C.unUTxO utxos) (loop (pred i) (show utxos))
-  loop timeoutSeconds ""
+  loop timeoutSeconds " "
 
 -- | Get tx out at address is for general use when txo is expected
 getTxOutAtAddress :: (MonadIO m, MonadTest m)
