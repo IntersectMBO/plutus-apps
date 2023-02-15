@@ -4,6 +4,7 @@ module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
+import Spec.Marconi.ChainIndex.CLI qualified as CLI
 import Spec.Marconi.ChainIndex.Indexers.AddressDatum qualified as Indexers.AddressDatum
 import Spec.Marconi.ChainIndex.Indexers.ScriptTx qualified as Indexers.ScriptTx
 -- TODO see tests below
@@ -21,7 +22,8 @@ tests = testGroup "Marconi"
   , Indexers.ScriptTx.tests
   , Indexers.AddressDatum.tests
   , Indexers.MintBurn.tests
-  -- TODO Enable when test environemnt is reconfigured
+  , CLI.tests
   , Integration.tests
+  -- TODO Enable when test environemnt is reconfigured
   -- , EpochStakepoolSize.tests
   ]

@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Spec.Marconi.ChainIndex.Indexers.ScriptTx ( tests) where

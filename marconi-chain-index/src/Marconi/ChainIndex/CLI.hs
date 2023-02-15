@@ -7,6 +7,7 @@ module Marconi.ChainIndex.CLI
     , pNetworkId
     , Options (..)
     , optionsParser
+    , programParser
     , parseOptions
     , utxoDbPath
     , addressDatumDbPath
@@ -18,6 +19,7 @@ module Marconi.ChainIndex.CLI
 
 import Control.Applicative (optional, some)
 import Data.ByteString.Char8 qualified as C8
+import Data.Functor ((<&>))
 import Data.List (nub)
 import Data.List.NonEmpty (fromList)
 import Data.Maybe (fromMaybe)
@@ -80,7 +82,8 @@ pTestnetMagic = C.NetworkMagic <$> Opt.option Opt.auto
 multiString :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser TargetAddresses
 multiString desc = fromList . concat <$> some single
   where
-    single = Opt.option (Opt.str >>= (pure . parseCardanoAddresses)) desc
+    single :: Opt.Parser [C.Address C.ShelleyAddr]
+    single = Opt.option (Opt.str <&> parseCardanoAddresses) desc
 
 parseCardanoAddresses :: String -> [C.Address C.ShelleyAddr]
 parseCardanoAddresses =  nub
@@ -120,18 +123,21 @@ parseOptions :: IO Options
 parseOptions = do
     maybeSha <- lookupEnv "GITHUB_SHA"
     let sha = fromMaybe "GIHUB_SHA environment variable not set!" maybeSha
-    Opt.execParser (programParser sha)
-    where
-        programParser sha =
-            Opt.info (Opt.helper
-                      <*> (versionOption sha)
-                      <*> optionsParser)
-            (Opt.fullDesc
-                <> Opt.progDesc "marconi"
-                <> Opt.header
-                    "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
-            )
-        versionOption sha = Opt.infoOption sha (Opt.long "version" <> Opt.help "Show git SHA")
+    Opt.execParser $ programParser sha
+
+programParser :: String -> Opt.ParserInfo Options
+programParser sha =
+  Opt.info (Opt.helper
+            <*> versionOption
+            <*> optionsParser)
+  (Opt.fullDesc
+   <> Opt.progDesc "marconi"
+   <> Opt.header
+   "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
+  )
+  where
+    versionOption =
+      Opt.infoOption sha (Opt.long "version" <> Opt.help "Show git SHA")
 
 optionsParser :: Opt.Parser Options
 optionsParser =

@@ -1,0 +1,25 @@
+marconi - a lightweight customizable solution for indexing and querying the
+Cardano blockchain
+
+Usage: marconi-mamba [--version] --socket-path FILE-PATH --db-dir DIR 
+                     [--utxo-db-fname FILE-NAME] [--http-port HTTP-PORT] 
+                     (--mainnet | --testnet-magic NATURAL) 
+                     [(--addresses-to-index BECH32-ADDRESS)]
+
+  marconi-mamba
+
+Available options:
+  -h,--help                Show this help text
+  --version                Show git SHA
+  --socket-path FILE-PATH  Socket path to node
+  --db-dir DIR             Directory path that will contain all the SQLite
+                           databases
+  --utxo-db-fname FILE-NAME
+                           File name of the utxo database.
+  --http-port HTTP-PORT    JSON-RPC http port number, default is port 3000.
+  --mainnet                Use the mainnet magic id.
+  --testnet-magic NATURAL  Specify a testnet magic id.
+  --addresses-to-index BECH32-ADDRESS
+                           Bech32 Shelley addresses to index. i.e
+                           "--address-to-index address-1 --address-to-index
+                           address-2 ..."

@@ -42,8 +42,8 @@ parserCliArgs = CliArgs
                 )
         )
 
-parserOpts  :: String -> ParserInfo CliArgs
-parserOpts sha =
+programParser  :: String -> ParserInfo CliArgs
+programParser sha =
     info (helper
           <*> versionOption
           <*> parserCliArgs)
@@ -62,4 +62,4 @@ parseCli :: IO CliArgs
 parseCli = do
     maybeSha <- lookupEnv "GITHUB_SHA"
     let sha = fromMaybe "GIHUB_SHA environment variable not set!" maybeSha
-    execParser $ parserOpts sha
+    execParser $ programParser sha
