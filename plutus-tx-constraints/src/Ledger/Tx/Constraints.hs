@@ -69,6 +69,7 @@ module Ledger.Tx.Constraints(
     -- ** Combining multiple typed scripts into one transaction
     , OC.SomeLookupsAndConstraints(..)
     , OC.mkSomeTx
+    , OC.mkTxWithParams
     -- ** Lookups
     , OC.ScriptLookups(..)
     , OC.typedValidatorLookups
@@ -82,8 +83,6 @@ module Ledger.Tx.Constraints(
     , OC.otherData
     , OC.paymentPubKey
     , OC.paymentPubKeyHash
-    , OC.ownPaymentPubKeyHash
-    , OC.ownStakingCredential
     -- * Deprecated
     , TC.mustPayToTheScript
     , TC.mustPayToAddressWithDatum
@@ -98,8 +97,8 @@ module Ledger.Tx.Constraints(
     , TC.mustValidateIn
     ) where
 
-import Ledger.Constraints.TxConstraints qualified as TC
 import Ledger.Tx.Constraints.OffChain qualified as OC
+import Ledger.Tx.Constraints.TxConstraints qualified as TC
 
 -- $constraints
 -- This module defines 'Ledger.Tx.Constraints.TxConstraints.TxConstraints', a list

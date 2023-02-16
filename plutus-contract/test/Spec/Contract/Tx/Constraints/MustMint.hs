@@ -19,16 +19,16 @@ import Control.Lens (_Just, has, (&), (??))
 import Data.Map qualified as Map
 import Data.Void (Void)
 import Ledger qualified
-import Ledger.Constraints qualified as TC
-import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), mintingPolicy,
-                                                             typedValidatorLookups, unspentOutputs)
-import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Constraints.OnChain.V2 qualified as TCV2
-import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Scripts (ScriptHash (ScriptHash), unitRedeemer)
 import Ledger.Test (asRedeemer, coinMintingPolicy, coinMintingPolicyHash, coinMintingPolicyId)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoAssetName, fromCardanoValue)
+import Ledger.Tx.Constraints qualified as TC
+import Ledger.Tx.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), mintingPolicy,
+                                                                typedValidatorLookups, unspentOutputs)
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
+import Ledger.Tx.Constraints.OnChain.V2 qualified as TCV2
+import Ledger.Tx.Constraints.TxConstraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI (assetIdValue)
 import Plutus.Contract as Con

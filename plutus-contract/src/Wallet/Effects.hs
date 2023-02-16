@@ -30,7 +30,7 @@ import Cardano.Node.Emulator.Params (Params)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, CardanoTx, Slot)
-import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
 import Plutus.V1.Ledger.Value (Value)
 import Wallet.Error (WalletAPIError)
 

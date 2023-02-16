@@ -117,13 +117,12 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator      >=1.1.0
-    , freer-extras               >=1.1.0
-    , plutus-chain-index-core    >=1.1.0
-    , plutus-ledger              >=1.1.0
-    , plutus-ledger-constraints  >=1.1.0
-    , plutus-script-utils        >=1.1.0
-    , plutus-tx-constraints      >=1.1.0
+    , cardano-node-emulator    >=1.1.0
+    , freer-extras             >=1.1.0
+    , plutus-chain-index-core  >=1.1.0
+    , plutus-ledger            >=1.1.0
+    , plutus-script-utils      >=1.1.0
+    , plutus-tx-constraints    >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
@@ -265,14 +264,13 @@ test-suite plutus-contract-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator      >=1.0.0
-    , freer-extras               >=1.0.0
-    , plutus-chain-index-core    >=1.0.0
-    , plutus-contract            >=1.0.0
-    , plutus-ledger              >=1.0.0
-    , plutus-ledger-constraints  >=1.0.0
-    , plutus-script-utils        >=1.0.0
-    , plutus-tx-constraints      >=1.0.0
+    , cardano-node-emulator    >=1.0.0
+    , freer-extras             >=1.0.0
+    , plutus-chain-index-core  >=1.0.0
+    , plutus-contract          >=1.0.0
+    , plutus-ledger            >=1.0.0
+    , plutus-script-utils      >=1.0.0
+    , plutus-tx-constraints    >=1.0.0
 
   --------------------------
   -- Other IOG dependencies

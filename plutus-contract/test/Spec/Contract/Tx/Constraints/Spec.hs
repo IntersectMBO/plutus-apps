@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- | Integration tests covering each of the transaction constraints used by plutus-contract.
-    Currently covering both the plutus-ledger-constraints and plutus-tx-constraints. Soon only
-    plutus-tx-constraints will be supported.
 
     These tests cover both the off chain and on chain constraints:
       - Off chain constraints are used to build the transaction correctly to pass all phase-1

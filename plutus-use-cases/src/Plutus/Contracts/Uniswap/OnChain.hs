@@ -18,8 +18,8 @@ module Plutus.Contracts.Uniswap.OnChain
 
 import Data.Void (Void)
 import Ledger ()
-import Ledger.Constraints.OnChain.V2 as Constraints
 import Ledger.Tx.Constraints as Constraints
+import Ledger.Tx.Constraints.OnChain.V2 as Constraints
 import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateInitialLiquidity, calculateRemoval,
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types

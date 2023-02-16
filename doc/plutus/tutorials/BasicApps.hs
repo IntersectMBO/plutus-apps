@@ -27,7 +27,7 @@ import Data.Text qualified as T
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Ledger (CardanoAddress, PaymentPubKeyHash (unPaymentPubKeyHash), toPlutusAddress)
-import Ledger.Constraints qualified as Constraints
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Endpoint, Promise, endpoint, getParams, logInfo, selectList, submitTxConstraints,
                         submitTxConstraintsSpending, type (.\/), utxosAt)

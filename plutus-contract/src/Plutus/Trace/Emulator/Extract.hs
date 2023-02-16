@@ -27,8 +27,8 @@ import Data.Monoid (Sum (..))
 import Data.Set qualified as Set
 
 import Ledger qualified
-import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Ledger.Tx.Constraints.OffChain (UnbalancedTx (..))
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)

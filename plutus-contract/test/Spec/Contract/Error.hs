@@ -5,7 +5,7 @@ module Spec.Contract.Error where
 import Control.Lens (anyOf, has, makeClassyPrisms)
 import Data.Text qualified as Text
 import Ledger qualified
-import Ledger.Constraints.OffChain qualified as Constraints
+import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Plutus.Contract qualified as Contract
 import Plutus.Contract qualified as Ledger
 import Wallet qualified

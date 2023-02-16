@@ -19,8 +19,8 @@ import Data.Row
 import Test.Tasty
 
 import Cardano.Node.Emulator.Params (pNetworkId)
-import Ledger.Constraints (collectFromTheScript, mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx)
 import Ledger.Tx (getCardanoTxId)
+import Ledger.Tx.Constraints (collectFromTheScript, mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract as Contract
 import Plutus.Contract.Test hiding (not)

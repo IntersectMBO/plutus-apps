@@ -43,9 +43,9 @@ import GHC.Generics (Generic)
 import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
 import Ledger qualified (ScriptPurpose (..))
 import Ledger qualified as P
-import Ledger.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx))
 import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
+import Ledger.Tx.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx))
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)

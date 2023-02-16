@@ -27,8 +27,8 @@ import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
-import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (txOutDatumHash)
+import Ledger.Tx.Constraints qualified as Constraints
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,

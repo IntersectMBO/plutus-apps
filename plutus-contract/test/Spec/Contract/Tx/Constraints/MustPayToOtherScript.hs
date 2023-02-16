@@ -18,13 +18,13 @@ import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators (someTokenValue)
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.OnChain.V1 qualified as Constraints
-import Ledger.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Scripts (Redeemer)
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidator, someValidatorHash)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints qualified as Tx.Constraints
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Constraints
+import Ledger.Tx.Constraints.OnChain.V2 qualified as V2.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract as Con

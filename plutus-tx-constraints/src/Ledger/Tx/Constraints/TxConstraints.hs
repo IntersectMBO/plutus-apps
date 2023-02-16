@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 
 -- | Constraints for transactions
-module Ledger.Constraints.TxConstraints where
+module Ledger.Tx.Constraints.TxConstraints where
 
 import Cardano.Node.Emulator.TimeSlot (slotRangeToPOSIXTimeRange)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
@@ -53,7 +53,7 @@ import Data.Maybe (fromMaybe)
 import Prelude qualified as Haskell
 import Prettyprinter.Render.String (renderShowS)
 
-import Ledger.Constraints.ValidityInterval (ValidityInterval, fromPlutusInterval, toPlutusInterval)
+import Ledger.Tx.Constraints.ValidityInterval (ValidityInterval, fromPlutusInterval, toPlutusInterval)
 
 -- | How tx outs datum are embedded in a a Tx
 --

@@ -15,9 +15,9 @@ import Test.Tasty (TestName, TestTree, testGroup)
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger (unitDatum, unitRedeemer)
 import Ledger qualified
-import Ledger.Constraints qualified as L.Constraints
 import Ledger.Test
 import Ledger.Tx.CardanoAPI (toCardanoValue)
+import Ledger.Tx.Constraints qualified as L.Constraints
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,

@@ -26,7 +26,7 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
 import Data.Aeson qualified as JSON
-import Ledger.Constraints.OffChain (MkTxError)
+import Ledger.Tx.Constraints.OffChain (MkTxError)
 import Plutus.Contract.CardanoAPI (ToCardanoError)
 import Plutus.Contract.Checkpoint (AsCheckpointError (_CheckpointError), CheckpointError)
 import Plutus.Contract.Effects (ChainIndexResponse)

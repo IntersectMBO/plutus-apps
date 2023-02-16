@@ -18,7 +18,7 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 
 import Ledger (PaymentPubKeyHash)
-import Ledger.Constraints (mustPayToPubKey)
+import Ledger.Tx.Constraints (mustPayToPubKey)
 import Plutus.Contract (ContractError, Endpoint, Promise, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints,
                         yieldUnbalancedTx)
 import Plutus.Script.Utils.Value (Value)
