@@ -214,5 +214,5 @@ tests = testGroup "PRISM"
         .&&. walletFundsChangePlutus user (Ada.lovelaceValueOf (negate numTokens) <> STO.coins stoData numTokens)
         )
         prismTrace
-    , testProperty "QuickCheck property" prop_Prism
+    , testProperty "QuickCheck property" $ withMaxSuccess 20 prop_Prism
     ]

@@ -22,7 +22,6 @@ import Control.Monad.Freer (run)
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BSL
-import Data.Data
 import Data.Default (Default (..))
 import Data.Foldable
 import Data.Map (Map)
@@ -62,7 +61,7 @@ data CrowdfundingModel = CrowdfundingModel { _contributions       :: Map Wallet 
                                            , _ownerOnline         :: Bool
                                            , _collectDeadlineSlot :: Slot
                                            , _endSlot             :: Slot
-                                           } deriving (Show, Data)
+                                           } deriving (Show, Generic)
 
 makeLenses ''CrowdfundingModel
 
