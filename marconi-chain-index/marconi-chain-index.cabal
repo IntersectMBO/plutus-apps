@@ -160,6 +160,7 @@ library marconi-chain-index-test-lib
   visibility:      public
   hs-source-dirs:  test-lib
   exposed-modules:
+    Gen.Marconi.ChainIndex.Indexers.Utxo
     Gen.Marconi.ChainIndex.Types
     Helpers
 
@@ -175,8 +176,12 @@ library marconi-chain-index-test-lib
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-ledger-core
     , cardano-testnet
     , ouroboros-network
+    , plutus-core
 
   ------------------------
   -- Non-IOG dependencies
@@ -184,6 +189,7 @@ library marconi-chain-index-test-lib
   build-depends:
     , async
     , base             >=4.9 && <5
+    , bytestring
     , containers
     , directory
     , filepath
@@ -208,6 +214,7 @@ test-suite marconi-chain-index-test
     Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize
     Spec.Marconi.ChainIndex.Indexers.ScriptTx
     Spec.Marconi.ChainIndex.Indexers.Utxo
+    Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex
 
   --------------------
   -- Local components
