@@ -26,7 +26,7 @@ let
       "https://github.com/input-output-hk/cardano-wallet"."18a931648550246695c790578d4a55ee2f10463e" = "0i40hp1mdbljjcj4pn3n6zahblkb2jmpm8l4wnb36bya1pzf66fx";
       "https://github.com/Quviq/quickcheck-contractmodel"."b66e3ff0c6011dcef63f2bcfa6ea8d6ab685230d" = "sha256-gnY/Ps9i7RqO3yjcFilXjHyqDsdSZ+sLQn4vu3mAK/A=";
       "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
-      "https://github.com/james-iohk/cardano-node"."9e2426a89204b339d0cc6d848dba13719014fadc" = "00ax9dvr256kdr0c6i7kafhxra2hk7xywgl8k4wgq14wxv56gfzq";
+      "https://github.com/james-iohk/cardano-node"."34746b6c3dd524f99c10e51dd0787012081057a9" = "0k3p4csfb0xrfa99m0jydqa4bk1cfk22ypmy5hnz7lgjzp9i73dc";
       "https://github.com/james-iohk/cardano-node"."2b6978583b306ad28f7e1226b5d1ad604919c98a" = "06nggf0kpdh3whn6kqpw8s0484xw1q9r964rv125grbmpdx86dah";
     };
 

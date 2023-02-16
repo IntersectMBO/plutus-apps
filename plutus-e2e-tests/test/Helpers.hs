@@ -571,13 +571,14 @@ waitForTxInAtAddress :: (MonadIO m, MonadTest m)
   -> m ()
 waitForTxInAtAddress era localNodeConnectInfo address txIn debugStr = do
   let timeoutSeconds = 90 :: Int
-      loop i = do
+      loop i prevUtxo = do
         if i == 0
-          then error ("waitForTxInAtAddress timeout. Debug: " ++ debugStr)
+          then error ("waitForTxInAtAddress timeout. \n-- Debug --\nTest function: " ++ debugStr
+                    ++ "\nAddress: " ++ show address ++ "\nTxIn: " ++ show txIn ++ "\nPrev UTxO: " ++ show prevUtxo)
           else HE.threadDelay 1000000
         utxos <- findUTxOByAddress era localNodeConnectInfo address
-        when (Map.notMember txIn $ C.unUTxO utxos) (loop $ pred i)
-  loop timeoutSeconds
+        when (Map.notMember txIn $ C.unUTxO utxos) (loop (pred i) (show utxos))
+  loop timeoutSeconds ""
 
 -- | Get tx out at address is for general use when txo is expected
 getTxOutAtAddress :: (MonadIO m, MonadTest m)
