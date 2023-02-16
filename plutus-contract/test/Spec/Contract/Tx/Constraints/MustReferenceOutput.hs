@@ -25,12 +25,12 @@ import Data.Set qualified as S
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified as L
-import Ledger.Constraints qualified as Cons
-import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
-import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someValidatorHash)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints qualified as Cons
 import Ledger.Tx.Constraints qualified as TxCons
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Cons.V1
+import Ledger.Tx.Constraints.OnChain.V2 qualified as Cons.V2
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.ChainIndex.Emulator (diskState)

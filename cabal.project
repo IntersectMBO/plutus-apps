@@ -34,7 +34,6 @@ packages: cardano-node-emulator
           plutus-e2e-tests
           plutus-example
           plutus-ledger
-          plutus-ledger-constraints
           plutus-pab
           plutus-pab-executables
           plutus-script-utils

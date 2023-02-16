@@ -50,16 +50,18 @@ library
   exposed-modules:
     Ledger.Tx.Constraints
     Ledger.Tx.Constraints.OffChain
+    Ledger.Tx.Constraints.OnChain.V1
+    Ledger.Tx.Constraints.OnChain.V2
+    Ledger.Tx.Constraints.TxConstraints
     Ledger.Tx.Constraints.ValidityInterval
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator      >=1.1.0
-    , plutus-ledger              >=1.1.0
-    , plutus-ledger-constraints  >=1.1.0
-    , plutus-script-utils        >=1.1.0
+    , cardano-node-emulator  >=1.1.0
+    , plutus-ledger          >=1.1.0
+    , plutus-script-utils    >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
@@ -76,6 +78,7 @@ library
     , aeson
     , base           >=4.9 && <5
     , containers
+    , data-default
     , lens
     , mtl
     , prettyprinter

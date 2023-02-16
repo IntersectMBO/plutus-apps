@@ -12,9 +12,9 @@ import Control.Lens (makeClassyPrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
-import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts (Datum (..), Redeemer (..), unitRedeemer)
 import Ledger.Tx (getCardanoTxId)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts as Scripts
 import Plutus.Contract
 import Plutus.Contracts.PubKey qualified as PubKey

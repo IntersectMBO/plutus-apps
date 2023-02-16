@@ -20,7 +20,7 @@ import Data.Monoid qualified as Monoid
 import Data.Semigroup qualified as Semigroup
 import Data.Void (Void)
 import Ledger
-import Ledger.Constraints hiding (adjustUnbalancedTx)
+import Ledger.Tx.Constraints hiding (adjustUnbalancedTx)
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OffChain as OffChain

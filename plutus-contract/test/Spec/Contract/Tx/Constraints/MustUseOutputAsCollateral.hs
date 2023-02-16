@@ -24,14 +24,14 @@ import Data.Maybe (fromJust, maybeToList)
 import Ledger qualified as L
 import Ledger qualified as PSU
 import Ledger.CardanoWallet (paymentPrivateKey)
-import Ledger.Constraints qualified as Cons
-import Ledger.Constraints.OffChain qualified as OffCon
-import Ledger.Constraints.OnChain.V1 qualified as Cons
-import Ledger.Constraints.OnChain.V2 qualified as V2.Cons
 import Ledger.Test (asRedeemer, someCardanoAddressV2, someTypedValidatorV2)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as Tx
+import Ledger.Tx.Constraints qualified as Cons
 import Ledger.Tx.Constraints qualified as Tx.Cons
+import Ledger.Tx.Constraints.OffChain qualified as OffCon
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Cons
+import Ledger.Tx.Constraints.OnChain.V2 qualified as V2.Cons
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertUnbalancedTx, assertValidatedTransactionCount,
@@ -130,7 +130,7 @@ singleUseOfMustUseOutputAsCollateral submitTxFromConstraints lc =
       (assertValidatedTransactionCount 1 .&&.
         (assertUnbalancedTx contract
         (Trace.walletInstanceTag w1)
-        (\unT -> (length $ concat $ maybeToList $ unT ^? OffCon.cardanoTx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs) == 1)
+        (\unT -> (length $ concat $ maybeToList $ unT ^? OffCon.tx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs) == 1)
         "correct number of collateral inputs"))
       (void $ trace contract)
 
@@ -147,7 +147,7 @@ multipleUseOfMustUseOutputAsCollateral submitTxFromConstraints lc =
         (assertUnbalancedTx contract
         (Trace.walletInstanceTag w1)
         (\unT ->
-          (length $ concat $ maybeToList $ unT ^? OffCon.cardanoTx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
+          (length $ concat $ maybeToList $ unT ^? OffCon.tx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
             ==  fromIntegral maximumCollateralInputs)
         "correct number of collateral inputs"))
       (void $ trace contract)
@@ -174,7 +174,7 @@ usingMustUseOutputAsCollateralWithOtherWalletUtxo submitTxFromConstraints lc =
     (assertUnbalancedTx contract
     (Trace.walletInstanceTag w1)
     (\unT ->
-        (length $ concat $ maybeToList $ unT ^? OffCon.cardanoTx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
+        (length $ concat $ maybeToList $ unT ^? OffCon.tx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
         ==  fromIntegral numberOfCollateralInputs)
     "correct number of collateral inputs"))
     (void traceWithW2Signing)
@@ -201,7 +201,7 @@ useOfMustUseOutputAsCollateralWithoutPlutusScript submitTxFromConstraints _ =
       (assertValidatedTransactionCount 1 .&&.
         (assertUnbalancedTx contract
         (Trace.walletInstanceTag w1)
-        (\unT -> (length $ concat $ maybeToList $ unT ^? OffCon.cardanoTx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
+        (\unT -> (length $ concat $ maybeToList $ unT ^? OffCon.tx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
             ==  numberOfCollateralInputs)
         "correct number of collateral inputs"))
       (void $ trace contract)
@@ -241,7 +241,7 @@ ledgerValidationErrorWhenUsingMustUseOutputAsCollateralWithScriptUtxo submitTxFr
         assertUnbalancedTx contract
             (Trace.walletInstanceTag w1)
             (\unT ->
-                (length $ concat $ maybeToList $ unT ^? OffCon.cardanoTx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
+                (length $ concat $ maybeToList $ unT ^? OffCon.tx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
                     ==  numberOfCollateralInputs)
                 "correct number of collateral inputs")
         (void $ trace contract)
@@ -263,7 +263,7 @@ ledgerValidationErrorWhenMustUseOutputAsCollateralExceedsMaximumCollateralInputs
         assertUnbalancedTx contract
             (Trace.walletInstanceTag w1)
             (\unT ->
-                (length $ concat $ maybeToList $ unT ^? OffCon.cardanoTx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
+                (length $ concat $ maybeToList $ unT ^? OffCon.tx . to Tx.getCardanoBuildTx . to Tx.getTxBodyContentCollateralInputs)
                     ==  fromIntegral moreThanMaximumCollateralInputs)
                 "correct number of collateral inputs")
     (void $ trace contract)

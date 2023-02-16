@@ -1,10 +1,8 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeApplications  #-}
 
 module Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndexEvent
     ( tests
@@ -12,21 +10,13 @@ module Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndexEvent
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Binary qualified as CBOR
-import Cardano.Crypto.Hash.Class qualified as CRYPTO
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Control.Monad (forM)
-import Data.Coerce (coerce)
 import Data.List qualified as List
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, mapMaybe)
+import Data.Maybe (catMaybes, isJust, mapMaybe)
 import Data.Set qualified as Set
-import GHC.Int (Int64)
-import GHC.Natural (Natural)
-import GHC.Real (Ratio, (%))
 import Gen.Cardano.Api.Typed qualified as CGen
 import Marconi.Core.Storable qualified as Storable
-import PlutusCore (defaultCostModelParams)
 import Test.Tasty (TestTree, localOption, testGroup)
 import Test.Tasty.Hedgehog (HedgehogTestLimit (HedgehogTestLimit), testPropertyNamed)
 
@@ -35,9 +25,11 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 
+import Gen.Marconi.ChainIndex.Types (genAddressInEra, genChainPoint, genExecutionUnits, genSimpleScriptData,
+                                     genTxOutValue)
 import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumHandle, StorableEvent (AddressDatumIndexEvent))
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
-import Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators (genAddressInEra, genChainPoint, genSimpleScriptData)
+import Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators (genTxBodyContentWithPlutusScripts)
 import Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils (addressInEraToAddressAny)
 
 tests :: TestTree
@@ -270,160 +262,6 @@ genTxBodyContentWithAddresses addressesDatumLocation = do
         { C.txIns = C.txIns txBody <> scriptTxIns
         , C.txOuts = concat txOuts
         }
-
-genTxBodyContentWithPlutusScripts :: Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
-genTxBodyContentWithPlutusScripts = do
-  txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) CGen.genTxIn
-  txInsCollateral <- C.TxInsCollateral C.CollateralInBabbageEra <$> Gen.list (Range.linear 1 10) CGen.genTxIn
-  let txInsReference = C.TxInsReferenceNone
-  txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext C.BabbageEra)
-  let txTotalCollateral = C.TxTotalCollateralNone
-  let txReturnCollateral = C.TxReturnCollateralNone
-  txFee <- genTxFee C.BabbageEra
-  let txValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-  let txMetadata = C.TxMetadataNone
-  let txAuxScripts = C.TxAuxScriptsNone
-  let txExtraKeyWits = C.TxExtraKeyWitnessesNone
-  txProtocolParams <- C.BuildTxWith . Just <$> genProtocolParametersForPlutusScripts
-  let txWithdrawals = C.TxWithdrawalsNone
-  let txCertificates = C.TxCertificatesNone
-  let txUpdateProposal = C.TxUpdateProposalNone
-  let txMintValue = C.TxMintNone
-  let txScriptValidity = C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra C.ScriptValid
-
-  pure $ C.TxBodyContent
-    { C.txIns
-    , C.txInsCollateral
-    , C.txInsReference
-    , C.txOuts
-    , C.txTotalCollateral
-    , C.txReturnCollateral
-    , C.txFee
-    , C.txValidityRange
-    , C.txMetadata
-    , C.txAuxScripts
-    , C.txExtraKeyWits
-    , C.txProtocolParams
-    , C.txWithdrawals
-    , C.txCertificates
-    , C.txUpdateProposal
-    , C.txMintValue
-    , C.txScriptValidity
-    }
- where
-    genTxOutTxContext :: C.CardanoEra era -> Gen (C.TxOut C.CtxTx era)
-    genTxOutTxContext era =
-      C.TxOut <$> genAddressInEra era
-              <*> genTxOutValue era
-              <*> genSimpleTxOutDatumHashTxContext era
-              <*> constantReferenceScript era
-    constantReferenceScript :: C.CardanoEra era -> Gen (C.ReferenceScript era)
-    constantReferenceScript era =
-      case C.refInsScriptsAndInlineDatsSupportedInEra era of
-        Nothing -> return C.ReferenceScriptNone
-        Just supp -> pure
-                   $ C.ReferenceScript supp
-                   $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1)
-                   $ C.PlutusScript C.PlutusScriptV1
-                   $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxTxIn
-
-    genSimpleTxOutDatumHashTxContext :: C.CardanoEra era -> Gen (C.TxOutDatum C.CtxTx era)
-    genSimpleTxOutDatumHashTxContext era = case era of
-        C.ByronEra   -> pure C.TxOutDatumNone
-        C.ShelleyEra -> pure C.TxOutDatumNone
-        C.AllegraEra -> pure C.TxOutDatumNone
-        C.MaryEra    -> pure C.TxOutDatumNone
-        C.AlonzoEra  -> Gen.choice
-                        [ pure C.TxOutDatumNone
-                        , C.TxOutDatumHash C.ScriptDataInAlonzoEra <$> genHashScriptData
-                        , C.TxOutDatumInTx C.ScriptDataInAlonzoEra <$> genSimpleScriptData
-                        ]
-        C.BabbageEra -> Gen.choice
-                        [ pure C.TxOutDatumNone
-                        , C.TxOutDatumHash C.ScriptDataInBabbageEra <$> genHashScriptData
-                        , C.TxOutDatumInTx C.ScriptDataInBabbageEra <$> genSimpleScriptData
-                        , C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genSimpleScriptData
-                        ]
-
-    -- Copied from cardano-api. Delete when this function is reexported
-    genHashScriptData :: Gen (C.Hash C.ScriptData)
-    genHashScriptData = C.ScriptDataHash . unsafeMakeSafeHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
-
-    mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
-    mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR
-
-    -- Copied from cardano-api. Delete when this function is reexported
-    genTxFee :: C.CardanoEra era -> Gen (C.TxFee era)
-    genTxFee era =
-      case C.txFeesExplicitInEra era of
-        Left supported  -> pure (C.TxFeeImplicit supported)
-        Right supported -> C.TxFeeExplicit supported <$> CGen.genLovelace
-
-genProtocolParametersForPlutusScripts :: Gen C.ProtocolParameters
-genProtocolParametersForPlutusScripts =
-  C.ProtocolParameters
-    <$> ((,) <$> genNat <*> genNat)
-    <*> Gen.maybe CGen.genRational
-    <*> CGen.genMaybePraosNonce
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> Gen.maybe CGen.genLovelace
-    <*> CGen.genLovelace
-    <*> CGen.genLovelace
-    <*> CGen.genLovelace
-    <*> genEpochNo
-    <*> genNat
-    <*> genRationalInt64
-    <*> CGen.genRational
-    <*> CGen.genRational
-    <*> pure Nothing -- Obsolete from babbage onwards
-    <*> pure (Map.fromList
-      [ (C.AnyPlutusScriptVersion C.PlutusScriptV1, C.CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams)
-      , (C.AnyPlutusScriptVersion C.PlutusScriptV2, C.CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams) ])
-    <*> (Just <$> genExecutionUnitPrices)
-    <*> (Just <$> genExecutionUnits)
-    <*> (Just <$> genExecutionUnits)
-    <*> (Just <$> genNat)
-    <*> (Just <$> genNat)
-    <*> (Just <$> genNat)
-    <*> (Just <$> CGen.genLovelace)
- where
-    -- Copied from cardano-api. Delete when this function is reexported
-    genRationalInt64 :: Gen Rational
-    genRationalInt64 =
-        (\d -> ratioToRational (1 % d)) <$> genDenominator
-      where
-        genDenominator :: Gen Int64
-        genDenominator = Gen.integral (Range.linear 1 maxBound)
-
-        ratioToRational :: Ratio Int64 -> Rational
-        ratioToRational = toRational
-
-    -- Copied from cardano-api. Delete when this function is reexported
-    genEpochNo :: Gen C.EpochNo
-    genEpochNo = C.EpochNo <$> Gen.word64 (Range.linear 0 10)
-
-    -- Copied from cardano-api. Delete when this function is reexported
-    genNat :: Gen Natural
-    genNat = Gen.integral (Range.linear 0 10)
-
-    -- Copied from cardano-api. Delete when this function is reexported
-    genExecutionUnitPrices :: Gen C.ExecutionUnitPrices
-    genExecutionUnitPrices = C.ExecutionUnitPrices <$> CGen.genRational <*> CGen.genRational
-
--- Copied from cardano-api. Delete when this function is reexported
-genExecutionUnits :: Gen C.ExecutionUnits
-genExecutionUnits = C.ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
-                                     <*> Gen.integral (Range.constant 0 1000)
-
-genTxOutValue :: C.CardanoEra era -> Gen (C.TxOutValue era)
-genTxOutValue era =
-  case C.multiAssetSupportedInEra era of
-    Left adaOnlyInEra     -> C.TxOutAdaOnly adaOnlyInEra <$> CGen.genLovelace
-    Right multiAssetInEra -> C.TxOutValue multiAssetInEra . C.lovelaceToValue <$> CGen.genLovelace
 
 isShelleyAddressInEra :: C.AddressInEra era -> Bool
 isShelleyAddressInEra (C.AddressInEra _ C.ShelleyAddress {}) = True

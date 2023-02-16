@@ -124,9 +124,9 @@ import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
 import Ledger.Address (CardanoAddress, toPlutusAddress)
-import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
+import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
 import Ledger.Value.CardanoAPI (fromCardanoValue, lovelaceToValue, toCardanoValue)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request

@@ -66,11 +66,11 @@ import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, Slot, TxOutRef)
 import Ledger qualified
-import Ledger.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
-                           mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
-                           mustSpendPubKeyOutput, plutusV2MintingPolicy)
-import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
+                              mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
+                              mustSpendPubKeyOutput, plutusV2MintingPolicy)
+import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Promise, adjustUnbalancedTx,

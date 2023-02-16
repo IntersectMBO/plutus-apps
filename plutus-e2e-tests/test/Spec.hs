@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- | Tests covering the integration of local modules and external packages. To name a few:
-    Trace Emulator, plutus-ledger-constraints, plutus-tx-constarints, Contract.Test library,
+    Trace Emulator, plutus-tx-constarints, Contract.Test library,
     plutus-tx and plutus-ledger-api.
     Scenarios aim to use a variety of functions and assert relevant properties.
     Can also be considered living documentation for Contract and Tx Constraint use.

@@ -133,11 +133,10 @@ import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
                cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
-import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints.OffChain (ScriptLookups, UnbalancedTx)
-import Ledger.Tx.Constraints.OffChain qualified as Tx.Constraints
+import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Plutus.Contract.Util (loopM)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
@@ -992,17 +991,14 @@ mkTxConstraints :: forall a w s e.
   -> Contract w s e UnbalancedTx
 mkTxConstraints lookups constraints = do
     params <- getParams
-    let rethrow = \case
-          Tx.Constraints.ToCardanoError err  -> review _TxToCardanoConvertContractError err
-          Tx.Constraints.LedgerMkTxError err -> review _ConstraintResolutionContractError err
-        result = Tx.Constraints.mkTx params lookups constraints
+    let result = Constraints.mkTx params lookups constraints
         logData = MkTxLog
           { mkTxLogLookups = Constraints.generalise lookups
           , mkTxLogTxConstraints = bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData constraints
           , mkTxLogResult = result
           }
     logDebug logData
-    mapError rethrow $ either throwError pure result
+    mapError (review _ConstraintResolutionContractError) $ either throwError pure result
 
 {-| Arguments and result of a call to 'mkTx'
 -}
@@ -1010,7 +1006,7 @@ data MkTxLog =
     MkTxLog
         { mkTxLogLookups       :: ScriptLookups Any
         , mkTxLogTxConstraints :: TxConstraints PlutusTx.BuiltinData PlutusTx.BuiltinData
-        , mkTxLogResult        :: Either Tx.Constraints.MkTxError UnbalancedTx
+        , mkTxLogResult        :: Either Constraints.MkTxError UnbalancedTx
         }
         deriving stock (Show, Generic)
         deriving anyclass (ToJSON, FromJSON)

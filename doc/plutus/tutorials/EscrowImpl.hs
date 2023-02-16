@@ -56,11 +56,11 @@ import GHC.Generics (Generic)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
                TxId, getCardanoTxId, interval, scriptOutputsAt, txSignedBy, valuePaidTo)
 import Ledger qualified
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Constraints.ValidityInterval qualified as Interval
 import Ledger.Interval (after, before, from)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.Constraints (TxConstraints)
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Scripts qualified as Scripts

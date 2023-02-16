@@ -21,25 +21,24 @@ import Data.Map as M
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified as L
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints.OffChain qualified as Cons (_NoMatchingOutputFound, _TxOutRefWrongType, mintingPolicy,
-                                                      otherScript, plutusV2OtherScript, typedValidatorLookups,
-                                                      unspentOutputs)
-import Ledger.Constraints.OnChain.V1 qualified as Cons.V1
-import Ledger.Constraints.OnChain.V2 qualified as Cons.V2
-import Ledger.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMintValueWithRedeemer,
-                                                           mustPayToAddressWithReferenceValidator,
-                                                           mustPayToOtherScriptWithDatumInTx,
-                                                           mustPayToTheScriptWithDatumInTx,
-                                                           mustPayToTheScriptWithInlineDatum, mustReferenceOutput,
-                                                           mustSpendPubKeyOutput, mustSpendScriptOutput,
-                                                           mustSpendScriptOutputWithMatchingDatumAndValue,
-                                                           mustSpendScriptOutputWithReference,
-                                                           mustUseOutputAsCollateral)
 import Ledger.Test (asDatum, asRedeemer, someCardanoAddress, someCardanoAddressV2, someTypedValidator,
                     someTypedValidatorV2, someValidatorHash)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.Constraints qualified as TxCons
+import Ledger.Tx.Constraints qualified as Constraints
+import Ledger.Tx.Constraints.OffChain qualified as Cons (_NoMatchingOutputFound, _TxOutRefWrongType, mintingPolicy,
+                                                         otherScript, plutusV2OtherScript, typedValidatorLookups,
+                                                         unspentOutputs)
+import Ledger.Tx.Constraints.OnChain.V1 qualified as Cons.V1
+import Ledger.Tx.Constraints.OnChain.V2 qualified as Cons.V2
+import Ledger.Tx.Constraints.TxConstraints qualified as Cons (TxConstraints, mustMintValueWithRedeemer,
+                                                              mustPayToAddressWithReferenceValidator,
+                                                              mustPayToOtherScriptWithDatumInTx,
+                                                              mustPayToTheScriptWithDatumInTx,
+                                                              mustPayToTheScriptWithInlineDatum, mustReferenceOutput,
+                                                              mustSpendPubKeyOutput, mustSpendScriptOutput,
+                                                              mustSpendScriptOutputWithMatchingDatumAndValue,
+                                                              mustSpendScriptOutputWithReference,
+                                                              mustUseOutputAsCollateral)
 import Numeric.Natural (Natural)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Prelude hiding (not)
@@ -138,7 +137,7 @@ mustPayToTheScriptWithMultipleOutputsContract nScriptOutputs = do
     where
         mustPayToTheScriptWithMultipleOutputs
             :: Integer
-            -> TxConstraints i P.BuiltinData
+            -> Constraints.TxConstraints i P.BuiltinData
         mustPayToTheScriptWithMultipleOutputs n = let
             go x = Cons.mustPayToTheScriptWithDatumInTx (PlutusTx.toBuiltinData x) (Value.fromCardanoValue utxoValue)
             in foldMap go [0 .. n-1]
@@ -167,7 +166,7 @@ mustSpendScriptOutputsContract' policyVersion nScriptOutputs nScriptOutputsToSpe
     ledgerTx <- submitTxConstraintsWith lookups tx
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
     where
-        mustSpendScriptOutputs :: [Tx.TxOutRef] -> TxConstraints P.BuiltinData P.BuiltinData
+        mustSpendScriptOutputs :: [Tx.TxOutRef] -> Constraints.TxConstraints P.BuiltinData P.BuiltinData
         mustSpendScriptOutputs = foldMap (\txOutRef -> Cons.mustSpendScriptOutput txOutRef (asRedeemer txOutRef))
 
 -- | Contract to create multiple outputs at script address and then uses
@@ -607,7 +606,7 @@ mustSpendScriptOutputsInlineDatumContract useInlineDatum = do
     ledgerTx4 <- submitTxConstraintsWith lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx4
     where
-        mustSpendScriptOutputs :: [Tx.TxOutRef] -> [TxConstraints P.BuiltinData P.BuiltinData]
+        mustSpendScriptOutputs :: [Tx.TxOutRef] -> [Constraints.TxConstraints P.BuiltinData P.BuiltinData]
         mustSpendScriptOutputs scriptTxOutRefs = fmap (\txOutRef -> Cons.mustSpendScriptOutput txOutRef (asRedeemer txOutRef)) scriptTxOutRefs
 
 mustSpendScriptOutputsInlineDatumHasNoDataInTx :: TestTree
@@ -797,7 +796,7 @@ txConstraintsMustSpendScriptOutputWithReferenceCanUnlockFundsWithV2Script =
 
 mustSpendScriptOutputWithReferenceTxV2ConTest :: Contract () EmptySchema ContractError ()
 mustSpendScriptOutputWithReferenceTxV2ConTest = do
-    let mkTx lookups constraints = either (error . show) id $ TxCons.mkTx @Any def lookups constraints
+    let mkTx lookups constraints = either (error . show) id $ Constraints.mkTx @Any def lookups constraints
 
     utxos <- ownUtxos
     myAddr <- ownAddress
