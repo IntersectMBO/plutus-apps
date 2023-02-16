@@ -54,6 +54,7 @@ library
     Marconi.ChainIndex.Indexers.AddressDatum
     Marconi.ChainIndex.Indexers.Datum
     Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Marconi.ChainIndex.Indexers.MintBurn
     Marconi.ChainIndex.Indexers.ScriptTx
     Marconi.ChainIndex.Indexers.Utxo
     Marconi.ChainIndex.Logging
@@ -74,6 +75,7 @@ library
     , cardano-api
     , cardano-binary
     , cardano-ledger-alonzo
+    , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
@@ -212,6 +214,7 @@ test-suite marconi-chain-index-test
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils
     Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Spec.Marconi.ChainIndex.Indexers.MintBurn
     Spec.Marconi.ChainIndex.Indexers.ScriptTx
     Spec.Marconi.ChainIndex.Indexers.Utxo
     Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex

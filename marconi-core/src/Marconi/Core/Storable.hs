@@ -36,9 +36,9 @@ module Marconi.Core.Storable
   , query
   ) where
 
-import Control.Applicative ((<|>))
 import Control.Lens.Operators ((%~), (.~), (^.))
 import Control.Lens.TH qualified as Lens
+import Control.Monad (void)
 import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.Foldable (foldl', foldlM)
 import Data.Function ((&))
@@ -344,28 +344,28 @@ rewind
      Rewindable h
   => HasPoint (StorableEvent h) (StorablePoint h)
   => PrimMonad (StorableMonad h)
-  => Eq (StorablePoint h)
+  => Ord (StorablePoint h)
   => StorablePoint h
   -> State h
   -> StorableMonad h (Maybe (State h))
-rewind p s = do
-  m' <- rewindMemory
-  h' <- rewindStorage p (s ^. handle)
-  -- The implementation here is a little non-trivial. If the rollback point is in memory
-  -- then we don't need to rewind the disk. If we need to rewind to some point stored
-  -- on disk, then the memory needs to be reset.
-  pure $ m' <|> resetMemory s <$> h'
-  where
-    rewindMemory :: StorableMonad h (Maybe (State h))
-    rewindMemory = do
-      v <- V.freeze $ VM.slice 0 (s ^. storage . cursor) (s ^. storage . events)
-      pure $ do
-        ix   <- VG.findIndex (\e -> syntheticPoint e == p) v
-        pure $ s & storage . cursor .~ (ix + 1)
-    resetMemory :: State h -> h -> State h
-    resetMemory s' h =
-      s' & handle  .~ h
-         & storage . cursor .~ 0
+rewind p s = if s ^. storage . cursor == 0
+  -- Buffer is empty, rewind storage just in case:
+  then do
+    void $ rewindStorage p (s ^. handle)
+    return $ Just s
+  -- Something in buffer:
+  else do
+    v <- V.freeze $ VM.slice 0 (s ^. storage . cursor) (s ^. storage . events)
+    case VG.findIndex (\e -> syntheticPoint e > p) v of
+      -- All of buffer is later than p, reset memory and rewind storage
+      Just 0 -> do
+        void $ rewindStorage p (s ^. handle)
+        return $ Just $ s & storage . cursor .~ 0
+      -- Some of buffer is later than p, truncate memory to that
+      Just ix -> return $ Just $ s & storage . cursor .~ ix
+      -- No point is larger than p => everything is smaller. Since
+      -- buffer was not empty then don't do anything:
+      _       -> return $ Just s
 
 resume
   :: Resumable h

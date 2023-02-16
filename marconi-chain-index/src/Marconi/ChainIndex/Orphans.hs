@@ -1,12 +1,10 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Marconi.ChainIndex.Orphans where
 
-import Cardano.Api (BlockHeader, BlockNo (BlockNo), ChainPoint (ChainPoint, ChainPointAtGenesis),
-                    ChainTip (ChainTip, ChainTipAtGenesis), Hash, SlotNo (SlotNo))
 import Cardano.Api qualified as C
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (decode, encode), deserialiseOrFail, serialise)
@@ -22,27 +20,29 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Typeable (Typeable)
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField qualified as SQL
+import Database.SQLite.Simple.Ok qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
 import Prettyprinter (Pretty (pretty), (<+>))
 
-instance Pretty ChainTip where
-  pretty ChainTipAtGenesis   = "ChainTipAtGenesis"
-  pretty (ChainTip sn ha bn) = "ChainTip(" <> pretty sn <> "," <+> pretty ha <> "," <+> pretty bn <> ")"
+instance Pretty C.ChainTip where
+  pretty C.ChainTipAtGenesis   = "ChainTipAtGenesis"
+  pretty (C.ChainTip sn ha bn) = "ChainTip(" <> pretty sn <> "," <+> pretty ha <> "," <+> pretty bn <> ")"
 
-instance Pretty ChainPoint where
-  pretty ChainPointAtGenesis = "ChainPointAtGenesis"
-  pretty (ChainPoint sn ha)  = "ChainPoint(" <> pretty sn <> "," <+> pretty ha <> ")"
+instance Pretty C.ChainPoint where
+  pretty C.ChainPointAtGenesis = "ChainPointAtGenesis"
+  pretty (C.ChainPoint sn ha)  = "ChainPoint(" <> pretty sn <> "," <+> pretty ha <> ")"
 
-instance Ord ChainPoint where
+instance Ord C.ChainPoint where
    C.ChainPointAtGenesis <= _                  = True
    _ <= C.ChainPointAtGenesis                  = False
    (C.ChainPoint sn _) <= (C.ChainPoint sn' _) = sn <= sn'
 
 -- * C.Hash C.BlockHeader
 
-instance Pretty (Hash BlockHeader) where
+instance Pretty (C.Hash C.BlockHeader) where
   pretty hash = "BlockHash" <+> pretty (C.serialiseToRawBytesHexText hash)
 
 instance SQL.ToField (C.Hash C.BlockHeader) where
@@ -56,23 +56,11 @@ instance SQL.FromField (C.Hash C.BlockHeader) where
 
 -- * C.SlotNo
 
-instance Pretty SlotNo where
-  pretty (SlotNo n) = "Slot" <+> pretty n
+instance Pretty C.SlotNo where
+  pretty (C.SlotNo n) = "Slot" <+> pretty n
 
-instance SQL.ToField C.SlotNo where
-  toField (C.SlotNo n) =  SQL.toField (fromIntegral n :: Int)
-
-instance SQL.FromField C.SlotNo where
-  fromField f = C.SlotNo <$> SQL.fromField f
-
-instance Pretty BlockNo where
-  pretty (BlockNo bn) = "BlockNo" <+> pretty bn
-
-instance SQL.FromField C.BlockNo where
-  fromField f = C.BlockNo <$> SQL.fromField f
-
-instance SQL.ToField C.BlockNo where
-  toField (C.BlockNo s) = SQL.SQLInteger $ fromIntegral s
+instance Pretty C.BlockNo where
+  pretty (C.BlockNo bn) = "BlockNo" <+> pretty bn
 
 instance ToJSON C.BlockNo
 
@@ -85,7 +73,6 @@ instance SQL.FromField C.AddressAny where
     b
     where
       cantDeserialise = SQL.returnError SQL.ConversionFailed f "Cannot deserialise address."
-
 
 instance SQL.ToField C.AddressAny where
   toField = SQL.SQLBlob . C.serialiseToRawBytes
@@ -172,3 +159,27 @@ instance ToJSON ByteString  where
 -- be encoded as CBOR bytestrings.
 bytesPrefix :: Text
 bytesPrefix = "0x"
+
+-- * ToField/FromField
+
+deriving newtype instance SQL.ToField C.BlockNo
+deriving newtype instance SQL.FromField C.BlockNo
+
+deriving newtype instance SQL.ToField C.SlotNo
+deriving newtype instance SQL.FromField C.SlotNo
+
+deriving newtype instance SQL.ToField C.AssetName
+deriving newtype instance SQL.FromField C.AssetName
+
+deriving newtype instance SQL.ToField C.Quantity
+deriving newtype instance SQL.FromField C.Quantity
+
+instance SQL.ToField C.PolicyId where -- C.PolicyId is a newtype over C.ScriptHash but no ToField available for it.
+  toField = SQL.toField . C.serialiseToRawBytes
+instance SQL.FromField C.PolicyId where
+  fromField = fromFieldViaRawBytes C.AsPolicyId
+
+-- | Helper to deserialize via SerialiseAsRawBytes instance
+fromFieldViaRawBytes :: (C.SerialiseAsRawBytes a, Typeable a) => C.AsType a -> SQL.Field -> SQL.Ok a
+fromFieldViaRawBytes as f = maybe err pure . C.deserialiseFromRawBytes as =<< SQL.fromField f
+  where err = SQL.returnError SQL.ConversionFailed f "can't deserialise via SerialiseAsRawBytes"

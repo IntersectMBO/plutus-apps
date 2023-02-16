@@ -14,7 +14,7 @@ import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
 import Control.Concurrent.STM qualified as IO
 import Control.Exception (catch)
-import Control.Monad (void, when)
+import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
@@ -24,9 +24,7 @@ import Data.List.NonEmpty qualified as NE
 import Data.Map qualified as Map
 import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
-import System.Environment qualified as IO
 import System.FilePath ((</>))
-import System.Info qualified as IO
 
 import Hedgehog (Property, assert, (===))
 import Hedgehog qualified as H
@@ -78,7 +76,7 @@ tests = testGroup "Integration"
       the indexer to see if it was indexed properly
 -}
 testIndex :: Property
-testIndex = H.integration $ (liftIO setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "." $ \tempAbsPath -> do
+testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "." $ \tempAbsPath -> do
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
   (localNodeConnectInfo, conf, runtime) <- TN.startTestnet TN.defaultTestnetOptions base tempAbsPath
@@ -259,8 +257,3 @@ testIndex = H.integration $ (liftIO setDarwinTmpdir >>) $ HE.runFinallies $ H.wo
     H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
 
   tx2 === queriedTx2
-
--- * Helpers
-
-setDarwinTmpdir :: IO ()
-setDarwinTmpdir = when (IO.os == "darwin") $ IO.setEnv "TMPDIR" "/tmp"

@@ -29,6 +29,7 @@ main = do
                                   (Cli.datumDbPath o)
                                   (Cli.scriptTxDbPath o)
                                   (Cli.epochStakepoolSizeDbPath o)
+                                  (Cli.mintBurnDbPath o)
                                   (Cli.optionsTargetAddresses o)
                                   (Cli.optionsNodeConfigPath o)
     (cp, coordinator) <- startIndexers indexers

@@ -14,7 +14,7 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Lens (view, (&))
 import Control.Lens.Operators ((^.))
-import Control.Monad (void)
+import Control.Monad (forever, void)
 import Control.Monad.Trans.Class (lift)
 import Data.List (findIndex, foldl1', intersect)
 import Data.Map (Map)
@@ -36,6 +36,7 @@ import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
 import Marconi.ChainIndex.Indexers.Datum (DatumIndex)
 import Marconi.ChainIndex.Indexers.Datum qualified as Datum
 import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochStakepoolSize
+import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Indexers.ScriptTx qualified as ScriptTx
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
@@ -204,6 +205,8 @@ addressDatumWorker_ onInsert targetAddresses depth Coordinator{_barrier} ch path
           modifyMVar_ index $ \ix -> fromMaybe ix <$> Storable.rewind cp ix
           innerLoop index
 
+-- * ScriptTx indexer
+
 scriptTxWorker_
   :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> ScriptTx.Depth
@@ -240,6 +243,8 @@ scriptTxWorker onInsert coordinator path = do
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
+-- * Epoch stakepool size indexer
+
 epochStakepoolSizeWorker :: FilePath -> Worker
 epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
   tchan <- atomically $ dupTChan _channel
@@ -262,8 +267,38 @@ epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
   void . forkIO $ S.effects indexer
   pure [ChainPointAtGenesis]
 
+-- * Mint/burn indexer
+
+mintBurnWorker_
+  :: Int
+  -> (MintBurn.TxMintEvent -> IO ())
+  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO b, MVar MintBurn.MintBurnIndexer)
+mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
+  indexerMVar <- newMVar =<< MintBurn.open dbPath bufferSize
+  let
+    loop = forever $ do
+      signalQSemN _barrier 1
+      event <- atomically $ readTChan ch
+      case event of
+        RollForward blockInMode _ct
+          | Just event' <- MintBurn.toUpdate blockInMode -> do
+              modifyMVar_ indexerMVar $ Storable.insert $ MintBurn.MintBurnEvent $ event'
+              void $ onInsert event'
+          | otherwise -> pure ()
+        RollBackward cp _ct ->
+          modifyMVar_ indexerMVar $ \ix -> fromMaybe ix <$> Storable.rewind cp ix
+  pure (loop, indexerMVar)
+
+mintBurnWorker :: (MintBurn.TxMintEvent -> IO ()) -> Worker
+mintBurnWorker onInsert coordinator path = do
+  workerChannel <- atomically . dupTChan $ _channel coordinator
+  (loop, ix) <- mintBurnWorker_ 2160 onInsert coordinator workerChannel path
+  void $ forkIO loop
+  readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
+
 filterIndexers
   :: Maybe FilePath
+  -> Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
@@ -277,6 +312,7 @@ filterIndexers
     datumPath
     scriptTxPath
     epochStakepoolSizePath
+    mintBurnPath
     maybeTargetAddresses
     maybeConfigPath =
   mapMaybe liftMaybe pairs
@@ -293,6 +329,7 @@ filterIndexers
         , (addressDatumWorker (\_ -> pure []) maybeTargetAddresses, addressDatumPath)
         , (datumWorker, datumPath)
         , (scriptTxWorker (\_ -> pure []), scriptTxPath)
+        , (mintBurnWorker (\_ -> pure ()), mintBurnPath)
         ] <> epochStakepoolSizeIndexer
 
 startIndexers

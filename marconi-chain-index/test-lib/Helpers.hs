@@ -234,6 +234,9 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
 
+setDarwinTmpdir :: IO ()
+setDarwinTmpdir = when (IO.os == "darwin") $ IO.setEnv "TMPDIR" "/tmp"
+
 -- * Accessors
 
 bimTxIds :: C.BlockInMode mode -> [C.TxId]
