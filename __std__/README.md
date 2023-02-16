@@ -79,7 +79,7 @@ For example:
 
 ## Reference example
 
-As an example, consider the file `./nix/cells/plutus-apps/packages/marconi.nix`:
+As an example, consider the file `./nix/cells/plutus-apps/packages/marconi-chain-index.nix`:
 
 - `./nix/cells` is the `cellsFrom` value in `flake.nix`
 - `/plutus-apps` is the cell name
@@ -88,11 +88,11 @@ As an example, consider the file `./nix/cells/plutus-apps/packages/marconi.nix`:
 - `/packages` is the cell block name
 - `/packages/*` are accessible via `cell.packages.*` (while inside `cells/plutus-apps`)
 - `/packages/*` are accessible via `inputs.cells.plutus-apps.packages.*` (everywhere)
-- `/marconi.nix` contains a *single derivation*
-- `marconi` is the name of the flake fragment
-- A derivation named `marconi` is accessible via `cell.packages.marconi` (while inside `cells/plutus-apps`)
-- And also accessible via `inputs.cells.plutus-apps.packages.marconi` (everywhere)
-- And also buildable via `nix build .#marconi`
+- `/marconi-chain-index.nix` contains a *single derivation*
+- `marconi-chain-index` is the name of the flake fragment
+- A derivation named `marconi-chain-index` is accessible via `cell.packages.marconi-chain-index` (while inside `cells/plutus-apps`)
+- And also accessible via `inputs.cells.plutus-apps.packages.marconi-chain-index` (everywhere)
+- And also buildable via `nix build .#marconi-chain-index`
 
 As another example, consider the file `./nix/cells/plutus-apps/library/default.nix`
 

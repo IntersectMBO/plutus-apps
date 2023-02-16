@@ -54,7 +54,7 @@
 
   plutus-chain-index = import ./plutus-chain-index.nix block;
 
-  marconi = import ./marconi.nix block;
+  marconi-chain-index = import ./marconi-chain-index.nix block;
 
   marconi-mamba = import ./marconi-mamba.nix block;
 
