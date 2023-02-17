@@ -27,19 +27,17 @@ import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Node.Emulator.Params qualified as Params
 import Ledger qualified
-import Ledger.Tx (txOutDatumHash)
 import Ledger.Tx.Constraints qualified as Constraints
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
                              assertUserLog, checkEmulatorFails, checkPredicateOptions, defaultCheckOptions,
-                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, w3,
-                             waitingForSlot, walletFundsChange, (.&&.))
+                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, waitingForSlot,
+                             walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
@@ -47,7 +45,7 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
                                     ContractInstanceState (ContractInstanceState, instContractState),
                                     UserThreadMsg (UserLog))
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, Validator)
+import Plutus.V1.Ledger.Api (Validator)
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -214,45 +212,6 @@ tests =
             (assertDone theContract tag ((==) (Committed TxValid ())) "should be done")
             (activateContract w1 theContract tag >> void (Trace.waitNSlots 1))
 
-        , let c :: Contract [Maybe DatumHash] Schema ContractError () = do
-                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
-                let payment = Constraints.mustPayToPubKeyWithDatumHash w2PubKeyHash datum (Ada.adaValueOf 10)
-                tx <- submitTx payment
-                let txOuts = fmap fst $ Ledger.getCardanoTxOutRefs tx
-                -- tell the tx out' datum hash that was specified by 'mustPayToPubKeyWithDatumHash'
-                tell [txOutDatumHash (head txOuts)]
-
-              datum = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
-              isExpectedDatumHash [Just hash] = hash == datumHash datum
-              isExpectedDatumHash _           = False
-
-          in run "mustPayToPubKeyWithDatumHash produces datum in TxOut"
-            ( assertAccumState c tag isExpectedDatumHash "should be done"
-            ) $ do
-              _ <- activateContract w1 c tag
-              void (Trace.waitNSlots 2)
-
-        -- verify that 'matchInputOutput' doesn't thrown 'InOutTypeMismatch' error
-        -- in case of two transactions with 'mustPayToPubKeyWithDatumHash'
-        , let c1 :: Contract [Maybe DatumHash] Schema ContractError () = do
-                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
-                let payment = Constraints.mustPayToPubKeyWithDatumHash w2PubKeyHash datum1 (Ada.adaValueOf 10)
-                void $ submitTx payment
-              c2 :: Contract [Maybe DatumHash] Schema ContractError () = do
-                let w3PubKeyHash = mockWalletPaymentPubKeyHash w3
-                let payment = Constraints.mustPayToPubKeyWithDatumHash w3PubKeyHash datum2 (Ada.adaValueOf 50)
-                void $ submitTx payment
-
-              datum1 = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
-              datum2 = Datum $ PlutusTx.toBuiltinData (42 :: Integer)
-
-          in run "mustPayToPubKeyWithDatumHash doesn't throw 'InOutTypeMismatch' error"
-            assertNoFailedTransactions $ do
-              _ <- activateContract w1 c1 tag
-              void (Trace.waitNSlots 2)
-              _ <- activateContract w2 c2 tag
-              void (Trace.waitNSlots 2)
-
         , let c :: Contract [TxOutStatus] Schema ContractError () = do
                 -- Submit a payment tx of 10 lovelace to W2.
                 let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
@@ -378,13 +337,6 @@ tests =
                 void $ Trace.assert "Always fails" $ const False
                 void $ Trace.waitNSlots 10
           in checkEmulatorFails "assert throws error" (defaultCheckOptions & minLogLevel .~ Debug) (waitingForSlot theContract tag 10) emTrace
-
-        , let c :: Contract () Schema ContractError () = do
-                let payment = Constraints.mustSatisfyAnyOf [mempty]
-                void $ submitTx payment
-          in run "mustSatisfyAnyOf [mempty] works"
-            ( assertDone c tag (const True) "should be done"
-            ) (void $ activateContract w1 c tag)
 
         , let c :: Contract [Ledger.Slot] Schema ContractError () = do
                 void $ submitTx mempty

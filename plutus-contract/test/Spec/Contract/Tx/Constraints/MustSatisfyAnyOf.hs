@@ -75,7 +75,8 @@ v1FeaturesTests :: SubmitTx -> LanguageContext -> TestTree
 v1FeaturesTests sub t = testGroup "Plutus V1 features" $
     [ mustSatisfyAnyOfUsingAllOfTheSameConstraintsOnAndOffChain,
       mustSatisfyAnyOfUsingSomeOfTheSameConstraintsOnAndOffChain,
-      phase2ErrorWhenUsingMustSatisfyAnyOf
+      phase2ErrorWhenUsingMustSatisfyAnyOf,
+      mustSatisfyAnyOfListWithMempty
     ] ?? sub ?? t
 
 someDatum :: L.Datum
@@ -275,6 +276,17 @@ phase2ErrorWhenUsingMustSatisfyAnyOf submitTxFromConstraints lc =
             (assertEvaluationError "L3")
             (void $ trace contract)
     ]
+
+mustSatisfyAnyOfListWithMempty :: SubmitTx -> LanguageContext -> TestTree
+mustSatisfyAnyOfListWithMempty submitTxFromConstraints _ =
+    let contract = do
+            ledgerTx1 <- submitTxFromConstraints mempty (Cons.mustSatisfyAnyOf [mempty])
+            awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+    in checkPredicateOptions defaultCheckOptions
+            "mustSatisfyAnyOf [mempty] works"
+            (assertValidatedTransactionCount 1)
+            (void $ trace contract)
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest
