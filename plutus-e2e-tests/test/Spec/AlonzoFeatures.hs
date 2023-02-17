@@ -72,7 +72,7 @@ checkTxInfoV1 networkOptions = H.integration . HE.runFinallies . TN.workspace ".
     lowerBound = PlutusV1.fromMilliSeconds
       $ PlutusV1.DiffMilliSeconds $ posixToMilliseconds preTestnetTime -- before slot 1
     upperBound = PlutusV1.fromMilliSeconds
-      $ PlutusV1.DiffMilliSeconds $ posixToMilliseconds startTime + 180_000 -- ~3mins after slot 1
+      $ PlutusV1.DiffMilliSeconds $ posixToMilliseconds startTime + 600_000 -- ~10mins after slot 1 (to account for testnet init time)
     timeRange = PlutusV1.interval lowerBound upperBound :: PlutusV1.POSIXTimeRange
 
     expTxInfoInputs     = txInfoInputs (txIn, txInAsTxOut)
@@ -95,7 +95,7 @@ checkTxInfoV1 networkOptions = H.integration . HE.runFinallies . TN.workspace ".
       , C.txMintValue = TN.txMintValue era tokenValues mintWitnesses
       , C.txOuts = [txOut1, txOut2]
       , C.txFee = TN.txFee era fee
-      , C.txValidityRange = TN.txValidityRange era 1 600 -- with 200ms slots, ~2min range. Babbage era onwards cannot have upper slot beyond epoch boundary (1000 slot epoch).
+      , C.txValidityRange = TN.txValidityRange era 1 2700 -- ~9min range (200ms slots). Babbage era onwards cannot have upper slot beyond epoch boundary (10_000 slot epoch).
       , C.txExtraKeyWits = TN.txExtraKeyWits era [w1VKey]
       }
   txbody <- TN.buildRawTx era txBodyContent
@@ -105,7 +105,7 @@ checkTxInfoV1 networkOptions = H.integration . HE.runFinallies . TN.workspace ".
   TN.submitTx era localNodeConnectInfo signedTx
 
   let expectedTxIn = TN.txIn (TN.txId signedTx) 0
-  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress"
+  resultTxOut <- TN.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress "
   txOutHasTokenValue <- TN.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
   H.success
