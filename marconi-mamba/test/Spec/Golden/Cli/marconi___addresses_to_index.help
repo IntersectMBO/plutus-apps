@@ -1,6 +1,0 @@
-The option `--addresses-to-index` expects an argument.
-
-Usage: marconi-mamba --socket-path FILE-PATH --db-dir DIR 
-                     [--utxo-db-fname FILE-NAME] [--http-port HTTP-PORT] 
-                     (--mainnet | --testnet-magic NATURAL) 
-                     [(--addresses-to-index BECH32-ADDRESS)]

@@ -1,0 +1,16 @@
+Invalid option `--disable-address-data'
+
+Did you mean this?
+    --disable-address-datum
+
+Usage: marconi-chain-index [--version] (-s|--socket-path ARG) 
+                           (--mainnet | --testnet-magic NATURAL) 
+                           [(-n|--slot-no SLOT-NO) (-b|--block-hash BLOCK-HASH)]
+                           (-d|--database-directory-path ARG) [--disable-utxo] 
+                           [--disable-address-datum] [--disable-datum] 
+                           [--disable-script-tx] 
+                           [--disable-epoch-stakepool-size] [--disable-mintburn]
+                           [(-a|--addresses-to-index ARG)] 
+                           [--node-config-path ARG]
+
+  marconi

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TupleSections      #-}
@@ -269,7 +268,7 @@ registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials p
      let
        dummyFee = 0
        tx0 = (TN.emptyTxBodyContent dummyFee pparams)
-         { C.txIns = (map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns)
+         { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
          , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
          , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra
            ([poolRegistration] <> delegationCertificates)

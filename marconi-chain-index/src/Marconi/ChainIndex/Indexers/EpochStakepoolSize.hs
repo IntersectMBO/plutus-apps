@@ -1,15 +1,12 @@
 {-# OPTIONS_GHC -Wno-orphans      #-}
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
-{-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE MultiWayIf           #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE TupleSections        #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE MultiWayIf        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Marconi.ChainIndex.Indexers.EpochStakepoolSize where
 
@@ -113,7 +110,7 @@ getStakeMap ledgerState' = case ledgerState' of
         res = M.fromListWith (+) $ map swap $ P.catMaybes $ VMap.elems $
           VMap.mapWithKey (\cred spkHash -> (\c -> (C.Lovelace $ coerce $ L.fromCompact c, f spkHash)) <$> VMap.lookup cred stakes) delegations
 
-        f :: (LK.KeyHash 'LK.StakePool c) -> C.PoolId
+        f :: LK.KeyHash 'LK.StakePool c -> C.PoolId
         f xk = C.StakePoolKeyHash xk
 
 indexer

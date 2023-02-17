@@ -1,6 +1,5 @@
-{-# LANGUAGE LambdaCase     #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections  #-}
+{-# LANGUAGE LambdaCase    #-}
+{-# LANGUAGE TupleSections #-}
 
 module Helpers where
 
@@ -71,15 +70,13 @@ getSocketPathAbs :: (MonadTest m, MonadIO m) => TC.Conf -> TN.TestnetRuntime -> 
 getSocketPathAbs conf tn = do
   let tempAbsPath = TC.tempAbsPath conf
   socketPath <- IO.sprocketArgumentName <$> H.headM (TN.nodeSprocket <$> TN.bftNodes tn)
-  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
-  pure socketPathAbs
+  H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
 
 getPoolSocketPathAbs :: (MonadTest m, MonadIO m) => TC.Conf -> TN.TestnetRuntime -> m FilePath
 getPoolSocketPathAbs conf tn = do
   let tempAbsPath = TC.tempAbsPath conf
   socketPath <- IO.sprocketArgumentName <$> H.headM (TN.poolNodeSprocket <$> TN.poolNodes tn)
-  socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
-  pure socketPathAbs
+  H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
 
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = do
@@ -157,7 +154,7 @@ awaitTxId con txId = do
   void $ (IO.link =<<) $ IO.async $ void $ S.effects indexer
   let loop = do
         txIds <- IO.readChan chan
-        when (not $ txId `elem` txIds) loop
+        when (txId `notElem` txIds) loop
   loop
 
 -- | Submit the argument transaction and await for it to be accepted into the blockhain.

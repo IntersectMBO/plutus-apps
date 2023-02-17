@@ -208,6 +208,7 @@ test-suite marconi-chain-index-test
   hs-source-dirs: test
   other-modules:
     Integration
+    Spec.Marconi.ChainIndex.CLI
     Spec.Marconi.ChainIndex.Indexers.AddressDatum
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndex
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndexEvent
@@ -250,7 +251,7 @@ test-suite marconi-chain-index-test
   build-depends:
     , aeson
     , async
-    , base             >=4.9 && <5
+    , base                  >=4.9 && <5
     , bytestring
     , containers
     , directory
@@ -258,10 +259,13 @@ test-suite marconi-chain-index-test
     , hedgehog
     , hedgehog-extras
     , lens
+    , optparse-applicative
     , prettyprinter
     , serialise
     , sqlite-simple
     , stm
     , streaming
     , tasty
+    , tasty-golden
     , tasty-hedgehog
+    , text
