@@ -14,45 +14,45 @@
 
   inputs = {
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/e14f9fb57315f0d4abde222364f19f88c77d2b79";
+      url = "github:NixOS/nixpkgs";
     };
     std = {
-      url = "github:divnix/std/94a90eedb9cfc115b12ae8f6622d9904788559e4";
+      url = "github:divnix/std";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-compat = {
-      url = "github:input-output-hk/flake-compat/7da118186435255a30b5ffeabba9629c344c0bec";
+      url = "github:input-output-hk/flake-compat";
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix/7075077d46e684d50e1b00759bb4590426c99c70";
+      url = "github:input-output-hk/haskell.nix";
       inputs = {
         hackage.follows = "hackage-nix";
         nixpkgs.follows = "nixpkgs";
       };
     };
     hackage-nix = {
-      url = "github:input-output-hk/hackage.nix/adbe11fcbabc1f192b98776c7c8b9f26d4e831c0";
+      url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
     sphinxcontrib-haddock = {
-      url = "github:michaelpj/sphinxcontrib-haddock/f3956b3256962b2d27d5a4e96edb7951acf5de34";
+      url = "github:michaelpj/sphinxcontrib-haddock";
       flake = false;
     };
     gitignore-nix = {
-      url = "github:hercules-ci/gitignore.nix/a20de23b925fd8264fd7fad6454652e142fd7f73";
+      url = "github:hercules-ci/gitignore.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     iohk-nix = {
-      url = "github:input-output-hk/iohk-nix/7fc7625a9ab2ba137bc70ddbc89a13d3fdb78c8b";
+      url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     pre-commit-hooks-nix = {
-      url = "github:cachix/pre-commit-hooks.nix/ab608394886fb04b8a5df3cb0bab2598400e3634";
+      url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     CHaP = {
-      url = "github:input-output-hk/cardano-haskell-packages?ref=85510200dd0dc758d72bc1ada11ff5855e5d46b7";
+      url = "github:input-output-hk/cardano-haskell-packages";
       flake = false;
     };
     haskell-language-server = {
