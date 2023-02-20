@@ -8,6 +8,7 @@
 -}
 module Main(main) where
 
+import Spec.AlonzoFeatures qualified
 import Spec.BabbageFeatures qualified
 import Spec.Builtins.SECP256k1 qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -17,6 +18,7 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Plutus E2E" [
-    Spec.Builtins.SECP256k1.tests
+    Spec.AlonzoFeatures.tests
   , Spec.BabbageFeatures.tests
+  , Spec.Builtins.SECP256k1.tests
   ]

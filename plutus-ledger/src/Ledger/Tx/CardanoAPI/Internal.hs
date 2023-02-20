@@ -25,6 +25,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoTxId
   , fromCardanoTxIn
   , fromCardanoTxOutToPV1TxInfoTxOut
+  , fromCardanoTxOutToPV1TxInfoTxOut'
   , fromCardanoTxOutToPV2TxInfoTxOut
   , fromCardanoTxOutDatumHash
   , fromCardanoTxOutDatum
@@ -634,14 +635,19 @@ toCardanoTxId (PV1.TxId bs) =
     tag "toCardanoTxId"
     $ deserialiseFromRawBytes C.AsTxId $ PlutusTx.fromBuiltin bs
 
--- TODO Handle reference script once 'P.TxOut' supports it (or when we use
--- exclusively 'C.TxOut' in all the codebase).
 fromCardanoTxOutToPV1TxInfoTxOut :: C.TxOut C.CtxTx era -> PV1.TxOut
 fromCardanoTxOutToPV1TxInfoTxOut (C.TxOut addr value datumHash _) =
     PV1.TxOut
     (fromCardanoAddressInEra addr)
     (fromCardanoValue $ fromCardanoTxOutValue value)
     (fromCardanoTxOutDatumHash datumHash)
+
+fromCardanoTxOutToPV1TxInfoTxOut' :: C.TxOut C.CtxUTxO era -> PV1.TxOut
+fromCardanoTxOutToPV1TxInfoTxOut' (C.TxOut addr value datumHash _) =
+    PV1.TxOut
+    (fromCardanoAddressInEra addr)
+    (fromCardanoValue $ fromCardanoTxOutValue value)
+    (fromCardanoTxOutDatumHash' datumHash)
 
 fromCardanoTxOutToPV2TxInfoTxOut :: C.TxOut C.CtxTx era -> PV2.TxOut
 fromCardanoTxOutToPV2TxInfoTxOut (C.TxOut addr value datum refScript) =
@@ -762,6 +768,13 @@ fromCardanoTxOutDatumHash (C.TxOutDatumHash _ h) =
 fromCardanoTxOutDatumHash (C.TxOutDatumInTx _ d) =
     Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 fromCardanoTxOutDatumHash (C.TxOutDatumInline _ d) =
+    Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
+
+fromCardanoTxOutDatumHash' :: C.TxOutDatum C.CtxUTxO era -> Maybe P.DatumHash
+fromCardanoTxOutDatumHash' C.TxOutDatumNone       = Nothing
+fromCardanoTxOutDatumHash' (C.TxOutDatumHash _ h) =
+    Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
+fromCardanoTxOutDatumHash' (C.TxOutDatumInline _ d) =
     Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 
 fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> PV2.OutputDatum

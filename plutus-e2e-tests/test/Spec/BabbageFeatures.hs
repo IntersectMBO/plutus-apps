@@ -2,7 +2,6 @@
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
 
@@ -19,22 +18,25 @@ import Test.Tasty.Hedgehog (testProperty)
 
 import Helpers (testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers qualified as TN
-import PlutusScripts qualified as PS
+import PlutusScripts.AlwaysSucceeds qualified as PS
+import PlutusScripts.Helpers qualified as PS
 import Testnet.Plutus qualified as TN
 
 tests :: TestTree
-tests = testGroup "reference script"
-  [ testProperty "mint a token with a reference script in Babbage PV7" (referenceScriptMint testnetOptionsBabbage7)
-  , testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint testnetOptionsBabbage8)
-  --, testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+tests = testGroup "Babbage Features"
+  [ testGroup "reference script"
+    [ testProperty "mint a token with a reference script in Babbage PV7" (referenceScriptMint testnetOptionsBabbage7)
+    , testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint testnetOptionsBabbage8)
+    --, testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMint localNodeOptionsPreview) -- uncomment to use local node on preview testnet
 
-  , testProperty "spend locked funds with a reference script using inline datum in Babbage PV7" (referenceScriptInlineDatumSpend testnetOptionsBabbage7)
-  , testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend testnetOptionsBabbage8)
-  --, testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+    , testProperty "spend locked funds with a reference script using inline datum in Babbage PV7" (referenceScriptInlineDatumSpend testnetOptionsBabbage7)
+    , testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend testnetOptionsBabbage8)
+    --, testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpend localNodeOptionsPreview) -- uncomment to use local node on preview testnet
 
-  , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV7" (referenceScriptDatumHashSpend testnetOptionsBabbage7)
-  , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend testnetOptionsBabbage8)
-  --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+    , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV7" (referenceScriptDatumHashSpend testnetOptionsBabbage7)
+    , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend testnetOptionsBabbage8)
+    --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpend localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+    ]
   ]
 
 referenceScriptMint :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
@@ -44,7 +46,7 @@ referenceScriptMint networkOptions = H.integration . HE.runFinallies . TN.worksp
 
   -- 1: spin up a testnet or use local node connected to public testnet
   (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
 
@@ -99,7 +101,7 @@ referenceScriptInlineDatumSpend networkOptions = H.integration . HE.runFinallies
 
   -- 1: spin up a testnet or use local node connected to public testnet
   (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
 
@@ -156,7 +158,7 @@ referenceScriptDatumHashSpend networkOptions = H.integration . HE.runFinallies .
 
   -- 1: spin up a testnet or use local node connected to public testnet
   (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, w1Address) <- TN.w1 tempAbsPath networkId
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
 
@@ -207,3 +209,4 @@ referenceScriptDatumHashSpend networkOptions = H.integration . HE.runFinallies .
   H.success
 
   -- TODO: inlineDatumSpendTest (no reference script)
+  -- TODO: Check V2 TxInfo
