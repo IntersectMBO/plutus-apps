@@ -10,6 +10,7 @@ module Marconi.Mamba.Api.Query.Indexers.Utxo
     , writeTMVar
     , writeTMVar'
     ) where
+
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, tryReadTMVar, tryTakeTMVar)
 import Control.Lens ((^.))
