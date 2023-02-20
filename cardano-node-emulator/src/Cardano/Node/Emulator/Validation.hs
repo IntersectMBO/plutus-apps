@@ -6,6 +6,8 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE ViewPatterns       #-}
+
 {-| Transaction validation using 'cardano-ledger-specs'
 -}
 module Cardano.Node.Emulator.Validation(
@@ -77,8 +79,8 @@ import Ledger.Address qualified as P
 import Ledger.Crypto qualified as Crypto
 import Ledger.Index.Internal qualified as P
 import Ledger.Slot (Slot)
-import Ledger.Tx (CardanoTx (CardanoApiTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), addCardanoTxSignature,
-                  onCardanoTx)
+import Ledger.Tx (CardanoTx (CardanoApiTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), _cardanoApiTx,
+                  addCardanoTxSignature)
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as V1 hiding (TxOut (..))
@@ -261,11 +263,9 @@ validateCardanoTx
   -> UTxO EmulatorEra
   -> CardanoTx
   -> Either P.ValidationErrorInPhase P.ValidationSuccess
-validateCardanoTx params slot utxo@(UTxO utxoMap) =
-  onCardanoTx
-      (\_ -> error "validateCardanoTx: EmulatorTx is not supported")
-      (\(CardanoApiEmulatorEraTx tx) -> if Map.null utxoMap then Right Map.empty else
-        hasValidationErrors params (fromIntegral slot) utxo tx)
+validateCardanoTx params slot utxo@(UTxO utxoMap) (_cardanoApiTx -> CardanoApiEmulatorEraTx tx) =
+  if Map.null utxoMap then Right Map.empty else
+    hasValidationErrors params (fromIntegral slot) utxo tx
 
 getTxExUnitsWithLogs :: Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either P.ValidationErrorInPhase P.ValidationSuccess
 getTxExUnitsWithLogs params utxo (C.Api.ShelleyTx _ tx) =

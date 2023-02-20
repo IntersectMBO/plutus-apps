@@ -24,7 +24,7 @@ module Cardano.Wallet.LocalClient.ExportTx(
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params (emulatorPParams, pNetworkId))
+import Cardano.Node.Emulator.Params (Params)
 import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
 import Control.Applicative ((<|>))
 import Control.Monad ((>=>))
@@ -33,23 +33,20 @@ import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (String), object, withObject, (.:), (.=))
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Types (Parser, parseFail)
-import Data.Bifunctor (Bifunctor (bimap), first)
+import Data.Bifunctor (first)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Ledger (DCert, Redeemer, StakingCredential, txRedeemers)
-import Ledger qualified (ScriptPurpose (..))
+import Ledger (DCert, StakingCredential)
 import Ledger qualified as P
 import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
-import Ledger.Tx.Constraints (UnbalancedTx (UnbalancedCardanoTx, UnbalancedEmulatorTx))
+import Ledger.Tx.Constraints (UnbalancedTx (UnbalancedCardanoTx))
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
-import Plutus.V1.Ledger.Value (currencyMPSHash)
 import PlutusTx qualified
 import Wallet.API qualified as WAPI
 import Wallet.Effects (WalletEffect, balanceTx, yieldUnbalancedTx)
@@ -230,12 +227,6 @@ export
     :: Params
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
-export params (UnbalancedEmulatorTx tx sigs utxos) =
-    let requiredSigners = Set.toList sigs
-     in ExportTx
-        <$> bimap Right (C.makeSignedTransaction []) (CardanoAPI.toCardanoTxBody (pNetworkId params) (emulatorPParams params) requiredSigners tx)
-        <*> first Right (mkInputs utxos)
-        <*> pure (mkRedeemers tx)
 export params (UnbalancedCardanoTx tx utxos) =
     let fromCardanoTx ctx = do
             utxo <- fromPlutusIndex $ P.UtxoIndex utxos
@@ -259,14 +250,3 @@ toExportTxInput Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = d
         <*> pure (C.selectLovelace cardanoValue)
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> P.txOutDatumHash txOut)
         <*> pure otherQuantities
-
--- TODO: Here there's hidden error of script DCert missing its redeemer - this just counts as no DCert. Don't know if bad.
--- TODO: Refactor with getGardanoTxRedeemers once we are ceady to move to Cardano Txs
-mkRedeemers :: P.Tx -> [ExportTxRedeemer]
-mkRedeemers = map (uncurry scriptPurposeToExportRedeemer) . Map.assocs . txRedeemers
-
-scriptPurposeToExportRedeemer :: Ledger.ScriptPurpose -> Redeemer -> ExportTxRedeemer
-scriptPurposeToExportRedeemer (Ledger.Spending ref)     rd = SpendingRedeemer {redeemerOutRef = ref, redeemer=rd}
-scriptPurposeToExportRedeemer (Ledger.Minting cs)       rd = MintingRedeemer {redeemerPolicyId = currencyMPSHash cs, redeemer=rd}
-scriptPurposeToExportRedeemer (Ledger.Rewarding cred)   rd = RewardingRedeemer {redeemerStakingCredential = cred, redeemer=rd}
-scriptPurposeToExportRedeemer (Ledger.Certifying dcert) rd = CertifyingRedeemer {redeemerDCert = dcert, redeemer=rd}

@@ -84,7 +84,7 @@
                              <>>,
                              10000000> )
                            redeemers:
-                             RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
+                             RedeemerPtr Spend 0 : Constr 0 []
                            attached scripts:
                              PlutusScript PlutusV1 ScriptHash "3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908"}
                        Requires signatures:
@@ -126,7 +126,7 @@
                            <>>,
                            10000000> )
                          redeemers:
-                           RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
+                           RedeemerPtr Spend 1 : Constr 0 []
                          attached scripts:
                            PlutusScript PlutusV1 ScriptHash "3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908"}
 [INFO] Slot 2: W[1]: Signing tx: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533

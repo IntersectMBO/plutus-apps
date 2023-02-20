@@ -40,21 +40,16 @@ module Plutus.ChainIndex.Tx(
     , _ValidTx
     ) where
 
-import Data.List (sort)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
 import Data.Tuple (swap)
-import Ledger (OnChainTx (..), ScriptTag (Cert, Mint, Reward), SomeCardanoApiTx (SomeTx), Tx (..),
-               TxInput (txInputType), TxOut (getTxOut), TxOutRef (..), onCardanoTx, txCertifyingRedeemers, txId,
-               txMintingRedeemers, txRewardingRedeemers)
+import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), TxOutRef (..))
 import Ledger.Address (CardanoAddress)
 import Ledger.Scripts (Redeemer, RedeemerHash)
-import Ledger.Tx (TxInputType (TxScriptAddress), fillTxInputWitnesses)
+import Ledger.Tx (_cardanoApiTx)
 import Plutus.ChainIndex.Types
-import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxOut, setValidity)
+import Plutus.Contract.CardanoAPI (fromCardanoTx, setValidity)
 import Plutus.Script.Utils.Scripts (redeemerHash)
-import Plutus.V1.Ledger.Tx (RedeemerPtr (RedeemerPtr), Redeemers, ScriptTag (Spend))
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
 
 -- | Get tx outputs from tx.
@@ -92,38 +87,8 @@ validityFromChainIndex tx =
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
 fromOnChainTx = \case
-    Valid ctx ->
-        onCardanoTx
-            (\case tx@Tx{txInputs, txOutputs, txValidRange, txData, txScripts} ->
-                    ChainIndexTx
-                        { _citxTxId = txId tx
-                        , _citxInputs = map (fillTxInputWitnesses tx) txInputs
-                        , _citxOutputs = ValidTx $ map (fromCardanoTxOut . getTxOut) txOutputs
-                        , _citxValidRange = txValidRange
-                        , _citxData = txData
-                        , _citxRedeemers = calculateRedeemerPointers tx
-                        , _citxScripts = txScripts
-                        , _citxCardanoTx = Nothing
-                        }
-            )
-            (fromOnChainCardanoTx True)
-            ctx
-    Invalid ctx ->
-        onCardanoTx
-            (\case tx@Tx{txCollateralInputs, txReturnCollateral, txValidRange, txData, txScripts} ->
-                    ChainIndexTx
-                        { _citxTxId = txId tx
-                        , _citxInputs = map (fillTxInputWitnesses tx) txCollateralInputs
-                        , _citxOutputs = InvalidTx $ fmap (fromCardanoTxOut . getTxOut) txReturnCollateral
-                        , _citxValidRange = txValidRange
-                        , _citxData = txData
-                        , _citxRedeemers = calculateRedeemerPointers tx
-                        , _citxScripts = txScripts
-                        , _citxCardanoTx = Nothing
-                        }
-            )
-            (fromOnChainCardanoTx False)
-            ctx
+    Valid ctx   -> (fromOnChainCardanoTx True . _cardanoApiTx) ctx
+    Invalid ctx -> (fromOnChainCardanoTx False . _cardanoApiTx) ctx
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
 txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
@@ -134,20 +99,3 @@ txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
 -- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
 fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) = fromCardanoTx era $ setValidity validity tx
-
--- TODO: the index of the txin is probably incorrect as we take it from the set.
--- To determine the proper index we have to convert the plutus's `TxIn` to cardano-api `TxIn` and
--- sort them by using the standard `Ord` instance.
-calculateRedeemerPointers :: Tx -> Redeemers
-calculateRedeemerPointers tx = spends <> rewards <> mints <> certs
-    -- we sort the inputs to make sure that the indices match with redeemer pointers
-
-    where
-        rewards = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Reward n, rd)) [0..]  $ sort $ Map.assocs $ txRewardingRedeemers tx
-        mints   = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Mint n, rd)) [0..]  $ sort $ Map.assocs $ txMintingRedeemers tx
-        certs   = Map.fromList $ zipWith (\n (_, rd) -> (RedeemerPtr Cert n, rd)) [0..]  $ sort $ Map.assocs $ txCertifyingRedeemers tx
-        spends = Map.fromList $ mapMaybe (uncurry getRd) $ zip [0..] $ fmap txInputType $ sort $ txInputs tx
-
-        getRd n = \case
-            TxScriptAddress rd _ _ -> Just (RedeemerPtr Spend n, rd)
-            _                      -> Nothing

@@ -110,8 +110,8 @@ pubKey3 = mockWalletPaymentPubKeyHash wallet3
 
 utxo :: Property
 utxo = property $ do
-    Mockchain txPool o params <- forAll Gen.genMockchain
-    Hedgehog.assert (unspentOutputs [map (Valid . Gen.signTx params o) txPool] == o)
+    Mockchain txPool o _params <- forAll Gen.genMockchain
+    Hedgehog.assert (unspentOutputs [map Valid txPool] == o)
 
 txnValid :: Property
 txnValid = property $ do
@@ -131,15 +131,14 @@ selectCoinProp = property $ do
 
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
-    (Mockchain m utxos params, txn) <- forAll genChainTxn
+    (Mockchain m _utxos _params, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        signedTx = Gen.signTx params utxos txn
 
         -- submit the same txn twice, so it should be accepted the first time
         -- and rejected the second time.
         trace = do
-            Trace.liftWallet wallet1 (submitTxn signedTx)
-            Trace.liftWallet wallet1 (submitTxn signedTx)
+            Trace.liftWallet wallet1 (submitTxn txn)
+            Trace.liftWallet wallet1 (submitTxn txn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
@@ -153,20 +152,18 @@ txnUpdateUtxo = property $ do
 
 validTrace :: Property
 validTrace = property $ do
-    (Mockchain m utxo params, txn) <- forAll genChainTxn
+    (Mockchain m _utxo _params, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        signedTx = Gen.signTx params utxo txn
-        trace = Trace.liftWallet wallet1 (submitTxn signedTx)
+        trace = Trace.liftWallet wallet1 (submitTxn txn)
     void $  checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 validTrace2 :: Property
 validTrace2 = property $ do
-    (Mockchain m utxo params, txn) <- forAll genChainTxn
+    (Mockchain m _utxo _params, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        signedTx = Gen.signTx params utxo txn
         trace = do
-            Trace.liftWallet wallet1 (submitTxn signedTx)
-            Trace.liftWallet wallet1 (submitTxn signedTx)
+            Trace.liftWallet wallet1 (submitTxn txn)
+            Trace.liftWallet wallet1 (submitTxn txn)
         predicate = assertFailedTransaction (\_ _ -> True)
     void $  checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 

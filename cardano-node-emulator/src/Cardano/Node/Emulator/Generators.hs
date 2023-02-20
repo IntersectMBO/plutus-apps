@@ -49,7 +49,6 @@ module Cardano.Node.Emulator.Generators(
     splitVal,
     validateMockchain,
     signAll,
-    signTx,
     CW.knownAddresses,
     CW.knownPaymentPublicKeys,
     CW.knownPaymentPrivateKeys,
@@ -86,7 +85,7 @@ import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Node.Emulator.Params (Params (pSlotConfig))
 import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Cardano.Node.Emulator.Validation (fromPlutusTxSigned, validateCardanoTx)
+import Cardano.Node.Emulator.Validation (validateCardanoTx)
 import Control.Lens.Lens ((<&>))
 import Data.Functor (($>))
 import Data.String (fromString)
@@ -163,11 +162,10 @@ genMockchain' gm = do
     slotCfg <- genSlotConfig
     (txn, ot) <- genInitialTransaction gm
     let params = def { pSlotConfig = slotCfg }
-        signedTx = signTx params mempty txn
         -- There is a problem that txId of emulator tx and tx of cardano tx are different.
         -- We convert the emulator tx to cardano tx here to get the correct transaction id
         -- because later we anyway will use the converted cardano tx so the utxo should match it.
-        tid = Tx.getCardanoTxId signedTx
+        tid = Tx.getCardanoTxId txn
     pure Mockchain {
         mockchainInitialTxPool = [txn],
         mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot,
@@ -351,7 +349,6 @@ genValidTransactionBodySpending' g ins totalVal = do
            , txMetadata = C.TxMetadataNone
            , txAuxScripts = C.TxAuxScriptsNone
            , txWithdrawals = C.TxWithdrawalsNone
-
            , txCertificates = C.TxCertificatesNone
            , txUpdateProposal = C.TxUpdateProposalNone
            }
@@ -379,18 +376,11 @@ genValidTransactionBodySpending' g ins totalVal = do
         toTxInType Tx.ConsumePublicKeyAddress = Tx.TxConsumePublicKeyAddress
         toTxInType (Tx.ScriptAddress valOrRef rd dat) = Tx.TxScriptAddress rd (first validatorHash valOrRef) $ fmap datumHash dat
 
-signTx :: Params -> Map TxOutRef TxOut -> CardanoTx -> CardanoTx
-signTx params utxo = let
-  cUtxoIndex = either (error . show) id $ fromPlutusIndex (Index.UtxoIndex utxo)
-  in Tx.onCardanoTx
-      (\t -> fromPlutusTxSigned params cUtxoIndex t CW.knownPaymentKeys)
-      Tx.CardanoApiTx
-
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> CardanoTx -> Maybe Ledger.ValidationErrorInPhase
 validateMockchain (Mockchain _ utxo params) tx = result where
     cUtxoIndex = either (error . show) id $ fromPlutusIndex (Index.UtxoIndex utxo)
-    result = leftToMaybe $ validateCardanoTx params 1 cUtxoIndex (signTx params utxo tx)
+    result = leftToMaybe $ validateCardanoTx params 1 cUtxoIndex tx
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

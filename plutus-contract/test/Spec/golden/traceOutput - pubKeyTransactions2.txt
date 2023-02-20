@@ -11,16 +11,16 @@
 [DEBUG] Slot 0: Thread 11 {block maker}: Started (Normal)
 [INFO] Slot 0: TxnValidate 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84 [  ]
 [DEBUG] Slot 0: SlotAdd Slot 1
-[DEBUG] Slot 1: W[7]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[8]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[6]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[4]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[2]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[1]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[10]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[9]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[3]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
-[DEBUG] Slot 1: W[5]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[7]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[8]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[6]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[4]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[2]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[1]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[10]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[9]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[3]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
+[DEBUG] Slot 1: W[5]: InsertionSuccess: New tip is Tip(Slot 1, BlockId f21c6e2db5201d6956c39d269269777c0be9424ec4cc6243a35d74c730e98e8c, BlockNumber 0). UTxO state was added to the end.
 [DEBUG] Slot 1: W[1]: Adjusting an unbalanced transaction: []
 [INFO] Slot 1: W[1]: Balancing an unbalanced transaction:
                        Tx:
@@ -79,16 +79,16 @@
 [INFO] Slot 1: W[1]: TxSubmit: f27de1e5fbd1a274645a778e85974c19390b0b638918ad797de71b7a8cb7dae5
 [INFO] Slot 1: TxnValidate f27de1e5fbd1a274645a778e85974c19390b0b638918ad797de71b7a8cb7dae5 [  ]
 [DEBUG] Slot 1: SlotAdd Slot 2
-[DEBUG] Slot 2: W[7]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[8]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[6]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[4]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[2]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[1]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[10]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[9]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[3]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
-[DEBUG] Slot 2: W[5]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[7]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[8]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[6]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[4]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[2]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[1]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[10]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[9]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[3]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
+[DEBUG] Slot 2: W[5]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 51c0cc78451a11df48af91bd8e15dfa30ff117fdc850ed235a9c621e6abb46e0, BlockNumber 1). UTxO state was added to the end.
 [DEBUG] Slot 2: W[2]: Adjusting an unbalanced transaction: []
 [INFO] Slot 2: W[2]: Balancing an unbalanced transaction:
                        Tx:
@@ -135,16 +135,16 @@
 [INFO] Slot 2: W[2]: TxSubmit: 58acb02a2c306546d145079a99ff90303e03718f0275dfdd625d28cbbbea4410
 [INFO] Slot 2: TxnValidate 58acb02a2c306546d145079a99ff90303e03718f0275dfdd625d28cbbbea4410 [  ]
 [DEBUG] Slot 2: SlotAdd Slot 3
-[DEBUG] Slot 3: W[7]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[8]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[6]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[4]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[2]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[1]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[10]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[9]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[3]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
-[DEBUG] Slot 3: W[5]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[7]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[8]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[6]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[4]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[2]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[1]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[10]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[9]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[3]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
+[DEBUG] Slot 3: W[5]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 5279094c8135a39e36962b55ec4fb5f362a45433c8fd7a7cee7d7672743dff39, BlockNumber 2). UTxO state was added to the end.
 [DEBUG] Slot 3: W[3]: Adjusting an unbalanced transaction: []
 [INFO] Slot 3: W[3]: Balancing an unbalanced transaction:
                        Tx:
@@ -187,16 +187,16 @@
 [INFO] Slot 3: W[3]: TxSubmit: 13107325fe84a3d9b7b6acc810f2d2ddc83345f63be62cbf38fb8c29ec44a6a9
 [INFO] Slot 3: TxnValidate 13107325fe84a3d9b7b6acc810f2d2ddc83345f63be62cbf38fb8c29ec44a6a9 [  ]
 [DEBUG] Slot 3: SlotAdd Slot 4
-[DEBUG] Slot 4: W[7]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[8]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[6]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[4]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[2]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[1]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[10]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[9]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[3]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
-[DEBUG] Slot 4: W[5]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[7]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[8]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[6]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[4]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[2]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[1]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[10]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[9]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[3]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
+[DEBUG] Slot 4: W[5]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 24a787dcdcff541da8c2502b6b2cd204f872280aa16d12994558d00288584b38, BlockNumber 3). UTxO state was added to the end.
 [DEBUG] Slot 4: W[1]: Adjusting an unbalanced transaction: []
 [INFO] Slot 4: W[1]: Balancing an unbalanced transaction:
                        Tx:
@@ -237,16 +237,16 @@
 [INFO] Slot 4: W[1]: TxSubmit: 0c2f86bb3b8de2e696833433420e7d1ac77816bcf08114169916ba53115c2574
 [INFO] Slot 4: TxnValidate 0c2f86bb3b8de2e696833433420e7d1ac77816bcf08114169916ba53115c2574 [  ]
 [DEBUG] Slot 4: SlotAdd Slot 5
-[DEBUG] Slot 5: W[7]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[8]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[6]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[4]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[2]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[1]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[10]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[9]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[3]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
-[DEBUG] Slot 5: W[5]: InsertionSuccess: New tip is Tip(Slot 5, BlockId c471d7167404089f59fe6a28a9d0a51f0d03d12da59e68ff204f0e2dcbb6987d, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[7]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[8]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[6]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[4]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[2]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[1]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[10]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[9]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[3]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
+[DEBUG] Slot 5: W[5]: InsertionSuccess: New tip is Tip(Slot 5, BlockId 97d5e82ddfbfbf9a5651cb9e0752458b78dbb1134956c973606288bca4733d43, BlockNumber 4). UTxO state was added to the end.
 [DEBUG] Slot 5: SlotAdd Slot 6
 [DEBUG] Slot 6: W[7]: InsertionSuccess: New tip is Tip(Slot 6, BlockId 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71, BlockNumber 5). UTxO state was added to the end.
 [DEBUG] Slot 6: W[8]: InsertionSuccess: New tip is Tip(Slot 6, BlockId 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71, BlockNumber 5). UTxO state was added to the end.
