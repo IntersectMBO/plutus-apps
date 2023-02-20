@@ -213,28 +213,17 @@ registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredentia
   -- cardano-cli transaction build
   -- cardano-cli transaction sign
   -- cardano-cli transaction submit
-  (txIns, totalLovelace) <- TN.getAddressTxInsValue @C.AlonzoEra con payerAddress
-  let
-    dummyFee = 0
-    tx0 =
-        (TN.emptyTxBodyContent
-            (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
-            (C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra dummyFee)
-            pparams
-        ) { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-          , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
-          , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra [stakeAddressRegCert] (C.BuildTxWith mempty)
-          }
-    keyWitnesses = [C.WitnessGenesisUTxOKey payerSKey]
-  txBody0 :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx0
-  let
-    feeLovelace = TN.calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses) networkId txBody0 :: C.Lovelace
-    fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
-    tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - feeLovelace] }
-
-  txBody <- HE.leftFail $ C.makeTransactionBody tx1
-  let tx = C.signShelleyTransaction txBody keyWitnesses
-  return (tx, txBody)
+  (txIns, totalLovelace) <- TN.getAddressTxInsValue con payerAddress
+  let keyWitnesses = [C.WitnessGenesisUTxOKey payerSKey]
+      mkTxOuts lovelace = [TN.mkAddressAdaTxOut payerAddress lovelace]
+      validityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+  (feeLovelace, tx) <- TN.calculateAndUpdateTxFee pparams networkId (length txIns) (length keyWitnesses) (TN.emptyTxBodyContent validityRange pparams)
+    { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
+    , C.txOuts = mkTxOuts 0
+    , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra [stakeAddressRegCert] (C.BuildTxWith mempty)
+    }
+  txBody <- HE.leftFail $ C.makeTransactionBody $ tx { C.txOuts = mkTxOuts $ totalLovelace - feeLovelace }
+  return (C.signShelleyTransaction txBody keyWitnesses, txBody)
 
 registerPool
   :: C.LocalNodeConnectInfo C.CardanoMode -> C.NetworkId -> C.ProtocolParameters -> FilePath
@@ -285,27 +274,16 @@ registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials p
 
   -- Create transaction
   do (txIns, totalLovelace) <- TN.getAddressTxInsValue @C.AlonzoEra con payerAddress
-     let
-       dummyFee = 0
-       tx0 =
-           (TN.emptyTxBodyContent
-               (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
-               (C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra dummyFee)
-               pparams
-           ) { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-             , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
-             , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra
-                 ([poolRegistration] <> delegationCertificates)
-                 (C.BuildTxWith mempty) -- BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
-             }
-     txBody0 :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx0
-     let
-       -- cardano-cli transaction calculate-min-fee
-       feeLovelace = TN.calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses') networkId txBody0 :: C.Lovelace
-       fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
-       tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - feeLovelace] }
-
-     txBody :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx1
+     let mkTxOuts lovelace = [TN.mkAddressAdaTxOut payerAddress lovelace]
+         validityRange = C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra
+     (feeLovelace, txbc) <- TN.calculateAndUpdateTxFee pparams networkId (length txIns) (length keyWitnesses) (TN.emptyTxBodyContent validityRange pparams)
+       { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
+       , C.txOuts = mkTxOuts 0
+       , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra ([poolRegistration] <> delegationCertificates)
+         (C.BuildTxWith mempty) -- BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
+       }
+     txBody :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody $ txbc
+       { C.txOuts = mkTxOuts $ totalLovelace - feeLovelace }
      let tx = C.signShelleyTransaction txBody keyWitnesses'
 
      return (coldVKeyHash, tx, txBody)

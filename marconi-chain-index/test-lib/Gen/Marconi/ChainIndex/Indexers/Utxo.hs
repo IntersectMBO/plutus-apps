@@ -80,12 +80,12 @@ genTxBodyContentFromTxIns
 genTxBodyContentFromTxIns inputs = do
     txBodyContent <-
         emptyTxBodyContent (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-            <$> fmap (C.TxFeeExplicit C.TxFeesExplicitInBabbageEra) CGen.genLovelace
-            <*> CGen.genProtocolParameters
+            <$> CGen.genProtocolParameters
     txOuts <- Gen.list (Range.linear 1 5) $ genTxOutTxContext C.BabbageEra
     pure $ txBodyContent
         { C.txIns = fmap (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) inputs
         , C.txOuts = txOuts
+        , C.txFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee
         }
 
 -- TODO Must be reworked following implementation in 'genUtxoEvents'.
@@ -107,5 +107,3 @@ genUtxo' (C.TxIn _txId _txIx) _address = do
   _value            <- CGen.genValueForTxOut
   let (_inlineScript, _inlineScriptHash)=  Utxo.getRefScriptAndHash script
   pure $ Utxo.Utxo {..}
-
-
