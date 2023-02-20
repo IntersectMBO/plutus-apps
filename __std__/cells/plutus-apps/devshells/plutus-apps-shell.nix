@@ -69,10 +69,10 @@ inputs.std.lib.dev.mkShell {
       help = "Haskell build tool";
     }
     {
-      package = cell.packages.haskell-language-server;
-      name = "haskell-language-server";
+      package = cell.packages.haskell-language-server-wrapper;
+      name = "haskell-language-server-wrapper";
       category = "haskell";
-      help = "Haskell Language Server";
+      help = "Haskell Language Server Wrapper";
     }
     {
       package = cell.packages.hlint;
@@ -104,7 +104,7 @@ inputs.std.lib.dev.mkShell {
     cell.packages.sphinx-toolchain
     cell.packages.hlint
     cell.packages.stylish-haskell
-    cell.packages.haskell-language-server
+    cell.packages.haskell-language-server-wrapper
     cell.packages.cabal-install
     cell.packages.cabal-fmt
     cell.packages.plutus-use-cases

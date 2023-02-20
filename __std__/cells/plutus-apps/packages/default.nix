@@ -28,7 +28,7 @@
 
   ghc = import ./ghc.nix block;
 
-  haskell-language-server = import ./haskell-language-server.nix block;
+  haskell-language-server-wrapper = import ./haskell-language-server-wrapper.nix block;
 
   hie-bios = import ./hie-bios.nix block;
 
