@@ -305,7 +305,7 @@ instance Pretty CardanoTx where
                     ]) (const []) tx ++
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
                 , hang 2 (vsep ("data:": fmap pretty (Map.toList (getCardanoTxData tx))))
-                , hang 2 (vsep ("redeemers:": fmap pretty (Map.elems $ getCardanoTxRedeemers tx)))
+                , hang 2 (vsep ("redeemers:": fmap (\(k, v) -> viaShow k <+> ":" <+> viaShow v) (Map.toList $ getCardanoTxRedeemers tx)))
                 ]
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
@@ -425,21 +425,9 @@ txBodyContentCollateralIns = lens
 txBodyContentOuts :: Lens' (C.TxBodyContent ctx C.BabbageEra) [TxOut]
 txBodyContentOuts = lens (map TxOut . C.txOuts) (\bodyContent outs -> bodyContent { C.txOuts = map getTxOut outs })
 
--- TODO: To implement
--- getCardanoTxRedeemers :: CardanoTx -> Redeemers
--- getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty)
-    -- (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
-    --     Map.fromList $ mapMaybe (\(C.TxOut _ _ d _) -> fromCardanoTxOutDatum d) txOuts)
-    -- where
-    --     fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe (DatumHash, Datum)
-    --     fromCardanoTxOutDatum C.TxOutDatumNone = Nothing
-    --     fromCardanoTxOutDatum (C.TxOutDatumHash _ _) = Nothing
-    --     fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) =
-    --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
-    --     fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
-    --         let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
-getCardanoTxRedeemers :: CardanoTx -> Map V1.ScriptPurpose V1.Redeemer
-getCardanoTxRedeemers = onCardanoTx txRedeemers (const Map.empty)
+getCardanoTxRedeemers :: CardanoTx -> V2.Tx.Redeemers
+getCardanoTxRedeemers = onCardanoTx (const Map.empty)
+    (\(SomeTx (C.Tx txBody _) _) -> snd $ CardanoAPI.scriptDataFromCardanoTxBody txBody)
 
 -- Defined here as uses `txId`.
 instance Pretty Tx where

@@ -178,7 +178,10 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                        , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
                        ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                        , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
-                     redeemers:}
+                     redeemers:
+                       RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
+                       RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
+                       RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}}
                  Utxo index:
                    ( 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4!0
                    , - 10000000 lovelace addressed to
@@ -222,7 +225,10 @@ Slot 20: W[1]: Finished balancing:
                      , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
                      ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                      , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
-                   redeemers:}
+                   redeemers:
+                     RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
+                     RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
+                     RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}}
 Slot 20: W[1]: Signing tx: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
 Slot 20: W[1]: Submitting tx: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
 Slot 20: W[1]: TxSubmit: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
