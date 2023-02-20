@@ -88,7 +88,7 @@ open = to $ \ p -> p ^. coinAAmount > 0 -- If one is bigger than zero the other 
 
 prop_Uniswap :: Actions UniswapModel -> Property
 prop_Uniswap = propRunActionsWithOptions
-  (defaultCheckOptionsContractModel & increaseTransactionLimits)
+  (iterate increaseTransactionLimits defaultCheckOptionsContractModel !! 4)
   defaultCoverageOptions
   (\ _ -> pure True)
 
@@ -288,7 +288,7 @@ instance ContractModel UniswapModel where
                    , start <- [StartContract . WalletKey, StartContract . BadReqKey] ]
 
   precondition s Start                        = not $ hasUniswapToken s
-  precondition _ SetupTokens                  = True
+  precondition s SetupTokens                  = null (s ^. contractState . exchangeableTokens)
   precondition s (CreatePool _ t1 a1 t2 a2)   = hasUniswapToken s
                                                 && not (hasOpenPool s t1 t2)
                                                 && t1 /= t2
@@ -631,8 +631,7 @@ tests = testGroup "uniswap" [
                        "setupTokens contract should be still running"
         .&&. assertNoFailedTransactions)
         Uniswap.uniswapTrace
-    -- TODO: turned off until there is an option to turn off cardano-ledger validation
-    -- , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
+    , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
     , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
     , testProperty "prop_NLFP" $ withMaxSuccess 250 prop_CheckNoLockedFundsProofFast
     ]
