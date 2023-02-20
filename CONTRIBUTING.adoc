@@ -228,9 +228,9 @@ There are various tools for visualizing the resulting profile, e.g. https://hack
 
 === How to setup `haskell-language-server`
 
-The `nix develop` environment has a `haskell-language-server` binary for the right version of GHC.
+The `nix develop` environment has a `haskell-language-server-wrapper` binary for the right version of GHC.
 
-IMPORTANT: this binary is called `haskell-language-server`, rather than `haskell-language-server-wrapper`, which is what some of the editor integrations expect.
+IMPORTANT: this binary is called `haskell-language-server-wrapper`, rather than `haskell-language-server`, which is what some of the editor integrations expect.
 
 We don't have a `hie.yaml`, the implicit cradle support in HLS seems to work fine these days.
 
