@@ -12,7 +12,8 @@ pkgs.stdenv.mkDerivation {
   phases = [ "installPhase" ];
   installPhase = ''
     mkdir -p $out/bin
-    echo '#!${pkgs.bash}/bin/bash ${haskell-language-server}/bin/haskell-language-server "$@"' > $out/bin/haskell-language-server-wrapper
+    echo '#!${pkgs.bash}/bin/bash' > $out/bin/haskell-language-server-wrapper
+    echo '${haskell-language-server}/bin/haskell-language-server "$@"' >> $out/bin/haskell-language-server-wrapper
     chmod u+x $out/bin/haskell-language-server-wrapper
   '';
 }
