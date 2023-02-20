@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
+
 {-# OPTIONS_GHC -Wno-orphans    #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
@@ -48,7 +49,7 @@ import Test.Base qualified as H
 
 import Helpers qualified as TN
 import Testnet.Cardano qualified as TN
--- ^ Although these are defined in this cabal component, they are
+-- Although these are defined in this cabal component, they are
 -- helpers for interacting with the testnet, thus TN
 
 import Marconi.ChainIndex.Indexers qualified as M
@@ -149,7 +150,7 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
     H.headM $ Map.toList $ C.unUTxO utxo
   let totalLovelace = C.txOutValueToLovelace v
 
-  pparams <- TN.getAlonzoProtocolParams localNodeConnectInfo
+  pparams <- TN.getProtocolParams localNodeConnectInfo
 
   let scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
@@ -159,29 +160,29 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
       -- Must return everything that was not paid to script and that didn't went to fees:
       amountReturned = totalLovelace - amountPaid - tx1fee :: C.Lovelace
 
-      txOut1 :: C.TxOut ctx C.AlonzoEra
+      txOut1 :: C.TxOut ctx C.BabbageEra
       txOut1 =
         C.TxOut
-          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) plutusScriptAddr)
-          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountPaid)
-          (C.TxOutDatumHash C.ScriptDataInAlonzoEra scriptDatumHash)
+          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) plutusScriptAddr)
+          (C.TxOutValue C.MultiAssetInBabbageEra $ C.lovelaceToValue amountPaid)
+          (C.TxOutDatumHash C.ScriptDataInBabbageEra scriptDatumHash)
           C.ReferenceScriptNone
-      txOut2 :: C.TxOut ctx C.AlonzoEra
+      txOut2 :: C.TxOut ctx C.BabbageEra
       txOut2 =
         C.TxOut
-          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
-          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountReturned)
+          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) address)
+          (C.TxOutValue C.MultiAssetInBabbageEra $ C.lovelaceToValue amountReturned)
           C.TxOutDatumNone
           C.ReferenceScriptNone
-      txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
+      txBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
       txBodyContent = (TN.emptyTxBodyContent tx1fee pparams)
         { C.txIns = [(tx1in, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)]
         , C.txOuts = [txOut1, txOut2]
         , C.txProtocolParams   = C.BuildTxWith $ Just pparams
         }
-  tx1body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
+  tx1body :: C.TxBody C.BabbageEra <- H.leftFail $ C.makeTransactionBody txBodyContent
   let
-    kw :: C.KeyWitness C.AlonzoEra
+    kw :: C.KeyWitness C.BabbageEra
     kw = C.makeShelleyKeyWitness tx1body (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
     tx1 = C.makeSignedTransaction [kw] tx1body
 
@@ -210,19 +211,19 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
       executionUnits = C.ExecutionUnits {C.executionSteps = 500_000, C.executionMemory = 10_000 }
       tx2fee = 1000303 :: C.Lovelace
 
-      scriptWitness :: C.Witness C.WitCtxTxIn C.AlonzoEra
+      scriptWitness :: C.Witness C.WitCtxTxIn C.BabbageEra
       scriptWitness = C.ScriptWitness C.ScriptWitnessForSpending $
-        C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 (C.PScript plutusScript)
+        C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 (C.PScript plutusScript)
         (C.ScriptDatumForTxIn scriptDatum) redeemer executionUnits
 
-      tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
+      tx2bodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
       tx2bodyContent = (TN.emptyTxBodyContent tx2fee pparams)
         { C.txIns              = [(scriptTxIn, C.BuildTxWith scriptWitness)]
-        , C.txInsCollateral    = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
+        , C.txInsCollateral    = C.TxInsCollateral C.CollateralInBabbageEra [tx2collateralTxIn]
         , C.txOuts             = [TN.mkAddressAdaTxOut address (lovelaceAtScript - tx2fee)]
         }
 
-  tx2body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody tx2bodyContent
+  tx2body :: C.TxBody C.BabbageEra <- H.leftFail $ C.makeTransactionBody tx2bodyContent
   let tx2 = C.signShelleyTransaction tx2body [C.WitnessGenesisUTxOKey genesisSKey]
 
   TN.submitTx localNodeConnectInfo tx2
@@ -245,15 +246,15 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
 
   ScriptTx.ScriptTxAddress indexedScriptHash <- H.headM indexedScriptHashes
 
-  indexedTx2 :: C.Tx C.AlonzoEra <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) tx
+  indexedTx2 :: C.Tx C.BabbageEra <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsBabbageEra) tx
 
   plutusScriptHash === indexedScriptHash
   tx2 === indexedTx2
 
-  queriedTx2 :: C.Tx C.AlonzoEra <- do
+  queriedTx2 :: C.Tx C.BabbageEra <- do
     ScriptTx.ScriptTxResult (ScriptTx.TxCbor txCbor : _) <- liftIO $ do
       ix <- IO.readMVar indexer
       Storable.query Storable.QEverything ix (ScriptTx.ScriptTxAddress plutusScriptHash)
-    H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
+    H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsBabbageEra) txCbor
 
   tx2 === queriedTx2

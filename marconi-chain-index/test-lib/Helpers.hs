@@ -84,7 +84,7 @@ readAs as path = do
   H.leftFailM . liftIO $ C.readFileTextEnvelope as path'
 
 -- | An empty transaction
-emptyTxBodyContent :: C.Lovelace -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx C.AlonzoEra
+emptyTxBodyContent :: C.Lovelace -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx C.BabbageEra
 emptyTxBodyContent fee pparams = C.TxBodyContent
   { C.txIns              = []
   , C.txInsCollateral    = C.TxInsCollateralNone
@@ -92,8 +92,8 @@ emptyTxBodyContent fee pparams = C.TxBodyContent
   , C.txOuts             = []
   , C.txTotalCollateral  = C.TxTotalCollateralNone
   , C.txReturnCollateral = C.TxReturnCollateralNone
-  , C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee
-  , C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+  , C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra fee
+  , C.txValidityRange    = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
   , C.txMetadata         = C.TxMetadataNone
   , C.txAuxScripts       = C.TxAuxScriptsNone
   , C.txExtraKeyWits     = C.TxExtraKeyWitnessesNone
@@ -105,21 +105,21 @@ emptyTxBodyContent fee pparams = C.TxBodyContent
   , C.txScriptValidity   = C.TxScriptValidityNone
   }
 
-getAlonzoProtocolParams :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
-getAlonzoProtocolParams localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
+getProtocolParams :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> m C.ProtocolParameters
+getProtocolParams localNodeConnectInfo = H.leftFailM . H.leftFailM . liftIO
   $ C.queryNodeLocalState localNodeConnectInfo Nothing
-  $ C.QueryInEra C.AlonzoEraInCardanoMode
-  $ C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo C.QueryProtocolParameters
+  $ C.QueryInEra C.BabbageEraInCardanoMode
+  $ C.QueryInShelleyBasedEra C.ShelleyBasedEraBabbage C.QueryProtocolParameters
 
 findUTxOByAddress
   :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO C.AlonzoEra)
+  => C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m (C.UTxO C.BabbageEra)
 findUTxOByAddress localNodeConnectInfo address = let
-  query = C.QueryInShelleyBasedEra C.ShelleyBasedEraAlonzo $ C.QueryUTxO $
+  query = C.QueryInShelleyBasedEra C.ShelleyBasedEraBabbage $ C.QueryUTxO $
     C.QueryUTxOByAddress $ Set.singleton (C.toAddressAny address)
   in
   H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
-    C.QueryInEra C.AlonzoEraInCardanoMode query
+    C.QueryInEra C.BabbageEraInCardanoMode query
 
 -- | Get [TxIn] and total value for an address.
 getAddressTxInsValue
@@ -132,10 +132,10 @@ getAddressTxInsValue con address = do
     values = map (\case C.TxOut _ v _ _ -> C.txOutValueToLovelace v) txOuts
   pure (txIns, sum values)
 
-submitTx :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> C.Tx C.AlonzoEra -> m ()
+submitTx :: (MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> C.Tx C.BabbageEra -> m ()
 submitTx localNodeConnectInfo tx = do
   submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
-    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.AlonzoEraInCardanoMode
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.BabbageEraInCardanoMode
   failOnTxSubmitFail submitResult
   where
     failOnTxSubmitFail :: (Show a, MonadTest m) => SubmitResult a -> m ()
@@ -160,7 +160,7 @@ awaitTxId con txId = do
 -- | Submit the argument transaction and await for it to be accepted into the blockhain.
 submitAwaitTx
   :: (MonadIO m, MonadTest m)
-  => C.LocalNodeConnectInfo C.CardanoMode -> (C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra) -> m ()
+  => C.LocalNodeConnectInfo C.CardanoMode -> (C.Tx C.BabbageEra, C.TxBody C.BabbageEra) -> m ()
 submitAwaitTx con (tx, txBody) = do
   submitTx con tx
   liftIO $ awaitTxId con $ C.getTxId txBody
@@ -168,9 +168,9 @@ submitAwaitTx con (tx, txBody) = do
 mkTransferTx
   :: (MonadIO m, MonadTest m, MonadFail m)
   => C.NetworkId -> C.LocalNodeConnectInfo C.CardanoMode -> C.Address C.ShelleyAddr -> C.Address C.ShelleyAddr -> [C.ShelleyWitnessSigningKey] -> C.Lovelace
-  -> m (C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra)
+  -> m (C.Tx C.BabbageEra, C.TxBody C.BabbageEra)
 mkTransferTx networkId con from to keyWitnesses howMuch = do
-  pparams <- getAlonzoProtocolParams con
+  pparams <- getProtocolParams con
   (txIns, totalLovelace) <- getAddressTxInsValue con from
   let
     fee0 = 0
@@ -178,23 +178,23 @@ mkTransferTx networkId con from to keyWitnesses howMuch = do
       { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
       , C.txOuts = [mkAddressAdaTxOut to $ totalLovelace - fee0]
       }
-  txBody0 :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx0
+  txBody0 :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx0
   let fee = calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses) networkId txBody0 :: C.Lovelace
 
   when (howMuch + fee >= totalLovelace) $ fail "Not enough funds"
   let
-    tx = tx0 { C.txFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee
+    tx = tx0 { C.txFee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra fee
              , C.txOuts = [ mkAddressAdaTxOut to howMuch
                           , mkAddressAdaTxOut from $ totalLovelace - howMuch - fee
                           ]}
-  txBody :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx
+  txBody :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx
   return (C.signShelleyTransaction txBody keyWitnesses, txBody)
 
-mkAddressAdaTxOut :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.AlonzoEra
+mkAddressAdaTxOut :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.BabbageEra
 mkAddressAdaTxOut address lovelace =
   C.TxOut
-    (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
-    (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue lovelace)
+    (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) address)
+    (C.TxOutValue C.MultiAssetInBabbageEra $ C.lovelaceToValue lovelace)
     C.TxOutDatumNone
     C.ReferenceScriptNone
 

@@ -61,7 +61,7 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
   (con, conf, runtime) <- TN.startTestnet testnetOptions base tempAbsPath
   let networkId = TN.getNetworkId runtime
   socketPath <- TN.getSocketPathAbs conf runtime
-  pparams <- TN.getAlonzoProtocolParams con
+  pparams <- TN.getProtocolParams con
 
   -- Load genesis keys, these already exist (were already created when testnet started)
   genesisVKey :: C.VerificationKey C.GenesisUTxOKey <- TN.readAs (C.AsVerificationKey C.AsGenesisUTxOKey) $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
@@ -187,7 +187,7 @@ createPaymentAndStakeKey networkId = do
 
 registerStakeAddress
   :: C.NetworkId -> C.LocalNodeConnectInfo C.CardanoMode -> C.ProtocolParameters -> C.Address C.ShelleyAddr -> C.SigningKey C.GenesisUTxOKey -> C.StakeCredential
-  -> HE.Integration (C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra)
+  -> HE.Integration (C.Tx C.BabbageEra, C.TxBody C.BabbageEra)
 registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredential = do
 
   -- Create a registration certificate: cardano-cli stake-address registration-certificate
@@ -203,13 +203,13 @@ registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredentia
     tx0 = (TN.emptyTxBodyContent dummyFee pparams)
       { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
       , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
-      , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra [stakeAddressRegCert] (C.BuildTxWith mempty)
+      , C.txCertificates = C.TxCertificates C.CertificatesInBabbageEra [stakeAddressRegCert] (C.BuildTxWith mempty)
       }
     keyWitnesses = [C.WitnessGenesisUTxOKey payerSKey]
-  txBody0 :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx0
+  txBody0 :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx0
   let
     feeLovelace = TN.calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses) networkId txBody0 :: C.Lovelace
-    fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
+    fee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra feeLovelace
     tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - feeLovelace] }
 
   txBody <- HE.leftFail $ C.makeTransactionBody tx1
@@ -219,7 +219,7 @@ registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredentia
 registerPool
   :: C.LocalNodeConnectInfo C.CardanoMode -> C.NetworkId -> C.ProtocolParameters -> FilePath
   -> [C.ShelleyWitnessSigningKey] -> [C.StakeCredential] -> C.Address C.ShelleyAddr
-  -> HE.Integration (C.PoolId, C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra)
+  -> HE.Integration (C.PoolId, C.Tx C.BabbageEra, C.TxBody C.BabbageEra)
 registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials payerAddress = do
 
   -- Create the metadata file
@@ -270,18 +270,18 @@ registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials p
        tx0 = (TN.emptyTxBodyContent dummyFee pparams)
          { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
          , C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - dummyFee]
-         , C.txCertificates = C.TxCertificates C.CertificatesInAlonzoEra
+         , C.txCertificates = C.TxCertificates C.CertificatesInBabbageEra
            ([poolRegistration] <> delegationCertificates)
            (C.BuildTxWith mempty) -- BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
          }
-     txBody0 :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx0
+     txBody0 :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx0
      let
        -- cardano-cli transaction calculate-min-fee
        feeLovelace = TN.calculateFee pparams (length $ C.txIns tx0) (length $ C.txOuts tx0) 0 (length keyWitnesses') networkId txBody0 :: C.Lovelace
-       fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
+       fee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra feeLovelace
        tx1 = tx0 { C.txFee = fee, C.txOuts = [TN.mkAddressAdaTxOut payerAddress $ totalLovelace - feeLovelace] }
 
-     txBody :: C.TxBody C.AlonzoEra <- HE.leftFail $ C.makeTransactionBody tx1
+     txBody :: C.TxBody C.BabbageEra <- HE.leftFail $ C.makeTransactionBody tx1
      let tx = C.signShelleyTransaction txBody keyWitnesses'
 
      return (coldVKeyHash, tx, txBody)

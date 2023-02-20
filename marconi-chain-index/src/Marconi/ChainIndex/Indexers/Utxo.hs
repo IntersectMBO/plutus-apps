@@ -28,12 +28,16 @@
 -}
 module Marconi.ChainIndex.Indexers.Utxo where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as Shelley
 import Control.Concurrent.Async (concurrently_)
 import Control.Exception (bracket_)
 import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((^.))
 import Control.Lens.TH (makeLenses)
 import Control.Monad (unless, when)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
+import Data.Aeson qualified as Aeson
 import Data.Foldable (foldl', toList)
 import Data.Functor ((<&>))
 import Data.List (elemIndex)
@@ -46,14 +50,6 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
-import System.Random.MWC (createSystemRandom, uniformR)
-import Text.RawString.QQ (r)
-
-import Cardano.Api ()
-import Cardano.Api qualified as C
-import "cardano-api" Cardano.Api.Shelley qualified as Shelley
-import Data.Aeson (ToJSON (toJSON), object, (.=))
-import Data.ByteString (ByteString)
 import Marconi.ChainIndex.Orphans ()
 import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
 import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
@@ -61,6 +57,8 @@ import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasP
                               Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent, StorableMonad,
                               StorablePoint, StorableQuery, StorableResult, emptyState, filterWithQueryInterval)
 import Marconi.Core.Storable qualified as Storable
+import System.Random.MWC (createSystemRandom, uniformR)
+import Text.RawString.QQ (r)
 
 type UtxoIndexer = Storable.State UtxoHandle
 
@@ -87,7 +85,7 @@ data Utxo = Utxo
   , _datum            :: Maybe C.ScriptData
   , _datumHash        :: Maybe (C.Hash C.ScriptData)
   , _value            :: C.Value
-  , _inlineScript     :: Maybe Shelley.ScriptInAnyLang -- ByteString -- ^ ReferenceScript
+  , _inlineScript     :: Maybe Shelley.ScriptInAnyLang -- ^ Reference script
   , _inlineScriptHash :: Maybe C.ScriptHash
   } deriving (Show, Eq, Generic)
 
@@ -98,28 +96,32 @@ instance Ord Utxo where
     =   _txId left <= _txId right
     &&  _txIx left <= _txIx right
 
+instance FromJSON Utxo where
+  parseJSON (Aeson.Object o) =
+      Utxo
+        <$> o .: "address"
+        <*> o .: "txId"
+        <*> o .: "txIx"
+        <*> o .: "datum"
+        <*> o .: "datumHash"
+        <*> o .: "value"
+        <*> o .: "inlineScript"
+        <*> o .: "inlineScriptHash"
+  parseJSON _ = mempty
+
+
 instance ToJSON Utxo where
   toJSON (Utxo addr tId tIx dtum dtumHash val scrpt scrptHash) = object
     [ "address"           .= addr
     , "txId"              .= tId
     , "txIx"              .= tIx
-    , "datum"             .= (C.serialiseToCBOR <$> dtum)
+    , "datum"             .= dtum
     , "datumHash"         .= dtumHash
     , "value"             .= val
-    , "inlineScript"      .= (scriptToCBOR <$> scrpt)
+    -- Uses ToJSON instance of cardano-api which serialises using the 'C.HasTextEnvelope' typeclass.
+    , "inlineScript"      .= scrpt
     , "inlineScriptHash"  .= scrptHash
     ]
-
--- | convert to Script to CBOR bytestring
-scriptToCBOR :: Shelley.ScriptInAnyLang -> ByteString
-scriptToCBOR (Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV1) script) =
-  C.serialiseToCBOR script
-scriptToCBOR (Shelley.ScriptInAnyLang(C.SimpleScriptLanguage C.SimpleScriptV2) script) =
-  C.serialiseToCBOR script
-scriptToCBOR (Shelley.ScriptInAnyLang(C.PlutusScriptLanguage C.PlutusScriptV1) script) =
-  C.serialiseToCBOR script
-scriptToCBOR (Shelley.ScriptInAnyLang(C.PlutusScriptLanguage C.PlutusScriptV2) script) =
-  C.serialiseToCBOR script
 
 data UtxoRow = UtxoRow
   { _urUtxo      :: Utxo
@@ -128,6 +130,14 @@ data UtxoRow = UtxoRow
   } deriving (Show, Eq, Ord, Generic)
 
 $(makeLenses ''UtxoRow)
+
+instance FromJSON UtxoRow where
+  parseJSON (Aeson.Object o) =
+      UtxoRow
+        <$> o .: "utxo"
+        <*> o .: "slotNo"
+        <*> o .: "blockHeaderHash"
+  parseJSON _ = mempty
 
 instance ToJSON UtxoRow where
   toJSON (UtxoRow u s h) = object
