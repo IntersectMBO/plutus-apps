@@ -78,8 +78,11 @@ genTxBodyContentFromTxIns
     :: [C.TxIn]
     -> Gen (C.TxBodyContent C.BuildTx C.AlonzoEra)
 genTxBodyContentFromTxIns inputs = do
-    txBodyContent <- emptyTxBodyContent <$> CGen.genLovelace <*> CGen.genProtocolParameters
-    txOuts <- Gen.list (Range.linear 1 2) $ genTxOutTxContext C.AlonzoEra
+    txBodyContent <-
+        emptyTxBodyContent (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+            <$> fmap (C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra) CGen.genLovelace
+            <*> CGen.genProtocolParameters
+    txOuts <- Gen.list (Range.linear 1 5) $ genTxOutTxContext C.AlonzoEra
     pure $ txBodyContent
         { C.txIns = fmap (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) inputs
         , C.txOuts = txOuts
