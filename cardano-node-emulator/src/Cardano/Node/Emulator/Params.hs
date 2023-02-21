@@ -16,6 +16,7 @@ module Cardano.Node.Emulator.Params(
   protocolParamsL,
   networkIdL,
   increaseTransactionLimits,
+  increaseTransactionLimits',
   genesisDefaultsFromParams,
   -- * cardano-ledger specific types and conversion functions
   EmulatorEra,
@@ -52,6 +53,7 @@ import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.SOP.Strict (K (K), NP (..))
 import GHC.Generics (Generic)
+import GHC.Natural (Natural)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
 import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
 import Plutus.V1.Ledger.Api (POSIXTime (..))
@@ -122,11 +124,14 @@ instance Pretty Params where
 -- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
 -- Note that if you need this your Plutus script will probably not validate on Mainnet.
 increaseTransactionLimits :: Params -> Params
-increaseTransactionLimits = over protocolParamsL fixParams
+increaseTransactionLimits = increaseTransactionLimits' 2 10 10
+
+increaseTransactionLimits' :: Natural -> Natural -> Natural -> Params -> Params
+increaseTransactionLimits' size steps mem = over protocolParamsL fixParams
   where
     fixParams pp = pp
-      { protocolParamMaxTxSize = 2 * protocolParamMaxTxSize pp
-      , protocolParamMaxTxExUnits = protocolParamMaxTxExUnits pp >>= (\ExecutionUnits {executionSteps, executionMemory} -> pure $ ExecutionUnits {executionSteps = 10 * executionSteps, executionMemory = 10 * executionMemory})
+      { protocolParamMaxTxSize = size * protocolParamMaxTxSize pp
+      , protocolParamMaxTxExUnits = protocolParamMaxTxExUnits pp >>= (\ExecutionUnits {executionSteps, executionMemory} -> pure $ ExecutionUnits {executionSteps = steps * executionSteps, executionMemory = mem * executionMemory})
       }
 
 

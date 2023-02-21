@@ -88,7 +88,7 @@ open = to $ \ p -> p ^. coinAAmount > 0 -- If one is bigger than zero the other 
 
 prop_Uniswap :: Actions UniswapModel -> Property
 prop_Uniswap = propRunActionsWithOptions
-  (iterate increaseTransactionLimits defaultCheckOptionsContractModel !! 4)
+  (Uniswap.increaseTransactionLimitsOpts defaultCheckOptionsContractModel)
   defaultCoverageOptions
   (\ _ -> pure True)
 
@@ -625,7 +625,7 @@ prop_Whitelist = checkErrorWhitelist defaultWhitelist
 
 tests :: TestTree
 tests = testGroup "uniswap" [
-    checkPredicateOptions (iterate increaseTransactionLimits defaultCheckOptions !! 4) "can create a liquidity pool and add liquidity"
+    checkPredicateOptions (Uniswap.increaseTransactionLimitsOpts defaultCheckOptions) "can create a liquidity pool and add liquidity"
         (assertNotDone Uniswap.setupTokens
                        (Trace.walletInstanceTag w1)
                        "setupTokens contract should be still running"
