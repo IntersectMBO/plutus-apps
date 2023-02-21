@@ -205,7 +205,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/james-iohk/cardano-node
-    tag: b46e2a7b1cdb09c7bbf1471ea5cb349fac75fb40
+    tag: 81a709513ec93dc6a55378fc0f15e95fcd3d2287
     subdir:
       cardano-testnet
 
