@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -85,10 +86,11 @@ import Cardano.Node.Emulator.Validation (fromPlutusTxSigned, validateCardanoTx)
 import Control.Lens.Lens ((<&>))
 import Data.Functor (($>))
 import Data.String (fromString)
-import Ledger (CardanoTx (CardanoApiTx, EmulatorTx), Interval, MintingPolicy (getMintingPolicy),
+import Gen.Cardano.Api.Typed (genTxIn)
+import Ledger (CardanoTx (CardanoApiTx), Interval, MintingPolicy (getMintingPolicy),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx), Tx (txMint, txOutputs, txValidRange),
+               SomeCardanoApiTx (CardanoApiEmulatorEraTx),
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput, TxInputType,
                TxOut, TxOutRef (TxOutRef), ValidationErrorInPhase, addCardanoTxSignature, maxFee, minAdaTxOutEstimated,
                minLovelaceTxOutEstimated, pubKeyTxOut, txOutValue, validatorHash)
@@ -112,7 +114,7 @@ signAll tx = foldl' (flip addCardanoTxSignature) tx
 
 -- | The parameters for the generators in this module.
 data GeneratorModel = GeneratorModel {
-    gmInitialBalance      :: Map PaymentPubKey C.Value,
+    gmInitialBalance      :: Map PaymentPubKey C.Lovelace,
     -- ^ Value created at the beginning of the blockchain.
     gmPubKeys             :: Set PaymentPubKey,
     -- ^ Public keys that are to be used for generating transactions.
@@ -122,7 +124,7 @@ data GeneratorModel = GeneratorModel {
 -- | A generator model with some sensible defaults.
 generatorModel :: GeneratorModel
 generatorModel =
-    let vl = Value.adaValueOf 100
+    let vl = C.Lovelace $ 1_000_000 * 100
         pubKeys = CW.knownPaymentPublicKeys
 
     in
@@ -150,13 +152,13 @@ emptyChain = Mockchain [] Map.empty def
 -- | Generate a mockchain.
 --
 --   TODO: Generate more than 1 txn
-genMockchain' :: MonadGen m
-    => GeneratorModel
-    -> m Mockchain
+genMockchain' ::
+       GeneratorModel
+    -> Gen Mockchain
 genMockchain' gm = do
     slotCfg <- genSlotConfig
-    let (txn, ot) = genInitialTransaction gm
-        params = def { pSlotConfig = slotCfg }
+    (txn, ot) <- genInitialTransaction gm
+    let params = def { pSlotConfig = slotCfg }
         signedTx = signTx params mempty txn
         -- There is a problem that txId of emulator tx and tx of cardano tx are different.
         -- We convert the emulator tx to cardano tx here to get the correct transaction id
@@ -170,23 +172,50 @@ genMockchain' gm = do
 
 -- | Generate a mockchain using the default 'GeneratorModel'.
 --
-genMockchain :: MonadGen m => m Mockchain
+genMockchain :: Gen Mockchain
 genMockchain = genMockchain' generatorModel
 
 -- | A transaction with no inputs that mints some value (to be used at the
 --   beginning of a blockchain).
 genInitialTransaction ::
        GeneratorModel
-    -> (CardanoTx, [TxOut])
-genInitialTransaction GeneratorModel{..} =
+    -> Gen (CardanoTx, [TxOut])
+genInitialTransaction g = do
+    (body, o) <- initialTxBody g
+    (,o) <$> makeGenTx (pure body)
+
+
+initialTxBody ::
+       GeneratorModel
+    -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra, [TxOut])
+initialTxBody GeneratorModel{..} = do
     let o = either (error . ("Cannot create outputs: " <>) . show) id
-          $ traverse (\(ppk, v) -> pubKeyTxOut v ppk Nothing) $ Map.toList gmInitialBalance
-        t = fold gmInitialBalance
-    in (EmulatorTx $ mempty {
-        txOutputs = o,
-        txMint = t,
-        txValidRange = Interval.from 0
-        }, o)
+          $ traverse (\(ppk, v) -> pubKeyTxOut v ppk Nothing) $ Map.toList $ fmap Value.lovelaceToValue gmInitialBalance
+    -- we use a generated tx in input it's unbalanced but it's "fine" as we don't validate this tx
+    txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))
+                 <$> Gen.list (Range.constant 1 10) genTxIn
+    pure (C.TxBodyContent
+           { txIns
+           , txInsCollateral = C.TxInsCollateralNone
+           , txMintValue = C.TxMintNone
+           , txFee = C.toCardanoFee 0
+           , txOuts = Tx.getTxOut <$> o
+            -- unused:
+           , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
+           , txInsReference = C.TxInsReferenceNone
+           , txTotalCollateral = C.TxTotalCollateralNone
+           , txReturnCollateral = C.TxReturnCollateralNone
+           , txValidityRange = ( C.TxValidityNoLowerBound
+                               , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+           , txScriptValidity = C.TxScriptValidityNone
+           , txExtraKeyWits = C.TxExtraKeyWitnessesNone
+           , txMetadata = C.TxMetadataNone
+           , txAuxScripts = C.TxAuxScriptsNone
+           , txWithdrawals = C.TxWithdrawalsNone
+
+           , txCertificates = C.TxCertificatesNone
+           , txUpdateProposal = C.TxUpdateProposalNone
+           }, o)
 
 -- | Generate a valid transaction, using the unspent outputs provided.
 --   Fails if the there are no unspent outputs, or if the total value
@@ -229,11 +258,19 @@ genValidTransactionSpending'
     -> [TxInputWitnessed]
     -> C.Value
     -> Gen CardanoTx
-genValidTransactionSpending' g ins totalVal = do
-    bodyContent <- genValidTransactionBodySpending g ins totalVal
-    txBody <- either (const $ fail "Can't create TxBody") pure
-                  $ C.makeTransactionBody bodyContent
-    pure (signAll $ CardanoApiTx $ CardanoApiEmulatorEraTx $ C.Tx txBody [])
+genValidTransactionSpending' g ins totalVal =
+    makeGenTx $ genValidTransactionBodySpending g ins totalVal
+
+
+makeGenTx
+    :: MonadFail m
+    => m (C.TxBodyContent C.BuildTx C.BabbageEra)
+    -> m CardanoTx
+makeGenTx gen = do
+    bodyContent <- gen
+    txBody <- either (fail . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody bodyContent
+    pure $ signAll $ CardanoApiTx $ CardanoApiEmulatorEraTx $ C.Tx txBody []
+
 
 genValidTransactionBodySpending
     :: GeneratorModel
@@ -303,9 +340,6 @@ genValidTransactionBodySpending g ins totalVal = do
            , txUpdateProposal = C.TxUpdateProposalNone
            }
     where
-        -- | Catch cardano error and fail wi it
-        failOnCardanoError :: Either C.ToCardanoError a -> Gen a
-        failOnCardanoError = either (fail . show) pure
         -- | Translate TxIn to TxInput taking out data witnesses if present.
         txInToCardanoTxInput :: TxInputWitnessed ->
             Either C.ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
@@ -481,3 +515,7 @@ alwaysSucceedPolicyId = C.scriptPolicyId (C.PlutusScript C.PlutusScriptV1 $ C.ex
 
 someTokenValue :: C.AssetName -> Integer -> C.Value
 someTokenValue an i = C.valueFromList [(C.AssetId alwaysSucceedPolicyId an, C.Quantity i)]
+
+-- | Catch cardano error and fail wi it
+failOnCardanoError :: MonadFail m => Either C.ToCardanoError a -> m a
+failOnCardanoError = either (fail . show) pure
