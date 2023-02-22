@@ -82,7 +82,7 @@ let
 
       # Plutus Stuff
       plutus-apps-shell.ghc
-      cell.packages.haskell-language-server
+      cell.packages.haskell-language-server-wrapper
       cell.packages.cabal-install
     ];
 
