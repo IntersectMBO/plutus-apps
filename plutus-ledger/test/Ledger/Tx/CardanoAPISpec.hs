@@ -9,13 +9,14 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash)
                     StakeAddressReference (NoStakeAddress, StakeAddressByValue), StakeCredential, makeShelleyAddress,
                     shelleyAddressInEra)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), TxBody (ShelleyTxBody))
-import Gen.Cardano.Api.Typed (genAssetName, genValueDefault)
+import Gen.Cardano.Api.Typed (genAssetName, genTxId, genValueDefault)
 import Gen.Cardano.Api.Typed qualified as Gen
 import Ledger (toPlutusAddress)
 import Ledger.Test (someValidator)
 import Ledger.Tx (Language (PlutusV1), Tx (txMint), Versioned (Versioned), addMintingPolicy)
-import Ledger.Tx.CardanoAPI (fromCardanoAssetName, fromCardanoValue, makeTransactionBody, toCardanoAddressInEra,
-                             toCardanoAssetName, toCardanoPolicyId, toCardanoTxBodyContent, toCardanoValue)
+import Ledger.Tx.CardanoAPI (fromCardanoAssetName, fromCardanoTxId, fromCardanoValue, makeTransactionBody,
+                             toCardanoAddressInEra, toCardanoAssetName, toCardanoPolicyId, toCardanoTxBodyContent,
+                             toCardanoTxId, toCardanoValue)
 import Ledger.Value.CardanoAPI (combine, valueFromList, valueGeq)
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
@@ -40,6 +41,7 @@ tests =
     , testPropertyNamed "Tx conversion retains minting policy scripts" "txConversionRetainsMPS" convertMintingTx
     , testPropertyNamed "TokenName <- Cardano AssetName roundtrip" "cardanoAssetNameRoundTrip" cardanoAssetNameRoundTrip
     , testPropertyNamed "Plutus Value <- Cardano Value roundtrip" "cardanoValueRoundTrip" cardanoValueRoundTrip
+    , testPropertyNamed "TxId round trip" "cardanoValueRoundTrip" cardanoTxIdRoundTrip
     ]
   , testGroup "Ledger.Value.CardanoAPI"
     [ testPropertyNamed "combineLeftId" "combineLeftId" combineLeftId
@@ -57,6 +59,11 @@ cardanoValueRoundTrip :: Property
 cardanoValueRoundTrip = property $ do
     value <- forAll genValueDefault
     tripping value fromCardanoValue toCardanoValue
+
+cardanoTxIdRoundTrip :: Property
+cardanoTxIdRoundTrip = property $ do
+    txId <- forAll genTxId
+    tripping txId fromCardanoTxId toCardanoTxId
 
 -- | From a cardano address, we should be able to convert it to a plutus address,
 -- back to the same initial cardano address.
