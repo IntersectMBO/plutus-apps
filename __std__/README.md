@@ -6,7 +6,7 @@ The target audience includes current and future maintainers.
 
 Start with the comments inside the [flake](../flake.nix) then continue reading here.
 
-## The standard format of nix files 
+## The standard format of nix files
 
 Note how *every single nix file* in this repository (with the exception of `flake.nix`) has the same format:
 
@@ -72,10 +72,10 @@ Other cell blocks (for example `library` or `devcontainer`) host nix files that 
 
 While these blocks are not exposed directly to the flake (they are not "harvested"), they can still be accessed using this syntax:
 
-`nix (develop|build|run) .#<system>.<cell>.<cell-block>.<valid.attr.path>` 
+`nix (develop|build|run) .#<system>.<cell>.<cell-block>.<valid.attr.path>`
 
 For example:
-`nix build .#x86_64-linux.plutus-apps.library.plutus-apps-project.hsPkgs.marconi-mamba.components.exes.marconi-mamba`
+`nix build .#x86_64-linux.plutus-apps.library.plutus-apps-project.hsPkgs.marconi-sidechain.components.exes.marconi-sidechain`
 
 ## Reference example
 

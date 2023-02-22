@@ -25,7 +25,7 @@ packages: cardano-node-emulator
           freer-extras
           marconi-chain-index
           marconi-core
-          marconi-mamba
+          marconi-sidechain
           pab-blockfrost
           plutus-chain-index
           plutus-chain-index-core
