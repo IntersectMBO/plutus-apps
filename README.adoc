@@ -112,7 +112,8 @@ So for the time being, you need to:
 . Copy the `source-repository-package` stanzas from our `cabal.project` to yours.
 . Copy additional stanzas from our `cabal.project` as you need, e.g. you may need some of the `allow-newer` stanzas.
 
-The https://github.com/input-output-hk/plutus-starter[plutus-starter] project provides an example.
+The https://github.com/input-output-hk/plutus-starter[plutus-starter] project
+(deprecated) provides an example.
 
 == Licensing
 
