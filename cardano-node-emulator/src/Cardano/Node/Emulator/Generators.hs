@@ -19,10 +19,12 @@ module Cardano.Node.Emulator.Generators(
     generatorModel,
     -- * Transactions
     genValidTransaction,
+    genValidTransactionBody,
     genValidTransaction',
     genValidTransactionSpending,
     genValidTransactionSpending',
     genInitialTransaction,
+    makeTx,
     -- * Assertions
     assertValid,
     -- * Time
@@ -33,6 +35,7 @@ module Cardano.Node.Emulator.Generators(
     genPOSIXTime,
     genSlotConfig,
     -- * Etc.
+    failOnCardanoError,
     genPolicyId,
     genAssetId,
     Gen.genAssetName,
@@ -52,6 +55,7 @@ module Cardano.Node.Emulator.Generators(
     CW.knownPaymentPrivateKeys,
     CW.knownPaymentKeys,
     knownXPrvs,
+    alwaysSucceedPolicy,
     alwaysSucceedPolicyId,
     someTokenValue
     ) where
@@ -182,7 +186,7 @@ genInitialTransaction ::
     -> Gen (CardanoTx, [TxOut])
 genInitialTransaction g = do
     (body, o) <- initialTxBody g
-    (,o) <$> makeGenTx (pure body)
+    (,o) <$> makeTx body
 
 
 initialTxBody ::
@@ -225,6 +229,11 @@ genValidTransaction
     -> Gen CardanoTx
 genValidTransaction = genValidTransaction' generatorModel
 
+genValidTransactionBody
+    :: Mockchain
+    -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
+genValidTransactionBody = genValidTransactionBody' generatorModel
+
 -- | Generate a valid transaction, using the unspent outputs provided.
 --   Fails if the there are no unspent outputs, or if the total value
 --   of the unspent outputs is smaller than the estimated fee.
@@ -232,15 +241,7 @@ genValidTransaction'
     :: GeneratorModel
     -> Mockchain
     -> Gen CardanoTx
-genValidTransaction' g (Mockchain _ ops _) = do
-    -- Take a random number of UTXO from the input
-    nUtxo <- if Map.null ops
-                then Gen.discard
-                else Gen.int (Range.linear 1 (Map.size ops))
-    let ins = (`TxInputWitnessed` ConsumePublicKeyAddress) . fst <$> inUTXO
-        inUTXO = take nUtxo $ Map.toList ops
-        totalVal = foldMap (txOutValue . snd) inUTXO
-    genValidTransactionSpending' g ins totalVal
+genValidTransaction' g chain = genValidTransactionBody' g chain >>= makeTx
 
 genValidTransactionSpending
     :: [TxInputWitnessed]
@@ -259,25 +260,40 @@ genValidTransactionSpending'
     -> C.Value
     -> Gen CardanoTx
 genValidTransactionSpending' g ins totalVal =
-    makeGenTx $ genValidTransactionBodySpending g ins totalVal
+    genValidTransactionBodySpending' g ins totalVal >>= makeTx
 
 
-makeGenTx
+makeTx
     :: MonadFail m
-    => m (C.TxBodyContent C.BuildTx C.BabbageEra)
+    => C.TxBodyContent C.BuildTx C.BabbageEra
     -> m CardanoTx
-makeGenTx gen = do
-    bodyContent <- gen
+makeTx bodyContent = do
     txBody <- either (fail . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody bodyContent
     pure $ signAll $ CardanoApiTx $ CardanoApiEmulatorEraTx $ C.Tx txBody []
 
+-- | Generate a valid transaction, using the unspent outputs provided.
+--   Fails if the there are no unspent outputs, or if the total value
+--   of the unspent outputs is smaller than the estimated fee.
+genValidTransactionBody'
+    :: GeneratorModel
+    -> Mockchain
+    -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
+genValidTransactionBody' g (Mockchain _ ops _) = do
+    -- Take a random number of UTXO from the input
+    nUtxo <- if Map.null ops
+                then Gen.discard
+                else Gen.int (Range.linear 1 (Map.size ops))
+    let ins = (`TxInputWitnessed` ConsumePublicKeyAddress) . fst <$> inUTXO
+        inUTXO = take nUtxo $ Map.toList ops
+        totalVal = foldMap (txOutValue . snd) inUTXO
+    genValidTransactionBodySpending' g ins totalVal
 
-genValidTransactionBodySpending
+genValidTransactionBodySpending'
     :: GeneratorModel
     -> [TxInputWitnessed]
     -> C.Value
     -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
-genValidTransactionBodySpending g ins totalVal = do
+genValidTransactionBodySpending' g ins totalVal = do
     mintAmount <- toInteger <$> Gen.int (Range.linear 0 maxBound)
     mintTokenName <- Gen.genAssetName
     let mintValue = guard (mintAmount == 0) $> someTokenValue mintTokenName mintAmount
