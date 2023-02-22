@@ -237,7 +237,7 @@ endToEnd = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H.
       tx2ins = [(scriptTxIn, C.BuildTxWith scriptWitness)]
       mkTx2Outs lovelace = [TN.mkAddressAdaTxOut address lovelace]
 
-  (tx2fee, tx2bodyContent) <- TN.calculateAndUpdateTxFee pparams networkId (length tx2ins) (length keyWitnesses) (TN.emptyTxBodyContent pparams)
+  (tx2fee, tx2bodyContent) <- TN.calculateAndUpdateTxFee pparams networkId (length tx2ins + 1) (length keyWitnesses) (TN.emptyTxBodyContent pparams)
     { C.txIns              = tx2ins
     , C.txInsCollateral    = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
     , C.txOuts             = mkTx2Outs lovelaceAtScript
