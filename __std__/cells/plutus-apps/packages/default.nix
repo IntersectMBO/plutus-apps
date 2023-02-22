@@ -56,7 +56,7 @@
 
   marconi-chain-index = import ./marconi-chain-index.nix block;
 
-  marconi-mamba = import ./marconi-mamba.nix block;
+  marconi-sidechain = import ./marconi-sidechain.nix block;
 
   plutus-playground-client-entrypoint = import ./plutus-playground-client-entrypoint.nix block;
 

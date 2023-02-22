@@ -1,8 +1,0 @@
-Invalid option `--socket'
-
-Usage: marconi-mamba [--version] --socket-path FILE-PATH --db-dir DIR 
-                     [--utxo-db-fname FILE-NAME] [--http-port HTTP-PORT] 
-                     (--mainnet | --testnet-magic NATURAL) 
-                     [(--addresses-to-index BECH32-ADDRESS)]
-
-  marconi-mamba
