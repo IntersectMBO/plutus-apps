@@ -64,6 +64,7 @@ import Plutus.Contracts.GameStateMachine as G hiding (Guess)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator as Trace
+import PlutusTx qualified
 import PlutusTx.Coverage
 
 gameParam :: G.GameParam
@@ -350,8 +351,7 @@ tests =
         .&&. walletFundsChangePlutus w1 (Ada.toValue (-2_000_000) <> Ada.adaValueOf (-8)))
         failTrace
 
-    -- TODO: turn this on again when reproducibility issue in core is fixed
-    -- , goldenPir "test/Spec/gameStateMachine.pir" $$(PlutusTx.compile [|| mkValidator ||])
+    , goldenPir "test/Spec/gameStateMachine.pir" $$(PlutusTx.compile [|| mkValidator ||])
 
     , HUnit.testCaseSteps "script size is reasonable" $ \step ->
         reasonable' step (Scripts.validatorScript $ G.typedValidator gameParam) 49000
