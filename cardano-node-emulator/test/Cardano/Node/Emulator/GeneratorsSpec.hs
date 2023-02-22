@@ -76,7 +76,7 @@ tests = testGroup "Cardano.Node.Emulator.Generators" [
 
 initialTxnValid :: Property
 initialTxnValid = property $ do
-    (i, _) <- forAll . pure $ Gen.genInitialTransaction Gen.generatorModel
+    (i, _) <- forAll $ Gen.genInitialTransaction Gen.generatorModel
     Gen.assertValid i Gen.emptyChain
 
 splitVal :: Property
