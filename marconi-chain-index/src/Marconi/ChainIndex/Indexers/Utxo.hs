@@ -51,8 +51,8 @@ import Text.RawString.QQ (r)
 
 import Cardano.Api ()
 import Cardano.Api qualified as C
-import "cardano-api" Cardano.Api.Shelley qualified as Shelley
-import Data.Aeson (ToJSON (toJSON), object, (.=))
+import Cardano.Api.Shelley qualified as Shelley
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
 import Data.ByteString (ByteString)
 import Marconi.ChainIndex.Orphans ()
 import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
@@ -98,6 +98,19 @@ instance Ord Utxo where
     =   _txId left <= _txId right
     &&  _txIx left <= _txIx right
 
+instance FromJSON Utxo where
+    parseJSON (Object v) =
+        Utxo
+            <$> v .: "address"
+            <*> v .: "txId"
+            <*> v .: "txIx"
+            <*> v .: "datum"
+            <*> v .: "datumHash"
+            <*> v .: "value"
+            <*> v .: "inlineScript"
+            <*> v .: "inlineScriptHash"
+    parseJSON _ = mempty
+
 instance ToJSON Utxo where
   toJSON (Utxo addr tId tIx dtum dtumHash val scrpt scrptHash) = object
     [ "address"           .= addr
@@ -129,6 +142,14 @@ data UtxoRow = UtxoRow
 
 $(makeLenses ''UtxoRow)
 
+instance FromJSON UtxoRow where
+    parseJSON (Object v) =
+        UtxoRow
+            <$> v .: "utxo"
+            <*> v .: "slotNo"
+            <*> v .: "blockHeaderHash"
+    parseJSON _ = mempty
+
 instance ToJSON UtxoRow where
   toJSON (UtxoRow u s h) = object
     [ "utxo" .= u
@@ -136,7 +157,8 @@ instance ToJSON UtxoRow where
     , "blockHeaderHash" .= h
     ]
 
-newtype instance StorableResult UtxoHandle = UtxoResult [UtxoRow] deriving Show
+newtype instance StorableResult UtxoHandle =
+    UtxoResult { getUtxoResult :: [UtxoRow] } deriving Show
 
 data instance StorableEvent UtxoHandle = UtxoEvent
   { ueUtxos       :: !(Set Utxo)
@@ -222,6 +244,9 @@ open
   -> IO UtxoIndexer
 open dbPath (Depth k) = do
   c <- SQL.open dbPath
+
+  SQL.execute_ c "PRAGMA journal_mode=WAL"
+
   SQL.execute_ c [r|CREATE TABLE IF NOT EXISTS unspent_transactions
                       ( address TEXT NOT NULL
                       , txId TEXT NOT NULL
