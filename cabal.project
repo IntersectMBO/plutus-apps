@@ -199,20 +199,3 @@ source-repository-package
       libs/small-steps
       libs/small-steps-test
       libs/non-integral
-
--- Includes cardano-testnet fix for Babbage era on fork of 1.35.4
--- PR for master branch: https://github.com/input-output-hk/cardano-node/pull/4729
-source-repository-package
-    type: git
-    location: https://github.com/james-iohk/cardano-node
-    tag: b46e2a7b1cdb09c7bbf1471ea5cb349fac75fb40
-    subdir:
-      cardano-testnet
-
--- QueryConvenienceError deriving Show
-source-repository-package
-    type: git
-    location: https://github.com/james-iohk/cardano-node
-    tag: 2b6978583b306ad28f7e1226b5d1ad604919c98a
-    subdir:
-      cardano-api
