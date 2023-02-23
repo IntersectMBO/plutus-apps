@@ -92,7 +92,6 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
           propResumingShouldReturnOrderedListOfPoints
     ]
 
-
 eventsToRowsRoundTripTest :: Property
 eventsToRowsRoundTripTest  = property $ do
   events <- forAll genUtxoEvents

@@ -174,8 +174,8 @@ genAddressInEra era =
 genTxOutValue :: C.CardanoEra era -> Gen (C.TxOutValue era)
 genTxOutValue era =
   case C.multiAssetSupportedInEra era of
-    Left adaOnlyInEra     -> C.TxOutAdaOnly adaOnlyInEra <$> CGen.genLovelace
-    Right multiAssetInEra -> C.TxOutValue multiAssetInEra . C.lovelaceToValue <$> CGen.genLovelace
+    Left adaOnlyInEra     -> C.TxOutAdaOnly adaOnlyInEra <$> fmap (<> 1) CGen.genLovelace
+    Right multiAssetInEra -> C.TxOutValue multiAssetInEra . C.lovelaceToValue <$> fmap (<> 1) CGen.genLovelace
 
 -- Copied from cardano-api, but removed the recursive construction because it is time consuming,
 -- about a factor of 20 when compared to this simple generator.

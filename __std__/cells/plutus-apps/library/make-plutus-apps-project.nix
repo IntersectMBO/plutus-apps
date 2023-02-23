@@ -26,8 +26,6 @@ let
       "https://github.com/input-output-hk/cardano-wallet"."18a931648550246695c790578d4a55ee2f10463e" = "0i40hp1mdbljjcj4pn3n6zahblkb2jmpm8l4wnb36bya1pzf66fx";
       "https://github.com/Quviq/quickcheck-contractmodel"."b66e3ff0c6011dcef63f2bcfa6ea8d6ab685230d" = "sha256-gnY/Ps9i7RqO3yjcFilXjHyqDsdSZ+sLQn4vu3mAK/A=";
       "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
-      "https://github.com/james-iohk/cardano-node"."b46e2a7b1cdb09c7bbf1471ea5cb349fac75fb40" = "0ppw3y5r41i40rgjshlnc90xv9i5x7rrr7y4k7nzhlahp5wp1h1z";
-      "https://github.com/james-iohk/cardano-node"."2b6978583b306ad28f7e1226b5d1ad604919c98a" = "06nggf0kpdh3whn6kqpw8s0484xw1q9r964rv125grbmpdx86dah";
     };
 
     inputMap = {
@@ -61,7 +59,7 @@ let
             cardano-streaming.package.buildable = false;
             marconi-chain-index.package.buildable = false;
             marconi-core.package.buildable = false;
-            marconi-mamba.package.buildable = false;
+            marconi-sidechain.package.buildable = false;
             pab-blockfrost.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
@@ -144,8 +142,8 @@ let
               export CARDANO_NODE_SRC=${src}
             ";
 
-            marconi-mamba.doHaddock = deferPluginErrors;
-            marconi-mamba.flags.defer-plugin-errors = deferPluginErrors;
+            marconi-sidechain.doHaddock = deferPluginErrors;
+            marconi-sidechain.flags.defer-plugin-errors = deferPluginErrors;
 
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
@@ -195,7 +193,7 @@ let
             cardano-streaming.ghcOptions = [ "-Werror" ];
             marconi-chain-index.ghcOptions = [ "-Werror" ];
             marconi-core.ghcOptions = [ "-Werror" ];
-            marconi-mamba.ghcOptions = [ "-Werror" ];
+            marconi-sidechain.ghcOptions = [ "-Werror" ];
             pab-blockfrost.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];

@@ -75,6 +75,7 @@ open
 open dbPath (Depth k) = do
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
+  SQL.execute_ c "PRAGMA journal_mode=WAL"
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS kv_datumhsh_datum (datumHash TEXT PRIMARY KEY, datum BLOB, slotNo INT)"
   pure ix
 

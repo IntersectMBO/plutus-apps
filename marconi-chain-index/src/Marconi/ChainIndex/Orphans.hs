@@ -8,7 +8,7 @@ module Marconi.ChainIndex.Orphans where
 import Cardano.Api qualified as C
 import Cardano.Binary (fromCBOR, toCBOR)
 import Codec.Serialise (Serialise (decode, encode), deserialiseOrFail, serialise)
-import Data.Aeson (ToJSON)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
@@ -77,8 +77,13 @@ instance SQL.FromField C.AddressAny where
 instance SQL.ToField C.AddressAny where
   toField = SQL.SQLBlob . C.serialiseToRawBytes
 
+instance FromJSON C.AddressAny where
+    parseJSON (Aeson.String s) =
+        maybe mempty pure $ C.deserialiseAddress C.AsAddressAny s
+    parseJSON _ = mempty
+
 instance ToJSON C.AddressAny where
-    toJSON  = Aeson.String . C.serialiseAddress
+    toJSON = Aeson.String . C.serialiseAddress
 
 -- * C.Hash C.ScriptData
 
@@ -95,6 +100,12 @@ instance SQL.ToField (C.Hash C.ScriptData) where
 instance Serialise C.ScriptData where
   encode = toCBOR
   decode = fromCBOR
+
+instance FromJSON C.ScriptData where
+    parseJSON (Aeson.String s) =
+        either (const mempty) pure
+            $ C.deserialiseFromCBOR C.AsScriptData (Text.encodeUtf8 s)
+    parseJSON _ = mempty
 
 instance SQL.FromField C.ScriptData where
   fromField f = SQL.fromField f >>=
