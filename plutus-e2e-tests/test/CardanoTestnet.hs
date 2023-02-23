@@ -76,7 +76,6 @@ data Era = Alonzo | Babbage deriving (Eq, Show)
 data TestnetOptions = TestnetOptions
   { era               :: C.AnyCardanoEra
   , protocolVersion   :: Int
-  , numSpoNodes       :: Int
   , slotDuration      :: Int
   , slotLength        :: Double
   , activeSlotsCoeff  :: Double
@@ -89,7 +88,6 @@ defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
   { era = C.AnyCardanoEra C.BabbageEra
   , protocolVersion = 8
-  , numSpoNodes = 3
   , slotDuration = 1000
   , slotLength = 0.2
   , activeSlotsCoeff = 0.1 -- higher value (e.g. 0.9) prevents long waits for slot leader but could be the cause of more rollbacks/forks
@@ -184,13 +182,15 @@ testnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
+  let numPoolNodes = 3 :: Int
+
   void . H.execCli $
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
     , "--k", show @Int (securityParam testnetOptions)
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int (numSpoNodes testnetOptions)
+    , "--n-delegate-addresses", show numPoolNodes
     , "--total-balance", show @Int (totalBalance testnetOptions)
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
@@ -243,13 +243,11 @@ testnet testnetOptions H.Conf {..} = do
                     NodeLoggingFormatAsJson -> "ScJson"
                     NodeLoggingFormatAsText -> "ScText")
 
-  let numPoolNodes = 3 :: Int
-
   void . H.execCli $
     [ "genesis", "create-staked"
     , "--genesis-dir", tempAbsPath
     , "--testnet-magic", show @Int testnetMagic
-    , "--gen-pools", show @Int 3
+    , "--gen-pools", show numPoolNodes
     , "--supply", "1000000000000"
     , "--supply-delegated", "1000000000000"
     , "--gen-stake-delegs", "3"
@@ -284,7 +282,7 @@ testnet testnetOptions H.Conf {..} = do
         }
       }
 
-  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. numSpoNodes testnetOptions]
+  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1..3 :: Int] -- 3 spo nodes
 
   -- Create the node directories
 
@@ -354,7 +352,7 @@ testnet testnetOptions H.Conf {..} = do
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath </> "node-spo2/byron-delegation.cert")
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath </> "node-spo3/byron-delegation.cert")
 
-  [port1, port2, port3] <- getOpenPorts 3
+  [port1, port2, port3] <- getOpenPorts numPoolNodes
 --   [port1, port2, port3] <- getOpenPorts [3001, 3002, 3003]
 
   H.writeFile (tempAbsPath </> "node-spo1/port") (show port1)
