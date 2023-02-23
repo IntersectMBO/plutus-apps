@@ -38,7 +38,7 @@ tests :: TestTree
 tests =
   testGroup
     "Alonzo Features"
-    [ testProperty "check each attribute of V1 TxInfo in Alonzo PV6 " (checkTxInfoV1Test testnetOptionsAlonzo6)
+    [ testProperty "check each attribute of V1 TxInfo in Alonzo PV6" (checkTxInfoV1Test testnetOptionsAlonzo6)
     , testProperty "check each attribute of V1 TxInfo in Babbage PV7" (checkTxInfoV1Test testnetOptionsBabbage7)
     , testProperty "check each attribute of V1 TxInfo in Babbage PV8" (checkTxInfoV1Test testnetOptionsBabbage8)
     ]
