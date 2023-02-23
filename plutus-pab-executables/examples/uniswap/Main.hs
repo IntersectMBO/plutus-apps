@@ -13,7 +13,6 @@ module Main
     ( main
     ) where
 
-import Cardano.Node.Emulator (increaseTransactionLimits)
 import Control.Monad (forM, void)
 import Control.Monad.Freer (interpret)
 import Control.Monad.IO.Class (MonadIO (..))
@@ -28,7 +27,7 @@ import GHC.Generics (Generic)
 import Plutus.Contract
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap qualified as Uniswap
-import Plutus.Contracts.Uniswap.Trace as US
+import Plutus.Contracts.Uniswap.Trace as Uniswap
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..), SomeBuiltin (..))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Simulator (SimulatorEffectHandlers, logString)
@@ -61,7 +60,7 @@ main = void $ Simulator.runSimulationWith handlers $ do
                     _                                       -> Nothing
     logString @(Builtin UniswapContracts) $ "Uniswap instance created: " ++ show us
 
-    cids <- fmap Map.fromList $ forM US.wallets $ \w -> do
+    cids <- fmap Map.fromList $ forM Uniswap.wallets $ \w -> do
         cid <- Simulator.activateContract w $ UniswapUser us
         logString @(Builtin UniswapContracts) $ "Uniswap user contract started for " ++ show w
         Simulator.waitForEndpoint cid "funds"
@@ -100,9 +99,9 @@ instance HasDefinitions UniswapContracts where
     getContract = \case
         UniswapUser us -> SomeBuiltin . awaitPromise $ Uniswap.userEndpoints us
         UniswapStart   -> SomeBuiltin Uniswap.ownerEndpoint
-        Init           -> SomeBuiltin US.setupTokens
+        Init           -> SomeBuiltin Uniswap.setupTokens
 
 handlers :: SimulatorEffectHandlers (Builtin UniswapContracts)
 handlers =
-    Simulator.mkSimulatorHandlers (iterate increaseTransactionLimits def !! 4)
+    Simulator.mkSimulatorHandlers (Uniswap.increaseTransactionLimits def)
     $ interpret (contractHandler (Builtin.handleBuiltin @UniswapContracts))
