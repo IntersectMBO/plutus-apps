@@ -10,6 +10,7 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 -- | Copy of Cardano.Babbage from cardano-testnet (1.35.4 branch) with some tweaks to make it
 --   work correctly in Alonzo and Babbage eras. Will use cardano-testnet in future when it has
@@ -30,10 +31,9 @@ module CardanoTestnet
 
 import Cardano.Api qualified as C
 import Control.Concurrent (threadDelay)
-import Control.Monad (forM, forM_, void, when)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad (forM, forM_, when)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (encode, object, toJSON, (.=))
-import Data.Functor ((<&>))
 import Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import System.FilePath.Posix ((</>))
@@ -43,8 +43,10 @@ import Test.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..)
 import Data.HashMap.Lazy qualified as HM
 import Data.List qualified as L
 import Data.Time.Clock qualified as DTC
+import Hedgehog (MonadTest)
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.Aeson qualified as J
+import Hedgehog.Extras.Stock.IO.Network.Socket qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Stock.OS qualified as OS
 import Hedgehog.Extras.Stock.String qualified as S
@@ -57,6 +59,11 @@ import System.Process qualified as IO
 import Test.Assert qualified as H
 import Test.Process qualified as H
 import Testnet.Conf qualified as H
+
+import Control.Exception (handle)
+import Data.Functor
+import Network.Socket qualified as IO
+import UnliftIO.Exception qualified as IO
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -100,6 +107,50 @@ defaultTestnetNodeOptions = TestnetNodeOptions
 -- MacOS.  We need to allow a lot more time to set up a testnet.
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
+
+-- | Check if a TCP port is open
+isPortOpen :: Int -> IO Bool
+isPortOpen port = do
+  socketAddressInfos <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
+  case socketAddressInfos of
+    socketAddressInfo:_ ->
+      handle (return . const @Bool @IO.IOException False) $
+        canConnect (IO.addrAddress socketAddressInfo) $> True
+    [] -> return False
+
+-- | Check if it is possible to connect to a socket address
+-- TODO: upstream to Hedgehog Extras
+canConnect :: IO.SockAddr -> IO Bool
+canConnect sockAddr = IO.bracket (IO.socket IO.AF_INET IO.Stream 6) IO.close' $ \sock -> do
+  res <- IO.try $ IO.connect sock sockAddr
+  case res of
+    Left (_ :: IO.SomeException) -> return False
+    Right _                      -> return True
+
+-- -- | Check if it is possible to connect to a socket address
+-- canConnect :: IO.SockAddr -> IO ()
+-- canConnect sockAddr = IO.bracket (IO.socket IO.AF_INET IO.Stream 6) IO.close' $ \sock -> do
+--   IO.connect sock sockAddr
+
+-- getOpenPorts :: (MonadTest m, Control.Monad.IO.Class.MonadIO m) => [Int] -> m [Int]
+-- getOpenPorts n = do
+--   --let ports = H.allocateRandomPorts n
+--   allOpen <- liftIO $ mapM isPortOpen n
+--   if all (==True) allOpen
+--     then pure n
+--     else do
+--       H.annotate "Some ports are not open, trying again..."
+--       getOpenPorts n
+
+getOpenPorts :: (MonadTest m, Control.Monad.IO.Class.MonadIO m) => Int -> m [Int]
+getOpenPorts n = do
+  let ports = H.allocateRandomPorts n
+  allOpen <- liftIO $ mapM isPortOpen =<< ports
+  if all (==True) allOpen
+    then liftIO ports
+    else do
+      H.annotate "Some ports are not open, trying again..."
+      getOpenPorts n
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
@@ -303,10 +354,12 @@ testnet testnetOptions H.Conf {..} = do
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath </> "node-spo2/byron-delegation.cert")
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath </> "node-spo3/byron-delegation.cert")
 
-  H.writeFile (tempAbsPath </> "node-spo1/port") "3001"
-  H.writeFile (tempAbsPath </> "node-spo2/port") "3002"
-  H.writeFile (tempAbsPath </> "node-spo3/port") "3003"
+  [port1, port2, port3] <- getOpenPorts 3
+--   [port1, port2, port3] <- getOpenPorts [3001, 3002, 3003]
 
+  H.writeFile (tempAbsPath </> "node-spo1/port") (show port1)
+  H.writeFile (tempAbsPath </> "node-spo2/port") (show port2)
+  H.writeFile (tempAbsPath </> "node-spo3/port") (show port3)
 
   -- Make topology files
   -- TODO generalise this over the N BFT nodes and pool nodes
@@ -316,12 +369,12 @@ testnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -332,12 +385,12 @@ testnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -348,12 +401,12 @@ testnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -403,11 +456,12 @@ testnet testnetOptions H.Conf {..} = do
 
     return (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
 
+  when (OS.os `L.elem` ["darwin"]) $ do
+    liftIO $ threadDelay 60_000_000 -- wait 1 min for network to stabilise before proceeding
+
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 300 now -- increased from 90s
 
-  when (OS.os `L.elem` ["darwin"]) $ do
-    liftIO $ threadDelay 60_000_000 -- wait 1 min for network to stabilise before proceeding
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"

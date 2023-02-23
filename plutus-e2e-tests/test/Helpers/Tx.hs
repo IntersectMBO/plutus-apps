@@ -121,8 +121,6 @@ scriptDataSupportedInEra = fromMaybe . C.scriptDataSupportedInEra
     fromMaybe Nothing  = error "Era must support script data"
     fromMaybe (Just e) = e
 
-
-
 -- | Empty transaction body to begin building from.
 emptyTxBodyContent :: C.CardanoEra era -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx era
 emptyTxBodyContent era pparams =
