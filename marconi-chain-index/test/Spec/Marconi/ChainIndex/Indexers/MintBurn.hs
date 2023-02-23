@@ -4,6 +4,8 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TupleSections      #-}
+
 module Spec.Marconi.ChainIndex.Indexers.MintBurn where
 
 import Codec.Serialise (serialise)
@@ -211,7 +213,7 @@ endToEnd = H.withShrinks 0 $ H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE
         in indexerWorker `catch` handleException :: IO ()
 
   -- Create & submit transaction
-  pparams <- TN.getAlonzoProtocolParams localNodeConnectInfo
+  pparams <- TN.getProtocolParams @C.AlonzoEra localNodeConnectInfo
   txMintValue <- forAll genTxMintValue
 
   genesisVKey :: C.VerificationKey C.GenesisUTxOKey <- TN.readAs (C.AsVerificationKey C.AsGenesisUTxOKey) $ tempPath </> "shelley/utxo-keys/utxo1.vkey"
@@ -224,7 +226,7 @@ endToEnd = H.withShrinks 0 $ H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE
         C.NoStakeAddress :: C.Address C.ShelleyAddr
 
   value <- H.fromJustM $ getValue txMintValue
-  (txIns, lovelace) <- TN.getAddressTxInsValue localNodeConnectInfo address
+  (txIns, lovelace) <- TN.getAddressTxInsValue @C.AlonzoEra localNodeConnectInfo address
   let fee = 500 :: C.Lovelace
       amountReturned = lovelace - fee :: C.Lovelace
       txOut :: C.TxOut ctx C.AlonzoEra
@@ -235,13 +237,17 @@ endToEnd = H.withShrinks 0 $ H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE
           C.TxOutDatumNone
           C.ReferenceScriptNone
       txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
-      txBodyContent = (TN.emptyTxBodyContent fee pparams)
-        { C.txIns = map (\txIn -> (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) txIns
-        , C.txOuts = [txOut]
-        , C.txProtocolParams = C.BuildTxWith $ Just pparams
-        , C.txMintValue = txMintValue
-        , C.txInsCollateral = C.TxInsCollateral C.CollateralInAlonzoEra txIns
-        }
+      txBodyContent =
+          (TN.emptyTxBodyContent
+              (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+              (C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee)
+              pparams
+          ) { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
+            , C.txOuts = [txOut]
+            , C.txProtocolParams = C.BuildTxWith $ Just pparams
+            , C.txMintValue = txMintValue
+            , C.txInsCollateral = C.TxInsCollateral C.CollateralInAlonzoEra txIns
+            }
   txBody :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
   let
     kw :: C.KeyWitness C.AlonzoEra
