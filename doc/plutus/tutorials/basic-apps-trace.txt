@@ -26,6 +26,7 @@
                              <>>,
                              10000000> )
                            redeemers:}
+                       Requires signatures:
                        Utxo index:
 [INFO] Slot 1: W[1]: Finished balancing:
                        Tx 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f:
@@ -84,6 +85,7 @@
                              10000000> )
                            redeemers:
                              RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}}
+                       Requires signatures:
                        Utxo index:
                          ( 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
                          , - 10000000 lovelace addressed to
