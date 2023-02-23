@@ -9,6 +9,7 @@ import Data.Word (Word32)
 import Cardano.Api qualified as C
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import Network.TypedProtocol.Pipelined (N (Z), Nat (Succ, Zero))
+import Ouroboros.Consensus.Storage.ImmutableDB qualified as IDB
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
 import Ouroboros.Network.Protocol.ChainSync.ClientPipelined qualified as CSP
 import Ouroboros.Network.Protocol.ChainSync.PipelineDecision (PipelineDecision (Collect), pipelineDecisionMax)
@@ -88,3 +89,6 @@ blocksCallback con point callback =
                 callback $ H.RollBackward cp ct
                 sendRequestNext
             }
+
+blocksFromChainDbCallback :: C.ChainPoint -> (C.BlockInMode C.CardanoMode -> IO ()) -> IO ()
+blocksFromChainDbCallback _point _callback = undefined

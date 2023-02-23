@@ -38,7 +38,8 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api        >=1.35
+    , cardano-api          >=1.35
+    , ouroboros-consensus
     , ouroboros-network
 
   ------------------------
