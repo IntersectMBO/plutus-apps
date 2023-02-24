@@ -7,8 +7,7 @@
 #     AWS_SECRET_ACCESS_KEY=<...> \
 #     AWS_DEFAULT_REGION=<...> \
 #     AWS_ENDPOINT_URL=https://s3.devx.iog.io \
-#     NODE_DIR=../cardano-node-files \
-#     NODE_BIN_DIR=../cardano-node-bin \
+#     NODE_DIR=$HOME/mainnet \
 #     S3_DUMP_DIR=s3://plutus/mainnet-script-dump/ \
 #     LOCAL_DUMP_DIR=../mainnet-script-dump \
 #     ./scripts/create-dump.sh
@@ -18,7 +17,6 @@ set -eEuo pipefail
 trap '(kill $pid_node || true); (kill $pid_dump || true); exit' INT TERM QUIT ERR EXIT
 
 mkdir -p "$NODE_DIR"
-mkdir -p "$NODE_BIN_DIR"
 mkdir -p "$LOCAL_DUMP_DIR"
 
 set -x
@@ -28,16 +26,17 @@ set -x
 
 pid_node=$!
 
+cabal update
+
 # If the local node is run for the first time, the config file needs to be downloaded,
 # so here we wait until the config file is available.
-while ! [ -f "$NODE_DIR"/mainnet-config.json ]
+while ! [ -f "$NODE_DIR"/config.json ]
 do
-  sleep 30
+  sleep 15
 done
 
-cabal update
 # Start the dump job
-cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/mainnet-config.json --mainnet --blocks-per-file 10000 --events-per-file 50000 --dir "$LOCAL_DUMP_DIR" &
+cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/config.json --mainnet --blocks-per-file 50000 --events-per-file 50000 --dir "$LOCAL_DUMP_DIR" &
 pid_dump=$!
 
 echo $pid_node

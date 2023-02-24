@@ -132,6 +132,7 @@ inputs.std.lib.dev.mkShell {
     pkgs.zlib
     pkgs.cacert
     pkgs.dateutils
+    pkgs.act
   ];
 
   devshell.startup."pre-commit-check".text = cell.packages.pre-commit-check.shellHook;
