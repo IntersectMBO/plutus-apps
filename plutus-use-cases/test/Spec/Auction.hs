@@ -33,7 +33,6 @@ import Control.Monad (void, when)
 import Control.Monad.Freer qualified as Freer
 import Control.Monad.Freer.Error qualified as Freer
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
-import Data.Data
 import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
@@ -172,10 +171,10 @@ data AuctionModel = AuctionModel
     , _winner     :: Wallet
     , _endSlot    :: Slot
     , _phase      :: Phase
-    } deriving (Show, Eq, Data)
+    } deriving (Show, Eq, Generic)
 
 data Phase = NotStarted | Bidding | AuctionOver
-    deriving (Eq, Show, Data)
+    deriving (Eq, Show, Generic)
 
 makeLenses 'AuctionModel
 
