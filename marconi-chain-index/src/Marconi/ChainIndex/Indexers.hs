@@ -135,12 +135,10 @@ utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = 
       readMVar index >>= callback -- refresh the query STM/CPS with new storage pointers/counters state
       event <- atomically . readTChan $ ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo hsh _) txs) _) _ct ->
-            case Utxo.getUtxoEvents maybeTargetAddresses txs (C.ChainPoint slotNo hsh) of
-              Just u -> do
-                modifyMVar_ index (Storable.insert u)
-                loop index
-              Nothing -> loop index
+        RollForward (BlockInMode (Block (BlockHeader slotNo hsh _) txs) _) _ct -> do
+            let utxoEvents = Utxo.getUtxoEvents maybeTargetAddresses txs (C.ChainPoint slotNo hsh)
+            modifyMVar_ index (Storable.insert utxoEvents)
+            loop index
 
         RollBackward cp _ct -> do
           modifyMVar_ index $ \ix -> fromMaybe ix <$> Storable.rewind cp ix
@@ -193,9 +191,9 @@ addressDatumWorker_ onInsert targetAddresses depth Coordinator{_barrier} ch path
       case event of
         RollForward (BlockInMode (Block (BlockHeader slotNo bh _) txs) _) _ -> do
             -- TODO Redo. Inefficient filtering
-            let addressFilter = case targetAddresses of
-                    Just targetAddrs -> Just $ \addr ->  addr `elem` targetAddrs
-                    _                -> Nothing -- no filtering is applied
+            let addressFilter =
+                    fmap (\targetAddrs -> \addr -> addr `elem` targetAddrs)
+                         targetAddresses
                 addressDatumIndexEvent =
                     AddressDatum.toAddressDatumIndexEvent addressFilter txs (C.ChainPoint slotNo bh)
             modifyMVar_ index (Storable.insert addressDatumIndexEvent)
@@ -282,7 +280,7 @@ mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
       case event of
         RollForward blockInMode _ct
           | Just event' <- MintBurn.toUpdate blockInMode -> do
-              modifyMVar_ indexerMVar $ Storable.insert $ MintBurn.MintBurnEvent $ event'
+              modifyMVar_ indexerMVar $ Storable.insert $ MintBurn.MintBurnEvent event'
               void $ onInsert event'
           | otherwise -> pure ()
         RollBackward cp _ct ->
@@ -317,12 +315,10 @@ filterIndexers
     maybeConfigPath =
   mapMaybe liftMaybe pairs
   where
-    liftMaybe (worker, maybePath) = case maybePath of
-      Just path -> Just (worker, path)
-      _         -> Nothing
+    liftMaybe (worker, maybePath) = fmap (worker,) maybePath
     epochStakepoolSizeIndexer = case maybeConfigPath of
       Just configPath -> [(epochStakepoolSizeWorker configPath, epochStakepoolSizePath)]
-      _               -> []
+      Nothing         -> []
 
     pairs =
         [ (utxoWorker (\_ -> pure ()) maybeTargetAddresses, utxoPath)

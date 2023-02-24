@@ -1,39 +1,37 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex (tests) where
 
+import Cardano.Api qualified as C
 import Control.Lens (filtered, folded, toListOf)
 import Control.Lens.Operators ((^.))
+import Control.Monad (forM_, void)
 import Control.Monad.IO.Class (liftIO)
+import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
-import Data.List.NonEmpty (nonEmpty, toList)
-import Data.Maybe (fromJust, isJust, mapMaybe)
+import Data.List qualified as List
+import Data.List.NonEmpty (nonEmpty)
+import Data.Maybe (fromJust, isJust, isNothing, mapMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Database.SQLite.Simple qualified as SQL
+import Gen.Marconi.ChainIndex.Indexers.Utxo (genEventWithShelleyAddressAtChainPoint, genUtxoEvents)
+import Gen.Marconi.ChainIndex.Indexers.Utxo qualified as UtxoGen
+import Gen.Marconi.ChainIndex.Mockchain (mockBlockTxs)
 import Hedgehog (Property, cover, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
-
-import Cardano.Api qualified as C
-import Control.Monad (forM_, void)
-import Data.Aeson qualified as Aeson
-import Data.List qualified as List
-import Gen.Cardano.Api.Typed qualified as CGen
-import Gen.Marconi.ChainIndex.Indexers.Utxo (genEventWithShelleyAddressAtChainPoint, genUtxoEvents)
 import Helpers (addressAnyToShelley)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (ueInputs, ueUtxos))
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
-import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses)
+import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Storable (StorableQuery)
 import Marconi.Core.Storable qualified as Storable
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 -- | Proves two list are equivalant, but not identical
 
@@ -63,9 +61,9 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
         eventsToRowsRoundTripTest
 
     , testPropertyNamed
-        "marconi-utxo storable-query address property"
-        "txAddressToUtxoAddressTest"
-        txAddressToUtxoAddressTest
+        "getUtxoEvents with target addresses corresponding to all addresses in generated txs should return the same 'UtxoEvent' as if no target addresses were provided"
+        "propUsingAllAddressesOfTxsAsTargetAddressesShouldReturnUtxosAsIfNoFilterWasApplied "
+        propUsingAllAddressesOfTxsAsTargetAddressesShouldReturnUtxosAsIfNoFilterWasApplied
 
     , testPropertyNamed
         "marconi-utxo storage-roundtrip property"
@@ -101,13 +99,13 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
 
 eventsToRowsRoundTripTest :: Property
 eventsToRowsRoundTripTest  = property $ do
-  events <- forAll genUtxoEvents
+  events <- forAll UtxoGen.genUtxoEvents
   let f :: C.ChainPoint -> IO (Set C.TxIn)
       f C.ChainPointAtGenesis = pure  Set.empty
       f _                     = pure . Utxo.ueInputs $ head events
       rows = concatMap Utxo.eventsToRows events
   computedEvent <- liftIO . Utxo.rowsToEvents f $ rows
-  let postGenesisEvents = filter (\e -> C.ChainPointAtGenesis /= Utxo.ueChainPoint e ) events
+  let postGenesisEvents = filter (\e -> C.ChainPointAtGenesis /= Utxo.ueChainPoint e) events
   length computedEvent === (length . fmap Utxo.ueChainPoint $ postGenesisEvents)
   Hedgehog.assert (equivalentLists computedEvent postGenesisEvents)
 
@@ -115,7 +113,7 @@ eventsToRowsRoundTripTest  = property $ do
 --
 utxoStorageTest :: Property
 utxoStorageTest = property $ do
-  events <- forAll genUtxoEvents
+  events <- forAll UtxoGen.genUtxoEvents
   (storedEvents :: [StorableEvent Utxo.UtxoHandle]) <-
     (liftIO . Utxo.open ":memory:") (Utxo.Depth 10)
      >>= liftIO . Storable.insertMany events
@@ -165,7 +163,7 @@ utxoQueryIntervalTest = property $ do
 -- Puporse of this test is to filter out utxos that have a different address than those in the TargetAddress list.
 eventsAtAddressTest :: Property
 eventsAtAddressTest = property $ do
-    event <- head <$> forAll genUtxoEvents
+    event <- head <$> forAll UtxoGen.genUtxoEvents
     let (addresses :: [StorableQuery Utxo.UtxoHandle]) =
           map (Utxo.UtxoAddress . Utxo._address) $ Set.toList $ Utxo.ueUtxos event
         sameAddressEvents :: [StorableEvent Utxo.UtxoHandle]
@@ -182,19 +180,46 @@ eventsAtAddressTest = property $ do
             $ Utxo.ueUtxos event
     computedAddresses === actualAddresses
 
--- | Test to make sure we only make Utxo's from chain events for the TargetAddresses user has
--- provided through CLI.
-txAddressToUtxoAddressTest ::  Property
-txAddressToUtxoAddressTest = property $ do
-    t@(C.Tx (C.TxBody C.TxBodyContent{C.txOuts}) _)  <- forAll $ CGen.genTx C.BabbageEra
-    let (targetAddresses :: Maybe TargetAddresses ) = mkTargetAddressFromTxOut txOuts
-    let (utxos :: [Utxo.Utxo]) = Utxo.getUtxos targetAddresses t
-    case targetAddresses of
-        Nothing         ->  length utxos === length txOuts
-        Just targets    ->
-            ( List.nub
-              . mapMaybe (\x -> addressAnyToShelley (x ^. Utxo.address))
-              $ utxos) === (List.nub . toList $ targets)
+-- | Calling 'Utxo.getUtxoEvents' with target addresses that are extracted from all tx outputs from
+-- the initial generated txs should return the same 'UtxoEvent's as if there was no provided target
+-- addresses.
+propUsingAllAddressesOfTxsAsTargetAddressesShouldReturnUtxosAsIfNoFilterWasApplied ::  Property
+propUsingAllAddressesOfTxsAsTargetAddressesShouldReturnUtxosAsIfNoFilterWasApplied = property $ do
+    utxoEventsWithTxs <- forAll UtxoGen.genUtxoEventsWithTxs
+    forM_ utxoEventsWithTxs $ \(expectedUtxoEvent, block) -> do
+        let txs = mockBlockTxs block
+            expectedAddresses = mkTargetAddressFromTxs txs
+        cover 50 "At least one address is used as a target address"
+            $ isJust expectedAddresses
+        cover 1 "No target addresses are provided"
+            $ isNothing expectedAddresses
+        let actualUtxoEvents =
+                Utxo.getUtxoEvents expectedAddresses txs (Utxo.ueChainPoint expectedUtxoEvent)
+        let filteredExpectedUtxoEvent =
+                expectedUtxoEvent
+                    { Utxo.ueUtxos =
+                        Set.filter (\utxo -> isJust $ addressAnyToShelley $ Utxo._address utxo)
+                                   (Utxo.ueUtxos expectedUtxoEvent)
+                    }
+
+        -- If the 'expectedUtxoEvent' only contain byron addresses, then 'filteredExpectedUtxoEvent'
+        -- will have an empty set of utxos. In that scenario, the `getUtxoEvents` should not filter
+        -- anything, so we just return 'pure ()'.
+        if not (null $ Utxo.ueUtxos expectedUtxoEvent) && null (Utxo.ueUtxos filteredExpectedUtxoEvent)
+           then pure ()
+           else filteredExpectedUtxoEvent === actualUtxoEvents
+ where
+    mkTargetAddressFromTxs
+      :: [C.Tx C.BabbageEra]
+      -> Maybe TargetAddresses
+    mkTargetAddressFromTxs txs =
+        foldMap (\(C.Tx (C.TxBody C.TxBodyContent { C.txOuts }) _) -> mkTargetAddressFromTxOuts txOuts) txs
+
+    mkTargetAddressFromTxOuts
+      :: [C.TxOut C.CtxTx C.BabbageEra]
+      -> Maybe TargetAddresses
+    mkTargetAddressFromTxOuts txOuts =
+        nonEmpty $ mapMaybe (\(C.TxOut addr _ _ _) -> addressAnyToShelley $ Utxo.toAddr addr) txOuts
 
 chainpoints :: [C.ChainPoint]
 chainpoints =
@@ -210,7 +235,7 @@ chainpoints =
 -- is not 'C.ChainPointAtGenesis' when some events are inserted on disk.
 propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk :: Property
 propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk = property $ do
-    events <- forAll genUtxoEvents
+    events <- forAll UtxoGen.genUtxoEvents
     cover 90 "All UtxoEvents have a least one utxo and one spent txout"
         $ isJust
         $ List.find (\ue -> not (Set.null (ueUtxos ue)) && not (Set.null (ueInputs ue))) events
@@ -243,7 +268,7 @@ propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk = property $ do
 -- | The property verifies that the 'Storable.resumeFromStorage' returns an ordered list of points.
 propResumingShouldReturnOrderedListOfPoints :: Property
 propResumingShouldReturnOrderedListOfPoints = property $ do
-    events <- forAll genUtxoEvents
+    events <- forAll UtxoGen.genUtxoEvents
     depth <- forAll $ Gen.int (Range.linear 1 $ length events)
 
     -- We insert the events in the indexer, but for the test assertions, we discard the events in
@@ -259,17 +284,6 @@ propJsonRoundtripUtxoRow = property $ do
     utxoEvents <- forAll genUtxoEvents
     let utxoRows = concatMap Utxo.eventsToRows utxoEvents
     forM_ utxoRows $ \utxoRow -> Hedgehog.tripping utxoRow Aeson.encode Aeson.decode
-
--- Create TargetAddresses
--- We use TxOut to create a valid and relevant TargetAddress. This garnteed that the targetAddress is among the generated events.
-mkTargetAddressFromTxOut
-  :: [C.TxOut C.CtxTx CurrentEra]
-  -> Maybe TargetAddresses
-mkTargetAddressFromTxOut [C.TxOut addressInEra _ _ _]
-    = nonEmpty
-    . mapMaybe (addressAnyToShelley . Utxo.toAddr)
-    $ [addressInEra]
-mkTargetAddressFromTxOut _ = Nothing
 
 getConn :: Storable.State Utxo.UtxoHandle -> SQL.Connection
 getConn  s =
