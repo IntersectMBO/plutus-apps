@@ -12,9 +12,13 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as BS (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Plutus.Script.Utils.Value (CurrencySymbol)
 import Plutus.V1.Ledger.Api (MintingPolicy, Validator, unMintingPolicyScript, unValidatorScript)
+import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Bytes qualified as P (bytes, fromHex)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), Redeemer (Redeemer))
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as BI
 
 -- | Treat string of hexidecimal bytes literally, without encoding. Useful for hashes.
 bytesFromHex :: BS.ByteString -> BS.ByteString
@@ -31,6 +35,12 @@ defExecutionUnits = C.ExecutionUnits {C.executionSteps = 0, C.executionMemory = 
 -- | Any data to ScriptData. Used for script datum and redeemer.
 toScriptData :: PlutusTx.ToData a => a -> C.ScriptData
 toScriptData a = C.fromPlutusData $ PlutusTx.toData a
+
+asRedeemer :: PlutusTx.ToData a => a -> Redeemer
+asRedeemer a = Redeemer $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
+
+asDatum :: PlutusTx.ToData a => a -> Datum
+asDatum a = Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
 
 plutusL1 :: C.ScriptLanguage C.PlutusScriptV1
 plutusL1 = C.PlutusScriptLanguage C.PlutusScriptV1
@@ -121,3 +131,6 @@ policyIdV1 = C.scriptPolicyId . unPlutusScriptV1 . policyScript
 -- | PolicyId of a V2 minting policy
 policyIdV2 :: MintingPolicy -> C.PolicyId
 policyIdV2 = C.scriptPolicyId . unPlutusScriptV2 . policyScript
+
+fromPolicyId :: C.PolicyId -> CurrencySymbol
+fromPolicyId (C.PolicyId hash) = PlutusV1.CurrencySymbol . BI.toBuiltin $ C.serialiseToRawBytes hash
