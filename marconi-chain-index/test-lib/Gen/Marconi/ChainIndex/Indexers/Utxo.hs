@@ -1,25 +1,27 @@
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TupleSections   #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE RecordWildCards    #-}
 
 module Gen.Marconi.ChainIndex.Indexers.Utxo
     ( genUtxoEvents
+    , genUtxoEventsWithTxs
     , genEventAtChainPoint
     )
 where
 
-import Control.Monad (foldM, forM)
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Control.Monad (forM)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import GHC.Generics (Generic)
+import Gen.Cardano.Api.Typed qualified as CGen
+import Gen.Marconi.ChainIndex.Mockchain (MockBlock (MockBlock), MockBlockHeader (MockBlockHeader), genMockchain)
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Gen.Cardano.Api.Typed qualified as CGen
-import Gen.Marconi.ChainIndex.Types (genChainPoints, genTxOutTxContext, nonEmptySubset)
-import Helpers (emptyTxBodyContent)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), Utxo (Utxo), UtxoHandle)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 
@@ -30,25 +32,69 @@ import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 --   * that any generated UTXO is unique
 --   * for any spent tx output, there must be a UTXO created in a previous event
 genUtxoEvents :: Gen [StorableEvent UtxoHandle]
-genUtxoEvents = do
-    chainPoints <- genChainPoints 1 5
-    txIns <- Set.singleton <$> CGen.genTxIn
-    snd <$> foldM f (txIns, []) chainPoints
+genUtxoEvents = fmap fst <$> genUtxoEventsWithTxs
+
+-- | Generates a list of UTXO events, along with the list of transactions that generated each of
+-- them.
+--
+-- This generators has the following properties:
+--
+--   * that any generated UTXO is unique
+--   * for any spent tx output, there must be a UTXO created in a previous event
+genUtxoEventsWithTxs :: Gen [(StorableEvent UtxoHandle, MockBlock C.BabbageEra)]
+genUtxoEventsWithTxs = do
+    mockchain <- genMockchain
+    pure $ fmap (\block -> (getStorableEventFromBlock block, block)) mockchain
   where
-    f :: (Set C.TxIn, [StorableEvent UtxoHandle])
-      -> C.ChainPoint
-      -> Gen (Set C.TxIn, [StorableEvent UtxoHandle])
-    f (utxoSet, utxoEvents) cp = do
-        utxosAsTxInput <- nonEmptySubset utxoSet
-        txBodyContent <- genTxBodyContentFromTxIns $ Set.toList utxosAsTxInput
-        txBody <- either (fail . show) pure $ C.makeTransactionBody txBodyContent
+    getStorableEventFromBlock :: MockBlock C.BabbageEra -> StorableEvent UtxoHandle
+    getStorableEventFromBlock (MockBlock (MockBlockHeader slotNo blockHeaderHash _blockNo) txs) =
+        let (TxOutBalance utxos spentTxOuts) = foldMap txOutBalanceFromTx txs
+            utxoMap = foldMap getUtxosFromTx txs
+            resolvedUtxos = Set.fromList
+                          $ mapMaybe (\utxo -> Map.lookup utxo utxoMap)
+                          $ Set.toList utxos
+         in UtxoEvent resolvedUtxos spentTxOuts (C.ChainPoint slotNo blockHeaderHash)
+
+    getUtxosFromTx :: C.Tx C.BabbageEra -> Map C.TxIn Utxo
+    getUtxosFromTx (C.Tx txBody@(C.TxBody txBodyContent) _) =
         let txId = C.getTxId txBody
-        let newUtxos = fmap (\(txIx, txOut) -> convertTxOutToUtxo txId (C.TxIx txIx) txOut)
+         in Map.fromList
+                $ fmap (\(txIx, txOut) -> ( C.TxIn txId (C.TxIx txIx)
+                                          , convertTxOutToUtxo txId (C.TxIx txIx) txOut))
                 $ zip [0..]
                 $ C.txOuts txBodyContent
-            newUtxoRefs = Set.fromList $ fmap (\Utxo { _txId, _txIx } -> C.TxIn _txId _txIx) newUtxos
-            newUtxoEvent = UtxoEvent (Set.fromList newUtxos) utxosAsTxInput cp
-        pure (Set.union newUtxoRefs $ Set.difference utxoSet utxosAsTxInput, utxoEvents ++ [newUtxoEvent])
+
+-- | The effect of a transaction (or a number of them) on the tx output set.
+data TxOutBalance =
+  TxOutBalance
+    { _tobUnspent :: !(Set C.TxIn)
+    -- ^ Outputs newly added by the transaction(s)
+    , _tobSpent   :: !(Set C.TxIn)
+    -- ^ Outputs spent by the transaction(s)
+    }
+    deriving stock (Eq, Show, Generic)
+
+instance Semigroup TxOutBalance where
+    tobL <> tobR =
+        TxOutBalance
+            { _tobUnspent = _tobUnspent tobR
+                         <> (_tobUnspent tobL `Set.difference` _tobSpent tobR)
+            , _tobSpent = _tobSpent tobL <> _tobSpent tobR
+            }
+
+instance Monoid TxOutBalance where
+    mappend = (<>)
+    mempty = TxOutBalance mempty mempty
+
+txOutBalanceFromTx :: C.Tx era -> TxOutBalance
+txOutBalanceFromTx (C.Tx txBody@(C.TxBody txBodyContent) _) =
+    let txId = C.getTxId txBody
+        txInputs = Set.fromList $ fmap fst $ C.txIns txBodyContent
+        utxoRefs = Set.fromList
+                 $ fmap (\(txIx, _) -> C.TxIn txId $ C.TxIx txIx)
+                 $ zip [0..]
+                 $ C.txOuts txBodyContent
+     in TxOutBalance utxoRefs txInputs
 
 convertTxOutToUtxo :: C.TxId -> C.TxIx -> C.TxOut C.CtxTx C.BabbageEra -> Utxo
 convertTxOutToUtxo txId txIx (C.TxOut (C.AddressInEra _ addr) val txOutDatum refScript) =
@@ -73,19 +119,6 @@ convertTxOutToUtxo txId txIx (C.TxOut (C.AddressInEra _ addr) val txOutDatum ref
             (C.txOutValueToValue val)
             script
             scriptHash
-
-genTxBodyContentFromTxIns
-    :: [C.TxIn]
-    -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
-genTxBodyContentFromTxIns inputs = do
-    txBodyContent <-
-        emptyTxBodyContent (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-            <$> CGen.genProtocolParameters
-    txOuts <- Gen.list (Range.linear 1 5) $ genTxOutTxContext C.BabbageEra
-    pure $ txBodyContent
-        { C.txIns = fmap (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) inputs
-        , C.txOuts = txOuts
-        }
 
 -- TODO Must be reworked following implementation in 'genUtxoEvents'.
 genEventAtChainPoint :: C.ChainPoint -> Gen (Utxo.StorableEvent Utxo.UtxoHandle)
