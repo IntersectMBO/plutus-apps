@@ -39,7 +39,6 @@ import Plutus.Contract.Test.ContractModel qualified as CM
 
 -- END import ContractModel
 import Test.QuickCheck.DynamicLogic (Quantification)
-import Test.QuickCheck.StateModel (Var (Var))
 
 -- START import Game
 import Plutus.Contracts.GameStateMachine qualified as G

@@ -139,7 +139,7 @@ library
     , plutus-core             >=1.0.0
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
-    , quickcheck-dynamic      >=2.0.0
+    , quickcheck-dynamic      >=3.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -198,7 +198,6 @@ library
       Plutus.Contract.Test.ContractModel.Interface
       Plutus.Contract.Test.ContractModel.Internal
       Plutus.Contract.Test.ContractModel.Internal.ContractInstance
-      Plutus.Contract.Test.ContractModel.Symbolics
       Plutus.Contract.Test.Coverage
       Plutus.Contract.Test.Coverage.Analysis
       Plutus.Contract.Test.Coverage.Analysis.Common
@@ -281,7 +280,7 @@ test-suite plutus-contract-test
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
-    , quickcheck-dynamic              >=2.0.0
+    , quickcheck-dynamic              >=3.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
