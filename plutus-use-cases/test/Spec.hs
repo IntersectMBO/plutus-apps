@@ -8,6 +8,7 @@ import Spec.ErrorHandling qualified
 import Spec.Escrow qualified
 import Spec.Future qualified
 import Spec.Game qualified
+import Spec.GameBabbage qualified
 import Spec.GameStateMachine qualified
 import Spec.Governance qualified
 import Spec.MultiSig qualified
@@ -42,6 +43,7 @@ tests =
     Spec.Escrow.tests,
     Spec.SimpleEscrow.tests,
     Spec.Game.tests,
+    Spec.GameBabbage.tests,
     Spec.GameStateMachine.tests,
     Spec.Rollup.tests,
     Spec.TokenAccount.tests,

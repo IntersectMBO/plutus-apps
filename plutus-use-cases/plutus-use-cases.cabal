@@ -37,6 +37,7 @@ library
     Plutus.Contracts.Escrow
     Plutus.Contracts.Future
     Plutus.Contracts.Game
+    Plutus.Contracts.GameBabbage
     Plutus.Contracts.GameStateMachine
     Plutus.Contracts.Governance
     Plutus.Contracts.MultiSig
@@ -143,6 +144,7 @@ test-suite plutus-use-cases-test
     Spec.Escrow.Endpoints
     Spec.Future
     Spec.Game
+    Spec.GameBabbage
     Spec.GameStateMachine
     Spec.Governance
     Spec.MultiSig
