@@ -31,7 +31,8 @@ import System.FilePath ((</>))
 
 import Cardano.Api (ChainPoint, NetworkId)
 import Cardano.Api qualified as C
-import Marconi.ChainIndex.Types (TargetAddresses)
+import Marconi.ChainIndex.Types (TargetAddresses, addressDatumDbName, datumDbName, epochStakepoolSizeDbName,
+                                 mintBurnDbName, scriptTxDbName, utxoDbName)
 
 chainPointParser :: Opt.Parser C.ChainPoint
 chainPointParser =
@@ -179,25 +180,7 @@ optionsParser =
 optAddressesParser :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser (Maybe TargetAddresses)
 optAddressesParser =  optional . multiString
 
--- * Database names and paths
-
-utxoDbName :: FilePath
-utxoDbName = "utxo.db"
-
-addressDatumDbName :: FilePath
-addressDatumDbName = "addressdatum.db"
-
-datumDbName :: FilePath
-datumDbName = "datum.db"
-
-scriptTxDbName :: FilePath
-scriptTxDbName = "scripttx.db"
-
-epochStakepoolSizeDbName :: FilePath
-epochStakepoolSizeDbName = "epochstakepool.db"
-
-mintBurnDbName :: FilePath
-mintBurnDbName = "mintburn.db"
+-- * Database paths
 
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
