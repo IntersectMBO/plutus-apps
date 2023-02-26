@@ -39,7 +39,6 @@ import Control.Exception hiding (handle)
 import Control.Lens
 import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
-import Data.Data
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
@@ -80,7 +79,7 @@ data GameModel = GameModel
     , _hasToken      :: Maybe Wallet
     , _currentSecret :: String
     }
-    deriving (Show, Data)
+    deriving (Show, Generic)
 
 makeLenses 'GameModel
 

@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints -fno-warn-name-shadowing -fno-warn-unused-do-bind #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints -fno-warn-name-shadowing -fno-warn-unused-do-bind -Wno-orphans #-}
 
 module Plutus.Contract.Test.ContractModel.CrashTolerance
   ( -- * Extending contract models with a model of
@@ -27,17 +27,20 @@ module Plutus.Contract.Test.ContractModel.CrashTolerance
 import Control.Lens
 import Control.Monad.State
 import Data.Functor.Compose
+import Data.Set (Set)
 import Data.Typeable
 import Plutus.Contract.Test.ContractModel
 import Plutus.Trace.Effects.EmulatorControl
 import Plutus.Trace.Emulator.Types
 import Test.QuickCheck as QC
+import Test.QuickCheck.StateModel qualified as QCSM
 
 -- | This derived state is used to derive a new `ContractModel` on top of the `state` contract model
 -- that also specifies how the contract(s) behave when contract instances crash and restart.
 data WithCrashTolerance state = WithCrashTolerance { _underlyingModelState   :: state
                                                    , _aliveContractInstances :: [SomeContractInstanceKey state]
                                                    , _deadContractInstances  :: [SomeContractInstanceKey state] }
+                                                   deriving Generic
 makeLenses ''WithCrashTolerance
 
 deriving instance ContractModel state => Show (WithCrashTolerance state)
@@ -55,6 +58,13 @@ class ContractModel state => CrashTolerance state where
   -- | Check if an action is available given a list of alive
   -- contract instances.
   available :: Action state -> [SomeContractInstanceKey state] -> Bool
+  -- | If your `ContractInstanceKey`s contain symbolic tokens or
+  -- symbolic variables you **MUST** implement this function.
+  contractInstanceVariables :: ContractInstanceKey state w s e p -> Set (QCSM.Any QCSM.Var)
+  contractInstanceVariables _ = mempty
+
+instance CrashTolerance state => QCSM.HasVariables (SomeContractInstanceKey state) where
+  getAllVariables (Key k) = contractInstanceVariables k
 
 instance ContractModel state => Show (Action (WithCrashTolerance state)) where
   showsPrec p (Crash cis)          = showParen (p >= 11) $ showString "Crash " . showsPrec 11 cis
@@ -79,6 +89,7 @@ instance forall state.
   data Action (WithCrashTolerance state) = Crash (SomeContractInstanceKey state)
                                          | Restart (SomeContractInstanceKey state)
                                          | UnderlyingAction (Action state)
+                                         deriving Generic
 
   data ContractInstanceKey (WithCrashTolerance state) w s e p where
     UnderlyingContractInstanceKey :: ContractInstanceKey state w s e p -> ContractInstanceKey (WithCrashTolerance state) w s e p
@@ -144,9 +155,15 @@ instance forall state.
   monitoring (s,s') (UnderlyingAction a) = monitoring (_underlyingModelState <$> s,_underlyingModelState <$> s') a
   monitoring _      _                    = id
 
-  arbitraryAction s = frequency [ (10, UnderlyingAction <$> arbitraryAction (_underlyingModelState <$> s))
-                                , (1, Crash <$> QC.elements (s ^. contractState . aliveContractInstances))
-                                , (1, Restart <$> QC.elements (s ^. contractState . deadContractInstances)) ]
+  arbitraryAction s =
+    frequency $ [ (10, UnderlyingAction <$> arbitraryAction (_underlyingModelState <$> s)) ] ++
+                [ (1, Crash <$> QC.elements alive)
+                | let alive = s ^. contractState . aliveContractInstances
+                , not $ null alive ] ++
+                [ (1, Restart <$> QC.elements dead)
+                | let dead = s ^. contractState . deadContractInstances
+                , not $ null dead
+                ]
 
   shrinkAction s (UnderlyingAction a) = UnderlyingAction <$> shrinkAction (_underlyingModelState <$> s) a
   shrinkAction _ _                    = []

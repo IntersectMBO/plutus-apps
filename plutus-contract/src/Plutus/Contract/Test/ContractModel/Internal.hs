@@ -93,6 +93,7 @@ import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.ContractModel as CM
 import Test.QuickCheck.ContractModel.Internal (ContractModelResult)
+import Test.QuickCheck.ContractModel.Internal.Model (annotatedStateAfter)
 import Test.QuickCheck.ContractModel.ThreatModel (ThreatModel, assertThreatModel)
 import Test.QuickCheck.Monadic (PropertyM, monadic)
 import Test.QuickCheck.Monadic qualified as QC
@@ -253,9 +254,12 @@ instance HasSymTokens (Action s) => HasSymTokens (Action (WithInstances s)) wher
   getAllSymTokens (UnderlyingAction a) = getAllSymTokens a
   getAllSymTokens Unilateral{}         = mempty
 
+deriving via StateModel.HasNoVariables Wallet instance StateModel.HasVariables Wallet
+
 instance forall s. ContractModel s => ContractModel (WithInstances s) where
   data Action (WithInstances s) = UnderlyingAction (Action s)
                                 | Unilateral Wallet
+                                deriving Generic
   initialState                        = WithInstances initialState
   waitProbability                     = waitProbability . fmap withoutInstances
   arbitraryWaitInterval               = arbitraryWaitInterval . fmap withoutInstances
@@ -530,26 +534,26 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
                                                 nlfpOverhead       = overhead,
                                                 nlfpErrorMargin    = wiggle } =
     forAllDL anyActions_ $ \ (Actions as) ->
-    forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) mainStrat $ \ (Actions as') ->
+    let ans0 = (annotatedStateAfter $ Actions as) in
+    forAllUniqueDL ans0 mainStrat $ \ (Actions as') ->
           let s0 = (stateAfter $ Actions as)
               s = stateAfter $ Actions (as ++ as') in
             foldl (QC..&&.) (counterexample "Main run prop" (run (Actions $ as ++ as')) QC..&&.
                              (counterexample "Main strategy" . counterexample (show . Actions $ as ++ as') $ prop s0 s))
-                            [ walletProp s0 as w bal
+                            [ walletProp ans0 s0 as w bal
                             | (addr, bal) <- Map.toList (s ^. balanceChanges)
                             , Just w <- [addressToWallet addr]
                             , not $ bal `symLeq` (s0 ^. balanceChange addr) ]
                             -- if the main strategy leaves w with <= the starting value, then doing nothing is a good wallet strategy.
     where
-        nextVarIdx as = 1 + maximum ([0] ++ [ i | i <- varNumOf <$> as ])
         prop s0 s =
           -- TODO: check that nothing is locked by scripts
           let lockedVal = lockedValue s
           in (counterexample ("Locked funds should be at most " ++ show (overhead s0) ++ ", but they are\n  " ++ show lockedVal)
             $ symLeq lockedVal (overhead s0))
 
-        walletProp s0 as w bal =
-          DL.forAllUniqueDL (nextVarIdx as) s0 (DL.action (ContractAction False $ Unilateral w) >> walletStrat w) $ \ acts ->
+        walletProp ans0 s0 as w bal =
+          DL.forAllUniqueDL ans0 (DL.action (ContractAction False $ Unilateral w) >> walletStrat w) $ \ acts ->
           let Actions as' = fromStateModelActions acts
               wig = wiggle s0
               err  = "Unilateral strategy for " ++ show w ++ " should have gotten it at least\n" ++
@@ -566,11 +570,7 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
           QC..&&. counterexample err' (run smacts)
 
 actionsFromList :: [Action s] -> Actions s
-actionsFromList = Actions . zipWith NoBind (StateModel.Var <$> [0..])
-
-varNumOf :: Act s -> Int
-varNumOf (ActWaitUntil (StateModel.Var i) _) = i
-varNumOf act | StateModel.Var i <- varOf act = i
+actionsFromList = Actions . zipWith NoBind (StateModel.mkVar <$> [0..])
 
 -- TODO: possibly there's a nicer way to do this...?
 walletAddress :: Wallet -> CardanoAPI.AddressInEra Era
@@ -594,10 +594,9 @@ checkNoLockedFundsProofLight
   -> Property
 checkNoLockedFundsProofLight NoLockedFundsProofLight{nlfplMainStrategy = mainStrat} =
   forAllDL anyActions_ $ \ (Actions as) ->
-    forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) mainStrat $ \ (Actions as') ->
+    forAllUniqueDL (annotatedStateAfter $ Actions as) mainStrat $ \ (Actions as') ->
       counterexample "Main run prop" (run $ Actions $ as ++ as')
   where
-    nextVarIdx as = 1 + maximum ([0] ++ [ i | StateModel.Var i <- varOf <$> as ])
     run = propRunActionsWithOptions defaultCheckOptionsContractModel
                                     defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
                                     balanceChangePredicate

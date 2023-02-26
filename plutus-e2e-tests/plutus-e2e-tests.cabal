@@ -67,6 +67,7 @@ common lang
     , filepath
     , lens
     , mwc-random
+    , network
     , optparse-applicative
     , prettyprinter
     , process
@@ -77,6 +78,8 @@ common lang
     , text
     , time
     , transformers-except
+    , unlift
+    , unliftio
     , unordered-containers
 
 test-suite plutus-e2e-tests-test
