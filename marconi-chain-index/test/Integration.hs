@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
+
 {-# OPTIONS_GHC -Wno-orphans    #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
@@ -48,7 +49,7 @@ import Test.Base qualified as H
 
 import Helpers qualified as TN
 import Testnet.Cardano qualified as TN
--- ^ Although these are defined in this cabal component, they are
+-- Although these are defined in this cabal component, they are
 -- helpers for interacting with the testnet, thus TN
 
 import Marconi.ChainIndex.Indexers qualified as M

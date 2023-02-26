@@ -150,7 +150,11 @@ getAddressTxInsValue con address = do
     values = map (\case C.TxOut _ v _ _ -> C.txOutValueToLovelace v) txOuts
   pure (txIns, sum values)
 
-submitTx :: (C.IsCardanoEra era, MonadIO m, MonadTest m) => C.LocalNodeConnectInfo C.CardanoMode -> C.Tx era -> m ()
+submitTx
+    :: (C.IsCardanoEra era, MonadIO m, MonadTest m)
+    => C.LocalNodeConnectInfo C.CardanoMode
+    -> C.Tx era
+    -> m ()
 submitTx localNodeConnectInfo tx = do
   eraInMode <- H.nothingFail
              $ C.toEraInMode C.cardanoEra C.CardanoMode

@@ -7,18 +7,14 @@ module Marconi.ChainIndex.Orphans where
 
 import Cardano.Api qualified as C
 import Cardano.Binary (fromCBOR, toCBOR)
-import Codec.Serialise (Serialise (decode, encode), deserialiseOrFail, serialise)
+import Codec.Serialise (Serialise (decode, encode))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
-import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (toStrict)
-import Data.Char qualified as Char
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
-import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (Typeable)
 import Database.SQLite.Simple qualified as SQL
@@ -59,10 +55,14 @@ instance SQL.FromField (C.Hash C.BlockHeader) where
 instance Pretty C.SlotNo where
   pretty (C.SlotNo n) = "Slot" <+> pretty n
 
+-- * C.BlockNo
+
 instance Pretty C.BlockNo where
   pretty (C.BlockNo bn) = "BlockNo" <+> pretty bn
 
 instance ToJSON C.BlockNo
+
+instance FromJSON C.BlockNo
 
 -- * C.AddressAny
 
@@ -78,8 +78,10 @@ instance SQL.ToField C.AddressAny where
   toField = SQL.SQLBlob . C.serialiseToRawBytes
 
 instance FromJSON C.AddressAny where
-    parseJSON (Aeson.String s) =
-        maybe mempty pure $ C.deserialiseAddress C.AsAddressAny s
+    parseJSON (Aeson.String v) =
+        maybe mempty
+              pure
+              $ C.deserialiseAddress C.AsAddressAny v
     parseJSON _ = mempty
 
 instance ToJSON C.AddressAny where
@@ -101,25 +103,35 @@ instance Serialise C.ScriptData where
   encode = toCBOR
   decode = fromCBOR
 
-instance FromJSON C.ScriptData where
-    parseJSON (Aeson.String s) =
-        either (const mempty) pure
-            $ C.deserialiseFromCBOR C.AsScriptData (Text.encodeUtf8 s)
-    parseJSON _ = mempty
-
 instance SQL.FromField C.ScriptData where
   fromField f = SQL.fromField f >>=
     either (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise C.ScriptData.") pure
-    . deserialiseOrFail
+    . C.deserialiseFromCBOR C.AsScriptData
 
 instance SQL.ToField C.ScriptData where
-  toField = SQL.SQLBlob . toStrict . serialise
+  toField = SQL.SQLBlob . C.serialiseToCBOR
 
-instance SQL.FromRow C.TxIn where
-  fromRow = C.TxIn <$> SQL.field <*> SQL.field
+instance FromJSON C.ScriptData where
+    parseJSON (Aeson.String v) =
+        either (const mempty) pure $ do
+            base16Val <- Base16.decode $ Text.encodeUtf8 v
+            mapLeft show $ C.deserialiseFromCBOR C.AsScriptData base16Val
+    parseJSON _ = mempty
+
+mapLeft :: (a -> b) -> Either a c -> Either b c
+mapLeft f (Left v)  = Left $ f v
+mapLeft _ (Right v) = Right v
+
+instance ToJSON C.ScriptData where
+    toJSON v = Aeson.String $ Text.decodeLatin1 $ Base16.encode $ C.serialiseToCBOR v
+
+-- * C.TxIn
 
 instance SQL.ToRow C.TxIn where
   toRow (C.TxIn txid txix) = SQL.toRow (txid, txix)
+
+instance SQL.FromRow C.TxIn where
+  fromRow = C.TxIn <$> SQL.field <*> SQL.field
 
 instance SQL.FromField C.TxId where
   fromField f = SQL.fromField f >>= maybe
@@ -135,6 +147,8 @@ instance SQL.FromField C.TxIx where
 instance SQL.ToField C.TxIx where
   toField (C.TxIx i) = SQL.SQLInteger $ fromIntegral i
 
+-- * C.Value
+
 instance SQL.ToField C.Value where
   toField = SQL.SQLBlob . toStrict . Aeson.encode
 
@@ -142,6 +156,8 @@ instance SQL.FromField C.Value where
   fromField f = SQL.fromField f >>= either
     (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise value.")
     pure . Aeson.eitherDecode
+
+-- * C.ScriptInAnyLang
 
 instance SQL.ToField C.ScriptInAnyLang where
   toField = SQL.SQLBlob . toStrict . Aeson.encode
@@ -151,6 +167,8 @@ instance SQL.FromField C.ScriptInAnyLang where
     (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise value.")
     pure . Aeson.eitherDecode
 
+-- * C.ScriptHash
+
 instance SQL.ToField C.ScriptHash where
   toField = SQL.SQLBlob . C.serialiseToRawBytesHex
 
@@ -158,18 +176,6 @@ instance SQL.FromField C.ScriptHash where
   fromField f = SQL.fromField f >>= either
     (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise scriptDataHash.")
     pure . C.deserialiseFromRawBytesHex (C.proxyToAsType Proxy)
-
-instance ToJSON ByteString  where
-  toJSON bs
-      | Right s <- Text.decodeUtf8' bs, Text.all Char.isPrint s = Aeson.String s
-      | otherwise
-      = Aeson.String (bytesPrefix <> Text.decodeLatin1 (Base16.encode bs))
-
--- from cardano-node: https://github.com/input-output-hk/cardano-node/blob/master/cardano-api/src/Cardano/Api/ScriptData.hs#L444-L447
--- | JSON strings that are base16 encoded and prefixed with 'bytesPrefix' will
--- be encoded as CBOR bytestrings.
-bytesPrefix :: Text
-bytesPrefix = "0x"
 
 -- * ToField/FromField
 

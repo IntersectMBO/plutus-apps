@@ -8,14 +8,21 @@
 
 module Spec.Marconi.ChainIndex.Indexers.MintBurn where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.BM.Tracing (defaultConfigStdout)
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Codec.Serialise (serialise)
 import Control.Concurrent qualified as IO
 import Control.Concurrent.Async qualified as IO
 import Control.Concurrent.STM qualified as IO
 import Control.Exception (catch)
 import Control.Lens qualified as Lens
-import Control.Monad (foldM, forM, replicateM, void, when)
+import Control.Monad (foldM, forM, replicateM, unless, void)
 import Control.Monad.IO.Class (liftIO)
+import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.Coerce (coerce)
@@ -26,38 +33,29 @@ import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import Data.String (fromString)
 import Data.Word (Word64)
-import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
-import Prettyprinter.Render.Text (renderStrict)
-import Streaming.Prelude qualified as S
-import System.Directory qualified as IO
-import System.FilePath ((</>))
-
+import Gen.Cardano.Api.Typed qualified as CGen
 import Hedgehog (Gen, Property, forAll, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Cardano.BM.Setup (withTrace)
-import Cardano.BM.Trace (logError)
-import Cardano.BM.Tracing (defaultConfigStdout)
-import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-import Gen.Cardano.Api.Typed qualified as CGen
-import Plutus.V1.Ledger.Api qualified as PlutusV1
-import PlutusTx qualified
-import Test.Base qualified as H
-import Testnet.Cardano qualified as TN
-
 import Helpers qualified as TN
 import Marconi.ChainIndex.Indexers qualified as M
 import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Logging ()
 import Marconi.Core.Storable qualified as RI
+import Plutus.V1.Ledger.Api qualified as PlutusV1
+import PlutusTx qualified
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+import Streaming.Prelude qualified as S
+import System.Directory qualified as IO
+import System.FilePath ((</>))
+import Test.Base qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testPropertyNamed)
+import Testnet.Cardano qualified as TN
 
 -- | Each test case is described beside every top level property
 -- declaration.
@@ -159,10 +157,10 @@ intervals = H.property $ do
   -- Genesis to genesis returns nothing
   H.assert . null =<< queryInterval C.ChainPointAtGenesis C.ChainPointAtGenesis
   -- When there were at least one event created:
-  when (not $ null events) $ do
+  unless (null events) $ do
     let eventCp e = cpFromSlot $ MintBurn.txMintEventSlotNo e
     -- From genesis to "latest slot + 1" returns everything:
-    equalSet events =<< (queryInterval C.ChainPointAtGenesis $ cpFromSlot $ (MintBurn.txMintEventSlotNo (last events)) + 1)
+    equalSet events =<< (queryInterval C.ChainPointAtGenesis $ cpFromSlot $ MintBurn.txMintEventSlotNo (last events) + 1)
     -- From first event's slot to last event's slot returns everything:
     equalSet events =<< queryInterval (eventCp $ head events) (eventCp $ last events)
     -- Form any slot to genesis returns nothing
@@ -309,7 +307,7 @@ genTxWithMint txMintValue = do
   pparams' :: C.ProtocolParameters <- CGen.genProtocolParameters
   let
     pparams = C.BuildTxWith $ Just pparams'
-      { C.protocolParamUTxOCostPerWord = Just 1
+      { C.protocolParamUTxOCostPerByte = Just 1
       , C.protocolParamPrices = Just $ C.ExecutionUnitPrices 1 1
       , C.protocolParamMaxTxExUnits = Just $ C.ExecutionUnits 1 1
       , C.protocolParamMaxBlockExUnits = Just $ C.ExecutionUnits 1 1
@@ -350,7 +348,7 @@ genTxMintValue = do
 
 -- | Remove events that remained in buffer.
 onlyPersisted :: Int -> [a] -> [a]
-onlyPersisted bufferSize events = take (eventsPersisted bufferSize $ length events) $ events
+onlyPersisted bufferSize events = take (eventsPersisted bufferSize $ length events) events
 
 eventsPersisted :: Int -> Int -> Int
 eventsPersisted bufferSize nEvents = let
@@ -382,7 +380,7 @@ mkMintValue policy policyAssets = (policyId, policyWitness, mintedValues)
       (C.PScript serialisedPolicyScript) C.NoScriptDatumForMint redeemer executionUnits
 
     mintedValues :: C.Value
-    mintedValues = C.valueFromList $ map (\(assetName, quantity) -> (C.AssetId policyId assetName, quantity)) policyAssets
+    mintedValues = C.valueFromList $ map (first (C.AssetId policyId)) policyAssets
 
 commonMintingPolicy :: PlutusV1.MintingPolicy
 commonMintingPolicy = PlutusV1.mkMintingPolicyScript $$(PlutusTx.compile [||\_ _ -> ()||])
