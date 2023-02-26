@@ -8,6 +8,8 @@
 
   plutus-apps-project = import ./plutus-apps-project.nix block;
 
+  plutus-core-objects-inv = import ./plutus-core-objects-inv.nix block;
+
   make-plutus-apps-project = import ./make-plutus-apps-project.nix block;
 
   gitignore-source = import ./gitignore-source.nix block;
