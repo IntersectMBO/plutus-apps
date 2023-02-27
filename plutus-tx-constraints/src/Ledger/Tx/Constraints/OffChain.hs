@@ -375,7 +375,7 @@ instance Pretty UnbalancedTx where
         ]
     pretty (UnbalancedCardanoTx utx utxo) =
         vsep
-        [ hang 2 $ vsep ["Tx (cardano-api Representation):", pretty utx]
+        [ hang 2 $ vsep ["Tx:", pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (viaShow <$> Set.toList (utx ^. txExtraKeyWits))
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         ]
