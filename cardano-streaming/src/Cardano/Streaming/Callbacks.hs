@@ -9,12 +9,16 @@ import Data.Word (Word32)
 import Cardano.Api qualified as C
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import Network.TypedProtocol.Pipelined (N (Z), Nat (Succ, Zero))
-import Ouroboros.Consensus.Storage.ImmutableDB qualified as IDB
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
 import Ouroboros.Network.Protocol.ChainSync.ClientPipelined qualified as CSP
 import Ouroboros.Network.Protocol.ChainSync.PipelineDecision (PipelineDecision (Collect), pipelineDecisionMax)
 
 import Cardano.Streaming.Helpers qualified as H
+import Ouroboros.Consensus.Util.ResourceRegistry qualified as Util
+import Ouroboros.Consensus.Util.Args qualified as Util
+import Ouroboros.Consensus.Storage.ImmutableDB qualified as ImmutableDB
+import Ouroboros.Consensus.Storage.ChainDB qualified as ChainDB
+import Ouroboros.Consensus.Storage.FS.API qualified as FS
 
 -- * Raw chain-sync clients using callback
 
@@ -92,3 +96,44 @@ blocksCallback con point callback =
 
 blocksFromChainDbCallback :: C.ChainPoint -> (C.BlockInMode C.CardanoMode -> IO ()) -> IO ()
 blocksFromChainDbCallback _point _callback = undefined
+
+run :: IO ()
+run = do
+ let
+   args = ImmutableDB.defaultArgs :: FS.SomeHasFS IO -> ImmutableDB.ImmutableDbArgs Util.Defaults IO (C.BlockInMode C.CardanoMode)
+   args_ = args $ mkFS $ ChainDB.RelativeMountPoint "immutable"
+--   _ = ImmutableDB.openDB (args u)
+   open :: IO (ImmutableDB.ImmutableDB IO (C.BlockInMode C.CardanoMode))
+   open = u
+   action :: ImmutableDB.ImmutableDB IO (C.BlockInMode C.CardanoMode) -> IO ()
+   action = printBlockHashes
+ ImmutableDB.withDB open action
+
+-- | Print the hash of each block in the ImmutableDB
+printBlockHashes
+  :: ImmutableDB.ImmutableDB IO (C.BlockInMode C.CardanoMode) -> IO ()
+printBlockHashes db = do
+  -- create an iterator over the ImmutableDB
+  eitherIterator <- let
+    resourceRegistry = u :: Util.ResourceRegistry m
+    blockComponent = u :: ChainDB.BlockComponent (C.BlockInMode C.CardanoMode) b
+    streamFrom = u :: ChainDB.StreamFrom (C.BlockInMode C.CardanoMode)
+    streamTo = u :: ChainDB.StreamTo (C.BlockInMode C.CardanoMode)
+    -- -> m (Either (MissingBlock blk) (Iterator m blk b))
+    in ImmutableDB.stream db resourceRegistry blockComponent streamFrom streamTo
+
+  case eitherIterator of
+    Left (_e :: ImmutableDB.MissingBlock (C.BlockInMode C.CardanoMode)) -> do
+      putStrLn "MissingBlock, exiting"
+      return () -- todo
+    Right (iterator :: ImmutableDB.Iterator IO (C.BlockInMode C.CardanoMode) b) ->
+      let
+        loop = do
+          r :: ImmutableDB.IteratorResult (C.BlockInMode C.CardanoMode) <- ImmutableDB.iteratorNext iterator
+          case r of
+            ImmutableDB.IteratorResult (blk :: C.BlockInMode C.CardanoMode) -> print $ H.bimSlotNo blk
+            ImmutableDB.IteratorExhausted -> pure ()
+        in loop
+
+u :: a
+u = undefined
