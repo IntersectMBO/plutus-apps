@@ -86,12 +86,10 @@ instance Pretty TxIn where
     pretty TxIn{txInRef,txInType} =
                 let rest =
                         case txInType of
-                            Just (ScriptAddress wit redeemer md) ->
-                                [ either (\v -> "Validator:" <+> pretty v) (\ref -> "Script reference:" <+> pretty ref) wit
-                                , "Redeemer:" <+> pretty redeemer]
-                                ++ maybe [] (\d -> ["Datum:" <+> pretty d]) md
+                            Just (ScriptAddress _ redeemer _) ->
+                                pretty redeemer
                             _ -> mempty
-                in hang 2 $ vsep $ ("-" <+> pretty txInRef) : rest
+                in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
 
 -- | A transaction input that spends a "pay to public key" output, given the witness.
 pubKeyTxIn :: TxOutRef -> TxIn
