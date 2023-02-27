@@ -90,10 +90,9 @@ import Control.Lens.Lens ((<&>))
 import Data.Functor (($>))
 import Data.String (fromString)
 import Gen.Cardano.Api.Typed (genTxIn)
-import Ledger (CardanoTx (CardanoApiTx), Interval, MintingPolicy (getMintingPolicy),
-               POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx),
+import Ledger (CardanoTx (CardanoTx), Interval, MintingPolicy (getMintingPolicy), POSIXTime (POSIXTime, getPOSIXTime),
+               POSIXTimeRange, Passphrase (Passphrase), PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey,
+               Slot (Slot), SlotRange, SomeCardanoApiTx (CardanoApiEmulatorEraTx),
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput, TxInputType,
                TxOut, TxOutRef (TxOutRef), ValidationErrorInPhase, addCardanoTxSignature, maxFee, minAdaTxOutEstimated,
                minLovelaceTxOutEstimated, pubKeyTxOut, txOutValue, validatorHash)
@@ -267,7 +266,7 @@ makeTx
     -> m CardanoTx
 makeTx bodyContent = do
     txBody <- either (fail . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody bodyContent
-    pure $ signAll $ CardanoApiTx $ CardanoApiEmulatorEraTx $ C.Tx txBody []
+    pure $ signAll $ CardanoTx $ CardanoApiEmulatorEraTx $ C.Tx txBody []
 
 -- | Generate a valid transaction, using the unspent outputs provided.
 --   Fails if the there are no unspent outputs, or if the total value

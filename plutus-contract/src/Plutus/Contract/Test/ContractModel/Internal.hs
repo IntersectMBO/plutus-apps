@@ -193,7 +193,7 @@ instance HasChainIndex (EmulatorTraceWithInstances state) where
                                                      $ Index.initialise (take 1 $ reverse (_chainNewestFirst cs))
                                               }
                   addBlock block (txs, state) =
-                    ( txs ++ [ TxInState ((\(CardanoApiEmulatorEraTx tx) -> tx) . _cardanoApiTx . unOnChain $ tx)
+                    ( txs ++ [ TxInState ((\(CardanoApiEmulatorEraTx tx) -> tx) . _cardanoTx . unOnChain $ tx)
                                          state
                                          (onChainTxIsValid tx)
                              | tx <- block ]

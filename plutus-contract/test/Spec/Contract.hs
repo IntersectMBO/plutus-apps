@@ -249,7 +249,7 @@ tests =
         , let submitTxConstraintsWith sl constraints = do
                 unbalancedTx <- mkTxConstraints @Void sl constraints
                 tx <- balanceTx unbalancedTx
-                submitBalancedTx $ Ledger.CardanoApiTx $ tx ^?! Ledger.cardanoApiTx
+                submitBalancedTx $ Ledger.CardanoTx $ tx ^?! Ledger.cardanoTx
               c :: Contract [TxOutStatus] Schema ContractError () = do
                 -- Submit a payment tx of 10 lovelace to W2.
                 let w2PubKeyHash = mockWalletPaymentPubKeyHash w2

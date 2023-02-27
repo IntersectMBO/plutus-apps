@@ -79,7 +79,7 @@ import Ledger.Address qualified as P
 import Ledger.Crypto qualified as Crypto
 import Ledger.Index.Internal qualified as P
 import Ledger.Slot (Slot)
-import Ledger.Tx (CardanoTx (CardanoApiTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), _cardanoApiTx,
+import Ledger.Tx (CardanoTx (CardanoTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx, SomeTx), _cardanoTx,
                   addCardanoTxSignature)
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Tx.Internal qualified as P
@@ -263,7 +263,7 @@ validateCardanoTx
   -> UTxO EmulatorEra
   -> CardanoTx
   -> Either P.ValidationErrorInPhase P.ValidationSuccess
-validateCardanoTx params slot utxo@(UTxO utxoMap) (_cardanoApiTx -> CardanoApiEmulatorEraTx tx) =
+validateCardanoTx params slot utxo@(UTxO utxoMap) (_cardanoTx -> CardanoApiEmulatorEraTx tx) =
   if Map.null utxoMap then Right Map.empty else
     hasValidationErrors params (fromIntegral slot) utxo tx
 
@@ -329,4 +329,4 @@ fromPlutusTxSigned' params utxo tx knownPaymentKeys =
         flip SomeTx C.BabbageEraInCardanoMode
         <$> fromPlutusTx params utxo (P.PaymentPubKeyHash . Crypto.pubKeyHash <$> getPublicKeys t) t
   in
-    signTx . CardanoApiTx <$> convertTx tx
+    signTx . CardanoTx <$> convertTx tx

@@ -26,8 +26,8 @@ import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index (UtxoIndex (..))
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (CardanoTx (CardanoApiTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx),
-                  TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
+import Ledger.Tx (CardanoTx (CardanoTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxInType (ConsumePublicKeyAddress),
+                  txOutAddress, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value.CardanoAPI (isAdaOnlyValue)
 
@@ -93,8 +93,7 @@ generateTx gen slot (UtxoIndex utxo) = do
       utxoIndex = either (error . show) id $ fromPlutusIndex $ UtxoIndex utxo
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
-      Left _  -> case txn of
-                      CardanoApiTx (CardanoApiEmulatorEraTx cTx) -> pure cTx
+      Left _  -> case txn of CardanoTx (CardanoApiEmulatorEraTx cTx) -> pure cTx
       Right _ -> generateTx gen slot (UtxoIndex utxo)
 
 keyPairs :: NonEmpty CardanoAddress

@@ -46,7 +46,7 @@ import Data.Tuple (swap)
 import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), TxOutRef (..))
 import Ledger.Address (CardanoAddress)
 import Ledger.Scripts (Redeemer, RedeemerHash)
-import Ledger.Tx (_cardanoApiTx)
+import Ledger.Tx (_cardanoTx)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, setValidity)
 import Plutus.Script.Utils.Scripts (redeemerHash)
@@ -87,8 +87,8 @@ validityFromChainIndex tx =
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
 fromOnChainTx = \case
-    Valid ctx   -> (fromOnChainCardanoTx True . _cardanoApiTx) ctx
-    Invalid ctx -> (fromOnChainCardanoTx False . _cardanoApiTx) ctx
+    Valid ctx   -> (fromOnChainCardanoTx True . _cardanoTx) ctx
+    Invalid ctx -> (fromOnChainCardanoTx False . _cardanoTx) ctx
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
 txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList

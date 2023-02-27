@@ -94,7 +94,7 @@ runProducer AppEnv{txQueue, stats, utxoIndex} = do
       -- boundaries. We don't currently use boundaries for our generated
       -- transactions, so we chose the random number.
       tx <- generateTx rng (Slot 4) utxo
-      let utxo' = insertBlock [Valid $ CardanoApiTx $ CardanoApiEmulatorEraTx tx] utxo
+      let utxo' = insertBlock [Valid $ CardanoTx $ CardanoApiEmulatorEraTx tx] utxo
       atomically $ do
         writeTBQueue txQueue tx
         modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ getIndex utxo' }

@@ -153,7 +153,7 @@ handleCommand ::
 handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState params =
     liftIO (atomically $ readTQueue ccCommand) >>= \case
         AddTx tx     -> do
-            liftIO $ modifyMVar_ mvChainState (pure . over txPool (CardanoApiTx (CardanoApiEmulatorEraTx tx) :))
+            liftIO $ modifyMVar_ mvChainState (pure . over txPool (CardanoTx (CardanoApiEmulatorEraTx tx) :))
         ModifySlot f -> liftIO $ do
             state <- liftIO $ takeMVar mvChainState
             (s, nextState') <- liftIO $ Chain.modifySlot f
@@ -480,7 +480,7 @@ txSubmissionServer state = txSubmissionState
         TxSubmission.LocalTxSubmissionServer {
           TxSubmission.recvMsgSubmitTx =
             \tx -> do
-                modifyMVar_ state (pure . over txPool (addTxToPool (CardanoApiTx $ CardanoApiEmulatorEraTx tx)))
+                modifyMVar_ state (pure . over txPool (addTxToPool (CardanoTx $ CardanoApiEmulatorEraTx tx)))
                 return (TxSubmission.SubmitSuccess, txSubmissionState)
         , TxSubmission.recvMsgDone     = ()
         }
