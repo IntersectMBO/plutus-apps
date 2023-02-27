@@ -19,10 +19,9 @@ import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-import Data.Maybe (fromMaybe)
 import Marconi.ChainIndex.Indexers (mkIndexerStream, startIndexers, utxoWorker)
 import Marconi.ChainIndex.Logging (logging)
-import Marconi.ChainIndex.Types (TargetAddresses)
+import Marconi.ChainIndex.Types (TargetAddresses, utxoDbName)
 import Marconi.Sidechain.Api.HttpServer qualified as Http
 import Marconi.Sidechain.Api.Query.Indexers.Utxo (UtxoIndexer, initializeEnv, writeTMVar')
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs), HasIndexerEnv (uiIndexer), HasSidechainEnv (queryEnv),
@@ -53,13 +52,13 @@ bootstrapIndexers
     :: CliArgs
     -> SidechainEnv
     -> IO ()
-bootstrapIndexers (CliArgs socket dbPath utxoDbFileName _ networkId targetAddresses) env = do
+bootstrapIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
   let callbackIndexer :: UtxoIndexer -> IO ()
       callbackIndexer = atomically . writeTMVar' (env ^. queryEnv . uiIndexer)
   (chainPointsToResumeFrom, coordinator) <-
       startIndexers
           [ ( utxoWorker callbackIndexer targetAddresses
-            , dbPath </> fromMaybe "utxo.db" utxoDbFileName
+            , dbPath </> utxoDbName
             )
           ]
   let indexers = mkIndexerStream coordinator
