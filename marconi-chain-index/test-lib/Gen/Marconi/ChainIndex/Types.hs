@@ -19,6 +19,10 @@ module Gen.Marconi.ChainIndex.Types
   , genTxOutValue
   , genSimpleScriptData
   , genProtocolParametersForPlutusScripts
+  , genHashScriptData
+  , genAssetId
+  , genPolicyId
+  , genQuantity
   ) where
 
 import Cardano.Api qualified as C
@@ -37,11 +41,13 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Ratio (Ratio, (%))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.String (fromString)
 import Data.Word (Word64)
 import GHC.Natural (Natural)
 import Gen.Cardano.Api.Typed qualified as CGen
 import Hedgehog (Gen, MonadGen)
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
 import PlutusCore (defaultCostModelParams)
 
@@ -288,3 +294,24 @@ genProtocolParametersForPlutusScripts =
     -- Copied from cardano-api. Delete when this function is reexported
     genExecutionUnitPrices :: Gen C.ExecutionUnitPrices
     genExecutionUnitPrices = C.ExecutionUnitPrices <$> CGen.genRational <*> CGen.genRational
+
+-- TODO Copied from cardano-api. Delete once reexported
+genAssetId :: Gen C.AssetId
+genAssetId = Gen.choice [ C.AssetId <$> genPolicyId <*> CGen.genAssetName
+                        , return C.AdaAssetId
+                        ]
+
+-- TODO Copied from cardano-api. Delete once reexported
+genPolicyId :: Gen C.PolicyId
+genPolicyId =
+  Gen.frequency
+      -- mostly from a small number of choices, so we get plenty of repetition
+    [ (9, Gen.element [ fromString (x : replicate 55 '0') | x <- ['a'..'c'] ])
+
+       -- and some from the full range of the type
+    , (1, C.PolicyId <$> CGen.genScriptHash)
+    ]
+
+-- TODO Copied from cardano-api. Delete once reexported
+genQuantity :: Range Integer -> Gen C.Quantity
+genQuantity range = fromInteger <$> Gen.integral range

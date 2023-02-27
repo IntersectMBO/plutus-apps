@@ -10,6 +10,7 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 -- | Copy of Cardano.Babbage from cardano-testnet (1.35.4 branch) with some tweaks to make it
 --   work correctly in Alonzo and Babbage eras. Will use cardano-testnet in future when it has
@@ -30,33 +31,37 @@ module CardanoTestnet
 
 import Cardano.Api qualified as C
 import Control.Concurrent (threadDelay)
-import Control.Monad (forM, forM_, void, when)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad (forM, forM_, unless, when)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (encode, object, toJSON, (.=))
-import Data.Functor ((<&>))
 import Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import System.FilePath.Posix ((</>))
 import Test.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
                      PoolNodeKeys (..), StakingKeyPair (..), TestnetNode (..), TestnetRuntime (..))
 
+import Data.Functor (void, ($>), (<&>))
 import Data.HashMap.Lazy qualified as HM
 import Data.List qualified as L
 import Data.Time.Clock qualified as DTC
+import Hedgehog (MonadTest)
 import Hedgehog qualified as H
 import Hedgehog.Extras.Stock.Aeson qualified as J
+import Hedgehog.Extras.Stock.IO.Network.Socket qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Stock.OS qualified as OS
 import Hedgehog.Extras.Stock.String qualified as S
 import Hedgehog.Extras.Test.Base qualified as H
 import Hedgehog.Extras.Test.File qualified as H
 import Hedgehog.Extras.Test.Process qualified as H
+import Network.Socket qualified as IO
 import System.IO qualified as IO
 import System.Info qualified as OS
 import System.Process qualified as IO
 import Test.Assert qualified as H
 import Test.Process qualified as H
 import Testnet.Conf qualified as H
+import UnliftIO.Exception qualified as IO
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -69,7 +74,6 @@ data Era = Alonzo | Babbage deriving (Eq, Show)
 data TestnetOptions = TestnetOptions
   { era               :: C.AnyCardanoEra
   , protocolVersion   :: Int
-  , numSpoNodes       :: Int
   , slotDuration      :: Int
   , slotLength        :: Double
   , activeSlotsCoeff  :: Double
@@ -82,7 +86,6 @@ defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
   { era = C.AnyCardanoEra C.BabbageEra
   , protocolVersion = 8
-  , numSpoNodes = 3
   , slotDuration = 1000
   , slotLength = 0.2
   , activeSlotsCoeff = 0.1 -- higher value (e.g. 0.9) prevents long waits for slot leader but could be the cause of more rollbacks/forks
@@ -100,6 +103,36 @@ defaultTestnetNodeOptions = TestnetNodeOptions
 -- MacOS.  We need to allow a lot more time to set up a testnet.
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
+
+-- | Check if a TCP port is open
+isPortOpen :: Int -> IO Bool
+isPortOpen port = do
+  socketAddressInfos <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
+  case socketAddressInfos of
+    socketAddressInfo:_ -> canConnect (IO.addrAddress socketAddressInfo) $> True
+    []                  -> return False
+
+-- | Check if it is possible to connect to a socket address
+-- TODO: upstream fix to Hedgehog Extras
+canConnect :: IO.SockAddr -> IO Bool
+canConnect sockAddr = IO.bracket (IO.socket IO.AF_INET IO.Stream 6) IO.close' $ \sock -> do
+  res <- IO.try $ IO.connect sock sockAddr
+  case res of
+    Left (_ :: IO.IOException) -> return False
+    Right _                    -> return True
+
+-- | Get random list of open ports. Timeout after 60seconds if unsuccessful.
+getOpenPorts :: (MonadTest m, Control.Monad.IO.Class.MonadIO m) => Int -> Int -> m [Int]
+getOpenPorts n numberOfPorts = do
+  when (n == 0) $ do
+   error "getOpenPorts timeout"
+  ports <- liftIO $ H.allocateRandomPorts numberOfPorts
+  allOpen <- liftIO $ mapM isPortOpen ports
+  unless (and allOpen) $ do
+    H.annotate "Some ports are not open, trying again..."
+    liftIO $ threadDelay 1_000_000 -- wait 1 sec
+    void $ getOpenPorts (pred n) numberOfPorts
+  pure ports
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
@@ -133,13 +166,15 @@ testnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
+  let numPoolNodes = 3 :: Int
+
   void . H.execCli $
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
     , "--k", show @Int (securityParam testnetOptions)
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int (numSpoNodes testnetOptions)
+    , "--n-delegate-addresses", show numPoolNodes
     , "--total-balance", show @Int (totalBalance testnetOptions)
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
@@ -192,13 +227,11 @@ testnet testnetOptions H.Conf {..} = do
                     NodeLoggingFormatAsJson -> "ScJson"
                     NodeLoggingFormatAsText -> "ScText")
 
-  let numPoolNodes = 3 :: Int
-
   void . H.execCli $
     [ "genesis", "create-staked"
     , "--genesis-dir", tempAbsPath
     , "--testnet-magic", show @Int testnetMagic
-    , "--gen-pools", show @Int 3
+    , "--gen-pools", show numPoolNodes
     , "--supply", "1000000000000"
     , "--supply-delegated", "1000000000000"
     , "--gen-stake-delegs", "3"
@@ -233,7 +266,7 @@ testnet testnetOptions H.Conf {..} = do
         }
       }
 
-  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. numSpoNodes testnetOptions]
+  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1..3 :: Int] -- 3 spo nodes
 
   -- Create the node directories
 
@@ -303,10 +336,11 @@ testnet testnetOptions H.Conf {..} = do
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath </> "node-spo2/byron-delegation.cert")
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath </> "node-spo3/byron-delegation.cert")
 
-  H.writeFile (tempAbsPath </> "node-spo1/port") "3001"
-  H.writeFile (tempAbsPath </> "node-spo2/port") "3002"
-  H.writeFile (tempAbsPath </> "node-spo3/port") "3003"
+  [port1, port2, port3] <- getOpenPorts 60 numPoolNodes -- 60s timeout to find open ports
 
+  H.writeFile (tempAbsPath </> "node-spo1/port") (show port1)
+  H.writeFile (tempAbsPath </> "node-spo2/port") (show port2)
+  H.writeFile (tempAbsPath </> "node-spo3/port") (show port3)
 
   -- Make topology files
   -- TODO generalise this over the N BFT nodes and pool nodes
@@ -316,12 +350,12 @@ testnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -332,12 +366,12 @@ testnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -348,12 +382,12 @@ testnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -403,11 +437,11 @@ testnet testnetOptions H.Conf {..} = do
 
     return (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
 
+  when (OS.os == "darwin") $ do
+    liftIO $ threadDelay 60_000_000 -- wait 1 min for network to stabilise before proceeding
+
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 300 now -- increased from 90s
-
-  when (OS.os `L.elem` ["darwin"]) $ do
-    liftIO $ threadDelay 60_000_000 -- wait 1 min for network to stabilise before proceeding
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"

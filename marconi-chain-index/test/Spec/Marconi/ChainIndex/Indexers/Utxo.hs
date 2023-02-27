@@ -10,4 +10,3 @@ tests = localOption (HedgehogTestLimit $ Just 200) $
     testGroup "Spec.Marconi.ChainIndex.Indexer.Utxo"
     [ UtxoIndex.tests
     ]
-

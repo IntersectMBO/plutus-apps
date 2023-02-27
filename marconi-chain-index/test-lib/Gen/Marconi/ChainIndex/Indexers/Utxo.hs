@@ -31,7 +31,7 @@ import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 --   * for any spent tx output, there must be a UTXO created in a previous event
 genUtxoEvents :: Gen [StorableEvent UtxoHandle]
 genUtxoEvents = do
-    chainPoints <- genChainPoints 1 3
+    chainPoints <- genChainPoints 1 5
     txIns <- Set.singleton <$> CGen.genTxIn
     snd <$> foldM f (txIns, []) chainPoints
   where
@@ -50,7 +50,7 @@ genUtxoEvents = do
             newUtxoEvent = UtxoEvent (Set.fromList newUtxos) utxosAsTxInput cp
         pure (Set.union newUtxoRefs $ Set.difference utxoSet utxosAsTxInput, utxoEvents ++ [newUtxoEvent])
 
-convertTxOutToUtxo :: C.TxId -> C.TxIx -> C.TxOut C.CtxTx C.AlonzoEra -> Utxo
+convertTxOutToUtxo :: C.TxId -> C.TxIx -> C.TxOut C.CtxTx C.BabbageEra -> Utxo
 convertTxOutToUtxo txId txIx (C.TxOut (C.AddressInEra _ addr) val txOutDatum refScript) =
     let (scriptDataHash, scriptData) =
             case txOutDatum of
@@ -76,13 +76,13 @@ convertTxOutToUtxo txId txIx (C.TxOut (C.AddressInEra _ addr) val txOutDatum ref
 
 genTxBodyContentFromTxIns
     :: [C.TxIn]
-    -> Gen (C.TxBodyContent C.BuildTx C.AlonzoEra)
+    -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra)
 genTxBodyContentFromTxIns inputs = do
     txBodyContent <-
-        emptyTxBodyContent (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
-            <$> fmap (C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra) CGen.genLovelace
+        emptyTxBodyContent (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+            <$> fmap (C.TxFeeExplicit C.TxFeesExplicitInBabbageEra) CGen.genLovelace
             <*> CGen.genProtocolParameters
-    txOuts <- Gen.list (Range.linear 1 5) $ genTxOutTxContext C.AlonzoEra
+    txOuts <- Gen.list (Range.linear 1 5) $ genTxOutTxContext C.BabbageEra
     pure $ txBodyContent
         { C.txIns = fmap (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) inputs
         , C.txOuts = txOuts
