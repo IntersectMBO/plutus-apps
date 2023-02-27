@@ -1,0 +1,23 @@
+{
+    "blockHeaderHash": "6161616161616161616161616161616161616161616161616161616161616161",
+    "slotNo": 1,
+    "utxo": {
+        "address": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc",
+        "datum": "34",
+        "datumHash": "eb8649214997574e20c464388a172420d25403682bbbb80c496831c8cc1f8f0d",
+        "inlineScript": {
+            "script": {
+                "cborHex": "49484701000022220011",
+                "description": "",
+                "type": "PlutusScriptV1"
+            },
+            "scriptLanguage": "PlutusScriptLanguage PlutusScriptV1"
+        },
+        "inlineScriptHash": "284d60f7e56f5fd54faed4c50fd5cab0307da1c4034d6a92c5dbb940",
+        "txId": "ec7d3bd7c6a3a31368093b077af0db46ceac77956999eb842373e08c6420f000",
+        "txIx": 0,
+        "value": {
+            "lovelace": 10000000
+        }
+    }
+}

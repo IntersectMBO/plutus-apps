@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
+
 {-# OPTIONS_GHC -Wno-orphans    #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
@@ -48,7 +49,7 @@ import Test.Base qualified as H
 
 import Helpers qualified as TN
 import Testnet.Cardano qualified as TN
--- ^ Although these are defined in this cabal component, they are
+-- Although these are defined in this cabal component, they are
 -- helpers for interacting with the testnet, thus TN
 
 import Marconi.ChainIndex.Indexers qualified as M
@@ -145,11 +146,11 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
       C.NoStakeAddress :: C.Address C.ShelleyAddr
 
   (tx1in, C.TxOut _ v _ _) <- do
-    utxo <- TN.findUTxOByAddress localNodeConnectInfo address
+    utxo <- TN.findUTxOByAddress @C.AlonzoEra localNodeConnectInfo address
     H.headM $ Map.toList $ C.unUTxO utxo
   let totalLovelace = C.txOutValueToLovelace v
 
-  pparams <- TN.getAlonzoProtocolParams localNodeConnectInfo
+  pparams <- TN.getProtocolParams @C.AlonzoEra localNodeConnectInfo
 
   let scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
@@ -173,8 +174,12 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
           (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountReturned)
           C.TxOutDatumNone
           C.ReferenceScriptNone
+
+      tx1ValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+      tx1ExplitFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx1fee
+
       txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
-      txBodyContent = (TN.emptyTxBodyContent tx1fee pparams)
+      txBodyContent = (TN.emptyTxBodyContent tx1ValidityRange tx1ExplitFee pparams)
         { C.txIns = [(tx1in, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)]
         , C.txOuts = [txOut1, txOut2]
         , C.txProtocolParams   = C.BuildTxWith $ Just pparams
@@ -191,10 +196,10 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
 
   _ <- liftIO $ IO.readChan indexedTxs -- wait for the first transaction to be accepted
 
-  tx2collateralTxIn <- H.headM . Map.keys . C.unUTxO =<< TN.findUTxOByAddress localNodeConnectInfo address
+  tx2collateralTxIn <- H.headM . Map.keys . C.unUTxO =<< TN.findUTxOByAddress @C.AlonzoEra localNodeConnectInfo address
 
   (scriptTxIn, C.TxOut _ valueAtScript _ _) <- do
-    scriptUtxo <- TN.findUTxOByAddress localNodeConnectInfo plutusScriptAddr
+    scriptUtxo <- TN.findUTxOByAddress @C.AlonzoEra localNodeConnectInfo plutusScriptAddr
     H.headM $ Map.toList $ C.unUTxO scriptUtxo
 
   let lovelaceAtScript = C.txOutValueToLovelace valueAtScript
@@ -215,8 +220,11 @@ testIndex = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H
         C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1 (C.PScript plutusScript)
         (C.ScriptDatumForTxIn scriptDatum) redeemer executionUnits
 
+      tx2ValidityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+      tx2ExplitFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx2fee
+
       tx2bodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
-      tx2bodyContent = (TN.emptyTxBodyContent tx2fee pparams)
+      tx2bodyContent = (TN.emptyTxBodyContent tx2ValidityRange tx2ExplitFee pparams)
         { C.txIns              = [(scriptTxIn, C.BuildTxWith scriptWitness)]
         , C.txInsCollateral    = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
         , C.txOuts             = [TN.mkAddressAdaTxOut address (lovelaceAtScript - tx2fee)]

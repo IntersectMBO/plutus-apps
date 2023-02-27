@@ -200,6 +200,48 @@ library marconi-chain-index-test-lib
     , streaming
     , temporary
 
+benchmark marconi-chain-index-bench
+  import:         lang
+  main-is:        BenchQueries.hs
+  hs-source-dirs: bench
+  type:           exitcode-stdio-1.0
+
+  if impl(ghc >=8.10)
+    ghc-options: "-with-rtsopts=-A32m --nonmoving-gc"
+
+  else
+    ghc-options: -with-rtsopts=-A32m
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , cardano-streaming
+    , marconi-chain-index
+    , marconi-core
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api
+    , cardano-ledger-byron
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson
+    , async
+    , base
+    , bytestring
+    , filepath
+    , raw-strings-qq
+    , sqlite-simple
+    , stm
+    , tasty-bench
+    , text
+
 test-suite marconi-chain-index-test
   import:         lang
   ghc-options:    -Wno-unused-packages
@@ -219,6 +261,7 @@ test-suite marconi-chain-index-test
     Spec.Marconi.ChainIndex.Indexers.ScriptTx
     Spec.Marconi.ChainIndex.Indexers.Utxo
     Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex
+    Spec.Marconi.ChainIndex.Orphans
 
   --------------------
   -- Local components
@@ -252,6 +295,7 @@ test-suite marconi-chain-index-test
     , aeson
     , async
     , base                  >=4.9 && <5
+    , base16-bytestring
     , bytestring
     , containers
     , directory

@@ -67,8 +67,10 @@ common lang
     , filepath
     , lens
     , mwc-random
+    , network
     , optparse-applicative
     , prettyprinter
+    , process
     , serialise
     , sqlite-simple
     , stm
@@ -76,6 +78,9 @@ common lang
     , text
     , time
     , transformers-except
+    , unlift
+    , unliftio
+    , unordered-containers
 
 test-suite plutus-e2e-tests-test
   import:         lang
@@ -84,7 +89,12 @@ test-suite plutus-e2e-tests-test
   main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
-    Helpers
+    CardanoTestnet
+    Helpers.Common
+    Helpers.Query
+    Helpers.Testnet
+    Helpers.Tx
+    Helpers.Utils
     PlutusScripts.AlwaysSucceeds
     PlutusScripts.Helpers
     PlutusScripts.SECP256k1

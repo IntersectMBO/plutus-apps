@@ -23,7 +23,8 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
 import Cardano.Api qualified as C
-import Control.Monad (void)
+import Control.Monad (forM_, void)
+import Data.Aeson qualified as Aeson
 import Data.List qualified as List
 import Gen.Cardano.Api.Typed qualified as CGen
 import Gen.Marconi.ChainIndex.Indexers.Utxo (genEventAtChainPoint, genUtxoEvents)
@@ -90,8 +91,12 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
           "The points that indexer can be resumed from should return an ordered list of points"
           "propResumingShouldReturnOrderedListOfPoints"
           propResumingShouldReturnOrderedListOfPoints
-    ]
 
+    , testPropertyNamed
+          "ToJSON/FromJSON roundtrip for UtxoRow"
+          "propJsonRoundtripUtxoRow"
+          propJsonRoundtripUtxoRow
+    ]
 
 eventsToRowsRoundTripTest :: Property
 eventsToRowsRoundTripTest  = property $ do
@@ -247,6 +252,12 @@ propResumingShouldReturnOrderedListOfPoints = property $ do
 
     resumablePoints <- liftIO $ Storable.resume indexer
     List.reverse (List.sort resumablePoints) === resumablePoints
+
+propJsonRoundtripUtxoRow :: Property
+propJsonRoundtripUtxoRow = property $ do
+    utxoEvents <- forAll genUtxoEvents
+    let utxoRows = concatMap Utxo.eventsToRows utxoEvents
+    forM_ utxoRows $ \utxoRow -> Hedgehog.tripping utxoRow Aeson.encode Aeson.decode
 
 -- Create TargetAddresses
 -- We use TxOut to create a valid and relevant TargetAddress. This garnteed that the targetAddress is among the generated events.

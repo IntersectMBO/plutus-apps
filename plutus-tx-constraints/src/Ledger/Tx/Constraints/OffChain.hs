@@ -38,6 +38,7 @@ module Ledger.Tx.Constraints.OffChain(
     , UnbalancedTx(..)
     , unBalancedTxTx
     , tx
+    , txInsCollateral
     , txValidityRange
     , txOuts
     , utxoIndex
@@ -61,6 +62,33 @@ module Ledger.Tx.Constraints.OffChain(
     , _CannotSatisfyAny
     , _NoMatchingOutputFound
     , _MultipleMatchingOutputsFound
+    -- * Internals exposed for testing
+    , ValueSpentBalances(..)
+    , provided
+    , required
+    , missingValueSpent
+    , ConstraintProcessingState(..)
+    , unbalancedTx
+    , valueSpentInputs
+    , valueSpentOutputs
+    , paramsL
+    , processConstraintFun
+    , addOwnInput
+    , addOwnOutput
+    , updateUtxoIndex
+    , lookupTxOutRef
+    , lookupMintingPolicy
+    , lookupScript
+    , lookupScriptAsReferenceScript
+    , prepareConstraints
+    , resolveScriptTxOut
+    , resolveScriptTxOutValidator
+    , resolveScriptTxOutDatumAndValue
+    , DatumWithOrigin(..)
+    , datumWitness
+    , checkValueSpent
+    , SortedConstraints(..)
+    , initialState
     ) where
 
 import Cardano.Api qualified as C
@@ -500,7 +528,7 @@ data SortedConstraints
    = MkSortedConstraints
    { rangeConstraints :: [POSIXTimeRange]
    , otherConstraints :: [TxConstraint]
-   }
+   } deriving (Eq, Show)
 
 -- | Filtering MustSpend constraints to ensure their consistency and check that we do not try to spend them
 -- with different redeemer or reference scripts.

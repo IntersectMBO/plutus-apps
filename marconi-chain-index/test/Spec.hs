@@ -12,13 +12,15 @@ import Spec.Marconi.ChainIndex.Indexers.ScriptTx qualified as Indexers.ScriptTx
 import Integration qualified
 import Spec.Marconi.ChainIndex.Indexers.MintBurn qualified as Indexers.MintBurn
 import Spec.Marconi.ChainIndex.Indexers.Utxo qualified as Indexers.Utxo
+import Spec.Marconi.ChainIndex.Orphans qualified as Orphans
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [ Indexers.Utxo.tests
+  [ Orphans.tests
+  , Indexers.Utxo.tests
   , Indexers.ScriptTx.tests
   , Indexers.AddressDatum.tests
   , Indexers.MintBurn.tests
