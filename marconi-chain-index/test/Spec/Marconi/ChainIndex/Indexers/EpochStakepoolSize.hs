@@ -213,7 +213,7 @@ registerStakeAddress networkId con pparams payerAddress payerSKey stakeCredentia
   -- cardano-cli transaction build
   -- cardano-cli transaction sign
   -- cardano-cli transaction submit
-  (txIns, totalLovelace) <- TN.getAddressTxInsValue con payerAddress
+  (txIns, totalLovelace) <- TN.getAddressTxInsValue @C.AlonzoEra con payerAddress
   let keyWitnesses = [C.WitnessGenesisUTxOKey payerSKey]
       mkTxOuts lovelace = [TN.mkAddressAdaTxOut payerAddress lovelace]
       validityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
@@ -275,7 +275,7 @@ registerPool con networkId pparams tempAbsPath   keyWitnesses stakeCredentials p
   -- Create transaction
   do (txIns, totalLovelace) <- TN.getAddressTxInsValue @C.AlonzoEra con payerAddress
      let mkTxOuts lovelace = [TN.mkAddressAdaTxOut payerAddress lovelace]
-         validityRange = C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra
+         validityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
      (feeLovelace, txbc) <- TN.calculateAndUpdateTxFee pparams networkId (length txIns) (length keyWitnesses) (TN.emptyTxBodyContent validityRange pparams)
        { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
        , C.txOuts = mkTxOuts 0

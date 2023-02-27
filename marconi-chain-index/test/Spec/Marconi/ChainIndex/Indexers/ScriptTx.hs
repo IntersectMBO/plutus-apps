@@ -176,11 +176,11 @@ propEndToEndScriptTx = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFi
       C.NoStakeAddress :: C.Address C.ShelleyAddr
 
   (tx1in, C.TxOut _ v _ _) <- do
-    utxo <- TN.findUTxOByAddress localNodeConnectInfo address
+    utxo <- TN.findUTxOByAddress @C.AlonzoEra localNodeConnectInfo address
     H.headM $ Map.toList $ C.unUTxO utxo
   let totalLovelace = C.txOutValueToLovelace v
 
-  pparams <- TN.getAlonzoProtocolParams localNodeConnectInfo
+  pparams <- TN.getProtocolParams @C.AlonzoEra localNodeConnectInfo
   let scriptDatum = C.ScriptDataNumber 42 :: C.ScriptData
       scriptDatumHash = C.hashScriptData scriptDatum
       amountPaid = 10_000_000 :: C.Lovelace -- 10 ADA
@@ -196,7 +196,9 @@ propEndToEndScriptTx = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFi
       mkTxOut2 lovelace = TN.mkAddressAdaTxOut address lovelace
       keyWitnesses = [C.WitnessPaymentKey $ C.castSigningKey genesisSKey]
       tx1ins = [(tx1in, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)]
-  (tx1fee, txbc0) <- TN.calculateAndUpdateTxFee pparams networkId (length tx1ins) (length keyWitnesses) (TN.emptyTxBodyContent pparams)
+      validityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+
+  (tx1fee, txbc0) <- TN.calculateAndUpdateTxFee pparams networkId (length tx1ins) (length keyWitnesses) (TN.emptyTxBodyContent validityRange pparams)
     { C.txIns = tx1ins
     , C.txOuts = [txOut1, mkTxOut2 amountReturned]
     , C.txProtocolParams = C.BuildTxWith $ Just pparams
@@ -211,10 +213,10 @@ propEndToEndScriptTx = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFi
 
   _ <- liftIO $ IO.readChan indexedTxs -- wait for the first transaction to be accepted
 
-  tx2collateralTxIn <- H.headM . Map.keys . C.unUTxO =<< TN.findUTxOByAddress localNodeConnectInfo address
+  tx2collateralTxIn <- H.headM . Map.keys . C.unUTxO =<< TN.findUTxOByAddress @C.AlonzoEra localNodeConnectInfo address
 
   (scriptTxIn, C.TxOut _ valueAtScript _ _) <- do
-    scriptUtxo <- TN.findUTxOByAddress localNodeConnectInfo plutusScriptAddr
+    scriptUtxo <- TN.findUTxOByAddress @C.AlonzoEra localNodeConnectInfo plutusScriptAddr
     H.headM $ Map.toList $ C.unUTxO scriptUtxo
 
   let lovelaceAtScript = C.txOutValueToLovelace valueAtScript
@@ -239,7 +241,7 @@ propEndToEndScriptTx = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFi
       tx2witnesses = [C.WitnessGenesisUTxOKey genesisSKey]
       tx2fee = 1000303 :: C.Lovelace
 
-      tx2bodyContent = (TN.emptyTxBodyContent pparams)
+      tx2bodyContent = (TN.emptyTxBodyContent validityRange pparams)
         { C.txIns              = tx2ins
         , C.txInsCollateral    = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
         , C.txOuts             = mkTx2Outs $ lovelaceAtScript - tx2fee

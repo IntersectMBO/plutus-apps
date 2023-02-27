@@ -85,7 +85,6 @@ genTxBodyContentFromTxIns inputs = do
     pure $ txBodyContent
         { C.txIns = fmap (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) inputs
         , C.txOuts = txOuts
-        , C.txFee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee
         }
 
 -- TODO Must be reworked following implementation in 'genUtxoEvents'.

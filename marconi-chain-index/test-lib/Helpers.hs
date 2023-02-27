@@ -86,7 +86,8 @@ readAs as path = do
 
 -- | An empty transaction
 emptyTxBodyContent
-  :: (C.TxValidityLowerBound era, C.TxValidityUpperBound era, C.IsShelleyBasedEra era)
+  :: C.IsShelleyBasedEra era
+  => (C.TxValidityLowerBound era, C.TxValidityUpperBound era)
   -> C.ProtocolParameters
   -> C.TxBodyContent C.BuildTx era
 emptyTxBodyContent validityRange pparams = C.TxBodyContent
@@ -229,20 +230,22 @@ mkTransferTx networkId con validityRange from to keyWitnesses howMuch = do
 
 mkAddressValueTxOut
   :: (C.IsShelleyBasedEra era)
-  => C.Address C.ShelleyAddr -> C.Value -> C.TxOut ctx era
-mkAddressValueTxOut address value =
+  => C.Address C.ShelleyAddr -> C.TxOutValue era -> C.TxOut ctx era
+mkAddressValueTxOut address value = C.TxOut
+  (C.AddressInEra (C.ShelleyAddressInEra C.shelleyBasedEra) address)
+  value
+  C.TxOutDatumNone
+  C.ReferenceScriptNone
+
+mkAddressAdaTxOut
+    :: (C.IsShelleyBasedEra era)
+    => C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx era
+mkAddressAdaTxOut address lovelace =
     let txOutValue =
             case C.multiAssetSupportedInEra $ C.shelleyBasedToCardanoEra C.shelleyBasedEra of
               Left adaOnlyInEra     -> C.TxOutAdaOnly adaOnlyInEra lovelace
               Right multiAssetInEra -> C.TxOutValue multiAssetInEra $ C.lovelaceToValue lovelace
-     in C.TxOut
-            (C.AddressInEra (C.ShelleyAddressInEra C.shelleyBasedEra) address)
-            txOutValue
-            C.TxOutDatumNone
-            C.ReferenceScriptNone
-
-mkAddressAdaTxOut :: C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx C.AlonzoEra
-mkAddressAdaTxOut address lovelace = mkAddressValueTxOut address $ C.lovelaceToValue lovelace
+     in mkAddressValueTxOut address txOutValue
 
 -- | Adapted from:
 -- https://github.com/input-output-hk/cardano-node/blob/d15ff2b736452857612dd533c1ddeea2405a2630/cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs#L1105-L1112

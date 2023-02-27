@@ -227,8 +227,9 @@ endToEnd = H.withShrinks 0 $ H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE
   (txIns, lovelace) <- TN.getAddressTxInsValue @C.AlonzoEra localNodeConnectInfo address
 
   let keyWitnesses = [C.WitnessPaymentKey $ C.castSigningKey genesisSKey]
-      mkTxOuts lovelace' = [TN.mkAddressValueTxOut @C.AlonzoEra address $ C.lovelaceToValue lovelace' <> value]
-  (feeLovelace, txbc) <- TN.calculateAndUpdateTxFee pparams networkId (length txIns) (length keyWitnesses) (TN.emptyTxBodyContent pparams)
+      mkTxOuts lovelace' = [TN.mkAddressValueTxOut address $ C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue lovelace' <> value]
+      validityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+  (feeLovelace, txbc) <- TN.calculateAndUpdateTxFee pparams networkId (length txIns) (length keyWitnesses) (TN.emptyTxBodyContent validityRange pparams)
     { C.txIns = map (\txIn -> (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) txIns
     , C.txOuts = mkTxOuts 0
     , C.txProtocolParams = C.BuildTxWith $ Just pparams
