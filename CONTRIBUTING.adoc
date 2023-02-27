@@ -80,6 +80,22 @@ nix = {
 
 You will need to restart the nix-daemon on non-NixOS for the changes to take effect, or just restart your machine.
 
+IMPORTANT: If you are on NixOS or otherwise using a multi-user Nix install, you **must** be a trusted user to set substituters. If you are not a trusted user, enabling the options prompted by the flake will have no effect (non-trusted users are disallowed from doing this).
+
+On non-NixOS systems, add the following to the system-wide configuration (`/etc/nix/nix.conf`):
+
+```
+trusted-users = <username> root
+```
+
+You can also use a group name by prefixing it with `@`, e.g. to add all members of the `wheel` group:
+
+```
+trusted-users = @wheel root
+```
+
+On NixOS, add the user/group name to the list under [`nix.settings.trusted-users`](https://search.nixos.org/options?show=nix.settings.trusted-users).
+
 === What to do once inside the `nix develop` shell
 
 Your prompt will change to `[plutus-shell]` and you will be presented with a menu of available commands.
