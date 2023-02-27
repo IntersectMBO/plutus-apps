@@ -65,17 +65,17 @@ tests :: TestTree
 tests = testGroup "Spec.Marconi.ChainIndex.Indexers.ScriptTx"
   [ testPropertyNamed
     "Transaction with script hash survives `makeTransactionBody`"
-    "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
+    "propGetTxBodyScriptsRoundtrip" propGetTxBodyScriptsRoundtrip
   , testPropertyNamed
     "Submitted transactions with script address show up in indexer"
-    "endToEnd" endToEnd
+    "propEndToEndScriptTx" propEndToEndScriptTx
   ]
 
 -- | Create @nScripts@ scripts, add them to a transaction body, then
 -- generate a transaction with @makeTransactionBody@ and check if the
 -- scripts put in are present in the generated transaction.
-getTxBodyScriptsRoundtrip :: Property
-getTxBodyScriptsRoundtrip = property $ do
+propGetTxBodyScriptsRoundtrip :: Property
+propGetTxBodyScriptsRoundtrip = property $ do
   nScripts <- forAll $ Gen.integral (Range.linear 5 500)
   C.AnyCardanoEra (era :: C.CardanoEra era) <- forAll $
     Gen.enum (C.AnyCardanoEra C.ShelleyEra) maxBound
@@ -106,8 +106,8 @@ getTxBodyScriptsRoundtrip = property $ do
     - submit a second transaction that spends this UTxO, then query
       the indexer to see if it was indexed properly
 -}
-endToEnd :: Property
-endToEnd = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "." $ \tempAbsPath -> do
+propEndToEndScriptTx :: Property
+propEndToEndScriptTx = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H.workspace "." $ \tempAbsPath -> do
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
 
   (localNodeConnectInfo, conf, runtime) <- TN.startTestnet TN.defaultTestnetOptions base tempAbsPath
@@ -237,16 +237,16 @@ endToEnd = H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE.runFinallies $ H.
       tx2ins = [(scriptTxIn, C.BuildTxWith scriptWitness)]
       mkTx2Outs lovelace = [TN.mkAddressAdaTxOut address lovelace]
       tx2witnesses = [C.WitnessGenesisUTxOKey genesisSKey]
+      tx2fee = 1000303 :: C.Lovelace
 
-  (tx2fee, tx2bodyContent) <- TN.calculateAndUpdateTxFee pparams networkId (length tx2ins + 1) (length tx2witnesses) (TN.emptyTxBodyContent pparams)
-    { C.txIns              = tx2ins
-    , C.txInsCollateral    = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
-    , C.txOuts             = mkTx2Outs lovelaceAtScript
-    }
+      tx2bodyContent = (TN.emptyTxBodyContent pparams)
+        { C.txIns              = tx2ins
+        , C.txInsCollateral    = C.TxInsCollateral C.CollateralInAlonzoEra [tx2collateralTxIn]
+        , C.txOuts             = mkTx2Outs $ lovelaceAtScript - tx2fee
+        , C.txFee              = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra tx2fee
+        }
   tx2body :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody tx2bodyContent
-    { C.txOuts = mkTx2Outs $ lovelaceAtScript - tx2fee }
   let tx2 = C.signShelleyTransaction tx2body tx2witnesses
-
   TN.submitTx localNodeConnectInfo tx2
 
   {- Test if what the indexer got is what we sent.
