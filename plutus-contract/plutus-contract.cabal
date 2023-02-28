@@ -128,18 +128,18 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api             >=1.35
+    , cardano-api               >=1.35
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
-    , contractmodel
-    , plutus-core             >=1.0.0
-    , plutus-ledger-api       >=1.0.0
-    , plutus-tx               >=1.0.0
-    , quickcheck-dynamic      >=3.0.0
+    , plutus-core               >=1.0.0
+    , plutus-ledger-api         >=1.0.0
+    , plutus-tx                 >=1.0.0
+    , quickcheck-contractmodel
+    , quickcheck-dynamic        >=3.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -276,10 +276,10 @@ test-suite plutus-contract-test
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}  >=1.35
-    , contractmodel
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
+    , quickcheck-contractmodel
     , quickcheck-dynamic              >=3.0.0
 
   if !(impl(ghcjs) || os(ghcjs))

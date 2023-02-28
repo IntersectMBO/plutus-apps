@@ -202,11 +202,11 @@ test-suite plutus-use-cases-test
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
-    , contractmodel
     , ouroboros-consensus
     , ouroboros-consensus-cardano
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0
+    , quickcheck-contractmodel
     , quickcheck-dynamic           >=3.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
@@ -304,10 +304,9 @@ executable plutus-use-cases-scripts
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-      base                  >=4.9 && <5
+      base                      >=4.9 && <5
     , bytestring
     , containers
-    , contractmodel
     , data-default
     , foldl
     , freer-simple
@@ -316,6 +315,7 @@ executable plutus-use-cases-scripts
     , optparse-applicative
     , prettyprinter
     , QuickCheck
+    , quickcheck-contractmodel
     , streaming
     , tasty
     , tasty-golden
