@@ -1,4 +1,4 @@
-[INFO] Slot 0: TxnValidate 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84 [  ]
+[INFO] Slot 0: TxnValidate d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d [  ]
 [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Contract instance started
 [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
@@ -29,11 +29,11 @@
                        Requires signatures:
                        Utxo index:
 [INFO] Slot 1: W[1]: Finished balancing:
-                       Tx 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f:
+                       Tx 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5:
                          {inputs:
-                            - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!50
+                            - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!50
 
-                            - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!51
+                            - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!51
 
                          reference inputs:
                          collateral inputs:
@@ -54,17 +54,17 @@
                            <>>,
                            10000000> )
                          redeemers:}
-[INFO] Slot 1: W[1]: Signing tx: 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f
-[INFO] Slot 1: W[1]: Submitting tx: 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f
-[INFO] Slot 1: W[1]: TxSubmit: 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f
-[INFO] Slot 1: TxnValidate 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f [  ]
+[INFO] Slot 1: W[1]: Signing tx: 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
+[INFO] Slot 1: W[1]: Submitting tx: 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
+[INFO] Slot 1: W[1]: TxSubmit: 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
+[INFO] Slot 1: TxnValidate 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5 [  ]
 [INFO] Slot 2: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Receive endpoint call on 'unlock' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "unlock")]),Object (fromList [("unEndpointValue",Object (fromList [("recipient1Address",String "addr_test1vz3vyrrh3pavu8xescvnunn4h27cny70645etn2ulnnqnssrz8utc"),("recipient2Address",String "addr_test1vzq2fazm26ug6yfemg3mcnpuwhkx6v558sy87fgtscvnefckqs3wk"),("totalAda",Object (fromList [("getLovelace",Number 1.0e7)]))]))])]),("tag",String "ExposeEndpointResp")])
 [INFO] Slot 2: W[1]: Balancing an unbalanced transaction:
                        Tx:
-                         Tx 726adfb9e7c9773f7639540b564cbf67dbb897efcb011739e38e2816ff08e1e5:
+                         Tx 91ed39867cbcc307d0beb619215e1c138e726105024dbb6668e5ffbfdd2fd754:
                            {inputs:
-                              - 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
+                              - 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5!0
 
                            reference inputs:
                            collateral inputs:
@@ -89,20 +89,20 @@
                              PlutusScript PlutusV1 ScriptHash "3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908"}
                        Requires signatures:
                        Utxo index:
-                         ( 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
+                         ( 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5!0
                          , - 10000000 lovelace addressed to
                              ScriptCredential: 3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908 (no staking credential)
                              with datum hash 43492163ee71f886ebc65c85f3dfa8db313f00d701b433b539811464d4355873 )
 [INFO] Slot 2: W[1]: Finished balancing:
-                       Tx fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533:
+                       Tx 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09:
                          {inputs:
-                            - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!52
+                            - 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5!0
 
-                            - 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
+                            - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!52
 
                          reference inputs:
                          collateral inputs:
-                           - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!52
+                           - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!52
 
                          outputs:
                            - 5000000 lovelace addressed to
@@ -126,13 +126,13 @@
                            <>>,
                            10000000> )
                          redeemers:
-                           RedeemerPtr Spend 1 : Constr 0 []
+                           RedeemerPtr Spend 0 : Constr 0 []
                          attached scripts:
                            PlutusScript PlutusV1 ScriptHash "3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908"}
-[INFO] Slot 2: W[1]: Signing tx: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533
-[INFO] Slot 2: W[1]: Submitting tx: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533
-[INFO] Slot 2: W[1]: TxSubmit: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533
-[INFO] Slot 2: TxnValidate fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533 [ Data decoded successfully
+[INFO] Slot 2: W[1]: Signing tx: 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
+[INFO] Slot 2: W[1]: Submitting tx: 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
+[INFO] Slot 2: W[1]: TxSubmit: 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
+[INFO] Slot 2: TxnValidate 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09 [ Data decoded successfully
                                                                                             , Redeemer decoded successfully
                                                                                             , Script context decoded successfully ]
 Final balances

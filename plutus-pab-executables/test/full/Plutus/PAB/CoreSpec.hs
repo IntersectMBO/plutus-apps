@@ -49,8 +49,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
 import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), cardanoPubKeyHash, getCardanoTxFee, getCardanoTxId,
-               getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress, txId, txOutAddress, txOutRefId,
-               txOutRefs, txOutputs)
+               getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress, txOutAddress, txOutRefId)
 import Ledger qualified
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW

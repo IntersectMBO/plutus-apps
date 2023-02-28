@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeFamilies       #-}
 -- | Calculating transaction fees in the emulator.
 module Cardano.Node.Emulator.Fee(
-  estimateTransactionFee,
   estimateCardanoBuildTxFee,
   makeAutoBalancedTransaction,
   makeAutoBalancedTransactionWithUtxoProvider,
@@ -23,7 +22,7 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.BaseTypes (Globals (systemStart))
 import Cardano.Ledger.Core qualified as C.Ledger (Tx)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
-import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams, pNetworkId), emulatorEraHistory,
+import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory,
                                      emulatorGlobals, pProtocolParams)
 import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
 import Control.Arrow ((&&&))
@@ -36,25 +35,15 @@ import Data.Map qualified as Map
 import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
-import Ledger.Address (CardanoAddress, PaymentPubKeyHash)
+import Ledger.Address (CardanoAddress)
 import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1), adjustCardanoTxOut,
                      minAdaTxOutEstimated)
-import Ledger.Tx (ToCardanoError (TxBodyError), Tx, TxOut, TxOutRef)
+import Ledger.Tx (ToCardanoError (TxBodyError), TxOut, TxOutRef)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
-                             toCardanoReturnCollateral, toCardanoTotalCollateral, toCardanoTxBodyContent)
+                             toCardanoReturnCollateral, toCardanoTotalCollateral)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Value.CardanoAPI (isZero, lovelaceToValue, split, valueGeq)
-
-estimateTransactionFee
-  :: Params
-  -> UTxO EmulatorEra
-  -> [PaymentPubKeyHash]
-  -> Tx
-  -> Either CardanoLedgerError C.Lovelace
-estimateTransactionFee params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ toCardanoTxBodyContent (pNetworkId params) (emulatorPParams params) requiredSigners tx
-  estimateCardanoBuildTxFee params utxo txBodyContent
 
 estimateCardanoBuildTxFee
   :: Params

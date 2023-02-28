@@ -1,4 +1,4 @@
-Slot 0: TxnValidate 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84 [  ]
+Slot 0: TxnValidate d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d [  ]
 Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
           Contract instance started
 Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
@@ -43,11 +43,11 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                 Requires signatures:
                 Utxo index:
 Slot 1: W[2]: Finished balancing:
-                Tx 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4:
+                Tx 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328:
                   {inputs:
-                     - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!20
+                     - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!20
 
-                     - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!21
+                     - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!21
 
                   reference inputs:
                   collateral inputs:
@@ -64,9 +64,9 @@ Slot 1: W[2]: Finished balancing:
                     ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                     , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                   redeemers:}
-Slot 1: W[2]: Signing tx: 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4
-Slot 1: W[2]: Submitting tx: 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4
-Slot 1: W[2]: TxSubmit: 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4
+Slot 1: W[2]: Signing tx: 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328
+Slot 1: W[2]: Submitting tx: 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328
+Slot 1: W[2]: TxSubmit: 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328
 Slot 1: W[3]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 194cca53f8695e0a74eea757808428376b4bfd8a06fccaf19e75f9129459915e:
@@ -87,11 +87,11 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                 Requires signatures:
                 Utxo index:
 Slot 1: W[3]: Finished balancing:
-                Tx a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31:
+                Tx 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287:
                   {inputs:
-                     - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!0
+                     - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!0
 
-                     - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!1
+                     - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!1
 
                   reference inputs:
                   collateral inputs:
@@ -108,9 +108,9 @@ Slot 1: W[3]: Finished balancing:
                     ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
                     , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
                   redeemers:}
-Slot 1: W[3]: Signing tx: a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31
-Slot 1: W[3]: Submitting tx: a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31
-Slot 1: W[3]: TxSubmit: a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31
+Slot 1: W[3]: Signing tx: 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287
+Slot 1: W[3]: Submitting tx: 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287
+Slot 1: W[3]: TxSubmit: 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287
 Slot 1: W[4]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 3d717362ec1a56be4e25bfb41385cf70fea675caa88a2c6f1005b4de6dee4860:
@@ -131,9 +131,9 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                 Requires signatures:
                 Utxo index:
 Slot 1: W[4]: Finished balancing:
-                Tx 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6:
+                Tx 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8:
                   {inputs:
-                     - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!10
+                     - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!10
 
                   reference inputs:
                   collateral inputs:
@@ -150,23 +150,23 @@ Slot 1: W[4]: Finished balancing:
                     ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
                     , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
                   redeemers:}
-Slot 1: W[4]: Signing tx: 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6
-Slot 1: W[4]: Submitting tx: 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6
-Slot 1: W[4]: TxSubmit: 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6
-Slot 1: TxnValidate 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6 [  ]
-Slot 1: TxnValidate a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31 [  ]
-Slot 1: TxnValidate 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4 [  ]
+Slot 1: W[4]: Signing tx: 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
+Slot 1: W[4]: Submitting tx: 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
+Slot 1: W[4]: TxSubmit: 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
+Slot 1: TxnValidate 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8 [  ]
+Slot 1: TxnValidate 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287 [  ]
+Slot 1: TxnValidate 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328 [  ]
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: W[1]: Balancing an unbalanced transaction:
                  Tx:
-                   Tx 1a10475d70fa7871c67872e654e30a722c904be8659271930819de11666290a6:
+                   Tx 9088249ae32dbe7e723828c6806f84857068badb79061715ba69234e6fd0b4de:
                      {inputs:
-                        - 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4!0
+                        - 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287!0
 
-                        - 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6!0
+                        - 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8!0
 
-                        - a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31!0
+                        - 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328!0
 
                      reference inputs:
                      collateral inputs:
@@ -182,44 +182,38 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                        ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                        , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                      redeemers:
-<<<<<<< HEAD
-                       RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
-                       RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
-                       RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}
+                       RedeemerPtr Spend 0 : Constr 0 []
+                       RedeemerPtr Spend 1 : Constr 0 []
+                       RedeemerPtr Spend 2 : Constr 0 []
                      attached scripts:
                        PlutusScript PlutusV2 ScriptHash "c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264"}
                  Requires signatures:
                    "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
-=======
-                       RedeemerPtr Spend 0 : Constr 0 []
-                       RedeemerPtr Spend 1 : Constr 0 []
-                       RedeemerPtr Spend 2 : Constr 0 []}
->>>>>>> 063752850 (Drop EmulatorTx)
                  Utxo index:
-                   ( 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4!0
-                   , - 10000000 lovelace addressed to
-                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                       with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 )
-                   ( 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6!0
-                   , - 2500000 lovelace addressed to
-                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                       with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 )
-                   ( a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31!0
+                   ( 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287!0
                    , - 10000000 lovelace addressed to
                        ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
                        with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122 )
+                   ( 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8!0
+                   , - 2500000 lovelace addressed to
+                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
+                       with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969 )
+                   ( 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328!0
+                   , - 10000000 lovelace addressed to
+                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
+                       with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51 )
 Slot 20: W[1]: Finished balancing:
-                 Tx 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f:
+                 Tx 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263:
                    {inputs:
-                      - 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4!0
+                      - 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287!0
 
-                      - 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6!0
+                      - 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8!0
 
-                      - a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31!0
+                      - 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328!0
 
                    reference inputs:
                    collateral inputs:
-                     - 43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84!50
+                     - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!50
 
                    outputs:
                      - 21983335 lovelace addressed to
@@ -239,23 +233,17 @@ Slot 20: W[1]: Finished balancing:
                      ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                      , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                    redeemers:
-<<<<<<< HEAD
-                     RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
-                     RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
-                     RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}
-                   attached scripts:
-                     PlutusScript PlutusV2 ScriptHash "c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264"}
-=======
                      RedeemerPtr Spend 0 : Constr 0 []
                      RedeemerPtr Spend 1 : Constr 0 []
-                     RedeemerPtr Spend 2 : Constr 0 []}
->>>>>>> 063752850 (Drop EmulatorTx)
-Slot 20: W[1]: Signing tx: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
-Slot 20: W[1]: Submitting tx: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
-Slot 20: W[1]: TxSubmit: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
+                     RedeemerPtr Spend 2 : Constr 0 []
+                   attached scripts:
+                     PlutusScript PlutusV2 ScriptHash "c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264"}
+Slot 20: W[1]: Signing tx: 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263
+Slot 20: W[1]: Submitting tx: 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263
+Slot 20: W[1]: TxSubmit: 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract instance stopped (no errors)
-Slot 20: TxnValidate 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f [ Data decoded successfully
+Slot 20: TxnValidate 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263 [ Data decoded successfully
                                                                                       , Redeemer decoded successfully
                                                                                       , Script context decoded successfully
                                                                                       , Data decoded successfully

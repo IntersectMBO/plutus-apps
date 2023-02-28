@@ -56,7 +56,8 @@ module Cardano.Node.Emulator.Generators(
     knownXPrvs,
     alwaysSucceedPolicy,
     alwaysSucceedPolicyId,
-    someTokenValue
+    someTokenValue,
+    emptyTxBodyContent
     ) where
 
 import Control.Monad (guard, replicateM)
@@ -185,6 +186,27 @@ genInitialTransaction g = do
     (body, o) <- initialTxBody g
     (,o) <$> makeTx body
 
+emptyTxBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
+emptyTxBodyContent = C.TxBodyContent
+   { txIns = []
+   , txInsCollateral = C.TxInsCollateralNone
+   , txMintValue = C.TxMintNone
+   , txFee = C.toCardanoFee 0
+   , txOuts = []
+   , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
+   , txInsReference = C.TxInsReferenceNone
+   , txTotalCollateral = C.TxTotalCollateralNone
+   , txReturnCollateral = C.TxReturnCollateralNone
+   , txValidityRange = ( C.TxValidityNoLowerBound
+                       , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+   , txScriptValidity = C.TxScriptValidityNone
+   , txExtraKeyWits = C.TxExtraKeyWitnessesNone
+   , txMetadata = C.TxMetadataNone
+   , txAuxScripts = C.TxAuxScriptsNone
+   , txWithdrawals = C.TxWithdrawalsNone
+   , txCertificates = C.TxCertificatesNone
+   , txUpdateProposal = C.TxUpdateProposalNone
+   }
 
 initialTxBody ::
        GeneratorModel
@@ -195,27 +217,9 @@ initialTxBody GeneratorModel{..} = do
     -- we use a generated tx in input it's unbalanced but it's "fine" as we don't validate this tx
     txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))
                  <$> Gen.list (Range.constant 1 10) genTxIn
-    pure (C.TxBodyContent
-           { txIns
-           , txInsCollateral = C.TxInsCollateralNone
-           , txMintValue = C.TxMintNone
-           , txFee = C.toCardanoFee 0
-           , txOuts = Tx.getTxOut <$> o
-            -- unused:
-           , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
-           , txInsReference = C.TxInsReferenceNone
-           , txTotalCollateral = C.TxTotalCollateralNone
-           , txReturnCollateral = C.TxReturnCollateralNone
-           , txValidityRange = ( C.TxValidityNoLowerBound
-                               , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-           , txScriptValidity = C.TxScriptValidityNone
-           , txExtraKeyWits = C.TxExtraKeyWitnessesNone
-           , txMetadata = C.TxMetadataNone
-           , txAuxScripts = C.TxAuxScriptsNone
-           , txWithdrawals = C.TxWithdrawalsNone
-
-           , txCertificates = C.TxCertificatesNone
-           , txUpdateProposal = C.TxUpdateProposalNone
+    pure (emptyTxBodyContent
+           { C.txIns
+           , C.txOuts = Tx.getTxOut <$> o
            }, o)
 
 -- | Generate a valid transaction, using the unspent outputs provided.
@@ -330,26 +334,12 @@ genValidTransactionBodySpending' g ins totalVal = do
         (fail "Cannot gen collateral")
         (failOnCardanoError . (C.toCardanoTxInsCollateral . map toTxInput . flip take ins . fromIntegral))
         (gmMaxCollateralInputs g)
-    pure $ C.TxBodyContent
-           { txIns
-           , txInsCollateral
-           , txMintValue
-           , txFee = C.toCardanoFee fee'
-           , txOuts = Tx.getTxOut <$> txOutputs
-            -- unused:
-           , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
-           , txInsReference = C.TxInsReferenceNone
-           , txTotalCollateral = C.TxTotalCollateralNone
-           , txReturnCollateral = C.TxReturnCollateralNone
-           , txValidityRange = ( C.TxValidityNoLowerBound
-                               , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-           , txScriptValidity = C.TxScriptValidityNone
-           , txExtraKeyWits = C.TxExtraKeyWitnessesNone
-           , txMetadata = C.TxMetadataNone
-           , txAuxScripts = C.TxAuxScriptsNone
-           , txWithdrawals = C.TxWithdrawalsNone
-           , txCertificates = C.TxCertificatesNone
-           , txUpdateProposal = C.TxUpdateProposalNone
+    pure $ emptyTxBodyContent
+           { C.txIns
+           , C.txInsCollateral
+           , C.txMintValue
+           , C.txFee = C.toCardanoFee fee'
+           , C.txOuts = Tx.getTxOut <$> txOutputs
            }
     where
         -- | Translate TxIn to TxInput taking out data witnesses if present.

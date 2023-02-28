@@ -392,7 +392,6 @@ type Schema =
         .\/ Endpoint "4" Int
         .\/ Endpoint "ep" ()
         .\/ Endpoint "5" [ActiveEndpoint]
-        .\/ Endpoint "6" Ledger.Tx
 
 initial :: _
 initial = State.initialiseContract loopCheckpointContract

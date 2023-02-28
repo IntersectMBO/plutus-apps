@@ -21,16 +21,12 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInsCollateral
   , fromCardanoTotalCollateral
   , fromCardanoReturnCollateral
-  , toCardanoTxBody
-  , toCardanoTxBodyContent
   , toCardanoTxInsCollateral
   , toCardanoTotalCollateral
   , toCardanoReturnCollateral
-  , toCardanoTxInWitness
   , toCardanoDatumWitness
   , toCardanoTxInReferenceWitnessHeader
   , toCardanoTxInScriptWitnessHeader
-  , toCardanoMintValue
   , toCardanoMintWitness
   , ToCardanoError(..)
   , FromCardanoError(..)
@@ -45,13 +41,12 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Babbage qualified as Babbage
-import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Babbage.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Data.Bifunctor (Bifunctor (..))
-import Data.Bitraversable (bisequence, bitraverse)
+import Data.Bitraversable (bitraverse)
 import Data.Map qualified as Map
 import Ledger.Address qualified as P
 import Ledger.Index.Internal qualified as P
@@ -60,66 +55,6 @@ import Ledger.Tx.CardanoAPI.Internal
 import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as PV1
 
-
-toCardanoTxBodyContent
-    :: C.NetworkId
-    -> Babbage.PParams (Babbage.BabbageEra StandardCrypto)
-    -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> P.Tx
-    -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent networkId protocolParams sigs tx@P.Tx{..} = do
-    -- TODO: translate all fields
-    txIns <- traverse (toCardanoTxInBuild tx) txInputs
-    txInsReference <- traverse (toCardanoTxIn . P.txInputRef) txReferenceInputs
-    txInsCollateral <- toCardanoTxInsCollateral txCollateralInputs
-    let txOuts = P.getTxOut <$> txOutputs
-    let returnCollateral = toCardanoReturnCollateral txReturnCollateral
-    let totalCollateral = toCardanoTotalCollateral txTotalCollateral
-    let txFee' = toCardanoFee txFee
-    txValidityRange <- toCardanoValidityRange txValidRange
-    txMintValue <- toCardanoMintValue tx
-    txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInBabbageEra <$> traverse toCardanoPaymentKeyHash sigs
-    withdrawals <- toWithdrawals txScripts networkId txWithdrawals
-    pure $ CardanoBuildTx $ C.TxBodyContent
-        { txIns = txIns
-        , txInsReference = C.TxInsReference C.ReferenceTxInsScriptsInlineDatumsInBabbageEra txInsReference
-        , txInsCollateral = txInsCollateral
-        , txOuts = txOuts
-        , txTotalCollateral = totalCollateral
-        , txReturnCollateral = returnCollateral
-        , txFee = txFee'
-        , txValidityRange = txValidityRange
-        , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage protocolParams
-        , txScriptValidity = C.TxScriptValidityNone
-        , txExtraKeyWits
-        -- unused:
-        , txMetadata = C.TxMetadataNone
-        , txAuxScripts = C.TxAuxScriptsNone
-        , txWithdrawals = withdrawals
-        , txCertificates = C.TxCertificatesNone
-        , txUpdateProposal = C.TxUpdateProposalNone
-        }
-
-toWithdrawals :: P.ScriptsMap
-  -> C.NetworkId
-  -> [P.Withdrawal]
-  -> Either ToCardanoError (C.TxWithdrawals C.BuildTx C.BabbageEra)
-toWithdrawals txScripts networkId = \case
-  [] -> pure C.TxWithdrawalsNone
-  xs -> C.TxWithdrawals C.WithdrawalsInBabbageEra <$> mapM toWithdraw xs
-
-  where
-    toWithdraw P.Withdrawal{withdrawalCredential, withdrawalAmount, withdrawalRedeemer} = do
-      saddr <- toCardanoStakeAddress networkId withdrawalCredential
-      witness <- toStakeWitness withdrawalRedeemer withdrawalCredential
-      pure (saddr, C.Lovelace withdrawalAmount, witness)
-
-    toStakeWitness withdrawalRedeemer cred = case cred of
-      PV1.PubKeyCredential _pkh -> pure $ C.BuildTxWith $ C.KeyWitness C.KeyWitnessForStakeAddr
-      PV1.ScriptCredential _vh -> case (,) <$> withdrawalRedeemer <*> P.lookupValidator txScripts _vh of
-        Just (redeemer, script) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoScriptWitness C.NoScriptDatumForStake redeemer (Left $ fmap P.getValidator script)
-        Nothing                    -> Left MissingStakeValidator
 
 toCardanoMintWitness :: PV1.Redeemer -> Maybe (P.Versioned PV1.TxOutRef) -> Maybe (P.Versioned PV1.MintingPolicy) -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
 toCardanoMintWitness _ Nothing Nothing = Left MissingMintingPolicy
@@ -152,28 +87,6 @@ toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
   where
     lang = either P.version P.version scriptOrRef
 
-toCardanoStakeAddress :: C.NetworkId -> PV1.Credential -> Either ToCardanoError C.StakeAddress
-toCardanoStakeAddress networkId credential =
-  C.StakeAddress (C.toShelleyNetwork networkId) . C.toShelleyStakeCredential <$> toCardanoStakingCredential credential
-
-toCardanoStakingCredential :: PV1.Credential -> Either ToCardanoError C.StakeCredential
-toCardanoStakingCredential (PV1.PubKeyCredential pubKeyHash) = C.StakeCredentialByKey <$> toCardanoStakeKeyHash pubKeyHash
-toCardanoStakingCredential (PV1.ScriptCredential validatorHash) = C.StakeCredentialByScript <$> toCardanoScriptHash validatorHash
-
-
-toCardanoTxBody ::
-    C.NetworkId
-    -> Babbage.PParams (Babbage.BabbageEra StandardCrypto)
-    -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> P.Tx
-    -> Either ToCardanoError (C.TxBody C.BabbageEra)
-toCardanoTxBody networkId params sigs tx = do
-    txBodyContent <- toCardanoTxBodyContent networkId params sigs tx
-    makeTransactionBody (Just params) mempty txBodyContent
-
-toCardanoTxInBuild :: P.Tx -> P.TxInput -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))
-toCardanoTxInBuild tx (P.TxInput txInRef txInType) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness tx txInType)
-
 fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [P.TxIn]
 fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
 fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (P.pubKeyTxIn . fromCardanoTxIn) txIns
@@ -181,24 +94,6 @@ fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (P.pubKeyTxIn . fro
 toCardanoTxInsCollateral :: [P.TxInput] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
 toCardanoTxInsCollateral [] = pure C.TxInsCollateralNone
 toCardanoTxInsCollateral inputs = fmap (C.TxInsCollateral C.CollateralInBabbageEra) (traverse (toCardanoTxIn . P.txInputRef) inputs)
-
-toCardanoTxInWitness :: P.Tx -> P.TxInputType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.BabbageEra)
-toCardanoTxInWitness _ P.TxConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
-toCardanoTxInWitness _ P.TxConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
-toCardanoTxInWitness tx
-    (P.TxScriptAddress
-        (P.Redeemer redeemer)
-        valhOrRef
-        dh)
-    = do
-      mDatum <- traverse (maybe (Left MissingDatum) pure . (`Map.lookup` P.txData tx)) dh
-      mkWitness <- case valhOrRef of
-        Left valh -> maybe (Left MissingInputValidator) (toCardanoTxInScriptWitnessHeader . fmap PV1.getValidator) $ P.lookupValidator (P.txScripts tx) valh
-        Right vref -> toCardanoTxInReferenceWitnessHeader vref
-      pure $ C.ScriptWitness C.ScriptWitnessForSpending $ mkWitness
-            (toCardanoDatumWitness mDatum)
-            (toCardanoScriptData redeemer)
-            zeroExecutionUnits
 
 toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
 toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)
@@ -225,14 +120,6 @@ toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
         P.PlutusV2 ->
             C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 . C.PScript <$>
                 toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
-
-toCardanoMintValue :: P.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.BabbageEra)
-toCardanoMintValue tx@P.Tx{..} =
-    let indexedMps = Map.assocs txMintingWitnesses
-    in C.TxMintValue C.MultiAssetInBabbageEra txMint . C.BuildTxWith . Map.fromList <$>
-        traverse (\(mph, (rd, mTxOutRef)) ->
-            bisequence (toCardanoPolicyId mph, toCardanoMintWitness rd mTxOutRef (P.lookupMintingPolicy (P.txScripts tx) mph)))
-            indexedMps
 
 fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe C.Lovelace
 fromCardanoTotalCollateral C.TxTotalCollateralNone    = Nothing

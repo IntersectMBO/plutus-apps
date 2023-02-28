@@ -26,7 +26,9 @@ import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut, Validation
                onChainTxIsValid, outputsProduced, txInRef, txOutRefId, txOutRefIdx, txOutValue, unOnChain)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
+import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxIn)
 import Plutus.V1.Ledger.Value (Value)
+import Wallet.Emulator.MultiAgent (genesisTxIn)
 import Wallet.Rollup.Types
 
 ------------------------------------------------------------
@@ -49,7 +51,9 @@ annotateTransaction sequenceId tx = do
                   in case Map.lookup key cPreviousOutputs of
                          Just txOut -> pure $ DereferencedInput txIn txOut
                          Nothing    -> pure $ InputNotFound key)
-            (consumableInputs tx)
+            -- We are filtering out the genesisTxIn as it will be processed as `InputNotFound`
+            -- because there is no matching output for it.
+            (filter (/= TxIn (fromCardanoTxIn genesisTxIn) Nothing) $ consumableInputs tx)
     let txId = Tx.getCardanoTxId $ unOnChain tx
         txOuts = Map.elems $ outputsProduced tx
         newOutputs =
