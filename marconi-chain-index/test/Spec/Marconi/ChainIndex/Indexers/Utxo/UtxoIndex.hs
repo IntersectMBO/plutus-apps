@@ -10,6 +10,7 @@ import Control.Monad (forM_, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
+import Data.List (find, sort)
 import Data.List qualified as List
 import Data.List.NonEmpty (nonEmpty)
 import Data.Maybe (fromJust, isJust, isNothing, mapMaybe)
@@ -33,6 +34,7 @@ import Marconi.Core.Storable qualified as Storable
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
+import Debug.Trace qualified as Debug
 -- | Proves two list are equivalant, but not identical
 
 -- NOTE --
@@ -40,13 +42,14 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 -- Not all utxoEvent attributes have defined `Eq` and/or `Ord` relationship defined.
 -- As events are disassembled and reassembled, the Ordering of these sub-parts may change in the coresponding collections.
 -- Therefore we used the Equivalence relationship to show two event are morally equal.
+
 equivalentLists :: Eq a => [a] -> [a] -> Bool
 equivalentLists us us' =
   length us == length us'
   &&
-  all (const True) [u `elem` us'| u <- us]
+  all (== True) [u `elem` us'| u <- us]
   &&
-  all (const True) [u `elem` us| u <- us']
+  all (== True) [u `elem` us| u <- us']
 
 tests :: TestTree
 tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
@@ -56,7 +59,7 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
         eventsAtAddressTest
 
     , testPropertyNamed
-        "marconi-utxo event-to-sqlRows property"
+        "marconi-utxo roundtrip-event-to-sqlRows property"
         "eventsToRowsRoundTripTest"
         eventsToRowsRoundTripTest
 
@@ -97,17 +100,26 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
           propJsonRoundtripUtxoRow
     ]
 
+getTxInsAtChainPoint
+  :: Foldable f
+  => f (StorableEvent Utxo.UtxoHandle)
+  -> C.ChainPoint
+  -> Set C.TxIn
+getTxInsAtChainPoint _ C.ChainPointAtGenesis = Set.empty
+getTxInsAtChainPoint events cp =
+  case  find (\(Utxo.UtxoEvent _ _ cp') -> cp == cp') events of
+    Just (Utxo.UtxoEvent _ txIns _) -> txIns
+    Nothing                         -> Set.empty
+
 eventsToRowsRoundTripTest :: Property
 eventsToRowsRoundTripTest  = property $ do
   events <- forAll UtxoGen.genUtxoEvents
   let f :: C.ChainPoint -> IO (Set C.TxIn)
-      f C.ChainPointAtGenesis = pure  Set.empty
-      f _                     = pure . Utxo.ueInputs $ head events
+      f = pure . getTxInsAtChainPoint events
       rows = concatMap Utxo.eventsToRows events
-  computedEvent <- liftIO . Utxo.rowsToEvents f $ rows
+  computedEvents <- liftIO . Utxo.rowsToEvents f $ rows
   let postGenesisEvents = filter (\e -> C.ChainPointAtGenesis /= Utxo.ueChainPoint e) events
-  length computedEvent === (length . fmap Utxo.ueChainPoint $ postGenesisEvents)
-  Hedgehog.assert (equivalentLists computedEvent postGenesisEvents)
+  sort computedEvents === sort postGenesisEvents
 
 -- Insert Utxo events in storage, and retreive the events
 --

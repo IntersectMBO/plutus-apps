@@ -30,14 +30,14 @@ module Marconi.ChainIndex.Indexers.Utxo where
 
 import Control.Concurrent.Async (concurrently_)
 import Control.Exception (bracket_)
-import Control.Lens.Combinators (imap)
-import Control.Lens.Operators ((^.))
+import Control.Lens.Combinators (folded, imap)
+import Control.Lens.Operators ((^.), (^..))
 import Control.Lens.TH (makeLenses)
-import Control.Monad (unless, when)
+import Control.Monad (filterM, unless, when)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
 import Data.Foldable (foldl', toList)
 import Data.Functor ((<&>))
-import Data.List (elemIndex)
+import Data.List (groupBy)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -61,11 +61,14 @@ import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasP
                               StorablePoint, StorableQuery, StorableResult, emptyState, filterWithQueryInterval)
 import Marconi.Core.Storable qualified as Storable
 
+
+import Debug.Trace qualified as Debug
+
 type UtxoIndexer = Storable.State UtxoHandle
 
 data UtxoHandle = UtxoHandle
-  { hdlConnection :: SQL.Connection
-  , hdlDpeth      :: Int
+  { hdlConnection :: !SQL.Connection
+  , hdlDpeth      :: !Int
   }
 
 newtype instance StorableQuery UtxoHandle =
@@ -158,7 +161,7 @@ data instance StorableEvent UtxoHandle = UtxoEvent
 eventIsBefore :: StorableEvent UtxoHandle  -> C.ChainPoint -> Bool
 eventIsBefore (UtxoEvent _ _ (C.ChainPoint _ slot)) (C.ChainPoint _ slot') =  slot < slot'
 eventIsBefore _ _                                                          = False
-{-
+
 instance Semigroup (StorableEvent UtxoHandle) where
   e@(UtxoEvent u i cp) <> (UtxoEvent u' i' cp') =
     if cp == cp' then
@@ -167,7 +170,7 @@ instance Semigroup (StorableEvent UtxoHandle) where
 
 instance Monoid (StorableEvent UtxoHandle) where
   mempty = UtxoEvent mempty mempty C.ChainPointAtGenesis
--}
+
 data Spent = Spent
   { _sTxInTxId  :: !C.TxId                 -- ^ from TxIn, containts the Spent txId
   , _sTxInTxIx  :: !C.TxIx
@@ -344,21 +347,43 @@ getTxIns c (C.ChainPoint slotNo blockHash) = do
   pure . Set.fromList . fmap (uncurry C.TxIn) $ ins
 
 -- | Convert UtxoRows to UtxoEvents
+
 rowsToEvents
   :: (C.ChainPoint -> IO (Set C.TxIn)) -- ^ Function that knows how to get corresponding TxIn
   -> [UtxoRow] -- ^ UtxoRows, source
   -> IO [StorableEvent UtxoHandle] -- ^ UtxoEvents
-rowsToEvents f rows =
-  traverse eventFromRow  rows <&> Set.toList . Set.fromList
+rowsToEvents f = traverse rowsToEvents' . g
   where
-    eventFromRow :: UtxoRow -> IO (StorableEvent UtxoHandle)
-    eventFromRow utxoRow = do
-      ins <- f (C.ChainPoint (utxoRow ^. urSlotNo) (utxoRow ^. urBlockHash) )
-      pure $ UtxoEvent
-        { ueUtxos  = Set.singleton (utxoRow ^. urUtxo)
-        , ueInputs = ins
-        , ueChainPoint = C.ChainPoint (utxoRow ^. urSlotNo) (utxoRow ^. urBlockHash)
-        }
+    g :: [UtxoRow] -> [[UtxoRow]]
+    g = groupBy (\(UtxoRow _ sn bh) (UtxoRow _ sn' bh') -> sn == sn' && bh == bh')
+    rowsToEvents' :: [UtxoRow] -> IO (StorableEvent UtxoHandle)
+    rowsToEvents' [] = pure (UtxoEvent mempty mempty C.ChainPointAtGenesis)
+    rowsToEvents' rows@(ur :_) = do
+      let cp = C.ChainPoint (ur ^. urSlotNo) (ur ^. urBlockHash)
+      txins <- f cp
+      let utxos = rows ^.. folded . urUtxo
+      pure $ UtxoEvent (Set.fromList utxos) txins cp
+
+  -- events <- traverse eventFromRow  rows
+  -- let gEvents :: [[StorableEvent UtxoHandle]] =
+  --       groupBy (\(UtxoEvent _ _ cp) (UtxoEvent _ _ cp' ) -> cp == cp' ) events
+  --     events' = fmap fold gEvents
+  -- pure events'
+  -- where
+  --   g :: [StorableEvent UtxoHandle] -> [StorableEvent UtxoHandle] -> [StorableEvent UtxoHandle]
+  --   g = undefined
+  --   -- g ess es = case findIndex' e es of
+  --   --   Just n  ->
+  --   --     take n es <> [es !! n <> e] <> drop (n+1) es
+  --   --   Nothing -> e : es
+
+  --   findIndex' :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle] -> Maybe Int
+  --   findIndex' x xs = elemIndex (ueChainPoint x) (ueChainPoint <$> xs)
+
+  --   eventFromRow = do
+  --     txins <- f (C.ChainPoint (utxoRow ^. urSlotNo) (utxoRow ^. urBlockHash) )
+  --     let utxos =  rows ^.. urUtxo
+  --     pure UtxoEvent utxos txins rows
 
 -- | Convert 'UtxoEvent's to 'UtxoRow's.
 eventsToRows :: StorableEvent UtxoHandle -> [UtxoRow]
@@ -401,7 +426,7 @@ instance Queryable UtxoHandle where
     -> StorableQuery UtxoHandle
     -> IO (StorableResult UtxoHandle)
   queryStorage qi es (UtxoHandle c _) q@(UtxoAddress addr) = do
-    persisted <- case qi of
+    fromSQL <- case qi of -- get the unspent transaction from DB
       QEverything -> SQL.query c
           [r|SELECT u.address, u.txId, u.txIx, u.datum, u.datumHash
                   , u.value, u.inlineScript, u.inlineScriptHash
@@ -427,10 +452,12 @@ instance Queryable UtxoHandle where
                 AND u.address = ?
              ORDER BY u.slotNo ASC|] (sn, C.serialiseToRawBytes addr)
       QInterval _ C.ChainPointAtGenesis -> pure []
-
-    es' <- queryBuffer qi es q (getTxIns c)
-    let rows = concatMap eventsToRows es'
-    pure . UtxoResult $ persisted <> rows
+    fromSQL' <- adjustUtxosForInMemorySpents c es fromSQL -- remote the newly Spent
+    fromBuffer <- queryBuffer qi es q (getTxIns c) <&> concatMap eventsToRows
+    pure . UtxoResult $
+                        fromSQL'   -- from sqlite
+                      <>
+                        fromBuffer  -- from memory
 
 -- | Query the in incomming UtxoEvent
 queryBuffer
@@ -441,13 +468,13 @@ queryBuffer
   -> (C.ChainPoint -> IO (Set C.TxIn))    -- ^ Function that know how to get TxIns fron ChainPoint
   -> IO [StorableEvent UtxoHandle]
 queryBuffer qi es q f
-  = filterSpent                   -- filter out the utxo that have had Spent
+  = filterSpents                   -- filter out the utxo that have had Spent
   . filterWithQueryInterval qi    -- filter for the given slot interval
   . eventsAtAddress q             -- query for the given address
   $ es
   where
-    filterSpent :: [StorableEvent UtxoHandle] -> IO [StorableEvent UtxoHandle]
-    filterSpent = traverse unspentEvents
+    filterSpents :: [StorableEvent UtxoHandle] -> IO [StorableEvent UtxoHandle]
+    filterSpents = traverse unspentEvents
 
     unspentEvents :: StorableEvent UtxoHandle -> IO (StorableEvent UtxoHandle)
     unspentEvents e = do
@@ -586,15 +613,40 @@ isAddressInTarget targetAddresses utxo =
 mkQueryableAddresses :: TargetAddresses -> QueryableAddresses
 mkQueryableAddresses = fmap (UtxoAddress . C.toAddressAny)
 
--- | does the spent exist?
--- we use this to see if a utxo is spent
-isUtxoSpent :: SQL.Connection -> C.TxId -> IO Bool
-isUtxoSpent c txid
+-- | Did we Spend an Unspent?
+-- We try to find the TxId of a newely Spent in the Unspent_Transaction table
+-- if NOT found, then the then transaction is still Unspent
+isUnSpent :: SQL.Connection -> C.TxId -> IO Bool
+isUnSpent c txid
   = (SQL.query c
      "SELECT EXISTS(SELECT 1 FROM unspent_transactions WHERE txId=?)"
      (SQL.Only (txid :: C.TxId)) :: IO [Int])
   <&>
-    all (==1)
+    all (==0) -- if exist 1, else 0;
 
-isEventSpent :: UtxoHandle -> StorableEvent UtxoHandle -> IO Bool
-isEventSpent (UtxoHandle c _)(UtxoEvent utxos _ _) = undefined
+filterUnSpentIds
+  :: SQL.Connection
+  -> Set C.TxIn  -- ^ TxIn, from in memory TxIns, representing new Spents
+  -> IO [C.TxId] -- ^ TxId, from the Unspent_Transaction, representing Unspent Transactions
+filterUnSpentIds c
+  = filterM (isUnSpent c)
+  . fmap (\(C.TxIn _id _) -> _id)
+  . Set.toList
+
+adjustUtxosForInMemorySpents
+  :: Foldable f
+  => SQL.Connection
+  -> f (StorableEvent UtxoHandle)
+  -> [UtxoRow]
+  -> IO [UtxoRow]
+adjustUtxosForInMemorySpents c es rs =  do
+  ids ::[C.TxId] <- filterUnSpentIds c
+                         . foldr (\(UtxoEvent _ _txins _) b -> _txins <> b) Set.empty
+                         $ es
+  pure . filter (isRowUnspent ids) $ rs
+
+isRowUnspent
+  :: [C.TxId]   -- ^ TxId of a TxIn, Spent
+  -> UtxoRow    -- ^ UnspentTransaction fetched from SQL
+  -> Bool       -- ^ True indicates the Transaction is still Unspent
+isRowUnspent ids row = row ^. urUtxo . txId `elem` ids
