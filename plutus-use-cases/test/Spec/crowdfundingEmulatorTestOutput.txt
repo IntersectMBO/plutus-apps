@@ -24,7 +24,7 @@ Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
 Slot 1: W[2]: Balancing an unbalanced transaction:
-                Tx (cardano-api Representation):
+                Tx:
                   Tx f254a129e2e631de12a34c7d279865389a65336d66106263b0491a788b1459d9:
                     {inputs:
                     reference inputs:
@@ -40,6 +40,7 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                       ( 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
                       , "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167" )
                     redeemers:}
+                Requires signatures:
                 Utxo index:
 Slot 1: W[2]: Finished balancing:
                 Tx 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4:
@@ -67,7 +68,7 @@ Slot 1: W[2]: Signing tx: 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d7
 Slot 1: W[2]: Submitting tx: 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4
 Slot 1: W[2]: TxSubmit: 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4
 Slot 1: W[3]: Balancing an unbalanced transaction:
-                Tx (cardano-api Representation):
+                Tx:
                   Tx 194cca53f8695e0a74eea757808428376b4bfd8a06fccaf19e75f9129459915e:
                     {inputs:
                     reference inputs:
@@ -83,6 +84,7 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                       ( 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
                       , ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|" )
                     redeemers:}
+                Requires signatures:
                 Utxo index:
 Slot 1: W[3]: Finished balancing:
                 Tx a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31:
@@ -110,7 +112,7 @@ Slot 1: W[3]: Signing tx: a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6
 Slot 1: W[3]: Submitting tx: a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31
 Slot 1: W[3]: TxSubmit: a522f112d96e2dd90ac280b540e7c7823f8431a9b3978e6fdc6fb6d6c4df2e31
 Slot 1: W[4]: Balancing an unbalanced transaction:
-                Tx (cardano-api Representation):
+                Tx:
                   Tx 3d717362ec1a56be4e25bfb41385cf70fea675caa88a2c6f1005b4de6dee4860:
                     {inputs:
                     reference inputs:
@@ -126,6 +128,7 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                       ( 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
                       , "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 =" )
                     redeemers:}
+                Requires signatures:
                 Utxo index:
 Slot 1: W[4]: Finished balancing:
                 Tx 7a0884c15e9e68dee44e312b74b890119b98e341764d8d797d6e36d851b14df6:
@@ -156,7 +159,7 @@ Slot 1: TxnValidate 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac8
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: W[1]: Balancing an unbalanced transaction:
-                 Tx (cardano-api Representation):
+                 Tx:
                    Tx 1a10475d70fa7871c67872e654e30a722c904be8659271930819de11666290a6:
                      {inputs:
                         - 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4!0
@@ -181,7 +184,11 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                      redeemers:
                        RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
                        RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
-                       RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}}
+                       RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}
+                     attached scripts:
+                       PlutusScript PlutusV2 ScriptHash "c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264"}
+                 Requires signatures:
+                   "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
                  Utxo index:
                    ( 347e93f9aef35ed28126dce19cf9f4d8f88d49b6afb4b9983a03d79e8ac81be4!0
                    , - 10000000 lovelace addressed to
@@ -228,7 +235,9 @@ Slot 20: W[1]: Finished balancing:
                    redeemers:
                      RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
                      RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
-                     RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}}
+                     RedeemerPtr Spend 2 : Redeemer {getRedeemer = Constr 0 []}
+                   attached scripts:
+                     PlutusScript PlutusV2 ScriptHash "c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264"}
 Slot 20: W[1]: Signing tx: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
 Slot 20: W[1]: Submitting tx: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f
 Slot 20: W[1]: TxSubmit: 19f9d8e8183af81bd3a4163a31dd31098c7e705fa33eaa224922847f9726409f

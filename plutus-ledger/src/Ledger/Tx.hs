@@ -306,7 +306,9 @@ instance Pretty CardanoTx where
                 [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
                 , hang 2 (vsep ("data:": fmap pretty (Map.toList (getCardanoTxData tx))))
                 , hang 2 (vsep ("redeemers:": fmap (\(k, v) -> viaShow k <+> ":" <+> viaShow v) (Map.toList $ getCardanoTxRedeemers tx)))
-                ]
+                ] ++ onCardanoTx (const []) renderScriptWitnesses tx
+            renderScriptWitnesses (CardanoApiEmulatorEraTx (C.Api.Tx (C.Api.ShelleyTxBody _ _ scripts _ _ _) _)) =
+                [ hang 2 (vsep ("attached scripts:": fmap viaShow scripts)) | not (null scripts) ]
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
 instance Pretty SomeCardanoApiTx where
