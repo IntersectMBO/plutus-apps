@@ -19,6 +19,9 @@ import Ouroboros.Consensus.Util.Args qualified as Util
 import Ouroboros.Consensus.Storage.ImmutableDB qualified as ImmutableDB
 import Ouroboros.Consensus.Storage.ChainDB qualified as ChainDB
 import Ouroboros.Consensus.Storage.FS.API qualified as FS
+import Ouroboros.Consensus.Storage.FS.API.Types qualified as FS
+import Ouroboros.Consensus.Storage.FS.IO qualified as FS
+-- import Ouroboros.Consensus.Storage.FS.API.Types
 
 -- * Raw chain-sync clients using callback
 
@@ -94,44 +97,45 @@ blocksCallback con point callback =
                 sendRequestNext
             }
 
-blocksFromChainDbCallback :: C.ChainPoint -> (C.BlockInMode C.CardanoMode -> IO ()) -> IO ()
-blocksFromChainDbCallback _point _callback = undefined
+type Block = C.BlockInMode C.CardanoMode
 
-run :: IO ()
-run = do
- let
-   args = ImmutableDB.defaultArgs :: FS.SomeHasFS IO -> ImmutableDB.ImmutableDbArgs Util.Defaults IO (C.BlockInMode C.CardanoMode)
-   args_ = args $ mkFS $ ChainDB.RelativeMountPoint "immutable"
---   _ = ImmutableDB.openDB (args u)
-   open :: IO (ImmutableDB.ImmutableDB IO (C.BlockInMode C.CardanoMode))
-   open = u
-   action :: ImmutableDB.ImmutableDB IO (C.BlockInMode C.CardanoMode) -> IO ()
-   action = printBlockHashes
- ImmutableDB.withDB open action
+blocksFromChainDbCallback :: C.ChainPoint -> (Block -> IO ()) -> IO ()
+blocksFromChainDbCallback _point _callback = let
+  preprod = "/home/markus/preprod" :: FilePath
+  preprodHasFS = FS.ioHasFS $ FS.MountPoint preprod :: FS.HasFS IO FS.HandleIO
+  args = ImmutableDB.defaultArgs $ FS.SomeHasFS preprodHasFS :: ImmutableDB.ImmutableDbArgs Util.Defaults IO Block
+  iargs = undefined :: ImmutableDB.ImmutableDbArgs Util.Identity IO Block
+
+  f :: Util.WithTempRegistry st IO (ImmutableDB.ImmutableDB IO Block, st) -> IO (ImmutableDB.ImmutableDB IO Block)
+  f = u
+
+  open = ImmutableDB.openDB iargs f
+
+  uopen = u
+  in ImmutableDB.withDB uopen printBlockHashes
 
 -- | Print the hash of each block in the ImmutableDB
-printBlockHashes
-  :: ImmutableDB.ImmutableDB IO (C.BlockInMode C.CardanoMode) -> IO ()
+printBlockHashes :: ImmutableDB.ImmutableDB IO (Block) -> IO ()
 printBlockHashes db = do
   -- create an iterator over the ImmutableDB
   eitherIterator <- let
     resourceRegistry = u :: Util.ResourceRegistry m
-    blockComponent = u :: ChainDB.BlockComponent (C.BlockInMode C.CardanoMode) b
-    streamFrom = u :: ChainDB.StreamFrom (C.BlockInMode C.CardanoMode)
-    streamTo = u :: ChainDB.StreamTo (C.BlockInMode C.CardanoMode)
+    blockComponent = u :: ChainDB.BlockComponent Block b
+    streamFrom = u :: ChainDB.StreamFrom Block
+    streamTo = u :: ChainDB.StreamTo Block
     -- -> m (Either (MissingBlock blk) (Iterator m blk b))
     in ImmutableDB.stream db resourceRegistry blockComponent streamFrom streamTo
 
   case eitherIterator of
-    Left (_e :: ImmutableDB.MissingBlock (C.BlockInMode C.CardanoMode)) -> do
+    Left (_e :: ImmutableDB.MissingBlock Block) -> do
       putStrLn "MissingBlock, exiting"
       return () -- todo
-    Right (iterator :: ImmutableDB.Iterator IO (C.BlockInMode C.CardanoMode) b) ->
+    Right (iterator :: ImmutableDB.Iterator IO Block b) ->
       let
         loop = do
-          r :: ImmutableDB.IteratorResult (C.BlockInMode C.CardanoMode) <- ImmutableDB.iteratorNext iterator
+          r :: ImmutableDB.IteratorResult Block <- ImmutableDB.iteratorNext iterator
           case r of
-            ImmutableDB.IteratorResult (blk :: C.BlockInMode C.CardanoMode) -> print $ H.bimSlotNo blk
+            ImmutableDB.IteratorResult (blk :: Block) -> print $ H.bimSlotNo blk
             ImmutableDB.IteratorExhausted -> pure ()
         in loop
 
