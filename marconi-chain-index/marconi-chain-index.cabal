@@ -261,6 +261,7 @@ test-suite marconi-chain-index-test
     Spec.Marconi.ChainIndex.Indexers.ScriptTx
     Spec.Marconi.ChainIndex.Indexers.Utxo
     Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex
+    Spec.Marconi.ChainIndex.Orphans
 
   --------------------
   -- Local components
@@ -294,6 +295,7 @@ test-suite marconi-chain-index-test
     , aeson
     , async
     , base                  >=4.9 && <5
+    , base16-bytestring
     , bytestring
     , containers
     , directory

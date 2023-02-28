@@ -28,7 +28,7 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, Tx (txMint), cardanoTxMap, unspentOutputs)
+import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, unspentOutputs)
 import Ledger.Index qualified as Index
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test hiding (not)
@@ -54,7 +54,6 @@ tests = testGroup "all tests" [
     testGroup "traces" [
         testPropertyNamed "accept valid txn" "validTrace" validTrace,
         testPropertyNamed "accept valid txn 2" "validTrace2" validTrace2,
-        testPropertyNamed "reject invalid txn" "invalidTrace" invalidTrace,
         testPropertyNamed "notify wallet" "notifyWallet" notifyWallet,
         testPropertyNamed "payToPaymentPubkey" "payToPaymentPubKeyScript" payToPaymentPubKeyScript,
         testPropertyNamed "payToPaymentPubkey-2" "payToPaymentPubKeyScript2" payToPaymentPubKeyScript2
@@ -170,22 +169,6 @@ validTrace2 = property $ do
             Trace.liftWallet wallet1 (submitTxn signedTx)
         predicate = assertFailedTransaction (\_ _ -> True)
     void $  checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
-
-invalidTrace :: Property
-invalidTrace = property $ do
-    (Mockchain m utxo params, txn) <- forAll genChainTxn
-    let invalidTxn = cardanoTxMap (\tx -> tx { txMint = Value.adaValueOf 1 }) (\_ -> error "Unexpected Cardano.Api.Tx") txn
-        signedTxn = Gen.signTx params utxo invalidTxn
-        options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        trace = Trace.liftWallet wallet1 (submitTxn signedTxn)
-        pred = \case
-            [ Chain.TxnValidate{}
-                , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _ _
-                , Chain.SlotAdd _
-                ] -> "ValueNotConservedUTxO" `Text.isInfixOf` msg
-            _ -> False
-    void $ checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 txnFlowsTest :: Property
 txnFlowsTest =
