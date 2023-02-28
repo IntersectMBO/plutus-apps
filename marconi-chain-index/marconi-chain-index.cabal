@@ -249,7 +249,6 @@ test-suite marconi-chain-index-test
   main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
-    Integration
     Spec.Marconi.ChainIndex.CLI
     Spec.Marconi.ChainIndex.Indexers.AddressDatum
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndex

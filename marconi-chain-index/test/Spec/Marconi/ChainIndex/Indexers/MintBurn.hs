@@ -225,33 +225,22 @@ endToEnd = H.withShrinks 0 $ H.integration $ (liftIO TN.setDarwinTmpdir >>) $ HE
 
   value <- H.fromJustM $ getValue txMintValue
   (txIns, lovelace) <- TN.getAddressTxInsValue @C.AlonzoEra localNodeConnectInfo address
-  let fee = 500 :: C.Lovelace
-      amountReturned = lovelace - fee :: C.Lovelace
-      txOut :: C.TxOut ctx C.AlonzoEra
-      txOut =
-        C.TxOut
-          (C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) address)
-          (C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue amountReturned <> value)
-          C.TxOutDatumNone
-          C.ReferenceScriptNone
-      txBodyContent :: C.TxBodyContent C.BuildTx C.AlonzoEra
-      txBodyContent =
-          (TN.emptyTxBodyContent
-              (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
-              (C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra fee)
-              pparams
-          ) { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-            , C.txOuts = [txOut]
-            , C.txProtocolParams = C.BuildTxWith $ Just pparams
-            , C.txMintValue = txMintValue
-            , C.txInsCollateral = C.TxInsCollateral C.CollateralInAlonzoEra txIns
-            }
-  txBody :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody txBodyContent
-  let
-    kw :: C.KeyWitness C.AlonzoEra
-    kw = C.makeShelleyKeyWitness txBody (C.WitnessPaymentKey $ C.castSigningKey genesisSKey)
-    tx = C.makeSignedTransaction [kw] txBody
-  TN.submitTx localNodeConnectInfo tx
+
+  let keyWitnesses = [C.WitnessPaymentKey $ C.castSigningKey genesisSKey]
+      mkTxOuts lovelace' = [TN.mkAddressValueTxOut address $ C.TxOutValue C.MultiAssetInAlonzoEra $ C.lovelaceToValue lovelace' <> value]
+      validityRange = (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra)
+  (feeLovelace, txbc) <- TN.calculateAndUpdateTxFee pparams networkId (length txIns) (length keyWitnesses) (TN.emptyTxBodyContent validityRange pparams)
+    { C.txIns = map (\txIn -> (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) txIns
+    , C.txOuts = mkTxOuts 0
+    , C.txProtocolParams = C.BuildTxWith $ Just pparams
+    , C.txMintValue = txMintValue
+    , C.txInsCollateral = C.TxInsCollateral C.CollateralInAlonzoEra txIns
+    }
+  txBody :: C.TxBody C.AlonzoEra <- H.leftFail $ C.makeTransactionBody $ txbc
+    { C.txOuts = mkTxOuts $ lovelace - feeLovelace }
+  let keyWitnesses' :: [C.KeyWitness C.AlonzoEra]
+      keyWitnesses' = map (C.makeShelleyKeyWitness txBody) keyWitnesses
+  TN.submitTx localNodeConnectInfo $ C.makeSignedTransaction keyWitnesses' txBody
 
   -- Receive event from the indexer, compare the mint that we
   -- submitted above with the one we got from the indexer.
