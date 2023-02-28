@@ -1,0 +1,8 @@
+Invalid option `--socket'
+
+Usage: marconi-sidechain [--version] --socket-path FILE-PATH --db-dir DIR 
+                         [--http-port HTTP-PORT] 
+                         (--mainnet | --testnet-magic NATURAL) 
+                         [(--addresses-to-index BECH32-ADDRESS)]
+
+  marconi-sidechain

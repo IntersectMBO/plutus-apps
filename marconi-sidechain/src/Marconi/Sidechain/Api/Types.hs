@@ -36,7 +36,6 @@ import Marconi.ChainIndex.Types as Export (TargetAddresses)
 data CliArgs = CliArgs
   { socket          :: FilePath -- ^ POSIX socket file to communicate with cardano node
   , dbDir           :: FilePath -- ^ Directory path containing the SQLite database files
-  , utxoDbFileName  :: Maybe FilePath -- ^ File name of the local SQLite for the UTXO index table
   , httpPort        :: Maybe Int -- ^ optional tcp/ip port number for JSON-RPC http server
   , networkId       :: C.NetworkId -- ^ cardano network id
   , targetAddresses :: Maybe TargetAddresses -- ^ white-space sepparated list of Bech32 Cardano Shelley addresses

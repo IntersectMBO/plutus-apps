@@ -86,18 +86,18 @@ readAs as path = do
 
 -- | An empty transaction
 emptyTxBodyContent
-    :: (C.TxValidityLowerBound era, C.TxValidityUpperBound era)
-    -> C.TxFee era
-    -> C.ProtocolParameters
-    -> C.TxBodyContent C.BuildTx era
-emptyTxBodyContent validityRange fee pparams = C.TxBodyContent
+  :: C.IsShelleyBasedEra era
+  => (C.TxValidityLowerBound era, C.TxValidityUpperBound era)
+  -> C.ProtocolParameters
+  -> C.TxBodyContent C.BuildTx era
+emptyTxBodyContent validityRange pparams = C.TxBodyContent
   { C.txIns              = []
   , C.txInsCollateral    = C.TxInsCollateralNone
   , C.txInsReference     = C.TxInsReferenceNone
   , C.txOuts             = []
   , C.txTotalCollateral  = C.TxTotalCollateralNone
   , C.txReturnCollateral = C.TxReturnCollateralNone
-  , C.txFee              = fee
+  , C.txFee              = C.TxFeeExplicit (txFeesExplicitInShelleyBasedEra C.shelleyBasedEra) 0
   , C.txValidityRange    = validityRange
   , C.txMetadata         = C.TxMetadataNone
   , C.txAuxScripts       = C.TxAuxScriptsNone
@@ -205,11 +205,9 @@ mkTransferTx networkId con validityRange from to keyWitnesses howMuch = do
   pparams <- getProtocolParams @era con
   (txIns, totalLovelace) <- getAddressTxInsValue @era con from
   let
-    fee0 = 0
-    txFee0Explicit = C.TxFeeExplicit (txFeesExplicitInShelleyBasedEra C.shelleyBasedEra) fee0
-    tx0 = (emptyTxBodyContent validityRange txFee0Explicit pparams)
+    tx0 = (emptyTxBodyContent validityRange pparams)
       { C.txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) txIns
-      , C.txOuts = [mkAddressAdaTxOut to $ totalLovelace - fee0]
+      , C.txOuts = [mkAddressAdaTxOut to totalLovelace]
       }
   txBody0 :: C.TxBody era <- HE.leftFail $ C.makeTransactionBody tx0
   let fee = calculateFee
@@ -230,21 +228,24 @@ mkTransferTx networkId con validityRange from to keyWitnesses howMuch = do
   txBody :: C.TxBody era <- HE.leftFail $ C.makeTransactionBody tx
   return (C.signShelleyTransaction txBody keyWitnesses, txBody)
 
+mkAddressValueTxOut
+  :: (C.IsShelleyBasedEra era)
+  => C.Address C.ShelleyAddr -> C.TxOutValue era -> C.TxOut ctx era
+mkAddressValueTxOut address value = C.TxOut
+  (C.AddressInEra (C.ShelleyAddressInEra C.shelleyBasedEra) address)
+  value
+  C.TxOutDatumNone
+  C.ReferenceScriptNone
+
 mkAddressAdaTxOut
     :: (C.IsShelleyBasedEra era)
-    => C.Address C.ShelleyAddr
-    -> C.Lovelace
-    -> C.TxOut ctx era
+    => C.Address C.ShelleyAddr -> C.Lovelace -> C.TxOut ctx era
 mkAddressAdaTxOut address lovelace =
     let txOutValue =
             case C.multiAssetSupportedInEra $ C.shelleyBasedToCardanoEra C.shelleyBasedEra of
               Left adaOnlyInEra     -> C.TxOutAdaOnly adaOnlyInEra lovelace
               Right multiAssetInEra -> C.TxOutValue multiAssetInEra $ C.lovelaceToValue lovelace
-     in C.TxOut
-            (C.AddressInEra (C.ShelleyAddressInEra C.shelleyBasedEra) address)
-            txOutValue
-            C.TxOutDatumNone
-            C.ReferenceScriptNone
+     in mkAddressValueTxOut address txOutValue
 
 -- | Adapted from:
 -- https://github.com/input-output-hk/cardano-node/blob/d15ff2b736452857612dd533c1ddeea2405a2630/cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs#L1105-L1112
@@ -257,6 +258,20 @@ calculateFee pparams nInputs nOutputs nByronKeyWitnesses nShelleyKeyWitnesses ne
   (C.makeSignedTransaction [] txBody)
   nInputs nOutputs
   nByronKeyWitnesses nShelleyKeyWitnesses
+
+-- | Add fee to transaction body, return transaction with the fee
+-- applied, and also the fee in lovelace.
+calculateAndUpdateTxFee
+  :: H.MonadTest m
+  => C.ProtocolParameters -> C.NetworkId -> Int -> Int
+  -> C.TxBodyContent C.BuildTx C.AlonzoEra -> m (C.Lovelace, C.TxBodyContent C.BuildTx C.AlonzoEra)
+calculateAndUpdateTxFee pparams networkId lengthTxIns lengthKeyWitnesses txbc = do
+  txb <- HE.leftFail $ C.makeTransactionBody txbc
+  let
+    feeLovelace = calculateFee pparams lengthTxIns (length $ C.txOuts txbc) 0 lengthKeyWitnesses networkId txb :: C.Lovelace
+    fee = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra feeLovelace
+    txbc' = txbc { C.txFee = fee }
+  return (feeLovelace, txbc')
 
 -- | This is a copy of the workspace from
 -- hedgehog-extras:Hedgehog.Extras.Test.Base, which for darwin sets
