@@ -15,7 +15,14 @@ module Marconi.ChainIndex.Types
        TxOut,
        -- * Aliases to ease concept mapping between plutus types and cardano types
        TxOutRef,
-       txOutRef
+       txOutRef,
+       -- * Database file names
+       utxoDbName,
+       addressDatumDbName,
+       datumDbName,
+       scriptTxDbName,
+       epochStakepoolSizeDbName,
+       mintBurnDbName
        ) where
 
 import Cardano.Api qualified as C
@@ -43,3 +50,23 @@ type TxOutRef = C.TxIn
 
 txOutRef :: C.TxId -> C.TxIx -> C.TxIn
 txOutRef = C.TxIn
+
+-- * Database file names
+
+utxoDbName :: FilePath
+utxoDbName = "utxo.db"
+
+addressDatumDbName :: FilePath
+addressDatumDbName = "addressdatum.db"
+
+datumDbName :: FilePath
+datumDbName = "datum.db"
+
+scriptTxDbName :: FilePath
+scriptTxDbName = "scripttx.db"
+
+epochStakepoolSizeDbName :: FilePath
+epochStakepoolSizeDbName = "epochstakepool.db"
+
+mintBurnDbName :: FilePath
+mintBurnDbName = "mintburn.db"

@@ -23,11 +23,6 @@ parserCliArgs = CliArgs
       <> metavar "DIR"
       <> help "Directory path that will contain all the SQLite databases"
       )
-  <*> (optional . strOption)
-      (  long "utxo-db-fname"
-      <> metavar "FILE-NAME"
-      <> help "File name of the utxo database."
-      )
   <*> (optional . option  auto)
       (  long "http-port"
       <> metavar "HTTP-PORT"
