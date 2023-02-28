@@ -127,6 +127,9 @@ instance ToJSON C.ScriptData where
 
 -- * C.TxIn
 
+instance SQL.FromRow Int where
+  fromRow = SQL.field
+
 instance SQL.ToRow C.TxIn where
   toRow (C.TxIn txid txix) = SQL.toRow (txid, txix)
 

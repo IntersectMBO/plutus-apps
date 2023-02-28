@@ -158,7 +158,7 @@ data instance StorableEvent UtxoHandle = UtxoEvent
 eventIsBefore :: StorableEvent UtxoHandle  -> C.ChainPoint -> Bool
 eventIsBefore (UtxoEvent _ _ (C.ChainPoint _ slot)) (C.ChainPoint _ slot') =  slot < slot'
 eventIsBefore _ _                                                          = False
-
+{-
 instance Semigroup (StorableEvent UtxoHandle) where
   e@(UtxoEvent u i cp) <> (UtxoEvent u' i' cp') =
     if cp == cp' then
@@ -167,7 +167,7 @@ instance Semigroup (StorableEvent UtxoHandle) where
 
 instance Monoid (StorableEvent UtxoHandle) where
   mempty = UtxoEvent mempty mempty C.ChainPointAtGenesis
-
+-}
 data Spent = Spent
   { _sTxInTxId  :: !C.TxId                 -- ^ from TxIn, containts the Spent txId
   , _sTxInTxIx  :: !C.TxIx
@@ -348,17 +348,9 @@ rowsToEvents
   :: (C.ChainPoint -> IO (Set C.TxIn)) -- ^ Function that knows how to get corresponding TxIn
   -> [UtxoRow] -- ^ UtxoRows, source
   -> IO [StorableEvent UtxoHandle] -- ^ UtxoEvents
-rowsToEvents f rows = traverse eventFromRow  rows <&> foldl' g []
+rowsToEvents f rows =
+  traverse eventFromRow  rows <&> Set.toList . Set.fromList
   where
-    g :: [StorableEvent UtxoHandle] -> StorableEvent UtxoHandle -> [StorableEvent UtxoHandle]
-    g es e = case findIndex' e es of
-      Just n  ->
-        take n es <> [es !! n <> e] <> drop (n+1) es
-      Nothing -> e : es
-
-    findIndex' :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle] -> Maybe Int
-    findIndex' x xs = elemIndex (ueChainPoint x) (ueChainPoint <$> xs)
-
     eventFromRow :: UtxoRow -> IO (StorableEvent UtxoHandle)
     eventFromRow utxoRow = do
       ins <- f (C.ChainPoint (utxoRow ^. urSlotNo) (utxoRow ^. urBlockHash) )
@@ -593,3 +585,16 @@ isAddressInTarget targetAddresses utxo =
 
 mkQueryableAddresses :: TargetAddresses -> QueryableAddresses
 mkQueryableAddresses = fmap (UtxoAddress . C.toAddressAny)
+
+-- | does the spent exist?
+-- we use this to see if a utxo is spent
+isUtxoSpent :: SQL.Connection -> C.TxId -> IO Bool
+isUtxoSpent c txid
+  = (SQL.query c
+     "SELECT EXISTS(SELECT 1 FROM unspent_transactions WHERE txId=?)"
+     (SQL.Only (txid :: C.TxId)) :: IO [Int])
+  <&>
+    all (==1)
+
+isEventSpent :: UtxoHandle -> StorableEvent UtxoHandle -> IO Bool
+isEventSpent (UtxoHandle c _)(UtxoEvent utxos _ _) = undefined
