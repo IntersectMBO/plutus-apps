@@ -20,7 +20,7 @@ let
     shell.withHoogle = false;
 
     # TODO(std) fix this when nix-shell goes away
-    sha256map = inputs.self + ./nix/pkgs/haskell/sha256map.nix;
+    sha256map = import (inputs.self + ./nix/pkgs/haskell/sha256map.nix);
 
     inputMap = {
       "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
