@@ -4,7 +4,8 @@
 
 module Gen.Marconi.ChainIndex.Indexers.Utxo
     ( genUtxoEvents
-    , genEventAtChainPoint
+    , genShelleyEraUtxoEvents
+    , genEventWithShelleyAddressAtChainPoint
     )
 where
 
@@ -20,7 +21,7 @@ import Cardano.Api.Shelley qualified as C
 import Gen.Cardano.Api.Typed qualified as CGen
 import Gen.Marconi.ChainIndex.Types (genChainPoints, genTxOutTxContext, nonEmptySubset)
 import Helpers (emptyTxBodyContent)
-import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), Utxo (Utxo), UtxoHandle)
+import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), Utxo (Utxo), UtxoHandle, _address)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 
 -- | Generates a list of UTXO events.
@@ -30,8 +31,13 @@ import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 --   * that any generated UTXO is unique
 --   * for any spent tx output, there must be a UTXO created in a previous event
 genUtxoEvents :: Gen [StorableEvent UtxoHandle]
-genUtxoEvents = do
-    chainPoints <- genChainPoints 1 5
+genUtxoEvents = genUtxoEvents' convertTxOutToUtxo
+
+genUtxoEvents'
+  :: (C.TxId -> C.TxIx -> C.TxOut C.CtxTx C.BabbageEra -> Utxo)
+  -> Gen [StorableEvent UtxoHandle]
+genUtxoEvents' txOutToUtxo = do
+    chainPoints <- genChainPoints 1 3
     txIns <- Set.singleton <$> CGen.genTxIn
     snd <$> foldM f (txIns, []) chainPoints
   where
@@ -43,7 +49,7 @@ genUtxoEvents = do
         txBodyContent <- genTxBodyContentFromTxIns $ Set.toList utxosAsTxInput
         txBody <- either (fail . show) pure $ C.makeTransactionBody txBodyContent
         let txId = C.getTxId txBody
-        let newUtxos = fmap (\(txIx, txOut) -> convertTxOutToUtxo txId (C.TxIx txIx) txOut)
+        let newUtxos = fmap (\(txIx, txOut) -> txOutToUtxo txId (C.TxIx txIx) txOut)
                 $ zip [0..]
                 $ C.txOuts txBodyContent
             newUtxoRefs = Set.fromList $ fmap (\Utxo { _txId, _txIx } -> C.TxIn _txId _txIx) newUtxos
@@ -63,7 +69,6 @@ convertTxOutToUtxo txId txIx (C.TxOut (C.AddressInEra _ addr) val txOutDatum ref
               C.ReferenceScriptNone -> (Nothing, Nothing)
               C.ReferenceScript _ scriptInAnyLang@(C.ScriptInAnyLang _ s) ->
                   (Just $ C.hashScript s, Just scriptInAnyLang)
-
      in Utxo
             (C.toAddressAny addr)
             txId
@@ -73,6 +78,20 @@ convertTxOutToUtxo txId txIx (C.TxOut (C.AddressInEra _ addr) val txOutDatum ref
             (C.txOutValueToValue val)
             script
             scriptHash
+-- | Override the Utxo address with ShelleyEra address
+-- This is used to generate ShelleyEra Utxo events
+utxoAddressOverride
+  :: C.Address C.ShelleyAddr
+  -> Utxo
+  -> Utxo
+utxoAddressOverride addr utxo =  utxo {_address=C.toAddressAny addr}
+
+-- | Generate ShelleyEra Utxo Events
+genShelleyEraUtxoEvents :: Gen [StorableEvent UtxoHandle]
+genShelleyEraUtxoEvents = do
+  addr <- CGen.genAddressShelley
+  genUtxoEvents' (\_id _ix _tx ->
+                    utxoAddressOverride addr $ convertTxOutToUtxo _id _ix _tx)
 
 genTxBodyContentFromTxIns
     :: [C.TxIn]
@@ -80,20 +99,20 @@ genTxBodyContentFromTxIns
 genTxBodyContentFromTxIns inputs = do
     txBodyContent <-
         emptyTxBodyContent (C.TxValidityNoLowerBound, C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-            <$> fmap (C.TxFeeExplicit C.TxFeesExplicitInBabbageEra) CGen.genLovelace
-            <*> CGen.genProtocolParameters
+            <$> CGen.genProtocolParameters
     txOuts <- Gen.list (Range.linear 1 5) $ genTxOutTxContext C.BabbageEra
     pure $ txBodyContent
         { C.txIns = fmap (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) inputs
         , C.txOuts = txOuts
         }
 
+
 -- TODO Must be reworked following implementation in 'genUtxoEvents'.
-genEventAtChainPoint :: C.ChainPoint -> Gen (Utxo.StorableEvent Utxo.UtxoHandle)
-genEventAtChainPoint ueChainPoint = do
-  txOutRefs <- Gen.list (Range.linear 1 10) CGen.genTxIn
+genEventWithShelleyAddressAtChainPoint :: C.ChainPoint -> Gen (Utxo.StorableEvent Utxo.UtxoHandle)
+genEventWithShelleyAddressAtChainPoint ueChainPoint = do
+  txOutRefs <- Gen.list (Range.linear 1 5) CGen.genTxIn
   ueUtxos <- Set.fromList <$> forM txOutRefs genUtxo
-  ueInputs <- Gen.set (Range.linear 1 10) CGen.genTxIn
+  ueInputs <- Gen.set (Range.linear 1 5) CGen.genTxIn
   pure $ Utxo.UtxoEvent {..}
 
 genUtxo :: C.TxIn -> Gen Utxo.Utxo
@@ -107,5 +126,3 @@ genUtxo' (C.TxIn _txId _txIx) _address = do
   _value            <- CGen.genValueForTxOut
   let (_inlineScript, _inlineScriptHash)=  Utxo.getRefScriptAndHash script
   pure $ Utxo.Utxo {..}
-
-

@@ -22,7 +22,7 @@ module Marconi.Sidechain.Api.Types  where
 import Control.Concurrent.STM.TMVar (TMVar)
 import Control.Exception (Exception)
 import Control.Lens (makeClassy)
-import Data.Aeson (ToJSON (toEncoding), defaultOptions, genericToEncoding)
+import Data.Aeson (FromJSON, ToJSON (toEncoding), defaultOptions, genericToEncoding)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (Settings)
@@ -68,7 +68,9 @@ data QueryExceptions
 data UtxoQueryResult = UtxoQueryResult
     { uqAddress :: Text
     , uqResults :: ![Utxo.UtxoRow]
-    } deriving (Eq, Ord, Generic)
+    } deriving (Eq, Ord, Generic, Show)
 
 instance ToJSON UtxoQueryResult where
     toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON UtxoQueryResult

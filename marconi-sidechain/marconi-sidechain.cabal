@@ -118,6 +118,7 @@ executable examples-json-rpc-server
   build-depends:
     , async
     , base                  >=4.9 && <5
+    , filepath
     , lens
     , optparse-applicative
     , stm
@@ -130,16 +131,19 @@ executable examples-json-rpc-client
   --------------------
   -- Local components
   --------------------
-  build-depends:  marconi-chain-index:{marconi-chain-index, json-rpc}
+  build-depends:
+    , marconi-chain-index:json-rpc
+    , marconi-sidechain
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base            >=4.9 && <5
+    , base                 >=4.9 && <5
     , http-client
     , servant
     , servant-client
+    , servant-client-core
 
 library db-utils
   import:          lang
@@ -193,7 +197,7 @@ test-suite marconi-sidechain-test
   -- Local components
   --------------------
   build-depends:
-    , marconi-chain-index:{marconi-chain-index, marconi-chain-index-test-lib}
+    , marconi-chain-index:{marconi-chain-index, json-rpc, marconi-chain-index-test-lib}
     , marconi-core
     , marconi-sidechain
 
@@ -212,10 +216,15 @@ test-suite marconi-sidechain-test
     , bytestring
     , containers
     , hedgehog
+    , http-client
     , lens
     , optparse-applicative
+    , servant
+    , servant-client
+    , servant-server
     , stm
     , tasty
     , tasty-golden
     , tasty-hedgehog
     , text
+    , warp

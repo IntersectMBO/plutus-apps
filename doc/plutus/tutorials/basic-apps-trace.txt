@@ -6,7 +6,7 @@
 [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Contract log: String "Locking Lovelace {getLovelace = 10000000}"
 [INFO] Slot 1: W[1]: Balancing an unbalanced transaction:
-                       Tx (cardano-api Representation):
+                       Tx:
                          Tx 7733b05c8a3d6eb7ade1182beea8b1c1ad7440e7400ef238f7ffeab21e94cd9c:
                            {inputs:
                            reference inputs:
@@ -26,6 +26,7 @@
                              <>>,
                              10000000> )
                            redeemers:}
+                       Requires signatures:
                        Utxo index:
 [INFO] Slot 1: W[1]: Finished balancing:
                        Tx 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f:
@@ -60,7 +61,7 @@
 [INFO] Slot 2: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Receive endpoint call on 'unlock' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "unlock")]),Object (fromList [("unEndpointValue",Object (fromList [("recipient1Address",String "addr_test1vz3vyrrh3pavu8xescvnunn4h27cny70645etn2ulnnqnssrz8utc"),("recipient2Address",String "addr_test1vzq2fazm26ug6yfemg3mcnpuwhkx6v558sy87fgtscvnefckqs3wk"),("totalAda",Object (fromList [("getLovelace",Number 1.0e7)]))]))])]),("tag",String "ExposeEndpointResp")])
 [INFO] Slot 2: W[1]: Balancing an unbalanced transaction:
-                       Tx (cardano-api Representation):
+                       Tx:
                          Tx 726adfb9e7c9773f7639540b564cbf67dbb897efcb011739e38e2816ff08e1e5:
                            {inputs:
                               - 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
@@ -83,7 +84,10 @@
                              <>>,
                              10000000> )
                            redeemers:
-                             RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}}
+                             RedeemerPtr Spend 0 : Redeemer {getRedeemer = Constr 0 []}
+                           attached scripts:
+                             PlutusScript PlutusV1 ScriptHash "3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908"}
+                       Requires signatures:
                        Utxo index:
                          ( 4971ec8310b413ee54d21e1d62dd0cda373c6cec41cf159d832bdf7cfc1c266f!0
                          , - 10000000 lovelace addressed to
@@ -122,7 +126,9 @@
                            <>>,
                            10000000> )
                          redeemers:
-                           RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}}
+                           RedeemerPtr Spend 1 : Redeemer {getRedeemer = Constr 0 []}
+                         attached scripts:
+                           PlutusScript PlutusV1 ScriptHash "3e4f54085c2eb253b81fb958f3c3369ab6139c12964ee894ae57a908"}
 [INFO] Slot 2: W[1]: Signing tx: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533
 [INFO] Slot 2: W[1]: Submitting tx: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533
 [INFO] Slot 2: W[1]: TxSubmit: fcef4d121ba88cef5c12d689427e73aec161154190e270c953b1a652037c7533

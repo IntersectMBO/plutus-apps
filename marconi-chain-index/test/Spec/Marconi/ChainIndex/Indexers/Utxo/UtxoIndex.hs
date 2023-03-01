@@ -27,7 +27,8 @@ import Control.Monad (forM_, void)
 import Data.Aeson qualified as Aeson
 import Data.List qualified as List
 import Gen.Cardano.Api.Typed qualified as CGen
-import Gen.Marconi.ChainIndex.Indexers.Utxo (genEventAtChainPoint, genUtxoEvents)
+import Gen.Marconi.ChainIndex.Indexers.Utxo (genEventWithShelleyAddressAtChainPoint, genUtxoEvents)
+import Helpers (addressAnyToShelley)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (ueInputs, ueUtxos))
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses)
@@ -144,10 +145,10 @@ utxoStorageTest = property $ do
 --
 utxoQueryIntervalTest :: Property
 utxoQueryIntervalTest = property $ do
-  event0 <- forAll $ genEventAtChainPoint C.ChainPointAtGenesis
-  event1 <- forAll $ genEventAtChainPoint (head chainpoints)
-  event2 <- forAll $ genEventAtChainPoint (chainpoints !! 1)
-  event3 <- forAll $ genEventAtChainPoint (chainpoints !! 2)
+  event0 <- forAll $ genEventWithShelleyAddressAtChainPoint C.ChainPointAtGenesis
+  event1 <- forAll $ genEventWithShelleyAddressAtChainPoint (head chainpoints)
+  event2 <- forAll $ genEventWithShelleyAddressAtChainPoint (chainpoints !! 1)
+  event3 <- forAll $ genEventWithShelleyAddressAtChainPoint (chainpoints !! 2)
   let events = [event0, event1, event2, event3]
   indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 2)
              >>= liftIO . Storable.insertMany [event0, event1, event2, event3]
@@ -269,12 +270,6 @@ mkTargetAddressFromTxOut [C.TxOut addressInEra _ _ _]
     . mapMaybe (addressAnyToShelley . Utxo.toAddr)
     $ [addressInEra]
 mkTargetAddressFromTxOut _ = Nothing
-
-addressAnyToShelley
-  :: C.AddressAny
-  -> Maybe (C.Address C.ShelleyAddr)
-addressAnyToShelley  (C.AddressShelley a) = Just a
-addressAnyToShelley  _                    = Nothing
 
 getConn :: Storable.State Utxo.UtxoHandle -> SQL.Connection
 getConn  s =

@@ -11,9 +11,7 @@
 --
 -- Note: This client implementation runs over HTTP and the semantics of HTTP
 -- remove the need for the message id.
-module Network.JsonRpc.Client.Types (
-    JsonRpcResponse
-    ) where
+module Network.JsonRpc.Client.Types  where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Proxy (Proxy (Proxy))

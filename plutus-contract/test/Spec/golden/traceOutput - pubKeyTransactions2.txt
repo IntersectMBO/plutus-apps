@@ -23,7 +23,7 @@
 [DEBUG] Slot 1: W[5]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 9e944371f5292bcd66e4e498bbc313b92ae884154f0eca1ddf75cd0ec69ddc47, BlockNumber 0). UTxO state was added to the end.
 [DEBUG] Slot 1: W[1]: Adjusting an unbalanced transaction: []
 [INFO] Slot 1: W[1]: Balancing an unbalanced transaction:
-                       Tx (cardano-api Representation):
+                       Tx:
                          Tx 9492c721acfd523bf1e6f32f56f672121fbf2f949567d348b788634acd24d682:
                            {inputs:
                            reference inputs:
@@ -36,6 +36,8 @@
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                            data:
                            redeemers:}
+                       Requires signatures:
+                         "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
                        Utxo index:
 [INFO] Slot 1: W[1]: Finished balancing:
                        Tx f27de1e5fbd1a274645a778e85974c19390b0b638918ad797de71b7a8cb7dae5:
@@ -89,7 +91,7 @@
 [DEBUG] Slot 2: W[5]: InsertionSuccess: New tip is Tip(Slot 2, BlockId 25ca1d0c1ebf8ada7ea7ce4621769f4cf6292bf9df90b1d9486fb5b725be9901, BlockNumber 1). UTxO state was added to the end.
 [DEBUG] Slot 2: W[2]: Adjusting an unbalanced transaction: []
 [INFO] Slot 2: W[2]: Balancing an unbalanced transaction:
-                       Tx (cardano-api Representation):
+                       Tx:
                          Tx f3841c93766306a56d3d74fdaca59dbedb97b56a74ff12c09869a3cf81998a48:
                            {inputs:
                            reference inputs:
@@ -102,6 +104,8 @@
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                            data:
                            redeemers:}
+                       Requires signatures:
+                         "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
                        Utxo index:
 [INFO] Slot 2: W[2]: Finished balancing:
                        Tx 58acb02a2c306546d145079a99ff90303e03718f0275dfdd625d28cbbbea4410:
@@ -143,7 +147,7 @@
 [DEBUG] Slot 3: W[5]: InsertionSuccess: New tip is Tip(Slot 3, BlockId 534989ac88c07c75d16deca30d086532a6d0a2af41a03750c45fffb3ea00cd40, BlockNumber 2). UTxO state was added to the end.
 [DEBUG] Slot 3: W[3]: Adjusting an unbalanced transaction: []
 [INFO] Slot 3: W[3]: Balancing an unbalanced transaction:
-                       Tx (cardano-api Representation):
+                       Tx:
                          Tx 9c166846225d435679c816b3f115f3034c1cc79bc2f34093e53776cb84e62b20:
                            {inputs:
                            reference inputs:
@@ -156,6 +160,8 @@
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                            data:
                            redeemers:}
+                       Requires signatures:
+                         "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c"
                        Utxo index:
 [INFO] Slot 3: W[3]: Finished balancing:
                        Tx 13107325fe84a3d9b7b6acc810f2d2ddc83345f63be62cbf38fb8c29ec44a6a9:
@@ -193,7 +199,7 @@
 [DEBUG] Slot 4: W[5]: InsertionSuccess: New tip is Tip(Slot 4, BlockId 48bea9d9f4dfe0bd56c69bb10d60df8e609141c24e8644ebaf56f49d863aa1a1, BlockNumber 3). UTxO state was added to the end.
 [DEBUG] Slot 4: W[1]: Adjusting an unbalanced transaction: []
 [INFO] Slot 4: W[1]: Balancing an unbalanced transaction:
-                       Tx (cardano-api Representation):
+                       Tx:
                          Tx cfc26b7ee2144ae65a794987d1caca263150ab48955672dddcf3c2ede4025768:
                            {inputs:
                            reference inputs:
@@ -206,6 +212,8 @@
                            validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
                            data:
                            redeemers:}
+                       Requires signatures:
+                         "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
                        Utxo index:
 [INFO] Slot 4: W[1]: Finished balancing:
                        Tx 0c2f86bb3b8de2e696833433420e7d1ac77816bcf08114169916ba53115c2574:

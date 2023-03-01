@@ -241,4 +241,6 @@ prop_spending_plutus_script = H.integration . H.runFinallies . H.workspace "chai
     , "--testnet-magic", show @Int testnetMagic
     ]
 
+  H.annotate $ show result
+
   L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "100000000000"
