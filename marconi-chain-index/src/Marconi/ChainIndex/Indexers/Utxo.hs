@@ -28,9 +28,6 @@
 -}
 module Marconi.ChainIndex.Indexers.Utxo where
 
-import Cardano.Api ()
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as Shelley
 import Control.Concurrent.Async (concurrently_)
 import Control.Exception (bracket_)
 import Control.Lens.Combinators (imap)
@@ -50,6 +47,12 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
+import System.Random.MWC (createSystemRandom, uniformR)
+import Text.RawString.QQ (r)
+
+import Cardano.Api ()
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as Shelley
 import Marconi.ChainIndex.Orphans ()
 import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
 import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
@@ -57,8 +60,6 @@ import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasP
                               Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent, StorableMonad,
                               StorablePoint, StorableQuery, StorableResult, emptyState, filterWithQueryInterval)
 import Marconi.Core.Storable qualified as Storable
-import System.Random.MWC (createSystemRandom, uniformR)
-import Text.RawString.QQ (r)
 
 type UtxoIndexer = Storable.State UtxoHandle
 

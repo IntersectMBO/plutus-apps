@@ -3,9 +3,7 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Marconi.Sidechain.Api.Routes (
-  API
-  ) where
+module Marconi.Sidechain.Api.Routes where
 
 import Data.Text (Text)
 import Marconi.Sidechain.Api.Types (UtxoQueryResult)
@@ -23,10 +21,7 @@ type RpcUtxoQueryResult = JsonRpc "getUtxoFromAddress" String String UtxoQueryRe
 type RpcTargetAddresses = JsonRpc "getTargetAddresses" String String [Text]
 
 -- | Rpc routes
-type RpcAPI
-  = RpcEcho
-  :<|> RpcUtxoQueryResult
-  :<|> RpcTargetAddresses
+type RpcAPI = RpcEcho :<|> RpcTargetAddresses :<|> RpcUtxoQueryResult
 
 -- | JSON-RPC API, endpoint
 type JsonRpcAPI = "json-rpc" :> RawJsonRpc RpcAPI

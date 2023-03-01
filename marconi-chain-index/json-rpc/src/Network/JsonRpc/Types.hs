@@ -23,8 +23,8 @@ module Network.JsonRpc.Types
 
     -- * JSON-RPC messages
     , Request (..)
-    , JsonRpcResponse (..)
     , JsonRpcErr (..)
+    , JsonRpcResponse (..)
 
     -- ** Standard error codes
     , parseErrorCode
