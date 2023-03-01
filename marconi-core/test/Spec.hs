@@ -5,9 +5,19 @@ import Marconi.Core.Model qualified as Ix
 import Marconi.Core.Spec.Sqlite qualified as S
 import Marconi.Core.Spec.VSplit qualified as V
 import Marconi.Core.Spec.VSqlite qualified as VS
+import Marconi.Core.Trace qualified as Ix
 
 tests :: TestTree
-tests = testGroup "Index" [ixProperties, sProperties, viProperties, vsProperties]
+tests = testGroup "Index" [ ixProperties, sProperties, viProperties, vsProperties
+                          , traceProperties ]
+
+traceProperties :: TestTree
+traceProperties = testGroup "Model traces"
+  [ testProperty "Weak bisimilarity (observed builder)" $
+      withMaxSuccess 10000 $ Ix.prop_WeakBisimilarity  @Int @Int @Int Ix.modelConversion
+  , testProperty "Weak bisimilarity (grammar builder)" $
+      withMaxSuccess 100  $ Ix.prop_WeakBisimilarity' @Int @Int @Int Ix.modelConversion
+  ]
 
 ixProperties :: TestTree
 ixProperties = testGroup "Basic model"
