@@ -70,7 +70,7 @@ import Data.Text qualified as Text
 import GHC.Records (HasField (..))
 import Ledger.Index.Internal qualified as P
 import Ledger.Slot (Slot)
-import Ledger.Tx (CardanoTx, SomeCardanoApiTx (CardanoApiEmulatorEraTx), _cardanoTx)
+import Ledger.Tx (CardanoTx (CardanoEmulatorEraTx))
 import Ledger.Tx.CardanoAPI qualified as P
 import Plutus.V1.Ledger.Api qualified as V1 hiding (TxOut (..))
 import Plutus.V1.Ledger.Scripts qualified as P
@@ -252,7 +252,7 @@ validateCardanoTx
   -> UTxO EmulatorEra
   -> CardanoTx
   -> Either P.ValidationErrorInPhase P.ValidationSuccess
-validateCardanoTx params slot utxo@(UTxO utxoMap) (_cardanoTx -> CardanoApiEmulatorEraTx tx) =
+validateCardanoTx params slot utxo@(UTxO utxoMap) (CardanoEmulatorEraTx tx) =
   if Map.null utxoMap then Right Map.empty else
     hasValidationErrors params (fromIntegral slot) utxo tx
 

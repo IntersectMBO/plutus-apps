@@ -33,8 +33,8 @@ instance ToJSON (C.Tx C.BabbageEra) where
 instance FromJSON (C.Tx C.BabbageEra) where
   parseJSON (Object v) = do
    envelope <- v .: "tx"
-   either (const $ parseFail "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx")
+   either (const $ parseFail "Failed to parse BabbageEra 'tx' field from CardanoTx")
           pure
           $ C.deserialiseFromTextEnvelope (C.AsTx C.AsBabbageEra) envelope
   parseJSON invalid =
-    prependFailure "parsing SomeCardanoApiTx failed, " (typeMismatch "Object" invalid)
+    prependFailure "parsing CardanoTx failed, " (typeMismatch "Object" invalid)

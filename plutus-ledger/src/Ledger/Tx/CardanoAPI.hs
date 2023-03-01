@@ -17,7 +17,7 @@ Interface to the transaction types from 'cardano-api'
 module Ledger.Tx.CardanoAPI(
   module Ledger.Tx.CardanoAPI.Internal
   , CardanoBuildTx(..)
-  , SomeCardanoApiTx(..)
+  , CardanoTx(..)
   , fromCardanoTxInsCollateral
   , fromCardanoTotalCollateral
   , fromCardanoReturnCollateral

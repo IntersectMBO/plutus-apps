@@ -26,7 +26,7 @@ main = do
       flip map txs $ \tx@(Cardano.Api.Tx txBody _) ->
         let scriptData = Ledger.Tx.CardanoAPI.scriptDataFromCardanoTxBody txBody
             txId = Ledger.Tx.CardanoAPI.fromCardanoTxId $ Cardano.Api.getTxId txBody
-            txOutRefs = Ledger.Tx.CardanoAPI.txOutRefs (workaround (Ledger.Tx.CardanoAPI.SomeTx tx) eim)
+            txOutRefs = Ledger.Tx.CardanoAPI.txOutRefs (workaround (Ledger.Tx.CardanoAPI.CardanoTx tx) eim)
          in Aeson.object
               [ "txId" .= txId,
                 "txOutRefs" .= txOutRefs,

@@ -323,7 +323,7 @@ emulatorStateInitialDist params mp = do
            , C.txValidityRange = validityRange
            }
     txBody <- either (error . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody txBodyContent
-    let cTx = signAll $ CardanoTx $ CardanoApiEmulatorEraTx $ C.Tx txBody []
+    let cTx = signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
     pure $ emulatorStatePool [cTx]
     where
         -- we start with an empty TxOut and we adjust it to be sure that the contained Adas fit the size

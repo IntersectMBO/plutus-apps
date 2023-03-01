@@ -43,10 +43,9 @@ module Plutus.ChainIndex.Tx(
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
-import Ledger (OnChainTx (..), SomeCardanoApiTx (SomeTx), TxOutRef (..))
+import Ledger (CardanoTx (CardanoTx), OnChainTx (..), TxOutRef (..))
 import Ledger.Address (CardanoAddress)
 import Ledger.Scripts (Redeemer, RedeemerHash)
-import Ledger.Tx (_cardanoTx)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx, setValidity)
 import Plutus.Script.Utils.Scripts (redeemerHash)
@@ -87,8 +86,8 @@ validityFromChainIndex tx =
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
 fromOnChainTx = \case
-    Valid ctx   -> (fromOnChainCardanoTx True . _cardanoTx) ctx
-    Invalid ctx -> (fromOnChainCardanoTx False . _cardanoTx) ctx
+    Valid ctx   -> (fromOnChainCardanoTx True) ctx
+    Invalid ctx -> (fromOnChainCardanoTx False) ctx
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
 txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
@@ -97,5 +96,5 @@ txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
 
 -- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
 -- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
-fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
-fromOnChainCardanoTx validity (SomeTx tx era) = fromCardanoTx era $ setValidity validity tx
+fromOnChainCardanoTx :: Bool -> CardanoTx -> ChainIndexTx
+fromOnChainCardanoTx validity (CardanoTx tx era) = fromCardanoTx era $ setValidity validity tx

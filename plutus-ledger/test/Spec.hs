@@ -19,7 +19,7 @@ import Hedgehog.Range qualified as Range
 import Ledger (Slot (Slot))
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), SomeCardanoApiTx (SomeTx))
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), CardanoTx (CardanoTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
 import Plutus.Script.Utils.Ada qualified as Ada
@@ -55,8 +55,8 @@ tests = testGroup "all tests" [
     testGroup "TxIn" [
         testPropertyNamed "Check that Ord instances of TxIn match" "txInOrdInstanceEquivalenceTest" txInOrdInstanceEquivalenceTest
     ],
-    testGroup "SomeCardanoApiTx" [
-        testPropertyNamed "Value ToJSON/FromJSON" "genSomeCardanoApiTx" (jsonRoundTrip genSomeCardanoApiTx)
+    testGroup "CardanoTx" [
+        testPropertyNamed "Value ToJSON/FromJSON" "genCardanoTx" (jsonRoundTrip genCardanoTx)
     ],
     testGroup "CardanoBuildTx" [
         testPropertyNamed "Value ToJSON/FromJSON" "genCardanoBuildTx" (jsonRoundTrip genCardanoBuildTx)
@@ -148,8 +148,8 @@ genCardanoBuildTx = do
 
 -- TODO Unfortunately, there's no way to get a warning if another era has been
 -- added to EraInMode. Alternative way?
-genSomeCardanoApiTx :: Hedgehog.Gen SomeCardanoApiTx
-genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
+genCardanoTx :: Hedgehog.Gen CardanoTx
+genCardanoTx = Gen.choice [ genByronEraInCardanoModeTx
                                  , genShelleyEraInCardanoModeTx
                                  , genAllegraEraInCardanoModeTx
                                  , genMaryEraInCardanoModeTx
@@ -157,32 +157,32 @@ genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
                                  , genBabbageEraInCardanoModeTx
                                  ]
 
-genByronEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genByronEraInCardanoModeTx :: Hedgehog.Gen CardanoTx
 genByronEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.ByronEra
-  pure $ SomeTx tx C.ByronEraInCardanoMode
+  pure $ CardanoTx tx C.ByronEraInCardanoMode
 
-genShelleyEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genShelleyEraInCardanoModeTx :: Hedgehog.Gen CardanoTx
 genShelleyEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.ShelleyEra
-  pure $ SomeTx tx C.ShelleyEraInCardanoMode
+  pure $ CardanoTx tx C.ShelleyEraInCardanoMode
 
-genAllegraEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genAllegraEraInCardanoModeTx :: Hedgehog.Gen CardanoTx
 genAllegraEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.AllegraEra
-  pure $ SomeTx tx C.AllegraEraInCardanoMode
+  pure $ CardanoTx tx C.AllegraEraInCardanoMode
 
-genMaryEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genMaryEraInCardanoModeTx :: Hedgehog.Gen CardanoTx
 genMaryEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.MaryEra
-  pure $ SomeTx tx C.MaryEraInCardanoMode
+  pure $ CardanoTx tx C.MaryEraInCardanoMode
 
-genAlonzoEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genAlonzoEraInCardanoModeTx :: Hedgehog.Gen CardanoTx
 genAlonzoEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.AlonzoEra
-  pure $ SomeTx tx C.AlonzoEraInCardanoMode
+  pure $ CardanoTx tx C.AlonzoEraInCardanoMode
 
-genBabbageEraInCardanoModeTx :: Hedgehog.Gen SomeCardanoApiTx
+genBabbageEraInCardanoModeTx :: Hedgehog.Gen CardanoTx
 genBabbageEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.BabbageEra
-  pure $ SomeTx tx C.BabbageEraInCardanoMode
+  pure $ CardanoTx tx C.BabbageEraInCardanoMode

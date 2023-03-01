@@ -321,12 +321,12 @@ handleBalance utx = do
         (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs filteredUtxo)
         (handleError utx . Left)
         unbalancedBodyContent
-    pure $ Tx.CardanoTx (Tx.CardanoApiEmulatorEraTx cTx)
+    pure $ Tx.CardanoEmulatorEraTx cTx
     where
         handleError utx' (Left (Left (ph, ve))) = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
-                 $ fmap (Tx.CardanoTx . Tx.CardanoApiEmulatorEraTx . C.makeSignedTransaction [])
+                 $ fmap (Tx.CardanoEmulatorEraTx . C.makeSignedTransaction [])
                           . CardanoAPI.makeTransactionBody Nothing mempty
                  $ U.unBalancedCardanoBuildTx utx'
             logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty []
@@ -346,7 +346,7 @@ handleAddSignature ::
     )
     => CardanoTx
     -> Eff effs CardanoTx
-handleAddSignature tx@(Tx.CardanoTx (Tx.CardanoApiEmulatorEraTx ctx)) = do
+handleAddSignature tx@(Tx.CardanoEmulatorEraTx ctx) = do
     msp <- gets _signingProcess
     case msp of
         Nothing -> do

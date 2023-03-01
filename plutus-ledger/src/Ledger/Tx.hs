@@ -44,8 +44,6 @@ module Ledger.Tx
     , DatumFromQuery(..)
     , datumInDatumFromQuery
     -- * Transactions
-    , CardanoTx(..)
-    , cardanoTx
     , getCardanoTxId
     , getCardanoTxInputs
     , getCardanoTxCollateralInputs
@@ -61,7 +59,7 @@ module Ledger.Tx
     , getCardanoTxMint
     , getCardanoTxValidityRange
     , getCardanoTxData
-    , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
+    , CardanoTx(.., CardanoEmulatorEraTx)
     , ToCardanoError(..)
     , addCardanoTxSignature
     , pubKeyTxOut
@@ -99,7 +97,7 @@ import Ledger.Address (Address, CardanoAddress, PaymentPubKey, cardanoAddressCre
                        pubKeyAddress)
 import Ledger.Orphans ()
 import Ledger.Slot (SlotRange)
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
+import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 
 import Plutus.Script.Utils.Scripts (scriptHash)
@@ -245,26 +243,20 @@ instance Pretty DecoratedTxOut where
       hang 2 $ vsep [ "-" <+> pretty (p ^. decoratedTxOutValue) <+> "addressed to"
                     , pretty (p ^. decoratedTxOutAddress)]
 
-newtype CardanoTx = CardanoTx { _cardanoTx :: SomeCardanoApiTx }
-    deriving (Eq, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, Serialise)
+getEmulatorEraTx :: CardanoTx -> C.Tx C.BabbageEra
+getEmulatorEraTx (CardanoTx tx C.BabbageEraInCardanoMode) = tx
+getEmulatorEraTx _                                        = error "getEmulatorEraTx: Expected a Babbage tx"
 
-makeLenses ''CardanoTx
+pattern CardanoEmulatorEraTx :: C.Tx C.BabbageEra -> CardanoTx
+pattern CardanoEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
+    CardanoEmulatorEraTx tx = CardanoTx tx C.BabbageEraInCardanoMode
 
-getEmulatorEraTx :: SomeCardanoApiTx -> C.Tx C.BabbageEra
-getEmulatorEraTx (SomeTx tx C.BabbageEraInCardanoMode) = tx
-getEmulatorEraTx _                                     = error "getEmulatorEraTx: Expected a Babbage tx"
-
-pattern CardanoApiEmulatorEraTx :: C.Tx C.BabbageEra -> SomeCardanoApiTx
-pattern CardanoApiEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
-    CardanoApiEmulatorEraTx tx = SomeTx tx C.BabbageEraInCardanoMode
-
-{-# COMPLETE CardanoApiEmulatorEraTx #-}
+{-# COMPLETE CardanoEmulatorEraTx #-}
 
 instance Pretty CardanoTx where
     pretty tx =
         let
-          renderScriptWitnesses (_cardanoTx -> CardanoApiEmulatorEraTx (C.Api.Tx (C.Api.ShelleyTxBody _ _ scripts _ _ _) _)) =
+          renderScriptWitnesses (CardanoEmulatorEraTx (C.Api.Tx (C.Api.ShelleyTxBody _ _ scripts _ _ _) _)) =
                 [ hang 2 (vsep ("attached scripts:": fmap viaShow scripts)) | not (null scripts) ]
           lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty (getCardanoTxInputs tx)))
@@ -282,38 +274,35 @@ instance Pretty CardanoTx where
                 ] ++ renderScriptWitnesses tx
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
-instance Pretty SomeCardanoApiTx where
-  pretty = pretty . CardanoTx
-
 instance Pretty CardanoAPI.CardanoBuildTx where
   pretty txBodyContent = case C.makeSignedTransaction [] <$> CardanoAPI.makeTransactionBody Nothing mempty txBodyContent of
-    Right tx -> pretty $ CardanoApiEmulatorEraTx tx
+    Right tx -> pretty $ CardanoEmulatorEraTx tx
     _        -> viaShow txBodyContent
 
-getTxBodyContent :: SomeCardanoApiTx -> C.TxBodyContent C.ViewTx C.BabbageEra
-getTxBodyContent (CardanoApiEmulatorEraTx (C.Tx (C.TxBody bodyContent) _)) = bodyContent
+getTxBodyContent :: CardanoTx -> C.TxBodyContent C.ViewTx C.BabbageEra
+getTxBodyContent (CardanoEmulatorEraTx (C.Tx (C.TxBody bodyContent) _)) = bodyContent
 
 getCardanoTxId :: CardanoTx -> V1.Tx.TxId
-getCardanoTxId = getCardanoApiTxId . _cardanoTx
+getCardanoTxId = getCardanoApiTxId
 
-getCardanoApiTxId :: SomeCardanoApiTx -> V1.Tx.TxId
-getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
+getCardanoApiTxId :: CardanoTx -> V1.Tx.TxId
+getCardanoApiTxId (CardanoTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
 getCardanoTxInputs :: CardanoTx -> [TxIn]
-getCardanoTxInputs = getTxBodyContentInputs . getTxBodyContent . _cardanoTx
+getCardanoTxInputs = getTxBodyContentInputs . getTxBodyContent
 
 getTxBodyContentInputs :: C.TxBodyContent ctx era -> [TxIn]
 getTxBodyContentInputs C.TxBodyContent {..} =
     fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns
 
 getCardanoTxCollateralInputs :: CardanoTx -> [TxIn]
-getCardanoTxCollateralInputs = getTxBodyContentCollateralInputs . getTxBodyContent . _cardanoTx
+getCardanoTxCollateralInputs = getTxBodyContentCollateralInputs . getTxBodyContent
 
 getTxBodyContentCollateralInputs :: C.TxBodyContent ctx era -> [TxIn]
 getTxBodyContentCollateralInputs C.TxBodyContent {..} = CardanoAPI.fromCardanoTxInsCollateral txInsCollateral
 
 getCardanoTxReferenceInputs :: CardanoTx -> [TxIn]
-getCardanoTxReferenceInputs (CardanoTx (SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _)) =
+getCardanoTxReferenceInputs (CardanoTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) =
     txInsReferenceToPlutusTxIns txInsReference
   where
     txInsReferenceToPlutusTxIns C.TxInsReferenceNone = []
@@ -321,10 +310,10 @@ getCardanoTxReferenceInputs (CardanoTx (SomeTx (C.Tx (C.TxBody C.TxBodyContent {
       fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn) txIns'
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, V1.Tx.TxOutRef)]
-getCardanoTxOutRefs = cardanoApiTxOutRefs . _cardanoTx
+getCardanoTxOutRefs = cardanoApiTxOutRefs
   where
-    cardanoApiTxOutRefs :: SomeCardanoApiTx -> [(TxOut, V1.Tx.TxOutRef)]
-    cardanoApiTxOutRefs (CardanoApiEmulatorEraTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _)) =
+    cardanoApiTxOutRefs :: CardanoTx -> [(TxOut, V1.Tx.TxOutRef)]
+    cardanoApiTxOutRefs (CardanoEmulatorEraTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _)) =
       mkOut <$> zip [0..] (map TxOut txOuts)
       where
         mkOut (i, o) = (o, V1.TxOutRef (CardanoAPI.fromCardanoTxId $ C.getTxId txBody) i)
@@ -339,7 +328,7 @@ getCardanoTxSpentOutputs :: CardanoTx -> Set V1.Tx.TxOutRef
 getCardanoTxSpentOutputs = Set.fromList . map txInRef . getCardanoTxInputs
 
 getCardanoTxReturnCollateral :: CardanoTx -> Maybe TxOut
-getCardanoTxReturnCollateral = getTxBodyContentReturnCollateral . getTxBodyContent . _cardanoTx
+getCardanoTxReturnCollateral = getTxBodyContentReturnCollateral . getTxBodyContent
 
 getTxBodyContentReturnCollateral :: C.TxBodyContent ctx C.Api.BabbageEra -> Maybe TxOut
 getTxBodyContentReturnCollateral C.TxBodyContent {..} =
@@ -352,23 +341,23 @@ getCardanoTxProducedReturnCollateral tx = maybe Map.empty (Map.singleton (V1.TxO
     getCardanoTxReturnCollateral tx
 
 getCardanoTxTotalCollateral :: CardanoTx -> Maybe C.Lovelace
-getCardanoTxTotalCollateral (_cardanoTx -> CardanoApiEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) =
+getCardanoTxTotalCollateral (CardanoEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) =
   CardanoAPI.fromCardanoTotalCollateral txTotalCollateral
 
 getCardanoTxFee :: CardanoTx -> C.Lovelace
-getCardanoTxFee (CardanoTx (SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _)) = CardanoAPI.fromCardanoFee txFee
+getCardanoTxFee (CardanoTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) = CardanoAPI.fromCardanoFee txFee
 
 getCardanoTxMint :: CardanoTx -> C.Value
-getCardanoTxMint = getTxBodyContentMint . getTxBodyContent . _cardanoTx
+getCardanoTxMint = getTxBodyContentMint . getTxBodyContent
 
 getTxBodyContentMint :: C.TxBodyContent ctx era -> C.Value
 getTxBodyContentMint C.TxBodyContent {..} = CardanoAPI.fromCardanoMintValue txMintValue
 
 getCardanoTxValidityRange :: CardanoTx -> SlotRange
-getCardanoTxValidityRange (CardanoTx (SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _)) = CardanoAPI.fromCardanoValidityRange txValidityRange
+getCardanoTxValidityRange (CardanoTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) = CardanoAPI.fromCardanoValidityRange txValidityRange
 
 getCardanoTxData :: CardanoTx -> Map V1.DatumHash V1.Datum
-getCardanoTxData (CardanoTx (SomeTx (C.Tx txBody _) _)) = fst $ CardanoAPI.scriptDataFromCardanoTxBody txBody
+getCardanoTxData (CardanoTx (C.Tx txBody _) _) = fst $ CardanoAPI.scriptDataFromCardanoTxBody txBody
     -- TODO: add txMetaData
 
 txBodyContentIns :: Lens' (C.TxBodyContent C.BuildTx C.BabbageEra) [(C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.BabbageEra))]
@@ -383,7 +372,7 @@ txBodyContentOuts :: Lens' (C.TxBodyContent ctx C.BabbageEra) [TxOut]
 txBodyContentOuts = lens (map TxOut . C.txOuts) (\bodyContent outs -> bodyContent { C.txOuts = map getTxOut outs })
 
 getCardanoTxRedeemers :: CardanoTx -> V2.Tx.Redeemers
-getCardanoTxRedeemers (CardanoTx (SomeTx (C.Tx txBody _) _)) = snd $ CardanoAPI.scriptDataFromCardanoTxBody txBody
+getCardanoTxRedeemers (CardanoTx (C.Tx txBody _) _) = snd $ CardanoAPI.scriptDataFromCardanoTxBody txBody
 
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
@@ -406,11 +395,11 @@ pubKeyTxOut v pk sk = do
 type PrivateKey = Crypto.XPrv
 
 addCardanoTxSignature :: PrivateKey -> CardanoTx -> CardanoTx
-addCardanoTxSignature privKey = CardanoTx . addSignatureCardano . _cardanoTx
+addCardanoTxSignature privKey = addSignatureCardano
     where
-        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
-        addSignatureCardano (CardanoApiEmulatorEraTx ctx)
-            = CardanoApiEmulatorEraTx (addSignatureCardano' ctx)
+        addSignatureCardano :: CardanoTx -> CardanoTx
+        addSignatureCardano (CardanoEmulatorEraTx ctx)
+            = CardanoEmulatorEraTx (addSignatureCardano' ctx)
 
         addSignatureCardano' (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isValid aux))
             = C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits' isValid aux)
