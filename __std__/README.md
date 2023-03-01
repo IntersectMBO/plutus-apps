@@ -79,9 +79,9 @@ For example:
 
 ## Reference example
 
-As an example, consider the file `./nix/cells/plutus-apps/packages/marconi-chain-index.nix`:
+As an example, consider the file `./__std__/cells/plutus-apps/packages/marconi-chain-index.nix`:
 
-- `./nix/cells` is the `cellsFrom` value in `flake.nix`
+- `./__std__/cells` is the `cellsFrom` value in `flake.nix`
 - `/plutus-apps` is the cell name
 - `/plutus-apps/*` are accessible via `cell.*` from `{ inputs, cell }` (while inside `cells/plutus-apps`)
 - `/plutus-apps/*` are accessible via `inputs.cells.plutus-apps.*` (everywhere)
@@ -94,9 +94,9 @@ As an example, consider the file `./nix/cells/plutus-apps/packages/marconi-chain
 - And also accessible via `inputs.cells.plutus-apps.packages.marconi-chain-index` (everywhere)
 - And also buildable via `nix build .#marconi-chain-index`
 
-As another example, consider the file `./nix/cells/plutus-apps/library/default.nix`
+As another example, consider the file `./__std__/cells/plutus-apps/library/default.nix`
 
-- `./nix/cells` is the `cellsFrom` value in `flake.nix`
+- `./__std__/cells` is the `cellsFrom` value in `flake.nix`
 - `/plutus-apps` is the cell name
 - `/plutus-apps/*` are accessible via `cell.*` from `{ inputs, cell }` (while inside `cells/plutus-apps`)
 - `/plutus-apps/*` are accessible via `inputs.cells.plutus-apps.*` (everywhere)
