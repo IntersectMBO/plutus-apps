@@ -65,8 +65,8 @@ if haddock_dir:
       if os.path.exists(inv_file):
         haddock_mapping[entry.name] = (html_dir, inv_file)
 
+haddock_mapping['plutus'] = ('https://plutus.readthedocs.io/en/latest', os.getenv('PLUTUS_CORE_OBJECTS_INV', None))
 intersphinx_mapping = haddock_mapping
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

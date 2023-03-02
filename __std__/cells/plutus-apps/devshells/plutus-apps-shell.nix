@@ -150,5 +150,11 @@ inputs.std.lib.dev.mkShell {
       value = pkgs.lib.optionalString
         (pkgs.stdenv.hostPlatform.libc == "glibc") "${pkgs.glibcLocales}/lib/locale/locale-archive";
     }
+
+    # This is used by doc/conf.py to link plutus-core read-the-docs pages
+    {
+      name = "PLUTUS_CORE_OBJECTS_INV";
+      value = cell.library.plutus-core-objects-inv;
+    }
   ];
 }
