@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   script-evaluation-dump:
-    runs-on: [self-hosted, plutus-benchmark]
+    runs-on: [ubuntu-latest]
     timeout-minutes: 180
 
     steps:
@@ -20,6 +20,13 @@ jobs:
         uses: actions/checkout@v3.3.0
         with: 
           ref: zliu41/dump-1.35.4
+
+      - name: Quick Install Nix
+        uses: nixbuild/nix-quick-install-action@v21 
+        with: 
+          nix_conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true 
 
       - name: Create Dump
         run: |
