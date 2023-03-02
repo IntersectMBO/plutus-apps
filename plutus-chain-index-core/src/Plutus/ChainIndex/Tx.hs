@@ -84,17 +84,15 @@ validityFromChainIndex tx =
 -- | Convert a 'OnChainTx' to a 'ChainIndexTx'. An invalid 'OnChainTx' will not
 -- produce any 'ChainIndexTx' outputs and the collateral inputs of the
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
+--
+-- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
+-- so we need to make sure these match up.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
 fromOnChainTx = \case
-    Valid ctx   -> (fromOnChainCardanoTx True) ctx
-    Invalid ctx -> (fromOnChainCardanoTx False) ctx
+    Valid (CardanoTx tx era)   -> fromCardanoTx era $ setValidity True tx
+    Invalid (CardanoTx tx era) -> fromCardanoTx era $ setValidity False tx
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
 txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList
     $ fmap (\r -> (redeemerHash r, r))
     $ Map.elems _citxRedeemers
-
--- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
--- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
-fromOnChainCardanoTx :: Bool -> CardanoTx -> ChainIndexTx
-fromOnChainCardanoTx validity (CardanoTx tx era) = fromCardanoTx era $ setValidity validity tx

@@ -8,5 +8,5 @@
 
 ### Changed
 
-- Renamed `SomeCardanoApiTx(SomeTx)` to `CardanoTx(CardanoTx`.
+- Renamed `SomeCardanoApiTx(SomeTx)` to `CardanoTx(CardanoTx)`.
 - Renamed `CardanoApiEmulatorEraTx` to `CardanoEmulatorEraTx`.
