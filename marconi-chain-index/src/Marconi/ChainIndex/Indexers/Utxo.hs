@@ -54,7 +54,7 @@ import Cardano.Api ()
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
 import Marconi.ChainIndex.Orphans ()
-import Marconi.ChainIndex.Types (CurrentEra, TargetAddresses, TxOut, pattern CurrentEra)
+import Marconi.ChainIndex.Types (TargetAddresses, TxOut, pattern CurrentEra)
 import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                               QueryInterval (QEverything, QInterval), Queryable (queryStorage),
                               Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent, StorableMonad,
@@ -482,13 +482,12 @@ instance Resumable UtxoHandle where
     pure $ map ueChainPoint es ++ [C.ChainPointAtGenesis]
 
 -- | Convert from 'AddressInEra' of the 'CurrentEra' to 'AddressAny'.
-toAddr :: C.AddressInEra CurrentEra -> C.AddressAny
+toAddr :: C.AddressInEra era -> C.AddressAny
 toAddr (C.AddressInEra C.ByronAddressInAnyEra addr)    = C.AddressByron addr
 toAddr (C.AddressInEra (C.ShelleyAddressInEra _) addr) = C.AddressShelley addr
 
 -- | Extract Utxos payload from Cardano Transaction
 -- Note, these Utxos will be decorated with additional data points to make a UtxoEvent
---
 getUtxos :: (C.IsCardanoEra era) => Maybe TargetAddresses -> C.Tx era -> [Utxo]
 getUtxos maybeTargetAddresses (C.Tx txBody@(C.TxBody C.TxBodyContent {C.txOuts}) _) =
   either (const []) addressDiscriminator (getUtxos' txOuts)
@@ -533,14 +532,14 @@ getRefScriptAndHash refScript = case refScript of
     ( Just s
     , Just . C.hashScript $ script)
 
--- | get the inlineDatum and inlineDatumHash
+-- | Get the datum hash and datum or a transaction output.
 getScriptDataAndHash
-  :: C.TxOutDatum ctx era
+  :: C.TxOutDatum C.CtxTx era
   -> (Maybe C.ScriptData, Maybe (C.Hash C.ScriptData))
-getScriptDataAndHash (C.TxOutDatumHash _ h) = (Nothing, Just h)
-getScriptDataAndHash (C.TxOutDatumInline _ d) =
-  (Just d, (Just . C.hashScriptData) d)
-getScriptDataAndHash _ = (Nothing, Nothing)
+getScriptDataAndHash C.TxOutDatumNone         = (Nothing, Nothing)
+getScriptDataAndHash (C.TxOutDatumHash _ h)   = (Nothing, Just h)
+getScriptDataAndHash (C.TxOutDatumInTx _ d)   = (Just d, (Just . C.hashScriptData) d)
+getScriptDataAndHash (C.TxOutDatumInline _ d) = (Just d, (Just . C.hashScriptData) d)
 
 -- | remove spent transactions
 rmSpent :: Set C.TxIn -> [Utxo] -> [Utxo]
@@ -556,14 +555,12 @@ getUtxoEvents
   => Maybe TargetAddresses -- ^ target addresses to filter for
   -> [C.Tx era]
   -> C.ChainPoint
-  -> Maybe (StorableEvent UtxoHandle) -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
+  -> StorableEvent UtxoHandle -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
 getUtxoEvents maybeTargetAddresses txs cp =
   let
-    utxos = Set.fromList(concatMap (getUtxos maybeTargetAddresses) txs)
+    utxos = Set.fromList $ concatMap (getUtxos maybeTargetAddresses) txs
     ins = foldl' Set.union Set.empty $ getInputs <$> txs
-  in
-    if null utxos then Nothing
-    else Just (UtxoEvent utxos ins cp)
+  in UtxoEvent utxos ins cp
 
 getInputs :: C.Tx era -> Set C.TxIn
 getInputs (C.Tx (C.TxBody C.TxBodyContent

@@ -163,6 +163,7 @@ library marconi-chain-index-test-lib
   hs-source-dirs:  test-lib
   exposed-modules:
     Gen.Marconi.ChainIndex.Indexers.Utxo
+    Gen.Marconi.ChainIndex.Mockchain
     Gen.Marconi.ChainIndex.Types
     Helpers
 
