@@ -50,7 +50,7 @@ tests = testGroup "Babbage Features"
     , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpendTest testnetOptionsBabbage8)
     --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpendTest localNodeOptionsPreview) -- uncomment to use local node on preview testnet
 
-    , testProperty "check each attribute of V2 TxInfo in Babbage PV7 " (checkTxInfoV2Test testnetOptionsBabbage7)
+    , testProperty "check each attribute of V2 TxInfo in Babbage PV7" (checkTxInfoV2Test testnetOptionsBabbage7)
     , testProperty "check each attribute of V2 TxInfo in Babbage PV8" (checkTxInfoV2Test testnetOptionsBabbage8)
     ]
   ]
