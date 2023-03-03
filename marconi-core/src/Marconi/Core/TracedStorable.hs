@@ -76,12 +76,12 @@ data family StorableQuery h
 data family StorableResult h
 
 -- TODO: Rename `Storable` to `Indexer`.
-data family StorableNotifications h
+-- data family StorableNotifications h
 
-data ControlNotification h =
-    CNRollForward !(StorablePoint h)
-  | CNRollBack    !(StorablePoint h)
-  | CNApplication !(StorableNotifications h)
+data ControlNotification pt =
+    CNRollForward !pt
+  | CNRollBack    !pt
+ ---- | CNApplication !(StorableNotifications h)
   deriving (Generic)
 
 type family StorableMonad h :: * -> *
@@ -293,7 +293,7 @@ insert
   :: Buffered h
   => PrimMonad (StorableMonad h)
   => HasPoint (StorableEvent h) (StorablePoint h)
-  => Tracer (StorableMonad h) (ControlNotification h)
+  => Tracer (StorableMonad h) (ControlNotification (StorablePoint h))
   -> StorableEvent h
   -> State h
   -> StorableMonad h (State h)
@@ -335,7 +335,7 @@ insertMany
   => Buffered h
   => PrimMonad (StorableMonad h)
   => HasPoint (StorableEvent h) (StorablePoint h)
-  => Tracer (StorableMonad h) (ControlNotification h)
+  => Tracer (StorableMonad h) (ControlNotification (StorablePoint h))
   -> f (StorableEvent h)
   -> State h
   -> StorableMonad h (State h)
@@ -348,7 +348,7 @@ rewind
   => PrimMonad (StorableMonad h)
   => Ord (StorablePoint h)
   => HasPoint (StorableEvent h) (StorablePoint h)
-  => Tracer (StorableMonad h) (ControlNotification h)
+  => Tracer (StorableMonad h) (ControlNotification (StorablePoint h))
   -> StorablePoint h
   -> State h
   -> StorableMonad h (Maybe (State h))

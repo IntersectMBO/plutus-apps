@@ -5,9 +5,9 @@ import Control.Lens.TH qualified as Lens
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
-import Control.Tracer (nullTracer)
+import Control.Tracer (Tracer (Tracer), nullTracer)
 import Data.Foldable (foldl', toList)
-import Data.Functor ((<&>))
+import Data.Functor (void, (<&>))
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import Database.SQLite.Simple qualified as Sql
 import Database.SQLite.Simple.FromField (FromField (fromField))
@@ -233,6 +233,14 @@ conversion = Conversion
   , cMonadic = monadic
   }
 
+observeTrace :: IndexT -> IO Ix.Trace
+observeTrace ix = do
+  r <- newIORef []
+  let tracer (Storable.CNRollForward  _) = modifyIORef' r (Ix.TRollBack:)
+      tracer (Storable.CNRollBack     _) = modifyIORef' r (Ix.TRollForward:)
+  _ <- pure . monadicIO . void $ run (Tracer tracer) ix
+  readIORef r
+
 -- We don't really have any notification implementation available for the new indexers.
 getNotifications
   :: IndexT
@@ -243,7 +251,7 @@ getHistory
   :: IndexT
   -> PropertyM IO (Maybe [Int])
 getHistory ix = do
-  mix <- run ix
+  mix <- run nullTracer ix
   case mix of
     Nothing       -> pure Nothing
     Just (ix', _) -> liftIO $ do
@@ -272,7 +280,7 @@ getView
   :: IndexT
   -> PropertyM IO (Maybe (IndexView Int))
 getView ix = do
-  mix <- run ix
+  mix <- run nullTracer ix
   case mix of
     Nothing       -> pure Nothing
     Just (ix', _) -> do
@@ -331,9 +339,10 @@ lookupPoint n (Config st _) = MaybeT $ do
 -- The run function returns a tupple because it needs to both assign increasing slot
 -- numbers and return the indexer produced by the previous computation.
 run
-  :: IndexT
+  :: Tracer IO (Storable.ControlNotification Point)
+  -> IndexT
   -> PropertyM IO (Maybe (Config, Int))
-run (Ix.New f depth ag0)
+run _ (Ix.New f depth ag0)
   | depth <= 0 = pure Nothing
   | otherwise = do
       let d = fromIntegral depth
@@ -342,18 +351,18 @@ run (Ix.New f depth ag0)
       indexer <- liftIO $ newSqliteIndexer f (d  - 1) ag0
       -- On creation the slot number will always be 0.
       pure $ (,0) <$> indexer
-run (Ix.Insert e ix) = do
-  mix <- run ix
+run t (Ix.Insert e ix) = do
+  mix <- run t ix
   case mix of
     Nothing        -> pure Nothing
     Just (ix', sq) -> liftIO $ do
-      nextState <- Storable.insert nullTracer (Event (Point sq) e) (ix' ^. state)
+      nextState <- Storable.insert t (Event (Point sq) e) (ix' ^. state)
       pure . Just . (, sq + 1) $ ix' { _state = nextState }
-run (Ix.Rewind n ix) = do
-  mix <- run ix
+run t (Ix.Rewind n ix) = do
+  mix <- run t ix
   case mix of
     Nothing        -> pure Nothing
     Just (ix', sq) -> liftIO . runMaybeT $ do
       p         <- lookupPoint n ix'
-      nextState <- MaybeT . liftIO $ Storable.rewind nullTracer p (ix' ^. state)
+      nextState <- MaybeT . liftIO $ Storable.rewind t p (ix' ^. state)
       pure . (,sq) $ ix' { _state = nextState }
