@@ -3,6 +3,7 @@ module Helpers.Utils where
 import Cardano.Api qualified as C
 import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Time.Clock.POSIX qualified as Time
 import GHC.Stack qualified as GHC
 import Hedgehog (MonadTest)
 import Hedgehog qualified as H
@@ -59,3 +60,7 @@ maybeReadAs as path = do
   maybeEither . liftIO $ C.readFileTextEnvelope as path'
   where
     maybeEither m = m >>= return . either (const Nothing) Just
+
+-- | Convert a 'POSIXTime' to the number of milliseconds since the Unix epoch.
+posixToMilliseconds :: Time.POSIXTime -> Integer
+posixToMilliseconds posixTime = round $ 1000 * (realToFrac posixTime :: Double)

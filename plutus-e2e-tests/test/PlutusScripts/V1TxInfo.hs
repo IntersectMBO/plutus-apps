@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-missing-fields #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module PlutusScripts.V1TxInfo (
     txInfoInputs

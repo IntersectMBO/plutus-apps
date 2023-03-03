@@ -99,6 +99,7 @@ test-suite plutus-e2e-tests-test
     PlutusScripts.Helpers
     PlutusScripts.SECP256k1
     PlutusScripts.V1TxInfo
+    PlutusScripts.V2TxInfo
     Spec.AlonzoFeatures
     Spec.BabbageFeatures
     Spec.Builtins.SECP256k1

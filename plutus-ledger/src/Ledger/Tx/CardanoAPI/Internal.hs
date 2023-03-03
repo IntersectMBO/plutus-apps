@@ -27,6 +27,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoTxOutToPV1TxInfoTxOut
   , fromCardanoTxOutToPV1TxInfoTxOut'
   , fromCardanoTxOutToPV2TxInfoTxOut
+  , fromCardanoTxOutToPV2TxInfoTxOut'
   , fromCardanoTxOutDatumHash
   , fromCardanoTxOutDatum
   , fromCardanoTxOutValue
@@ -657,6 +658,14 @@ fromCardanoTxOutToPV2TxInfoTxOut (C.TxOut addr value datum refScript) =
     (fromCardanoTxOutDatum datum)
     (refScriptToScriptHash refScript)
 
+fromCardanoTxOutToPV2TxInfoTxOut' :: C.TxOut C.CtxUTxO era -> PV2.TxOut
+fromCardanoTxOutToPV2TxInfoTxOut' (C.TxOut addr value datum refScript) =
+    PV2.TxOut
+    (fromCardanoAddressInEra addr)
+    (fromCardanoValue $ fromCardanoTxOutValue value)
+    (fromCardanoTxOutDatum' datum)
+    (refScriptToScriptHash refScript)
+
 refScriptToScriptHash :: C.ReferenceScript era -> Maybe PV2.ScriptHash
 refScriptToScriptHash C.ReferenceScriptNone = Nothing
 refScriptToScriptHash (C.ReferenceScript _ (C.ScriptInAnyLang _ s)) =
@@ -785,6 +794,14 @@ fromCardanoTxOutDatum (C.TxOutDatumHash _ h) =
 fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) =
     PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
+    PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
+
+fromCardanoTxOutDatum' :: C.TxOutDatum C.CtxUTxO era -> PV2.OutputDatum
+fromCardanoTxOutDatum' C.TxOutDatumNone       =
+    PV2.NoOutputDatum
+fromCardanoTxOutDatum' (C.TxOutDatumHash _ h) =
+    PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
+fromCardanoTxOutDatum' (C.TxOutDatumInline _ d) =
     PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 
 toCardanoTxOutNoDatum  :: C.TxOutDatum C.CtxTx C.BabbageEra
