@@ -24,7 +24,7 @@ import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Data.UUID (UUID)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Ledger.Tx (Tx)
+import Ledger.Tx (CardanoTx)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Resumable (Response (..))
 import Plutus.Contract.State (ContractRequest)
@@ -79,7 +79,7 @@ deriving via (Tagged "contract_instance_iteration" IterationID) instance Structu
 deriving via (Tagged "message" CheckpointLogMsg) instance StructuredLog CheckpointLogMsg
 deriving via (Tagged "message" RequestHandlerLogMsg) instance StructuredLog RequestHandlerLogMsg
 deriving via (Tagged "message" TxBalanceMsg) instance StructuredLog TxBalanceMsg
-deriving via (Tagged "tx" Tx) instance StructuredLog Tx
+deriving via (Tagged "tx" CardanoTx) instance StructuredLog CardanoTx
 deriving via (Tagged "uuid" UUID) instance StructuredLog UUID
 deriving via (Tagged "request" (ContractRequest w v)) instance (ToJSON w, ToJSON v) => StructuredLog (ContractRequest w v)
 deriving via (Tagged "value" V.Value) instance StructuredLog V.Value

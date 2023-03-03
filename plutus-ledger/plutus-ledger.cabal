@@ -187,8 +187,8 @@ test-suite plutus-ledger-test
   -- Local components
   --------------------
   build-depends:
-    , plutus-ledger        >=1.0.0
-    , plutus-script-utils  >=1.0.0
+    , plutus-ledger        >=1.1.0
+    , plutus-script-utils  >=1.1.0
 
   --------------------------
   -- Other IOG dependencies
@@ -206,7 +206,6 @@ test-suite plutus-ledger-test
     , aeson
     , base            >=4.9 && <5
     , bytestring
-    , data-default
     , hedgehog
     , tasty
     , tasty-hedgehog

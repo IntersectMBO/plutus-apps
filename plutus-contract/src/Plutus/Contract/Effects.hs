@@ -103,7 +103,7 @@ import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
-import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, getCardanoTxId, onCardanoTx)
+import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, getCardanoTxId)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
@@ -161,7 +161,7 @@ instance Pretty PABReq where
     OwnAddressesReq                         -> "Own addresses"
     ChainIndexQueryReq q                    -> "Chain index query:" <+> pretty q
     BalanceTxReq utx                        -> "Balance tx:" <+> pretty utx
-    WriteBalancedTxReq tx                   -> "Write balanced tx:" <+> onCardanoTx pretty (fromString . show) tx
+    WriteBalancedTxReq tx                   -> "Write balanced tx:" <+> (fromString $ show tx)
     ExposeEndpointReq ep                    -> "Expose endpoint:" <+> pretty ep
     PosixTimeRangeToContainedSlotRangeReq r -> "Posix time range to contained slot range:" <+> pretty r
     YieldUnbalancedTxReq utx                -> "Yield unbalanced tx:" <+> pretty utx

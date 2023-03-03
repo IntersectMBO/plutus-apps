@@ -20,7 +20,6 @@ module Wallet.Emulator.Types(
     Wallet.Emulator.Wallet.mockWalletAddress,
     Wallet.Emulator.Wallet.mockWalletPaymentPubKey,
     Wallet.Emulator.Wallet.mockWalletPaymentPubKeyHash,
-    addSignature,
     Wallet.Emulator.Wallet.knownWallets,
     Wallet.Emulator.Wallet.knownWallet,
     Ledger.CardanoWallet.WalletNumber(..),
@@ -74,7 +73,6 @@ import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
 import Control.Monad.Freer.State (State)
 
 import Cardano.Node.Emulator.Params (Params)
-import Ledger (addSignature)
 import Plutus.ChainIndex (ChainIndexError)
 import Wallet.API (WalletAPIError)
 

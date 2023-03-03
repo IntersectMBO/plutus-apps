@@ -41,7 +41,7 @@ import Data.Either (fromRight)
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (CardanoTx (..), SomeCardanoApiTx (CardanoApiEmulatorEraTx))
+import Ledger.Tx (CardanoTx (..))
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.PAB.Types (Config (..))
 import TxInject.RandomTx (generateTx)
@@ -94,7 +94,7 @@ runProducer AppEnv{txQueue, stats, utxoIndex} = do
       -- boundaries. We don't currently use boundaries for our generated
       -- transactions, so we chose the random number.
       tx <- generateTx rng (Slot 4) utxo
-      let utxo' = insertBlock [Valid $ CardanoApiTx $ CardanoApiEmulatorEraTx tx] utxo
+      let utxo' = insertBlock [Valid $ CardanoEmulatorEraTx tx] utxo
       atomically $ do
         writeTBQueue txQueue tx
         modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ getIndex utxo' }

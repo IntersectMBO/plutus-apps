@@ -20,7 +20,7 @@ import Data.Aeson qualified as JSON
 import Data.Aeson.Encode.Pretty qualified as JSON
 import Data.ByteString.Lazy.Char8 qualified as BSL8
 import GHC.Generics (Generic)
-import Ledger.Tx (Tx, txId)
+import Ledger.Tx (CardanoTx, getCardanoTxId)
 import Plutus.Contract.Effects (PABReq (..), PABResp (..))
 import Plutus.Contract.Resumable (IterationID, Request (..), Response (..))
 import Plutus.Contract.Trace.RequestHandler (RequestHandlerLogMsg)
@@ -50,7 +50,7 @@ data ContractInstanceMsg t =
     | ActivatedContractInstance (Contract.ContractDef t) Wallet ContractInstanceId
     | RunRequestHandler ContractInstanceId Int -- number of requests
     | RunRequestHandlerDidNotHandleAnyEvents
-    | StoringSignedTx Tx
+    | StoringSignedTx CardanoTx
     | CallingEndpoint String ContractInstanceId JSON.Value
     | ProcessContractInbox ContractInstanceId
     | HandlingRequest RequestHandlerLogMsg
@@ -152,7 +152,7 @@ instance Pretty (Contract.ContractDef t) => Pretty (ContractInstanceMsg t) where
         ActivatedContractInstance _ wallet instanceID -> "Activated instance" <+> pretty instanceID <+> "on" <+> pretty wallet
         RunRequestHandler instanceID numRequests -> "Running request handler for" <+> pretty instanceID <+> "with" <+> pretty numRequests <+> "requests."
         RunRequestHandlerDidNotHandleAnyEvents -> "runRequestHandler: did not handle any requests"
-        StoringSignedTx tx -> "Storing signed tx" <+> pretty (txId tx)
+        StoringSignedTx tx -> "Storing signed tx" <+> pretty (getCardanoTxId tx)
         CallingEndpoint endpoint instanceID value ->
             "Calling endpoint" <+> pretty endpoint <+> "on instance" <+> pretty instanceID <+> "with" <+> viaShow value
         ProcessContractInbox i -> "Processing contract inbox for" <+> pretty i

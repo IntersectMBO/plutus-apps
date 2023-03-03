@@ -19,17 +19,14 @@ import Control.Lens ((&), (.~))
 import Control.Monad.Freer (run)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.Bifunctor (Bifunctor (bimap))
 import Data.ByteString.Lazy qualified as BSL
 import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
-import Data.Set qualified as Set
 
 import Ledger qualified
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx (..))
-import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
@@ -119,12 +116,6 @@ writeTransaction params fp prefix idx utx = do
             BSL.writeFile filename1 $ encodePretty ctx
     where
       buildTx :: UnbalancedTx -> Either CardanoLedgerError (C.Tx C.BabbageEra)
-      buildTx (UnbalancedEmulatorTx tx sigs _) =
-        let requiredSigners = Set.toList sigs
-        in bimap
-            Right
-            (C.makeSignedTransaction [])
-            (CardanoAPI.toCardanoTxBody (pNetworkId params) (emulatorPParams params) requiredSigners tx)
       buildTx (UnbalancedCardanoTx tx utxos) =
         let fromCardanoTx ctx = do
               utxo <- fromPlutusIndex $ Ledger.UtxoIndex utxos

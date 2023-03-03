@@ -29,7 +29,7 @@ import Data.OpenApi (NamedSchema (NamedSchema), OpenApiType (OpenApiObject), byt
                      required, type_)
 import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics (Generic)
-import Ledger (Certificate, Datum, POSIXTime (POSIXTime), PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash, Tx, TxId,
+import Ledger (Certificate, Datum, POSIXTime (POSIXTime), PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash, TxId,
                TxOut, Value, Withdrawal)
 import Ledger.Crypto (PubKey (PubKey), Signature (Signature))
 import Ledger.Index (UtxoIndex)
@@ -114,9 +114,7 @@ deriving instance OpenApi.ToSchema TxInputType
 deriving instance OpenApi.ToSchema TxInput
 deriving instance OpenApi.ToSchema Withdrawal
 deriving instance OpenApi.ToSchema Certificate
-deriving anyclass instance OpenApi.ToSchema Tx
 deriving anyclass instance OpenApi.ToSchema UtxoIndex
-deriving anyclass instance OpenApi.ToSchema CardanoTx
 deriving anyclass instance OpenApi.ToSchema DereferencedInput
 deriving anyclass instance OpenApi.ToSchema BeneficialOwner
 deriving anyclass instance OpenApi.ToSchema TxKey
@@ -124,7 +122,7 @@ deriving anyclass instance OpenApi.ToSchema AnnotatedTx
 
 data ChainReport =
     ChainReport
-        { transactionMap      :: Map TxId Tx
+        { transactionMap      :: Map TxId CardanoTx
         , utxoIndex           :: UtxoIndex
         , annotatedBlockchain :: [[AnnotatedTx]]
         }
