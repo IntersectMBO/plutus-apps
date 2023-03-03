@@ -77,6 +77,21 @@ tests = testGroup "Spec.Marconi.ChainIndex.Orphans"
               "C.PolicyId"
               "propSQLFieldRoundtripPolicyId"
               propSQLFieldRoundtripPolicyId
+
+        , testPropertyNamed
+              "C.EpochNo"
+              "propSQLFieldRoundtripEpochNo"
+              propSQLFieldRoundtripEpochNo
+
+        , testPropertyNamed
+              "C.Lovelace"
+              "propSQLFieldRoundtripLovelace"
+              propSQLFieldRoundtripLovelace
+
+        , testPropertyNamed
+              "C.PoolId"
+              "propSQLFieldRoundtripPoolId"
+              propSQLFieldRoundtripPoolId
         ]
 
   , testGroup "ToJSON/FromJSON rountrip"
@@ -160,5 +175,20 @@ propSQLFieldRoundtripScriptHash = property $ do
 propSQLFieldRoundtripPolicyId :: Property
 propSQLFieldRoundtripPolicyId = property $ do
     p <- forAll Gen.genPolicyId
+    tripping p SQL.toField (\sqlData -> SQL.fromField $ SQL.Field sqlData 0)
+
+propSQLFieldRoundtripEpochNo :: Property
+propSQLFieldRoundtripEpochNo = property $ do
+    p <- forAll Gen.genEpochNo
+    tripping p SQL.toField (\sqlData -> SQL.fromField $ SQL.Field sqlData 0)
+
+propSQLFieldRoundtripLovelace :: Property
+propSQLFieldRoundtripLovelace = property $ do
+    p <- forAll CGen.genLovelace
+    tripping p SQL.toField (\sqlData -> SQL.fromField $ SQL.Field sqlData 0)
+
+propSQLFieldRoundtripPoolId :: Property
+propSQLFieldRoundtripPoolId = property $ do
+    p <- forAll Gen.genPoolId
     tripping p SQL.toField (\sqlData -> SQL.fromField $ SQL.Field sqlData 0)
 

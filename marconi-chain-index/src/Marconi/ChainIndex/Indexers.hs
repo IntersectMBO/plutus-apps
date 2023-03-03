@@ -9,51 +9,58 @@
 
 module Marconi.ChainIndex.Indexers where
 
-import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar, readMVar)
-import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
-import Control.Exception (catch)
-import Control.Lens (view, (&))
-import Control.Lens.Operators ((^.))
-import Control.Monad (forever, void)
-import Control.Monad.Trans.Class (lift)
-import Data.List (findIndex, foldl1', intersect)
-import Data.Map (Map)
-import Data.Map qualified as Map
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Text qualified as TS
-import Database.SQLite.Simple qualified as SQL
-import Streaming.Prelude qualified as S
-
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as Shelley
+import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                           withChainSyncEventStream)
-import Cardano.Streaming qualified as CS
-import Marconi.ChainIndex.Logging (logging)
-import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
-import Prettyprinter.Render.Text (renderStrict)
-
+import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar, readMVar)
+import Control.Concurrent.MVar (modifyMVar)
+import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
+import Control.Exception (catch)
+import Control.Lens (view)
+import Control.Lens.Operators ((^.))
+import Control.Monad (forever, void)
+import Control.Monad.Trans.Except (runExceptT)
+import Data.List (findIndex, foldl1', intersect)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Text qualified as TS
+import Data.Word (Word64)
 import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatumDepth), AddressDatumHandle,
                                                  AddressDatumIndex)
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
 import Marconi.ChainIndex.Indexers.Datum (DatumIndex)
 import Marconi.ChainIndex.Indexers.Datum qualified as Datum
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochStakepoolSize
+import Marconi.ChainIndex.Indexers.EpochStakepoolSize (EpochSPDHandle, EpochSPDIndex)
+import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochSPD
 import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Indexers.ScriptTx qualified as ScriptTx
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
+import Marconi.ChainIndex.Logging (logging)
+import Marconi.ChainIndex.Node.Client.GenesisConfig (NetworkConfigFile (NetworkConfigFile), initExtLedgerStateVar,
+                                                     mkProtocolInfoCardano, readCardanoGenesisConfig, readNetworkConfig,
+                                                     renderGenesisConfigError)
 import Marconi.ChainIndex.Types (TargetAddresses)
-
 import Marconi.Core.Index.VSplit qualified as Ix
 import Marconi.Core.Storable qualified as Storable
+import Ouroboros.Consensus.Config qualified as O
+import Ouroboros.Consensus.Ledger.Abstract qualified as O
+import Ouroboros.Consensus.Ledger.Extended qualified as O
+import Ouroboros.Consensus.Node qualified as O
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+import Streaming.Prelude qualified as S
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (takeDirectory, (</>))
 
 -- DatumIndexer
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (Hash ScriptData, ScriptData))]
@@ -67,13 +74,13 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extra
             $ txBody
 
 scriptDataFromCardanoTxBody :: C.TxBody era -> Map (Hash ScriptData) ScriptData
-scriptDataFromCardanoTxBody (Shelley.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ dats _) _ _) =
+scriptDataFromCardanoTxBody (C.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ dats _) _ _) =
     extractData dats
   where
     extractData :: Alonzo.TxDats era -> Map (Hash ScriptData) ScriptData
     extractData (Alonzo.TxDats' xs) =
       Map.fromList
-      . fmap ((\x -> (C.hashScriptData x, x)) . Shelley.fromAlonzoData)
+      . fmap ((\x -> (C.hashScriptData x, x)) . C.fromAlonzoData)
       . Map.elems
       $ xs
 scriptDataFromCardanoTxBody _ = mempty
@@ -90,12 +97,10 @@ scriptDataFromCardanoTxBody _ = mempty
      how many we are waiting.
 -}
 data Coordinator = Coordinator
-  { _channel      :: TChan (ChainSyncEvent (BlockInMode CardanoMode))
-  , _barrier      :: QSemN
-  , _indexerCount :: Int
+  { _channel      :: !(TChan (ChainSyncEvent (BlockInMode CardanoMode)))
+  , _barrier      :: !QSemN
+  , _indexerCount :: !Int
   }
-
-
 
 initialCoordinator :: Int -> IO Coordinator
 initialCoordinator indexerCount =
@@ -134,7 +139,10 @@ utxoWorker_
   :: (Utxo.UtxoIndexer -> IO ())  -- ^ callback function used in the queryApi thread, needs to be non-blocking
   -> Utxo.Depth
   -> Maybe TargetAddresses                       -- ^ Target addresses to filter for
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO (), MVar Utxo.UtxoIndexer)
+  -> Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO (IO (), MVar Utxo.UtxoIndexer)
 utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = do
   ix <- Utxo.open path depth
   mIndexer <- newMVar ix
@@ -203,7 +211,7 @@ addressDatumWorker_ onInsert targetAddresses depth Coordinator{_barrier} ch path
         RollForward (BlockInMode (Block (BlockHeader slotNo bh _) txs) _) _ -> do
             -- TODO Redo. Inefficient filtering
             let addressFilter =
-                    fmap (\targetAddrs -> \addr -> addr `elem` targetAddrs)
+                    fmap (flip elem)
                          targetAddresses
                 addressDatumIndexEvent =
                     AddressDatum.toAddressDatumIndexEvent addressFilter txs (C.ChainPoint slotNo bh)
@@ -254,27 +262,104 @@ scriptTxWorker onInsert coordinator path = do
 
 -- * Epoch stakepool size indexer
 
-epochStakepoolSizeWorker :: FilePath -> Worker
-epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
-  tchan <- atomically $ dupTChan _channel
-  let
-    -- Read blocks from TChan, emit them as a stream.
-    chainSyncEvents :: S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO ()
-    chainSyncEvents = do
-      lift $ signalQSemN _barrier 1
-      S.yield =<< (lift $ atomically $ readTChan tchan)
-      chainSyncEvents
+epochStakepoolSizeWorker_
+  :: FilePath
+  -> ((Storable.State EpochSPDHandle, Storable.StorableEvent EpochSPDHandle) -> IO ())
+  -> Word64 -- Security param
+  -> Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO (IO b, MVar EpochSPDIndex)
+epochStakepoolSizeWorker_
+        nodeConfigPath
+        onInsert
+        securityParam
+        Coordinator{_barrier}
+        ch
+        dbPath = do
+    let ledgerStateDir = takeDirectory dbPath </> "ledgerStates"
+    createDirectoryIfMissing False ledgerStateDir
+    indexerMVar <- newMVar =<< EpochSPD.open dbPath ledgerStateDir securityParam
 
-  dbCon <- SQL.open dbPath
-  (env, initialLedgerStateHistory) <- CS.getEnvAndInitialLedgerStateHistory configPath
-  let
-    indexer = chainSyncEvents
-      & CS.foldLedgerState env initialLedgerStateHistory C.QuickValidation
-      & EpochStakepoolSize.toEvents
-      & EpochStakepoolSize.sqlite dbCon
+    nodeConfigE <- runExceptT $ readNetworkConfig (NetworkConfigFile nodeConfigPath)
+    nodeConfig <- either (error . show) pure nodeConfigE
+    genesisConfigE <- runExceptT $ readCardanoGenesisConfig nodeConfig
+    genesisConfig <- either (error . show . renderGenesisConfigError) pure genesisConfigE
 
-  void . forkIO $ S.effects indexer
-  pure [ChainPointAtGenesis]
+    let initialLedgerState = O.ledgerState $ initExtLedgerStateVar genesisConfig
+        hfLedgerConfig = O.topLevelConfigLedger $ O.pInfoConfig (mkProtocolInfoCardano genesisConfig)
+
+        loop currentLedgerState currentEpochNo previousEpochNo = do
+            signalQSemN _barrier 1
+            chainSyncEvent <- atomically $ readTChan ch
+
+            newLedgerState <- case chainSyncEvent of
+              RollForward blockInMode@(C.BlockInMode (C.Block (C.BlockHeader slotNo bh bn) _) _) chainTip -> do
+                  -- If the block is rollbackable, we always store the LedgerState. If the block is
+                  -- immutable, we only store it right at the beginning of a new epoch.
+                  let isFirstEventOfEpoch = currentEpochNo > previousEpochNo
+                  let storableEvent =
+                          EpochSPD.toStorableEvent
+                            currentLedgerState
+                            slotNo
+                            bh
+                            bn
+                            chainTip
+                            securityParam
+                            isFirstEventOfEpoch
+                  newIndexer <-
+                      modifyMVar indexerMVar
+                        $ \idx -> fmap (\newIdx -> (newIdx, newIdx)) $ Storable.insert storableEvent idx
+                  onInsert (newIndexer, storableEvent)
+
+                  -- Compute new LedgerState given block and old LedgerState
+                  pure $ O.lrResult
+                       $ O.tickThenReapplyLedgerResult
+                            hfLedgerConfig
+                            (C.toConsensusBlock blockInMode)
+                            currentLedgerState
+
+              RollBackward C.ChainPointAtGenesis _ct -> do
+                  modifyMVar_ indexerMVar $ \ix -> fromMaybe ix <$> Storable.rewind C.ChainPointAtGenesis ix
+                  pure initialLedgerState
+              RollBackward cp _ct ->
+                  modifyMVar indexerMVar $ \ix -> do
+                  newIndex <- fromMaybe ix <$> Storable.rewind cp ix
+                  -- The possible points from which we can possibly rollback should be available
+                  -- in the buffer events and from the resumable points.
+                  -- For that assumption to be correct, we absolutely need
+                  --    * to make sure that 'EpochSPD.open' was called with the correct
+                  --    'SecurityParam' (k) value of connect Cardano network.
+                  --    * that the resumablePoints correctly returns the points from which we
+                  --    have saved a LedgerState on disk.
+                  EpochSPD.LedgerStateAtPointResult maybeLedgerState <-
+                      Storable.query Storable.QEverything newIndex (EpochSPD.LedgerStateAtPointQuery cp)
+                  case maybeLedgerState of
+                    Nothing ->
+                        error "Could not find LedgerState from which to rollback from in EpochSPD indexer. Should not happen!"
+                    Just ledgerState ->
+                        pure (newIndex, ledgerState)
+
+            loop newLedgerState (EpochSPD.getEpochNo newLedgerState) currentEpochNo
+
+    pure (loop initialLedgerState (EpochSPD.getEpochNo initialLedgerState) Nothing, indexerMVar)
+
+epochStakepoolSizeWorker
+    :: FilePath
+    -> ((Storable.State EpochSPDHandle, Storable.StorableEvent EpochSPDHandle) -> IO ())
+    -> Worker
+epochStakepoolSizeWorker nodeConfigPath onInsert coordinator path = do
+  workerChannel <- atomically . dupTChan $ _channel coordinator
+  (loop, ix) <-
+      epochStakepoolSizeWorker_
+        nodeConfigPath
+        onInsert
+        2160
+        coordinator
+        workerChannel
+        path
+  void $ forkIO loop
+  readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
 -- * Mint/burn indexer
 
@@ -340,13 +425,13 @@ mkIndexerStream coordinator = S.foldM_ step initial finish
 
 runIndexers
   :: FilePath
-  -> Shelley.NetworkId
+  -> C.NetworkId
   -> ChainPoint
   -> TS.Text
   -> [(Worker, Maybe FilePath)]
   -> IO ()
 runIndexers socketPath networkId cliChainPoint traceName list = do
-  (returnedCp, coordinator) <- initializeIndexers $ mapMaybe (traverse id) list
+  (returnedCp, coordinator) <- initializeIndexers $ mapMaybe sequenceA list
 
   -- If the user specifies the chain point then use that,
   -- otherwise use what the indexers provide.

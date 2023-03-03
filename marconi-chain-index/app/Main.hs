@@ -19,12 +19,12 @@ main = do
       , (Indexers.mintBurnWorker (\_ -> pure ()), Cli.mintBurnDbPath o)
       ] <> case Cli.optionsNodeConfigPath o of
       Just configPath ->
-        [(Indexers.epochStakepoolSizeWorker configPath, Cli.epochStakepoolSizeDbPath o)]
+        [(Indexers.epochStakepoolSizeWorker configPath (\_ -> pure ()), Cli.epochStakepoolSizeDbPath o)]
       Nothing         -> []
 
   Indexers.runIndexers
     (Cli.optionsSocketPath o)
     (Cli.optionsNetworkId o)
     (Cli.optionsChainPoint o)
-    "marconi"
+    "marconi-chain-index"
     indexers
