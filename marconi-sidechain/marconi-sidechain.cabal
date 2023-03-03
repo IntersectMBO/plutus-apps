@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          marconi-sidechain
-version:       1.1.0.0
+version:       1.2.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -55,9 +55,9 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , marconi-chain-index:{marconi-chain-index, json-rpc}
-    , marconi-core
+    , cardano-streaming                                    >=1.2.0
+    , marconi-chain-index:{marconi-chain-index, json-rpc}  >=1.2.0
+    , marconi-core                                         >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -109,8 +109,8 @@ executable examples-json-rpc-server
   -- Local components
   --------------------
   build-depends:
-    , marconi-chain-index
-    , marconi-sidechain
+    , marconi-chain-index  >=1.2.0
+    , marconi-sidechain    >=1.2.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -132,8 +132,8 @@ executable examples-json-rpc-client
   -- Local components
   --------------------
   build-depends:
-    , marconi-chain-index:json-rpc
-    , marconi-sidechain
+    , marconi-chain-index:json-rpc  >=1.2.0
+    , marconi-sidechain             >=1.2.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -197,9 +197,9 @@ test-suite marconi-sidechain-test
   -- Local components
   --------------------
   build-depends:
-    , marconi-chain-index:{marconi-chain-index, json-rpc, marconi-chain-index-test-lib}
-    , marconi-core
-    , marconi-sidechain
+    , marconi-chain-index:{marconi-chain-index, json-rpc, marconi-chain-index-test-lib}  >=1.2.0
+    , marconi-core                                                                       >=1.2.0
+    , marconi-sidechain                                                                  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
