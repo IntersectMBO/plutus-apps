@@ -203,8 +203,9 @@ instance Queryable Handle where
     es' :: [StorableEvent Handle] <-
       Sql.query h "SELECT * from index_property_cache WHERE point <= ? ORDER BY point ASC" (Sql.Only pt)
     Sql.execute_ h "COMMIT"
+    let es'' = filter (\e -> getPoint e <= pt) $ es' ++ toList memoryEs
     -- Run a fold computing the final result.
-    pure $ foldl' ((fst .) . indexedFn f) aggregate $ es' ++ toList memoryEs
+    pure $ foldl' ((fst .) . indexedFn f) aggregate es''
 
 
 instance Rewindable Handle where
