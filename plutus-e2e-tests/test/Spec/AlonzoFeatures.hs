@@ -19,7 +19,7 @@ import Helpers.Query qualified as Q
 import Helpers.Testnet (testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers.Testnet qualified as TN
 import Helpers.Tx qualified as Tx
-import Helpers.Utils qualified as U (posixToMilliseconds, workspace)
+import Helpers.Utils qualified as U (anyLeftFail_, posixToMilliseconds, workspace)
 import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Interval qualified as PlutusV1
 import Plutus.V1.Ledger.Time qualified as PlutusV1
@@ -108,7 +108,8 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
 
-  TN.cleanupTestnet mPoolNodes
+  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
+
   H.success
 
 -- TODO: datumHashSpendTest

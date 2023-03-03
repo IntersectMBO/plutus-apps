@@ -103,5 +103,5 @@ verifySchnorrAndEcdsaTest networkOptions = H.integration . HE.runFinallies . U.w
       txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
       H.assert txOutHasTokenValue
 
-      TN.cleanupTestnet mPoolNodes
+      U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
       H.success

@@ -1,14 +1,19 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE CPP        #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Helpers.Testnet where
 
+import Cardano.Api (Error)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import CardanoTestnet qualified as TN
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Maybe (fromJust)
 import Hedgehog (MonadTest)
+import Hedgehog.Extras.Stock (waitSecondsForProcess)
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
+import Hedgehog.Extras.Stock.OS qualified as OS
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
 import Helpers.Common (cardanoEraToShelleyBasedEra, makeAddress, toEraInCardanoMode)
@@ -16,7 +21,15 @@ import Helpers.Utils (maybeReadAs)
 import System.Directory qualified as IO
 import System.Environment qualified as IO
 import System.FilePath ((</>))
+
+#if defined(mingw32_HOST_OS)
+  -- do no process kill signalling on windows
+#else
+import System.Posix.Signals (sigKILL, signalProcess)
+#endif
+
 import System.Process (cleanupProcess)
+import System.Process.Internals (PHANDLE, ProcessHandle__ (ClosedHandle, OpenExtHandle, OpenHandle), withProcessHandle)
 import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
@@ -34,6 +47,11 @@ localNodeOptionsPreview = Left $ LocalNodeOptions
   , localEnvDir = "/tmp/preview"
   , testnetMagic = 2
   }
+
+data TimedOut = ProcessExitTimedOut Int PHANDLE deriving Show
+
+instance Error TimedOut where
+  displayError (ProcessExitTimedOut t pid) = "Timeout. Waited " ++ show t ++ "s in `cleanupTestnet` for process to exit. pid=" ++ show pid
 
 testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8 :: Either LocalNodeOptions TN.TestnetOptions
 testnetOptionsAlonzo6 = Right $ TN.defaultTestnetOptions {TN.era = C.AnyCardanoEra C.AlonzoEra, TN.protocolVersion = 6}
@@ -78,11 +96,24 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
   pure (localNodeConnectInfo, pparams, networkId, Just $ TN.poolNodes tn)
 
-cleanupTestnet :: (MonadIO m) => Maybe [TN.PoolNode] -> m ()
+cleanupTestnet :: (MonadIO m) => Maybe [TN.PoolNode] -> m [Either TimedOut ()]
 cleanupTestnet mPoolNodes = case mPoolNodes of
-    Just poolNodes ->
-      liftIO $ mapM_ (\node -> cleanupProcess (Just (TN.poolNodeStdinHandle node), Nothing, Nothing, TN.poolNodeProcessHandle node)) poolNodes
-    _ -> return ()
+    Just poolNodes -> do
+      liftIO $ mapM_ (\node -> cleanupProcess (Just (TN.poolNodeStdinHandle node), Nothing, Nothing, TN.poolNodeProcessHandle node)) poolNodes -- graceful SIGTERM all nodes
+      if not OS.isWin32 then -- do no process kill signalling on windows
+        liftIO $ mapM (\node -> killUnixHandle $ TN.poolNodeProcessHandle node) poolNodes -- kill signal for any node unix handles still open
+        else return []
+    _ ->     return []
+    where
+      killUnixHandle ph = liftIO $ withProcessHandle ph $ \case
+          OpenHandle pid    -> do
+            signalProcess sigKILL pid -- send kill signal if handle still open
+            eTimeOut <- waitSecondsForProcess 60 ph  -- wait 60s for process to exit
+            case eTimeOut of
+                Left _  -> return $ Left $ ProcessExitTimedOut 60 pid
+                Right _ -> return $ Right ()
+          OpenExtHandle _ _ -> return $ Right () -- do nothing on Windows
+          ClosedHandle _    -> return $ Right () -- do nothing if already closed
 
 connectToLocalNode ::
   C.CardanoEra era ->
