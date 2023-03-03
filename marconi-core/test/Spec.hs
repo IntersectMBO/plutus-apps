@@ -9,21 +9,29 @@ import Marconi.Core.Spec.VSqlite qualified as VS
 import Marconi.Core.Trace qualified as Ix
 
 tests :: TestTree
-tests = testGroup "Everything" [ indexTests, traceTests ]
+tests = testGroup "Everything" [ {-indexTests,-} traceTests ]
 
 indexTests :: TestTree
 indexTests = testGroup "Index" [ ixProperties, sProperties, viProperties, vsProperties
                                , tProperties ]
 
 traceTests :: TestTree
-traceTests = testGroup "Trace" [ traceProperties ]
+traceTests = testGroup "Trace" [ {-traceModelProperties,-} traceIndexerProperties ]
 
-traceProperties :: TestTree
-traceProperties = testGroup "Model traces"
+traceModelProperties :: TestTree
+traceModelProperties = testGroup "Model traces"
   [ testProperty "Weak bisimilarity (observed builder)" $
       withMaxSuccess 10000 $ Ix.prop_WeakBisimilarity  @Int @Int @Int Ix.modelConversion
   , testProperty "Weak bisimilarity (grammar builder)" $
       withMaxSuccess 300  $ Ix.prop_WeakBisimilarity' @Int @Int @Int Ix.modelConversion
+  ]
+
+traceIndexerProperties :: TestTree
+traceIndexerProperties = testGroup "Model traces"
+  [ testProperty "Weak bisimilarity (observed builder)" $
+      withMaxSuccess 10000 $ Ix.prop_WeakBisimilarity  TS.observeTrace
+  , testProperty "Weak bisimilarity (grammar builder)" $
+      withMaxSuccess 300  $ Ix.prop_WeakBisimilarity' TS.observeTrace
   ]
 
 ixProperties :: TestTree

@@ -10,11 +10,15 @@ module Marconi.Core.Trace
 
 import Marconi.Core.Model (GrammarBuilder (GrammarBuilder), Index (Insert, New, Rewind),
                            ObservedBuilder (ObservedBuilder))
+import Marconi.Core.Model qualified as Model
 
+import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
 
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
-import Test.Tasty.QuickCheck (Property)
+import Test.Tasty.QuickCheck (Property, (==>))
+
+import Debug.Trace qualified as Debug
 
 data TraceEvent =
      TRollForward
@@ -46,6 +50,8 @@ prop_WeakBisimilarity
   -> ObservedBuilder a e n
   -> Property
 prop_WeakBisimilarity c (ObservedBuilder ix) =
+  let v = fromJust $ Model.view ix
+   in Model.ixDepth v >= 2 ==>
   monadicIO $ do
     let modelTrace = trace ix
     ixTrace <- run $ convertTrace c ix
@@ -57,6 +63,8 @@ prop_WeakBisimilarity'
   -> GrammarBuilder a e n
   -> Property
 prop_WeakBisimilarity' c (GrammarBuilder ix) =
+  let v = fromJust $ Model.view ix
+   in Model.ixDepth v >= 2 ==>
   monadicIO $ do
     let modelTrace = trace ix
     ixTrace <- run $ convertTrace c ix

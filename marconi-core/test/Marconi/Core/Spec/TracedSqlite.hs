@@ -29,6 +29,8 @@ import Marconi.Core.TracedStorable (Buffered (getStoredEvents, persistToStorage)
                                     config, emptyState, memoryBufferSize)
 import Marconi.Core.TracedStorable qualified as Storable
 
+import Debug.Trace qualified as Debug
+
 {-
    This is a simplified indexer implementation. The simplification is that all events,
    points, queries and results have type `Int`.
@@ -234,13 +236,16 @@ conversion = Conversion
   , cMonadic = monadic
   }
 
-observeTrace :: IndexT -> IO Ix.Trace
-observeTrace ix = do
-  r <- newIORef []
-  let tracer (Storable.CNRollForward  _) = modifyIORef' r (Ix.TRollBack:)
-      tracer (Storable.CNRollBack     _) = modifyIORef' r (Ix.TRollForward:)
-  _ <- pure . monadicIO . void $ run (Tracer tracer) ix
-  readIORef r
+observeTrace :: Ix.ConvertibleEvent Int Int ()
+observeTrace  = Ix.ConvertibleEvent go
+  where
+    go :: IndexT -> IO Ix.Trace
+    go ix = do
+      r <- newIORef []
+      let tracer (Storable.CNRollForward  _) = modifyIORef' r (Ix.TRollForward:)
+          tracer (Storable.CNRollBack     _) = modifyIORef' r (Ix.TRollBack:)
+      _ <- run' (Tracer tracer) ix
+      readIORef r
 
 -- We don't really have any notification implementation available for the new indexers.
 getNotifications
@@ -336,6 +341,37 @@ lookupPoint n (Config st _) = MaybeT $ do
   then pure $ atMay es' n <&> sePoint
   -- Otherwise the point we need to rollback to was not found.
   else pure Nothing
+
+-- The run function returns a tupple because it needs to both assign increasing slot
+-- numbers and return the indexer produced by the previous computation.
+run'
+  :: Tracer IO (Storable.ControlNotification Point)
+  -> IndexT
+  -> IO (Maybe (Config, Int))
+run' _ (Ix.New f depth ag0)
+  | depth <= 0 = pure Nothing
+  | otherwise = do
+      let d = fromIntegral depth
+      -- In the model the K value is always `depth` - 1 to make place for the accumulator.
+      -- The second parameter is not really that important.
+      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ag0
+      -- On creation the slot number will always be 0.
+      pure $ (,0) <$> indexer
+run' t (Ix.Insert e ix) = do
+  mix <- run' t ix
+  case mix of
+    Nothing        -> pure Nothing
+    Just (ix', sq) -> liftIO $ do
+      nextState <- Storable.insert t (Event (Point sq) e) (ix' ^. state)
+      pure . Just . (, sq + 1) $ ix' { _state = nextState }
+run' t (Ix.Rewind n ix) = do
+  mix <- run' t ix
+  case mix of
+    Nothing        -> pure Nothing
+    Just (ix', sq) -> liftIO . runMaybeT $ do
+      p         <- lookupPoint n ix'
+      nextState <- MaybeT . liftIO $ Storable.rewind t p (ix' ^. state)
+      pure . (,sq) $ ix' { _state = nextState }
 
 -- The run function returns a tupple because it needs to both assign increasing slot
 -- numbers and return the indexer produced by the previous computation.
