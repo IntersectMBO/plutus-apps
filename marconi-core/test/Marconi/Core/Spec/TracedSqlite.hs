@@ -7,7 +7,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
 import Control.Tracer (Tracer (Tracer), nullTracer)
 import Data.Foldable (foldl', toList)
-import Data.Functor (void, (<&>))
+import Data.Functor ((<&>))
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import Database.SQLite.Simple qualified as Sql
 import Database.SQLite.Simple.FromField (FromField (fromField))
@@ -28,8 +28,6 @@ import Marconi.Core.TracedStorable (Buffered (getStoredEvents, persistToStorage)
                                     State, StorableEvent, StorableMonad, StorablePoint, StorableQuery, StorableResult,
                                     config, emptyState, memoryBufferSize)
 import Marconi.Core.TracedStorable qualified as Storable
-
-import Debug.Trace qualified as Debug
 
 {-
    This is a simplified indexer implementation. The simplification is that all events,
@@ -244,7 +242,7 @@ observeTrace  = Ix.ConvertibleEvent go
       r <- newIORef []
       let tracer (Storable.CNRollForward  _) = modifyIORef' r (Ix.TRollForward:)
           tracer (Storable.CNRollBack     _) = modifyIORef' r (Ix.TRollBack:)
-      _ <- run' (Tracer tracer) ix
+      _ <- run (Tracer tracer) ix
       readIORef r
 
 -- We don't really have any notification implementation available for the new indexers.
@@ -257,7 +255,7 @@ getHistory
   :: IndexT
   -> PropertyM IO (Maybe [Int])
 getHistory ix = do
-  mix <- run nullTracer ix
+  mix <- liftIO $ run nullTracer ix
   case mix of
     Nothing       -> pure Nothing
     Just (ix', _) -> liftIO $ do
@@ -286,7 +284,7 @@ getView
   :: IndexT
   -> PropertyM IO (Maybe (IndexView Int))
 getView ix = do
-  mix <- run nullTracer ix
+  mix <- liftIO $ run nullTracer ix
   case mix of
     Nothing       -> pure Nothing
     Just (ix', _) -> do
@@ -344,41 +342,10 @@ lookupPoint n (Config st _) = MaybeT $ do
 
 -- The run function returns a tupple because it needs to both assign increasing slot
 -- numbers and return the indexer produced by the previous computation.
-run'
-  :: Tracer IO (Storable.ControlNotification Point)
-  -> IndexT
-  -> IO (Maybe (Config, Int))
-run' _ (Ix.New f depth ag0)
-  | depth <= 0 = pure Nothing
-  | otherwise = do
-      let d = fromIntegral depth
-      -- In the model the K value is always `depth` - 1 to make place for the accumulator.
-      -- The second parameter is not really that important.
-      indexer <- liftIO $ newSqliteIndexer f (d  - 1) ag0
-      -- On creation the slot number will always be 0.
-      pure $ (,0) <$> indexer
-run' t (Ix.Insert e ix) = do
-  mix <- run' t ix
-  case mix of
-    Nothing        -> pure Nothing
-    Just (ix', sq) -> liftIO $ do
-      nextState <- Storable.insert t (Event (Point sq) e) (ix' ^. state)
-      pure . Just . (, sq + 1) $ ix' { _state = nextState }
-run' t (Ix.Rewind n ix) = do
-  mix <- run' t ix
-  case mix of
-    Nothing        -> pure Nothing
-    Just (ix', sq) -> liftIO . runMaybeT $ do
-      p         <- lookupPoint n ix'
-      nextState <- MaybeT . liftIO $ Storable.rewind t p (ix' ^. state)
-      pure . (,sq) $ ix' { _state = nextState }
-
--- The run function returns a tupple because it needs to both assign increasing slot
--- numbers and return the indexer produced by the previous computation.
 run
   :: Tracer IO (Storable.ControlNotification Point)
   -> IndexT
-  -> PropertyM IO (Maybe (Config, Int))
+  -> IO (Maybe (Config, Int))
 run _ (Ix.New f depth ag0)
   | depth <= 0 = pure Nothing
   | otherwise = do

@@ -9,14 +9,14 @@ import Marconi.Core.Spec.VSqlite qualified as VS
 import Marconi.Core.Trace qualified as Ix
 
 tests :: TestTree
-tests = testGroup "Everything" [ {-indexTests,-} traceTests ]
+tests = testGroup "Everything" [ indexTests, traceTests ]
 
 indexTests :: TestTree
 indexTests = testGroup "Index" [ ixProperties, sProperties, viProperties, vsProperties
                                , tProperties ]
 
 traceTests :: TestTree
-traceTests = testGroup "Trace" [ {-traceModelProperties,-} traceIndexerProperties ]
+traceTests = testGroup "Trace" [ traceModelProperties, traceIndexerProperties ]
 
 traceModelProperties :: TestTree
 traceModelProperties = testGroup "Model traces"
@@ -46,8 +46,6 @@ ixProperties = testGroup "Basic model"
       withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int @Int Ix.conversion
   , testProperty "Insert is folding the structure" $
       withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int @Int Ix.conversion
-  , testProperty "Notifications are accumulated as the fold runs" $
-      withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int Ix.conversion
   ]
 
 sProperties :: TestTree
@@ -90,8 +88,6 @@ viProperties = testGroup "Vector index"
       withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int V.conversion
   , testProperty "Insert is folding the structure" $
       withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int V.conversion
-  , testProperty "Notifications are accumulated as the fold runs" $
-      withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int V.conversion
   ]
 
 vsProperties :: TestTree
@@ -106,8 +102,6 @@ vsProperties = testGroup "SQLite vector index"
       withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int VS.conversion
   , testProperty "Insert is folding the structure" $
       withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int VS.conversion
-  , testProperty "Notifications are accumulated as the fold runs" $
-      withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int VS.conversion
   ]
 
 main :: IO ()

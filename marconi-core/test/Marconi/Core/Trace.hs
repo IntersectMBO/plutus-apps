@@ -18,8 +18,6 @@ import GHC.Generics (Generic)
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
 import Test.Tasty.QuickCheck (Property, (==>))
 
-import Debug.Trace qualified as Debug
-
 data TraceEvent =
      TRollForward
    | TRollBack
@@ -50,6 +48,7 @@ prop_WeakBisimilarity
   -> ObservedBuilder a e n
   -> Property
 prop_WeakBisimilarity c (ObservedBuilder ix) =
+  -- The new indexer can not handle a depth of 1
   let v = fromJust $ Model.view ix
    in Model.ixDepth v >= 2 ==>
   monadicIO $ do
@@ -63,6 +62,7 @@ prop_WeakBisimilarity'
   -> GrammarBuilder a e n
   -> Property
 prop_WeakBisimilarity' c (GrammarBuilder ix) =
+  -- The new indexer can not handle a depth of 1
   let v = fromJust $ Model.view ix
    in Model.ixDepth v >= 2 ==>
   monadicIO $ do
