@@ -26,6 +26,7 @@ pkgs.stdenv.mkDerivation {
   buildPhase = ''
     cp -aR ${cell.packages.combined-plutus-apps-haddock}/share/doc haddock
     # -n gives warnings on missing link targets, -W makes warnings into errors
+    export PLUTUS_CORE_OBJECTS_INV=${cell.library.plutus-core-objects-inv}
     SPHINX_HADDOCK_DIR=haddock sphinx-build -n . $out
     cp -aR haddock $out
   '';

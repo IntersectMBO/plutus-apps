@@ -18,6 +18,11 @@ inputs.std.lib.dev.mkShell {
 
   commands = [
     {
+      package = cell.packages.scriv;
+      category = "general commands";
+      help = "Manage changelogs";
+    }
+    {
       package = cell.packages.fix-png-optimization;
       category = "general commands";
       help = "Fix all PNG files in-place";
@@ -144,6 +149,12 @@ inputs.std.lib.dev.mkShell {
       name = "LOCALE_ARCHIVE";
       value = pkgs.lib.optionalString
         (pkgs.stdenv.hostPlatform.libc == "glibc") "${pkgs.glibcLocales}/lib/locale/locale-archive";
+    }
+
+    # This is used by doc/conf.py to link plutus-core read-the-docs pages
+    {
+      name = "PLUTUS_CORE_OBJECTS_INV";
+      value = cell.library.plutus-core-objects-inv;
     }
   ];
 }
