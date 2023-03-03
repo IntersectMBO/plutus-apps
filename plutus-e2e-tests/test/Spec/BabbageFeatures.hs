@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Spec.BabbageFeatures(tests) where
 
@@ -61,7 +62,7 @@ referenceScriptMintTest networkOptions = H.integration . HE.runFinallies . U.wor
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
@@ -107,6 +108,8 @@ referenceScriptMintTest networkOptions = H.integration . HE.runFinallies . U.wor
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
+
+  TN.cleanupTestnet mPoolNodes
   H.success
 
 
@@ -116,7 +119,7 @@ referenceScriptInlineDatumSpendTest networkOptions = H.integration . HE.runFinal
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
@@ -164,6 +167,8 @@ referenceScriptInlineDatumSpendTest networkOptions = H.integration . HE.runFinal
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
   txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
+
+  TN.cleanupTestnet mPoolNodes
   H.success
 
 
@@ -173,7 +178,7 @@ referenceScriptDatumHashSpendTest networkOptions = H.integration . HE.runFinalli
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
@@ -222,6 +227,8 @@ referenceScriptDatumHashSpendTest networkOptions = H.integration . HE.runFinalli
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
   txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
+
+  TN.cleanupTestnet mPoolNodes
   H.success
 
 checkTxInfoV2Test :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property

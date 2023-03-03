@@ -46,7 +46,7 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
   preTestnetTime <- liftIO Time.getPOSIXTime
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
   startTime <- liftIO Time.getPOSIXTime
 
@@ -107,6 +107,8 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress "
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
+
+  TN.cleanupTestnet mPoolNodes
   H.success
 
 -- TODO: datumHashSpendTest

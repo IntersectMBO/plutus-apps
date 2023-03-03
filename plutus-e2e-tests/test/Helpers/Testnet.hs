@@ -16,6 +16,7 @@ import Helpers.Utils (maybeReadAs)
 import System.Directory qualified as IO
 import System.Environment qualified as IO
 import System.FilePath ((</>))
+import System.Process (cleanupProcess)
 import Test.Runtime qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
@@ -55,7 +56,7 @@ startTestnet ::
   TN.TestnetOptions ->
   FilePath ->
   FilePath ->
-  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId, Maybe [TN.PoolNode])
 startTestnet era testnetOptions base tempAbsBasePath' = do
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf :: TC.Conf <- HE.noteShowM $ TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate) (tempAbsBasePath' <> "/") Nothing
@@ -75,13 +76,19 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
       networkId = getNetworkId tn
   pparams <- getProtocolParams era localNodeConnectInfo
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
-  pure (localNodeConnectInfo, pparams, networkId)
+  pure (localNodeConnectInfo, pparams, networkId, Just $ TN.poolNodes tn)
+
+cleanupTestnet :: (MonadIO m) => Maybe [TN.PoolNode] -> m ()
+cleanupTestnet mPoolNodes = case mPoolNodes of
+    Just poolNodes ->
+      liftIO $ mapM_ (\node -> cleanupProcess (Just (TN.poolNodeStdinHandle node), Nothing, Nothing, TN.poolNodeProcessHandle node)) poolNodes
+    _ -> return ()
 
 connectToLocalNode ::
   C.CardanoEra era ->
   LocalNodeOptions ->
   FilePath ->
-  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId, Maybe [TN.PoolNode])
 connectToLocalNode era localNodeOptions tempAbsPath = do
   let localEnvDir' = localEnvDir localNodeOptions
 
@@ -107,14 +114,14 @@ connectToLocalNode era localNodeOptions tempAbsPath = do
           }
   pparams <- getProtocolParams era localNodeConnectInfo
   liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs -- set node socket environment for Cardano.Api.Convenience.Query
-  pure (localNodeConnectInfo, pparams, networkId)
+  pure (localNodeConnectInfo, pparams, networkId, Nothing)
 
 -- | Start testnet with cardano-testnet or use local node that's already
 --   connected to a public testnet
 setupTestEnvironment ::
   Either LocalNodeOptions TN.TestnetOptions ->
   FilePath ->
-  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId)
+  H.Integration (C.LocalNodeConnectInfo C.CardanoMode, C.ProtocolParameters, C.NetworkId, Maybe [TN.PoolNode])
 setupTestEnvironment options tempAbsPath = do
   case options of
     Left localNodeOptions -> do
