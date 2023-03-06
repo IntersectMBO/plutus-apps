@@ -144,7 +144,7 @@ utxoWorker_
   -> FilePath
   -> IO (IO (), MVar Utxo.UtxoIndexer)
 utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = do
-  ix <- Utxo.open path depth
+  ix <- Utxo.open path depth True -- open Sqlite with depth=depth and perform sqltie vacuum
   mIndexer <- newMVar ix
   pure (loop mIndexer, mIndexer)
   where
