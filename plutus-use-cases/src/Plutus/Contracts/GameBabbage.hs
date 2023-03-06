@@ -55,8 +55,8 @@ import Ledger.Tx.Constraints (mustReferenceOutput)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (AsContractError, Contract, ContractError (OtherContractError), Endpoint, Promise,
-                        _ContractError, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints, selectList, throwError,
-                        type (.\/), utxosAt, yieldUnbalancedTx)
+                        _ContractError, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints, ownUtxos, selectList,
+                        throwError, type (.\/), utxosAt, yieldUnbalancedTx)
 import Plutus.Script.Utils.Ada (toValue)
 import Plutus.Script.Utils.Typed (ScriptContextV2, validatorHash)
 import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
@@ -200,11 +200,14 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsGameAddres
         gameHash = validatorHash game
     gameUtxos <- utxosAt guessArgsGameAddress
     gameRef <- findScriptReferenceByHash gameHash guessArgsGameAddress
+    collateral <- fmap (head . Map.toList) ownUtxos
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
                Haskell.<> Constraints.unspentOutputs gameUtxos
+               Haskell.<> Constraints.unspentOutputs (uncurry Map.singleton collateral)
         redeemer = clearString guessArgsSecret
         tx       = Constraints.spendUtxosFromTheReferencedScript utxos redeemer gameRef
+                <> Constraints.mustUseOutputAsCollateral (fst collateral)
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx
 
