@@ -1,21 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 
-module Marconi.ChainIndex.CLI
-    (chainPointParser
-    , multiString
-    , parseCardanoAddresses
-    , pNetworkId
-    , Options (..)
-    , optionsParser
-    , programParser
-    , parseOptions
-    , utxoDbPath
-    , addressDatumDbPath
-    , datumDbPath
-    , scriptTxDbPath
-    , epochStakepoolSizeDbPath
-    , mintBurnDbPath
-    ) where
+module Marconi.ChainIndex.CLI where
 
 import Control.Applicative (optional, some)
 import Data.ByteString.Char8 qualified as C8
@@ -122,35 +107,18 @@ data Options = Options
 
 parseOptions :: IO Options
 parseOptions = do
-    maybeSha <- lookupEnv "GITHUB_SHA"
-    let sha = fromMaybe "GIHUB_SHA environment variable not set!" maybeSha
-    Opt.execParser $ programParser sha
-
-programParser :: String -> Opt.ParserInfo Options
-programParser sha =
-  Opt.info (Opt.helper
-            <*> versionOption
-            <*> optionsParser)
-  (Opt.fullDesc
-   <> Opt.progDesc "marconi"
-   <> Opt.header
-   "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
-  )
-  where
-    versionOption =
-      Opt.infoOption sha (Opt.long "version" <> Opt.help "Show git SHA")
+  gitSha <- getGitSha
+  Opt.execParser $ Opt.info
+    (Opt.helper <*> commonVersionOption gitSha <*> optionsParser)
+    marconiDescr
 
 optionsParser :: Opt.Parser Options
 optionsParser =
   Options
-    <$> Opt.strOption (Opt.long "socket-path"
-                       <> Opt.short 's'
-                       <> Opt.help "Path to node socket.")
+    <$> commonSocketPath
     <*> pNetworkId
     <*> chainPointParser
-    <*> Opt.strOption (Opt.long "database-directory-path"
-                      <> Opt.short 'd'
-                      <> Opt.help "Dirctory Path for SQLite database.")
+    <*> commonDbDir
     <*> Opt.switch (Opt.long "disable-utxo"
                       <> Opt.help "disable utxo indexers."
                      )
@@ -169,10 +137,7 @@ optionsParser =
     <*> Opt.switch (Opt.long "disable-mintburn"
                       <> Opt.help "disable mint/burn indexers."
                      )
-    <*> optAddressesParser (Opt.long "addresses-to-index"
-                            <> Opt.short 'a'
-                            <> Opt.help ("Becch32 Shelley addresses to index."
-                                   <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
+    <*> commonMaybeTargetAddress
     <*> (optional $ Opt.strOption
          $ Opt.long "node-config-path"
           <> Opt.help "Path to node configuration which you are connecting to.")
@@ -199,3 +164,45 @@ epochStakepoolSizeDbPath o = if optionsDisableStakepoolSize o then Nothing else 
 
 mintBurnDbPath :: Options -> Maybe FilePath
 mintBurnDbPath o = if optionsDisableMintBurn o then Nothing else Just (optionsDbPath o </> mintBurnDbName)
+
+-- * Common CLI parsers
+
+commonSocketPath :: Opt.Parser String
+commonSocketPath = Opt.strOption $ Opt.long "socket-path"
+  <> Opt.short 's'
+  <> Opt.help "Path to node socket."
+  <> Opt.metavar "FILE-PATH"
+
+commonDbDir :: Opt.Parser String
+commonDbDir = Opt.strOption
+   $ Opt.short 'd'
+  <> Opt.long "db-dir"
+  <> Opt.metavar "DIR"
+  <> Opt.help "Directory path where all SQLite databases are."
+
+commonVersionOption :: String -> Opt.Parser (a -> a)
+commonVersionOption sha = Opt.infoOption sha $ Opt.long "version" <> Opt.help "Show git SHA"
+
+getGitSha :: IO String
+getGitSha = fromMaybe "GIHUB_SHA environment variable not set!" <$> lookupEnv "GITHUB_SHA"
+
+marconiDescr :: Opt.InfoMod a
+marconiDescr = Opt.fullDesc
+  <> Opt.progDesc "marconi"
+  <> Opt.header
+  "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
+
+commonMaybePort :: Opt.Parser (Maybe Int)
+commonMaybePort = Opt.optional $ Opt.option Opt.auto
+   $ Opt.long "http-port"
+  <> Opt.metavar "HTTP-PORT"
+  <> Opt.help "JSON-RPC http port number, default is port 3000."
+
+commonMaybeTargetAddress :: Opt.Parser (Maybe TargetAddresses)
+commonMaybeTargetAddress = Opt.optional $ multiString
+   $ Opt.long "addresses-to-index"
+  <> Opt.short 'a'
+  <> Opt.metavar "BECH32-ADDRESS"
+  <> Opt.help
+     "Bech32 Shelley addresses to index. \
+     \ i.e \"--address-to-index address-1 --address-to-index address-2 ...\""

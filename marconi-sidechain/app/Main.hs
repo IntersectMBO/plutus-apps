@@ -14,7 +14,8 @@ import Marconi.Sidechain.CLI (parseCli)
 -- Exceptions in either thread will end the program
 main :: IO ()
 main = do
-    cli@CliArgs { httpPort, targetAddresses }  <- parseCli
+    cli@CliArgs { httpPort, targetAddresses } <- parseCli
+
     rpcEnv <- initializeIndexerEnv httpPort targetAddresses
 
     race_
