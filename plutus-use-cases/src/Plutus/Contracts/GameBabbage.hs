@@ -198,13 +198,13 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsGameAddres
     utxos <- utxosAt $ gameAddress guessArgsGameParam
     let game = gameInstance guessArgsGameParam
         gameHash = validatorHash game
+    gameUtxos <- utxosAt guessArgsGameAddress
     gameRef <- findScriptReferenceByHash gameHash guessArgsGameAddress
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
-               Haskell.<> Constraints.otherScript(V2.vValidatorScript game)
+               Haskell.<> Constraints.unspentOutputs gameUtxos
         redeemer = clearString guessArgsSecret
-        tx       = mustReferenceOutput gameRef Haskell.<>
-                   Constraints.collectFromTheScript utxos redeemer
+        tx       = Constraints.collectFromTheReferencedScript utxos redeemer gameRef
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx
 

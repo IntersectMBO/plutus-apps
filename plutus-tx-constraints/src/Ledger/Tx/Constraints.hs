@@ -24,6 +24,7 @@ module Ledger.Tx.Constraints(
     , TC.mustSpendAtLeast
     , TC.mustSpendPubKeyOutput
     , TC.mustSpendOutputFromTheScript
+    , TC.mustSpendOutputFromTheReferencedScript
     , TC.mustSpendScriptOutput
     , TC.mustSpendScriptOutputWithReference
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
@@ -56,6 +57,7 @@ module Ledger.Tx.Constraints(
     , TC.collectFromPlutusV1ScriptFilter
     , TC.collectFromTheScriptFilter
     , TC.collectFromTheScript
+    , TC.collectFromTheReferencedScript
     , TC.collectFromPlutusV2Script
     , TC.collectFromPlutusV2ScriptFilter
     -- * Queries on constraints

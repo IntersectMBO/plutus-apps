@@ -226,6 +226,24 @@ mustSpendOutputFromTheScript :: TxOutRef -> i -> TxConstraints i o
 mustSpendOutputFromTheScript txOutRef red =
     mempty { txOwnInputs = [ScriptInputConstraint red txOutRef Nothing] }
 
+{-# INLINABLE mustSpendOutputFromTheReferencedScript #-}
+-- | @mustSpendOutputFromTheReferencedScript txOutRef red ref @ spends the transaction
+-- output @txOutRef@ with a script address using the redeemer @red@, using the reference script @ref@
+-- as a validator.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint spends a script
+-- output @txOutRef@ with redeemer @red@.
+-- The script address is derived from the typed validator that is provided in
+-- the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.typedValidatorLookups'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- spend script transaction output with @red@ is part of the transaction's
+-- inputs.
+mustSpendOutputFromTheReferencedScript :: TxOutRef -> i -> TxOutRef -> TxConstraints i o
+mustSpendOutputFromTheReferencedScript txOutRef red ref =
+    mempty { txOwnInputs = [ScriptInputConstraint red txOutRef (Just ref)] }
+
 instance (Pretty a) => Pretty (ScriptInputConstraint a) where
     pretty ScriptInputConstraint{icRedeemer, icTxOutRef, icReferenceTxOutRef} =
         vsep $
@@ -1110,6 +1128,20 @@ collectFromTheScript ::
     -> TxConstraints i o
 collectFromTheScript utxo redeemer =
     foldMap (flip mustSpendOutputFromTheScript redeemer) $ Map.keys utxo
+
+-- | A version of 'collectFromScript' that selects all outputs
+-- at the address
+--
+-- @utxo@ the set of utxos we search into to find the one we want to spendsOutput
+-- @ref@ the reference to the utxo that contains the reference script
+collectFromTheReferencedScript ::
+    forall i o
+    .  Map.Map TxOutRef DecoratedTxOut
+    -> i
+    -> TxOutRef
+    -> TxConstraints i o
+collectFromTheReferencedScript utxo redeemer ref =
+    foldMap (\toSpend -> mustSpendOutputFromTheReferencedScript toSpend redeemer ref) $ Map.keys utxo
 
 -- | A set of constraints for a transaction that collects PlutusV2 script outputs
 --   from the address of the given validator script, using the same redeemer
