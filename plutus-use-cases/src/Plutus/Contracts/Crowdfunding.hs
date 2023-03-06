@@ -217,7 +217,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     -- then we can claim a refund.
 
     let flt Ledger.TxOutRef{txOutRefId} _ = txid Haskell.== txOutRefId
-        tx' = Constraints.collectFromTheScriptFilter flt utxo Refund
+        tx' = Constraints.spendUtxosFromTheScriptFilter flt utxo Refund
                 <> Constraints.mustValidateInTimeRange (refundRange cmp)
                 <> Constraints.mustBeSignedBy contributor
     if Constraints.modifiesUtxoSet tx'
@@ -243,7 +243,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
     _ <- awaitTime $ campaignDeadline cmp
     unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress Params.testnet inst)
 
-    let tx = Constraints.collectFromTheScript unspentOutputs Collect
+    let tx = Constraints.spendUtxosFromTheScript unspentOutputs Collect
             <> Constraints.mustBeSignedBy (campaignOwner cmp)
             <> Constraints.mustValidateInTimeRange (collectionRange cmp)
 

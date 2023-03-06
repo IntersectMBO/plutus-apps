@@ -204,7 +204,7 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsGameAddres
                Haskell.<> Constraints.unspentOutputs utxos
                Haskell.<> Constraints.unspentOutputs gameUtxos
         redeemer = clearString guessArgsSecret
-        tx       = Constraints.collectFromTheReferencedScript utxos redeemer gameRef
+        tx       = Constraints.spendUtxosFromTheReferencedScript utxos redeemer gameRef
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx
 

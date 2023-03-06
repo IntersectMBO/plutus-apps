@@ -178,7 +178,7 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
         redeemer = clearString guessArgsSecret
-        tx       = Constraints.collectFromTheScript utxos redeemer
+        tx       = Constraints.spendUtxosFromTheScript utxos redeemer
 
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx

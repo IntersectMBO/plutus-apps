@@ -308,7 +308,7 @@ mustMintCurrencyWithRedeemerMissingPolicyContract lang = do
             Constraints.typedValidatorLookups (mustMintCurrencyWithRedeemerTypedValidator tknName) <>
             Constraints.unspentOutputs utxos
         tx2 =
-            Constraints.collectFromTheScript utxos () <>
+            Constraints.spendUtxosFromTheScript utxos () <>
             Constraints.mustMintCurrencyWithRedeemer (coinMintingPolicyHash lang) unitRedeemer tknName tknAmount
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2

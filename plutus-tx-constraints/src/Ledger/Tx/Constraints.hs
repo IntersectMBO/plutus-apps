@@ -53,13 +53,13 @@ module Ledger.Tx.Constraints(
     , TC.mustPayToOtherScriptAddressWithDatumInTx
     , TC.mustPayToOtherScriptAddressWithInlineDatum
     -- * Defining off-chain only constraints
-    , TC.collectFromPlutusV1Script
-    , TC.collectFromPlutusV1ScriptFilter
-    , TC.collectFromTheScriptFilter
-    , TC.collectFromTheScript
-    , TC.collectFromTheReferencedScript
-    , TC.collectFromPlutusV2Script
-    , TC.collectFromPlutusV2ScriptFilter
+    , TC.spendUtxosFromPlutusV1Script
+    , TC.spendUtxosFromPlutusV1ScriptFilter
+    , TC.spendUtxosFromTheScriptFilter
+    , TC.spendUtxosFromTheScript
+    , TC.spendUtxosFromTheReferencedScript
+    , TC.spendUtxosFromPlutusV2Script
+    , TC.spendUtxosFromPlutusV2ScriptFilter
     -- * Queries on constraints
     , TC.modifiesUtxoSet
     , TC.isSatisfiable

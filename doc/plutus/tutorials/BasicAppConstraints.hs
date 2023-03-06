@@ -85,7 +85,7 @@ unlockFunds splitData = do
     utxos <- utxosAt contractAddress
     -- Generate constraints which will spend all utxos locked by the Split
     -- validator and split the value evenly between the two payment keys.
-    let constraints = Constraints.collectFromTheScript utxos ()
+    let constraints = Constraints.spendUtxosFromTheScript utxos ()
                       <> splitDataConstraints splitData
     -- Create, Balance and submit the transaction
     void $ submitTxConstraintsSpending splitValidator utxos constraints
