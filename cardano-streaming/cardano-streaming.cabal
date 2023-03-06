@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name:          cardano-streaming
-version:       1.1.0.0
+version:       1.2.0.0
 author:        Andrea Bedini
 maintainer:    andrea.bedini@iohk.io
 
@@ -102,7 +102,7 @@ executable cardano-streaming-example-2
   --------------------
   build-depends:
     , cardano-streaming
-    , plutus-ledger      >=1.0.0
+    , plutus-ledger      >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -131,8 +131,8 @@ executable cardano-streaming-example-3
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , plutus-chain-index-core  >=1.0.0
+    , cardano-streaming        >=1.2.0
+    , plutus-chain-index-core  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

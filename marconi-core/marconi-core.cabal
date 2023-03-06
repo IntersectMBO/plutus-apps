@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name:          marconi-core
-version:       1.1.0.0
+version:       1.2.0.0
 synopsis:      Indexers that can rewind the state to a previous version.
 description:
   Please see the README on GitHub at <https://github.com/input-output-hk/marconi-core#README.md>
