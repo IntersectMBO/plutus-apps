@@ -50,7 +50,7 @@ verifySchnorrAndEcdsaTest networkOptions = H.integration . HE.runFinallies . U.w
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
 -- 2: build a transaction
@@ -102,4 +102,6 @@ verifySchnorrAndEcdsaTest networkOptions = H.integration . HE.runFinallies . U.w
       resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "TN.getTxOutAtAddress"
       txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
       H.assert txOutHasTokenValue
+
+      U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
       H.success

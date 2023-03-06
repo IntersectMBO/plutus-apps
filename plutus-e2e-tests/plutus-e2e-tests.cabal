@@ -82,6 +82,9 @@ common lang
     , unliftio
     , unordered-containers
 
+  if (os(osx) || os(linux))
+    build-depends: unix
+
 test-suite plutus-e2e-tests-test
   import:         lang
   ghc-options:    -Wno-unused-packages

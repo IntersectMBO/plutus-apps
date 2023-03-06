@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Spec.BabbageFeatures(tests) where
 
@@ -24,7 +25,7 @@ import Helpers.Query qualified as Q
 import Helpers.Testnet (testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers.Testnet qualified as TN
 import Helpers.Tx qualified as Tx
-import Helpers.Utils qualified as U (posixToMilliseconds, workspace)
+import Helpers.Utils qualified as U (anyLeftFail_, posixToMilliseconds, workspace)
 import Plutus.V1.Ledger.Interval qualified as PlutusV1
 import Plutus.V1.Ledger.Time qualified as PlutusV1
 import Plutus.V2.Ledger.Api qualified as PlutusV2
@@ -61,7 +62,7 @@ referenceScriptMintTest networkOptions = H.integration . HE.runFinallies . U.wor
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
@@ -107,6 +108,8 @@ referenceScriptMintTest networkOptions = H.integration . HE.runFinallies . U.wor
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
+
+  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
   H.success
 
 
@@ -116,7 +119,7 @@ referenceScriptInlineDatumSpendTest networkOptions = H.integration . HE.runFinal
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
@@ -164,6 +167,8 @@ referenceScriptInlineDatumSpendTest networkOptions = H.integration . HE.runFinal
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
   txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
+
+  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
   H.success
 
 
@@ -173,7 +178,7 @@ referenceScriptDatumHashSpendTest networkOptions = H.integration . HE.runFinalli
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction to hold reference script
@@ -222,6 +227,8 @@ referenceScriptDatumHashSpendTest networkOptions = H.integration . HE.runFinalli
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
   txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
+
+  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
   H.success
 
 checkTxInfoV2Test :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
@@ -231,7 +238,7 @@ checkTxInfoV2Test networkOptions = H.integration . HE.runFinallies . U.workspace
   preTestnetTime <- liftIO Time.getPOSIXTime
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
   startTime <- liftIO Time.getPOSIXTime
 
@@ -296,7 +303,8 @@ checkTxInfoV2Test networkOptions = H.integration . HE.runFinallies . U.workspace
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress "
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
+
+  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
   H.success
 
   -- TODO: inlineDatumSpendTest (no reference script)
-
