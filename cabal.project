@@ -172,8 +172,11 @@ source-repository-package
       -- cardano-addresses
       core
 
--- This is needed because we rely on an unreleased feature
--- https://github.com/input-output-hk/cardano-ledger/pull/3111
+-- This is needed because we rely on an unreleased branch of
+-- cardano-ledger-alonzo. The feature we need
+-- (evaluateTransactionExecutionUnitsWithLogs) in only included from
+-- cardano-ledger-alonzo version 1.0.0.0
+-- See https://github.com/input-output-hk/cardano-ledger/pull/3111
 source-repository-package
     type: git
     location: https://github.com/input-output-hk/cardano-ledger
