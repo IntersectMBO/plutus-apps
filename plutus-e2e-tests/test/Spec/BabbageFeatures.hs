@@ -5,10 +5,12 @@
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
+{-# LANGUAGE RecordWildCards     #-}
 
 module Spec.BabbageFeatures(tests) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Data.Map qualified as Map
 import Test.Tasty (TestTree, testGroup)
 
@@ -18,8 +20,11 @@ import Test.Base qualified as H
 import Test.Tasty.Hedgehog (testProperty)
 
 import CardanoTestnet qualified as TN
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Time (nominalDiffTimeToSeconds)
+import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as Time
+import Hedgehog.Internal.Property (MonadTest)
 import Helpers.Common (makeAddress)
 import Helpers.Query qualified as Q
 import Helpers.Testnet (testnetOptionsBabbage7, testnetOptionsBabbage8)
@@ -38,209 +43,75 @@ import PlutusScripts.V2TxInfo (checkV2TxInfoAssetIdV2, checkV2TxInfoMintWitnessV
 
 tests :: TestTree
 tests = testGroup "Babbage Features"
-  [ testGroup "reference script"
-    [ testProperty "mint a token with a reference script in Babbage PV7" (referenceScriptMintTest testnetOptionsBabbage7)
-    , testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMintTest testnetOptionsBabbage8)
-    --, testProperty "mint a token with a reference script in Babbage PV8" (referenceScriptMintTest localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+  [ testProperty "pv7Tests" pv7Tests,
+    testProperty "pv8Tests" pv8Tests ]
 
-    , testProperty "spend locked funds with a reference script using inline datum in Babbage PV7" (referenceScriptInlineDatumSpendTest testnetOptionsBabbage7)
-    , testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpendTest testnetOptionsBabbage8)
-    --, testProperty "spend locked funds with a reference script using inline datum in Babbage PV8" (referenceScriptInlineDatumSpendTest localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+data TestParams = TestParams {
+    localNodeConnectInfo :: C.LocalNodeConnectInfo C.CardanoMode,
+    pparams              :: C.ProtocolParameters,
+    networkId            :: C.NetworkId,
+    tempAbsPath          :: FilePath
+}
 
-    , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV7" (referenceScriptDatumHashSpendTest testnetOptionsBabbage7)
-    , testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpendTest testnetOptionsBabbage8)
-    --, testProperty "spend locked funds with a reference script providing datum in txbody in Babbage PV8" (referenceScriptDatumHashSpendTest localNodeOptionsPreview) -- uncomment to use local node on preview testnet
+runTest :: MonadIO m =>
+  String ->
+  (Either TN.LocalNodeOptions TN.TestnetOptions -> TestParams -> m ()) ->
+  Either TN.LocalNodeOptions TN.TestnetOptions -> TestParams ->
+  m ()
+runTest testName test networkOptions testParams = do
+  liftIO $ putStrLn $ "Running: " ++ testName
+  t <- liftIO Time.getPOSIXTime
+  test networkOptions testParams
+  t2 <- liftIO Time.getPOSIXTime
+  liftIO $ putStrLn $ "Duration: " ++ show (nominalDiffTimeToSeconds $ t2 - t) ++ "s"
 
-    , testProperty "check each attribute of V2 TxInfo in Babbage PV7" (checkTxInfoV2Test testnetOptionsBabbage7)
-    , testProperty "check each attribute of V2 TxInfo in Babbage PV8" (checkTxInfoV2Test testnetOptionsBabbage8)
-    ]
-  ]
+pv7Tests :: H.Property
+pv7Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+    preTestnetTime <- liftIO Time.getPOSIXTime
+    (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment testnetOptionsBabbage7 tempAbsPath
+    let
+      testParams = TestParams localNodeConnectInfo pparams networkId tempAbsPath
+      options = testnetOptionsBabbage7
 
-referenceScriptMintTest :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
-referenceScriptMintTest networkOptions = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+    -- must be first to run after new testnet is initialised due to expected slot to posix time
+    liftIO $ putStrLn "checkTxInfoV2Test"
+    checkTxInfoV2Test options testParams preTestnetTime
 
-  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
+    runTest "referenceScriptMintTest" referenceScriptMintTest options testParams
+    runTest "referenceScriptInlineDatumSpendTest" referenceScriptInlineDatumSpendTest options testParams
+    runTest "referenceScriptDatumHashSpendTest" referenceScriptDatumHashSpendTest options testParams
 
-  -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
+    U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
-  -- 2: build a transaction to hold reference script
+pv8Tests :: H.Property
+pv8Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+    preTestnetTime <- liftIO Time.getPOSIXTime
+    (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment testnetOptionsBabbage8 tempAbsPath
+    let
+      testParams = TestParams localNodeConnectInfo pparams networkId tempAbsPath
+      options = testnetOptionsBabbage8
 
-  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
+    -- must be first to run after new testnet is initialised due to expected slot to posix time
+    liftIO $ putStrLn "checkTxInfoV2Test"
+    checkTxInfoV2Test options testParams preTestnetTime
 
-  let
-    refScriptTxOut = Tx.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
-      (PS.unPlutusScriptV2 PS.alwaysSucceedPolicyScriptV2)
-    otherTxOut = Tx.txOut era (C.lovelaceToValue 5_000_000) w1Address
+    runTest "referenceScriptMintTest" referenceScriptMintTest options testParams
+    runTest "referenceScriptInlineDatumSpendTest" referenceScriptInlineDatumSpendTest options testParams
+    runTest "referenceScriptDatumHashSpendTest" referenceScriptDatumHashSpendTest options testParams
 
-    txBodyContent = (Tx.emptyTxBodyContent era pparams)
-      { C.txIns = Tx.pubkeyTxIns [txIn]
-      , C.txOuts = [refScriptTxOut, otherTxOut]
-      }
+    U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
-  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
-  Tx.submitTx era localNodeConnectInfo signedTx
-  let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
-      otherTxIn   = Tx.txIn (Tx.txId signedTx) 1
-  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
-
-  -- 3: build a transaction to mint token using reference script
-
-  let
-    tokenValues = C.valueFromList [(PS.alwaysSucceedAssetIdV2, 6)]
-    mintWitnesses = Map.fromList [PS.alwaysSucceedMintWitnessV2 era (Just refScriptTxIn)]
-    collateral = Tx.txInsCollateral era [otherTxIn]
-    txOut = Tx.txOut era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
-
-    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
-      { C.txIns = Tx.pubkeyTxIns [otherTxIn]
-      , C.txInsCollateral = collateral
-      , C.txInsReference = Tx.txInsReference era [refScriptTxIn]
-      , C.txMintValue = Tx.txMintValue era tokenValues mintWitnesses
-      , C.txOuts = [txOut]
-      }
-
-  signedTx2 <- Tx.buildTx era txBodyContent2 w1Address w1SKey networkId
-  Tx.submitTx era localNodeConnectInfo signedTx2
-  let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
-  -- Query for txo and assert it contains newly minted token
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
-  txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
-  H.assert txOutHasTokenValue
-
-  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
-  H.success
-
-
-referenceScriptInlineDatumSpendTest :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
-referenceScriptInlineDatumSpendTest networkOptions = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+-- | Test must be first to run after new testnet is initialised due to slot timing
+checkTxInfoV2Test :: (MonadIO m , MonadTest m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  POSIXTime ->
+  m ()
+checkTxInfoV2Test networkOptions TestParams{..} preTestnetTime = do
 
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
-
-  -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
-
-  -- 2: build a transaction to hold reference script
-
-  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
-
-  let
-    refTxOut      = Tx.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
-                     (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
-    otherTxOut    = Tx.txOut era (C.lovelaceToValue 5_000_000) w1Address
-    scriptAddress = makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
-    scriptTxOut   = Tx.txOutWithInlineDatum era (C.lovelaceToValue 10_000_000) scriptAddress (PS.toScriptData ())
-
-    txBodyContent = (Tx.emptyTxBodyContent era pparams)
-      { C.txIns = Tx.pubkeyTxIns [txIn]
-      , C.txOuts = [refTxOut, otherTxOut, scriptTxOut]
-      }
-
-  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
-  Tx.submitTx era localNodeConnectInfo signedTx
-  let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
-      otherTxIn     = Tx.txIn (Tx.txId signedTx) 1
-      txInAtScript  = Tx.txIn (Tx.txId signedTx) 2
-  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
-
-  -- 3: build a transaction to mint token using reference script
-
-  let
-    scriptTxIn = Tx.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) Nothing)
-    collateral = Tx.txInsCollateral era [otherTxIn]
-    adaValue = C.lovelaceToValue 4_200_000
-    txOut = Tx.txOut era adaValue w1Address
-
-    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
-      { C.txIns = [scriptTxIn]
-      , C.txInsReference = Tx.txInsReference era [refScriptTxIn]
-      , C.txInsCollateral = collateral
-      , C.txOuts = [txOut]
-      }
-
-  signedTx2 <- Tx.buildTx era txBodyContent2 w1Address w1SKey networkId
-  Tx.submitTx era localNodeConnectInfo signedTx2
-  let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
-  -- Query for txo and assert it contains newly minted token
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
-  txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
-  H.assert txOutHasAdaValue
-
-  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
-  H.success
-
-
-referenceScriptDatumHashSpendTest :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
-referenceScriptDatumHashSpendTest networkOptions = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
-
-  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
-
-  -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
-
-  -- 2: build a transaction to hold reference script
-
-  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
-
-  let
-    refTxOut      = Tx.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
-                     (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
-    otherTxOut    = Tx.txOut era (C.lovelaceToValue 5_000_000) w1Address
-    scriptAddress = makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
-    datum         = PS.toScriptData ()
-    scriptTxOut   = Tx.txOutWithDatumHash era (C.lovelaceToValue 10_000_000) scriptAddress datum
-
-    txBodyContent = (Tx.emptyTxBodyContent era pparams)
-      { C.txIns = Tx.pubkeyTxIns [txIn]
-      , C.txOuts = [refTxOut, otherTxOut, scriptTxOut]
-      }
-
-  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
-  Tx.submitTx era localNodeConnectInfo signedTx
-  let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
-      otherTxIn     = Tx.txIn (Tx.txId signedTx) 1
-      txInAtScript  = Tx.txIn (Tx.txId signedTx) 2
-  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
-
-  -- 3: build a transaction to mint token using reference script
-
-  let
-    scriptTxIn = Tx.txInWitness txInAtScript $ PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) (Just datum)
-    collateral = Tx.txInsCollateral era [otherTxIn]
-    adaValue = C.lovelaceToValue 4_200_000
-    txOut = Tx.txOut era adaValue w1Address
-
-    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
-      { C.txIns = [scriptTxIn]
-      , C.txInsReference = Tx.txInsReference era [refScriptTxIn]
-      , C.txInsCollateral = collateral
-      , C.txOuts = [txOut]
-      }
-
-  signedTx2 <- Tx.buildTx era txBodyContent2 w1Address w1SKey networkId
-  Tx.submitTx era localNodeConnectInfo signedTx2
-  let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
-  -- Query for txo and assert it contains newly minted token
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
-  txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
-  H.assert txOutHasAdaValue
-
-  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
-  H.success
-
-checkTxInfoV2Test :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
-checkTxInfoV2Test networkOptions = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
-
-  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
-  preTestnetTime <- liftIO Time.getPOSIXTime
-
-  -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
   startTime <- liftIO Time.getPOSIXTime
+  (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
 
   -- 2: build a transaction
 
@@ -304,7 +175,178 @@ checkTxInfoV2Test networkOptions = H.integration . HE.runFinallies . U.workspace
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
 
-  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
+  H.success
+
+referenceScriptMintTest :: (MonadTest m, MonadIO m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  m ()
+referenceScriptMintTest networkOptions TestParams{..} = do
+
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
+
+  -- build a transaction to hold reference script
+
+  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
+
+  let
+    refScriptTxOut = Tx.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
+      (PS.unPlutusScriptV2 PS.alwaysSucceedPolicyScriptV2)
+    otherTxOut = Tx.txOut era (C.lovelaceToValue 5_000_000) w1Address
+
+    txBodyContent = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = Tx.pubkeyTxIns [txIn]
+      , C.txOuts = [refScriptTxOut, otherTxOut]
+      }
+
+  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx
+  let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
+      otherTxIn   = Tx.txIn (Tx.txId signedTx) 1
+  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
+
+  -- build a transaction to mint token using reference script
+
+  let
+    tokenValues = C.valueFromList [(PS.alwaysSucceedAssetIdV2, 6)]
+    mintWitnesses = Map.fromList [PS.alwaysSucceedMintWitnessV2 era (Just refScriptTxIn)]
+    collateral = Tx.txInsCollateral era [otherTxIn]
+    txOut = Tx.txOut era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
+
+    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = Tx.pubkeyTxIns [otherTxIn]
+      , C.txInsCollateral = collateral
+      , C.txInsReference = Tx.txInsReference era [refScriptTxIn]
+      , C.txMintValue = Tx.txMintValue era tokenValues mintWitnesses
+      , C.txOuts = [txOut]
+      }
+
+  signedTx2 <- Tx.buildTx era txBodyContent2 w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx2
+  let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
+  -- Query for txo and assert it contains newly minted token
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
+  txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
+  H.assert txOutHasTokenValue
+
+  H.success
+
+
+referenceScriptInlineDatumSpendTest :: (MonadIO m , MonadTest m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  m ()
+referenceScriptInlineDatumSpendTest networkOptions TestParams{..} = do
+
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
+
+  -- build a transaction to hold reference script
+
+  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
+
+  let
+    refTxOut      = Tx.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
+                     (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
+    otherTxOut    = Tx.txOut era (C.lovelaceToValue 5_000_000) w1Address
+    scriptAddress = makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
+    scriptTxOut   = Tx.txOutWithInlineDatum era (C.lovelaceToValue 10_000_000) scriptAddress (PS.toScriptData ())
+
+    txBodyContent = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = Tx.pubkeyTxIns [txIn]
+      , C.txOuts = [refTxOut, otherTxOut, scriptTxOut]
+      }
+
+  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx
+  let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
+      otherTxIn     = Tx.txIn (Tx.txId signedTx) 1
+      txInAtScript  = Tx.txIn (Tx.txId signedTx) 2
+  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
+
+  -- build a transaction to mint token using reference script
+
+  let
+    scriptTxIn = Tx.txInWitness txInAtScript (PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) Nothing)
+    collateral = Tx.txInsCollateral era [otherTxIn]
+    adaValue = C.lovelaceToValue 4_200_000
+    txOut = Tx.txOut era adaValue w1Address
+
+    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = [scriptTxIn]
+      , C.txInsReference = Tx.txInsReference era [refScriptTxIn]
+      , C.txInsCollateral = collateral
+      , C.txOuts = [txOut]
+      }
+
+  signedTx2 <- Tx.buildTx era txBodyContent2 w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx2
+  let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
+  -- Query for txo and assert it contains newly minted token
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
+  txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
+  H.assert txOutHasAdaValue
+
+  H.success
+
+
+referenceScriptDatumHashSpendTest :: (MonadIO m , MonadTest m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  m ()
+referenceScriptDatumHashSpendTest networkOptions TestParams{..} = do
+
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
+
+  -- build a transaction to hold reference script
+
+  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
+
+  let
+    refTxOut      = Tx.txOutWithRefScript era (C.lovelaceToValue 20_000_000) w1Address
+                     (PS.unPlutusScriptV2 PS.alwaysSucceedSpendScriptV2)
+    otherTxOut    = Tx.txOut era (C.lovelaceToValue 5_000_000) w1Address
+    scriptAddress = makeAddress (Right PS.alwaysSucceedSpendScriptHashV2) networkId
+    datum         = PS.toScriptData ()
+    scriptTxOut   = Tx.txOutWithDatumHash era (C.lovelaceToValue 10_000_000) scriptAddress datum
+
+    txBodyContent = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = Tx.pubkeyTxIns [txIn]
+      , C.txOuts = [refTxOut, otherTxOut, scriptTxOut]
+      }
+
+  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx
+  let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
+      otherTxIn     = Tx.txIn (Tx.txId signedTx) 1
+      txInAtScript  = Tx.txIn (Tx.txId signedTx) 2
+  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
+
+  -- build a transaction to mint token using reference script
+
+  let
+    scriptTxIn = Tx.txInWitness txInAtScript $ PS.alwaysSucceedSpendWitnessV2 era (Just refScriptTxIn) (Just datum)
+    collateral = Tx.txInsCollateral era [otherTxIn]
+    adaValue = C.lovelaceToValue 4_200_000
+    txOut = Tx.txOut era adaValue w1Address
+
+    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = [scriptTxIn]
+      , C.txInsReference = Tx.txInsReference era [refScriptTxIn]
+      , C.txInsCollateral = collateral
+      , C.txOuts = [txOut]
+      }
+
+  signedTx2 <- Tx.buildTx era txBodyContent2 w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx2
+  let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
+  -- Query for txo and assert it contains newly minted token
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
+  txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
+  H.assert txOutHasAdaValue
+
   H.success
 
   -- TODO: inlineDatumSpendTest (no reference script)
