@@ -23,8 +23,6 @@ module Ledger.Blockchain (
     transaction,
     out,
     value,
-    unspentOutputsTx,
-    spentOutputs,
     unspentOutputs,
     datumTxo,
     updateUtxo,
@@ -50,8 +48,8 @@ import Prettyprinter (Pretty (..), (<+>))
 
 import Cardano.Api qualified as C
 import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, spentOutputs,
-                  txOutDatumHash, txOutPubKey, txOutValue, unspentOutputsTx, updateUtxo, updateUtxoCollateral)
+                  getCardanoTxInputs, getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, txOutDatumHash,
+                  txOutPubKey, txOutValue, updateUtxo, updateUtxoCollateral)
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
 

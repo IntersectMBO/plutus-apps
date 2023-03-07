@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            plutus-ledger
-version:         1.1.0.0
+version:         1.2.0.0
 license:         Apache-2.0
 license-files:
   LICENSE
@@ -109,7 +109,7 @@ library
   --------------------
   -- Local components
   --------------------
-  build-depends:      plutus-script-utils >=1.1.0
+  build-depends:      plutus-script-utils >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -187,8 +187,8 @@ test-suite plutus-ledger-test
   -- Local components
   --------------------
   build-depends:
-    , plutus-ledger        >=1.0.0
-    , plutus-script-utils  >=1.0.0
+    , plutus-ledger        >=1.2.0
+    , plutus-script-utils  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -206,7 +206,6 @@ test-suite plutus-ledger-test
     , aeson
     , base            >=4.9 && <5
     , bytestring
-    , data-default
     , hedgehog
     , tasty
     , tasty-hedgehog

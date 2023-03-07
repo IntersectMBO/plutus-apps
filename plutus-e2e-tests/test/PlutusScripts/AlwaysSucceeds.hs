@@ -12,6 +12,8 @@ module PlutusScripts.AlwaysSucceeds (
     alwaysSucceedPolicyScriptV2
   , alwaysSucceedAssetIdV2
   , alwaysSucceedMintWitnessV2
+  , alwaysSucceedMintWitnessV2'
+  , alwaysSucceedPolicyTxInfoRedeemerV2
 
   , alwaysSucceedSpendScriptV2
   , alwaysSucceedSpendScriptHashV2
@@ -19,10 +21,16 @@ module PlutusScripts.AlwaysSucceeds (
   ) where
 
 import Cardano.Api qualified as C
-import Plutus.V1.Ledger.Api (MintingPolicy, Validator, mkMintingPolicyScript, mkValidatorScript)
-import PlutusScripts.Helpers (mintScriptWitness, plutusL2, policyIdV2, policyScript, spendScriptWitness, toScriptData,
-                              validatorScript)
+import Plutus.V1.Ledger.Api (MintingPolicy, Redeemer, ScriptPurpose (Minting), Validator, mkMintingPolicyScript,
+                             mkValidatorScript)
+import Plutus.V1.Ledger.Api qualified as BI
+import Plutus.V2.Ledger.Api qualified as PlutusV2 (Map)
+import PlutusScripts.Helpers (asRedeemer, fromPolicyId, mintScriptWitness, mintScriptWitness', plutusL2, policyIdV2,
+                              policyScript, spendScriptWitness, toScriptData, validatorScript)
 import PlutusTx qualified
+import PlutusTx.AssocMap qualified as AMap
+
+-- AlwaysSucceeds minting policy --
 
 alwaysSucceedPolicy :: MintingPolicy
 alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
@@ -30,8 +38,16 @@ alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () |
 alwaysSucceedPolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
 alwaysSucceedPolicyScriptV2 = policyScript alwaysSucceedPolicy
 
+alwaysSucceedPolicyIdV2 :: C.PolicyId
+alwaysSucceedPolicyIdV2 = policyIdV2 alwaysSucceedPolicy
+
 alwaysSucceedAssetIdV2 :: C.AssetId
-alwaysSucceedAssetIdV2 = C.AssetId (policyIdV2 alwaysSucceedPolicy) ""
+alwaysSucceedAssetIdV2 = C.AssetId alwaysSucceedPolicyIdV2 ""
+
+alwaysSucceedPolicyTxInfoRedeemerV2 :: PlutusV2.Map ScriptPurpose Redeemer
+alwaysSucceedPolicyTxInfoRedeemerV2 = AMap.singleton
+  (Minting $ fromPolicyId alwaysSucceedPolicyIdV2)
+  (asRedeemer $ BI.toBuiltinData ())
 
 -- | Witness token mint for including in txbody's txMintValue
 -- Use Nothing to include script in witness, else provide TxIn to reference script
@@ -44,6 +60,13 @@ alwaysSucceedMintWitnessV2 era Nothing =
 alwaysSucceedMintWitnessV2 era (Just refTxIn) =
     (policyIdV2 alwaysSucceedPolicy,
      mintScriptWitness era plutusL2 (Right refTxIn) (toScriptData ()))
+
+alwaysSucceedMintWitnessV2' :: C.CardanoEra era
+  -> C.ExecutionUnits
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+alwaysSucceedMintWitnessV2'  era exunits =
+  (policyIdV2 alwaysSucceedPolicy,
+   mintScriptWitness' era plutusL2 (Left alwaysSucceedPolicyScriptV2) (toScriptData ()) exunits)
 
 -- AlwaysSucceeds validator --
 

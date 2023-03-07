@@ -19,7 +19,7 @@ import Helpers.Query qualified as Q
 import Helpers.Testnet (testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8)
 import Helpers.Testnet qualified as TN
 import Helpers.Tx qualified as Tx
-import Helpers.Utils qualified as U (workspace)
+import Helpers.Utils qualified as U (anyLeftFail_, posixToMilliseconds, workspace)
 import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Interval qualified as PlutusV1
 import Plutus.V1.Ledger.Time qualified as PlutusV1
@@ -29,10 +29,6 @@ import PlutusScripts.V1TxInfo (checkV1TxInfoAssetIdV1, checkV1TxInfoMintWitnessV
 import Test.Base qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
-
--- | Convert a 'POSIXTime' to the number of milliseconds since the Unix epoch.
-posixToMilliseconds :: Time.POSIXTime -> Integer
-posixToMilliseconds posixTime = round $ 1000 * (realToFrac posixTime :: Double)
 
 tests :: TestTree
 tests =
@@ -50,7 +46,7 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
   preTestnetTime <- liftIO Time.getPOSIXTime
 
   -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
   (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
   startTime <- liftIO Time.getPOSIXTime
 
@@ -73,9 +69,9 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
     txOut2 = Tx.txOut era (C.lovelaceToValue amountReturned) w1Address
 
     lowerBound = PlutusV1.fromMilliSeconds
-      $ PlutusV1.DiffMilliSeconds $ posixToMilliseconds preTestnetTime -- before slot 1
+      $ PlutusV1.DiffMilliSeconds $ U.posixToMilliseconds preTestnetTime -- before slot 1
     upperBound = PlutusV1.fromMilliSeconds
-      $ PlutusV1.DiffMilliSeconds $ posixToMilliseconds startTime + 600_000 -- ~10mins after slot 1 (to account for testnet init time)
+      $ PlutusV1.DiffMilliSeconds $ U.posixToMilliseconds startTime + 600_000 -- ~10mins after slot 1 (to account for testnet init time)
     timeRange = PlutusV1.interval lowerBound upperBound :: PlutusV1.POSIXTimeRange
 
     expTxInfoInputs     = txInfoInputs (txIn, txInAsTxOut)
@@ -111,7 +107,9 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress "
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
+
+  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
+
   H.success
 
 -- TODO: datumHashSpendTest
--- TODO: mintTest

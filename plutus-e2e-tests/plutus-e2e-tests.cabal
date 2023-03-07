@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          plutus-e2e-tests
-version:       1.0.0.0
+version:       1.2.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -82,6 +82,9 @@ common lang
     , unliftio
     , unordered-containers
 
+  if (os(osx) || os(linux))
+    build-depends: unix
+
 test-suite plutus-e2e-tests-test
   import:         lang
   ghc-options:    -Wno-unused-packages
@@ -99,6 +102,7 @@ test-suite plutus-e2e-tests-test
     PlutusScripts.Helpers
     PlutusScripts.SECP256k1
     PlutusScripts.V1TxInfo
+    PlutusScripts.V2TxInfo
     Spec.AlonzoFeatures
     Spec.BabbageFeatures
     Spec.Builtins.SECP256k1
@@ -106,7 +110,7 @@ test-suite plutus-e2e-tests-test
   --------------------
   -- Local components
   --------------------
-  build-depends:  plutus-script-utils
+  build-depends:  plutus-script-utils >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

@@ -34,7 +34,7 @@ import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Slot qualified as Slot
 import Ledger.Test (asRedeemer)
-import Ledger.Tx (Tx (txOutputs), TxOut (TxOut), txOutAddress)
+import Ledger.Tx (TxOut (TxOut), txOutAddress)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Tx.Constraints as Constraints
 import Ledger.Tx.Constraints.OffChain qualified as OC

@@ -1,4 +1,36 @@
 
+<a id='changelog-1.2.0'></a>
+# 1.2.0 — 2023-03-03
+
+## Removed
+
+- The `Plutus.Contract.Wallet` module has benn moved to the `plutus-pab` package
+  under the `Cardano.Wallet.LocalClient.ExportTx`.
+
+- `EmulatorAssertionContractError` and `TxConstraintResolutionContractError`
+  were removed from `ContractError`.
+
+- Removed `OpenApi.ToSchema` instance for `PABReq`, `ChainIndexQuery`, `ActiveEndpoint`, `RequestID`, `IterationID`, `Request a`, `ThreadToken`, `Wallet`, `WalletId`, `TxKey`, `SequenceId`, `DereferencedInput`, `BeneficialOwner`, `AnnotatedTx`, `ContractInstanceId`, `ContractActivityStatus`, `EndpointDescription`.
+
+## Added
+
+- A set of functions were added to submit a cardano `Tx` from a a set of
+  constraints: `subCardanoTx`, `subCardanoTxConstraints`,
+  `subCardanoTxConstraintsPending`, `subCardanoTxConstraintsWith`,
+  and `mkCardanoTxConstraints`.
+
+- `walletFundsChangePlutus`: A version of `walletFundsChange` that works with `plutus-core` `Value`s.
+- `plutusValueAtAddress`: A version of `valueAtAddress` that works with `plutus-core` `Value`s.
+
+## Changed
+
+- The `getUnspentOutput` function that was in the `Plutus.Contract.Wallet`
+  module is now in `Plutus.Contract.Request`.
+
+- Moved to using the `Value` type from `cardano-api` instead of the one from `plutus-core`.
+
+- `plutus-ledger-constraints` was replaced with `plutus-tx-constraints`.
+
 <a id='changelog-1.1.0'></a>
 # 1.1.0 — 2023-01-12
 

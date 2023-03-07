@@ -64,7 +64,7 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) =
             , _citxData = datums
             , _citxRedeemers = redeemers
             , _citxScripts = scriptMap
-            , _citxCardanoTx = Just $ SomeTx tx eraInMode
+            , _citxCardanoTx = Just $ CardanoTx tx eraInMode
             }
 
 fromCardanoTxOut :: C.IsCardanoEra era => C.TxOut C.CtxTx era -> ChainIndexTxOut

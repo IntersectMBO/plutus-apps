@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          plutus-contract
-version:       1.1.0.0
+version:       1.2.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -117,12 +117,12 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator    >=1.1.0
-    , freer-extras             >=1.1.0
-    , plutus-chain-index-core  >=1.1.0
-    , plutus-ledger            >=1.1.0
-    , plutus-script-utils      >=1.1.0
-    , plutus-tx-constraints    >=1.1.0
+    , cardano-node-emulator    >=1.2.0
+    , freer-extras             >=1.2.0
+    , plutus-chain-index-core  >=1.2.0
+    , plutus-ledger            >=1.2.0
+    , plutus-script-utils      >=1.2.0
+    , plutus-tx-constraints    >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -263,13 +263,13 @@ test-suite plutus-contract-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator    >=1.0.0
-    , freer-extras             >=1.0.0
-    , plutus-chain-index-core  >=1.0.0
-    , plutus-contract          >=1.0.0
-    , plutus-ledger            >=1.0.0
-    , plutus-script-utils      >=1.0.0
-    , plutus-tx-constraints    >=1.0.0
+    , cardano-node-emulator    >=1.2.0
+    , freer-extras             >=1.2.0
+    , plutus-chain-index-core  >=1.2.0
+    , plutus-contract          >=1.2.0
+    , plutus-ledger            >=1.2.0
+    , plutus-script-utils      >=1.2.0
+    , plutus-tx-constraints    >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

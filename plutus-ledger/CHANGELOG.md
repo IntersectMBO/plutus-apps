@@ -1,4 +1,31 @@
 
+<a id='changelog-1.2.0'></a>
+# 1.2.0 — 2023-03-03
+
+## Removed
+
+- Removed `OpenApi.ToSchema` instance for a lot of ledger, plutus and cardano types.
+
+- Moved `Ledger.Value` to `Plutus.Scripts.Utils.Value`
+- Moved `Ledger.Ada` to `Plutus.Scripts.Utils.Ada`
+
+- Remove `unspentOutputsTx` and `spentOutputs`.
+- Remove `cardanoApiTx`, `emulatorTx`, `onCardanoTx`, `cardanoTxMap`, `addSignature`, `addSignature'`, `txOutRefs`, `unspentOutputsTx`, `txId`.
+- Remove `CardanoTx(EmulatorTx, CardanoApiTx)`.
+- Remove `toCardanoTxBody`, `toCardanoTxBodyContent`, `toCardanoTxInWitness`, `toCardanoMintValue`.
+- Remove `Tx` and `TxStripped` types and all related functions.
+
+## Added
+
+- Added `Ledger.Value.CardanoAPI` for working with the `Value` type from `cardano-api`.
+
+## Changed
+
+- Moved to using the `Value` type from `cardano-api` instead of the one from `plutus-core`.
+
+- Renamed `SomeCardanoApiTx(SomeTx)` to `CardanoTx(CardanoTx)`.
+- Renamed `CardanoApiEmulatorEraTx` to `CardanoEmulatorEraTx`.
+
 <a id='changelog-1.1.0'></a>
 # 1.1.0 — 2023-01-12
 
