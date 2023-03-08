@@ -11,7 +11,6 @@ import System.FilePath ((</>))
 
 import Marconi.ChainIndex.Indexers (mkIndexerStream, runIndexers, startIndexers, utxoWorker)
 import Marconi.ChainIndex.Types (TargetAddresses, utxoDbName)
-import Marconi.Sidechain.Api.HttpServer qualified as Http
 import Marconi.Sidechain.Api.Query.Indexers.Utxo (UtxoIndexer, initializeEnv, writeTMVar')
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs), HasIndexerEnv (uiIndexer), HasSidechainEnv (queryEnv),
                                     SidechainEnv (SidechainEnv, _httpSettings, _queryEnv))
