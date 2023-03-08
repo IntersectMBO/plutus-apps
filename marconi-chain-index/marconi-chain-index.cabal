@@ -162,6 +162,7 @@ library marconi-chain-index-test-lib
   visibility:      public
   hs-source-dirs:  test-lib
   exposed-modules:
+    Gen.Marconi.ChainIndex.Indexers.MintBurn
     Gen.Marconi.ChainIndex.Indexers.Utxo
     Gen.Marconi.ChainIndex.Mockchain
     Gen.Marconi.ChainIndex.Types
@@ -173,6 +174,7 @@ library marconi-chain-index-test-lib
   build-depends:
     , cardano-streaming    >=1.2.0
     , marconi-chain-index  >=1.2.0
+    , marconi-core         >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -185,6 +187,9 @@ library marconi-chain-index-test-lib
     , cardano-testnet
     , ouroboros-network
     , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
@@ -198,6 +203,8 @@ library marconi-chain-index-test-lib
     , filepath
     , hedgehog
     , hedgehog-extras
+    , lens
+    , serialise
     , streaming
     , temporary
 
