@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
 
@@ -12,6 +13,7 @@ import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar, readMVar)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
+import Control.Exception (catch)
 import Control.Lens (view, (&))
 import Control.Lens.Operators ((^.))
 import Control.Monad (forever, void)
@@ -20,6 +22,7 @@ import Data.List (findIndex, foldl1', intersect)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Text qualified as TS
 import Database.SQLite.Simple qualified as SQL
 import Streaming.Prelude qualified as S
 
@@ -27,9 +30,17 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
+                          withChainSyncEventStream)
 import Cardano.Streaming qualified as CS
+import Marconi.ChainIndex.Logging (logging)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+
 import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatumDepth), AddressDatumHandle,
                                                  AddressDatumIndex)
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
@@ -357,3 +368,21 @@ mkIndexerStream coordinator = S.foldM_ step initial finish
 
     finish :: Coordinator -> IO ()
     finish _ = pure ()
+
+runIndexers
+  :: FilePath -> Shelley.NetworkId -> [ChainPoint]
+  -> (S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r -> IO ())
+  -> TS.Text
+  -> IO ()
+runIndexers socketPath networkId chainPoints stream traceName = do
+  c <- defaultConfigStdout
+  withTrace c traceName $ \trace -> let
+      io = withChainSyncEventStream socketPath networkId chainPoints (stream . logging trace)
+      handleException NoIntersectionFound =
+        logError trace $
+          renderStrict $
+            layoutPretty defaultLayoutOptions $
+              "No intersection found when looking for the chain point"
+              <+> pretty chainPoints <> "."
+              <+> "Please check the slot number and the block hash do belong to the chain"
+    in io `catch` handleException

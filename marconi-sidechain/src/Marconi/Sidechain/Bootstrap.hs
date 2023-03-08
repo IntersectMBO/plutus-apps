@@ -5,22 +5,14 @@
 module Marconi.Sidechain.Bootstrap  where
 
 import Control.Concurrent.STM (atomically)
-import Control.Exception (catch)
 import Control.Lens ((^.))
 import Data.List.NonEmpty (fromList, nub)
 import Data.Text (pack)
 import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
-import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
-import Prettyprinter.Render.Text (renderStrict)
 import System.FilePath ((</>))
 
 import Cardano.Api (AsType (AsShelleyAddress), deserialiseFromBech32)
-import Cardano.BM.Setup (withTrace)
-import Cardano.BM.Trace (logError)
-import Cardano.BM.Tracing (defaultConfigStdout)
-import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
-import Marconi.ChainIndex.Indexers (mkIndexerStream, startIndexers, utxoWorker)
-import Marconi.ChainIndex.Logging (logging)
+import Marconi.ChainIndex.Indexers (mkIndexerStream, runIndexers, startIndexers, utxoWorker)
 import Marconi.ChainIndex.Types (TargetAddresses, utxoDbName)
 import Marconi.Sidechain.Api.HttpServer qualified as Http
 import Marconi.Sidechain.Api.Query.Indexers.Utxo (UtxoIndexer, initializeEnv, writeTMVar')
@@ -61,21 +53,12 @@ bootstrapIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
             , dbPath </> utxoDbName
             )
           ]
-  let indexers = mkIndexerStream coordinator
-  c <- defaultConfigStdout
-  withTrace c "marconi-sidechain" $ \trace ->
-    withChainSyncEventStream
-        socket
-        networkId
-        chainPointsToResumeFrom
-        (indexers . logging trace)
-    `catch` \NoIntersectionFound ->
-      logError trace $
-          renderStrict $
-              layoutPretty defaultLayoutOptions $
-                  "No intersection found when looking for the chain points"
-                  <+> (pretty . show  $ chainPointsToResumeFrom)  <> "."
-                  <+> "Please check the slot number and the block hash do belong to the chain"
+  runIndexers
+    socket
+    networkId
+    chainPointsToResumeFrom
+    (mkIndexerStream coordinator)
+    "marconi-sidechain"
 
 -- | parses a white space separated address list
 -- Note, duplicate addresses are rmoved
