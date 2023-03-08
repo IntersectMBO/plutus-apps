@@ -139,7 +139,7 @@ library
     , plutus-ledger-api         >=1.0.0
     , plutus-tx                 >=1.0.0
     , quickcheck-contractmodel
-    , quickcheck-dynamic        >=3.0.0
+    , quickcheck-dynamic        >=3.0.2
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -280,7 +280,7 @@ test-suite plutus-contract-test
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
     , quickcheck-contractmodel
-    , quickcheck-dynamic              >=3.0.0
+    , quickcheck-dynamic              >=3.0.2
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
