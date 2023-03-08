@@ -44,22 +44,21 @@ module Plutus.Contracts.Game.Babbage
     ) where
 
 import Cardano.Node.Emulator.Params (testnet)
-import Control.Lens (_2, _Just, only, preview, review, to, (^?))
+import Control.Lens (_2, (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, DecoratedTxOut, POSIXTime, TxOutRef, ValidatorHash (ValidatorHash),
-               decoratedTxOutReferenceScript, getScriptHash, scriptHash)
+import Ledger (CardanoAddress, DecoratedTxOut, POSIXTime, TxOutRef)
 import Ledger.Tx (datumInDatumFromQuery, decoratedTxOutDatum)
 import Ledger.Tx.Constraints (mustReferenceOutput)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (AsContractError, Contract, ContractError (OtherContractError), Endpoint, Promise,
-                        _ContractError, adjustUnbalancedTx, endpoint, findReferenceValidatorScripByHash, logInfo,
-                        mkTxConstraints, ownUtxos, selectList, throwError, type (.\/), utxosAt, yieldUnbalancedTx)
+import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, endpoint,
+                        findReferenceValidatorScripByHash, logInfo, mkTxConstraints, ownUtxos, selectList, type (.\/),
+                        utxosAt, yieldUnbalancedTx)
 import Plutus.Script.Utils.Ada (toValue)
 import Plutus.Script.Utils.Typed (ScriptContextV2, validatorHash)
 import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
