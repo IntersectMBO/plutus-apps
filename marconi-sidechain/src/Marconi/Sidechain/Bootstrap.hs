@@ -6,12 +6,9 @@ module Marconi.Sidechain.Bootstrap  where
 
 import Control.Concurrent.STM (atomically)
 import Control.Lens ((^.))
-import Data.List.NonEmpty (fromList, nub)
-import Data.Text (pack)
 import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
 import System.FilePath ((</>))
 
-import Cardano.Api (AsType (AsShelleyAddress), deserialiseFromBech32)
 import Marconi.ChainIndex.Indexers (mkIndexerStream, runIndexers, startIndexers, utxoWorker)
 import Marconi.ChainIndex.Types (TargetAddresses, utxoDbName)
 import Marconi.Sidechain.Api.HttpServer qualified as Http
@@ -59,26 +56,3 @@ bootstrapIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
     chainPointsToResumeFrom
     (mkIndexerStream coordinator)
     "marconi-sidechain"
-
--- | parses a white space separated address list
--- Note, duplicate addresses are rmoved
-targetAddressParser
-    :: String           -- ^ contains white spece delimeted lis of addresses
-    -> TargetAddresses  -- ^ a non empty list of valid addresses
-targetAddressParser =
-    nub
-    . fromList
-    . fromJustWithError
-    . traverse (deserializeToCardano . pack)
-    . words
-    where
-        deserializeToCardano = deserialiseFromBech32 AsShelleyAddress
-
--- | Exit program with error
--- Note, if the targetAddress parser fails, or is empty, there is nothing to do for the hotStore.
--- In such case we should fail fast
-fromJustWithError :: (Show e) => Either e a -> a
-fromJustWithError v = case v of
-    Left e ->
-        error $ "\n!!!\n Abnormal Termination with Error: " <> show e <> "\n!!!\n"
-    Right accounts -> accounts
