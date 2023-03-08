@@ -217,18 +217,21 @@ OR
 }
 ```
 
-#### getUtxoFromAddress
+#### getUtxoFromAddress (NOT IMPLEMENTED YET)
 
-Retrieves user provided addresses.
+Retrieves UTXOs of a given address until a given point in time (measured in slots).
 
-**Parameters**: Address encoded in the Bech32 representation
+**Parameters**:
 
-**Returns**: List of UTXOs linked to the provided address.
+* `address`: address encoded in the Bech32 format
+* `slotNo`: slot number.
+
+**Returns**: List of resolved UTXOs.
 
 **Example**:
 
 ```sh
-$ curl -d '{"jsonrpc": "2.0" , "method": "getUtxoFromAddress" , "params": "addr_test1qz0ru2w9suwv8mcskg8r9ws3zvguekkkx6kpcnn058pe2ql2ym0y64huzhpu0wl8ewzdxya0hj0z5ejyt3g98lpu8xxs8faq0m", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+$ curl -d '{"jsonrpc": "2.0" , "method": "getUtxoFromAddress" , "params": { "address": "addr_test1qz0ru2w9suwv8mcskg8r9ws3zvguekkkx6kpcnn058pe2ql2ym0y64huzhpu0wl8ewzdxya0hj0z5ejyt3g98lpu8xxs8faq0m", "slotNo": 1 }, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 {
   "id": 1,
   "jsonrpc": "2.0",
@@ -278,16 +281,19 @@ $ curl -d '{"jsonrpc": "2.0" , "method": "getUtxoFromAddress" , "params": "addr_
 
 #### getTxWithMintingPolicy (NOT IMPLEMENTED YET)
 
-Retrieves transactions that include a minting policy for minting/burning tokens.
+Retrieves transactions that include a minting policy for minting/burning tokens until a given point in time (measured in slots).
 
-**Parameters**: Hash of the minting policy
+**Parameters**:
+
+* `mps`: Hash of the minting policy
+* `slotNo`: slot number
 
 **Returns**: List of transaction IDs
 
 **Example**:
 
 ```sh
-$ curl -d '{"jsonrpc": "2.0" , "method": "getTxWithMintingPolicy" , "params": "...", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+$ curl -d '{"jsonrpc": "2.0" , "method": "getTxWithMintingPolicy" , "params": { "mps": "284d60f7e56f5fd54faed4c50fd5cab0307da1c4034d6a92c5dbb940", "slotNo": 1 }, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 {
   "id": 1,
   "jsonrpc": "2.0",
@@ -316,27 +322,48 @@ $ curl -d '{"jsonrpc": "2.0" , "method": "getTxWithMintingPolicy" , "params": ".
 }
 ```
 
-#### getStakePoolDelegationByEpoch (NOT IMPLEMENTED YET)
+#### getStakePoolDelegationByEpoch
 
 Retrieves the stake pool delegation per epoch.
 
 **Parameters**: Epoch number
 
-**Returns**: List of stake pool IDs with the amount of staked lovelace
+**Returns**: List of stake pool IDs in Bech32 format with the total staked lovelace for that epoch.
 
 **Example**:
 
 ```sh
-$ curl -d '{"jsonrpc": "2.0" , "method": "getStakePoolDelegationByEpoch" , "params": "...", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+$ curl -d '{"jsonrpc": "2.0" , "method": "getStakePoolDelegationByEpoch" , "params": 6, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 {
   "id": 1,
   "jsonrpc": "2.0",
-  "result": [
-    {
-      "poolId": "...",
-      "lovelace": 10000000
-    }
-  ]
+  "result":
+    [
+        {
+            "blockHeaderHash": "578f3cb70f4153e1622db792fea9005c80ff80f83df028210c7a914fb780a6f6",
+            "blockNo": 64903,
+            "epochNo": 6,
+            "lovelace": 100000000000000,
+            "poolId": "pool1z22x50lqsrwent6en0llzzs9e577rx7n3mv9kfw7udwa2rf42fa",
+            "slotNo": 1382422
+        },
+        {
+            "blockHeaderHash": "578f3cb70f4153e1622db792fea9005c80ff80f83df028210c7a914fb780a6f6",
+            "blockNo": 64903,
+            "epochNo": 6,
+            "lovelace": 100000000000000,
+            "poolId": "pool1547tew8vmuj0g6vj3k5jfddudextcw6hsk2hwgg6pkhk7lwphe6",
+            "slotNo": 1382422
+        },
+        {
+            "blockHeaderHash": "578f3cb70f4153e1622db792fea9005c80ff80f83df028210c7a914fb780a6f6",
+            "blockNo": 64903,
+            "epochNo": 6,
+            "lovelace": 100000000000000,
+            "poolId": "pool174mw7e20768e8vj4fn8y6p536n8rkzswsapwtwn354dckpjqzr8",
+            "slotNo": 1382422
+        }
+    ]
 }
 ```
 
@@ -351,7 +378,7 @@ Retrieves transactions that include a minting policy for minting/burning tokens.
 **Example**:
 
 ```sh
-$ curl -d '{"jsonrpc": "2.0" , "method": "getNonceByEpoch " , "params": 398, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+$ curl -d '{"jsonrpc": "2.0" , "method": "getNonceByEpoch" , "params": 398, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 {
   "id": 1,
   "jsonrpc": "2.0",

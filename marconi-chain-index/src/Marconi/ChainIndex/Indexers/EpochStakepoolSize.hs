@@ -75,6 +75,7 @@ import Cardano.Slotting.Slot (EpochNo)
 import Codec.CBOR.Read qualified as CBOR
 import Codec.CBOR.Write qualified as CBOR
 import Control.Monad (filterM, forM_, when)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy qualified as BS
 import Data.Coerce (coerce)
@@ -230,6 +231,33 @@ data EpochSPDRow = EpochSPDRow
     , epochSPDRowBlockHeaderHash :: !(C.Hash C.BlockHeader)
     , epochSPDRowBlockNo         :: !C.BlockNo
     } deriving (Eq, Ord, Show, Generic, SQL.FromRow, SQL.ToRow)
+
+instance FromJSON EpochSPDRow where
+    parseJSON (Object v) =
+        EpochSPDRow
+            <$> (C.EpochNo <$> v .: "epochNo")
+            <*> v .: "poolId"
+            <*> v .: "lovelace"
+            <*> (C.SlotNo <$> v .: "slotNo")
+            <*> v .: "blockHeaderHash"
+            <*> (C.BlockNo <$> v .: "blockNo")
+    parseJSON _ = mempty
+
+instance ToJSON EpochSPDRow where
+  toJSON (EpochSPDRow (C.EpochNo epochNo)
+                      poolId
+                      lovelace
+                      (C.SlotNo slotNo)
+                      blockHeaderHash
+                      (C.BlockNo blockNo)) =
+      object
+        [ "epochNo" .= epochNo
+        , "poolId" .= poolId
+        , "lovelace" .= lovelace
+        , "slotNo" .= slotNo
+        , "blockHeaderHash" .= blockHeaderHash
+        , "blockNo" .= blockNo
+        ]
 
 instance Buffered EpochSPDHandle where
     -- We should only store on disk SPD from the last slot of each epoch.

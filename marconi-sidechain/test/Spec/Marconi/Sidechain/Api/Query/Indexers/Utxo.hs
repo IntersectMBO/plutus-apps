@@ -2,9 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Spec.Marconi.Sidechain.Api.Query.Indexers.Utxo (tests) where
 
 import Cardano.Api qualified as C
@@ -25,9 +22,11 @@ import Helpers (addressAnyToShelley)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.Core.Storable qualified as Storable
 import Marconi.Sidechain.Api.HttpServer (marconiApp)
+import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as AddressUtxoIndexer
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult), JsonRpcAPI)
-import Marconi.Sidechain.Api.Types (HasIndexerEnv (uiIndexer), IndexerEnv)
+import Marconi.Sidechain.Api.Types (SidechainEnv, sidechainAddressUtxoIndexer, sidechainEnvIndexers)
+import Marconi.Sidechain.Bootstrap (initializeSidechainEnv)
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Network.JsonRpc.Client.Types ()
 import Network.JsonRpc.Types (JsonRpcResponse (Result))
@@ -69,18 +68,20 @@ newtype RpcEnv = RpcEnv ([Utxo.StorableEvent Utxo.UtxoHandle] -> IO ()) --  call
 -- | Alias for the storable-action and RPC-client-Action pair, to simplify the type signatures
 type RpcClientAction = IO ( RpcEnv, String -> IO (JsonRpcResponse String AddressUtxoResult))
 
-mkRpcEnv :: IndexerEnv -> RpcEnv
-mkRpcEnv ixenv =
+mkRpcEnv :: SidechainEnv -> RpcEnv
+mkRpcEnv env =
   let cb :: Utxo.UtxoIndexer -> IO ()
-      cb = atomically . UIQ.writeTMVar' (ixenv ^. uiIndexer)
+      cb = atomically . UIQ.updateEnvState (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
   in RpcEnv (mocUtxoWorker cb)
 
 -- | Initialize RPC server on a free available port
 initRpcTestEnv :: RpcClientAction
 initRpcTestEnv = do
-  ixenv <- UIQ.initializeEnv Nothing
-  let f= \s -> Warp.testWithApplication (pure $ marconiApp ixenv)(queryUtxoFromRpcServer s)
-  pure (mkRpcEnv ixenv, f)
+  env <- initializeSidechainEnv Nothing Nothing
+  let f = \s -> Warp.testWithApplication
+                    (pure $ marconiApp env)
+                    (queryUtxoFromRpcServer s)
+  pure (mkRpcEnv env, f)
 
 depth :: Utxo.Depth
 depth = Utxo.Depth 5
@@ -89,7 +90,7 @@ depth = Utxo.Depth 5
 -- Note, the in-memory DB provides the isolation we need per property test as the memory cache
 -- is owned and visible only o the process that opened the connection
 mocUtxoWorker
-  :: (UIQ.UtxoIndexer -> IO ())
+  :: (AddressUtxoIndexer.UtxoIndexer -> IO ())
   -> [Utxo.StorableEvent Utxo.UtxoHandle]
   -> IO ()
 mocUtxoWorker callback events  =
@@ -99,15 +100,17 @@ mocUtxoWorker callback events  =
 queryTargetAddressTest :: Property
 queryTargetAddressTest = property $ do
   events <- forAll genUtxoEvents
-  env <- liftIO . UIQ.initializeEnv $ Nothing
+  env <- liftIO $ initializeSidechainEnv Nothing Nothing
   let
     callback :: Utxo.UtxoIndexer -> IO ()
-    callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer) -- update the indexer
+    callback = atomically
+             . AddressUtxoIndexer.updateEnvState
+                (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer) -- update the indexer
   liftIO $ mocUtxoWorker callback events
   fetchedRows <-
     liftIO
     . fmap concat
-    . traverse (UIQ.findByAddress env)
+    . traverse (AddressUtxoIndexer.findByAddress $ env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
     . Set.toList . Set.fromList  -- required to remove the potential duplicate addresses
     . fmap Utxo._address
     . concatMap (Set.toList . Utxo.ueUtxos)

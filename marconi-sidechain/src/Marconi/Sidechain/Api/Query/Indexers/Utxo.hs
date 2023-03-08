@@ -7,52 +7,47 @@ module Marconi.Sidechain.Api.Query.Indexers.Utxo
     , Utxo.UtxoIndexer
     , reportBech32Addresses
     , withQueryAction
-    , writeTMVar
-    , writeTMVar'
+    , updateEnvState
     ) where
 
+import Cardano.Api qualified as C
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, putTMVar, tryReadTMVar, tryTakeTMVar)
+import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, tryReadTMVar)
 import Control.Lens ((^.))
 import Control.Monad.STM (STM)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text (Text, unpack)
-
-import Cardano.Api qualified as C
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Storable qualified as Storable
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult))
-import Marconi.Sidechain.Api.Types (HasIndexerEnv (uiIndexer, uiQaddresses),
-                                    IndexerEnv (IndexerEnv, _uiIndexer, _uiQaddresses),
-                                    IndexerWrapper (IndexerWrapper, unWrapUtxoIndexer), QueryExceptions (QueryError))
+import Marconi.Sidechain.Api.Types (AddressUtxoIndexerEnv (AddressUtxoIndexerEnv), QueryExceptions (QueryError),
+                                    addressUtxoIndexerEnvIndexer, addressUtxoIndexerEnvTargetAddresses)
+import Marconi.Sidechain.Utils (writeTMVar)
 
 -- | Bootstraps the utxo query environment.
 -- The module is responsible for accessing SQLite for quries.
 -- The main issue we try to avoid here is mixing inserts and quries in SQLite to avoid locking the database
 initializeEnv
-    :: Maybe TargetAddresses      -- ^ user provided target addresses
-    -> IO IndexerEnv        -- ^ returns Query runtime environment
+    :: Maybe TargetAddresses -- ^ user provided target addresses
+    -> IO AddressUtxoIndexerEnv -- ^ returns Query runtime environment
 initializeEnv targetAddresses = do
-    ix <- atomically (newEmptyTMVar :: STM (TMVar Utxo.UtxoIndexer) )
-    pure $ IndexerEnv
-        { _uiIndexer = IndexerWrapper ix
-        , _uiQaddresses = targetAddresses
-        }
+    ix <- newEmptyTMVarIO
+    pure $ AddressUtxoIndexerEnv targetAddresses ix
 
 -- | Query utxos by Address
 --  Address conversion error from Bech32 may occur
 findByAddress
-    :: IndexerEnv           -- ^ Query run time environment
+    :: AddressUtxoIndexerEnv           -- ^ Query run time environment
     -> C.AddressAny         -- ^ Cardano address to query
     -> IO [Utxo.UtxoRow]
-findByAddress  = withQueryAction
+findByAddress = withQueryAction
 
 -- | Retrieve Utxos associated with the given address
--- We return an empty list if no address is found
+-- We return an empty list if no address is not found
 findByBech32Address
-    :: IndexerEnv -- ^ Query run time environment
+    :: AddressUtxoIndexerEnv -- ^ Query run time environment
     -> Text -- ^ Bech32 Address
     -> IO (Either QueryExceptions AddressUtxoResult)  -- ^ Plutus address conversion error may occur
 findByBech32Address env addressText =
@@ -70,11 +65,11 @@ findByBech32Address env addressText =
 -- | Execute the query function
 -- We must stop the utxo inserts before doing the query
 withQueryAction
-    :: IndexerEnv       -- ^ Query run time environment
+    :: AddressUtxoIndexerEnv -- ^ Query run time environment
     -> C.AddressAny     -- ^ Cardano address to query
     -> IO [Utxo.UtxoRow]
 withQueryAction env address =
-  (atomically . tryReadTMVar . unWrapUtxoIndexer $ env ^. uiIndexer) >>= action
+  (atomically $ tryReadTMVar $ env ^. addressUtxoIndexerEnvIndexer) >>= action
   where
     action Nothing = pure [] -- may occures at startup before marconi-chain-index gets to update the indexer
     action (Just indexer) = do
@@ -84,24 +79,16 @@ withQueryAction env address =
 -- | report target addresses
 -- Used by JSON-RPC
 reportQueryAddresses
-    :: IndexerEnv
+    :: AddressUtxoIndexerEnv
     -> IO [C.Address C.ShelleyAddr]
-reportQueryAddresses env = pure $ maybe [] NonEmpty.toList (env ^. uiQaddresses)
+reportQueryAddresses env = pure $ maybe [] NonEmpty.toList (env ^. addressUtxoIndexerEnvTargetAddresses)
 
 reportBech32Addresses
-    :: IndexerEnv
+    :: AddressUtxoIndexerEnv
     -> [Text]
 reportBech32Addresses env =
-    let addrs = maybe [] NonEmpty.toList (env ^. uiQaddresses)
+    let addrs = maybe [] NonEmpty.toList (env ^. addressUtxoIndexerEnvTargetAddresses)
      in fmap C.serialiseAddress addrs
 
--- | Non-blocking write of a new value to a 'TMVar'
--- Puts if empty. Replaces if populated.
---
--- Only exists in GHC9, but we're on GHC8.
--- TODO: Remove once we migrate to GHC9.
-writeTMVar :: TMVar a -> a -> STM ()
-writeTMVar t new = tryTakeTMVar t >> putTMVar t new
-
-writeTMVar' :: IndexerWrapper -> Utxo.UtxoIndexer -> STM ()
-writeTMVar' (IndexerWrapper t) =  writeTMVar t
+updateEnvState :: AddressUtxoIndexerEnv -> Utxo.UtxoIndexer -> STM ()
+updateEnvState (AddressUtxoIndexerEnv _ t) =  writeTMVar t

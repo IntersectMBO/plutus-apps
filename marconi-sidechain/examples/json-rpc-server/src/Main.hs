@@ -15,24 +15,24 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
-import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, optional, short, strOption, (<**>))
-import System.FilePath ((</>))
-
 import Marconi.ChainIndex.CLI (multiString)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
-import Marconi.Sidechain.Api.HttpServer qualified as Http
+import Marconi.Sidechain.Api.HttpServer (bootstrap)
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
-import Marconi.Sidechain.Api.Types (IndexerEnv, queryEnv, uiIndexer)
-import Marconi.Sidechain.Bootstrap (initializeIndexerEnv)
+import Marconi.Sidechain.Api.Types (SidechainEnv, sidechainAddressUtxoIndexer, sidechainEnvIndexers)
+import Marconi.Sidechain.Bootstrap (initializeSidechainEnv)
+import Options.Applicative (Parser, execParser, help, helper, info, long, metavar, optional, short, strOption, (<**>))
+import System.FilePath ((</>))
 
 data CliOptions = CliOptions
-    { _utxoDirPath :: FilePath -- ^ Filepath to utxo sqlite database
-    , _addresses   :: Maybe TargetAddresses
+    { _utxoDirPath :: !FilePath -- ^ Filepath to utxo sqlite database
+    , _addresses   :: !(Maybe TargetAddresses)
     }
 
 utxoDbFileName :: String
 utxoDbFileName = "utxodb"
+
 cliParser :: Parser CliOptions
 cliParser = CliOptions
     <$> strOption (long "utxo-db"
@@ -54,16 +54,16 @@ main = do
         <>"\nport =" <> show (3000 :: Int)
         <> "\nmarconi-db-dir =" <> dbpath
         <> "\nnumber of addresses to index = " <> show (length <$> addresses)
-    env <- initializeIndexerEnv Nothing addresses
-    race_ (Http.bootstrap env) (mocUtxoIndexer dbpath (env ^. queryEnv) )
+    env <- initializeSidechainEnv Nothing addresses
+    race_ (bootstrap env) (mocUtxoIndexer dbpath env)
 
 -- | moc marconi utxo indexer.
 -- This will allow us to use the UtxoIndexer query interface without having cardano-node or marconi online
 -- Effectively we are going to query SQLite only
-mocUtxoIndexer :: FilePath -> IndexerEnv -> IO ()
+mocUtxoIndexer :: FilePath -> SidechainEnv -> IO ()
 mocUtxoIndexer dbpath env =
         Utxo.open dbpath (Utxo.Depth 4) >>= callback >> innerLoop
     where
       callback :: Utxo.UtxoIndexer -> IO ()
-      callback = atomically . UIQ.writeTMVar' (env ^. uiIndexer)
+      callback = atomically . UIQ.updateEnvState (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
       innerLoop = threadDelay 1000000 >> innerLoop -- create some latency

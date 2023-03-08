@@ -12,7 +12,7 @@ main = defaultMain tests
 tests :: TestTree
 tests = localOption (HedgehogTestLimit $ Just 200) $
     testGroup "marconi-sidechain"
-        [ Api.Query.Indexers.Utxo.tests
-        , CLI.tests
+        [ CLI.tests
         , Routes.tests
+        , Api.Query.Indexers.Utxo.tests
         ]
