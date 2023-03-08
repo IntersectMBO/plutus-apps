@@ -29,7 +29,7 @@ import ContractExample.WaitForTx qualified as Contracts.WaitForTx
 import Data.OpenApi.Schema qualified as OpenApi
 import Ledger (TxId)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
-import Plutus.Contracts.Game qualified as Contracts.Game
+import Plutus.Contracts.Game.Alonzo qualified as Contracts.Game
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
 import Plutus.Contracts.PingPong qualified as Contracts.PingPong
 import Plutus.Contracts.Prism.Mirror qualified as Contracts.Prism
