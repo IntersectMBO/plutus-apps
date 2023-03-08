@@ -132,10 +132,6 @@ class Buffered h where
    act a lot like folds over the event stream. Each query introduces two indexed types:
    one for the type of requests (called StorableQuery) and one for responses (called
    StorableResult).
-
-   All queries include a validity interval. If the data is not available for a specified
-   interval, the returned result should specify that. It is also recommended that the result
-   includes the slot number at which the query was ran.
 -}
 class Queryable h where
   queryStorage
