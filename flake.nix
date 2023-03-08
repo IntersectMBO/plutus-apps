@@ -52,7 +52,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     CHaP = {
-      url = "github:input-output-hk/cardano-haskell-packages";
+      url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
       flake = false;
     };
     haskell-language-server = {
