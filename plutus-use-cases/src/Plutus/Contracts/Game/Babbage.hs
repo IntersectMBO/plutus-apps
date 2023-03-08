@@ -26,7 +26,10 @@
 -- Currently, remote wallets (anything other than WBE) can only handles
 -- `yieldUnbalancedTx` requests, and not `balanceTx`, `signTx` and `submitTx`
 -- requests.
-module Plutus.Contracts.GameBabbage
+--
+-- This is the "Babbage version" of the game, it uses features up to the Babbage era.
+-- It introduces reference script.
+module Plutus.Contracts.Game.Babbage
     ( contract
     , GameParam(..)
     , GameSchema

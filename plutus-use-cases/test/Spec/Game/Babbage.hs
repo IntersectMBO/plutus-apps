@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Spec.GameBabbage
+module Spec.Game.Babbage
   ( tests, successTrace, failTrace
   ) where
 
@@ -31,9 +31,9 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test (checkPredicate, goldenPir, mockWalletAddress, reasonable', valueAtAddress, w1, w2, w3,
                              walletFundsChange, (.&&.))
-import Plutus.Contracts.GameBabbage (GuessArgs (GuessArgs, guessArgsGameAddress, guessArgsGameParam, guessArgsSecret),
-                                     LockArgs (LockArgs, lockArgsGameAddress, lockArgsGameParam, lockArgsSecret, lockArgsValue))
-import Plutus.Contracts.GameBabbage qualified as G
+import Plutus.Contracts.Game.Babbage (GuessArgs (GuessArgs, guessArgsGameAddress, guessArgsGameParam, guessArgsSecret),
+                                      LockArgs (LockArgs, lockArgsGameAddress, lockArgsGameParam, lockArgsSecret, lockArgsValue))
+import Plutus.Contracts.Game.Babbage qualified as G
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator (EmulatorTrace)
@@ -104,36 +104,34 @@ guess hdl proposition addr = do
 
 successTrace :: EmulatorTrace ()
 successTrace = do
-    hdl <- Trace.activateContractWallet w3 $ G.contract @Text
-    Trace.callEndpoint @"init" hdl gameParam
+    hdl1 <- Trace.activateContractWallet w1 $ G.contract @Text
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
+    hdl3 <- Trace.activateContractWallet w3 $ G.contract @Text
+    Trace.callEndpoint @"init" hdl3 gameParam
     void Trace.nextSlot
-    hdl2 <- Trace.activateContractWallet w1 $ G.contract @Text
-    lock hdl2 "hello" (Ada.adaValueOf 8)
-    hdl3 <- Trace.activateContractWallet w2 $ G.contract @Text
-    guess hdl3 "hello" (mockWalletAddress w3)
+    lock hdl1 "hello" (Ada.adaValueOf 8)
+    guess hdl2 "hello" (mockWalletAddress w3)
 
 -- | Wallet 1 locks some funds, and w2 then makes a correct guess.
 successTwoGuessesTrace :: EmulatorTrace ()
 successTwoGuessesTrace = do
-    hdl <- Trace.activateContractWallet w3 $ G.contract @Text
-    Trace.callEndpoint @"init" hdl gameParam
+    hdl1 <- Trace.activateContractWallet w1 $ G.contract @Text
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
+    hdl3 <- Trace.activateContractWallet w3 $ G.contract @Text
+    Trace.callEndpoint @"init" hdl3 gameParam
     void Trace.nextSlot
-    hdl2 <- Trace.activateContractWallet w1 $ G.contract @Text
-    lock hdl2 "hello" (Ada.adaValueOf 4)
-    hdl3 <- Trace.activateContractWallet w2 $ G.contract @Text
-    guess hdl3 "hello" (mockWalletAddress w3)
-    hdl2 <- Trace.activateContractWallet w1 $ G.contract @Text
-    lock hdl2 "hola" (Ada.adaValueOf 4)
-    hdl3 <- Trace.activateContractWallet w2 $ G.contract @Text
-    guess hdl3 "hola" (mockWalletAddress w3)
+    lock hdl1 "hello" (Ada.adaValueOf 4)
+    guess hdl2 "hello" (mockWalletAddress w3)
+    lock hdl1 "hola" (Ada.adaValueOf 4)
+    guess hdl2 "hola" (mockWalletAddress w3)
 
 -- | Wallet 1 locks some funds, and Wallet 2 makes a wrong guess.
 failTrace :: EmulatorTrace ()
 failTrace = do
-    hdl <- Trace.activateContractWallet w3 $ G.contract @Text
-    Trace.callEndpoint @"init" hdl gameParam
+    hdl1 <- Trace.activateContractWallet w1 $ G.contract @Text
+    hdl2 <- Trace.activateContractWallet w2 $ G.contract @Text
+    hdl3 <- Trace.activateContractWallet w3 $ G.contract @Text
+    Trace.callEndpoint @"init" hdl3 gameParam
     void Trace.nextSlot
-    hdl2 <- Trace.activateContractWallet w1 $ G.contract @Text
-    lock hdl2 "hello" (Ada.adaValueOf 8)
-    hdl3 <- Trace.activateContractWallet w2 $ G.contract @Text
-    guess hdl3 "hola" (mockWalletAddress w3)
+    lock hdl1 "hello" (Ada.adaValueOf 8)
+    guess hdl2 "hola" (mockWalletAddress w3)
