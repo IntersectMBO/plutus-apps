@@ -7,30 +7,29 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 {-# LANGUAGE RecordWildCards     #-}
 
-module Spec.BabbageFeatures(tests) where
+module Spec.BabbageFeatures(
+    checkTxInfoV2Test,
+    referenceScriptMintTest,
+    referenceScriptInlineDatumSpendTest,
+    referenceScriptDatumHashSpendTest
+    ) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
 import Data.Map qualified as Map
-import Test.Tasty (TestTree, testGroup)
 
 import Hedgehog qualified as H
-import Hedgehog.Extras.Test qualified as HE
-import Test.Base qualified as H
-import Test.Tasty.Hedgehog (testProperty)
 
 import CardanoTestnet qualified as TN
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Time (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as Time
 import Hedgehog.Internal.Property (MonadTest)
 import Helpers.Common (makeAddress)
 import Helpers.Query qualified as Q
-import Helpers.Testnet (testnetOptionsBabbage7, testnetOptionsBabbage8)
+import Helpers.Test (TestParams (TestParams, localNodeConnectInfo, networkId, pparams, tempAbsPath))
 import Helpers.Testnet qualified as TN
 import Helpers.Tx qualified as Tx
-import Helpers.Utils qualified as U (anyLeftFail_, posixToMilliseconds, workspace)
+import Helpers.Utils qualified as U
 import Plutus.V1.Ledger.Interval qualified as PlutusV1
 import Plutus.V1.Ledger.Time qualified as PlutusV1
 import Plutus.V2.Ledger.Api qualified as PlutusV2
@@ -40,66 +39,6 @@ import PlutusScripts.Helpers (toScriptData)
 import PlutusScripts.Helpers qualified as PS
 import PlutusScripts.V2TxInfo (checkV2TxInfoAssetIdV2, checkV2TxInfoMintWitnessV2, checkV2TxInfoRedeemer, txInfoData,
                                txInfoFee, txInfoInputs, txInfoMint, txInfoOutputs, txInfoSigs)
-
-tests :: TestTree
-tests = testGroup "Babbage Features"
-  [ testProperty "pv7Tests" pv7Tests,
-    testProperty "pv8Tests" pv8Tests ]
-
-data TestParams = TestParams {
-    localNodeConnectInfo :: C.LocalNodeConnectInfo C.CardanoMode,
-    pparams              :: C.ProtocolParameters,
-    networkId            :: C.NetworkId,
-    tempAbsPath          :: FilePath
-}
-
-runTest :: MonadIO m =>
-  String ->
-  (Either TN.LocalNodeOptions TN.TestnetOptions -> TestParams -> m ()) ->
-  Either TN.LocalNodeOptions TN.TestnetOptions -> TestParams ->
-  m ()
-runTest testName test networkOptions testParams = do
-  liftIO $ putStrLn $ "Running: " ++ testName
-  t <- liftIO Time.getPOSIXTime
-  test networkOptions testParams
-  t2 <- liftIO Time.getPOSIXTime
-  liftIO $ putStrLn $ "Duration: " ++ show (nominalDiffTimeToSeconds $ t2 - t) ++ "s"
-
-pv7Tests :: H.Property
-pv7Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
-    preTestnetTime <- liftIO Time.getPOSIXTime
-    (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment testnetOptionsBabbage7 tempAbsPath
-    let
-      testParams = TestParams localNodeConnectInfo pparams networkId tempAbsPath
-      options = testnetOptionsBabbage7
-
-    -- must be first to run after new testnet is initialised due to expected slot to posix time
-    liftIO $ putStrLn "checkTxInfoV2Test"
-    checkTxInfoV2Test options testParams preTestnetTime
-
-    runTest "referenceScriptMintTest" referenceScriptMintTest options testParams
-    runTest "referenceScriptInlineDatumSpendTest" referenceScriptInlineDatumSpendTest options testParams
-    runTest "referenceScriptDatumHashSpendTest" referenceScriptDatumHashSpendTest options testParams
-
-    U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
-
-pv8Tests :: H.Property
-pv8Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
-    preTestnetTime <- liftIO Time.getPOSIXTime
-    (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment testnetOptionsBabbage8 tempAbsPath
-    let
-      testParams = TestParams localNodeConnectInfo pparams networkId tempAbsPath
-      options = testnetOptionsBabbage8
-
-    -- must be first to run after new testnet is initialised due to expected slot to posix time
-    liftIO $ putStrLn "checkTxInfoV2Test"
-    checkTxInfoV2Test options testParams preTestnetTime
-
-    runTest "referenceScriptMintTest" referenceScriptMintTest options testParams
-    runTest "referenceScriptInlineDatumSpendTest" referenceScriptInlineDatumSpendTest options testParams
-    runTest "referenceScriptDatumHashSpendTest" referenceScriptDatumHashSpendTest options testParams
-
-    U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
 -- | Test must be first to run after new testnet is initialised due to slot timing
 checkTxInfoV2Test :: (MonadIO m , MonadTest m) =>
@@ -113,7 +52,7 @@ checkTxInfoV2Test networkOptions TestParams{..} preTestnetTime = do
   startTime <- liftIO Time.getPOSIXTime
   (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
 
-  -- 2: build a transaction
+  -- build a transaction
 
   txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
   txInAsTxOut@(C.TxOut _ txInValue _ _) <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address txIn "txInAsTxOut <- TN.getTxOutAtAddress"

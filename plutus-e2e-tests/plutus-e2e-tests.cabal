@@ -95,6 +95,7 @@ test-suite plutus-e2e-tests-test
     CardanoTestnet
     Helpers.Common
     Helpers.Query
+    Helpers.Test
     Helpers.Testnet
     Helpers.Tx
     Helpers.Utils
