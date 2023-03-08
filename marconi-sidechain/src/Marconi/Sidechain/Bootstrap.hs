@@ -2,7 +2,7 @@
 -- This module bootstraps the marconi-sidechain JSON RPC server, it acts as a glue conntecting the
 -- JSON-RPC, HttpServer, marconiIndexer, and marconi cache
 --
-module Marconi.Sidechain.Bootstrap  where
+module Marconi.Sidechain.Bootstrap where
 
 import Control.Concurrent.STM (atomically)
 import Control.Lens ((^.))
@@ -30,11 +30,6 @@ initializeIndexerEnv maybePort targetAddresses = do
         { _httpSettings = httpsettings
         , _queryEnv = queryenv
         }
-
-bootstrapHttp
-    :: SidechainEnv
-    -> IO ()
-bootstrapHttp  = Http.bootstrap
 
 -- |  Marconi cardano blockchain indexer
 bootstrapIndexers

@@ -2,8 +2,9 @@
 module Main where
 
 import Control.Concurrent.Async (race_)
+import Marconi.Sidechain.Api.HttpServer qualified as Http
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs, httpPort, targetAddresses))
-import Marconi.Sidechain.Bootstrap (bootstrapHttp, bootstrapIndexers, initializeIndexerEnv)
+import Marconi.Sidechain.Bootstrap (bootstrapIndexers, initializeIndexerEnv)
 import Marconi.Sidechain.CLI (parseCli)
 
 -- | Concurrently start:
@@ -19,5 +20,5 @@ main = do
     rpcEnv <- initializeIndexerEnv httpPort targetAddresses
 
     race_
-       (bootstrapHttp rpcEnv) -- Start HTTP server
+       (Http.bootstrap rpcEnv) -- Start HTTP server
        (bootstrapIndexers cli rpcEnv) -- Start the Sidechain indexers
