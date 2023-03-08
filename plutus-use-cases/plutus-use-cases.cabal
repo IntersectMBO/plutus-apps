@@ -256,7 +256,7 @@ executable plutus-use-cases-scripts
     Spec.Escrow
     Spec.Escrow.Endpoints
     Spec.Future
-    Spec.Game
+    Spec.Game.Alonzo
     Spec.GameStateMachine
     Spec.Governance
     Spec.MultiSig
