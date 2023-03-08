@@ -58,8 +58,8 @@ import Ledger.Tx.Constraints (mustReferenceOutput)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (AsContractError, Contract, ContractError (OtherContractError), Endpoint, Promise,
-                        _ContractError, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints, ownUtxos, selectList,
-                        throwError, type (.\/), utxosAt, yieldUnbalancedTx)
+                        _ContractError, adjustUnbalancedTx, endpoint, findReferenceValidatorScripByHash, logInfo,
+                        mkTxConstraints, ownUtxos, selectList, throwError, type (.\/), utxosAt, yieldUnbalancedTx)
 import Plutus.Script.Utils.Ada (toValue)
 import Plutus.Script.Utils.Typed (ScriptContextV2, validatorHash)
 import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
@@ -188,7 +188,7 @@ lock = endpoint @"lock" $ \LockArgs { lockArgsGameParam, lockArgsGameAddress, lo
     logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
     let lookups = Constraints.typedValidatorLookups (gameInstance lockArgsGameParam)
         gameHash = validatorHash $ gameInstance lockArgsGameParam
-    gameRef <- findScriptReferenceByHash gameHash lockArgsGameAddress
+    gameRef <- findReferenceValidatorScripByHash gameHash lockArgsGameAddress
     let tx =  mustReferenceOutput gameRef Haskell.<>
               Constraints.mustPayToTheScriptWithDatumInTx (hashString lockArgsSecret) lockArgsValue
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= yieldUnbalancedTx
@@ -202,7 +202,7 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsGameAddres
     let game = gameInstance guessArgsGameParam
         gameHash = validatorHash game
     gameUtxos <- utxosAt guessArgsGameAddress
-    gameRef <- findScriptReferenceByHash gameHash guessArgsGameAddress
+    gameRef <- findReferenceValidatorScripByHash gameHash guessArgsGameAddress
     collateral <- fmap (head . Map.toList) ownUtxos
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
@@ -213,30 +213,6 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsGameAddres
                 <> Constraints.mustUseOutputAsCollateral (fst collateral)
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx
-
--- | Get the unspent transaction outputs at an address.
-findScriptReferenceByHash ::
-    forall w s e.
-    ( AsContractError e
-    )
-    => ValidatorHash
-    -> CardanoAddress
-    -> Contract w s e TxOutRef
-findScriptReferenceByHash hash address = do
-    utxos <- utxosAt address
-    maybe
-      (throwError $ review _ContractError $ OtherContractError "Game contract not available")
-      Haskell.pure
-      $ searchReferenceScript hash utxos
-    where
-        searchReferenceScript :: ValidatorHash -> Map TxOutRef DecoratedTxOut -> Maybe TxOutRef
-        searchReferenceScript (ValidatorHash h) = let
-            getReferenceScriptHash = _2 . decoratedTxOutReferenceScript
-                . _Just . to (getScriptHash . scriptHash)
-                . only h
-            in fmap fst
-            . find (isJust . preview getReferenceScriptHash)
-            . Map.toList
 
 -- | Find the secret word in the Datum of the UTxOs
 findSecretWordValue :: Map TxOutRef DecoratedTxOut -> Maybe HashedString

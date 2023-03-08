@@ -40,6 +40,7 @@ module Plutus.Contract.Request(
     , redeemerFromHash
     , txOutFromRef
     , txFromTxId
+    , findReferenceValidatorScripByHash
     , unspentTxOutFromRef
     , utxoRefMembership
     , utxoRefsAt
@@ -111,7 +112,7 @@ module Plutus.Contract.Request(
     ) where
 
 import Cardano.Node.Emulator.Params (Params)
-import Control.Lens (Prism', preview, review, view)
+import Control.Lens (Prism', _2, _Just, only, preview, review, to, view)
 import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Trans.State.Strict (StateT (..), evalStateT)
 import Data.Aeson (FromJSON, ToJSON)
@@ -119,10 +120,11 @@ import Data.Aeson qualified as JSON
 import Data.Aeson.Types qualified as JSON
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default (def))
+import Data.List (find)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Maybe (catMaybes, isJust, mapMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Data.Row (AllUniqueLabels, HasType, KnownSymbol, type (.==))
 import Data.Text qualified as Text
@@ -132,15 +134,17 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
-               cardanoAddressCredential, cardanoPubKeyHash, fromMilliSeconds, txOutRefId)
+               ValidatorHash (ValidatorHash), cardanoAddressCredential, cardanoPubKeyHash,
+               decoratedTxOutReferenceScript, fromMilliSeconds, getScriptHash, scriptHash, txOutRefId)
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
+import Plutus.Contract.Error (ContractError (OtherContractError), _ContractError)
 import Plutus.Contract.Util (loopM)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-                             StakeValidatorHash, Validator, ValidatorHash)
+                             StakeValidatorHash, Validator)
 import Plutus.V1.Ledger.Value (AssetClass)
 import PlutusTx qualified
 
@@ -528,6 +532,31 @@ queryUnspentTxOutsAt addr pq = do
   case cir of
     E.UnspentTxOutsAtResponse r -> pure r
     r                           -> throwError $ review _ChainIndexContractError ("UnspentTxOutAtResponse", r)
+
+-- | Find the reference to an utxo containing a reference script
+-- by its the script hash, amongst the utxos at a given address
+findReferenceValidatorScripByHash ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => ValidatorHash
+    -> CardanoAddress
+    -> Contract w s e TxOutRef
+findReferenceValidatorScripByHash hash address = do
+    utxos <- utxosAt address
+    maybe
+      (throwError $ review _ContractError $ OtherContractError "Enable to find the referenc script")
+      pure
+      $ searchReferenceScript hash utxos
+    where
+        searchReferenceScript :: ValidatorHash -> Map TxOutRef DecoratedTxOut -> Maybe TxOutRef
+        searchReferenceScript (ValidatorHash h) = let
+            getReferenceScriptHash = _2 . decoratedTxOutReferenceScript
+                . _Just . to (getScriptHash . scriptHash)
+                . only h
+            in fmap fst
+            . find (isJust . preview getReferenceScriptHash)
+            . Map.toList
 
 -- | Get the unspent transaction outputs at an address.
 utxosAt ::
