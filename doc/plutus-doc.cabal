@@ -93,7 +93,7 @@ executable doc-doctests
     , plutus-core         >=1.0.0
     , plutus-ledger-api   >=1.0.0
     , plutus-tx           >=1.0.0
-    , quickcheck-dynamic  >=3.0.0
+    , quickcheck-dynamic  >=3.0.2
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
