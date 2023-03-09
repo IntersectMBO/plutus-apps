@@ -31,8 +31,7 @@ data CliOptions = CliOptions
     }
 
 utxoDbFileName :: String
-utxoDbFileName = "utxodb"
-
+utxoDbFileName = "utxo.db"
 cliParser :: Parser CliOptions
 cliParser = CliOptions
     <$> strOption (long "utxo-db"
@@ -62,7 +61,7 @@ main = do
 -- Effectively we are going to query SQLite only
 mocUtxoIndexer :: FilePath -> SidechainEnv -> IO ()
 mocUtxoIndexer dbpath env =
-        Utxo.open dbpath (Utxo.Depth 4) >>= callback >> innerLoop
+        Utxo.open dbpath (Utxo.Depth 4) True >>= callback >> innerLoop
     where
       callback :: Utxo.UtxoIndexer -> IO ()
       callback = atomically . UIQ.updateEnvState (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)

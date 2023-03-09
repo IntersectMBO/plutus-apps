@@ -7,10 +7,10 @@ POST http://localhost:3000/json-rpc
 Content-Type: application/json-rpc
 {"jsonrpc": "2.0", "method": "echo", "params": "plutus-apps rocks", "id": 0}
 #
-# should fail. `add` method is unknown
+# should return targetAddresses, if any
 POST http://localhost:3000/json-rpc
 Content-Type: application/json
-{"jsonrpc": "2.0", "method": "add", "params": [1,1], "id": 0}
+{"jsonrpc": "2.0", "method": "getTargetAddresses", "params": "hello", "id": 1}
 #
 # should fail, Unknown method: unknownMethod
 POST http://localhost:3000/json-rpc
@@ -28,8 +28,8 @@ Content-Type: application/json
 {
 "jsonrpc": "2.0"
 , "method": "getUtxoFromAddress"
-, "params": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"
-, "id": 92
+, "params": "addr_test1wpzewuy339m9l8ax7gz8g08q2j9478lgntzv9qhmwvy3hwg0cwsaf"
+, "id": 3
 }
 #
 # lookup for UTXOs, should generate error if the address is not in the target list
@@ -39,18 +39,7 @@ Content-Type: application/json
 "jsonrpc": "2.0"
 , "method": "getUtxoFromAddress"
 , "params": "addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj"
-, "id":21
-}
-
-#
-# lookup for UTXOs, should generate error if the address is not in the target list
-POST http://localhost:3000/json-rpc
-Content-Type: application/json
-{
-"jsonrpc": "2.0"
-, "method": "getUtxoFromAddress"
-, "params": ["addr_test1wqr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugq6ch8kj"]
-, "id":21
+, "id":4
 }
 
 
@@ -75,19 +64,9 @@ Content-Type: application/json
 "jsonrpc": "2.0"
 , "method": "getUtxoFromAddress"
 , "params": 100
-, "id": 14
+, "id": 5
 }
 #
-# fetch plutus converted addresses the user had provided
-# This version of marconi-sidechain simply ignores `100` and returns all rows from database. This is a todo item for next release
-POST http://localhost:3000/json-rpc
-Content-Type: application/json
-{
-"jsonrpc": "2.0"
-, "method": "getTargetAddresses"
-, "params": ""
-, "id": 11
-}
 #
 #
 ####  REST calls ####

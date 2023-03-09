@@ -137,13 +137,6 @@ mapLeft _ (Right v) = Right v
 instance ToJSON C.ScriptData where
     toJSON v = Aeson.String $ Text.decodeLatin1 $ Base16.encode $ C.serialiseToCBOR v
 
-instance SQL.FromRow C.ChainPoint where
-  fromRow = C.ChainPoint <$> SQL.field <*> SQL.field
-
-instance SQL.ToRow C.ChainPoint where
-  toRow (C.ChainPoint sn bh)  = SQL.toRow (sn, bh)
-  toRow C.ChainPointAtGenesis = []
-
 instance SQL.FromRow Int where
   fromRow = SQL.field
 

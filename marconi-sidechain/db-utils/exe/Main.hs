@@ -15,10 +15,10 @@ cliParser = CliOptions
                               <> short 'd'
                               <> metavar "FILENAME"
                               <>  showDefault
-                              <> value "./.marconidb/utxodb"
+                              <> value "./.marconidb/utxo.db"
                               <> help "Path to the marconi database.")
 main :: IO ()
-main  = do
+main = do
     (CliOptions dbpath) <- execParser $ info (cliParser <**> helper) mempty
     dbEnv <- bootstrap dbpath
     freqUtxoTable dbEnv
