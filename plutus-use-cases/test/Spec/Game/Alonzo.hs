@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Spec.Game
+module Spec.Game.Alonzo
   ( tests, successTrace, failTrace
   ) where
 
@@ -30,9 +30,9 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test (checkPredicate, goldenPir, mockWalletPaymentPubKeyHash, reasonable', valueAtAddress, w1,
                              w2, walletFundsChange, (.&&.))
-import Plutus.Contracts.Game (GuessArgs (GuessArgs, guessArgsGameParam, guessArgsSecret),
-                              LockArgs (LockArgs, lockArgsGameParam, lockArgsSecret, lockArgsValue))
-import Plutus.Contracts.Game qualified as G
+import Plutus.Contracts.Game.Alonzo (GuessArgs (GuessArgs, guessArgsGameParam, guessArgsSecret),
+                                     LockArgs (LockArgs, lockArgsGameParam, lockArgsSecret, lockArgsValue))
+import Plutus.Contracts.Game.Alonzo qualified as G
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator (EmulatorTrace)

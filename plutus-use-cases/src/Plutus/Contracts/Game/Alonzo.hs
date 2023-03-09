@@ -25,7 +25,9 @@
 -- Currently, remote wallets (anything other than WBE) can only handles
 -- `yieldUnbalancedTx` requests, and not `balanceTx`, `signTx` and `submitTx`
 -- requests.
-module Plutus.Contracts.Game
+--
+-- This is the "Alonzo version" of the game, it uses features up to the Alonzo era.
+module Plutus.Contracts.Game.Alonzo
     ( contract
     , GameParam(..)
     , GameSchema
@@ -178,7 +180,7 @@ guess = endpoint @"guess" $ \GuessArgs { guessArgsGameParam, guessArgsSecret } -
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
                Haskell.<> Constraints.unspentOutputs utxos
         redeemer = clearString guessArgsSecret
-        tx       = Constraints.collectFromTheScript utxos redeemer
+        tx       = Constraints.spendUtxosFromTheScript utxos redeemer
 
     unbalancedTx <- mkTxConstraints lookups tx
     yieldUnbalancedTx unbalancedTx

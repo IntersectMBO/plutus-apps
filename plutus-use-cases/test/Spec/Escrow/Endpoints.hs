@@ -52,7 +52,7 @@ badRefund inst pk = do
     current <- currentNodeClientSlot
     let pkh = Ledger.datumHash $ Datum $ PlutusTx.toBuiltinData pk
         flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
-        tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
+        tx' = Constraints.spendUtxosFromTheScriptFilter flt unspentOutputs Refund
            <> Constraints.mustValidateInSlotRange (Interval.from (current - 1))
     utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                           <> Constraints.unspentOutputs unspentOutputs

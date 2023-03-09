@@ -23,10 +23,9 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Tx.Constraints.OffChain qualified as Constraints (typedValidatorLookups, unspentOutputs)
 import Ledger.Tx.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
-import Ledger.Tx.Constraints.TxConstraints qualified as Constraints (collectFromTheScript, mustBeSignedBy,
-                                                                     mustIncludeDatumInTx,
+import Ledger.Tx.Constraints.TxConstraints qualified as Constraints (mustBeSignedBy, mustIncludeDatumInTx,
                                                                      mustPayToTheScriptWithDatumInTx,
-                                                                     mustSpendPubKeyOutput)
+                                                                     mustSpendPubKeyOutput, spendUtxosFromTheScript)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.ChainIndex.Emulator (addressMap, diskState, unCredentialMap)
@@ -91,7 +90,7 @@ mustSpendPubKeyOutputContract' keys offChainTxOutRefs onChainTxOutRefs pkh = do
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
         tx2 =
-            Constraints.collectFromTheScript scriptUtxos ()
+            Constraints.spendUtxosFromTheScript scriptUtxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onChainTxOutRefs)
             <> mconcat mustSpendPubKeyOutputs
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2

@@ -305,7 +305,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     unspentOutputs <- utxosAt addr
     let
         valRange = Interval.lessThan $ escrowDeadline escrow
-        tx = Constraints.collectFromTheScript unspentOutputs Redeem
+        tx = Constraints.spendUtxosFromTheScript unspentOutputs Redeem
                 <> foldMap mkTx (escrowTargets escrow)
                 <> Constraints.mustValidateInTimeRange valRange
     if current >= escrowDeadline escrow
@@ -343,7 +343,7 @@ refund inst escrow = do
     unspentOutputs <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
     let pkh = Scripts.datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
-        tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
+        tx' = Constraints.spendUtxosFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateInTimeRange (Interval.from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
     then do

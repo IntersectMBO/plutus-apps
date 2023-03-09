@@ -137,7 +137,7 @@ unlockFunds SplitData{recipient1, recipient2, amount} = do
     utxos <- utxosAt contractAddress
     let half = Ada.divide amount 2
         tx =
-            Constraints.collectFromTheScript utxos ()
+            Constraints.spendUtxosFromTheScript utxos ()
             <> Constraints.mustPayToAddress recipient1 (Ada.toValue half)
             <> Constraints.mustPayToAddress recipient2 (Ada.toValue $ amount - half)
     void $ submitTxConstraintsSpending splitValidator utxos tx

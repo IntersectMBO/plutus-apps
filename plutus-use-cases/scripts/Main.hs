@@ -15,7 +15,7 @@ import Plutus.Trace (Command (..), ScriptsConfig (..), ValidatorMode (..), showS
 import Spec.Currency qualified as Currency
 import Spec.Escrow qualified as Escrow
 import Spec.Future qualified as Future
-import Spec.Game qualified as Game
+import Spec.Game.Alonzo qualified as Game
 import Spec.GameStateMachine qualified as GameStateMachine
 import Spec.MultiSig qualified as MultiSig
 import Spec.MultiSigStateMachine qualified as MultiSigStateMachine

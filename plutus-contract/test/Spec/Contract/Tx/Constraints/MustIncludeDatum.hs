@@ -87,7 +87,7 @@ mustIncludeDatumInTxWhenPayingToScriptContract offChainDatums onChainDatums = do
             Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
         tx2 =
-            Constraints.collectFromTheScript utxos onChainDatums
+            Constraints.spendUtxosFromTheScript utxos onChainDatums
             <> mustPayToTheScriptAndIncludeDatumsIfUsingOffChainConstraint
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
@@ -139,7 +139,7 @@ mustIncludeDatumInTxCalledBeforeOtherConstraints =
                 Constraints.typedValidatorLookups typedValidator
                 <> Constraints.unspentOutputs utxos
             tx2 =
-                Constraints.collectFromTheScript utxos [validatorDatum, otherDatumBs]
+                Constraints.spendUtxosFromTheScript utxos [validatorDatum, otherDatumBs]
                 <> Constraints.mustPayToOtherScriptWithDatumInTx
                      valHash
                      otherDatumBs

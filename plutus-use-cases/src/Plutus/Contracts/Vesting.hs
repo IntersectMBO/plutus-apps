@@ -221,7 +221,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
         remainingOutputs = case liveness of
                             Alive -> payIntoContract remainingValue
                             Dead  -> mempty
-        tx = Constraints.collectFromTheScript unspentOutputs ()
+        tx = Constraints.spendUtxosFromTheScript unspentOutputs ()
                 <> remainingOutputs
                 <> mustValidateInTimeRange (ValidityInterval.from now)
                 <> mustBeSignedBy (vestingOwner vesting)

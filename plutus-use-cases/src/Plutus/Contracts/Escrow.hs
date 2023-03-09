@@ -305,7 +305,7 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     else do
       let
           validityTimeRange = Interval.lessThan $ Haskell.pred $ escrowDeadline escrow
-          tx = Constraints.collectFromTheScript unspentOutputs Redeem
+          tx = Constraints.spendUtxosFromTheScript unspentOutputs Redeem
                   <> foldMap mkTx (escrowTargets escrow)
                   <> Constraints.mustValidateInTimeRange validityTimeRange
       utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
@@ -340,7 +340,7 @@ refund inst escrow = do
     pk <- ownFirstPaymentPubKeyHash
     let pkh = datumHash $ Datum $ PlutusTx.toBuiltinData pk
     let flt _ ciTxOut = has (Tx.decoratedTxOutScriptDatum . _1 . only pkh) ciTxOut
-        tx' = Constraints.collectFromTheScriptFilter flt unspentOutputs Refund
+        tx' = Constraints.spendUtxosFromTheScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustBeSignedBy pk
                 <> Constraints.mustValidateInTimeRange (Interval.from $ escrowDeadline escrow)
     if Constraints.modifiesUtxoSet tx'
