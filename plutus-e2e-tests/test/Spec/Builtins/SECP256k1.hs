@@ -6,33 +6,23 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use if" #-}
+{-# LANGUAGE RecordWildCards     #-}
 
-module Spec.Builtins.SECP256k1(tests) where
+module Spec.Builtins.SECP256k1(verifySchnorrAndEcdsaTest) where
 
 import Cardano.Api qualified as C
 import Data.Map qualified as Map
-import Test.Tasty (TestTree, testGroup)
 
 import Hedgehog qualified as H
-import Hedgehog.Extras.Test qualified as HE
-import Test.Base qualified as H
-import Test.Tasty.Hedgehog (testProperty)
 
 import CardanoTestnet qualified as TN
+import Control.Monad.IO.Class (MonadIO)
+import Hedgehog (MonadTest)
 import Helpers.Query qualified as Q
-import Helpers.Testnet (testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8)
+import Helpers.Test (TestParams (TestParams, localNodeConnectInfo, networkId, pparams, tempAbsPath))
 import Helpers.Testnet qualified as TN
 import Helpers.Tx qualified as Tx
-import Helpers.Utils qualified as U
 import PlutusScripts.SECP256k1 qualified as PS
-
-tests :: TestTree
-tests = testGroup "SECP256k1"
-  [ testProperty "unable to use SECP256k1 builtins in Alonzo PV6" (verifySchnorrAndEcdsaTest testnetOptionsAlonzo6)
-  , testProperty "unable to use SECP256k1 builtins in Babbage PV7" (verifySchnorrAndEcdsaTest testnetOptionsBabbage7)
-  , testProperty "can use SECP256k1 builtins in Babbage PV8" (verifySchnorrAndEcdsaTest testnetOptionsBabbage8)
-  --, testProperty "can use SECP256k1 builtins in Babbage PV8 (on preview testnet)" (verifySchnorrAndEcdsaTest localNodeOptionsPreview) -- uncomment to use local node on preview testnet
-  ]
 
 {- | Test that builtins: verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature can only
    be used to mint in Babbage era protocol version 8 and beyond.
@@ -43,17 +33,17 @@ tests = testGroup "SECP256k1"
     - if pv8+ then query the ledger to see if mint was successful otherwise expect
         "forbidden builtin" error when building tx
 -}
-verifySchnorrAndEcdsaTest :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
-verifySchnorrAndEcdsaTest networkOptions = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+verifySchnorrAndEcdsaTest :: (MonadIO m , MonadTest m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  m ()
+verifySchnorrAndEcdsaTest networkOptions TestParams{..} = do
 
-  pv <- TN.pvFromOptions networkOptions
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
-
-  -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
+  pv <- TN.pvFromOptions networkOptions
   (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
 
--- 2: build a transaction
+-- build a transaction
 
   txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
@@ -103,5 +93,4 @@ verifySchnorrAndEcdsaTest networkOptions = H.integration . HE.runFinallies . U.w
       txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
       H.assert txOutHasTokenValue
 
-      U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
       H.success
