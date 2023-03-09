@@ -45,6 +45,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoScriptData
   , fromCardanoPlutusScript
   , fromCardanoScriptInAnyLang
+  , fromCardanoReferenceScript
   , fromCardanoLovelace
   , fromTxScriptValidity
   , toTxScriptValidity
@@ -989,6 +990,10 @@ toCardanoScriptInAnyLang (P.Versioned script P.PlutusV1) =
 toCardanoScriptInAnyLang (P.Versioned script P.PlutusV2) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) . C.PlutusScript C.PlutusScriptV2
     <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
+
+fromCardanoReferenceScript :: C.ReferenceScript C.BabbageEra -> Maybe (P.Versioned P.Script)
+fromCardanoReferenceScript C.ReferenceScriptNone        = Nothing
+fromCardanoReferenceScript (C.ReferenceScript _ script) = fromCardanoScriptInAnyLang script
 
 toCardanoReferenceScript :: Maybe (P.Versioned P.Script) -> Either ToCardanoError (C.ReferenceScript C.BabbageEra)
 toCardanoReferenceScript (Just script) = C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> toCardanoScriptInAnyLang script

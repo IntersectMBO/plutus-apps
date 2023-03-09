@@ -272,12 +272,17 @@ data BalancingError
 
 -- Build a utxo provider from a set of unspent transaction outputs.
 utxoProviderFromWalletOutputs
-    :: Map.Map TxOutRef TxOut
+    :: UtxoIndex
     -- ^ The unspent transaction outputs.
-    -- Make sure that this doesn't contain any inputs from the transaction being balanced.
+    -> CardanoBuildTx
+    -- ^ The transaction being balanced, to make sure that we don't reuse any inputs from it.
     -> UtxoProvider (Either BalancingError)
-utxoProviderFromWalletOutputs walletUtxos value =
-    let outRefsWithValue = (\p -> (p, Tx.txOutValue (snd p))) <$> Map.toList walletUtxos
+utxoProviderFromWalletOutputs (UtxoIndex walletUtxos) unbalancedBodyContent value =
+    let inputOutRefs = map Tx.txInRef $ Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent
+        -- filter out inputs from walletUtxos that are already in unbalancedBodyContent
+        filteredUtxos = flip Map.filterWithKey walletUtxos $ \txOutRef _ ->
+            txOutRef `notElem` inputOutRefs
+        outRefsWithValue = (\p -> (p, Tx.txOutValue (snd p))) <$> Map.toList filteredUtxos
     in selectCoin outRefsWithValue value
 
 -- | Given a set of @a@s with coin values, and a target value, select a number

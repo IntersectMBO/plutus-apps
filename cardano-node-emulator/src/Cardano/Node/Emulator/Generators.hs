@@ -57,7 +57,7 @@ module Cardano.Node.Emulator.Generators(
     alwaysSucceedPolicy,
     alwaysSucceedPolicyId,
     someTokenValue,
-    emptyTxBodyContent
+    Tx.emptyTxBodyContent
     ) where
 
 import Control.Monad (guard, replicateM)
@@ -186,28 +186,6 @@ genInitialTransaction g = do
     (body, o) <- initialTxBody g
     (,o) <$> makeTx body
 
-emptyTxBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
-emptyTxBodyContent = C.TxBodyContent
-   { txIns = []
-   , txInsCollateral = C.TxInsCollateralNone
-   , txMintValue = C.TxMintNone
-   , txFee = C.toCardanoFee 0
-   , txOuts = []
-   , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
-   , txInsReference = C.TxInsReferenceNone
-   , txTotalCollateral = C.TxTotalCollateralNone
-   , txReturnCollateral = C.TxReturnCollateralNone
-   , txValidityRange = ( C.TxValidityNoLowerBound
-                       , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-   , txScriptValidity = C.TxScriptValidityNone
-   , txExtraKeyWits = C.TxExtraKeyWitnessesNone
-   , txMetadata = C.TxMetadataNone
-   , txAuxScripts = C.TxAuxScriptsNone
-   , txWithdrawals = C.TxWithdrawalsNone
-   , txCertificates = C.TxCertificatesNone
-   , txUpdateProposal = C.TxUpdateProposalNone
-   }
-
 initialTxBody ::
        GeneratorModel
     -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra, [TxOut])
@@ -217,7 +195,7 @@ initialTxBody GeneratorModel{..} = do
     -- we use a generated tx in input it's unbalanced but it's "fine" as we don't validate this tx
     txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))
                  <$> Gen.list (Range.constant 1 10) genTxIn
-    pure (emptyTxBodyContent
+    pure (Tx.emptyTxBodyContent
            { C.txIns
            , C.txOuts = Tx.getTxOut <$> o
            }, o)
@@ -269,7 +247,7 @@ makeTx
     => C.TxBodyContent C.BuildTx C.BabbageEra
     -> m CardanoTx
 makeTx bodyContent = do
-    txBody <- either (fail . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody bodyContent
+    txBody <- either (fail . ("makeTx: Can't create TxBody: " <>) . show) pure $ C.makeTransactionBody bodyContent
     pure $ signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
 
 -- | Generate a valid transaction, using the unspent outputs provided.
@@ -334,7 +312,7 @@ genValidTransactionBodySpending' g ins totalVal = do
         (fail "Cannot gen collateral")
         (failOnCardanoError . (C.toCardanoTxInsCollateral . map toTxInput . flip take ins . fromIntegral))
         (gmMaxCollateralInputs g)
-    pure $ emptyTxBodyContent
+    pure $ Tx.emptyTxBodyContent
            { C.txIns
            , C.txInsCollateral
            , C.txMintValue

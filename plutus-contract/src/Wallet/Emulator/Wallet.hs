@@ -310,15 +310,11 @@ handleBalance utx = do
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure $ traverse (Tx.toTxOut pNetworkId) utxo
     let unbalancedBodyContent = U.unBalancedCardanoBuildTx utx
     ownAddr <- gets ownAddress
-    -- filter out inputs from utxo that are already in unBalancedTx
-    let inputsOutRefs = map Tx.txInRef $ Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent
-        filteredUtxo = flip Map.filterWithKey mappedUtxo $ \txOutRef _ ->
-            txOutRef `notElem` inputsOutRefs
     cTx <- Fee.makeAutoBalancedTransactionWithUtxoProvider
         params
         (UtxoIndex $ U.unBalancedTxUtxoIndex utx)
         ownAddr
-        (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs filteredUtxo)
+        (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs (UtxoIndex mappedUtxo) unbalancedBodyContent)
         (handleError utx . Left)
         unbalancedBodyContent
     pure $ Tx.CardanoEmulatorEraTx cTx

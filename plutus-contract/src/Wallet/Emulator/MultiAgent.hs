@@ -20,7 +20,7 @@ module Wallet.Emulator.MultiAgent where
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Chain qualified as Chain
-import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, emptyTxBodyContent, signAll)
+import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, signAll)
 import Cardano.Node.Emulator.Params (Params (..))
 import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
                      view, (&), (.~), (^.), (^..))
@@ -322,7 +322,7 @@ emulatorStateInitialDist params mp = do
            , C.txOuts = Tx.getTxOut <$> concat outs
            , C.txValidityRange = validityRange
            }
-    txBody <- either (error . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody txBodyContent
+    txBody <- either (error . ("emulatorStateInitialDist: Can't create TxBody: " <>) . show) pure $ C.makeTransactionBody txBodyContent
     let cTx = signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
     pure $ emulatorStatePool [cTx]
     where
