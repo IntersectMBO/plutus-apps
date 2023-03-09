@@ -110,7 +110,7 @@ parseOptions = do
   gitSha <- getGitSha
   Opt.execParser $ Opt.info
     (Opt.helper <*> commonVersionOption gitSha <*> optionsParser)
-    marconiDescr
+    (marconiDescr "marconi")
 
 optionsParser :: Opt.Parser Options
 optionsParser =
@@ -186,11 +186,11 @@ commonVersionOption sha = Opt.infoOption sha $ Opt.long "version" <> Opt.help "S
 getGitSha :: IO String
 getGitSha = fromMaybe "GIHUB_SHA environment variable not set!" <$> lookupEnv "GITHUB_SHA"
 
-marconiDescr :: Opt.InfoMod a
-marconiDescr = Opt.fullDesc
-  <> Opt.progDesc "marconi"
+marconiDescr :: String -> Opt.InfoMod a
+marconiDescr programName = Opt.fullDesc
+  <> Opt.progDesc programName
   <> Opt.header
-  "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
+  (programName <> " - a lightweight customizable solution for indexing and querying the Cardano blockchain")
 
 commonMaybePort :: Opt.Parser (Maybe Int)
 commonMaybePort = Opt.optional $ Opt.option Opt.auto

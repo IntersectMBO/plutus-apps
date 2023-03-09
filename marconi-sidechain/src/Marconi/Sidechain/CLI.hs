@@ -10,7 +10,7 @@ parseCli = Opt.execParser . programParser =<< Cli.getGitSha
 programParser :: String -> Opt.ParserInfo CliArgs
 programParser gitSha = Opt.info
   (Opt.helper <*> Cli.commonVersionOption gitSha <*> parserCliArgs)
-  Cli.marconiDescr
+  (Cli.marconiDescr "marconi-sidechain")
 
 parserCliArgs :: Opt.Parser CliArgs
 parserCliArgs = CliArgs
