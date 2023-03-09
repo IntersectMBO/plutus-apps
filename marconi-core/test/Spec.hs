@@ -27,7 +27,7 @@ traceModelProperties = testGroup "Model traces"
   ]
 
 traceIndexerProperties :: TestTree
-traceIndexerProperties = testGroup "Model traces"
+traceIndexerProperties = testGroup "Implementation traces"
   [ testProperty "Weak bisimilarity (observed builder)" $
       withMaxSuccess 10000 $ Ix.prop_WeakBisimilarity  TS.observeTrace
   , testProperty "Weak bisimilarity (grammar builder)" $

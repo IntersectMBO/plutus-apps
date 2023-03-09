@@ -5,7 +5,7 @@ import Control.Lens.TH qualified as Lens
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
-import Control.Tracer (Tracer (Tracer), nullTracer)
+import Control.Tracer (Tracer (Tracer), nullTracer, traceWith)
 import Data.Foldable (foldl', toList)
 import Data.Functor ((<&>))
 import Data.IORef (modifyIORef', newIORef, readIORef)
@@ -25,8 +25,8 @@ import Marconi.Core.Model qualified as Ix
 import Marconi.Core.Trace qualified as Ix
 import Marconi.Core.TracedStorable (Buffered (getStoredEvents, persistToStorage), HasPoint (getPoint),
                                     Queryable (queryStorage), Resumable (resumeFromStorage), Rewindable (rewindStorage),
-                                    State, StorableEvent, StorableMonad, StorablePoint, StorableQuery, StorableResult,
-                                    config, emptyState, memoryBufferSize)
+                                    State, StorableEvent, StorableMonad, StorableNotifications, StorablePoint,
+                                    StorableQuery, StorableResult, config, emptyState, memoryBufferSize)
 import Marconi.Core.TracedStorable qualified as Storable
 
 {-
@@ -47,7 +47,7 @@ newtype Handle = Handle Sql.Connection
 -- This point for this test will be representated by a point on some blockchain where
 -- slot numbers are identified by integers.
 data Point =
-    Point Int
+    Point !Int
   | Genesis
   deriving (Eq, Show, Generic)
 
@@ -80,6 +80,8 @@ type TestFn = Int
 data instance StorableQuery Handle =
     QEvents { qF :: TestFn }
   | QAccumulator
+
+data instance StorableNotifications Handle = FourtyTwo
 
 newtype instance StorableResult Handle = Result
   { getResult :: Int
@@ -156,13 +158,14 @@ newSqliteIndexer accFn memBuf ag0 = do
   pure . Just $ Config c accFn
 
 instance Buffered Handle where
-  persistToStorage :: Foldable f => f (StorableEvent Handle) -> Handle -> IO Handle
-  persistToStorage es (Handle h) = do
+  persistToStorage :: Foldable f => Tracer IO (StorableNotifications Handle) -> f (StorableEvent Handle) -> Handle -> IO Handle
+  persistToStorage t es (Handle h) = do
     -- Append events to cache
     Sql.execute_ h "BEGIN"
     forM_ es $
       Sql.execute h "INSERT INTO index_property_cache (point, event) VALUES (?, ?)"
     Sql.execute_ h "COMMIT"
+    traceWith t FourtyTwo
     pure $ Handle h
 
   getStoredEvents :: Handle -> IO [StorableEvent Handle]
@@ -183,42 +186,47 @@ indexedFn f (Result ag0) (Event _ e) =
 instance Queryable Handle where
   queryStorage
     :: Foldable f
-    => StorablePoint Handle
+    => Tracer IO (StorableNotifications Handle)
+    -> StorablePoint Handle
     -> f (StorableEvent Handle)
     -> Handle
     -> StorableQuery Handle
     -> IO (StorableResult Handle)
   -- Querying the acumulator only retrieves the value stored in the accumulator table.
-  queryStorage _  _ (Handle h) QAccumulator = do
+  queryStorage t _  _ (Handle h) QAccumulator = do
     [ag0] :: [Aggregate] <-
       Sql.query h "SELECT id, accumulator FROM index_property_tests WHERE id = ?"
         (Sql.Only stateId)
+    traceWith t FourtyTwo
     pure $ ag0 ^. aggValue
 
-  queryStorage pt memoryEs (Handle h) (QEvents f)  = do
+  queryStorage t pt memoryEs (Handle h) (QEvents f)  = do
     Sql.execute_ h "BEGIN"
     -- First we retrieve the accumulator value, by using a proper query.
-    aggregate <- queryStorage pt memoryEs (Handle h) QAccumulator
+    aggregate <- queryStorage t pt memoryEs (Handle h) QAccumulator
     -- Fetch all events, ordered from oldest to newest.
     es' :: [StorableEvent Handle] <-
       Sql.query h "SELECT * from index_property_cache WHERE point <= ? ORDER BY point ASC" (Sql.Only pt)
     Sql.execute_ h "COMMIT"
     let es'' = filter (\e -> getPoint e <= pt) $ es' ++ toList memoryEs
     -- Run a fold computing the final result.
+    traceWith t FourtyTwo
     pure $ foldl' ((fst .) . indexedFn f) aggregate es''
 
 
 instance Rewindable Handle where
-  rewindStorage :: StorablePoint Handle -> Handle -> IO (Maybe Handle)
-  rewindStorage pt (Handle h) = do
+  rewindStorage :: Tracer IO (StorableNotifications Handle) -> StorablePoint Handle -> Handle -> IO (Maybe Handle)
+  rewindStorage t pt (Handle h) = do
     Sql.execute h "DELETE FROM index_property_cache WHERE point > ?" (Sql.Only pt)
+    traceWith t FourtyTwo
     pure . Just $ Handle h
 
 instance Resumable Handle where
-  resumeFromStorage :: Handle -> IO [StorablePoint Handle]
-  resumeFromStorage (Handle h) = do
+  resumeFromStorage :: Tracer IO (StorableNotifications Handle) -> Handle -> IO [StorablePoint Handle]
+  resumeFromStorage t (Handle h) = do
     es' :: [StorableEvent Handle] <-
       Sql.query_ h "SELECT * FROM index_property_cache ORDER BY point DEC"
+    traceWith t FourtyTwo
     pure $ fmap sePoint es'
 
 -- * Conversions
@@ -242,6 +250,7 @@ observeTrace  = Ix.ConvertibleEvent go
       r <- newIORef []
       let tracer (Storable.CNRollForward  _) = modifyIORef' r (Ix.TRollForward:)
           tracer (Storable.CNRollBack     _) = modifyIORef' r (Ix.TRollBack:)
+          tracer _                           = pure () -- we ignore the application notifications for testing => weak bisimilarity
       _ <- run (Tracer tracer) ix
       readIORef r
 
@@ -268,12 +277,12 @@ getHistory ix = do
       let pts = map sePoint es
       -- And run a fold over all of them, giving us all the historical values of the
       -- indexer across all the stored values.
-      rs  <- fmap getResult <$> mapM (\pt -> Storable.query pt st (QEvents f)) pts
+      rs  <- fmap getResult <$> mapM (\pt -> Storable.query nullTracer pt st (QEvents f)) pts
       if null rs
       then do
         -- If there are no results, then return a single element list with the
         -- accumulator.
-        Result ag0 <- Storable.query Genesis st QAccumulator
+        Result ag0 <- Storable.query nullTracer Genesis st QAccumulator
         pure $ Just [ag0]
       else
         -- If there are results, return a list of all the values *without* the
@@ -343,7 +352,7 @@ lookupPoint n (Config st _) = MaybeT $ do
 -- The run function returns a tupple because it needs to both assign increasing slot
 -- numbers and return the indexer produced by the previous computation.
 run
-  :: Tracer IO (Storable.ControlNotification Point)
+  :: Tracer IO (Storable.ControlNotification Point (StorableNotifications Handle))
   -> IndexT
   -> IO (Maybe (Config, Int))
 run _ (Ix.New f depth ag0)
