@@ -281,7 +281,10 @@ epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
 mintBurnWorker_
   :: Int
   -> (MintBurn.TxMintEvent -> IO ())
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO b, MVar MintBurn.MintBurnIndexer)
+  -> Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO (IO b, MVar MintBurn.MintBurnIndexer)
 mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
   indexerMVar <- newMVar =<< MintBurn.open dbPath bufferSize
   let
@@ -336,7 +339,12 @@ mkIndexerStream coordinator = S.foldM_ step initial finish
     finish _ = pure ()
 
 runIndexers
-  :: FilePath -> Shelley.NetworkId -> ChainPoint -> TS.Text -> [(Worker, Maybe FilePath)] -> IO ()
+  :: FilePath
+  -> Shelley.NetworkId
+  -> ChainPoint
+  -> TS.Text
+  -> [(Worker, Maybe FilePath)]
+  -> IO ()
 runIndexers socketPath networkId cliChainPoint traceName list = do
   (returnedCp, coordinator) <- initializeIndexers $ mapMaybe (traverse id) list
 
