@@ -192,6 +192,7 @@ test-suite marconi-sidechain-test
   other-modules:
     Spec.Marconi.Sidechain.Api.Query.Indexers.Utxo
     Spec.Marconi.Sidechain.CLI
+    Spec.Marconi.Sidechain.Routes
 
   --------------------
   -- Local components

@@ -19,7 +19,7 @@ module Network.JsonRpc.Types
       RawJsonRpc
     , JsonRpc
     , JsonRpcNotification
-    , JSONRPC
+    , JsonRpcContentType
 
     -- * JSON-RPC messages
     , Request (..)
@@ -54,9 +54,9 @@ import Servant.API (Accept (contentTypes), JSON, MimeRender (mimeRender), MimeUn
 -- | Client messages
 data Request p
     = Request
-    { method    :: String
-    , params    :: p
-    , requestId :: Maybe Word64 -- ^ omitted for notification type messages
+    { method    :: !String
+    , params    :: !p
+    , requestId :: !(Maybe Word64) -- ^ omitted for notification type messages
     } deriving (Eq, Show)
 
 instance ToJSON p => ToJSON (Request p) where
@@ -88,15 +88,15 @@ versionGuard v x
 
 -- | Server 'Ack' message
 data JsonRpcResponse e r
-    = Result Word64 r
-    | Ack Word64
-    | Errors (Maybe Word64) (JsonRpcErr e)
+    = Result !Word64 !r
+    | Ack !Word64
+    | Errors !(Maybe Word64) !(JsonRpcErr e)
     deriving (Eq, Show)
 
 data JsonRpcErr e = JsonRpcErr
-    { errorCode    :: Int
-    , errorMessage :: String
-    , errorData    :: Maybe e
+    { errorCode    :: !Int
+    , errorMessage :: !String
+    , errorData    :: !(Maybe e)
     } deriving (Eq, Show)
 
 -- | JSON-RPC error codes based on [JSONRPC Spec](https://www.jsonrpc.org/specification#error_object)
@@ -159,7 +159,14 @@ instance (ToJSON e, ToJSON r) => ToJSON (JsonRpcResponse e r) where
 -- | A JSON RPC server handles any number of methods.
 data RawJsonRpc api
 
--- | JSON-RPC endpoints which respond with a result
+-- | JSON-RPC endpoint which respond with a result given a query.
+--
+-- The type has the following type parameters:
+--
+--   * @method@: the name of the JSON-RPC method
+--   * @p@: the `params` field type in the JSON-RPC request
+--   * @e@: the error type for the `result` field in the JSON-RPC response
+--   * @r@: the value type of the `result` field in the JSON-RPC response
 data JsonRpc (method :: Symbol) p e r
 
 -- | JSON-RPC endpoints which do not respond
@@ -168,19 +175,19 @@ data JsonRpcNotification (method :: Symbol) p
 -- | JSON-RPC
 type family JsonRpcEndpoint a where
     JsonRpcEndpoint (JsonRpc m p e r)
-        = ReqBody '[JSONRPC] (Request p) :> Post '[JSONRPC] (JsonRpcResponse e r)
+        = ReqBody '[JsonRpcContentType] (Request p) :> Post '[JsonRpcContentType] (JsonRpcResponse e r)
 
     JsonRpcEndpoint (JsonRpcNotification m p)
-        = ReqBody '[JSONRPC] (Request p) :> Post '[JSONRPC] NoContent
+        = ReqBody '[JsonRpcContentType] (Request p) :> Post '[JsonRpcContentType] NoContent
 
--- | The JSON-RPC content type
-data JSONRPC
+-- | The JSON-RPC content type.
+data JsonRpcContentType
 
-instance Accept JSONRPC where
+instance Accept JsonRpcContentType where
     contentTypes _ = "application" // "json-rpc" :| ["application" // "json"]
 
-instance ToJSON a => MimeRender JSONRPC a where
+instance ToJSON a => MimeRender JsonRpcContentType a where
     mimeRender _ = mimeRender (Proxy @JSON)
 
-instance FromJSON a => MimeUnrender JSONRPC a where
+instance FromJSON a => MimeUnrender JsonRpcContentType a where
     mimeUnrender _ = mimeUnrender (Proxy @JSON)

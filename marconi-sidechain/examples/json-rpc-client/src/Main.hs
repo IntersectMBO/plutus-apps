@@ -29,7 +29,7 @@ main = do
   putStrLn "Starting servant client "
   manager' <- newManager defaultManagerSettings
   let env = mkClientEnv manager' url
-  let (rpcEcho :<|> rpcTargets :<|> rpcUtxos) = getClients env
+  let (rpcEcho :<|> rpcTargets :<|> _ :<|> rpcUtxos :<|> _ :<|> _ :<|> _) = getClients env
   -- RPC calls
   msg <- rpcEcho "marconi client calling ???" --  return the echo message
   addresses <- rpcTargets ""                  --  get the targetAddresss

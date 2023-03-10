@@ -19,7 +19,7 @@ import Data.Bifunctor (Bifunctor (bimap))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Network.JsonRpc.Types (JSONRPC, JsonRpc, JsonRpcErr (JsonRpcErr, errorData), JsonRpcNotification,
+import Network.JsonRpc.Types (JsonRpc, JsonRpcContentType, JsonRpcErr (JsonRpcErr, errorData), JsonRpcNotification,
                               JsonRpcResponse (Errors, Result), RawJsonRpc, Request (Request), invalidParamsCode,
                               invalidRequestCode, methodNotFoundCode)
 import Servant.API (NoContent (NoContent), Post, ReqBody, (:<|>) ((:<|>)), (:>))
@@ -30,10 +30,10 @@ import Servant.Server (DefaultErrorFormatters, ErrorFormatters, Handler, HasCont
 -- | The entire JSON RPC api is collapsed to a single endpoint.
 -- Therefore, we need a type that may or may not return content.
 data MaybeContent a
-    = SomeContent a
+    = SomeContent !a
     | EmptyContent
 
-instance ToJSON a => AllCTRender '[JSONRPC] (MaybeContent a) where
+instance ToJSON a => AllCTRender '[JsonRpcContentType] (MaybeContent a) where
     handleAcceptH px h = \case
         SomeContent x -> handleAcceptH px h x
         EmptyContent  -> handleAcceptH px h NoContent
@@ -41,8 +41,8 @@ instance ToJSON a => AllCTRender '[JSONRPC] (MaybeContent a) where
 type MaybeJsonRpcResponse = MaybeContent (JsonRpcResponse Value Value)
 
 type RawJsonRpcEndpoint
-    = ReqBody '[JSONRPC] (Request Value)
-   :> Post '[JSONRPC] MaybeJsonRpcResponse
+    = ReqBody '[JsonRpcContentType] (Request Value)
+   :> Post '[JsonRpcContentType] MaybeJsonRpcResponse
 
 instance (RouteJsonRpc api, HasContextEntry (context .++ DefaultErrorFormatters) ErrorFormatters)
     => HasServer (RawJsonRpc api) context where

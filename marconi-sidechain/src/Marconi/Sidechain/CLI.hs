@@ -8,8 +8,7 @@ import System.Environment (lookupEnv)
 import Marconi.ChainIndex.CLI (multiString, pNetworkId)
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs))
 
-
--- | parse cli arguments
+-- | Parse CLI arguments.
 --
 parserCliArgs :: Parser CliArgs
 parserCliArgs = CliArgs
