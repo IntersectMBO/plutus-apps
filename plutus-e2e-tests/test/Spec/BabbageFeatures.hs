@@ -55,7 +55,7 @@ checkTxInfoV2Test networkOptions TestParams{..} preTestnetTime = do
   -- build a transaction
 
   txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
-  txInAsTxOut@(C.TxOut _ txInValue _ _) <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address txIn "txInAsTxOut <- TN.getTxOutAtAddress"
+  txInAsTxOut@(C.TxOut _ txInValue _ _) <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address txIn "txInAsTxOut <- getTxOutAtAddress"
 
   let
     tokenValues = C.valueFromList [(checkV2TxInfoAssetIdV2, 1), (PS.alwaysSucceedAssetIdV2, 2)]
@@ -110,7 +110,7 @@ checkTxInfoV2Test networkOptions TestParams{..} preTestnetTime = do
   Tx.submitTx era localNodeConnectInfo signedTx
 
   let expectedTxIn = Tx.txIn (Tx.txId signedTx) 0
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress "
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- getTxOutAtAddress "
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
 
@@ -143,7 +143,7 @@ referenceScriptMintTest networkOptions TestParams{..} = do
   Tx.submitTx era localNodeConnectInfo signedTx
   let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
       otherTxIn   = Tx.txIn (Tx.txId signedTx) 1
-  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
+  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "waitForTxInAtAddress"
 
   -- build a transaction to mint token using reference script
 
@@ -165,7 +165,7 @@ referenceScriptMintTest networkOptions TestParams{..} = do
   Tx.submitTx era localNodeConnectInfo signedTx2
   let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
   -- Query for txo and assert it contains newly minted token
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "getTxOutAtAddress"
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
 
@@ -202,7 +202,7 @@ referenceScriptInlineDatumSpendTest networkOptions TestParams{..} = do
   let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
       otherTxIn     = Tx.txIn (Tx.txId signedTx) 1
       txInAtScript  = Tx.txIn (Tx.txId signedTx) 2
-  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
+  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "waitForTxInAtAddress"
 
   -- build a transaction to mint token using reference script
 
@@ -223,7 +223,7 @@ referenceScriptInlineDatumSpendTest networkOptions TestParams{..} = do
   Tx.submitTx era localNodeConnectInfo signedTx2
   let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
   -- Query for txo and assert it contains newly minted token
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "getTxOutAtAddress"
   txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
 
@@ -261,7 +261,7 @@ referenceScriptDatumHashSpendTest networkOptions TestParams{..} = do
   let refScriptTxIn = Tx.txIn (Tx.txId signedTx) 0
       otherTxIn     = Tx.txIn (Tx.txId signedTx) 1
       txInAtScript  = Tx.txIn (Tx.txId signedTx) 2
-  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "Tx.waitForTxInAtAddress"
+  Q.waitForTxInAtAddress era localNodeConnectInfo w1Address refScriptTxIn "waitForTxInAtAddress"
 
   -- build a transaction to mint token using reference script
 
@@ -282,10 +282,14 @@ referenceScriptDatumHashSpendTest networkOptions TestParams{..} = do
   Tx.submitTx era localNodeConnectInfo signedTx2
   let expectedTxIn = Tx.txIn (Tx.txId signedTx2) 0
   -- Query for txo and assert it contains newly minted token
-  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "Tx.getTxOutAtAddress"
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "getTxOutAtAddress"
   txOutHasAdaValue <- Q.txOutHasValue resultTxOut adaValue
   H.assert txOutHasAdaValue
 
   H.success
 
-  -- TODO: inlineDatumSpendTest (no reference script)
+-- TODO: inlineDatumSpendTest (no reference script)
+-- TODO: cannot reference input with V1 script test
+-- TODO: cannot create reference script output whilst evaluating V1 script test
+-- TODO: cannot create inline datum output whilst evaluating V1 script test
+-- TODO: return and total collateral (with and without MA)

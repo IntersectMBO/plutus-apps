@@ -34,6 +34,8 @@ pv6Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
 
     -- checkTxInfo tests must be first to run after new testnet is initialised due to expected slot to posix time
     runTestWithPosixTime "checkTxInfoV1Test" AlonzoFeatures.checkTxInfoV1Test options testParams preTestnetTime
+    runTest "datumHashSpendTest" AlonzoFeatures.datumHashSpendTest options testParams
+    runTest "mintBurnTest" AlonzoFeatures.mintBurnTest options testParams
     runTest "verifySchnorrAndEcdsaTest" Builtins.verifySchnorrAndEcdsaTest options testParams
 
     U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
@@ -48,6 +50,8 @@ pv7Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     -- checkTxInfo tests must be first to run after new testnet is initialised due to expected slot to posix time
     runTestWithPosixTime "checkTxInfoV1Test" AlonzoFeatures.checkTxInfoV1Test options testParams preTestnetTime
     runTestWithPosixTime "checkTxInfoV2Test" BabbageFeatures.checkTxInfoV2Test options testParams preTestnetTime
+    runTest "datumHashSpendTest" AlonzoFeatures.datumHashSpendTest options testParams
+    runTest "mintBurnTest" AlonzoFeatures.mintBurnTest options testParams
     runTest "verifySchnorrAndEcdsaTest" Builtins.verifySchnorrAndEcdsaTest options testParams
     runTest "referenceScriptMintTest" BabbageFeatures.referenceScriptMintTest options testParams
     runTest "referenceScriptInlineDatumSpendTest" BabbageFeatures.referenceScriptInlineDatumSpendTest options testParams
@@ -65,6 +69,8 @@ pv8Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     -- checkTxInfo tests must be first to run after new testnet is initialised due to expected slot to posix time
     runTestWithPosixTime "checkTxInfoV1Test" AlonzoFeatures.checkTxInfoV1Test options testParams preTestnetTime
     runTestWithPosixTime "checkTxInfoV2Test" BabbageFeatures.checkTxInfoV2Test options testParams preTestnetTime
+    runTest "datumHashSpendTest" AlonzoFeatures.datumHashSpendTest options testParams
+    runTest "mintBurnTest" AlonzoFeatures.mintBurnTest options testParams
     runTest "verifySchnorrAndEcdsaTest" Builtins.verifySchnorrAndEcdsaTest options testParams
     runTest "referenceScriptMintTest" BabbageFeatures.referenceScriptMintTest options testParams
     runTest "referenceScriptInlineDatumSpendTest" BabbageFeatures.referenceScriptInlineDatumSpendTest options testParams

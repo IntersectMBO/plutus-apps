@@ -9,9 +9,9 @@ import Cardano.Api.Shelley qualified as C
 import CardanoTestnet qualified as TN
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Maybe (fromMaybe)
-import Data.Time (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX qualified as Time
 import Helpers.Testnet qualified as TN
+import Text.Printf (printf)
 
 data TestParams = TestParams {
     localNodeConnectInfo :: C.LocalNodeConnectInfo C.CardanoMode,
@@ -32,7 +32,8 @@ runTestGeneric testName test networkOptions testParams preTestnetTime = do
   t <- liftIO Time.getPOSIXTime
   test networkOptions testParams (fromMaybe t preTestnetTime)
   t2 <- liftIO Time.getPOSIXTime
-  liftIO $ putStrLn $ "Pass\nDuration: " ++ show (nominalDiffTimeToSeconds $ t2 - t) ++ "s"
+  let diff = realToFrac $ t2 - t :: Double
+  liftIO $ putStrLn $ "Pass\nDuration: " ++ printf "%.2f" diff ++ "s"
 
 runTest :: MonadIO m =>
   String ->
