@@ -22,19 +22,14 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C hiding (toShelleyTxOut)
 import Cardano.Binary qualified as C
 import Cardano.Ledger.Alonzo.Genesis ()
-import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise, decode, encode)
-import Control.Applicative (empty, (<|>))
 
 import Cardano.Ledger.Core qualified as Ledger (TxOut)
 import Cardano.Ledger.Serialization qualified as Ledger (Sized, mkSized)
 import Ouroboros.Consensus.Shelley.Eras qualified as Ledger
 
 import Control.Lens qualified as L
-import Control.Monad.State.Strict (execState, modify')
 import Data.Aeson (FromJSON, ToJSON)
-import Data.ByteArray qualified as BA
-import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
@@ -43,24 +38,34 @@ import Ledger.Address (CardanoAddress, cardanoPubKeyHash, toPlutusAddress)
 import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
-import Ledger.Slot
 import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxOutDatum, fromCardanoTxOutValue)
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 
 import Plutus.Script.Utils.Scripts
-import Plutus.V1.Ledger.Api (Credential, DCert, ScriptPurpose (..), StakingCredential (StakingHash), dataToBuiltinData)
+import Plutus.V1.Ledger.Api (Credential, DCert, dataToBuiltinData)
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
                             pubKeyTxIns, scriptTxIn, scriptTxIns)
-import Plutus.V1.Ledger.Value as V
 import Plutus.V2.Ledger.Api qualified as PV2
-import PlutusTx.Lattice
-import PlutusTx.Prelude (BuiltinByteString)
 import PlutusTx.Prelude qualified as PlutusTx
 
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
+
+txOutValue :: TxOut -> C.Value
+txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
+  C.txOutValueToValue tov
+
+outValue :: L.Lens TxOut TxOut C.Value (C.TxOutValue C.BabbageEra)
+outValue = L.lens
+  txOutValue
+  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
+
+outValue' :: L.Lens' TxOut (C.TxOutValue C.BabbageEra)
+outValue' = L.lens
+  (\(TxOut (C.TxOut _aie tov _tod _rs)) -> tov)
+  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
 
 -- | The type of a transaction input.
 data TxInType =
@@ -194,14 +199,6 @@ referenceScriptTxInputs = (\x -> L.folding x) . filter $ \case
     TxInput{ txInputType = TxScriptAddress _ (Right _) _ } -> True
     _                                                      -> False
 
--- | Validator, redeemer, and data scripts of a transaction input that spends a
---   "pay to script" output.
--- inScripts :: Tx -> TxInput -> Maybe (LedgerPlutusVersion, Validator, Redeemer, Datum)
--- inScripts tx i@TxInput{txInputType=TxConsumeScriptAddress pv _ _ _} = case txInType $ fillTxInputWitnesses tx i of
---     Just (ConsumeScriptAddress v r d) -> Just (pv, v, r, d)
---     _                                   -> Nothing
--- inScripts _ _ = Nothing
-
 newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -239,204 +236,6 @@ toSizedTxOut = Ledger.mkSized . C.toShelleyTxOut C.ShelleyBasedEraBabbage . getT
 
 type ScriptsMap = Map ScriptHash (Versioned Script)
 type MintingWitnessesMap = Map MintingPolicyHash (Redeemer, Maybe (Versioned TxOutRef))
-
--- | A Babbage-era transaction, including witnesses for its inputs.
-data Tx = Tx {
-    txInputs           :: [TxInput],
-    -- ^ The inputs to this transaction.
-    txReferenceInputs  :: [TxInput],
-    -- ^ The reference inputs to this transaction.
-    txCollateralInputs :: [TxInput],
-    -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
-    txOutputs          :: [TxOut],
-    -- ^ The outputs of this transaction, ordered so they can be referenced by index.
-    txReturnCollateral :: Maybe TxOut,
-    -- ^ The output of the remaining collateral after covering fees in case validation of the transaction fails.
-    txTotalCollateral  :: Maybe C.Lovelace,
-    -- ^ The total collateral to be paid in case validation of the transaction fails.
-    txMint             :: !C.Value,
-    -- ^ The 'Value' minted by this transaction.
-    txFee              :: !C.Lovelace,
-    -- ^ The fee for this transaction.
-    txValidRange       :: !SlotRange,
-    -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintingWitnesses :: MintingWitnessesMap,
-    -- ^ The witnesses that must be present to check minting conditions matched with their redeemers.
-    txWithdrawals      :: [Withdrawal],
-    -- ^ Withdrawals, contains redeemers.
-    txCertificates     :: [Certificate],
-    -- ^ Certificates, contains redeemers.
-    txSignatures       :: Map PubKey Signature,
-    -- ^ Signatures of this transaction.
-    txScripts          :: ScriptsMap,
-    -- ^ Scripts for all script credentials mentioned in this tx.
-    txData             :: Map DatumHash Datum,
-    -- ^ Datum objects recorded on this transaction.
-    txMetadata         :: Maybe BuiltinByteString
-    -- ^ Metadata
-    } deriving stock (Show, Eq, Generic)
-      deriving anyclass (ToJSON, FromJSON, Serialise)
-
-
-instance Semigroup Tx where
-    tx1 <> tx2 = Tx {
-        txInputs = txInputs tx1 <> txInputs tx2,
-        txReferenceInputs = txReferenceInputs tx1 <> txReferenceInputs tx2,
-        txCollateralInputs = txCollateralInputs tx1 <> txCollateralInputs tx2,
-        txOutputs = txOutputs tx1 <> txOutputs tx2,
-        txReturnCollateral = txReturnCollateral tx1 <|> txReturnCollateral tx2,
-        txTotalCollateral = txTotalCollateral tx1 <> txTotalCollateral tx2,
-        txMint = txMint tx1 <> txMint tx2,
-        txFee = txFee tx1 <> txFee tx2,
-        txValidRange = txValidRange tx1 /\ txValidRange tx2,
-        txMintingWitnesses = txMintingWitnesses tx1 <> txMintingWitnesses tx2,
-        txSignatures = txSignatures tx1 <> txSignatures tx2,
-        txData = txData tx1 <> txData tx2,
-        txScripts = txScripts tx1 <> txScripts tx2,
-        txWithdrawals = txWithdrawals tx1 <> txWithdrawals tx2,
-        txCertificates = txCertificates tx1 <> txCertificates tx2,
-        txMetadata = txMetadata tx1 <> txMetadata tx2
-        }
-
-instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty empty mempty mempty mempty top mempty mempty mempty mempty mempty mempty mempty
-
-instance BA.ByteArrayAccess Tx where
-    length        = BA.length . Write.toStrictByteString . encode
-    withByteArray = BA.withByteArray . Write.toStrictByteString . encode
-
--- | The inputs of a transaction.
-inputs :: L.Lens' Tx [TxInput]
-inputs = L.lens g s where
-    g = txInputs
-    s tx i = tx { txInputs = i }
-
--- | The reference inputs of a transaction.
-referenceInputs :: L.Lens' Tx [TxInput]
-referenceInputs = L.lens g s where
-    g = txReferenceInputs
-    s tx i = tx { txReferenceInputs = i }
-
--- | The collateral inputs of a transaction for paying fees when validating the transaction fails.
-collateralInputs :: L.Lens' Tx [TxInput]
-collateralInputs = L.lens g s where
-    g = txCollateralInputs
-    s tx i = tx { txCollateralInputs = i }
-
--- | The outputs of a transaction.
-outputs :: L.Lens' Tx [TxOut]
-outputs = L.lens g s where
-    g = txOutputs
-    s tx o = tx { txOutputs = o }
-
-returnCollateral :: L.Lens' Tx (Maybe TxOut)
-returnCollateral = L.lens g s where
-    g = txReturnCollateral
-    s tx o = tx { txReturnCollateral = o }
-
-totalCollateral :: L.Lens' Tx (Maybe C.Lovelace)
-totalCollateral = L.lens g s where
-    g = txTotalCollateral
-    s tx o = tx { txTotalCollateral = o }
-
--- | The validity range of a transaction.
-validRange :: L.Lens' Tx SlotRange
-validRange = L.lens g s where
-    g = txValidRange
-    s tx o = tx { txValidRange = o }
-
-signatures :: L.Lens' Tx (Map PubKey Signature)
-signatures = L.lens g s where
-    g = txSignatures
-    s tx sig = tx { txSignatures = sig }
-
-fee :: L.Lens' Tx C.Lovelace
-fee = L.lens g s where
-    g = txFee
-    s tx v = tx { txFee = v }
-
-mint :: L.Lens' Tx C.Value
-mint = L.lens g s where
-    g = txMint
-    s tx v = tx { txMint = v }
-
-mintScripts :: L.Lens' Tx MintingWitnessesMap
-mintScripts = L.lens g s where
-    g = txMintingWitnesses
-    s tx fs = tx { txMintingWitnesses = fs }
-
-scriptWitnesses :: L.Lens' Tx ScriptsMap
-scriptWitnesses = L.lens g s where
-    g = txScripts
-    s tx fs = tx { txScripts = fs }
-
-datumWitnesses :: L.Lens' Tx (Map DatumHash Datum)
-datumWitnesses = L.lens g s where
-    g = txData
-    s tx dat = tx { txData = dat }
-
--- | The inputs of a transaction.
-metadata :: L.Lens' Tx (Maybe BuiltinByteString)
-metadata = L.lens g s where
-    g = txMetadata
-    s tx i = tx { txMetadata = i }
-
-lookupSignature :: PubKey -> Tx -> Maybe Signature
-lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
-
-lookupDatum :: Tx -> DatumHash -> Maybe Datum
-lookupDatum Tx{txData} h = Map.lookup h txData
-
-txOutValue :: TxOut -> C.Value
-txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
-  C.txOutValueToValue tov
-
-outValue :: L.Lens TxOut TxOut C.Value (C.TxOutValue C.BabbageEra)
-outValue = L.lens
-  txOutValue
-  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
-
-outValue' :: L.Lens' TxOut (C.TxOutValue C.BabbageEra)
-outValue' = L.lens
-  (\(TxOut (C.TxOut _aie tov _tod _rs)) -> tov)
-  (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
-
--- | A babbage era transaction without witnesses for its inputs.
-data TxStripped = TxStripped {
-    txStrippedInputs          :: [TxOutRef],
-    -- ^ The inputs to this transaction, as transaction output references only.
-    txStrippedReferenceInputs :: [TxOutRef],
-    -- ^ The reference inputs to this transaction, as transaction output references only.
-    txStrippedOutputs         :: [TxOut],
-    -- ^ The outputs of this transation.
-    txStrippedMint            :: !C.Value,
-    -- ^ The 'Value' minted by this transaction.
-    txStrippedFee             :: !C.Lovelace
-    -- ^ The fee for this transaction.
-    } deriving (Show, Eq, Generic, Serialise)
-
-strip :: Tx -> TxStripped
-strip Tx{..} = TxStripped i ri txOutputs txMint txFee where
-    i = map txInputRef txInputs
-    ri = map txInputRef txReferenceInputs
-
--- | A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g.
--- the full data script that goes with the 'TxOut'.
-data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass (Serialise, ToJSON, FromJSON)
-
-txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx (TxOut (C.TxOut _aie _tov tod _rs))) =
-  case tod of
-    C.TxOutDatumNone ->
-      Nothing
-    C.TxOutDatumHash _era scriptDataHash ->
-      lookupDatum tx $ DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptDataHash)
-    C.TxOutDatumInline _era scriptData ->
-      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
-    C.TxOutDatumInTx _era scriptData ->
-      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
 
 -- | Get a hash from the stored TxOutDatum (either dirctly or by hashing the inlined datum)
 txOutDatumHash :: TxOut -> Maybe DatumHash
@@ -485,14 +284,6 @@ lookupValidator txScripts = (fmap . fmap) Validator . lookupScript txScripts . t
     where
         toScriptHash (ValidatorHash b) = ScriptHash b
 
--- | The transaction output references consumed by a transaction.
-spentOutputs :: Tx -> [TxOutRef]
-spentOutputs = map txInputRef . txInputs
-
--- | The transaction output references referenced by a transaction.
-referencedOutputs :: Tx -> [TxOutRef]
-referencedOutputs = map txInputRef . txReferenceInputs
-
 lookupMintingPolicy :: ScriptsMap -> MintingPolicyHash -> Maybe (Versioned MintingPolicy)
 lookupMintingPolicy txScripts = (fmap . fmap) MintingPolicy . lookupScript txScripts . toScriptHash
     where
@@ -503,71 +294,5 @@ lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txS
     where
         toScriptHash (StakeValidatorHash b) = ScriptHash b
 
--- | Translate TxInput to old Plutus.V1.Ledger.Api TxIn taking script and datum witnesses from Tx.
-fillTxInputWitnesses :: Tx -> TxInput -> TxIn
-fillTxInputWitnesses tx (TxInput outRef _inType) = case _inType of
-    TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
-    TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
-    TxScriptAddress redeemer (Left vlh) dh -> TxIn outRef $ do
-        datum <- traverse (`Map.lookup` txData tx) dh
-        validator <- lookupValidator (txScripts tx) vlh
-        Just $ ScriptAddress (Left validator) redeemer datum
-    TxScriptAddress redeemer (Right ref) dh -> TxIn outRef $ do
-        datum <- traverse (`Map.lookup` txData tx) dh
-        Just $ ScriptAddress (Right ref) redeemer datum
-
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
-
--- | Add minting policy together with the redeemer into txMintingWitnesses and txScripts accordingly. Doesn't alter txMint.
-addMintingPolicy :: Versioned MintingPolicy -> (Redeemer, Maybe (Versioned TxOutRef)) -> Tx -> Tx
-addMintingPolicy vvl rdWithRef tx@Tx{txMintingWitnesses, txScripts} = tx
-    {txMintingWitnesses = Map.insert mph rdWithRef txMintingWitnesses,
-     txScripts = Map.insert (ScriptHash b) (fmap getMintingPolicy vvl) txScripts}
-    where
-        mph@(MintingPolicyHash b) = mintingPolicyHash vvl
-
--- | Add validator together with the redeemer and datum into txInputs, txData and txScripts accordingly.
--- Datum is optional if the input refers to a script output which contains an inline datum
-addScriptTxInput :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> Tx -> Tx
-addScriptTxInput outRef vl rd mdt tx@Tx{txInputs, txScripts, txData} = tx
-    {txInputs = TxInput outRef (TxScriptAddress rd (Left vlHash) mdtHash) : txInputs,
-     txScripts = Map.insert (ScriptHash b) (fmap getValidator vl) txScripts,
-     txData = maybe txData (\dt -> Map.insert (datumHash dt) dt txData) mdt}
-    where
-        mdtHash = fmap datumHash mdt
-        vlHash@(ValidatorHash b) = validatorHash vl
-
--- | Add script reference together with the redeemer and datum into txInputs and txData accordingly.
--- Datum is optional if the input refers to a script output which contains an inline datum
-addReferenceTxInput :: TxOutRef -> Versioned TxOutRef -> Redeemer -> Maybe Datum -> Tx -> Tx
-addReferenceTxInput outRef vref rd mdt tx@Tx{txInputs, txData} = tx
-    {txInputs = TxInput outRef (TxScriptAddress rd (Right vref) mdtHash) : txInputs,
-     txData = maybe txData (\dt -> Map.insert (datumHash dt) dt txData) mdt}
-    where
-        mdtHash = fmap datumHash mdt
-
-txRedeemers :: Tx -> Map ScriptPurpose Redeemer
-txRedeemers = (Map.mapKeys Spending . txSpendingRedeemers)
-    <> (Map.mapKeys (Minting . mpsSymbol) . txMintingRedeemers)
-    <> (Map.mapKeys (Rewarding . StakingHash)  . txRewardingRedeemers)
-    <> (Map.mapKeys Certifying . txCertifyingRedeemers)
-
-txSpendingRedeemers :: Tx -> Map TxOutRef Redeemer
-txSpendingRedeemers Tx{txInputs} = flip execState Map.empty $ traverse_ extract txInputs where
-    extract TxInput{txInputType=TxScriptAddress redeemer _ _, txInputRef} =
-        modify' $ Map.insert txInputRef redeemer
-    extract _ = return ()
-
-txMintingRedeemers :: Tx -> Map MintingPolicyHash Redeemer
-txMintingRedeemers Tx{txMintingWitnesses} = Map.map fst txMintingWitnesses
-
-txRewardingRedeemers :: Tx -> Map Credential Redeemer
-txRewardingRedeemers Tx{txWithdrawals} = flip execState Map.empty $ traverse_ f txWithdrawals where
-    f (Withdrawal cred _ (Just rd)) = modify' $ Map.insert cred rd
-    f _                             = return ()
-
-txCertifyingRedeemers :: Tx -> Map DCert Redeemer
-txCertifyingRedeemers Tx{txCertificates} = flip execState Map.empty $ traverse_ f txCertificates where
-    f (Certificate dcert (Just rd)) = modify' $ Map.insert dcert rd
-    f _                             = return ()

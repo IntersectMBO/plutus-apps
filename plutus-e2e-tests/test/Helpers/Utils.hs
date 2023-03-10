@@ -3,9 +3,12 @@ module Helpers.Utils where
 import Cardano.Api qualified as C
 import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Functor (void)
+import Data.Time.Clock.POSIX qualified as Time
 import GHC.Stack qualified as GHC
 import Hedgehog (MonadTest)
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as HE
 import Hedgehog.Extras.Stock.CallStack qualified as H
 import Hedgehog.Extras.Test.Base qualified as H
 import System.Directory qualified as IO
@@ -59,3 +62,15 @@ maybeReadAs as path = do
   maybeEither . liftIO $ C.readFileTextEnvelope as path'
   where
     maybeEither m = m >>= return . either (const Nothing) Just
+
+-- | Convert a 'POSIXTime' to the number of milliseconds since the Unix epoch.
+posixToMilliseconds :: Time.POSIXTime -> Integer
+posixToMilliseconds posixTime = round $ 1000 * (realToFrac posixTime :: Double)
+
+-- | Fails any Left returning Rights.
+anyLeftFail :: (MonadTest m, Show e) => m [Either e a] -> m [a]
+anyLeftFail es = mapM (HE.leftFailM . return) =<< es
+
+-- | Fails any Left returning unit.
+anyLeftFail_ :: (MonadTest m, Show e) => m [Either e a] -> m ()
+anyLeftFail_ = void . anyLeftFail

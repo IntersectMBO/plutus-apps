@@ -1,178 +1,98 @@
+# marconi-chain-index
 
-This is an initial draft for the Marconi README file. Going forward, we will need to discuss and refine this document and/or the implementation so that they match.
+`marconi-chain-index` is a chain indexer with a predefined set of indexers from which the user can choose from.
+Currently, this executable only acts as a chain-indexer, and doesn't provide a server from which clients can issue requests to.
 
-# Marconi
+## Prerequisites
 
-## The Cardano blockchain indexer for dApp developers
+* [GHC](https://www.haskell.org/downloads/) (`==8.10.7`)
+* [Nix](https://nixos.org/download.html) (`>=2.5.1`)
+  * Enable [IOHK's binary cache](https://iohk.zendesk.com/hc/en-us/articles/900000673963-Installing-Nix-on-Linux-distribution-and-setting-up-IOHK-binaries) or else you will build the world!
+* [cardano-node](https://github.com/input-output-hk/cardano-node) ([==1.35.4](https://github.com/input-output-hk/cardano-node/releases/tag/1.35.4))
 
-A lightweight customizable solution for indexing and querying the Cardano blockchain.
+## How to build from source
 
-### Built by IOG in Haskell
+### Cabal build
 
-* dApp developers can index whatever is important to them.
-* Marconi is an indexing solution for developers who need to store on-chain data in a local database.
+TODO
 
-## Introduction
+### Nix build
 
-Marconi is a blockchain query solution that you can configure for the types of information that you need to index and according to how you need to structure your database schema.
+The `marconi-chain-index` executable is available as a nix flake.
 
-Marconi consists of these three components:
+If inside the `plutus-apps` repository, you can run from the top-level:
 
-| Component | Description |
-| --------- | ----------- |
-| Streamer  | Provides event stream of configured data types |
-| Index     | Indexes and stores the data in a database |
-| Query     | Fetches information from the database |
-
-The streamer attaches to a node, providing an event stream of the configured data types. Your applications can use streams directly. Or streams may be passed to the index component which indexes and stores the data in a database. You can use the query component to fetch information from the database.
-
-## Design Principles
-
-### Scalability through Customized Solutions for Each Use Case
-
-The philosophy behind Marconi is to maintain scalability by customizing the solution for each use case. You can filter the streams of information to transmit only the data you need for your dApp, minimizing network traffic and database storage. You can also customize database schemas and queries so that the dApps have the most efficient and scalable application-specific API to interact with the data.
-
-### Handling Blockchain Rollback Events Properly
-
-Marconi is designed to enable dApps to handle blockchain rollback events properly. Since the head of the chain is constantly advancing and rolling back as the consensus algorithm advances the chain, this causes challenging synchronization issues for dApps that need rapid updates of the chain state.
-
-Marconi's index component handles rollbacks by distinguishing volatile and immutable blocks. A block on the top of the chain is volatile since it is subject to some probability of being rolled back. Eventually, when the block is deeper than the security parameter, the block becomes immutable. The Marconi indexer tracks this status and keeps the volatile blocks in memory until they become immutable. Once immutable, Marconi persists the blocks to the database.
-
-### Specifying Slots to Query
-
-Through the query interface, you can specify a range of slots to query or indicate that the query is for blocks deeper than a specified number of slots. As a result, you can use simple state management for applications that work only with immutable blocks.
-
-### Querying Volatile Data
-
-If your application requires faster response times, you can query volatile data on the head of the chain; however, you must take care to invalidate cached data when rollbacks occur.
-
-## API Layers
-
-The core Marconi APIs are defined in Haskell in order to support simple use cases where all the components run together in a single process.
-
-If your use cases require multiple synchronized instances for load balancing or for supporting different indexers, Marconi is designed with alternative transport layers on top of the core API that support network streaming and RPC calls.
-
-## What Differentiates Marconi
-
-* Developed by IOG
-* Built in Haskell
-
-### DB Sync
-
-Cardano DB-sync is IOG's current indexing solution, but it uses lots of memory and days/week to sync. DB-sync takes an index everything approach to put all information into a database that can support any query at the cost of requiring a large DB server to run it.
-
-In contrast, Marconi requires the user to customize it for the specific application so that only relevant information is streamed or stored. Marconi will be a scalable solution that allows the dApp developer to index whatever is important for their unique use case.
-
-### Ogmios
-
-Ogmios exposes the basic node interface as a web service. This is a great option for queries that can be made directly to the node for applications that want a web service interface.
-
-### Oura
-
-Oura, implemented in Rust, functions as a notification system that indexers provide. It has good connectivity with cloud infrastructure like Kafka. Marconi provides similar functionality implemented in Haskell to make it easy for Haskell programmers to customize it.
-
-### Scrolls
-
-Scrolls is the storage and query solution that our indexers provide. Like Scrolls, we can be selective for what is to be indexed. Scrolls can store into multiple databases. Marconi is currently focused on local DBs like SQL lite.
-
-### Carp
-
-## Customizing Marconi
-
-You can customize indexing in the following ways:
-
-1. *This statement is a placeholder:* A function that is given events and current state outputs notifications.
-
-2. Customize how a function performs queries by determining the following aspects of the function:
-
-   * The query type. Because Marconi uses an Abstract Data Type (ADT), you need to define the types of queries that the indexer responds to.
-   * Query for certain slot numbers by determining the point in the in-memory history where you want to run the query.
-   * Weigh considerations for in-memory and on-disk data. The query function produces a result by merging the in-memory and on-disk data. If you are concerned only with on-disk data, then you can query the database directly.
-
-3. Customize a function that stores buffered data. While there is no connection to any storage mechanism, there is a nice API is available, and you are encouraged to change it to suit your needs. Changing it is very simple.
-
-Marconi uses the `streaming` library so you can make use of its many combinators.
-
-## Documentation
-
-When it exists, we can link to our readthedocs user documentation.
-
-* User Guide
-* Reference Guide
-* Tutorial
-* Example Code
-
-## Intended Use Cases
-
-Description of its primary intended use cases.
-
-* Sync with the Cardano blockchain (private/public testnet or mainnet) by reading all blocks from the genesis block to the current tip
-* Index the syncing information based on the user’s predefined indexing
-* Query the indexed information based on the user’s predefined queries
-
-### Use Case 1
-
-### Use Case 2
-
-### Use Case 3
-
-## Example Queries
-
-Can we provide example queries?
-
-## Architecture
-
-* Provide a compelling diagram
-
-## Architecture Decision Records
-
-* Records of decisions that were made by the team.
-* Discuss alternatives.
-* Why did we choose one design over another?
-   * Konstantinos has some for Plutus Apps.
-   * Radu has some for Marconi.
-
-## System Requirements
-
-## How to Install and Configure
-
-### Installation Procedures
-
-The `marconi` executable is available as a nix flake.
-
-You may either clone the [`plutus-apps`](https://github.com/input-output-hk/plutus-apps)
-repository and run from the top-level:
 ```
-nix build .#marconi
+$ nix build .#marconi-chain-index
 ```
+
 Or you may run from anywhere:
+
 ```
-nix build github:input-output-hk/plutus-apps#marconi
+$ nix build github:input-output-hk/plutus-apps#marconi-chain-index
 ```
 
 Both commands will produce a `result` directory containing the executable
-`result/bin/marconi`.
+`result/bin/marconi-chain-index`.
 
-### Configuration Procedures
+### Cabal+Nix build
 
-## How to Contribute
+To build `marconi-chain-index` from the source files, use the following commands:
 
-How do you contribute to it? What tools, methods, processes are required?
+```sh
+git clone git@github.com:input-output-hk/plutus-apps.git
+nix develop
+cabal clean && cabal update # Optional, but makes sure you start clean
+cabal build marconi-chain-index
+```
 
-* Contributing documentation.
-* Most of the info in Plutus-Apps and Plutus should also be included in Marconi.
+The above process will build the executable in your local environment at this location:
 
-## Making Builds
+```sh
+cabal exec -- which marconi-chain-index
+```
 
-How do you build it?
+Or you can run the executable directly with:
 
-### Build Procedures
+```sh
+cabal run marconi-chain-index:exe:marconi-chain-index -- --help
+```
 
-## Storage Considerations and Accessing Data
+## Command line summary
 
-# Troubleshooting
+Run `marconi-chain-index`, `$(cabal exec -- which marconi-chain-index) --help` or `cabal run marconi-chain-index:exe:marconi-chain-index -- --help` for a general synopsis of the command line options depending on your installation method.
 
-# FAQ
+See [this automatically generated golden file](./test/Spec/Golden/Cli/marconi-chain-index___help.help) for the up-to-date help command output.
 
-# Further Reading
+## How to run
 
+We are assuming that:
+
+* you have a local running cardano-node instance.
+* you've set the following environment variables:
+  * `CARDANO_NODE_SOCKET_PATH`: socket path of your local cardano-node instance
+  * `MARCONI_DB_DIRECTORY`: directory in which to create the various SQLite database files
+
+The most minimal way to run the executable is as follows:
+
+```sh
+$(cabal exec -- which marconi-chain-index) \
+    --testnet-magic 1 \
+    --socket-path "$CARDANO_NODE_SOCKET_PATH" \
+    --db-dir "$MARCONI_DB_DIRECTORY" \
+```
+
+From the last chainpoint (if none, from genesis), this command will fetch blocks from the local node, extract required data and index them in the database.
+
+Using the `--addresses-to-index`, you can instruct Marconi to index target addresses.
+By default, all addresses are indexed in the database.
+
+Some example addresses from pre-production-testnet are:
+
+```
+addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc \
+addr_test1vp8cprhse9pnnv7f4l3n6pj0afq2hjm6f7r2205dz0583egagfjah \
+addr_test1wpzvcmq8yuqnnzerzv0u862hmc4tc8xlm74wtsqmh56tgpc3pvx0f \
+addr_test1wrn2wfykuhswv4km08w0zcl5apmnqha0j24fa287vueknasq6t4hc \
+addr_test1wr9gquc23wc7h8k4chyaad268mjft7t0c08wqertwms70sc0fvx8w \
+```

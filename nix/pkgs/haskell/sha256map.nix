@@ -4,5 +4,4 @@
   "https://github.com/input-output-hk/cardano-ledger"."da3e9ae10cf9ef0b805a046c84745f06643583c2" = "sha256-3VUZKkLu1R43GUk9IwgsGQ55O0rnu8NrCkFX9gqA4ck=";
   "https://github.com/input-output-hk/cardano-wallet"."18a931648550246695c790578d4a55ee2f10463e" = "0i40hp1mdbljjcj4pn3n6zahblkb2jmpm8l4wnb36bya1pzf66fx";
   "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
-  "https://github.com/Quviq/quickcheck-contractmodel"."cc43f13f98c704e0d53dbdef6a98367918f8c5c1" = "sha256-Zb6Cd23GG1STS0Eqzis+CgEcBKP54aAjFlhJYz8BRvk=";
 }

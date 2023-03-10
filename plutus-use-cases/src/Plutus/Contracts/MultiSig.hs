@@ -92,7 +92,7 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
     networkId <- pNetworkId <$> getParams
     let inst = typedValidator ms
     utx <- utxosAt (Scripts.validatorCardanoAddress networkId inst)
-    let tx = Constraints.collectFromTheScript utx ()
+    let tx = Constraints.spendUtxosFromTheScript utx ()
                 <> foldMap Constraints.mustBeSignedBy pks
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx

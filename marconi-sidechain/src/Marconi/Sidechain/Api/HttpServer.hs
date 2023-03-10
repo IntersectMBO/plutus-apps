@@ -5,9 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 
-module Marconi.Sidechain.Api.HttpServer(
-    bootstrap
-    ) where
+module Marconi.Sidechain.Api.HttpServer where
 
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
@@ -17,11 +15,11 @@ import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Network.Wai.Handler.Warp (runSettings)
 import Servant.API ((:<|>) ((:<|>)))
-import Servant.Server (Handler, Server, serve)
+import Servant.Server (Application, Handler, Server, serve)
 
 import Cardano.Api ()
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as Q.Utxo
-import Marconi.Sidechain.Api.Routes (API)
+import Marconi.Sidechain.Api.Routes (API, JsonRpcAPI, RestAPI)
 import Marconi.Sidechain.Api.Types (HasSidechainEnv (httpSettings, queryEnv), IndexerEnv, QueryExceptions, SidechainEnv,
                                     UtxoQueryResult)
 import Network.JsonRpc.Server.Types ()
@@ -31,21 +29,27 @@ import Network.JsonRpc.Types (JsonRpcErr (JsonRpcErr, errorCode, errorData, erro
 bootstrap :: SidechainEnv -> IO ()
 bootstrap env =  runSettings
         (env ^. httpSettings)
-        (serve (Proxy @API) (server (env ^. queryEnv ) ) )
+        (marconiApp (env ^. queryEnv))
 
-server
+marconiApp :: IndexerEnv -> Application
+marconiApp env = serve (Proxy @API) (httpRpcServer env)
+
+jsonRpcServer
+  :: IndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
+  -> Server JsonRpcAPI
+jsonRpcServer env = echo
+  :<|> getTargetAddressesQueryHandler env
+  :<|> getUtxoFromAddressHandler env
+
+restApiServer
+  :: IndexerEnv
+  -> Server RestAPI
+restApiServer env  = getTimeHandler :<|> getTargetAddressesHandler env
+
+httpRpcServer
   :: IndexerEnv -- ^  Utxo Environment to access Utxo Storage running on the marconi thread
   -> Server API
-server env = jsonRpcServer :<|> restApiServer
- where
-     jsonRpcServer =
-              echo
-         :<|> getUtxoFromAddressHandler env
-         :<|> getTargetAddressesQueryHandler env
-
-     restApiServer =
-              getTimeHandler
-         :<|> getTargetAddressesHandler env
+httpRpcServer env = jsonRpcServer env :<|> restApiServer env
 
 -- | Echos message back as a Jsonrpc response. Used for testing the server.
 echo

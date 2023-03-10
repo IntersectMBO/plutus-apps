@@ -90,8 +90,8 @@ import Data.Set qualified as Set
 import Data.Typeable (Proxy (Proxy), Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, Language, SlotRange, SomeCardanoApiTx, TxIn (..), TxInType (..), TxOutRef (..),
-               Versioned, toPlutusAddress)
+import Ledger (CardanoAddress, CardanoTx, Language, SlotRange, TxIn (..), TxInType (..), TxOutRef (..), Versioned,
+               toPlutusAddress)
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot (Slot))
@@ -260,11 +260,11 @@ instance (Typeable era) => OpenApi.ToSchema (C.Tx era) where
   declareNamedSchema _ = do
     return $ NamedSchema (Just "Tx") byteSchema
 
-instance OpenApi.ToSchema SomeCardanoApiTx where
+instance OpenApi.ToSchema CardanoTx where
   declareNamedSchema _ = do
     txSchema <- declareSchemaRef (Proxy :: Proxy (C.Tx C.BabbageEra))
     eraInModeSchema <- declareSchemaRef (Proxy :: Proxy (C.EraInMode C.BabbageEra C.CardanoMode))
-    return $ NamedSchema (Just "SomeCardanoApiTx") $ mempty
+    return $ NamedSchema (Just "CardanoTx") $ mempty
       & type_ ?~ OpenApiObject
       & properties .~
           InsOrdMap.fromList [ ("tx", txSchema)
@@ -287,7 +287,7 @@ data ChainIndexTx = ChainIndexTx {
     -- ^ Redeemers of the minting scripts.
     _citxScripts    :: Map ScriptHash (Versioned Script),
     -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
-    _citxCardanoTx  :: Maybe SomeCardanoApiTx
+    _citxCardanoTx  :: Maybe CardanoTx
     -- ^ The full Cardano API tx which was used to populate the rest of the
     -- 'ChainIndexTx' fields. Useful because 'ChainIndexTx' doesn't have all the
     -- details of the tx, so we keep it as a safety net. Might be Nothing if we

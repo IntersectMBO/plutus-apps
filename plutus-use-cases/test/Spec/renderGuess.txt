@@ -1,7 +1,7 @@
 ==== Slot #0, Tx #0 ====
-TxId:       43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84
+TxId:       d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d
 Fee:        0 lovelace
-Mint:       1000000000 lovelace
+Mint:       
 Inputs:
   
 
@@ -550,7 +550,7 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
-TxId:       18ff0a43c9a18aa720d0374db11148469bc7c1463775e27926d9e3e7da8a9c4d
+TxId:       4c26b0e20a3bd083e200e2ea03b380d2e591d9f428f466b7185495fcab5d2468
 Fee:        178173 lovelace
 Mint:       
 Inputs:
@@ -559,7 +559,7 @@ Inputs:
   Value:
     10000000 lovelace
   Source:
-    Tx:     43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84
+    Tx:     d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d
     Output #50
 
   ---- Input 1 ----
@@ -567,7 +567,7 @@ Inputs:
   Value:
     10000000 lovelace
   Source:
-    Tx:     43ba666cc8a22a04b63a3b605ce14146dfa5ed999986625ad90c1bc16dabdd84
+    Tx:     d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d
     Output #51
 
 

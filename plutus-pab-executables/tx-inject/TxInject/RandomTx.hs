@@ -26,8 +26,7 @@ import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index (UtxoIndex (..))
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (CardanoTx (CardanoApiTx, EmulatorTx), SomeCardanoApiTx (CardanoApiEmulatorEraTx),
-                  TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
+import Ledger.Tx (CardanoTx (CardanoEmulatorEraTx), TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value.CardanoAPI (isAdaOnlyValue)
 
@@ -85,18 +84,15 @@ generateTx gen slot (UtxoIndex utxo) = do
             inputs
         -- inputs of the transaction
         sourceTxIns = fmap ((`TxInputWitnessed` ConsumePublicKeyAddress) . fst) inputs
-    EmulatorTx tx <- Gen.sample $
+    txn@(CardanoEmulatorEraTx cTx) <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig
     let
       params = def { pSlotConfig = slotCfg }
       utxoIndex = either (error . show) id $ fromPlutusIndex $ UtxoIndex utxo
-      txn = Validation.fromPlutusTxSigned params utxoIndex tx CW.knownPaymentKeys
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
-      Left _  -> case txn of
-                      CardanoApiTx (CardanoApiEmulatorEraTx cTx) -> pure cTx
-                      EmulatorTx _ -> error "fromPlutusTxSigned can't generate an Emulator tx"
+      Left _  -> pure cTx
       Right _ -> generateTx gen slot (UtxoIndex utxo)
 
 keyPairs :: NonEmpty CardanoAddress

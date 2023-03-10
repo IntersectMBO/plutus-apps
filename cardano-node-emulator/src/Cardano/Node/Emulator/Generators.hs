@@ -49,7 +49,6 @@ module Cardano.Node.Emulator.Generators(
     splitVal,
     validateMockchain,
     signAll,
-    signTx,
     CW.knownAddresses,
     CW.knownPaymentPublicKeys,
     CW.knownPaymentPrivateKeys,
@@ -57,7 +56,8 @@ module Cardano.Node.Emulator.Generators(
     knownXPrvs,
     alwaysSucceedPolicy,
     alwaysSucceedPolicyId,
-    someTokenValue
+    someTokenValue,
+    emptyTxBodyContent
     ) where
 
 import Control.Monad (guard, replicateM)
@@ -86,15 +86,14 @@ import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Node.Emulator.Params (Params (pSlotConfig))
 import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Cardano.Node.Emulator.Validation (fromPlutusTxSigned, validateCardanoTx)
+import Cardano.Node.Emulator.Validation (validateCardanoTx)
 import Control.Lens.Lens ((<&>))
 import Data.Functor (($>))
 import Data.String (fromString)
 import Gen.Cardano.Api.Typed (genTxIn)
-import Ledger (CardanoTx (CardanoApiTx), Interval, MintingPolicy (getMintingPolicy),
+import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMintingPolicy),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
-               SomeCardanoApiTx (CardanoApiEmulatorEraTx),
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput, TxInputType,
                TxOut, TxOutRef (TxOutRef), ValidationErrorInPhase, addCardanoTxSignature, maxFee, minAdaTxOutEstimated,
                minLovelaceTxOutEstimated, pubKeyTxOut, txOutValue, validatorHash)
@@ -163,11 +162,10 @@ genMockchain' gm = do
     slotCfg <- genSlotConfig
     (txn, ot) <- genInitialTransaction gm
     let params = def { pSlotConfig = slotCfg }
-        signedTx = signTx params mempty txn
         -- There is a problem that txId of emulator tx and tx of cardano tx are different.
         -- We convert the emulator tx to cardano tx here to get the correct transaction id
         -- because later we anyway will use the converted cardano tx so the utxo should match it.
-        tid = Tx.getCardanoTxId signedTx
+        tid = Tx.getCardanoTxId txn
     pure Mockchain {
         mockchainInitialTxPool = [txn],
         mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot,
@@ -188,6 +186,27 @@ genInitialTransaction g = do
     (body, o) <- initialTxBody g
     (,o) <$> makeTx body
 
+emptyTxBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
+emptyTxBodyContent = C.TxBodyContent
+   { txIns = []
+   , txInsCollateral = C.TxInsCollateralNone
+   , txMintValue = C.TxMintNone
+   , txFee = C.toCardanoFee 0
+   , txOuts = []
+   , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
+   , txInsReference = C.TxInsReferenceNone
+   , txTotalCollateral = C.TxTotalCollateralNone
+   , txReturnCollateral = C.TxReturnCollateralNone
+   , txValidityRange = ( C.TxValidityNoLowerBound
+                       , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+   , txScriptValidity = C.TxScriptValidityNone
+   , txExtraKeyWits = C.TxExtraKeyWitnessesNone
+   , txMetadata = C.TxMetadataNone
+   , txAuxScripts = C.TxAuxScriptsNone
+   , txWithdrawals = C.TxWithdrawalsNone
+   , txCertificates = C.TxCertificatesNone
+   , txUpdateProposal = C.TxUpdateProposalNone
+   }
 
 initialTxBody ::
        GeneratorModel
@@ -198,27 +217,9 @@ initialTxBody GeneratorModel{..} = do
     -- we use a generated tx in input it's unbalanced but it's "fine" as we don't validate this tx
     txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))
                  <$> Gen.list (Range.constant 1 10) genTxIn
-    pure (C.TxBodyContent
-           { txIns
-           , txInsCollateral = C.TxInsCollateralNone
-           , txMintValue = C.TxMintNone
-           , txFee = C.toCardanoFee 0
-           , txOuts = Tx.getTxOut <$> o
-            -- unused:
-           , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
-           , txInsReference = C.TxInsReferenceNone
-           , txTotalCollateral = C.TxTotalCollateralNone
-           , txReturnCollateral = C.TxReturnCollateralNone
-           , txValidityRange = ( C.TxValidityNoLowerBound
-                               , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-           , txScriptValidity = C.TxScriptValidityNone
-           , txExtraKeyWits = C.TxExtraKeyWitnessesNone
-           , txMetadata = C.TxMetadataNone
-           , txAuxScripts = C.TxAuxScriptsNone
-           , txWithdrawals = C.TxWithdrawalsNone
-
-           , txCertificates = C.TxCertificatesNone
-           , txUpdateProposal = C.TxUpdateProposalNone
+    pure (emptyTxBodyContent
+           { C.txIns
+           , C.txOuts = Tx.getTxOut <$> o
            }, o)
 
 -- | Generate a valid transaction, using the unspent outputs provided.
@@ -269,7 +270,7 @@ makeTx
     -> m CardanoTx
 makeTx bodyContent = do
     txBody <- either (fail . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody bodyContent
-    pure $ signAll $ CardanoApiTx $ CardanoApiEmulatorEraTx $ C.Tx txBody []
+    pure $ signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
 
 -- | Generate a valid transaction, using the unspent outputs provided.
 --   Fails if the there are no unspent outputs, or if the total value
@@ -333,27 +334,12 @@ genValidTransactionBodySpending' g ins totalVal = do
         (fail "Cannot gen collateral")
         (failOnCardanoError . (C.toCardanoTxInsCollateral . map toTxInput . flip take ins . fromIntegral))
         (gmMaxCollateralInputs g)
-    pure $ C.TxBodyContent
-           { txIns
-           , txInsCollateral
-           , txMintValue
-           , txFee = C.toCardanoFee fee'
-           , txOuts = Tx.getTxOut <$> txOutputs
-            -- unused:
-           , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
-           , txInsReference = C.TxInsReferenceNone
-           , txTotalCollateral = C.TxTotalCollateralNone
-           , txReturnCollateral = C.TxReturnCollateralNone
-           , txValidityRange = ( C.TxValidityNoLowerBound
-                               , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
-           , txScriptValidity = C.TxScriptValidityNone
-           , txExtraKeyWits = C.TxExtraKeyWitnessesNone
-           , txMetadata = C.TxMetadataNone
-           , txAuxScripts = C.TxAuxScriptsNone
-           , txWithdrawals = C.TxWithdrawalsNone
-
-           , txCertificates = C.TxCertificatesNone
-           , txUpdateProposal = C.TxUpdateProposalNone
+    pure $ emptyTxBodyContent
+           { C.txIns
+           , C.txInsCollateral
+           , C.txMintValue
+           , C.txFee = C.toCardanoFee fee'
+           , C.txOuts = Tx.getTxOut <$> txOutputs
            }
     where
         -- | Translate TxIn to TxInput taking out data witnesses if present.
@@ -379,18 +365,11 @@ genValidTransactionBodySpending' g ins totalVal = do
         toTxInType Tx.ConsumePublicKeyAddress = Tx.TxConsumePublicKeyAddress
         toTxInType (Tx.ScriptAddress valOrRef rd dat) = Tx.TxScriptAddress rd (first validatorHash valOrRef) $ fmap datumHash dat
 
-signTx :: Params -> Map TxOutRef TxOut -> CardanoTx -> CardanoTx
-signTx params utxo = let
-  cUtxoIndex = either (error . show) id $ fromPlutusIndex (Index.UtxoIndex utxo)
-  in Tx.onCardanoTx
-      (\t -> fromPlutusTxSigned params cUtxoIndex t CW.knownPaymentKeys)
-      Tx.CardanoApiTx
-
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> CardanoTx -> Maybe Ledger.ValidationErrorInPhase
 validateMockchain (Mockchain _ utxo params) tx = result where
     cUtxoIndex = either (error . show) id $ fromPlutusIndex (Index.UtxoIndex utxo)
-    result = leftToMaybe $ validateCardanoTx params 1 cUtxoIndex (signTx params utxo tx)
+    result = leftToMaybe $ validateCardanoTx params 1 cUtxoIndex tx
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

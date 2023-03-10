@@ -19,7 +19,7 @@ Interface to the transaction types from 'cardano-api'
 -}
 module Ledger.Tx.CardanoAPI.Internal(
   CardanoBuildTx(..)
-  , SomeCardanoApiTx(..)
+  , CardanoTx(..)
   , txOutRefs
   , unspentOutputsTx
   , fromCardanoTxId
@@ -27,6 +27,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoTxOutToPV1TxInfoTxOut
   , fromCardanoTxOutToPV1TxInfoTxOut'
   , fromCardanoTxOutToPV2TxInfoTxOut
+  , fromCardanoTxOutToPV2TxInfoTxOut'
   , fromCardanoTxOutDatumHash
   , fromCardanoTxOutDatum
   , fromCardanoTxOutValue
@@ -371,22 +372,22 @@ deriving instance FromJSON (C.TxBodyContent C.BuildTx C.BabbageEra)
 deriving instance ToJSON (C.TxBodyContent C.BuildTx C.BabbageEra)
 
 -- | Cardano tx from any era.
-data SomeCardanoApiTx where
-  SomeTx :: C.IsCardanoEra era => C.Tx era -> C.EraInMode era C.CardanoMode -> SomeCardanoApiTx
+data CardanoTx where
+  CardanoTx :: C.IsCardanoEra era => C.Tx era -> C.EraInMode era C.CardanoMode -> CardanoTx
 
-instance Eq SomeCardanoApiTx where
-  (SomeTx tx1 C.ByronEraInCardanoMode) == (SomeTx tx2 C.ByronEraInCardanoMode)     = tx1 == tx2
-  (SomeTx tx1 C.ShelleyEraInCardanoMode) == (SomeTx tx2 C.ShelleyEraInCardanoMode) = tx1 == tx2
-  (SomeTx tx1 C.AllegraEraInCardanoMode) == (SomeTx tx2 C.AllegraEraInCardanoMode) = tx1 == tx2
-  (SomeTx tx1 C.MaryEraInCardanoMode) == (SomeTx tx2 C.MaryEraInCardanoMode)       = tx1 == tx2
-  (SomeTx tx1 C.AlonzoEraInCardanoMode) == (SomeTx tx2 C.AlonzoEraInCardanoMode)   = tx1 == tx2
-  (SomeTx tx1 C.BabbageEraInCardanoMode) == (SomeTx tx2 C.BabbageEraInCardanoMode) = tx1 == tx2
-  _ == _                                                                           = False
+instance Eq CardanoTx where
+  (CardanoTx tx1 C.ByronEraInCardanoMode) == (CardanoTx tx2 C.ByronEraInCardanoMode)     = tx1 == tx2
+  (CardanoTx tx1 C.ShelleyEraInCardanoMode) == (CardanoTx tx2 C.ShelleyEraInCardanoMode) = tx1 == tx2
+  (CardanoTx tx1 C.AllegraEraInCardanoMode) == (CardanoTx tx2 C.AllegraEraInCardanoMode) = tx1 == tx2
+  (CardanoTx tx1 C.MaryEraInCardanoMode) == (CardanoTx tx2 C.MaryEraInCardanoMode)       = tx1 == tx2
+  (CardanoTx tx1 C.AlonzoEraInCardanoMode) == (CardanoTx tx2 C.AlonzoEraInCardanoMode)   = tx1 == tx2
+  (CardanoTx tx1 C.BabbageEraInCardanoMode) == (CardanoTx tx2 C.BabbageEraInCardanoMode) = tx1 == tx2
+  _ == _                                                                                 = False
 
-deriving instance Show SomeCardanoApiTx
+deriving instance Show CardanoTx
 
-instance Serialise SomeCardanoApiTx where
-  encode (SomeTx tx eraInMode) = encodedMode eraInMode <> Encoding (TkBytes (C.serialiseToCBOR tx))
+instance Serialise CardanoTx where
+  encode (CardanoTx tx eraInMode) = encodedMode eraInMode <> Encoding (TkBytes (C.serialiseToCBOR tx))
     where
       encodedMode :: C.EraInMode era C.CardanoMode -> Encoding
       -- 0 and 1 are for ByronEraInByronMode and ShelleyEraInShelleyMode
@@ -407,23 +408,23 @@ instance Serialise SomeCardanoApiTx where
       7 -> decodeTx C.AsBabbageEra C.BabbageEraInCardanoMode
       _ -> fail "Unexpected value while decoding Cardano.Api.EraInMode"
     where
-      decodeTx :: C.IsCardanoEra era => C.AsType era -> C.EraInMode era C.CardanoMode -> Decoder s SomeCardanoApiTx
+      decodeTx :: C.IsCardanoEra era => C.AsType era -> C.EraInMode era C.CardanoMode -> Decoder s CardanoTx
       decodeTx asType eraInMode = do
         bytes <- decodeBytes
         tx <- either (const $ fail "Failed to decode Cardano.Api.Tx") pure $ C.deserialiseFromCBOR (C.AsTx asType) bytes
-        pure $ SomeTx tx eraInMode
+        pure $ CardanoTx tx eraInMode
 
-instance ToJSON SomeCardanoApiTx where
-  toJSON (SomeTx tx eraInMode) =
+instance ToJSON CardanoTx where
+  toJSON (CardanoTx tx eraInMode) =
     object [ "tx" .= C.serialiseToTextEnvelope Nothing tx
            , "eraInMode" .= eraInMode
            ]
 
--- | Converting 'SomeCardanoApiTx' to JSON.
+-- | Converting 'CardanoTx' to JSON.
 --
 -- If the "tx" field is from an unknown era, the JSON parser will print an
 -- error at runtime while parsing.
-instance FromJSON SomeCardanoApiTx where
+instance FromJSON CardanoTx where
   parseJSON v = parseByronInCardanoModeTx v
             <|> parseShelleyEraInCardanoModeTx v
             <|> parseAllegraEraInCardanoModeTx v
@@ -441,48 +442,48 @@ withIsCardanoEra C.MaryEraInCardanoMode r    = r
 withIsCardanoEra C.AlonzoEraInCardanoMode r  = r
 withIsCardanoEra C.BabbageEraInCardanoMode r = r
 
-parseByronInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseByronInCardanoModeTx :: Aeson.Value -> Parser CardanoTx
 parseByronInCardanoModeTx =
-  parseSomeCardanoTx "Failed to parse ByronEra 'tx' field from SomeCardanoApiTx"
+  parseSomeCardanoTx "Failed to parse ByronEra 'tx' field from CardanoTx"
                      (C.AsTx C.AsByronEra)
 
-parseShelleyEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseShelleyEraInCardanoModeTx :: Aeson.Value -> Parser CardanoTx
 parseShelleyEraInCardanoModeTx =
-  parseSomeCardanoTx "Failed to parse ShelleyEra 'tx' field from SomeCardanoApiTx"
+  parseSomeCardanoTx "Failed to parse ShelleyEra 'tx' field from CardanoTx"
                      (C.AsTx C.AsShelleyEra)
 
-parseMaryEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseMaryEraInCardanoModeTx :: Aeson.Value -> Parser CardanoTx
 parseMaryEraInCardanoModeTx =
-  parseSomeCardanoTx "Failed to parse MaryEra 'tx' field from SomeCardanoApiTx"
+  parseSomeCardanoTx "Failed to parse MaryEra 'tx' field from CardanoTx"
                      (C.AsTx C.AsMaryEra)
 
-parseAllegraEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseAllegraEraInCardanoModeTx :: Aeson.Value -> Parser CardanoTx
 parseAllegraEraInCardanoModeTx =
-  parseSomeCardanoTx "Failed to parse AllegraEra 'tx' field from SomeCardanoApiTx"
+  parseSomeCardanoTx "Failed to parse AllegraEra 'tx' field from CardanoTx"
                      (C.AsTx C.AsAllegraEra)
 
-parseAlonzoEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseAlonzoEraInCardanoModeTx :: Aeson.Value -> Parser CardanoTx
 parseAlonzoEraInCardanoModeTx =
-  parseSomeCardanoTx "Failed to parse AlonzoEra 'tx' field from SomeCardanoApiTx"
+  parseSomeCardanoTx "Failed to parse AlonzoEra 'tx' field from CardanoTx"
                      (C.AsTx C.AsAlonzoEra)
 
 -- TODO Uncomment the implementation once Cardano.Api adds a FromJSON instance
 -- for 'EraInMode BabbageEra CardanoMode':
 -- https://github.com/input-output-hk/cardano-node/pull/3837
-parseBabbageEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseBabbageEraInCardanoModeTx :: Aeson.Value -> Parser CardanoTx
 parseBabbageEraInCardanoModeTx (Aeson.Object v) =
-    SomeTx
-    <$> (v .: "tx" >>= \envelope -> either (const $ parseFail "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx")
+    CardanoTx
+    <$> (v .: "tx" >>= \envelope -> either (const $ parseFail "Failed to parse BabbageEra 'tx' field from CardanoTx")
                                            pure
                                            $ C.deserialiseFromTextEnvelope (C.AsTx C.AsBabbageEra) envelope)
     <*> pure C.BabbageEraInCardanoMode -- This is a workaround that only works because we tried all other eras first
 parseBabbageEraInCardanoModeTx invalid =
-  prependFailure "parsing SomeCardanoApiTx failed, "
+  prependFailure "parsing CardanoTx failed, "
       (typeMismatch "Object" invalid)
-  -- parseSomeCardanoTx "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx"
+  -- parseSomeCardanoTx "Failed to parse BabbageEra 'tx' field from CardanoTx"
   --                    (C.AsTx C.AsBabbageEra)
 
-parseEraInCardanoModeFail :: Aeson.Value -> Parser SomeCardanoApiTx
+parseEraInCardanoModeFail :: Aeson.Value -> Parser CardanoTx
 parseEraInCardanoModeFail _ = fail "Unable to parse 'eraInMode'"
 
 parseSomeCardanoTx
@@ -492,25 +493,25 @@ parseSomeCardanoTx
   => String
   -> C.AsType (C.Tx era)
   -> Aeson.Value
-  -> Parser SomeCardanoApiTx
+  -> Parser CardanoTx
 parseSomeCardanoTx errorMsg txAsType (Aeson.Object v) =
-  SomeTx
+  CardanoTx
     <$> (v .: "tx" >>= \envelope -> either (const $ parseFail errorMsg)
                                            pure
                                            $ C.deserialiseFromTextEnvelope txAsType envelope)
     <*> v .: "eraInMode"
 parseSomeCardanoTx _ _ invalid =
-    prependFailure "parsing SomeCardanoApiTx failed, "
+    prependFailure "parsing CardanoTx failed, "
       (typeMismatch "Object" invalid)
 
-txOutRefs :: SomeCardanoApiTx -> [(PV1.TxOut, PV1.TxOutRef)]
-txOutRefs (SomeTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) _) =
+txOutRefs :: CardanoTx -> [(PV1.TxOut, PV1.TxOutRef)]
+txOutRefs (CardanoTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) _) =
   mkOut <$> zip [0..] plutusTxOuts
   where
     mkOut (i, o) = (o, PV1.TxOutRef (fromCardanoTxId $ C.getTxId txBody) i)
     plutusTxOuts = fromCardanoTxOutToPV1TxInfoTxOut <$> txOuts
 
-unspentOutputsTx :: SomeCardanoApiTx -> Map PV1.TxOutRef PV1.TxOut
+unspentOutputsTx :: CardanoTx -> Map PV1.TxOutRef PV1.TxOut
 unspentOutputsTx tx = Map.fromList $ swap <$> txOutRefs tx
 
 -- | Given a 'C.TxScriptValidity era', if the @era@ supports scripts, return a
@@ -657,6 +658,14 @@ fromCardanoTxOutToPV2TxInfoTxOut (C.TxOut addr value datum refScript) =
     (fromCardanoTxOutDatum datum)
     (refScriptToScriptHash refScript)
 
+fromCardanoTxOutToPV2TxInfoTxOut' :: C.TxOut C.CtxUTxO era -> PV2.TxOut
+fromCardanoTxOutToPV2TxInfoTxOut' (C.TxOut addr value datum refScript) =
+    PV2.TxOut
+    (fromCardanoAddressInEra addr)
+    (fromCardanoValue $ fromCardanoTxOutValue value)
+    (fromCardanoTxOutDatum' datum)
+    (refScriptToScriptHash refScript)
+
 refScriptToScriptHash :: C.ReferenceScript era -> Maybe PV2.ScriptHash
 refScriptToScriptHash C.ReferenceScriptNone = Nothing
 refScriptToScriptHash (C.ReferenceScript _ (C.ScriptInAnyLang _ s)) =
@@ -785,6 +794,14 @@ fromCardanoTxOutDatum (C.TxOutDatumHash _ h) =
 fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) =
     PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 fromCardanoTxOutDatum (C.TxOutDatumInline _ d) =
+    PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
+
+fromCardanoTxOutDatum' :: C.TxOutDatum C.CtxUTxO era -> PV2.OutputDatum
+fromCardanoTxOutDatum' C.TxOutDatumNone       =
+    PV2.NoOutputDatum
+fromCardanoTxOutDatum' (C.TxOutDatumHash _ h) =
+    PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
+fromCardanoTxOutDatum' (C.TxOutDatumInline _ d) =
     PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
 
 toCardanoTxOutNoDatum  :: C.TxOutDatum C.CtxTx C.BabbageEra

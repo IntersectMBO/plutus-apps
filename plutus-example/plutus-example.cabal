@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-example
-version:            1.1.0.0
+version:            1.2.0.0
 description:
   End to end examples of creating and executing Plutus scripts.
 
@@ -72,7 +72,7 @@ library
   --------------------
   -- Local components
   --------------------
-  build-depends:   plutus-script-utils >=1.1.0
+  build-depends:   plutus-script-utils >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -113,7 +113,7 @@ executable plutus-example
   --------------------
   -- Local components
   --------------------
-  build-depends:  plutus-example
+  build-depends:  plutus-example >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -161,8 +161,8 @@ test-suite plutus-example-test
   -- Local components
   --------------------
   build-depends:
-    , plutus-example
-    , plutus-ledger   >=1.0.0
+    , plutus-example  >=1.2.0
+    , plutus-ledger   >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

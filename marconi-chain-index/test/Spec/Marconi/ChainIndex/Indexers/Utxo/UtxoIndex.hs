@@ -17,13 +17,14 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Database.SQLite.Simple qualified as SQL
-import Gen.Marconi.ChainIndex.Indexers.Utxo (genUtxoEvents)
+import Gen.Marconi.ChainIndex.Indexers.Utxo (genEventWithShelleyAddressAtChainPoint, genUtxoEvents)
 import Gen.Marconi.ChainIndex.Indexers.Utxo qualified as UtxoGen
 import Gen.Marconi.ChainIndex.Mockchain (mockBlockTxs)
 import Hedgehog (Property, cover, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import Helpers (addressAnyToShelley)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (ueInputs, ueUtxos))
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
@@ -142,10 +143,10 @@ utxoStorageTest = property $ do
 --
 utxoQueryIntervalTest :: Property
 utxoQueryIntervalTest = property $ do
-  event0 <- forAll $ UtxoGen.genEventAtChainPoint C.ChainPointAtGenesis
-  event1 <- forAll $ UtxoGen.genEventAtChainPoint (head chainpoints)
-  event2 <- forAll $ UtxoGen.genEventAtChainPoint (chainpoints !! 1)
-  event3 <- forAll $ UtxoGen.genEventAtChainPoint (chainpoints !! 2)
+  event0 <- forAll $ genEventWithShelleyAddressAtChainPoint C.ChainPointAtGenesis
+  event1 <- forAll $ genEventWithShelleyAddressAtChainPoint (head chainpoints)
+  event2 <- forAll $ genEventWithShelleyAddressAtChainPoint (chainpoints !! 1)
+  event3 <- forAll $ genEventWithShelleyAddressAtChainPoint (chainpoints !! 2)
   let events = [event0, event1, event2, event3]
   indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 2)
              >>= liftIO . Storable.insertMany [event0, event1, event2, event3]
@@ -283,12 +284,6 @@ propJsonRoundtripUtxoRow = property $ do
     utxoEvents <- forAll genUtxoEvents
     let utxoRows = concatMap Utxo.eventsToRows utxoEvents
     forM_ utxoRows $ \utxoRow -> Hedgehog.tripping utxoRow Aeson.encode Aeson.decode
-
-addressAnyToShelley
-  :: C.AddressAny
-  -> Maybe (C.Address C.ShelleyAddr)
-addressAnyToShelley  (C.AddressShelley a) = Just a
-addressAnyToShelley  _                    = Nothing
 
 getConn :: Storable.State Utxo.UtxoHandle -> SQL.Connection
 getConn  s =

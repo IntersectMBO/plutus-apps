@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          marconi-chain-index
-version:       1.1.0.0
+version:       1.2.0.0
 license:       Apache-2.0
 license-files:
   LICENSE
@@ -65,8 +65,8 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , marconi-core
+    , cardano-streaming  >=1.2.0
+    , marconi-core       >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -139,8 +139,8 @@ executable marconi-chain-index
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , marconi-chain-index
+    , cardano-streaming    >=1.2.0
+    , marconi-chain-index  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -171,8 +171,8 @@ library marconi-chain-index-test-lib
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , marconi-chain-index
+    , cardano-streaming    >=1.2.0
+    , marconi-chain-index  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -217,9 +217,9 @@ benchmark marconi-chain-index-bench
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , marconi-chain-index
-    , marconi-core
+    , cardano-streaming    >=1.2.0
+    , marconi-chain-index  >=1.2.0
+    , marconi-core         >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -267,10 +267,10 @@ test-suite marconi-chain-index-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming
-    , marconi-chain-index
-    , marconi-chain-index-test-lib
-    , marconi-core
+    , cardano-streaming             >=1.2.0
+    , marconi-chain-index           >=1.2.0
+    , marconi-chain-index-test-lib  >=1.2.0
+    , marconi-core                  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

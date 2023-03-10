@@ -63,7 +63,7 @@ mustBeSignedByContract paymentPubKey signedPubKey = do
             <> Constraints.unspentOutputs utxos
             <> Constraints.paymentPubKeyHash paymentPubKey
         tx2 =
-            Constraints.collectFromTheScript utxos signedPubKey
+            Constraints.spendUtxosFromTheScript utxos signedPubKey
             <> Constraints.mustIncludeDatumInTx unitDatum
             <> Constraints.mustBeSignedBy signedPubKey
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
@@ -86,7 +86,7 @@ withoutOffChainMustBeSignedByContract paymentPubKey signedPubKey = do
             <> Constraints.unspentOutputs utxos
             <> Constraints.paymentPubKeyHash paymentPubKey
         tx2 =
-            Constraints.collectFromTheScript utxos signedPubKey
+            Constraints.spendUtxosFromTheScript utxos signedPubKey
             <> Constraints.mustIncludeDatumInTx unitDatum
     logInfo @String $ "Required Signatories: " ++ show (Constraints.requiredSignatories tx2)
     ledgerTx2 <- submitTxConstraintsWith lookups2 tx2

@@ -322,3 +322,9 @@ txFeesExplicitInShelleyBasedEra shelleyBased =
       C.ShelleyBasedEraMary    -> C.TxFeesExplicitInMaryEra
       C.ShelleyBasedEraAlonzo  -> C.TxFeesExplicitInAlonzoEra
       C.ShelleyBasedEraBabbage -> C.TxFeesExplicitInBabbageEra
+
+addressAnyToShelley
+  :: C.AddressAny
+  -> Maybe (C.Address C.ShelleyAddr)
+addressAnyToShelley  (C.AddressShelley a) = Just a
+addressAnyToShelley  _                    = Nothing

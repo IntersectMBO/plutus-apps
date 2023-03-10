@@ -23,7 +23,6 @@
 
 module Wallet.Emulator.Wallet where
 
-import Cardano.Api (makeSignedTransaction)
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainState (_index))
 import Cardano.Node.Emulator.Fee qualified as Fee
@@ -48,7 +47,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe)
-import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
@@ -307,12 +305,10 @@ handleBalance ::
     => UnbalancedTx
     -> Eff effs CardanoTx
 handleBalance utx = do
-    params@Params { pNetworkId, emulatorPParams } <- getClientParams
+    params@Params { pNetworkId } <- getClientParams
     utxo <- get >>= ownOutputs
     mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure $ traverse (Tx.toTxOut pNetworkId) utxo
-    let eitherTx = U.unBalancedTxTx utx
-        requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-    unbalancedBodyContent <- either pure (handleError eitherTx . first Right . CardanoAPI.toCardanoTxBodyContent pNetworkId emulatorPParams requiredSigners) eitherTx
+    let unbalancedBodyContent = U.unBalancedCardanoBuildTx utx
     ownAddr <- gets ownAddress
     -- filter out inputs from utxo that are already in unBalancedTx
     let inputsOutRefs = map Tx.txInRef $ Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent
@@ -322,18 +318,17 @@ handleBalance utx = do
         params
         (UtxoIndex $ U.unBalancedTxUtxoIndex utx)
         ownAddr
-        (handleBalancingError eitherTx . Fee.utxoProviderFromWalletOutputs filteredUtxo)
-        (handleError eitherTx . Left)
+        (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs filteredUtxo)
+        (handleError utx . Left)
         unbalancedBodyContent
-    pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
+    pure $ Tx.CardanoEmulatorEraTx cTx
     where
-        handleError tx (Left (Left (ph, ve))) = do
+        handleError utx' (Left (Left (ph, ve))) = do
             tx' <- either (throwError . WAPI.ToCardanoError)
                            pure
-                 $ either (fmap (Tx.CardanoApiTx . Tx.CardanoApiEmulatorEraTx . makeSignedTransaction [])
-                          . CardanoAPI.makeTransactionBody Nothing mempty)
-                          (pure . Tx.EmulatorTx)
-                 $ tx
+                 $ fmap (Tx.CardanoEmulatorEraTx . C.makeSignedTransaction [])
+                          . CardanoAPI.makeTransactionBody Nothing mempty
+                 $ U.unBalancedCardanoBuildTx utx'
             logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty []
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
@@ -342,7 +337,7 @@ handleBalance utx = do
             $ T.unwords
                 [ "Total:", T.pack $ show total
                 , "expected:", T.pack $ show expected ]
-        handleBalancingError tx (Left (Fee.CardanoLedgerError e)) = handleError tx (Left e)
+        handleBalancingError utx' (Left (Fee.CardanoLedgerError e)) = handleError utx' (Left e)
         handleBalancingError _ (Right v) = pure v
 
 handleAddSignature ::
@@ -351,17 +346,14 @@ handleAddSignature ::
     )
     => CardanoTx
     -> Eff effs CardanoTx
-handleAddSignature tx = do
+handleAddSignature tx@(Tx.CardanoEmulatorEraTx ctx) = do
     msp <- gets _signingProcess
     case msp of
         Nothing -> do
             PaymentPrivateKey privKey <- gets ownPaymentPrivateKey
             pure $ Tx.addCardanoTxSignature privKey tx
         Just (SigningProcess sp) -> do
-            let ctx = case tx of
-                    Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
-                    _ -> error "handleAddSignature: Need a Cardano API Tx from the Alonzo era to get the required signers"
-                reqSigners = getRequiredSigners ctx
+            let reqSigners = getRequiredSigners ctx
             sp reqSigners tx
 
 ownOutputs :: forall effs.

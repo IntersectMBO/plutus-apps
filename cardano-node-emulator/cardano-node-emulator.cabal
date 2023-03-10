@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-node-emulator
-version:       1.1.0.0
+version:       1.2.0.0
 
 common lang
   default-language:   Haskell2010
@@ -40,9 +40,9 @@ library
   -- Local components
   --------------------
   build-depends:
-    , freer-extras         >=1.1.0
-    , plutus-ledger        >=1.1.0
-    , plutus-script-utils  >=1.1.0
+    , freer-extras         >=1.2.0
+    , plutus-ledger        >=1.2.0
+    , plutus-script-utils  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -96,9 +96,9 @@ test-suite cardano-node-emulator-test
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator  >=1.0.0
-    , plutus-ledger          >=1.0.0
-    , plutus-script-utils    >=1.0.0
+    , cardano-node-emulator  >=1.2.0
+    , plutus-ledger          >=1.2.0
+    , plutus-script-utils    >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

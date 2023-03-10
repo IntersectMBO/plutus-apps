@@ -17,6 +17,11 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module Wallet.Emulator.MultiAgent where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.Node.Emulator.Chain qualified as Chain
+import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, emptyTxBodyContent, signAll)
+import Cardano.Node.Emulator.Params (Params (..))
 import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
                      view, (&), (.~), (^.), (^..))
 import Control.Monad (join)
@@ -26,30 +31,27 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, handleObs
 import Control.Monad.Freer.Extras.Modify (handleZoomedState, raiseEnd, writeIntoState)
 import Control.Monad.Freer.State (State, get)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (def)
+import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
-import Prettyprinter (Pretty (pretty), colon, (<+>))
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator.Chain qualified as Chain
-import Cardano.Node.Emulator.Params (Params (..))
-import Cardano.Node.Emulator.Validation qualified as Validation
-import Data.Foldable (fold)
 import Ledger hiding (to, value)
 import Ledger.AddressMap qualified as AM
-import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
+import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
+import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusTx (toData)
+import Prettyprinter (Pretty (pretty), colon, (<+>))
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.NodeClient qualified as NC
@@ -292,19 +294,36 @@ to be an Ada-only output. To make sure we always have an Ada-only output availab
 we create 10 Ada-only outputs per wallet here.
 -}
 
+-- | cardano-ledger validation rules require the presence of inputs and
+-- we have to provide a stub TxIn for the genesis transaction.
+genesisTxIn :: C.TxIn
+genesisTxIn = C.TxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53" (C.TxIx 40214)
+
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Params -> Map PaymentPubKeyHash C.Value -> Either ToCardanoError EmulatorState
 emulatorStateInitialDist params mp = do
     minAdaEmptyTxOut <- mMinAdaTxOut
     outs <- traverse (mkOutputs minAdaEmptyTxOut) (Map.toList mp)
-    let tx = mempty
-           { txOutputs = concat outs
-           , txMint = fold mp
-           , txValidRange = WAPI.defaultSlotRange
+    validityRange <- C.toCardanoValidityRange WAPI.defaultSlotRange
+    mintWitness <- either (error . show) pure $ C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+                           <$> (C.PScript <$> C.toCardanoPlutusScript
+                                                  (C.AsPlutusScript C.AsPlutusScriptV2)
+                                                  (getMintingPolicy alwaysSucceedPolicy))
+                           <*> pure C.NoScriptDatumForMint
+                           <*> pure (C.fromPlutusData $ toData Script.unitRedeemer)
+                           <*> pure C.zeroExecutionUnits
+    let
+        txBodyContent = emptyTxBodyContent
+           { C.txIns = [ (genesisTxIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) ]
+           , C.txInsCollateral = C.TxInsCollateral C.CollateralInBabbageEra [genesisTxIn]
+           , C.txMintValue = C.TxMintValue C.MultiAssetInBabbageEra (fold $ Map.map CardanoAPI.noAdaValue mp)
+                              (C.BuildTxWith (Map.singleton alwaysSucceedPolicyId mintWitness))
+           , C.txOuts = Tx.getTxOut <$> concat outs
+           , C.txValidityRange = validityRange
            }
-        cUtxoIndex = either (error . show) id $ CardanoAPI.fromPlutusIndex mempty
-        cTx = Validation.fromPlutusTxSigned def cUtxoIndex tx CW.knownPaymentKeys
+    txBody <- either (error . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody txBodyContent
+    let cTx = signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
     pure $ emulatorStatePool [cTx]
     where
         -- we start with an empty TxOut and we adjust it to be sure that the contained Adas fit the size

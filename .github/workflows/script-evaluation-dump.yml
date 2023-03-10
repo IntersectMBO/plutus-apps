@@ -13,26 +13,26 @@ concurrency:
 jobs:
   script-evaluation-dump:
     runs-on: [ubuntu-latest]
-    timeout-minutes: 180
+    timeout-minutes: 360
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3.3.0
         with: 
           ref: zliu41/dump-1.35.4
-          
+
       - name: Quick Install Nix
         uses: nixbuild/nix-quick-install-action@v21 
         with: 
           nix_conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true 
-            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=
-            substituters = https://cache.iog.io https://cache.zw3rk.com
 
       - name: Create Dump
         run: |
-          nix-shell --run "./scripts/create-dump.sh"
+          nix-shell --run "./scripts/create-dump.sh" \
+            --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" \
+            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com" 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -44,7 +44,9 @@ jobs:
 
       - name: Upload Dump
         run: |
-          nix-shell --run "./scripts/upload-event-dump.sh ../mainnet-script-dump/*"
+          nix-shell --run "./scripts/upload-event-dump.sh ../mainnet-script-dump/*" \
+            --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" \
+            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com" 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
