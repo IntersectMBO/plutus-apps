@@ -281,7 +281,10 @@ epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
 mintBurnWorker_
   :: Int
   -> (MintBurn.TxMintEvent -> IO ())
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO b, MVar MintBurn.MintBurnIndexer)
+  -> Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO (IO b, MVar MintBurn.MintBurnIndexer)
 mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
   indexerMVar <- newMVar =<< MintBurn.open dbPath bufferSize
   let
@@ -305,44 +308,10 @@ mintBurnWorker onInsert coordinator path = do
   void $ forkIO loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
-filterIndexers
-  :: Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe TargetAddresses
-  -> Maybe FilePath
-  -> [(Worker, FilePath)]
-filterIndexers
-    utxoPath
-    addressDatumPath
-    datumPath
-    scriptTxPath
-    epochStakepoolSizePath
-    mintBurnPath
-    maybeTargetAddresses
-    maybeConfigPath =
-  mapMaybe liftMaybe pairs
-  where
-    liftMaybe (worker, maybePath) = fmap (worker,) maybePath
-    epochStakepoolSizeIndexer = case maybeConfigPath of
-      Just configPath -> [(epochStakepoolSizeWorker configPath, epochStakepoolSizePath)]
-      Nothing         -> []
-
-    pairs =
-        [ (utxoWorker (\_ -> pure ()) maybeTargetAddresses, utxoPath)
-        , (addressDatumWorker (\_ -> pure []) maybeTargetAddresses, addressDatumPath)
-        , (datumWorker, datumPath)
-        , (scriptTxWorker (\_ -> pure []), scriptTxPath)
-        , (mintBurnWorker (\_ -> pure ()), mintBurnPath)
-        ] <> epochStakepoolSizeIndexer
-
-startIndexers
+initializeIndexers
   :: [(Worker, FilePath)]
   -> IO ([ChainPoint], Coordinator)
-startIndexers indexers = do
+initializeIndexers indexers = do
   coordinator <- initialCoordinator $ length indexers
   startingPoints <- mapM (\(ix, fp) -> ix coordinator fp) indexers
   -- We want to use the set of points that are common to all indexers
@@ -370,14 +339,24 @@ mkIndexerStream coordinator = S.foldM_ step initial finish
     finish _ = pure ()
 
 runIndexers
-  :: FilePath -> Shelley.NetworkId -> [ChainPoint]
-  -> (S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r -> IO ())
+  :: FilePath
+  -> Shelley.NetworkId
+  -> ChainPoint
   -> TS.Text
+  -> [(Worker, Maybe FilePath)]
   -> IO ()
-runIndexers socketPath networkId chainPoints stream traceName = do
+runIndexers socketPath networkId cliChainPoint traceName list = do
+  (returnedCp, coordinator) <- initializeIndexers $ mapMaybe (traverse id) list
+
+  -- If the user specifies the chain point then use that,
+  -- otherwise use what the indexers provide.
+  let chainPoints = case cliChainPoint of
+        C.ChainPointAtGenesis -> returnedCp
+        cliCp                 -> [cliCp]
+
   c <- defaultConfigStdout
   withTrace c traceName $ \trace -> let
-      io = withChainSyncEventStream socketPath networkId chainPoints (stream . logging trace)
+      io = withChainSyncEventStream socketPath networkId chainPoints (mkIndexerStream coordinator . logging trace)
       handleException NoIntersectionFound =
         logError trace $
           renderStrict $

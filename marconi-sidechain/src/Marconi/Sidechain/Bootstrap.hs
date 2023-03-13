@@ -4,12 +4,13 @@
 --
 module Marconi.Sidechain.Bootstrap where
 
+import Cardano.Api qualified as C
 import Control.Concurrent.STM (atomically)
 import Control.Lens ((^.))
 import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
 import System.FilePath ((</>))
 
-import Marconi.ChainIndex.Indexers (mkIndexerStream, runIndexers, startIndexers, utxoWorker)
+import Marconi.ChainIndex.Indexers (runIndexers, utxoWorker)
 import Marconi.ChainIndex.Types (TargetAddresses, utxoDbName)
 import Marconi.Sidechain.Api.Query.Indexers.Utxo (UtxoIndexer, initializeEnv, writeTMVar')
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs), HasIndexerEnv (uiIndexer), HasSidechainEnv (queryEnv),
@@ -35,18 +36,15 @@ bootstrapIndexers
     :: CliArgs
     -> SidechainEnv
     -> IO ()
-bootstrapIndexers (CliArgs socket dbPath _ networkId targetAddresses) env = do
+bootstrapIndexers (CliArgs socketPath dbPath _ networkId targetAddresses) env = do
   let callbackIndexer :: UtxoIndexer -> IO ()
       callbackIndexer = atomically . writeTMVar' (env ^. queryEnv . uiIndexer)
-  (chainPointsToResumeFrom, coordinator) <-
-      startIndexers
-          [ ( utxoWorker callbackIndexer targetAddresses
-            , dbPath </> utxoDbName
-            )
-          ]
   runIndexers
-    socket
+    socketPath
     networkId
-    chainPointsToResumeFrom
-    (mkIndexerStream coordinator)
+    C.ChainPointAtGenesis
     "marconi-sidechain"
+    [ ( utxoWorker callbackIndexer targetAddresses
+      , Just (dbPath </> utxoDbName)
+      )
+    ]

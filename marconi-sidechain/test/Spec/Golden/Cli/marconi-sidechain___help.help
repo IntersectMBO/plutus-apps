@@ -1,12 +1,12 @@
-marconi - a lightweight customizable solution for indexing and querying the
-Cardano blockchain
+marconi-sidechain - a lightweight customizable solution for indexing and
+querying the Cardano blockchain
 
 Usage: marconi-sidechain [--version] (-s|--socket-path FILE-PATH)
                          (-d|--db-dir DIR) [--http-port HTTP-PORT] 
                          (--mainnet | --testnet-magic NATURAL) 
                          [(-a|--addresses-to-index BECH32-ADDRESS)]
 
-  marconi
+  marconi-sidechain
 
 Available options:
   -h,--help                Show this help text

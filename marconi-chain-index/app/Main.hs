@@ -1,33 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Cardano.Api qualified as C
 import Marconi.ChainIndex.CLI qualified as Cli
-import Marconi.ChainIndex.Indexers (filterIndexers, mkIndexerStream, runIndexers, startIndexers)
+import Marconi.ChainIndex.Indexers qualified as Indexers
 import System.Directory (createDirectoryIfMissing)
 
 main :: IO ()
 main = do
   o <- Cli.parseOptions
   createDirectoryIfMissing True (Cli.optionsDbPath o)
-  let indexers = filterIndexers (Cli.utxoDbPath o)
-                                (Cli.addressDatumDbPath o)
-                                (Cli.datumDbPath o)
-                                (Cli.scriptTxDbPath o)
-                                (Cli.epochStakepoolSizeDbPath o)
-                                (Cli.mintBurnDbPath o)
-                                (Cli.optionsTargetAddresses o)
-                                (Cli.optionsNodeConfigPath o)
-  (returnedCp, coordinator) <- startIndexers indexers
-  -- If the user specifies the chain point then use that,
-  -- otherwise use what the indexers provide.
-  let preferredChainPoints = case Cli.optionsChainPoint o of
-        C.ChainPointAtGenesis -> returnedCp
-        cliCp                 -> [cliCp]
+  let
+    maybeTargetAddresses = Cli.optionsTargetAddresses o
+    indexers =
+      [ (Indexers.utxoWorker (\_ -> pure ()) maybeTargetAddresses, Cli.utxoDbPath o)
+      , (Indexers.addressDatumWorker (\_ -> pure []) maybeTargetAddresses, Cli.addressDatumDbPath o)
+      , (Indexers.datumWorker, Cli.datumDbPath o)
+      , (Indexers.scriptTxWorker (\_ -> pure []), Cli.scriptTxDbPath o)
+      , (Indexers.mintBurnWorker (\_ -> pure ()), Cli.mintBurnDbPath o)
+      ] <> case Cli.optionsNodeConfigPath o of
+      Just configPath ->
+        [(Indexers.epochStakepoolSizeWorker configPath, Cli.epochStakepoolSizeDbPath o)]
+      Nothing         -> []
 
-  runIndexers
+  Indexers.runIndexers
     (Cli.optionsSocketPath o)
     (Cli.optionsNetworkId o)
-    preferredChainPoints
-    (mkIndexerStream coordinator)
+    (Cli.optionsChainPoint o)
     "marconi"
+    indexers

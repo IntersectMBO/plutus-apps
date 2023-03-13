@@ -140,11 +140,6 @@ executable marconi-chain-index
   --------------------
   build-depends:  marconi-chain-index >=1.2.0
 
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:  cardano-api
-
   ------------------------
   -- Non-IOG dependencies
   ------------------------
