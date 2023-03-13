@@ -214,7 +214,6 @@ benchmark marconi-chain-index-bench
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming    >=1.2.0
     , marconi-chain-index  >=1.2.0
     , marconi-core         >=1.2.0
 
@@ -283,6 +282,7 @@ test-suite marconi-chain-index-test
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
 
   ------------------------
   -- Non-IOG dependencies
