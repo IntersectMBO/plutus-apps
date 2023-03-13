@@ -22,10 +22,18 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (SubmitFa
 
 deriving instance Show QueryConvenienceError
 
+newtype SubmitError = SubmitError String
+
 -- | Check whether the auto-balancing txbody build (constructBalancedTx) resulted in an error
-isTxBodyScriptExecutionError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
-isTxBodyScriptExecutionError expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` (show m)
+isTxBodyScriptExecutionError, isTxBodyNonAdaError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
+isTxBodyScriptExecutionError expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` show m
 isTxBodyScriptExecutionError _ _                                                   = False
+isTxBodyNonAdaError expectedError (Left (C.TxBodyErrorNonAdaAssetsUnbalanced m)) = expectedError `isInfixOf` show m
+isTxBodyNonAdaError _ _                                                          = False
+
+isSubmitError :: String -> Either SubmitError () -> Bool
+isSubmitError expectedError (Left (SubmitError error)) = expectedError `isInfixOf` error
+isSubmitError _ _                                      = False
 
 -- | Any CardanoEra to one that supports tokens. Used for building TxOut.
 multiAssetSupportedInEra :: C.CardanoEra era -> C.MultiAssetSupportedInEra era
@@ -119,8 +127,6 @@ scriptDataSupportedInEra = fromMaybe . C.scriptDataSupportedInEra
   where
     fromMaybe Nothing  = error "Era must support script data"
     fromMaybe (Just e) = e
-
-
 
 -- | Empty transaction body to begin building from.
 emptyTxBodyContent :: C.CardanoEra era -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx era
@@ -258,10 +264,16 @@ buildTx' era txBody changeAddress sKey networkId = do
   where
     allInputs :: [C.TxIn]
     allInputs = do
-      let txIns = (fst <$> C.txIns txBody)
-      case C.txInsReference txBody of
-        C.TxInsReferenceNone        -> txIns
-        C.TxInsReference _ refTxIns -> txIns ++ refTxIns
+      let
+        txIns = fst <$> C.txIns txBody
+        colTxIns = case C.txInsCollateral txBody of
+          C.TxInsCollateralNone        -> []
+          C.TxInsCollateral _ colTxIns -> colTxIns
+        refTxIns = case C.txInsReference txBody of
+          C.TxInsReferenceNone        -> []
+          C.TxInsReference _ refTxIns -> refTxIns
+
+      txIns ++ colTxIns ++ refTxIns
 
 -- | Build txbody with no calculated change, fees or execution unit
 buildRawTx :: (MonadTest m) =>
@@ -294,3 +306,19 @@ submitTx era localNodeConnectInfo tx = do
     failOnTxSubmitFail = \case
       SubmitFail reason -> H.failMessage GHC.callStack $ "Transaction failed: " <> show reason
       SubmitSuccess     -> pure ()
+
+submitTx' ::
+  (MonadIO m, MonadTest m) =>
+  C.CardanoEra era ->
+  C.LocalNodeConnectInfo C.CardanoMode ->
+  C.Tx era ->
+  m (Either SubmitError ())
+submitTx' era localNodeConnectInfo tx = do
+  submitResult :: SubmitResult (C.TxValidationErrorInMode C.CardanoMode) <-
+    liftIO $ C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx (toEraInCardanoMode era)
+  returnErrorOnTxSubmitFail submitResult
+  where
+    returnErrorOnTxSubmitFail :: (Show a, MonadTest m) => SubmitResult a -> m (Either SubmitError ())
+    returnErrorOnTxSubmitFail = \case
+      SubmitFail reason -> pure $ Left $ SubmitError $ show reason
+      SubmitSuccess     -> pure $ Right ()

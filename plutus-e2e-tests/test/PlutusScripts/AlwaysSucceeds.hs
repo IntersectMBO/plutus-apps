@@ -14,6 +14,7 @@ module PlutusScripts.AlwaysSucceeds (
   , alwaysSucceedAssetIdV1
   , alwaysSucceedAssetIdV2
   , alwaysSucceedMintWitnessV1
+  , alwaysSucceedMintWitnessV1'
   , alwaysSucceedMintWitnessV2
   , alwaysSucceedMintWitnessV2'
   , alwaysSucceedPolicyTxInfoRedeemerV2
@@ -72,6 +73,13 @@ alwaysSucceedMintWitnessV1 era Nothing =
 alwaysSucceedMintWitnessV1 era (Just refTxIn) =
     (policyIdV1 alwaysSucceedPolicy,
      mintScriptWitness era plutusL1 (Right refTxIn) (toScriptData ()))
+
+alwaysSucceedMintWitnessV1' :: C.CardanoEra era
+  -> C.ExecutionUnits
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+alwaysSucceedMintWitnessV1'  era exunits =
+  (policyIdV1 alwaysSucceedPolicy,
+   mintScriptWitness' era plutusL1 (Left alwaysSucceedPolicyScriptV1) (toScriptData ()) exunits)
 
 -- | Witness token mint for including in txbody's txMintValue
 -- Use Nothing to include script in witness, else provide TxIn to reference script

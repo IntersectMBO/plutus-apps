@@ -9,7 +9,8 @@
 module Spec.AlonzoFeatures (
     checkTxInfoV1Test,
     datumHashSpendTest,
-    mintBurnTest
+    mintBurnTest,
+    collateralContainsTokenTest
     ) where
 
 import Cardano.Api qualified as C
@@ -229,4 +230,72 @@ mintBurnTest networkOptions TestParams{..} = do
 
   H.success
 
--- TODO: collateral contains non ada test
+collateralContainsTokenTest :: (MonadTest m, MonadIO m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  m ()
+collateralContainsTokenTest networkOptions TestParams{..} = do
+
+  C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
+  (w1SKey, _, w1Address) <- TN.w1 tempAbsPath networkId
+
+  -- build a transaction to mint tokens
+
+  txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
+
+  let
+    tokenValues = C.valueFromList [(PS.alwaysSucceedAssetIdV1, 1)]
+    mintWitnesses = Map.fromList [PS.alwaysSucceedMintWitnessV1 era Nothing]
+    collateral = Tx.txInsCollateral era [txIn]
+    txOut = Tx.txOut era (C.lovelaceToValue 10_000_000 <> tokenValues) w1Address
+    otherTxOut = Tx.txOut era (C.lovelaceToValue 8_000_000) w1Address
+
+    txBodyContent = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = Tx.pubkeyTxIns [txIn]
+      , C.txInsCollateral = collateral
+      , C.txMintValue = Tx.txMintValue era tokenValues mintWitnesses
+      , C.txOuts = [txOut, otherTxOut]
+      }
+
+  signedTx <- Tx.buildTx era txBodyContent w1Address w1SKey networkId
+  Tx.submitTx era localNodeConnectInfo signedTx
+  let expectedTxIn = Tx.txIn (Tx.txId signedTx) 0
+      otherTxIn = Tx.txIn (Tx.txId signedTx) 1
+  -- Query for txo and assert it contains newly minted token
+  resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- getTxOutAtAddress"
+  H.annotate $ show resultTxOut
+  txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
+  H.assert txOutHasTokenValue
+
+  -- build a transaction to mint again but using a collateral input that contains a native token
+
+  (C.TxOut _ txInValue _ _) <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address otherTxIn "(C.TxOut _ txInValue _ _) <- getTxOutAtAddress"
+  let
+    txInWithToken = expectedTxIn
+    collateral2 = Tx.txInsCollateral era [txInWithToken]
+    executionUnits2 = C.ExecutionUnits {C.executionSteps = 100_000_000, C.executionMemory = 1_000_000 }
+    mintWitnesses2 = Map.fromList [PS.alwaysSucceedMintWitnessV1' era executionUnits2]
+    totalLovelace = C.txOutValueToLovelace txInValue
+    fee = 1_500_000 :: C.Lovelace
+    amountPaid = 5_000_000
+    amountReturned = totalLovelace - amountPaid - fee
+    txOut2 = Tx.txOut era (C.lovelaceToValue amountPaid <> tokenValues) w1Address
+    txOut3 = Tx.txOut era (C.lovelaceToValue amountReturned) w1Address
+    txBodyContent2 = (Tx.emptyTxBodyContent era pparams)
+      { C.txIns = Tx.pubkeyTxIns [otherTxIn]
+      , C.txInsCollateral = collateral2
+      , C.txFee = Tx.txFee era fee
+      , C.txMintValue = Tx.txMintValue era tokenValues mintWitnesses2
+      , C.txOuts = [txOut2, txOut3]
+      }
+  txbody <- Tx.buildRawTx era txBodyContent2
+  kw <- Tx.signTx era txbody w1SKey
+  let signedTx2 = C.makeSignedTransaction [kw] txbody
+
+  eitherSubmit <- Tx.submitTx' era localNodeConnectInfo signedTx2
+  H.assert $ Tx.isSubmitError "CollateralContainsNonADA" eitherSubmit
+
+  H.success
+
+-- TODO: test when collateral input is missing (TxBodyEmptyTxInsCollateral)
+-- TODO: test when too many collateral inputs
