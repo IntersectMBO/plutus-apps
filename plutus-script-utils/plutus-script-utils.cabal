@@ -85,7 +85,7 @@ library
   --------------------------
   build-depends:
     , cardano-api            >=1.35
-    , cardano-ledger-alonzo
+    , cardano-ledger-alonzo  ^>=0.1.0.0
     , plutus-core            >=1.0.0
     , plutus-ledger-api      >=1.0.0
     , plutus-tx              >=1.0.0
@@ -95,14 +95,14 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
-    , base           >=4.9 && <5
-    , bytestring
-    , mtl
-    , prettyprinter
-    , serialise
-    , tagged
-    , text
+    , aeson          ^>=2.0.1.0
+    , base           >=4.9       && <5
+    , bytestring     ^>=0.10.12.0
+    , mtl            ^>=2.2.2
+    , prettyprinter  ^>=1.7.1
+    , serialise      ^>=0.2.6.0
+    , tagged         ^>=0.8.7
+    , text           ^>=1.2.4.1
 
   -- TODO This needs to be changed to 1.35 once cardano-node creates the tag
   ghc-options:      -fprint-potential-instances

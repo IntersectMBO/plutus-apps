@@ -116,18 +116,18 @@ library
   --------------------------
   build-depends:
     , cardano-api                  >=1.35
-    , cardano-binary
-    , cardano-crypto
-    , cardano-crypto-class
-    , cardano-ledger-alonzo
-    , cardano-ledger-babbage
-    , cardano-ledger-byron
-    , cardano-ledger-core
-    , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
-    , cardano-slotting
-    , iohk-monitoring
-    , ouroboros-consensus-shelley
+    , cardano-binary               ^>=1.5.0
+    , cardano-crypto               ^>=1.1.1
+    , cardano-crypto-class         ^>=2.0.0.0.1
+    , cardano-ledger-alonzo        ==0.1.0.0
+    , cardano-ledger-babbage       ==0.1.0.0
+    , cardano-ledger-byron         ==0.1.0.0
+    , cardano-ledger-core          ==0.1.0.0
+    , cardano-ledger-shelley       ==0.1.0.0
+    , cardano-ledger-shelley-ma    ==0.1.0.0
+    , cardano-slotting             ^>=0.1.0.2
+    , iohk-monitoring              ^>=0.1.11.1
+    , ouroboros-consensus-shelley  ^>=0.1.0.1
     , plutus-core                  >=1.0.0
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0
@@ -139,32 +139,32 @@ library
   -- has been bumped to include the instance of Ord for AddressInEra
   -- defined there.
   build-depends:
-    , aeson
-    , base                      >=4.9  && <5
-    , base16-bytestring
-    , bytestring
-    , cborg
-    , containers
-    , cryptonite                >=0.25
-    , flat
-    , hashable
-    , http-api-data
-    , lens
-    , memory
-    , mtl
-    , newtype-generics
-    , prettyprinter
-    , quickcheck-contractmodel
-    , scientific
-    , serialise
-    , servant
-    , strict-containers
-    , tagged
-    , template-haskell
-    , text
-    , time-units
-    , transformers
-    , vector
+    , aeson                     ^>=2.0.3.0
+    , base                      >=4.9             && <5
+    , base16-bytestring         ^>=1.0.2.0
+    , bytestring                ^>=0.10.12.0
+    , cborg                     ^>=0.2.8
+    , containers                ^>=0.6.5.1
+    , cryptonite                >=0.25            && <0.28
+    , flat                      ^>=0.4.4.0.0.0.0.2
+    , hashable                  ^>=1.3.5.0
+    , http-api-data             ^>=0.5
+    , lens                      ^>=5.2.1
+    , memory                    ^>=0.18.0
+    , mtl                       ^>=2.2.2
+    , newtype-generics          ^>=0.6.2
+    , prettyprinter             ^>=1.7.1
+    , quickcheck-contractmodel  ^>=0.1.2.0
+    , scientific                ^>=0.3.7.0
+    , serialise                 ^>=0.2.6.0
+    , servant                   ^>=0.19.1
+    , strict-containers         ^>=0.1.0.0
+    , tagged                    ^>=0.8.7
+    , template-haskell          ^>=2.16.0.0
+    , text                      ^>=1.2.4.1
+    , time-units                ^>=1.0.0
+    , transformers              ^>=0.5.6.2
+    , vector                    ^>=0.12.3.1
 
   ghc-options:        -fprint-potential-instances
 

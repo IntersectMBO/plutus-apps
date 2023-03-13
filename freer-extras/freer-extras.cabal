@@ -55,28 +55,28 @@ library
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:   iohk-monitoring
+  build-depends:   iohk-monitoring ^>=0.1.11.1
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson
-    , base               >=4.7 && <5
-    , beam-core
-    , beam-postgres
-    , beam-sqlite
-    , containers
-    , data-default
-    , freer-simple
-    , lens
-    , mtl
-    , postgresql-simple
-    , prettyprinter
-    , resource-pool
-    , sqlite-simple
-    , streaming
-    , text
+    , aeson              ^>=2.0.1.0
+    , base               >=4.7      && <5
+    , beam-core          ^>=0.10.0.0
+    , beam-postgres      ^>=0.5.3.0
+    , beam-sqlite        ^>=0.5.2.0
+    , containers         ^>=0.6.5.1
+    , data-default       ^>=0.7.1.1
+    , freer-simple       ^>=1.2.1.2
+    , lens               ^>=5.2.1
+    , mtl                ^>=2.2.2
+    , postgresql-simple  ^>=0.6.5
+    , prettyprinter      ^>=1.7.1
+    , resource-pool      ^>=0.4.0.0
+    , sqlite-simple      ^>=0.4.18.2
+    , streaming          ^>=0.2.3.1
+    , text               ^>=1.2.4.1
 
 test-suite freer-extras-test
   import:         lang
@@ -96,7 +96,7 @@ test-suite freer-extras-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base            >=4.7 && <5
+    , base             >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
@@ -109,4 +109,4 @@ test-suite freer-extras-test
     , semigroups
     , sqlite-simple
     , tasty
-    , tasty-hedgehog
+    , tasty-hedgehog1
