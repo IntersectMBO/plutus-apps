@@ -55,16 +55,13 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming                                    >=1.2.0
     , marconi-chain-index:{marconi-chain-index, json-rpc}  >=1.2.0
     , marconi-core                                         >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:
-    , cardano-api
-    , iohk-monitoring
+  build-depends:   cardano-api
 
   ------------------------
   -- Non-IOG dependencies
@@ -75,7 +72,6 @@ library
     , filepath
     , lens
     , optparse-applicative
-    , prettyprinter
     , servant
     , servant-server
     , stm                   >=2.5

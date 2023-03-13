@@ -1,21 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 
-module Marconi.ChainIndex.CLI
-    (chainPointParser
-    , multiString
-    , parseCardanoAddresses
-    , pNetworkId
-    , Options (..)
-    , optionsParser
-    , programParser
-    , parseOptions
-    , utxoDbPath
-    , addressDatumDbPath
-    , datumDbPath
-    , scriptTxDbPath
-    , epochStakepoolSizeDbPath
-    , mintBurnDbPath
-    ) where
+module Marconi.ChainIndex.CLI where
 
 import Control.Applicative (optional, some)
 import Data.ByteString.Char8 qualified as C8
@@ -36,18 +21,24 @@ import Marconi.ChainIndex.Types (TargetAddresses, addressDatumDbName, datumDbNam
 
 chainPointParser :: Opt.Parser C.ChainPoint
 chainPointParser =
-  pure C.ChainPointAtGenesis
-    Opt.<|> ( C.ChainPoint
-            <$> Opt.option (C.SlotNo <$> Opt.auto) (Opt.long "slot-no"
-                                                    <> Opt.short 'n'
-                                                    <> Opt.metavar "SLOT-NO")
-            <*> Opt.option
-              (Opt.maybeReader maybeParseHashBlockHeader Opt.<|> Opt.readerError "Malformed block hash")
-              (Opt.long "block-hash"
-               <> Opt.short 'b'
-               <> Opt.metavar "BLOCK-HASH")
-        )
+  pure C.ChainPointAtGenesis Opt.<|> (C.ChainPoint <$> slotNoParser <*> blockHeaderHashParser)
   where
+    blockHeaderHashParser :: Opt.Parser (C.Hash C.BlockHeader)
+    blockHeaderHashParser =
+        Opt.option
+            (Opt.maybeReader maybeParseHashBlockHeader Opt.<|> Opt.readerError "Malformed block header hash")
+            (  Opt.long "block-header-hash"
+            <> Opt.short 'b'
+            <> Opt.metavar "BLOCK-HEADER-HASH"
+            )
+    slotNoParser :: Opt.Parser C.SlotNo
+    slotNoParser =
+        Opt.option
+            (C.SlotNo <$> Opt.auto)
+            (  Opt.long "slot-no"
+            <> Opt.short 'n'
+            <> Opt.metavar "SLOT-NO"
+            )
     maybeParseHashBlockHeader :: String -> Maybe (C.Hash C.BlockHeader)
     maybeParseHashBlockHeader =
       either (const Nothing) Just
@@ -105,97 +96,141 @@ parseCardanoAddresses =  nub
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
 data Options = Options
-  { optionsSocketPath           :: String,
-    optionsNetworkId            :: NetworkId,
-    optionsChainPoint           :: ChainPoint,
-    optionsDbPath               :: FilePath,    -- ^ SQLite database directory path
-    optionsDisableUtxo          :: Bool,
-    optionsDisableAddressDatum  :: Bool,
-    optionsDisableDatum         :: Bool,
-    optionsDisableScript        :: Bool,
-    optionsDisableStakepoolSize :: Bool,
-    optionsDisableMintBurn      :: Bool,
-    optionsTargetAddresses      :: Maybe TargetAddresses,
-    optionsNodeConfigPath       :: Maybe FilePath
+  { optionsSocketPath           :: !String,
+    optionsNetworkId            :: !NetworkId,
+    optionsChainPoint           :: !ChainPoint,
+    optionsDbPath               :: !FilePath,    -- ^ SQLite database directory path
+    optionsDisableUtxo          :: !Bool,
+    optionsDisableAddressDatum  :: !Bool,
+    optionsDisableDatum         :: !Bool,
+    optionsDisableScript        :: !Bool,
+    optionsDisableStakepoolSize :: !Bool,
+    optionsDisableMintBurn      :: !Bool,
+    optionsTargetAddresses      :: !(Maybe TargetAddresses),
+    optionsNodeConfigPath       :: !(Maybe FilePath)
   }
   deriving (Show)
 
 parseOptions :: IO Options
-parseOptions = do
-    maybeSha <- lookupEnv "GITHUB_SHA"
-    let sha = fromMaybe "GIHUB_SHA environment variable not set!" maybeSha
-    Opt.execParser $ programParser sha
+parseOptions = getGitSha >>= Opt.execParser . programParser
 
 programParser :: String -> Opt.ParserInfo Options
-programParser sha =
-  Opt.info (Opt.helper
-            <*> versionOption
-            <*> optionsParser)
-  (Opt.fullDesc
-   <> Opt.progDesc "marconi"
-   <> Opt.header
-   "marconi - a lightweight customizable solution for indexing and querying the Cardano blockchain"
-  )
-  where
-    versionOption =
-      Opt.infoOption sha (Opt.long "version" <> Opt.help "Show git SHA")
+programParser gitSha = Opt.info
+  (Opt.helper <*> commonVersionOption gitSha <*> optionsParser)
+  (marconiDescr "marconi")
 
 optionsParser :: Opt.Parser Options
 optionsParser =
   Options
-    <$> Opt.strOption (Opt.long "socket-path"
-                       <> Opt.short 's'
-                       <> Opt.help "Path to node socket.")
+    <$> commonSocketPath
     <*> pNetworkId
     <*> chainPointParser
-    <*> Opt.strOption (Opt.long "database-directory-path"
-                      <> Opt.short 'd'
-                      <> Opt.help "Dirctory Path for SQLite database.")
-    <*> Opt.switch (Opt.long "disable-utxo"
-                      <> Opt.help "disable utxo indexers."
-                     )
-    <*> Opt.switch (Opt.long "disable-address-datum"
-                      <> Opt.help "disable address->datum indexers."
-                     )
-    <*> Opt.switch (Opt.long "disable-datum"
-                      <> Opt.help "disable datum indexers."
-                     )
-    <*> Opt.switch (Opt.long "disable-script-tx"
-                      <> Opt.help "disable script-tx indexers."
-                     )
-    <*> Opt.switch (Opt.long "disable-epoch-stakepool-size"
-                      <> Opt.help "disable epoch stakepool size indexers."
-                     )
-    <*> Opt.switch (Opt.long "disable-mintburn"
-                      <> Opt.help "disable mint/burn indexers."
-                     )
-    <*> optAddressesParser (Opt.long "addresses-to-index"
-                            <> Opt.short 'a'
-                            <> Opt.help ("Becch32 Shelley addresses to index."
-                                   <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
-    <*> (optional $ Opt.strOption
-         $ Opt.long "node-config-path"
-          <> Opt.help "Path to node configuration which you are connecting to.")
+    <*> commonDbDir
+    <*> Opt.switch (  Opt.long "disable-utxo"
+                   <> Opt.help "disable utxo indexers."
+                   )
+    <*> Opt.switch (  Opt.long "disable-address-datum"
+                   <> Opt.help "disable address->datum indexers."
+                   )
+    <*> Opt.switch (  Opt.long "disable-datum"
+                   <> Opt.help "disable datum indexers."
+                   )
+    <*> Opt.switch (  Opt.long "disable-script-tx"
+                   <> Opt.help "disable script-tx indexers."
+                   )
+    <*> Opt.switch (  Opt.long "disable-epoch-stakepool-size"
+                   <> Opt.help "disable epoch stakepool size indexers."
+                   )
+    <*> Opt.switch (  Opt.long "disable-mintburn"
+                   <> Opt.help "disable mint/burn indexers."
+                   )
+    <*> commonMaybeTargetAddress
+    <*> (optional
+            $ Opt.strOption
+            $ Opt.long "node-config-path"
+                <> Opt.help "Path to node configuration which you are connecting to.")
 
-optAddressesParser :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr] -> Opt.Parser (Maybe TargetAddresses)
+optAddressesParser
+    :: Opt.Mod Opt.OptionFields [C.Address C.ShelleyAddr]
+    -> Opt.Parser (Maybe TargetAddresses)
 optAddressesParser =  optional . multiString
 
 -- * Database paths
 
 utxoDbPath :: Options -> Maybe FilePath
-utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
+utxoDbPath o =
+    if optionsDisableUtxo o
+       then Nothing
+       else Just (optionsDbPath o </> utxoDbName)
 
 addressDatumDbPath :: Options -> Maybe FilePath
-addressDatumDbPath o = if optionsDisableAddressDatum o then Nothing; else Just (optionsDbPath o </> addressDatumDbName)
+addressDatumDbPath o =
+    if optionsDisableAddressDatum o
+       then Nothing
+       else Just (optionsDbPath o </> addressDatumDbName)
 
 datumDbPath :: Options -> Maybe FilePath
-datumDbPath o = if optionsDisableDatum o then Nothing; else Just (optionsDbPath o </> datumDbName)
+datumDbPath o =
+    if optionsDisableDatum o
+       then Nothing
+       else Just (optionsDbPath o </> datumDbName)
 
 scriptTxDbPath :: Options -> Maybe FilePath
-scriptTxDbPath o = if optionsDisableScript o then Nothing; else Just (optionsDbPath o </> scriptTxDbName)
+scriptTxDbPath o =
+    if optionsDisableScript o
+       then Nothing
+       else Just (optionsDbPath o </> scriptTxDbName)
 
 epochStakepoolSizeDbPath :: Options -> Maybe FilePath
-epochStakepoolSizeDbPath o = if optionsDisableStakepoolSize o then Nothing else Just (optionsDbPath o </> epochStakepoolSizeDbName)
+epochStakepoolSizeDbPath o =
+    if optionsDisableStakepoolSize o
+       then Nothing
+       else Just (optionsDbPath o </> epochStakepoolSizeDbName)
 
 mintBurnDbPath :: Options -> Maybe FilePath
-mintBurnDbPath o = if optionsDisableMintBurn o then Nothing else Just (optionsDbPath o </> mintBurnDbName)
+mintBurnDbPath o =
+    if optionsDisableMintBurn o
+       then Nothing
+       else Just (optionsDbPath o </> mintBurnDbName)
+
+-- * Common CLI parsers for other derived programs.
+
+commonSocketPath :: Opt.Parser String
+commonSocketPath = Opt.strOption $ Opt.long "socket-path"
+  <> Opt.short 's'
+  <> Opt.help "Path to node socket."
+  <> Opt.metavar "FILE-PATH"
+
+commonDbDir :: Opt.Parser String
+commonDbDir = Opt.strOption
+   $ Opt.short 'd'
+  <> Opt.long "db-dir"
+  <> Opt.metavar "DIR"
+  <> Opt.help "Directory path where all SQLite databases are located."
+
+commonVersionOption :: String -> Opt.Parser (a -> a)
+commonVersionOption sha = Opt.infoOption sha $ Opt.long "version" <> Opt.help "Show git SHA"
+
+getGitSha :: IO String
+getGitSha = fromMaybe "GIHUB_SHA environment variable not set!" <$> lookupEnv "GITHUB_SHA"
+
+marconiDescr :: String -> Opt.InfoMod a
+marconiDescr programName = Opt.fullDesc
+  <> Opt.progDesc programName
+  <> Opt.header
+  (programName <> " - a lightweight customizable solution for indexing and querying the Cardano blockchain")
+
+commonMaybePort :: Opt.Parser (Maybe Int)
+commonMaybePort = Opt.optional $ Opt.option Opt.auto
+   $ Opt.long "http-port"
+  <> Opt.metavar "HTTP-PORT"
+  <> Opt.help "JSON-RPC http port number, default is port 3000."
+
+commonMaybeTargetAddress :: Opt.Parser (Maybe TargetAddresses)
+commonMaybeTargetAddress = Opt.optional $ multiString
+   $ Opt.long "addresses-to-index"
+  <> Opt.short 'a'
+  <> Opt.metavar "BECH32-ADDRESS"
+  <> Opt.help
+     "Bech32 Shelley addresses to index. \
+     \ i.e \"--address-to-index address-1 --address-to-index address-2 ...\""

@@ -1,23 +1,24 @@
-marconi - a lightweight customizable solution for indexing and querying the
-Cardano blockchain
+marconi-sidechain - a lightweight customizable solution for indexing and
+querying the Cardano blockchain
 
-Usage: marconi-sidechain [--version] --socket-path FILE-PATH --db-dir DIR 
-                         [--http-port HTTP-PORT] 
+Usage: marconi-sidechain [--version] (-s|--socket-path FILE-PATH)
+                         (-d|--db-dir DIR) [--http-port HTTP-PORT] 
                          (--mainnet | --testnet-magic NATURAL) 
-                         [(--addresses-to-index BECH32-ADDRESS)]
+                         [(-a|--addresses-to-index BECH32-ADDRESS)]
 
   marconi-sidechain
 
 Available options:
   -h,--help                Show this help text
   --version                Show git SHA
-  --socket-path FILE-PATH  Socket path to node
-  --db-dir DIR             Directory path that will contain all the SQLite
-                           databases
+  -s,--socket-path FILE-PATH
+                           Path to node socket.
+  -d,--db-dir DIR          Directory path where all SQLite databases are
+                           located.
   --http-port HTTP-PORT    JSON-RPC http port number, default is port 3000.
   --mainnet                Use the mainnet magic id.
   --testnet-magic NATURAL  Specify a testnet magic id.
-  --addresses-to-index BECH32-ADDRESS
+  -a,--addresses-to-index BECH32-ADDRESS
                            Bech32 Shelley addresses to index. i.e
                            "--address-to-index address-1 --address-to-index
                            address-2 ..."

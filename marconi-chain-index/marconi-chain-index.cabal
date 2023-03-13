@@ -138,24 +138,14 @@ executable marconi-chain-index
   --------------------
   -- Local components
   --------------------
-  build-depends:
-    , cardano-streaming    >=1.2.0
-    , marconi-chain-index  >=1.2.0
-
-  --------------------------
-  -- Other IOG dependencies
-  --------------------------
-  build-depends:
-    , cardano-api
-    , iohk-monitoring
+  build-depends:  marconi-chain-index >=1.2.0
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base           >=4.9 && <5
+    , base       >=4.9 && <5
     , directory
-    , prettyprinter
 
 library marconi-chain-index-test-lib
   import:          lang
@@ -224,7 +214,6 @@ benchmark marconi-chain-index-bench
   -- Local components
   --------------------
   build-depends:
-    , cardano-streaming    >=1.2.0
     , marconi-chain-index  >=1.2.0
     , marconi-core         >=1.2.0
 

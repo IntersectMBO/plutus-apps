@@ -29,7 +29,6 @@ module Main (main) where
 
 import Cardano.Api qualified as C
 import Cardano.Chain.Slotting (EpochSlots (EpochSlots))
-import Cardano.Streaming (withChainSyncEventStream)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM (STM, TMVar, atomically, newEmptyTMVar, putTMVar, readTMVar, tryTakeTMVar)
@@ -45,7 +44,7 @@ import Database.SQLite.Simple.FromField (FromField)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow)
 import GHC.Generics (Generic)
-import Marconi.ChainIndex.Indexers (mkIndexerStream, startIndexers, utxoWorker)
+import Marconi.ChainIndex.Indexers (runIndexers, utxoWorker)
 import Marconi.ChainIndex.Indexers.Utxo (StorableQuery (UtxoAddress), StorableResult (UtxoResult, getUtxoResult),
                                          UtxoHandle, UtxoIndexer)
 import Marconi.Core.Storable (QueryInterval (QEverything))
@@ -97,17 +96,16 @@ runIndexerSyncing
 runIndexerSyncing databaseDir nodeSocketPath indexerTVar = do
     let callbackUtxoIndexer :: UtxoIndexer -> IO ()
         callbackUtxoIndexer utxoIndexer = atomically $ writeTMVar indexerTVar utxoIndexer
-    (chainPointsToResumeFrom, coordinator) <-
-      startIndexers
+    let indexers =
           [ ( utxoWorker callbackUtxoIndexer Nothing
-            , databaseDir </> utxoDbFileName
+            , Just $ databaseDir </> utxoDbFileName
             )
           ]
-    let indexers = mkIndexerStream coordinator
-    withChainSyncEventStream
+    runIndexers
         nodeSocketPath
         (C.Testnet $ C.NetworkMagic 1) -- TODO Needs to be passed a CLI param
-        chainPointsToResumeFrom
+        C.ChainPointAtGenesis
+        "marconi"
         indexers
 
 tests
