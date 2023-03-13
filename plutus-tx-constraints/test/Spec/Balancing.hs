@@ -5,15 +5,19 @@
 module Spec.Balancing(tests) where
 
 import Control.Lens ((&), (^.))
+import Control.Monad.RWS.Strict (ask, evalRWS)
 import Data.Default (def)
-import Data.Foldable (traverse_)
+import Data.Foldable (for_)
 import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.Plain
+import Cardano.Node.Emulator.MTL
+import Data.Map (Map)
+import Data.Sequence (Seq)
 import Ledger (CardanoAddress, unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.AddressMap qualified as AM
@@ -49,50 +53,60 @@ mkTx params lookups constraints =
   & Constraints.adjustUnbalancedTx (E.emulatorPParams params)
   & either (error . show) snd
 
-submitTxConfirmed :: Constraints.UnbalancedTx -> CardanoAddress -> PlainEmulator -> PlainEmulator
-submitTxConfirmed (Constraints.UnbalancedCardanoTx utx utxoIndex) addr pe =
+submitTxConfirmed :: MonadEmulator m => Constraints.UnbalancedTx -> CardanoAddress -> m ()
+submitTxConfirmed (Constraints.UnbalancedCardanoTx utx utxoIndex) addr = do
   let privateKey = lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
-  in pe
-    & submitUnbalancedTx (Ledger.UtxoIndex utxoIndex) addr utx privateKey
-    & nextSlot
+  submitUnbalancedTx (Ledger.UtxoIndex utxoIndex) addr utx privateKey
+  nextSlot
 
 w1, w2 :: CardanoAddress
 w1 : w2 : _ = E.knownAddresses
 
-assertValidatedTransactionCountOfTotal :: Int -> Int -> PlainEmulator -> IO ()
-assertValidatedTransactionCountOfTotal v i pe = foldMap assertFailure $ hasValidatedTransactionCountOfTotal v i pe
+checkPredicate
+  :: String
+  -> Map CardanoAddress C.Value
+  -> (Seq E.ChainEvent -> Maybe String)
+  -> EmulatorM a
+  -> TestTree
+checkPredicate testName initialDist test contract =
+  testCase testName $ do
+    let params = def
+        (_, log) = evalRWS contract params (emptyEmulatorStateWithInitialDist initialDist)
+    for_ (test log) $ \msg ->
+      assertFailure $ msg ++ "\n" ++ renderLogs log
 
 balanceTxnMinAda :: TestTree
 balanceTxnMinAda =
-  let params = def
-      ee = someTokenValue "ee" 1
+  let ee = someTokenValue "ee" 1
       ff = someTokenValue "ff" 1
       initialDist = Map.fromList [(w1, either mempty id $ toCardanoValue $ Value.scale 1000 (ee <> ff) <> Ada.lovelaceValueOf 100_000_000)]
-      em0 = emptyPlainEmulatorWithInitialDist params initialDist
 
-      vHash = Scripts.validatorHash someValidator
-      constraints1 =
-        Constraints.mustPayToOtherScriptWithDatumInTx
-              vHash
-              unitDatum
-              (Value.scale 100 ff)
-        <> Constraints.mustIncludeDatumInTx unitDatum
-      utx1 = mkTx @Void params mempty constraints1
-      em1 = em0 & submitTxConfirmed utx1 w1
+  in checkPredicate "balanceTxnMinAda" initialDist (hasValidatedTransactionCountOfTotal 2 2) $ do
 
-      utxo = utxosAt (someCardanoAddress (E.pNetworkId params)) em1
-      txOutRef = head (Map.keys utxo)
-      constraints2 =
-        Constraints.mustSpendScriptOutput txOutRef unitRedeemer
-        <> Constraints.mustPayToOtherScriptWithDatumInTx
-              vHash
-              unitDatum
-              (Value.scale 200 ee)
-        <> Constraints.mustIncludeDatumInTx unitDatum
-      lookups2 =
-          Constraints.unspentOutputs utxo
-          <> Constraints.plutusV1OtherScript someValidator
-      utx2 = mkTx @Void params lookups2 constraints2
-      em2 = em1 & submitTxConfirmed utx2 w1
+        params <- ask
+        let
+          vHash = Scripts.validatorHash someValidator
+          constraints1 =
+            Constraints.mustPayToOtherScriptWithDatumInTx
+                  vHash
+                  unitDatum
+                  (Value.scale 100 ff)
+            <> Constraints.mustIncludeDatumInTx unitDatum
+          utx1 = mkTx @Void params mempty constraints1
+        submitTxConfirmed utx1 w1
 
-  in testCase "balanceTxnMinAda" $ assertValidatedTransactionCountOfTotal 2 2 em2
+        utxo <- utxosAt (someCardanoAddress (E.pNetworkId params))
+        let
+          txOutRef = head (Map.keys utxo)
+          constraints2 =
+            Constraints.mustSpendScriptOutput txOutRef unitRedeemer
+            <> Constraints.mustPayToOtherScriptWithDatumInTx
+                  vHash
+                  unitDatum
+                  (Value.scale 200 ee)
+            <> Constraints.mustIncludeDatumInTx unitDatum
+          lookups2 =
+              Constraints.unspentOutputs utxo
+              <> Constraints.plutusV1OtherScript someValidator
+          utx2 = mkTx @Void params lookups2 constraints2
+        submitTxConfirmed utx2 w1

@@ -32,6 +32,7 @@ library
     Cardano.Node.Emulator.Chain
     Cardano.Node.Emulator.Fee
     Cardano.Node.Emulator.Generators
+    Cardano.Node.Emulator.MTL
     Cardano.Node.Emulator.Params
     Cardano.Node.Emulator.Plain
     Cardano.Node.Emulator.TimeSlot
@@ -57,6 +58,7 @@ library
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
+    , mtl
     , ouroboros-consensus
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
