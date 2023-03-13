@@ -5,4 +5,4 @@ Usage: marconi-sidechain [--version] (-s|--socket-path FILE-PATH)
                          (--mainnet | --testnet-magic NATURAL) 
                          [(-a|--addresses-to-index BECH32-ADDRESS)]
 
-  marconi
+  marconi-sidechain

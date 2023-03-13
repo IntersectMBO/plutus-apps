@@ -58,9 +58,9 @@ runUtxoJsonRpcTests
   -> TestTree
 runUtxoJsonRpcTests rpcenv = testGroup "marconi-sidechain-utxo JSON-RPC test-group"
     [ testPropertyNamed
-        "marconi-sidechain-utxo JSON-RPC test:stores UtxoEvents, and retrieve them through the RPC server using an RPC client"
-        "Spec. JSON-RPC, retreive inserted events through RPC endoints"
-        (propUtxoEventInsertionAndJsonRpcQueryRoundTrip rpcenv )
+        "stores UtxoEvents, and retrieve them through the RPC server using an RPC client"
+        "propUtxoEventInsertionAndJsonRpcQueryRoundTrip"
+        (propUtxoEventInsertionAndJsonRpcQueryRoundTrip rpcenv)
     ]
 
 -- | A type for Storable Action to store events
