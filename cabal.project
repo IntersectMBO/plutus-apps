@@ -11,12 +11,12 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
-index-state: 2023-02-20T00:00:00Z
+index-state: 2023-02-28T00:00:00Z
 
 -- See CONTRIBUTING.adoc for how to update index-state
 index-state:
-  , hackage.haskell.org 2023-02-20T00:00:00Z
-  , cardano-haskell-packages 2022-12-22T00:00:00Z
+  , hackage.haskell.org 2023-02-28T00:00:00Z
+  , cardano-haskell-packages 2023-02-28T00:00:00Z
 
 packages: cardano-node-emulator
           cardano-streaming
@@ -61,6 +61,8 @@ allow-newer:
   , servant:aeson
   , servant-client-core:aeson
   , servant-server:aeson
+  , servant-foreign:lens
+  , blockfrost-api:lens
 
 constraints:
   -- cardano-prelude-0.1.0.0 needs
@@ -92,6 +94,9 @@ constraints:
   , resource-pool <0.4.0.0
 
   , http2 <4.0.0
+
+  -- ouroboros-consensus-shelley-0.1.0.1 needs
+  , ouroboros-consensus-protocol==0.1.0.1
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which
@@ -153,14 +158,6 @@ source-repository-package
       lib/test-utils
       lib/text-class
 
--- Direct dependency.
-source-repository-package
-    type: git
-    location: https://github.com/Quviq/quickcheck-contractmodel
-    tag: cc43f13f98c704e0d53dbdef6a98367918f8c5c1
-    subdir:
-      contractmodel
-
 -- Should follow cardano-wallet.
 source-repository-package
     type: git
@@ -172,8 +169,11 @@ source-repository-package
       -- cardano-addresses
       core
 
--- This is needed because we rely on an unreleased feature
--- https://github.com/input-output-hk/cardano-ledger/pull/3111
+-- This is needed because we rely on an unreleased branch of
+-- cardano-ledger-alonzo. The feature we need
+-- (evaluateTransactionExecutionUnitsWithLogs) in only included from
+-- cardano-ledger-alonzo version 1.0.0.0
+-- See https://github.com/input-output-hk/cardano-ledger/pull/3111
 source-repository-package
     type: git
     location: https://github.com/input-output-hk/cardano-ledger

@@ -81,7 +81,7 @@ mustProduceAtLeastContract offAmt onAmt baseScriptValue addr = do
             <> Constraints.unspentOutputs pubKeyUtxos
             <> Constraints.unspentOutputs scriptUtxos
         tx2 =
-            Constraints.collectFromTheScript scriptUtxos ()
+            Constraints.spendUtxosFromTheScript scriptUtxos ()
             <> Constraints.mustPayToAddressWithDatumInTx
                  (Ledger.toPlutusAddress w1Address)
                  (Datum $ PlutusTx.toBuiltinData $ Value.fromCardanoValue onAmt)

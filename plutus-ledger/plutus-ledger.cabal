@@ -140,13 +140,12 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base               >=4.9  && <5
+    , base                      >=4.9  && <5
     , base16-bytestring
     , bytestring
     , cborg
     , containers
-    , contractmodel
-    , cryptonite         >=0.25
+    , cryptonite                >=0.25
     , flat
     , hashable
     , http-api-data
@@ -155,6 +154,7 @@ library
     , mtl
     , newtype-generics
     , prettyprinter
+    , quickcheck-contractmodel
     , scientific
     , serialise
     , servant

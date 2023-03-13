@@ -157,10 +157,13 @@ setupTestEnvironment options tempAbsPath = do
   case options of
     Left localNodeOptions -> do
       C.AnyCardanoEra era <- return $ era localNodeOptions
+      liftIO $ putStrLn "\nConnecting to local node..."
       connectToLocalNode era localNodeOptions tempAbsPath
     Right testnetOptions -> do
       C.AnyCardanoEra era <- return $ TN.era testnetOptions
+      pv <- pvFromOptions options
       base <- getProjectBase
+      liftIO $ putStrLn $ "\nStarting local testnet in " ++ show era ++ " PV" ++ show pv ++ "..."
       startTestnet era testnetOptions base tempAbsPath
 
 -- | Network ID of the testnet

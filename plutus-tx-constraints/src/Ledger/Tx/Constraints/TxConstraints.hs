@@ -226,6 +226,24 @@ mustSpendOutputFromTheScript :: TxOutRef -> i -> TxConstraints i o
 mustSpendOutputFromTheScript txOutRef red =
     mempty { txOwnInputs = [ScriptInputConstraint red txOutRef Nothing] }
 
+{-# INLINABLE mustSpendOutputFromTheReferencedScript #-}
+-- | @mustSpendOutputFromTheReferencedScript txOutRef red ref @ spends the transaction
+-- output @txOutRef@ with a script address using the redeemer @red@, using the reference script @ref@
+-- as a validator.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint spends a script
+-- output @txOutRef@ with redeemer @red@.
+-- The script address is derived from the typed validator that is provided in
+-- the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.typedValidatorLookups'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- spend script transaction output with @red@ is part of the transaction's
+-- inputs.
+mustSpendOutputFromTheReferencedScript :: TxOutRef -> i -> TxOutRef -> TxConstraints i o
+mustSpendOutputFromTheReferencedScript txOutRef red ref =
+    mempty { txOwnInputs = [ScriptInputConstraint red txOutRef (Just ref)] }
+
 instance (Pretty a) => Pretty (ScriptInputConstraint a) where
     pretty ScriptInputConstraint{icRedeemer, icTxOutRef, icReferenceTxOutRef} =
         vsep $
@@ -1070,66 +1088,80 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
 -- | A set of constraints for a transaction that collects PlutusV1 script outputs
 -- from the address of the given validator script, using the same redeemer script
 -- for all outputs.
-collectFromPlutusV1Script
+spendUtxosFromPlutusV1Script
     :: Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
-collectFromPlutusV1Script= collectFromPlutusV1ScriptFilter (\_ -> const True)
+spendUtxosFromPlutusV1Script= spendUtxosFromPlutusV1ScriptFilter (\_ -> const True)
 
-collectFromPlutusV1ScriptFilter
+spendUtxosFromPlutusV1ScriptFilter
     :: (TxOutRef -> DecoratedTxOut -> Bool)
     -> Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
-collectFromPlutusV1ScriptFilter flt am vls red =
+spendUtxosFromPlutusV1ScriptFilter flt am vls red =
     let mp'  = fromMaybe Haskell.mempty $ am ^. at (PV1.mkValidatorAddress vls)
         ourUtxo = Map.filterWithKey flt mp'
     in foldMap (flip mustSpendScriptOutput red) $ Map.keys ourUtxo
 
 -- | Given the pay to script address of the 'Validator', collect from it
 -- all the outputs that match a predicate, using the 'RedeemerValue'.
-collectFromTheScriptFilter ::
+spendUtxosFromTheScriptFilter ::
     forall i o
     .  (TxOutRef -> DecoratedTxOut -> Bool)
     -> Map.Map TxOutRef DecoratedTxOut
     -> i
     -> TxConstraints i o
-collectFromTheScriptFilter flt utxo red =
+spendUtxosFromTheScriptFilter flt utxo red =
     let ourUtxo :: Map.Map TxOutRef DecoratedTxOut
         ourUtxo = Map.filterWithKey flt utxo
-    in collectFromTheScript ourUtxo red
+    in spendUtxosFromTheScript ourUtxo red
 
--- | A version of 'collectFromScript' that selects all outputs
+-- | A version of 'spendUtxosFromScript' that selects all outputs
 -- at the address
-collectFromTheScript ::
+spendUtxosFromTheScript ::
     forall i o
     .  Map.Map TxOutRef DecoratedTxOut
     -> i
     -> TxConstraints i o
-collectFromTheScript utxo redeemer =
+spendUtxosFromTheScript utxo redeemer =
     foldMap (flip mustSpendOutputFromTheScript redeemer) $ Map.keys utxo
+
+-- | A version of 'spendUtxosFromScript' that selects all outputs
+-- at the address
+--
+-- @utxo@ the set of utxos we search into to find the one we want to spendsOutput
+-- @ref@ the reference to the utxo that contains the reference script
+spendUtxosFromTheReferencedScript ::
+    forall i o
+    .  Map.Map TxOutRef DecoratedTxOut
+    -> i
+    -> TxOutRef
+    -> TxConstraints i o
+spendUtxosFromTheReferencedScript utxo redeemer ref =
+    foldMap (\toSpend -> mustSpendOutputFromTheReferencedScript toSpend redeemer ref) $ Map.keys utxo
 
 -- | A set of constraints for a transaction that collects PlutusV2 script outputs
 --   from the address of the given validator script, using the same redeemer
 --   script for all outputs.
-collectFromPlutusV2Script
+spendUtxosFromPlutusV2Script
     :: Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
-collectFromPlutusV2Script= collectFromPlutusV2ScriptFilter (\_ -> const True)
+spendUtxosFromPlutusV2Script= spendUtxosFromPlutusV2ScriptFilter (\_ -> const True)
 
-collectFromPlutusV2ScriptFilter
+spendUtxosFromPlutusV2ScriptFilter
     :: (TxOutRef -> DecoratedTxOut -> Bool)
     -> Map Address (Map TxOutRef DecoratedTxOut)
     -> Validator
     -> Redeemer
     -> UntypedConstraints
-collectFromPlutusV2ScriptFilter flt am vls red = -- (Redeemer red) =
+spendUtxosFromPlutusV2ScriptFilter flt am vls red = -- (Redeemer red) =
     -- let mp'  = fromMaybe mempty $ am ^. at (PV2.mkValidatorAddress vls)
-    -- in collectFromTheScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
+    -- in spendUtxosFromTheScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
     let mp'  = fromMaybe Haskell.mempty $ am ^. at (PV2.mkValidatorAddress vls)
         ourUtxo = Map.filterWithKey flt mp'
     in foldMap (flip mustSpendScriptOutput red) $ Map.keys ourUtxo

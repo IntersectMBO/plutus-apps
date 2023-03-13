@@ -33,10 +33,11 @@ genTest commands = do
     goldenFile
     (generateHelpScreen commands)
 
--- | Test generate  cli tests and parse the help screen.
+-- | Generate CLI tests and parse the help screen.
+--
 -- Generated tests are incomplete CLI invocations that will result in
---   - printng the cli produced error
---   - help screen
+--   * printing the CLI produced error
+--   * help screen
 generateHelpScreen :: [T.Text] -> IO ByteString
 generateHelpScreen commands = do
   let parser =  programParser "fake-sha" -- parameter is ignored in this test

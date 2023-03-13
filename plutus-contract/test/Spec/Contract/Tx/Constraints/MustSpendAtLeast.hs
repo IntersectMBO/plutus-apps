@@ -55,7 +55,7 @@ mustSpendAtLeastContract offAmt onAmt = do
     let lookups2 = Constraints.typedValidatorLookups typedValidator
             <> Constraints.unspentOutputs utxos
         tx2 =
-            Constraints.collectFromTheScript utxos ()
+            Constraints.spendUtxosFromTheScript utxos ()
             <> Constraints.mustIncludeDatumInTx (Datum $ PlutusTx.toBuiltinData onAmt)
             <> Constraints.mustSpendAtLeast (Ada.lovelaceValueOf offAmt)
     ledgerTx2 <- submitTxConstraintsWith @UnitTest lookups2 tx2

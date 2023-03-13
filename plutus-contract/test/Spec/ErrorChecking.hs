@@ -20,7 +20,7 @@ import Test.Tasty
 
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger.Tx (getCardanoTxId)
-import Ledger.Tx.Constraints (collectFromTheScript, mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx)
+import Ledger.Tx.Constraints (mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx, spendUtxosFromTheScript)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Plutus.Contract as Contract
 import Plutus.Contract.Test hiding (not)
@@ -148,7 +148,7 @@ contract = selectList [failFalseC, failHeadNilC, divZeroC, successC]
       r <- submitTx tx
       awaitTxConfirmed (getCardanoTxId r)
       utxos <- utxosAt addr
-      let tx' = collectFromTheScript utxos 0
+      let tx' = spendUtxosFromTheScript utxos 0
       submitTxConstraintsSpending validator utxos tx'
 
     failFalseC = endpoint @"failFalse" $ \ _ -> do

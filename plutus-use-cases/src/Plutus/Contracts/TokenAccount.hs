@@ -183,7 +183,7 @@ redeemTx account addr = mapError (review _TAContractError) $ do
             <> show numInputs
             <> " outputs with a total value of "
             <> show totalVal
-    let constraints = Constraints.collectFromTheScript utxos ()
+    let constraints = Constraints.spendUtxosFromTheScript utxos ()
                 <> Constraints.mustPayToAddress (toPlutusAddress addr) (accountToken account)
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utxos

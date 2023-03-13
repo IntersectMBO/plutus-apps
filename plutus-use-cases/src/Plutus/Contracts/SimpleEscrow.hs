@@ -147,7 +147,7 @@ redeemEp = endpoint @"redeem" redeem
 
       let value = foldMap Ledger.decoratedTxOutPlutusValue unspentOutputs
           validityTimeRange = Interval.lessThan (Haskell.pred $ Haskell.pred $ deadline params)
-          tx = Constraints.collectFromTheScript unspentOutputs Redeem
+          tx = Constraints.spendUtxosFromTheScript unspentOutputs Redeem
                       <> Constraints.mustValidateInTimeRange validityTimeRange
                       -- Pay me the output of this script
                       <> Constraints.mustPayToPubKey pk value
@@ -169,7 +169,7 @@ refundEp = endpoint @"refund" refund
     refund params = do
       unspentOutputs <- utxosAt escrowAddress
 
-      let tx = Constraints.collectFromTheScript unspentOutputs Refund
+      let tx = Constraints.spendUtxosFromTheScript unspentOutputs Refund
                   <> Constraints.mustValidateInTimeRange (Interval.from (deadline params))
                   <> Constraints.mustBeSignedBy (payee params)
 

@@ -283,9 +283,7 @@ activeEndpoints :: forall w s e effs.
     -> Eff effs [ActiveEndpoint]
 activeEndpoints hdl = do
     ContractInstanceState{instContractState=ResumableResult{_requests=Requests rq}} <- getContractState hdl
-    pure
-        $ mapMaybe (preview _ExposeEndpointReq . rqRequest)
-        $ rq
+    pure $ mapMaybe (preview _ExposeEndpointReq . rqRequest) rq
 
 -- | Get the observable state @w@ of a contract instance.
 observableState :: forall w s e effs.

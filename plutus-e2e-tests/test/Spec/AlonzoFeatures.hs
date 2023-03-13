@@ -4,53 +4,42 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-} -- Not using all CardanoEra
+{-# LANGUAGE RecordWildCards     #-}
 
-
-module Spec.AlonzoFeatures (tests) where
+module Spec.AlonzoFeatures (checkTxInfoV1Test) where
 
 import Cardano.Api qualified as C
 import CardanoTestnet qualified as TN
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Map qualified as Map
+import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as Time
+import Hedgehog (MonadTest)
 import Hedgehog qualified as H
-import Hedgehog.Extras.Test qualified as HE
 import Helpers.Query qualified as Q
-import Helpers.Testnet (testnetOptionsAlonzo6, testnetOptionsBabbage7, testnetOptionsBabbage8)
+import Helpers.Test (TestParams (TestParams, localNodeConnectInfo, networkId, pparams, tempAbsPath))
 import Helpers.Testnet qualified as TN
 import Helpers.Tx qualified as Tx
-import Helpers.Utils qualified as U (anyLeftFail_, posixToMilliseconds, workspace)
+import Helpers.Utils qualified as U
 import Plutus.V1.Ledger.Api qualified as PlutusV1
 import Plutus.V1.Ledger.Interval qualified as PlutusV1
 import Plutus.V1.Ledger.Time qualified as PlutusV1
 import PlutusScripts.Helpers (toScriptData)
 import PlutusScripts.V1TxInfo (checkV1TxInfoAssetIdV1, checkV1TxInfoMintWitnessV1, checkV1TxInfoRedeemer, txInfoData,
                                txInfoFee, txInfoInputs, txInfoMint, txInfoOutputs, txInfoSigs)
-import Test.Base qualified as H
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
 
-tests :: TestTree
-tests =
-  testGroup
-    "Alonzo Features"
-    [ testProperty "check each attribute of V1 TxInfo in Alonzo PV6" (checkTxInfoV1Test testnetOptionsAlonzo6)
-    , testProperty "check each attribute of V1 TxInfo in Babbage PV7" (checkTxInfoV1Test testnetOptionsBabbage7)
-    , testProperty "check each attribute of V1 TxInfo in Babbage PV8" (checkTxInfoV1Test testnetOptionsBabbage8)
-    ]
-
-checkTxInfoV1Test :: Either TN.LocalNodeOptions TN.TestnetOptions -> H.Property
-checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+checkTxInfoV1Test :: (MonadIO m , MonadTest m) =>
+  Either TN.LocalNodeOptions TN.TestnetOptions ->
+  TestParams ->
+  POSIXTime ->
+  m ()
+checkTxInfoV1Test networkOptions TestParams{..} preTestnetTime = do
 
   C.AnyCardanoEra era <- TN.eraFromOptions networkOptions
-  preTestnetTime <- liftIO Time.getPOSIXTime
-
-  -- 1: spin up a testnet or use local node connected to public testnet
-  (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment networkOptions tempAbsPath
-  (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
   startTime <- liftIO Time.getPOSIXTime
+  (w1SKey, w1VKey, w1Address) <- TN.w1 tempAbsPath networkId
 
-  -- 2: build a transaction
+  -- build a transaction
 
   txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
   txInAsTxOut@(C.TxOut _ txInValue _ _) <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address txIn "txInAsTxOut <- TN.getTxOutAtAddress"
@@ -107,8 +96,6 @@ checkTxInfoV1Test networkOptions = H.integration . HE.runFinallies . U.workspace
   resultTxOut <- Q.getTxOutAtAddress era localNodeConnectInfo w1Address expectedTxIn "resultTxOut <- TN.getTxOutAtAddress "
   txOutHasTokenValue <- Q.txOutHasValue resultTxOut tokenValues
   H.assert txOutHasTokenValue
-
-  U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
   H.success
 

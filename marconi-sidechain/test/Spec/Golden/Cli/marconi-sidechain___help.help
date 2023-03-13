@@ -13,7 +13,8 @@ Available options:
   --version                Show git SHA
   -s,--socket-path FILE-PATH
                            Path to node socket.
-  -d,--db-dir DIR          Directory path where all SQLite databases are.
+  -d,--db-dir DIR          Directory path where all SQLite databases are
+                           located.
   --http-port HTTP-PORT    JSON-RPC http port number, default is port 3000.
   --mainnet                Use the mainnet magic id.
   --testnet-magic NATURAL  Specify a testnet magic id.

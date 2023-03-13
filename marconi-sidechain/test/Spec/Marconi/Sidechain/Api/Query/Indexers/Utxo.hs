@@ -1,21 +1,17 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-
 module Spec.Marconi.Sidechain.Api.Query.Indexers.Utxo (tests) where
 
+import Cardano.Api qualified as C
 import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Encode.Pretty qualified as Aeson
-import Data.ByteString.Lazy (ByteString)
 import Data.Foldable (fold)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (Proxy))
@@ -23,35 +19,55 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (unpack)
 import Data.Traversable (for)
-import Network.HTTP.Client (defaultManagerSettings, newManager)
-import Network.JsonRpc.Client.Types ()
-import Network.Wai.Handler.Warp qualified as Warp
-import Servant.API ((:<|>) ((:<|>)))
-import Servant.Client (BaseUrl (BaseUrl), ClientEnv, HasClient (Client), Scheme (Http), client, hoistClient,
-                       mkClientEnv, runClientM)
-
-import Hedgehog (Property, forAll, property, (===))
-import Test.Tasty (TestTree, testGroup, withResource)
-import Test.Tasty.Golden (goldenVsStringDiff)
-import Test.Tasty.Hedgehog (testPropertyNamed)
-
-import Cardano.Api qualified as C
 import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents, genUtxoEvents)
+import Hedgehog (Property, forAll, property, (===))
 import Helpers (addressAnyToShelley)
-import Marconi.ChainIndex.Indexers.Utxo (Utxo (Utxo), UtxoRow (UtxoRow))
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.Core.Storable qualified as Storable
 import Marconi.Sidechain.Api.HttpServer (marconiApp)
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
-import Marconi.Sidechain.Api.Routes (JsonRpcAPI)
-import Marconi.Sidechain.Api.Types (HasIndexerEnv (uiIndexer), IndexerEnv, UtxoQueryResult (UtxoQueryResult))
+import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult), JsonRpcAPI)
+import Marconi.Sidechain.Api.Types (HasIndexerEnv (uiIndexer), IndexerEnv)
+import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Network.JsonRpc.Client.Types ()
 import Network.JsonRpc.Types (JsonRpcResponse (Result))
+import Network.Wai.Handler.Warp qualified as Warp
+import Servant.API ((:<|>) ((:<|>)))
+import Servant.Client (BaseUrl (BaseUrl), ClientEnv, HasClient (Client), Scheme (Http), client, hoistClient,
+                       mkClientEnv, runClientM)
+import Test.Tasty (TestTree, testGroup, withResource)
+import Test.Tasty.Hedgehog (testPropertyNamed)
+
+tests :: TestTree
+tests = testGroup "marconi-sidechain-utxo query Api Specs"
+    [ testPropertyNamed
+        "marconi-sidechain-utxo query-target-addresses"
+        "Spec. Insert events and query for utxo's with address in the generated ShelleyEra targetAddresses"
+        queryTargetAddressTest
+
+    , utxoJsonRpcTestTree
+    ]
+
+-- | JSON-RPC Testtree
+-- We put all the JSON-RPC tests under this `TestTree`
+utxoJsonRpcTestTree :: TestTree
+utxoJsonRpcTestTree = withResource initRpcTestEnv (\_ -> pure ()) runUtxoJsonRpcTests
+
+runUtxoJsonRpcTests
+  :: RpcClientAction -- ^ the IO hoisted RPC client action that call the RPC Server
+  -> TestTree
+runUtxoJsonRpcTests rpcenv = testGroup "marconi-sidechain-utxo JSON-RPC test-group"
+    [ testPropertyNamed
+        "marconi-sidechain-utxo JSON-RPC test:stores UtxoEvents, and retrieve them through the RPC server using an RPC client"
+        "Spec. JSON-RPC, retreive inserted events through RPC endoints"
+        (propUtxoEventInsertionAndJsonRpcQueryRoundTrip rpcenv )
+    ]
 
 -- | A type for Storable Action to store events
 newtype RpcEnv = RpcEnv ([Utxo.StorableEvent Utxo.UtxoHandle] -> IO ()) --  callback
 
 -- | Alias for the storable-action and RPC-client-Action pair, to simplify the type signatures
-type RpcClientAction = IO ( RpcEnv, String -> IO (JsonRpcResponse String UtxoQueryResult) )
+type RpcClientAction = IO ( RpcEnv, String -> IO (JsonRpcResponse String AddressUtxoResult))
 
 mkRpcEnv :: IndexerEnv -> RpcEnv
 mkRpcEnv ixenv =
@@ -65,37 +81,6 @@ initRpcTestEnv = do
   ixenv <- UIQ.initializeEnv Nothing
   let f= \s -> Warp.testWithApplication (pure $ marconiApp ixenv)(queryUtxoFromRpcServer s)
   pure (mkRpcEnv ixenv, f)
-
--- | JSON-RPC Testtree
--- We put all the JSON-RPC tests under this `TestTree`
-utxoJsonRpcTestTree :: TestTree
-utxoJsonRpcTestTree = withResource initRpcTestEnv (\_ -> pure ()) runUtxoJsonRpcTests
-
-runUtxoJsonRpcTests
-  :: RpcClientAction -- ^ the IO hoisted RPC client action that call the RPC Server
-  -> TestTree
-runUtxoJsonRpcTests rpcenv = testGroup "marconi-sidechain -utxo JSON-RPC test-group"
-    [ testPropertyNamed
-        "marconi-sidechain-utxo JSON-RPC test:stores UtxoEvents, and retrieve them through the RPC server using an RPC client"
-        "Spec. JSON-RPC, retreive inserted events through RPC endoints"
-        (propUtxoEventInsertionAndJsonRpcQueryRoundTrip rpcenv )
-    ]
-
-tests :: TestTree
-tests = testGroup "marconi-sidechain-utxo query Api Specs"
-    [ testPropertyNamed
-        "marconi-sidechain-utxo query-target-addresses"
-        "Spec. Insert events and query for utxo's with address in the generated ShelleyEra targetAddresses"
-        queryTargetAddressTest
-
-    , goldenVsStringDiff
-        "Golden test for conversion of UtxoRow to JSON as Address->UTXO response"
-        (\expected actual -> ["diff", "--color=always", expected, actual])
-        "test/Spec/Marconi/Sidechain/Api/Query/Indexers/address-utxo-response.json"
-        generateUtxoRowJson
-
-    , utxoJsonRpcTestTree
-    ]
 
 depth :: Utxo.Depth
 depth = Utxo.Depth 5
@@ -137,66 +122,15 @@ queryTargetAddressTest = property $ do
   fmap Aeson.encode fetchedRows === fmap Aeson.encode fetchedRows
   fmap Aeson.encode rows === fmap Aeson.encode rows
 
-generateUtxoRowJson :: IO ByteString
-generateUtxoRowJson = do
-    let addressBech32 = "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc"
-    addr <-
-        either
-            (error . show)
-            pure
-            $ C.deserialiseFromBech32 (C.AsAddress C.AsShelleyAddr) addressBech32
-
-    let datumCbor = "4"
-    datum <-
-        either
-            (error . show)
-            pure
-            $ C.deserialiseFromCBOR C.AsScriptData datumCbor
-
-    let scriptCbor = "484701000022220011"
-    plutusScript <-
-        either
-            (error . show)
-            pure
-            $ C.deserialiseFromRawBytesHex (C.AsPlutusScript C.AsPlutusScriptV1) scriptCbor
-    let script = C.PlutusScript C.PlutusScriptV1 plutusScript
-
-    let txIdRawBytes = "ec7d3bd7c6a3a31368093b077af0db46ceac77956999eb842373e08c6420f000"
-    txId <-
-        either
-            (error . show)
-            pure
-            $ C.deserialiseFromRawBytesHex C.AsTxId txIdRawBytes
-
-    let blockHeaderHashRawBytes = "6161616161616161616161616161616161616161616161616161616161616161"
-    blockHeaderHash <-
-        either
-            (error . show)
-            pure
-            $ C.deserialiseFromRawBytesHex (C.AsHash (C.proxyToAsType $ Proxy @C.BlockHeader)) blockHeaderHashRawBytes
-
-    let utxo =
-            Utxo
-                (C.AddressShelley addr)
-                txId
-                (C.TxIx 0)
-                (Just datum)
-                (Just $ C.hashScriptData datum)
-                (C.lovelaceToValue $ C.Lovelace 10_000_000)
-                (Just $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) script)
-                (Just $ C.hashScript script)
-        utxoRow = UtxoRow utxo (C.SlotNo 1) blockHeaderHash
-    pure $ Aeson.encodePretty utxoRow
-
 -- | Create http JSON-RPC client function to test RPC route and handlers
 queryUtxoFromRpcServer
   :: String     -- ^ bech32 ShelleyEra address to fetch Utxo's for
   -> Warp.Port  -- ^ http port
-  -> IO (JsonRpcResponse String UtxoQueryResult)  -- ^  response to the client RPC http call
+  -> IO (JsonRpcResponse String AddressUtxoResult)  -- ^  response to the client RPC http call
 queryUtxoFromRpcServer address port = do
   manager' <- newManager defaultManagerSettings
   let env = mkClientEnv manager' (baseUrl port)
-  let (rpcEcho :<|> rpcTargets :<|> rpcUtxos) = mkHoistedHttpRpcClient env
+  let (rpcEcho :<|> rpcTargets :<|> _ :<|> rpcUtxos :<|> _ :<|> _ :<|> _) = mkHoistedHttpRpcClient env
   -- test will fail if these RPC methods fail.
   _ <- rpcEcho "client calling "
   _ <- rpcTargets ""
@@ -240,6 +174,6 @@ mkHoistedHttpRpcClient cEnv
 baseUrl :: Warp.Port -> BaseUrl
 baseUrl port = BaseUrl Http "localhost" port ""
 
-fromQueryResult :: JsonRpcResponse e UtxoQueryResult -> [Utxo.UtxoRow]
-fromQueryResult (Result _ (UtxoQueryResult _ rows) ) = rows
+fromQueryResult :: JsonRpcResponse e AddressUtxoResult -> [Utxo.UtxoRow]
+fromQueryResult (Result _ (AddressUtxoResult rows) ) = rows
 fromQueryResult _                                    = []

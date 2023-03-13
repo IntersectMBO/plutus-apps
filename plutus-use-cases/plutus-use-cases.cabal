@@ -36,7 +36,8 @@ library
     Plutus.Contracts.ErrorHandling
     Plutus.Contracts.Escrow
     Plutus.Contracts.Future
-    Plutus.Contracts.Game
+    Plutus.Contracts.Game.Alonzo
+    Plutus.Contracts.Game.Babbage
     Plutus.Contracts.GameStateMachine
     Plutus.Contracts.Governance
     Plutus.Contracts.MultiSig
@@ -142,7 +143,8 @@ test-suite plutus-use-cases-test
     Spec.Escrow
     Spec.Escrow.Endpoints
     Spec.Future
-    Spec.Game
+    Spec.Game.Alonzo
+    Spec.Game.Babbage
     Spec.GameStateMachine
     Spec.Governance
     Spec.MultiSig
@@ -202,12 +204,12 @@ test-suite plutus-use-cases-test
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
-    , contractmodel
     , ouroboros-consensus
     , ouroboros-consensus-cardano
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0
-    , quickcheck-dynamic           >=3.0.0
+    , quickcheck-contractmodel
+    , quickcheck-dynamic           >=3.0.2
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -254,7 +256,7 @@ executable plutus-use-cases-scripts
     Spec.Escrow
     Spec.Escrow.Endpoints
     Spec.Future
-    Spec.Game
+    Spec.Game.Alonzo
     Spec.GameStateMachine
     Spec.Governance
     Spec.MultiSig
@@ -304,10 +306,9 @@ executable plutus-use-cases-scripts
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-      base                  >=4.9 && <5
+      base                      >=4.9 && <5
     , bytestring
     , containers
-    , contractmodel
     , data-default
     , foldl
     , freer-simple
@@ -316,6 +317,7 @@ executable plutus-use-cases-scripts
     , optparse-applicative
     , prettyprinter
     , QuickCheck
+    , quickcheck-contractmodel
     , streaming
     , tasty
     , tasty-golden
