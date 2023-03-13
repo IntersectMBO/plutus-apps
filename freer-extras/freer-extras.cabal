@@ -96,7 +96,7 @@ test-suite freer-extras-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base             >=4.7 && <5
+    , base            >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
@@ -109,4 +109,4 @@ test-suite freer-extras-test
     , semigroups
     , sqlite-simple
     , tasty
-    , tasty-hedgehog1
+    , tasty-hedgehog
