@@ -15,21 +15,16 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- |
--- This module provides support for writing handlers for JSON-RPC endpoints
+-- | This module provides support for writing handlers for JSON-RPC endpoints.
 module Marconi.Sidechain.Api.Types  where
 
+import Cardano.Api qualified as C
 import Control.Concurrent.STM.TMVar (TMVar)
 import Control.Exception (Exception)
 import Control.Lens (makeClassy)
-import Data.Aeson (FromJSON, ToJSON (toEncoding), defaultOptions, genericToEncoding)
-import Data.Text (Text)
-import GHC.Generics (Generic)
-import Network.Wai.Handler.Warp (Settings)
-
-import Cardano.Api qualified as C
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types as Export (TargetAddresses)
+import Network.Wai.Handler.Warp (Settings)
 
 -- | Type represents http port for JSON-RPC
 
@@ -64,13 +59,3 @@ data QueryExceptions
     | QueryError String
     deriving stock Show
     deriving anyclass  Exception
-
-data UtxoQueryResult = UtxoQueryResult
-    { uqAddress :: Text
-    , uqResults :: ![Utxo.UtxoRow]
-    } deriving (Eq, Ord, Generic, Show)
-
-instance ToJSON UtxoQueryResult where
-    toEncoding = genericToEncoding defaultOptions
-
-instance FromJSON UtxoQueryResult

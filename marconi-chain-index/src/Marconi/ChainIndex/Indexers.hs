@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
 
@@ -12,6 +13,7 @@ import Control.Concurrent (MVar, forkIO, modifyMVar_, newMVar, readMVar)
 import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
+import Control.Exception (catch)
 import Control.Lens (view, (&))
 import Control.Lens.Operators ((^.))
 import Control.Monad (forever, void)
@@ -20,6 +22,7 @@ import Data.List (findIndex, foldl1', intersect)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Text qualified as TS
 import Database.SQLite.Simple qualified as SQL
 import Streaming.Prelude qualified as S
 
@@ -27,9 +30,17 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, ScriptData, SlotNo, Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as Shelley
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
+                          withChainSyncEventStream)
 import Cardano.Streaming qualified as CS
+import Marconi.ChainIndex.Logging (logging)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
+
 import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatumDepth), AddressDatumHandle,
                                                  AddressDatumIndex)
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
@@ -270,7 +281,10 @@ epochStakepoolSizeWorker configPath Coordinator{_barrier,_channel} dbPath = do
 mintBurnWorker_
   :: Int
   -> (MintBurn.TxMintEvent -> IO ())
-  -> Coordinator -> TChan (ChainSyncEvent (BlockInMode CardanoMode)) -> FilePath -> IO (IO b, MVar MintBurn.MintBurnIndexer)
+  -> Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO (IO b, MVar MintBurn.MintBurnIndexer)
 mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
   indexerMVar <- newMVar =<< MintBurn.open dbPath bufferSize
   let
@@ -294,44 +308,10 @@ mintBurnWorker onInsert coordinator path = do
   void $ forkIO loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
-filterIndexers
-  :: Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe FilePath
-  -> Maybe TargetAddresses
-  -> Maybe FilePath
-  -> [(Worker, FilePath)]
-filterIndexers
-    utxoPath
-    addressDatumPath
-    datumPath
-    scriptTxPath
-    epochStakepoolSizePath
-    mintBurnPath
-    maybeTargetAddresses
-    maybeConfigPath =
-  mapMaybe liftMaybe pairs
-  where
-    liftMaybe (worker, maybePath) = fmap (worker,) maybePath
-    epochStakepoolSizeIndexer = case maybeConfigPath of
-      Just configPath -> [(epochStakepoolSizeWorker configPath, epochStakepoolSizePath)]
-      Nothing         -> []
-
-    pairs =
-        [ (utxoWorker (\_ -> pure ()) maybeTargetAddresses, utxoPath)
-        , (addressDatumWorker (\_ -> pure []) maybeTargetAddresses, addressDatumPath)
-        , (datumWorker, datumPath)
-        , (scriptTxWorker (\_ -> pure []), scriptTxPath)
-        , (mintBurnWorker (\_ -> pure ()), mintBurnPath)
-        ] <> epochStakepoolSizeIndexer
-
-startIndexers
+initializeIndexers
   :: [(Worker, FilePath)]
   -> IO ([ChainPoint], Coordinator)
-startIndexers indexers = do
+initializeIndexers indexers = do
   coordinator <- initialCoordinator $ length indexers
   startingPoints <- mapM (\(ix, fp) -> ix coordinator fp) indexers
   -- We want to use the set of points that are common to all indexers
@@ -357,3 +337,31 @@ mkIndexerStream coordinator = S.foldM_ step initial finish
 
     finish :: Coordinator -> IO ()
     finish _ = pure ()
+
+runIndexers
+  :: FilePath
+  -> Shelley.NetworkId
+  -> ChainPoint
+  -> TS.Text
+  -> [(Worker, Maybe FilePath)]
+  -> IO ()
+runIndexers socketPath networkId cliChainPoint traceName list = do
+  (returnedCp, coordinator) <- initializeIndexers $ mapMaybe (traverse id) list
+
+  -- If the user specifies the chain point then use that,
+  -- otherwise use what the indexers provide.
+  let chainPoints = case cliChainPoint of
+        C.ChainPointAtGenesis -> returnedCp
+        cliCp                 -> [cliCp]
+
+  c <- defaultConfigStdout
+  withTrace c traceName $ \trace -> let
+      io = withChainSyncEventStream socketPath networkId chainPoints (mkIndexerStream coordinator . logging trace)
+      handleException NoIntersectionFound =
+        logError trace $
+          renderStrict $
+            layoutPretty defaultLayoutOptions $
+              "No intersection found when looking for the chain point"
+              <+> pretty chainPoints <> "."
+              <+> "Please check the slot number and the block hash do belong to the chain"
+    in io `catch` handleException
