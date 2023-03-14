@@ -25,9 +25,14 @@ deriving instance Show QueryConvenienceError
 newtype SubmitError = SubmitError String
 
 -- | Check whether the auto-balancing txbody build (constructBalancedTx) resulted in an error
-isTxBodyScriptExecutionError, isTxBodyNonAdaError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
+isTxBodyScriptExecutionError, isTxBodyError, isTxBodyNonAdaError :: String -> Either C.TxBodyErrorAutoBalance r -> Bool
+
 isTxBodyScriptExecutionError expectedError (Left (C.TxBodyScriptExecutionError m)) = expectedError `isInfixOf` show m
 isTxBodyScriptExecutionError _ _                                                   = False
+
+isTxBodyError expectedError (Left (C.TxBodyError m)) = expectedError `isInfixOf` show m
+isTxBodyError _ _                                    = False
+
 isTxBodyNonAdaError expectedError (Left (C.TxBodyErrorNonAdaAssetsUnbalanced m)) = expectedError `isInfixOf` show m
 isTxBodyNonAdaError _ _                                                          = False
 

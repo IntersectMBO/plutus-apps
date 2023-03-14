@@ -36,7 +36,9 @@ pv6Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     runTestWithPosixTime "checkTxInfoV1Test" AlonzoFeatures.checkTxInfoV1Test options testParams preTestnetTime
     runTest "datumHashSpendTest" AlonzoFeatures.datumHashSpendTest options testParams
     runTest "mintBurnTest" AlonzoFeatures.mintBurnTest options testParams
-    runTest "collateralContainsTokenTest" AlonzoFeatures.collateralContainsTokenTest options testParams
+    runTest "collateralContainsTokenErrorTest" AlonzoFeatures.collateralContainsTokenErrorTest options testParams
+    runTest "missingCollateralInputErrorTest" AlonzoFeatures.missingCollateralInputErrorTest options testParams
+    runTest "tooManyCollateralInputsErrorTest" AlonzoFeatures.tooManyCollateralInputsErrorTest options testParams
     runTest "verifySchnorrAndEcdsaTest" Builtins.verifySchnorrAndEcdsaTest options testParams
 
     U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
@@ -53,7 +55,9 @@ pv7Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     runTestWithPosixTime "checkTxInfoV2Test" BabbageFeatures.checkTxInfoV2Test options testParams preTestnetTime
     runTest "datumHashSpendTest" AlonzoFeatures.datumHashSpendTest options testParams
     runTest "mintBurnTest" AlonzoFeatures.mintBurnTest options testParams
-    runTest "collateralContainsTokenTest" AlonzoFeatures.collateralContainsTokenTest options testParams
+    runTest "collateralContainsTokenErrorTest" AlonzoFeatures.collateralContainsTokenErrorTest options testParams
+    runTest "missingCollateralInputErrorTest" AlonzoFeatures.missingCollateralInputErrorTest options testParams
+    runTest "tooManyCollateralInputsErrorTest" AlonzoFeatures.tooManyCollateralInputsErrorTest options testParams
     runTest "verifySchnorrAndEcdsaTest" Builtins.verifySchnorrAndEcdsaTest options testParams
     runTest "referenceScriptMintTest" BabbageFeatures.referenceScriptMintTest options testParams
     runTest "referenceScriptInlineDatumSpendTest" BabbageFeatures.referenceScriptInlineDatumSpendTest options testParams
@@ -73,11 +77,24 @@ pv8Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     runTestWithPosixTime "checkTxInfoV2Test" BabbageFeatures.checkTxInfoV2Test options testParams preTestnetTime
     runTest "datumHashSpendTest" AlonzoFeatures.datumHashSpendTest options testParams
     runTest "mintBurnTest" AlonzoFeatures.mintBurnTest options testParams
-    runTest "collateralContainsTokenTest" AlonzoFeatures.collateralContainsTokenTest options testParams
+    runTest "collateralContainsTokenErrorTest" AlonzoFeatures.collateralContainsTokenErrorTest options testParams
+    runTest "missingCollateralInputErrorTest" AlonzoFeatures.missingCollateralInputErrorTest options testParams
+    runTest "tooManyCollateralInputsErrorTest" AlonzoFeatures.tooManyCollateralInputsErrorTest options testParams
     runTest "verifySchnorrAndEcdsaTest" Builtins.verifySchnorrAndEcdsaTest options testParams
     runTest "referenceScriptMintTest" BabbageFeatures.referenceScriptMintTest options testParams
     runTest "referenceScriptInlineDatumSpendTest" BabbageFeatures.referenceScriptInlineDatumSpendTest options testParams
     runTest "referenceScriptDatumHashSpendTest" BabbageFeatures.referenceScriptDatumHashSpendTest options testParams
+
+    U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
+
+debug :: H.Property
+debug = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
+    let options = TN.testnetOptionsBabbage8
+    (localNodeConnectInfo, pparams, networkId, mPoolNodes) <- TN.setupTestEnvironment options tempAbsPath
+    let testParams = TestParams localNodeConnectInfo pparams networkId tempAbsPath
+
+    -- checkTxInfo tests must be first to run after new testnet is initialised due to expected slot to posix time
+    runTest "tooManyCollateralInputsTest" AlonzoFeatures.tooManyCollateralInputsTest options testParams
 
     U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
@@ -103,5 +120,6 @@ tests = testGroup "Plutus E2E Tests" [
   testProperty "Alonzo PV6 Tests" pv6Tests,
   testProperty "Babbage PV7 Tests" pv7Tests,
   testProperty "Babbage PV8 Tests" pv8Tests
+  --testProperty "debug" debug
   --testProperty "Babbage PV8 Tests (on Preview testnet)" $ localNodeTests TN.localNodeOptionsPreview
   ]
