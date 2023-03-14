@@ -184,6 +184,39 @@ $ curl -d '{"jsonrpc": "2.0" , "method": "getTargetAddresses" , "params": "", "i
 }
 ```
 
+#### getCurrentSyncedPoint (NOT IMPLEMENTED YET)
+
+Retrieves the chain point from which the indexers are synced at.
+
+**Parameters**: None
+
+**Returns**: Chain point consisted of a slot number and a block header hash.
+
+**Example**:
+
+```sh
+$ curl -d '{"jsonrpc": "2.0" , "method": "getCurrentSyncedPoint" , "params": "", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+      "blockHeaderHash": "6161616161616161616161616161616161616161616161616161616161616161",
+      "slotNo": 1,
+      "tag": "ChainPoint"
+  }
+}
+
+OR
+
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "tag": "ChainPointAtGenesis"
+  }
+}
+```
+
 #### getUtxoFromAddress
 
 Retrieves user provided addresses.
@@ -195,30 +228,134 @@ Retrieves user provided addresses.
 **Example**:
 
 ```sh
-$ curl -d '{"jsonrpc": "2.0" , "method": "getUtxoFromAddress" , "params": "addr_test1qz0ru2w9suwv8mcskg8r9ws3zvguekkkx6kpcnn058pe2ql2ym0y64huzhpu0wl8ewzdxya0hj0z5ejyt3g98lpu8xxs8faq0m", "id": 2}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+$ curl -d '{"jsonrpc": "2.0" , "method": "getUtxoFromAddress" , "params": "addr_test1qz0ru2w9suwv8mcskg8r9ws3zvguekkkx6kpcnn058pe2ql2ym0y64huzhpu0wl8ewzdxya0hj0z5ejyt3g98lpu8xxs8faq0m", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 {
-  "id": 19,
+  "id": 1,
   "jsonrpc": "2.0",
-  "result": {
-    "uqAddress": "addr_test1qz0ru2w9suwv8mcskg8r9ws3zvguekkkx6kpcnn058pe2ql2ym0y64huzhpu0wl8ewzdxya0hj0z5ejyt3g98lpu8xxs8faq0m",
-    "uqResults": [
+  "result": [
       {
-        "blockHeaderHash": "c6276bd653bc03d8ab0fd9d5d99023a77c153ed822254b954e45430e48377ddd",
-        "slotNo": 21445681,
-        "utxo": {
-          "address": "addr_test1qz0ru2w9suwv8mcskg8r9ws3zvguekkkx6kpcnn058pe2ql2ym0y64huzhpu0wl8ewzdxya0hj0z5ejyt3g98lpu8xxs8faq0m",
-          "datum": null,
-          "datumHash": null,
-          "inlineScript": null,
-          "inlineScriptHash": null,
-          "txId": "0d3870abb48690c101d017d070041c3b8a7cb54e76ab585a0f69df203aa7b168",
-          "txIx": 0,
-          "value": {
-            "lovelace": 10000000000
+          "blockHeaderHash": "6161616161616161616161616161616161616161616161616161616161616161",
+          "slotNo": 1,
+          "utxo": {
+              "address": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc",
+              "datum": null,
+              "datumHash": null,
+              "inlineScript": null,
+              "inlineScriptHash": null,
+              "txId": "ec7d3bd7c6a3a31368093b077af0db46ceac77956999eb842373e08c6420f000",
+              "txIx": 0,
+              "value": {
+                  "lovelace": 10000000
+              }
           }
-        }
+      },
+      {
+          "blockHeaderHash": "6161616161616161616161616161616161616161616161616161616161616161",
+          "slotNo": 1,
+          "utxo": {
+              "address": "addr_test1vpfwv0ezc5g8a4mkku8hhy3y3vp92t7s3ul8g778g5yegsgalc6gc",
+              "datum": "34",
+              "datumHash": "eb8649214997574e20c464388a172420d25403682bbbb80c496831c8cc1f8f0d",
+              "inlineScript": {
+                  "script": {
+                      "cborHex": "49484701000022220011",
+                      "description": "",
+                      "type": "PlutusScriptV1"
+                  },
+                  "scriptLanguage": "PlutusScriptLanguage PlutusScriptV1"
+              },
+              "inlineScriptHash": "284d60f7e56f5fd54faed4c50fd5cab0307da1c4034d6a92c5dbb940",
+              "txId": "ec7d3bd7c6a3a31368093b077af0db46ceac77956999eb842373e08c6420f000",
+              "txIx": 0,
+              "value": {
+                  "lovelace": 10000000
+              }
+          }
       }
-    ]
+  ]
+}
+```
+
+#### getTxWithMintingPolicy (NOT IMPLEMENTED YET)
+
+Retrieves transactions that include a minting policy for minting/burning tokens.
+
+**Parameters**: Hash of the minting policy
+
+**Returns**: List of transaction IDs
+
+**Example**:
+
+```sh
+$ curl -d '{"jsonrpc": "2.0" , "method": "getTxWithMintingPolicy" , "params": "...", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": [
+      {
+          "assetName": "6d7961737365746e616d65",
+          "blockHeaderHash": "6161616161616161616161616161616161616161616161616161616161616161",
+          "policyId": "284d60f7e56f5fd54faed4c50fd5cab0307da1c4034d6a92c5dbb940",
+          "quantity": -10,
+          "redeemerData": "34",
+          "redeemerIdx": 0,
+          "slotNo": 1,
+          "txId": "ec7d3bd7c6a3a31368093b077af0db46ceac77956999eb842373e08c6420f000"
+      },
+      {
+          "assetName": "6d7961737365746e616d65",
+          "blockHeaderHash": "6161616161616161616161616161616161616161616161616161616161616161",
+          "policyId": "284d60f7e56f5fd54faed4c50fd5cab0307da1c4034d6a92c5dbb940",
+          "quantity": 10,
+          "redeemerData": "34",
+          "redeemerIdx": 0,
+          "slotNo": 1,
+          "txId": "ec7d3bd7c6a3a31368093b077af0db46ceac77956999eb842373e08c6420f000"
+      }
+  ]
+}
+```
+
+#### getStakePoolDelegationByEpoch (NOT IMPLEMENTED YET)
+
+Retrieves the stake pool delegation per epoch.
+
+**Parameters**: Epoch number
+
+**Returns**: List of stake pool IDs with the amount of staked lovelace
+
+**Example**:
+
+```sh
+$ curl -d '{"jsonrpc": "2.0" , "method": "getStakePoolDelegationByEpoch" , "params": "...", "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "poolId": "...",
+      "lovelace": 10000000
+    }
+  ]
+}
+```
+
+#### getNonceByEpoch (NOT IMPLEMENTED YET)
+
+Retrieves transactions that include a minting policy for minting/burning tokens.
+
+**Parameters**: Epoch number
+
+**Returns**: Nonce
+
+**Example**:
+
+```sh
+$ curl -d '{"jsonrpc": "2.0" , "method": "getNonceByEpoch " , "params": 398, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "8aa754b018e7d9bca65527bc3a03ae3802f74baf92564fc8941fe234373c87a3"
   }
 }
 ```

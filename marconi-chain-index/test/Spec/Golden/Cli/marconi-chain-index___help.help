@@ -1,14 +1,15 @@
 marconi - a lightweight customizable solution for indexing and querying the
 Cardano blockchain
 
-Usage: marconi-chain-index [--version] (-s|--socket-path ARG) 
+Usage: marconi-chain-index [--version] (-s|--socket-path FILE-PATH) 
                            (--mainnet | --testnet-magic NATURAL) 
-                           [(-n|--slot-no SLOT-NO) (-b|--block-hash BLOCK-HASH)]
-                           (-d|--database-directory-path ARG) [--disable-utxo] 
+                           [(-n|--slot-no SLOT-NO)
+                             (-b|--block-header-hash BLOCK-HEADER-HASH)]
+                           (-d|--db-dir DIR) [--disable-utxo] 
                            [--disable-address-datum] [--disable-datum] 
                            [--disable-script-tx] 
                            [--disable-epoch-stakepool-size] [--disable-mintburn]
-                           [(-a|--addresses-to-index ARG)] 
+                           [(-a|--addresses-to-index BECH32-ADDRESS)] 
                            [--node-config-path ARG]
 
   marconi
@@ -16,11 +17,12 @@ Usage: marconi-chain-index [--version] (-s|--socket-path ARG)
 Available options:
   -h,--help                Show this help text
   --version                Show git SHA
-  -s,--socket-path ARG     Path to node socket.
+  -s,--socket-path FILE-PATH
+                           Path to node socket.
   --mainnet                Use the mainnet magic id.
   --testnet-magic NATURAL  Specify a testnet magic id.
-  -d,--database-directory-path ARG
-                           Dirctory Path for SQLite database.
+  -d,--db-dir DIR          Directory path where all SQLite databases are
+                           located.
   --disable-utxo           disable utxo indexers.
   --disable-address-datum  disable address->datum indexers.
   --disable-datum          disable datum indexers.
@@ -28,8 +30,8 @@ Available options:
   --disable-epoch-stakepool-size
                            disable epoch stakepool size indexers.
   --disable-mintburn       disable mint/burn indexers.
-  -a,--addresses-to-index ARG
-                           Becch32 Shelley addresses to index. i.e
+  -a,--addresses-to-index BECH32-ADDRESS
+                           Bech32 Shelley addresses to index. i.e
                            "--address-to-index address-1 --address-to-index
                            address-2 ..."
   --node-config-path ARG   Path to node configuration which you are connecting

@@ -23,10 +23,10 @@ import Cardano.Api qualified as C
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Storable qualified as Storable
+import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult))
 import Marconi.Sidechain.Api.Types (HasIndexerEnv (uiIndexer, uiQaddresses),
                                     IndexerEnv (IndexerEnv, _uiIndexer, _uiQaddresses),
-                                    IndexerWrapper (IndexerWrapper, unWrapUtxoIndexer), QueryExceptions (QueryError),
-                                    UtxoQueryResult (UtxoQueryResult))
+                                    IndexerWrapper (IndexerWrapper, unWrapUtxoIndexer), QueryExceptions (QueryError))
 
 -- | Bootstraps the utxo query environment.
 -- The module is responsible for accessing SQLite for quries.
@@ -54,14 +54,14 @@ findByAddress  = withQueryAction
 findByBech32Address
     :: IndexerEnv -- ^ Query run time environment
     -> Text -- ^ Bech32 Address
-    -> IO (Either QueryExceptions UtxoQueryResult)  -- ^ Plutus address conversion error may occur
+    -> IO (Either QueryExceptions AddressUtxoResult)  -- ^ Plutus address conversion error may occur
 findByBech32Address env addressText =
     let
-        f :: Either C.Bech32DecodeError (C.Address C.ShelleyAddr) -> IO (Either QueryExceptions UtxoQueryResult)
+        f :: Either C.Bech32DecodeError (C.Address C.ShelleyAddr) -> IO (Either QueryExceptions AddressUtxoResult)
         f (Right address) =
             (pure . C.toAddressAny $ address)
                 >>= findByAddress env
-                <&> Right . UtxoQueryResult addressText
+                <&> Right . AddressUtxoResult
         f (Left e) = pure . Left
                    $ QueryError (unpack  addressText <> " generated error: " <> show e)
     in

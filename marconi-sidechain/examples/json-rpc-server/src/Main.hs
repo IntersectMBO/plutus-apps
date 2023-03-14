@@ -21,9 +21,10 @@ import System.FilePath ((</>))
 import Marconi.ChainIndex.CLI (multiString)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
+import Marconi.Sidechain.Api.HttpServer qualified as Http
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Sidechain.Api.Types (IndexerEnv, queryEnv, uiIndexer)
-import Marconi.Sidechain.Bootstrap (bootstrapHttp, initializeIndexerEnv)
+import Marconi.Sidechain.Bootstrap (initializeIndexerEnv)
 
 data CliOptions = CliOptions
     { _utxoDirPath :: FilePath -- ^ Filepath to utxo sqlite database
@@ -54,7 +55,7 @@ main = do
         <> "\nmarconi-db-dir =" <> dbpath
         <> "\nnumber of addresses to index = " <> show (length <$> addresses)
     env <- initializeIndexerEnv Nothing addresses
-    race_ (bootstrapHttp env) (mocUtxoIndexer dbpath (env ^. queryEnv) )
+    race_ (Http.bootstrap env) (mocUtxoIndexer dbpath (env ^. queryEnv) )
 
 -- | moc marconi utxo indexer.
 -- This will allow us to use the UtxoIndexer query interface without having cardano-node or marconi online
