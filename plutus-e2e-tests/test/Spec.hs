@@ -62,6 +62,10 @@ pv7Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     runTest "referenceScriptMintTest" BabbageFeatures.referenceScriptMintTest options testParams
     runTest "referenceScriptInlineDatumSpendTest" BabbageFeatures.referenceScriptInlineDatumSpendTest options testParams
     runTest "referenceScriptDatumHashSpendTest" BabbageFeatures.referenceScriptDatumHashSpendTest options testParams
+    runTest "inlineDatumSpendTest" BabbageFeatures.inlineDatumSpendTest options testParams
+    runTest "referenceInputWithV1ScriptErrorTest" BabbageFeatures.referenceInputWithV1ScriptErrorTest options testParams
+    runTest "referenceScriptOutputWithV1ScriptErrorTest" BabbageFeatures.referenceScriptOutputWithV1ScriptErrorTest options testParams
+    runTest "inlineDatumOutputWithV1ScriptErrorTest" BabbageFeatures.inlineDatumOutputWithV1ScriptErrorTest options testParams
 
     U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
@@ -84,6 +88,10 @@ pv8Tests = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> d
     runTest "referenceScriptMintTest" BabbageFeatures.referenceScriptMintTest options testParams
     runTest "referenceScriptInlineDatumSpendTest" BabbageFeatures.referenceScriptInlineDatumSpendTest options testParams
     runTest "referenceScriptDatumHashSpendTest" BabbageFeatures.referenceScriptDatumHashSpendTest options testParams
+    runTest "inlineDatumSpendTest" BabbageFeatures.inlineDatumSpendTest options testParams
+    runTest "referenceInputWithV1ScriptErrorTest" BabbageFeatures.referenceInputWithV1ScriptErrorTest options testParams
+    runTest "referenceScriptOutputWithV1ScriptErrorTest" BabbageFeatures.referenceScriptOutputWithV1ScriptErrorTest options testParams
+    runTest "inlineDatumOutputWithV1ScriptErrorTest" BabbageFeatures.inlineDatumOutputWithV1ScriptErrorTest options testParams
 
     U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
@@ -94,7 +102,7 @@ debug = H.integration . HE.runFinallies . U.workspace "." $ \tempAbsPath -> do
     let testParams = TestParams localNodeConnectInfo pparams networkId tempAbsPath
 
     -- checkTxInfo tests must be first to run after new testnet is initialised due to expected slot to posix time
-    runTest "tooManyCollateralInputsTest" AlonzoFeatures.tooManyCollateralInputsTest options testParams
+    runTest "referenceScriptOutputWithV1ScriptErrorTest" BabbageFeatures.referenceScriptOutputWithV1ScriptErrorTest options testParams
 
     U.anyLeftFail_ $ TN.cleanupTestnet mPoolNodes
 
