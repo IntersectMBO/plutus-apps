@@ -8,6 +8,8 @@ module Cardano.Node.Emulator.MTL where
 
 import Control.Lens (makeLenses, (%~), (&), (^.))
 import Control.Monad (void)
+import Control.Monad.Error.Class (MonadError, throwError)
+import Control.Monad.Except (ExceptT)
 import Control.Monad.Freer (Eff, Member, interpret, run, type (~>))
 import Control.Monad.Freer.Extras (raiseEnd)
 import Control.Monad.Freer.Extras.Log (LogMessage (..), LogMsg (..))
@@ -28,7 +30,8 @@ import Prettyprinter.Render.Text qualified as Pretty
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator qualified as E
 import Ledger (CardanoAddress, CardanoTx, DatumFromQuery, DatumHash, DecoratedTxOut, OnChainTx (..),
-               PaymentPrivateKey (..), TxOut (..), TxOutRef, UtxoIndex, ValidationPhase (Phase2), mkDecoratedTxOut)
+               PaymentPrivateKey (..), ToCardanoError, TxOut (..), TxOutRef, UtxoIndex, ValidationErrorInPhase,
+               ValidationPhase (Phase2), mkDecoratedTxOut)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (UtxoIndex (..), createGenesisTransaction)
 import Ledger.Tx (CardanoTx (..), DatumFromQuery (..), addCardanoTxSignature)
@@ -38,16 +41,22 @@ import PlutusTx.Builtins qualified as PlutusTx
 
 
 data EmulatorState = EmulatorState
-  { _esChainState :: !E.ChainState
-  , _esAddressMap :: !AM.AddressMap
+  { _esChainState :: E.ChainState
+  , _esAddressMap :: AM.AddressMap
   }
   deriving (Show)
 
 makeLenses 'EmulatorState
 
-type EmulatorT = RWST E.Params (Seq E.ChainEvent) EmulatorState
+data EmulatorError
+  = BalancingError E.BalancingError
+  | ValidationError ValidationErrorInPhase
+  | ToCardanoError ToCardanoError
+  deriving (Show)
+
+type MonadEmulator m = (MonadRWS E.Params (Seq E.ChainEvent) EmulatorState m, MonadError EmulatorError m)
+type EmulatorT m = ExceptT EmulatorError (RWST E.Params (Seq E.ChainEvent) EmulatorState m)
 type EmulatorM = EmulatorT Identity
-type MonadEmulator = MonadRWS E.Params (Seq E.ChainEvent) EmulatorState
 
 emptyEmulatorState :: EmulatorState
 emptyEmulatorState = EmulatorState E.emptyChainState mempty
@@ -113,28 +122,38 @@ utxosAt addr = do
     toDecoratedDatum (C.TxOutDatumInline _ d) =
       Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInline $ PV2.Datum $ fromCardanoScriptData d)
 
+balanceTx
+  :: (MonadEmulator m)
+  => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
+  -> CardanoAddress -- ^ Wallet address
+  -> CardanoBuildTx
+  -> m CardanoTx
+balanceTx utxoIndex changeAddr utx = do
+  params <- ask
+  es <- get
+  let
+    ownUtxos = UtxoIndex $ snd <$> es ^. esAddressMap . AM.fundsAt changeAddr
+    utxoProvider = E.utxoProviderFromWalletOutputs ownUtxos utx
+  CardanoEmulatorEraTx <$> E.makeAutoBalancedTransactionWithUtxoProvider
+      params
+      utxoIndex
+      changeAddr
+      (either (throwError . BalancingError) pure . utxoProvider)
+      (throwError . either ValidationError ToCardanoError)
+      utx
+
 submitUnbalancedTx
   :: (MonadEmulator m, Foldable f)
   => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoAddress -- ^ Wallet address
   -> CardanoBuildTx
   -> f PaymentPrivateKey -- ^ Signatures
-  -> m ()
+  -> m CardanoTx
 submitUnbalancedTx utxoIndex changeAddr utx keys = do
-  params <- ask
-  es <- get
-  let
-    ownUtxos = UtxoIndex $ snd <$> es ^. esAddressMap . AM.fundsAt changeAddr
-    utxoProvider = E.utxoProviderFromWalletOutputs ownUtxos utx
-    newTx = either (error . show) id $ E.makeAutoBalancedTransactionWithUtxoProvider
-      params
-      utxoIndex
-      changeAddr
-      utxoProvider
-      (error . show)
-      utx
-    signedTx = foldr (addCardanoTxSignature . unPaymentPrivateKey) (CardanoEmulatorEraTx newTx) keys
+  newTx <- balanceTx utxoIndex changeAddr utx
+  let signedTx = foldr (addCardanoTxSignature . unPaymentPrivateKey) newTx keys
   queueTx signedTx
+  pure signedTx
 
 hasValidatedTransactionCountOfTotal :: Int -> Int -> Seq E.ChainEvent -> Maybe String
 hasValidatedTransactionCountOfTotal valid total lg =
