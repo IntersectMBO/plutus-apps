@@ -16,8 +16,7 @@ import Marconi.Sidechain.Api.Query.Indexers.EpochState qualified as EpochState
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as AddressUtxo
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs), SidechainEnv (SidechainEnv),
                                     SidechainIndexers (SidechainIndexers), epochStateIndexerEnvIndexer,
-                                    sidechainAddressUtxoIndexer, sidechainEnvIndexers,
-                                    sidechainEpochStakePoolDelegationIndexer)
+                                    sidechainAddressUtxoIndexer, sidechainEnvIndexers, sidechainEpochStateIndexer)
 import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
 import System.FilePath ((</>))
 
@@ -48,7 +47,7 @@ bootstrapIndexers (CliArgs socketPath nodeConfigPath dbPath _ networkId targetAd
   let epochStateCallback :: (State EpochStateHandle, StorableEvent EpochStateHandle) -> IO ()
       epochStateCallback =
           atomically
-        . EpochState.updateEnvState (env ^. sidechainEnvIndexers . sidechainEpochStakePoolDelegationIndexer . epochStateIndexerEnvIndexer)
+        . EpochState.updateEnvState (env ^. sidechainEnvIndexers . sidechainEpochStateIndexer . epochStateIndexerEnvIndexer)
         . fst
   let indexers =
           [ ( utxoWorker addressUtxoCallback targetAddresses

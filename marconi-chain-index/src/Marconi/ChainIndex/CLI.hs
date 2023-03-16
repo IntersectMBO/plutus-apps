@@ -96,18 +96,18 @@ parseCardanoAddresses =  nub
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
 data Options = Options
-  { optionsSocketPath           :: !String,
-    optionsNetworkId            :: !NetworkId,
-    optionsChainPoint           :: !ChainPoint,
-    optionsDbPath               :: !FilePath,    -- ^ SQLite database directory path
-    optionsDisableUtxo          :: !Bool,
-    optionsDisableAddressDatum  :: !Bool,
-    optionsDisableDatum         :: !Bool,
-    optionsDisableScript        :: !Bool,
-    optionsDisableStakepoolSize :: !Bool,
-    optionsDisableMintBurn      :: !Bool,
-    optionsTargetAddresses      :: !(Maybe TargetAddresses),
-    optionsNodeConfigPath       :: !(Maybe FilePath)
+  { optionsSocketPath          :: !String,
+    optionsNetworkId           :: !NetworkId,
+    optionsChainPoint          :: !ChainPoint,
+    optionsDbPath              :: !FilePath,    -- ^ SQLite database directory path
+    optionsDisableUtxo         :: !Bool,
+    optionsDisableAddressDatum :: !Bool,
+    optionsDisableDatum        :: !Bool,
+    optionsDisableScript       :: !Bool,
+    optionsDisableEpochState   :: !Bool,
+    optionsDisableMintBurn     :: !Bool,
+    optionsTargetAddresses     :: !(Maybe TargetAddresses),
+    optionsNodeConfigPath      :: !(Maybe FilePath)
   }
   deriving (Show)
 
@@ -183,7 +183,7 @@ scriptTxDbPath o =
 
 epochStateDbPath :: Options -> Maybe FilePath
 epochStateDbPath o =
-    if optionsDisableStakepoolSize o
+    if optionsDisableEpochState o
        then Nothing
        else Just (optionsDbPath o </> epochStateDbName)
 

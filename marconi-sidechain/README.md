@@ -367,7 +367,7 @@ $ curl -d '{"jsonrpc": "2.0" , "method": "getStakePoolDelegationByEpoch" , "para
 }
 ```
 
-#### getNonceByEpoch (NOT IMPLEMENTED YET)
+#### getNonceByEpoch
 
 Retrieves transactions that include a minting policy for minting/burning tokens.
 
@@ -378,11 +378,18 @@ Retrieves transactions that include a minting policy for minting/burning tokens.
 **Example**:
 
 ```sh
-$ curl -d '{"jsonrpc": "2.0" , "method": "getNonceByEpoch" , "params": 398, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
+$ curl -d '{"jsonrpc": "2.0" , "method": "getNonceByEpoch" , "params": 4, "id": 1}' -H 'Content-Type: application/json' -X POST http://localhost:3000/json-rpc | jq
 {
   "id": 1,
   "jsonrpc": "2.0",
-  "result": "8aa754b018e7d9bca65527bc3a03ae3802f74baf92564fc8941fe234373c87a3"
+  "result":
+    {
+        "blockHeaderHash": "fdd5eb1b1e9fc278a08aef2f6c0fe9b576efd76966cc552d8c5a59271dc01604",
+        "blockNo": 21645,
+        "epochNo": 4,
+        "nonce": "ce4a80f49c44c21d7114d93fe5f992a2f9de6bad4a03a5df7e7403004ebe16fc",
+        "slotNo": 518400
+    }
   }
 }
 ```

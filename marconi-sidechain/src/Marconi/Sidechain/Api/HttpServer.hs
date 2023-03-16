@@ -128,7 +128,9 @@ getEpochNonceHandler
     :: SidechainEnv -- ^ Utxo Environment to access Utxo Storage running on the marconi thread
     -> Word64           -- ^ EpochNo
     -> Handler (Either (JsonRpcErr String) EpochNonceResult)
-getEpochNonceHandler _ _ = pure $ Left $ JsonRpcErr 1 "Endpoint not implemented yet" Nothing
+getEpochNonceHandler env epochNo = liftIO $
+    first toRpcErr
+    <$> EpochState.queryNonceByEpochNo env epochNo
 
 -- | Convert to JSON-RPC protocol error.
 toRpcErr
