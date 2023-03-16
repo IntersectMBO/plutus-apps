@@ -22,7 +22,7 @@ jobs:
           ref: zliu41/dump-1.35.4
 
       - name: Quick Install Nix
-        uses: nixbuild/nix-quick-install-action@v21 
+        uses: nixbuild/nix-quick-install-action@v22 
         with: 
           nix_conf: |
             experimental-features = nix-command flakes
