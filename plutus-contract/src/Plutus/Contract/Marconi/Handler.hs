@@ -9,7 +9,7 @@
 
 module Plutus.Contract.Marconi.Handler where
 
-import Cardano.Api (AddressInEra (AddressInEra), AddressTypeInEra (..), TxIx (TxIx), toAddressAny)
+import Cardano.Api (AddressInEra (AddressInEra), AddressTypeInEra (..), ChainPoint, TxIx (TxIx), toAddressAny)
 import Control.Concurrent (MVar, putMVar, readMVar)
 import Control.Lens (views, (^.))
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, type (~>))
@@ -19,22 +19,28 @@ import Control.Monad.Freer.Extras.Pagination (PageQuery, pageOf)
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.Freer.TH (makeEffect)
 import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Maybe (fromJust)
 import Data.Set qualified as Set
 import Ledger.Address (CardanoAddress)
 import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxId)
 import Marconi.ChainIndex.Indexers.Utxo (StorableQuery (UtxoAddress), UtxoHandle, UtxoIndexer, getUtxoResult, txId,
                                          txIx, urUtxo)
-import Marconi.Core.Storable (HasPoint, QueryInterval (QEverything), Queryable, State, StorableEvent, StorableMonad,
-                              StorablePoint, StorableResult, query)
+import Marconi.Core.Storable (HasPoint, QueryInterval (QEverything), Queryable, Rewindable, State, StorableEvent,
+                              StorableMonad, StorablePoint, StorableResult, query)
+import Marconi.Core.Storable qualified as Storable (rewind)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.Compatibility (toCardanoPoint)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (UtxoSetAtAddress))
-import Plutus.ChainIndex.Types (Tip (..))
+import Plutus.ChainIndex.Types (ChainSyncBlock, Point, Tip (..))
 import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef))
 
 data MarconiEffect handle r where
   QueryIndexer :: StorableQuery handle -> MarconiEffect handle (StorableResult handle)
-  Rewind :: Point -> Marconi handle ()
+  Rewind :: Point -> MarconiEffect handle ()
+  Index  :: ChainSyncBlock -> MarconiEffect handle ()
+  Resume  :: Point -> MarconiEffect handle ()
+
 
 makeEffect ''MarconiEffect
 
@@ -43,14 +49,26 @@ handleMarconi ::
     ( LastMember IO effs
     , Member (Reader (State handle)) effs
     , StorableMonad handle ~ IO
+    , StorablePoint handle ~ ChainPoint
     , HasPoint (StorableEvent handle) (StorablePoint handle)
     , Ord (StorablePoint handle)
     , Queryable handle
+    , Rewindable handle
     )
-    => MarconiEffect handle ~> Eff effs
-handleMarconi (QueryIndexer q) = do
-  st <- ask
-  liftIO $ query QEverything st q
+    => (ChainSyncBlock -> [StorableEvent handle]) -> MarconiEffect handle ~> Eff effs
+handleMarconi _ (QueryIndexer q) = do
+    st <- ask
+    -- At the moment we query everything, we may need to find the latest common sync point in the future
+    liftIO $ query QEverything st q
+handleMarconi _f (Rewind point) = do
+    st <- ask
+    ix <- liftIO $ readMVar st
+    mix <- liftIO $ Storable.rewind (fromJust $ toCardanoPoint point) ix
+    maybe
+        (throwError  _a)
+        (liftIO $ writeTMVar st ix)
+        mix
+handleMarconi _f _others = undefined
 
 getUtxoSetAtAddress
   :: forall effs.

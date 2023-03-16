@@ -102,7 +102,7 @@ handleQuery = \case
     DatumsAtAddress pageQuery addr -> getDatumsAtAddress pageQuery addr
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
-    TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
+    TxoSetAtAddress pageQuery addr -> getTxoSetAtAddress pageQuery addr
     TxsFromTxIds txids -> getTxsFromTxIds txids
     GetTip -> getTip
 
@@ -377,10 +377,11 @@ getTxoSetAtAddress
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
-  -> Credential
+  -> CardanoAddress
   -> Eff effs TxosResponse
-getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
+getTxoSetAtAddress pageQuery addr = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
+  let cred = toDbValue $ cardanoAddressCredential addr
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
           logWarn TipIsGenesis

@@ -20,7 +20,7 @@ import Cardano.Api.Shelley qualified as Api
 import Ledger.Slot qualified as Ledger (Slot (..), SlotRange)
 import Ledger.Tx (TxOutRef (..))
 import Ledger.Tx qualified as LT (ScriptTag (..), TxId (TxId))
-import Ledger.Tx.CardanoAPI
+import Ledger.Tx.CardanoAPI hiding (fromCardanoAddressInEra)
 import Ledger.Value.CardanoAPI qualified as Value
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
@@ -91,10 +91,13 @@ toCardanoAddress bAddr = case deserialized of
     deserialized :: Maybe (Api.Address C.ShelleyAddr)
     deserialized = C.deserialiseAddress C.AsShelleyAddress (unAddress bAddr)
 
+fromCardanoAddressInEra :: C.AddressInEra C.BabbageEra -> Blockfrost.Address
+fromCardanoAddressInEra = mkAddress . C.serialiseAddress
+
 credentialToAddress :: C.NetworkId -> Credential -> Blockfrost.Address
 credentialToAddress netId c = case toCardanoAddressInEra netId pAddress of
     Left err   -> error $ show err
-    Right addr -> mkAddress $ C.serialiseAddress addr
+    Right addr -> fromCardanoAddressInEra addr
   where
     pAddress :: LA.Address
     pAddress = case c of

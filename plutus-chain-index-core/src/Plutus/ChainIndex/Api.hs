@@ -160,8 +160,8 @@ data IsUtxoResponse = IsUtxoResponse
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
 data TxoAtAddressRequest = TxoAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: Credential
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
@@ -173,8 +173,8 @@ data TxosResponse = TxosResponse
 
 
 data QueryAtAddressRequest = QueryAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: CardanoAddress
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
