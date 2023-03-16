@@ -364,7 +364,7 @@ queryDatumsAt ::
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [Datum])
 queryDatumsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.DatumsAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("DatumsAtResponse", r)
@@ -486,7 +486,7 @@ utxoRefsAt ::
     -> CardanoAddress
     -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetAtResponse r -> pure r
     r                     -> throwError $ review _ChainIndexContractError ("UtxoSetAtResponse", r)
@@ -528,7 +528,7 @@ queryUnspentTxOutsAt ::
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [(TxOutRef, DecoratedTxOut)])
 queryUnspentTxOutsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.UnspentTxOutsAtResponse r -> pure r
     r                           -> throwError $ review _ChainIndexContractError ("UnspentTxOutAtResponse", r)

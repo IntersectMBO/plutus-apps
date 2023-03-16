@@ -35,7 +35,7 @@ import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger.Address (cardanoAddressCredential)
+import Ledger.Address (CardanoAddress, cardanoAddressCredential)
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Ledger.Tx (TxId, TxOutRef (..), Versioned)
 import Ledger.Tx qualified as L (DatumFromQuery (..), DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutDatum,
@@ -173,10 +173,11 @@ getUtxoSetAtAddress ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => PageQuery TxOutRef
-  -> Credential
+  -> CardanoAddress
   -> Eff effs UtxosResponse
-getUtxoSetAtAddress pageQuery cred = do
+getUtxoSetAtAddress pageQuery addr = do
   state <- get
+  let cred = cardanoAddressCredential addr
   let outRefs = view (diskState . addressMap . at cred) state
       utxo = view (utxoIndex . to utxoState) state
       utxoRefs = Set.filter (flip TxUtxoBalance.isUnspentOutput utxo)
@@ -213,7 +214,7 @@ handleQuery = \case
         case tip utxo of
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxo))
-    UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
+    UtxoSetAtAddress pageQuery addr -> getUtxoSetAtAddress pageQuery addr
     UnspentTxOutSetAtAddress pageQuery cred -> do
         (UtxosResponse tp page) <- getUtxoSetAtAddress pageQuery cred
         case tp of
@@ -223,9 +224,10 @@ handleQuery = \case
             mtxouts <- mapM getUtxoutFromRef (pageItems page)
             let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
             pure $ QueryResponse txouts (nextPageQuery page)
-    DatumsAtAddress pageQuery cred -> do
+    DatumsAtAddress pageQuery addr -> do
       state <- get
-      let outRefs = view (diskState . addressMap . at cred) state
+      let cred = cardanoAddressCredential addr
+          outRefs = view (diskState . addressMap . at cred) state
           txoRefs = fromMaybe mempty outRefs
           utxo = view (utxoIndex . to utxoState) state
           page = pageOf pageQuery txoRefs

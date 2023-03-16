@@ -274,7 +274,7 @@ instance Buffered UtxoHandle where
     :: Foldable f
     => f (StorableEvent UtxoHandle) -- ^ ues to store
     -> UtxoHandle -- ^ handler for storing events
-    -> IO UtxoHandle
+    -> StorableMonad UtxoHandle UtxoHandle
   persistToStorage events h = do
     let rows = concatMap eventsToRows events
         spents = concatMap eventToSpent events
@@ -311,7 +311,7 @@ instance Buffered UtxoHandle where
       SQL.execute_ c "VACUUM"
     pure h
 
-  getStoredEvents :: UtxoHandle -> IO [StorableEvent UtxoHandle]
+  getStoredEvents :: UtxoHandle -> StorableMonad UtxoHandle [StorableEvent UtxoHandle]
   getStoredEvents (UtxoHandle c sz) =  do
     sns <- SQL.query c
         [r|SELECT slotNo FROM unspent_transactions
@@ -407,7 +407,7 @@ instance Queryable UtxoHandle where
     -> f (StorableEvent UtxoHandle)
     -> UtxoHandle
     -> StorableQuery UtxoHandle
-    -> IO (StorableResult UtxoHandle)
+    -> StorableMonad UtxoHandle (StorableResult UtxoHandle)
   queryStorage qi es (UtxoHandle c _) q@(UtxoAddress addr) = do
     persisted <- case qi of
       QEverything -> SQL.query c

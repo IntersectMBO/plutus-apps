@@ -46,7 +46,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, i
                             update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
+import Ledger (CardanoAddress, Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
 import Ledger qualified as L
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
@@ -97,9 +97,9 @@ handleQuery = \case
         case UtxoState.tip utxoState of
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
-    UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
-    UnspentTxOutSetAtAddress pageQuery cred -> getTxOutSetAtAddress pageQuery cred
-    DatumsAtAddress pageQuery cred -> getDatumsAtAddress pageQuery cred
+    UtxoSetAtAddress pageQuery addr -> getUtxoSetAtAddress pageQuery addr
+    UnspentTxOutSetAtAddress pageQuery addr -> getTxOutSetAtAddress pageQuery addr
+    DatumsAtAddress pageQuery addr -> getDatumsAtAddress pageQuery addr
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
     TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
@@ -232,10 +232,11 @@ getUtxoSetAtAddress
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
-  -> Credential
+  -> CardanoAddress
   -> Eff effs UtxosResponse
-getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
+getUtxoSetAtAddress pageQuery addr = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
+  let cred = toDbValue $ cardanoAddressCredential addr
 
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
@@ -265,10 +266,10 @@ getTxOutSetAtAddress ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => PageQuery TxOutRef
-  -> Credential
+  -> CardanoAddress
   -> Eff effs (QueryResponse [(TxOutRef, L.DecoratedTxOut)])
-getTxOutSetAtAddress pageQuery cred = do
-  (UtxosResponse tip page) <- getUtxoSetAtAddress pageQuery cred
+getTxOutSetAtAddress pageQuery addr = do
+  (UtxosResponse tip page) <- getUtxoSetAtAddress pageQuery addr
   case tip of
     TipAtGenesis -> do
       pure (QueryResponse [] Nothing)
@@ -285,10 +286,11 @@ getDatumsAtAddress ::
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
-  -> Credential
+  -> CardanoAddress
   -> Eff effs (QueryResponse [Datum])
-getDatumsAtAddress pageQuery (toDbValue -> cred) = do
+getDatumsAtAddress pageQuery addr = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
+  let cred = toDbValue $ cardanoAddressCredential addr
   case UtxoState.tip utxoState of
     TipAtGenesis -> do
       logWarn TipIsGenesis
