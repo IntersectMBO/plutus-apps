@@ -19,7 +19,7 @@ main = do
       , (Indexers.mintBurnWorker (\_ -> pure ()), Cli.mintBurnDbPath o)
       ] <> case Cli.optionsNodeConfigPath o of
       Just configPath ->
-        [(Indexers.epochStakepoolSizeWorker configPath (\_ -> pure ()), Cli.epochStakepoolSizeDbPath o)]
+        [(Indexers.epochStateWorker configPath (\_ -> pure ()), Cli.epochStateDbPath o)]
       Nothing         -> []
 
   Indexers.runIndexers

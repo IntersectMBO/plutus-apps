@@ -16,8 +16,8 @@ import System.FilePath ((</>))
 
 import Cardano.Api (ChainPoint, NetworkId)
 import Cardano.Api qualified as C
-import Marconi.ChainIndex.Types (TargetAddresses, addressDatumDbName, datumDbName, epochStakepoolSizeDbName,
-                                 mintBurnDbName, scriptTxDbName, utxoDbName)
+import Marconi.ChainIndex.Types (TargetAddresses, addressDatumDbName, datumDbName, epochStateDbName, mintBurnDbName,
+                                 scriptTxDbName, utxoDbName)
 
 chainPointParser :: Opt.Parser C.ChainPoint
 chainPointParser =
@@ -181,11 +181,11 @@ scriptTxDbPath o =
        then Nothing
        else Just (optionsDbPath o </> scriptTxDbName)
 
-epochStakepoolSizeDbPath :: Options -> Maybe FilePath
-epochStakepoolSizeDbPath o =
+epochStateDbPath :: Options -> Maybe FilePath
+epochStateDbPath o =
     if optionsDisableStakepoolSize o
        then Nothing
-       else Just (optionsDbPath o </> epochStakepoolSizeDbName)
+       else Just (optionsDbPath o </> epochStateDbName)
 
 mintBurnDbPath :: Options -> Maybe FilePath
 mintBurnDbPath o =

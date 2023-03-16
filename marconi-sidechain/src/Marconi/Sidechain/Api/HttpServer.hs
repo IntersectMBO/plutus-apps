@@ -15,7 +15,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text, pack)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Data.Word (Word64)
-import Marconi.Sidechain.Api.Query.Indexers.EpochSPD qualified as EpochSPD
+import Marconi.Sidechain.Api.Query.Indexers.EpochState qualified as EpochState
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as Q.Utxo
 import Marconi.Sidechain.Api.Routes (API, AddressUtxoResult, CurrentSyncedPointResult, EpochNonceResult,
                                      EpochStakePoolDelegationResult, JsonRpcAPI, MintingPolicyHashTxResult, RestAPI)
@@ -121,7 +121,7 @@ getEpochStakePoolDelegationHandler
     -> Handler (Either (JsonRpcErr String) EpochStakePoolDelegationResult)
 getEpochStakePoolDelegationHandler env epochNo = liftIO $
     first toRpcErr
-    <$> EpochSPD.querySPDByEpochNo env epochNo
+    <$> EpochState.querySDDByEpochNo env epochNo
 
 -- | Handler for retrieving stake pool delegation per epoch
 getEpochNonceHandler

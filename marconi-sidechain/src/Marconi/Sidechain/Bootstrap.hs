@@ -7,15 +7,15 @@ module Marconi.Sidechain.Bootstrap where
 import Cardano.Api qualified as C
 import Control.Concurrent.STM (atomically)
 import Control.Lens ((^.))
-import Marconi.ChainIndex.Indexers (epochStakepoolSizeWorker, runIndexers, utxoWorker)
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize (EpochSPDHandle)
+import Marconi.ChainIndex.Indexers (epochStateWorker, runIndexers, utxoWorker)
+import Marconi.ChainIndex.Indexers.EpochState (EpochStateHandle)
 import Marconi.ChainIndex.Indexers.Utxo (UtxoHandle)
-import Marconi.ChainIndex.Types (TargetAddresses, epochStakepoolSizeDbName, utxoDbName)
+import Marconi.ChainIndex.Types (TargetAddresses, epochStateDbName, utxoDbName)
 import Marconi.Core.Storable (State, StorableEvent)
-import Marconi.Sidechain.Api.Query.Indexers.EpochSPD qualified as EpochSPD
+import Marconi.Sidechain.Api.Query.Indexers.EpochState qualified as EpochState
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as AddressUtxo
 import Marconi.Sidechain.Api.Types (CliArgs (CliArgs), SidechainEnv (SidechainEnv),
-                                    SidechainIndexers (SidechainIndexers), epochSpdIndexerEnvIndexer,
+                                    SidechainIndexers (SidechainIndexers), epochStateIndexerEnvIndexer,
                                     sidechainAddressUtxoIndexer, sidechainEnvIndexers,
                                     sidechainEpochStakePoolDelegationIndexer)
 import Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
@@ -32,7 +32,7 @@ initializeSidechainEnv maybePort targetAddresses = do
     sidechainIndexers <-
         SidechainIndexers
             <$> AddressUtxo.initializeEnv targetAddresses
-            <*> EpochSPD.initializeEnv
+            <*> EpochState.initializeEnv
     pure $ SidechainEnv httpsettings sidechainIndexers
 
 -- |  Marconi cardano blockchain indexer
@@ -45,17 +45,17 @@ bootstrapIndexers (CliArgs socketPath nodeConfigPath dbPath _ networkId targetAd
       addressUtxoCallback =
           atomically
         . AddressUtxo.updateEnvState (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
-  let epochSPDCallback :: (State EpochSPDHandle, StorableEvent EpochSPDHandle) -> IO ()
-      epochSPDCallback =
+  let epochStateCallback :: (State EpochStateHandle, StorableEvent EpochStateHandle) -> IO ()
+      epochStateCallback =
           atomically
-        . EpochSPD.updateEnvState (env ^. sidechainEnvIndexers . sidechainEpochStakePoolDelegationIndexer . epochSpdIndexerEnvIndexer)
+        . EpochState.updateEnvState (env ^. sidechainEnvIndexers . sidechainEpochStakePoolDelegationIndexer . epochStateIndexerEnvIndexer)
         . fst
   let indexers =
           [ ( utxoWorker addressUtxoCallback targetAddresses
             , Just $ dbPath </> utxoDbName
             )
-          , ( epochStakepoolSizeWorker nodeConfigPath epochSPDCallback
-            , Just $ dbPath </> epochStakepoolSizeDbName
+          , ( epochStateWorker nodeConfigPath epochStateCallback
+            , Just $ dbPath </> epochStateDbName
             )
           ]
   runIndexers

@@ -45,7 +45,7 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Marconi.Sidechain.Api.HttpServer
-    Marconi.Sidechain.Api.Query.Indexers.EpochSPD
+    Marconi.Sidechain.Api.Query.Indexers.EpochState
     Marconi.Sidechain.Api.Query.Indexers.Utxo
     Marconi.Sidechain.Api.Routes
     Marconi.Sidechain.Api.Types
