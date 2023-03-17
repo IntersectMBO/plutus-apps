@@ -25,22 +25,30 @@ import Control.Monad.Freer.TH (makeEffect)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Foldable (foldl')
 import Data.Maybe (fromJust)
-import Data.Set (Set)
 import Data.Set qualified as Set
 import Ledger (CardanoTx (CardanoTx))
 import Ledger.Address (CardanoAddress)
 import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxId)
-import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), StorableQuery (UtxoAddress), Utxo (..), UtxoHandle,
-                                         getInputs, getUtxoResult, getUtxos, txId, txIx, urUtxo)
+import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), StorableQuery (UtxoAddress), UtxoHandle, getInputs,
+                                         getUtxoResult, getUtxos, txId, txIx, urUtxo)
 import Marconi.Core.Storable (HasPoint, QueryInterval (QEverything), Queryable, State, StorableMonad, StorablePoint,
                               StorableResult, insertMany, query)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
-import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.Compatibility (toCardanoBlockId)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (AppendBlocks), ChainIndexQueryEffect (UtxoSetAtAddress))
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Point (Point, PointAtGenesis), Tip (TipAtGenesis), citxCardanoTx,
                                 tipAsPoint)
 import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef))
+
+{- Developer note:
+   How to add new indexer to support new effect?
+       1. add the indexer MVar to `ChainIndexIndexersMvar` and the corresponding indexer to `ChainIndexIndexers`
+       2. edit `getChainIndexIndexers` and `putChainIndexIndexers` accordingly
+       3. generate `MarconiEffect` on the appropriate queries of `ChainIndexQueries` in `handleQuery`
+       4. Add the indexer update in the control operations
+       5. Add the `handleMarconiQuery` for the new effect in `handleChainIndexEffects`
+-}
 
 data ChainIndexIndexers -- We don't use `newtype` since other indexers will be needed
    = ChainIndexIndexers
@@ -105,13 +113,6 @@ getUtxoSetAtAddress pageQuery addrInEra = let
            . getUtxoResult
            <$> queryIndexer (UtxoAddress addr)
 
-utxosFromCardanoTx :: CardanoTx -> [Utxo]
-utxosFromCardanoTx (CardanoTx c _) = getUtxos Nothing c
-
-
-inputsFromCardanoTx :: CardanoTx -> Set C.TxIn
-inputsFromCardanoTx (CardanoTx c _) = getInputs c
-
 
 getUtxoEvents
   :: [CardanoTx]
@@ -119,10 +120,12 @@ getUtxoEvents
   -> StorableEvent UtxoHandle -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
 getUtxoEvents txs cp =
   let
-
+    utxosFromCardanoTx (CardanoTx c _) = getUtxos Nothing c
+    inputsFromCardanoTx (CardanoTx c _) = getInputs c
     utxos = Set.fromList $ concatMap utxosFromCardanoTx txs
     ins = foldl' Set.union Set.empty $ inputsFromCardanoTx <$> txs
   in UtxoEvent utxos ins cp
+
 
 handleControl ::
     ( LastMember IO effs
@@ -135,7 +138,7 @@ handleControl = \case
         ci <- Eff.get
         utxosIndexer' <- liftIO $ insertMany (extractUtxosEvent <$> xs) (ci ^. utxosIndexer)
         Eff.put (ci & utxosIndexer .~ utxosIndexer')
-    _other -> throwError @ChainIndexError undefined
+    _other -> throwError UnsupportedControlOperation
     where
         toCardanoPoint PointAtGenesis = ChainPointAtGenesis
         toCardanoPoint (Point slot blockId) =
@@ -153,7 +156,7 @@ handleQuery ::
     ~> Eff effs
 handleQuery = \case
    UtxoSetAtAddress pageQuery addr -> getUtxoSetAtAddress pageQuery addr
-   _eff                            -> throwError @ChainIndexError undefined
+   _eff                            -> throwError UnsupportedQuery
 
 -- | Handle the chain index effects from the set of all effects.
 handleChainIndexEffects
