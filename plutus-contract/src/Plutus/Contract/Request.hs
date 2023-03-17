@@ -134,8 +134,8 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
-               ValidatorHash (ValidatorHash), cardanoAddressCredential, cardanoPubKeyHash,
-               decoratedTxOutReferenceScript, fromMilliSeconds, getScriptHash, scriptHash, txOutRefId)
+               ValidatorHash (ValidatorHash), cardanoPubKeyHash, decoratedTxOutReferenceScript, fromMilliSeconds,
+               getScriptHash, scriptHash, txOutRefId)
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints.OffChain (ScriptLookups, UnbalancedTx)
@@ -654,7 +654,7 @@ txoRefsAt ::
     -> CardanoAddress
     -> Contract w s e TxosResponse
 txoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.TxoSetAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("TxoSetAtAddress", r)

@@ -99,7 +99,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.String (fromString)
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, toPlutusAddress)
-import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
@@ -277,7 +276,7 @@ data ChainIndexQuery =
   | DatumsAtAddress (PageQuery TxOutRef) CardanoAddress
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds [TxId]
-  | TxoSetAtAddress (PageQuery TxOutRef) Credential
+  | TxoSetAtAddress (PageQuery TxOutRef) CardanoAddress
   | GetTip
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -298,7 +297,7 @@ instance Pretty ChainIndexQuery where
         DatumsAtAddress _ addr          -> "requesting datums located at addresses with the credential" <+> pretty (toPlutusAddress addr)
         UtxoSetWithCurrency _ ac        -> "requesting utxos containing the asset class" <+> pretty ac
         TxsFromTxIds i                  -> "requesting chain index txs from ids" <+> pretty i
-        TxoSetAtAddress _ c             -> "requesting txos located at addresses with the credential" <+> pretty c
+        TxoSetAtAddress _ addr          -> "requesting txos located at addresses with the credential" <+> pretty (toPlutusAddress addr)
         GetTip                          -> "requesting the tip of the chain index"
 
 -- | Represents all possible responses to chain index queries. Each constructor

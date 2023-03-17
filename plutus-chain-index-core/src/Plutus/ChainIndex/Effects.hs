@@ -34,7 +34,6 @@ module Plutus.ChainIndex.Effects(
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger.Address (CardanoAddress)
-import Ledger.Credential (Credential)
 import Ledger.Tx (DecoratedTxOut, TxId, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
