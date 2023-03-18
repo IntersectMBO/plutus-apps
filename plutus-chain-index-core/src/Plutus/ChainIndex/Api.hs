@@ -116,8 +116,8 @@ deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Page a)
 --   }
 -- }
 data UtxoAtAddressRequest = UtxoAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , address :: CardanoAddress
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
