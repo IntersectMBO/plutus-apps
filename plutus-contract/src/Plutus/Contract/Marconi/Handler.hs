@@ -41,13 +41,26 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Point (Point, PointAtGenesi
                                 tipAsPoint)
 import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef))
 
-{- Developer note:
-   How to add new indexer to support new effect?
-       1. add the indexer MVar to `ChainIndexIndexersMvar` and the corresponding indexer to `ChainIndexIndexers`
-       2. edit `getChainIndexIndexers` and `putChainIndexIndexers` accordingly
-       3. generate `MarconiEffect` on the appropriate queries of `ChainIndexQueries` in `handleQuery`
-       4. Add the indexer update in the control operations
-       5. Add the `handleMarconiQuery` for the new effect in `handleChainIndexEffects`
+{- Handling ChainIndexEffects with Marconi - Developer notes:
+
+    The general idea is to transform `ChainIndexQueryEffect` into a @MarconiEffect@ for an handler,
+    and to resolve these effects afterwards with a bunch of calls to `handleMarconiQuery`.
+
+    There are two main reasons for it:
+
+        * We mutualise he code that query the handlers (see @handleMarconiQuery@).
+        * We don't deal with IO until we resolve the Marconi indexers effects
+          (it simplifies the body of the different effect handling cases in @handleQuery@).
+        * There's no need of different handlers for @MarconiEffect@ at this stage but we leave the door open to it.
+          A possible use case might be to provide a simpler indexer backend for the emulator.
+
+    How to add new indexer to support new effect?
+
+        1. add the indexer MVar to `ChainIndexIndexersMvar` and the corresponding indexer to `ChainIndexIndexers`
+        2. edit `getChainIndexIndexers` and `putChainIndexIndexers` accordingly
+        3. generate `MarconiEffect` on the appropriate queries of `ChainIndexQueries` in `handleQuery`
+        4. Add the indexer update in the control operations
+        5. Add the `handleMarconiQuery` for the new effect in `handleChainIndexEffects`
 -}
 
 data ChainIndexIndexers -- We don't use `newtype` since other indexers will be needed
