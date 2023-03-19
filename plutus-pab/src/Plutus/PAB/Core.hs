@@ -110,7 +110,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (TxOutRef)
-import Ledger.Address (Address, PaymentPubKeyHash, cardanoAddressCredential, pubKeyHashAddress)
+import Ledger.Address (Address, PaymentPubKeyHash, pubKeyHashAddress)
 import Ledger.Tx (CardanoTx, TxId, decoratedTxOutValue)
 import Ledger.Value.CardanoAPI (fromCardanoValue)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
@@ -641,10 +641,10 @@ finalResult instanceId = Instances.finalResult <$> instanceStateInternal instanc
 valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
   handleAgentThread wallet Nothing $ do
-    txOutsM <- ChainIndex.collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq cred)
+    txOutsM <- ChainIndex.collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq addr)
     pure $ fromCardanoValue $ foldMap (view $ _2 . decoratedTxOutValue) $ concat txOutsM
   where
-    cred = cardanoAddressCredential $ mockWalletAddress wallet
+    addr = mockWalletAddress wallet
 
 -- | Wait until the contract is done, then return
 --   the error (if any)
