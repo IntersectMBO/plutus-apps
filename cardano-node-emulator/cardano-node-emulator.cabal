@@ -34,7 +34,6 @@ library
     Cardano.Node.Emulator.Generators
     Cardano.Node.Emulator.MTL
     Cardano.Node.Emulator.Params
-    Cardano.Node.Emulator.Plain
     Cardano.Node.Emulator.TimeSlot
     Cardano.Node.Emulator.Validation
 
