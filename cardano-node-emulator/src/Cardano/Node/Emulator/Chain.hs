@@ -61,6 +61,11 @@ instance Pretty ChainEvent where
         TxnValidationFail p i _ e _ logs -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e <+> pretty logs
         SlotAdd sl                       -> "SlotAdd" <+> pretty sl
 
+chainEventOnChainTx :: ChainEvent -> Maybe OnChainTx
+chainEventOnChainTx (TxnValidate _ tx _)                        = Just (Valid tx)
+chainEventOnChainTx (TxnValidationFail Index.Phase2 _ tx _ _ _) = Just (Invalid tx)
+chainEventOnChainTx _                                           = Nothing
+
 -- | A pool of transactions which have yet to be validated.
 type TxPool = [CardanoTx]
 

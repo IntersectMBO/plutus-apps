@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeOperators    #-}
 module Cardano.Node.Emulator.MTL where
 
-import Control.Lens (makeLenses, (%~), (&), (^.))
+import Control.Lens (alaf, makeLenses, view, (%~), (&), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.Except (ExceptT)
@@ -21,21 +21,23 @@ import Control.Monad.RWS.Strict (RWST)
 import Data.Foldable (toList)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Monoid (Sum (..))
+import Data.Monoid (Endo (..), Sum (..))
 import Data.Sequence (Seq)
 import Data.Text qualified as Text
 import Prettyprinter qualified as Pretty
 import Prettyprinter.Render.Text qualified as Pretty
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator qualified as E
 import Ledger (CardanoAddress, CardanoTx, DatumFromQuery, DatumHash, DecoratedTxOut, OnChainTx (..),
                PaymentPrivateKey (..), ToCardanoError, TxOut (..), TxOutRef, UtxoIndex, ValidationErrorInPhase,
-               ValidationPhase (Phase2), mkDecoratedTxOut)
+               mkDecoratedTxOut)
 import Ledger.AddressMap qualified as AM
-import Ledger.Index (UtxoIndex (..), createGenesisTransaction)
-import Ledger.Tx (CardanoTx (..), DatumFromQuery (..), addCardanoTxSignature)
-import Ledger.Tx.CardanoAPI (CardanoBuildTx, fromCardanoReferenceScript, fromCardanoScriptData)
+import Ledger.Index (UtxoIndex (..), createGenesisTransaction, insertBlock)
+import Ledger.Tx (CardanoTx (..), DatumFromQuery (..), addCardanoTxSignature, decoratedTxOutValue, getCardanoTxId)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromCardanoReferenceScript, fromCardanoScriptData,
+                             toCardanoTxOutValue)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Builtins qualified as PlutusTx
 
@@ -66,6 +68,7 @@ emptyEmulatorStateWithInitialDist initialDist =
   let tx = Valid $ createGenesisTransaction initialDist
   in emptyEmulatorState
     & esChainState . E.chainNewestFirst %~ ([tx] :)
+    & esChainState . E.index %~ insertBlock [tx]
     & esAddressMap %~ AM.updateAllAddresses tx
 
 handleChain :: MonadEmulator m => Eff [E.ChainControlEffect, E.ChainEffect] a -> m a
@@ -91,10 +94,7 @@ handleChain eff = do
       => LogMsg E.ChainEvent ~> Eff effs
     handleChainLogs (LMessage (LogMessage _ e)) = do
       F.tell @(Seq E.ChainEvent) (pure e)
-      case e of
-        (E.TxnValidate _ tx _)                  -> void $ modify (AM.updateAllAddresses (Valid tx))
-        (E.TxnValidationFail Phase2 _ tx _ _ _) -> void $ modify (AM.updateAllAddresses (Invalid tx))
-        _                                       -> pure ()
+      void $ modify $ alaf Endo foldMap AM.updateAllAddresses $ E.chainEventOnChainTx e
 
 queueTx :: MonadEmulator m => CardanoTx -> m ()
 queueTx tx = handleChain (E.queueTx tx)
@@ -103,6 +103,7 @@ nextSlot :: MonadEmulator m => m ()
 nextSlot = handleChain $ do
   void E.processBlock
   void $ E.modifySlot succ
+
 
 utxosAt :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)
 utxosAt addr = do
@@ -121,6 +122,10 @@ utxosAt addr = do
       Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInBody $ PV2.Datum $ fromCardanoScriptData d)
     toDecoratedDatum (C.TxOutDatumInline _ d) =
       Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInline $ PV2.Datum $ fromCardanoScriptData d)
+
+fundsAt :: MonadEmulator m => CardanoAddress -> m C.Value
+fundsAt addr = foldMap (view decoratedTxOutValue) <$> utxosAt addr
+
 
 balanceTx
   :: (MonadEmulator m)
@@ -154,6 +159,14 @@ submitUnbalancedTx utxoIndex changeAddr utx keys = do
   let signedTx = foldr (addCardanoTxSignature . unPaymentPrivateKey) newTx keys
   queueTx signedTx
   pure signedTx
+
+payToAddress :: MonadEmulator m => (CardanoAddress, PaymentPrivateKey) -> CardanoAddress -> C.Value -> m PV2.TxId
+payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
+  let buildTx = CardanoBuildTx $ E.emptyTxBodyContent
+           { C.txOuts = [C.TxOut targetAddr (toCardanoTxOutValue value) C.TxOutDatumNone C.ReferenceScriptNone]
+           }
+  getCardanoTxId <$> submitUnbalancedTx mempty sourceAddr buildTx [sourcePrivKey]
+
 
 hasValidatedTransactionCountOfTotal :: Int -> Int -> Seq E.ChainEvent -> Maybe String
 hasValidatedTransactionCountOfTotal valid total lg =
