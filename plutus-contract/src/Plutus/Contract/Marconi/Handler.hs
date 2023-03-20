@@ -20,6 +20,7 @@ import Control.Monad.Freer (Eff, LastMember, Member, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
 import Control.Monad.Freer.Extras (raiseMUnderN)
 import Control.Monad.Freer.Extras.Pagination (PageQuery, pageOf)
+import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State qualified as Eff (State, get, put, runState)
 import Control.Monad.Freer.TH (makeEffect)
 import Control.Monad.IO.Class (MonadIO (liftIO))
@@ -155,6 +156,7 @@ handleControl = \case
     where
         toCardanoPoint PointAtGenesis = ChainPointAtGenesis
         toCardanoPoint (Point slot blockId) =
+            -- fromJust usage below is fine as the blockId was created from a CardanoBlock anyway
             ChainPoint (SlotNo (fromIntegral slot)) (fromJust $ toCardanoBlockId blockId)
         extractUtxosEvent Block{blockTip,blockTxs} = let
             point = toCardanoPoint $ tipAsPoint blockTip
@@ -172,12 +174,14 @@ handleQuery = \case
    _eff                            -> throwError UnsupportedQuery
 
 -- | Handle the chain index effects from the set of all effects.
-handleChainIndexEffects
-    :: LastMember IO effs
-    => ChainIndexIndexersMVar
-    -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': MarconiEffect UtxoHandle ': effs) a
+handleChainIndexEffects ::
+    ( LastMember IO effs
+    , Member (Reader ChainIndexIndexersMVar) effs
+    )
+    => Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': MarconiEffect UtxoHandle ': effs) a
     -> Eff effs (Either ChainIndexError a)
-handleChainIndexEffects mIndexers action = do
+handleChainIndexEffects action = do
+    mIndexers <- ask
     indexers <- liftIO $ getChainIndexIndexers mIndexers
     (result, indexers') <- Eff.runState indexers
         $ runError @ChainIndexError
