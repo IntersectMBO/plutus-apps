@@ -56,6 +56,7 @@ library
     Plutus.ChainIndex.Emulator.Handlers
     Plutus.ChainIndex.Emulator.Server
     Plutus.ChainIndex.Handlers
+    Plutus.ChainIndex.Marconi
     Plutus.ChainIndex.Server
     Plutus.ChainIndex.Tx
     Plutus.ChainIndex.TxIdState
@@ -74,6 +75,8 @@ library
   build-depends:
     , cardano-node-emulator  >=1.2.0
     , freer-extras           >=1.2.0
+    , marconi-chain-index    >=1.2.0
+    , marconi-core           >=1.2.0
     , plutus-ledger          >=1.2.0
     , plutus-script-utils    >=1.2.0
 

@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
@@ -9,7 +10,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module Plutus.Contract.Marconi.Handler where
+module Plutus.ChainIndex.Marconi where
 
 import Cardano.Api (AddressInEra (AddressInEra), AddressTypeInEra (..), ChainPoint (..), SlotNo (SlotNo), TxIx (TxIx),
                     toAddressAny)

@@ -62,7 +62,6 @@ library
     Plutus.Contract.Effects
     Plutus.Contract.Error
     Plutus.Contract.Logging
-    Plutus.Contract.Marconi.Handler
     Plutus.Contract.Oracle
     Plutus.Contract.Request
     Plutus.Contract.Resumable
@@ -120,8 +119,6 @@ library
   build-depends:
     , cardano-node-emulator    >=1.2.0
     , freer-extras             >=1.2.0
-    , marconi-chain-index      >=1.2.0
-    , marconi-core             >=1.2.0
     , plutus-chain-index-core  >=1.2.0
     , plutus-ledger            >=1.2.0
     , plutus-script-utils      >=1.2.0
@@ -154,7 +151,6 @@ library
     , aeson                 >=1.5.2
     , aeson-pretty
     , base                  >=4.7     && <5
-    , beam-sqlite
     , bytestring
     , containers
     , cryptonite            >=0.25
