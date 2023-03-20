@@ -4,7 +4,33 @@
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
-module Cardano.Node.Emulator.MTL where
+module Cardano.Node.Emulator.MTL (
+  -- * Updating the blockchain
+    queueTx
+  , nextSlot
+  -- * Querying the blockchain
+  , utxosAt
+  , fundsAt
+  -- * Transactions
+  , balanceTx
+  , submitUnbalancedTx
+  , payToAddress
+  -- * Testing
+  , hasValidatedTransactionCountOfTotal
+  , renderLogs
+  -- * Types
+  , EmulatorState(EmulatorState)
+  , esChainState
+  , esAddressMap
+  , EmulatorError(..)
+  , MonadEmulator
+  , EmulatorT
+  , EmulatorM
+  , emptyEmulatorState
+  , emptyEmulatorStateWithInitialDist
+  -- * Running Eff chain effects in MTL
+  , handleChain
+) where
 
 import Control.Lens (alaf, makeLenses, view, (%~), (&), (^.))
 import Control.Monad (void)
@@ -96,15 +122,18 @@ handleChain eff = do
       F.tell @(Seq E.ChainEvent) (pure e)
       void $ modify $ alaf Endo foldMap AM.updateAllAddresses $ E.chainEventOnChainTx e
 
+-- | Queue the transaction, it will be processed when @nextSlot@ is called.
 queueTx :: MonadEmulator m => CardanoTx -> m ()
 queueTx tx = handleChain (E.queueTx tx)
 
+-- | Process the queued transactions and increase the slot number.
 nextSlot :: MonadEmulator m => m ()
 nextSlot = handleChain $ do
   void E.processBlock
   void $ E.modifySlot succ
 
 
+-- | Query the unspent transaction outputs at the given address.
 utxosAt :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)
 utxosAt addr = do
   es <- get
@@ -123,12 +152,14 @@ utxosAt addr = do
     toDecoratedDatum (C.TxOutDatumInline _ d) =
       Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInline $ PV2.Datum $ fromCardanoScriptData d)
 
+-- | Query the total value of the unspent transaction outputs at the given address.
 fundsAt :: MonadEmulator m => CardanoAddress -> m C.Value
 fundsAt addr = foldMap (view decoratedTxOutValue) <$> utxosAt addr
 
 
+-- | Balance an unbalanced transaction, using funds from the given wallet if needed, and returning any remaining value to the same wallet.
 balanceTx
-  :: (MonadEmulator m)
+  :: MonadEmulator m
   => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoAddress -- ^ Wallet address
   -> CardanoBuildTx
@@ -147,6 +178,7 @@ balanceTx utxoIndex changeAddr utx = do
       (throwError . either ValidationError ToCardanoError)
       utx
 
+-- | Balance a transaction, sign it with the given signatures, and finally queue it.
 submitUnbalancedTx
   :: (MonadEmulator m, Foldable f)
   => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
@@ -160,6 +192,7 @@ submitUnbalancedTx utxoIndex changeAddr utx keys = do
   queueTx signedTx
   pure signedTx
 
+-- | Create a transaction that transfers funds from one address to another, and sign and submit it.
 payToAddress :: MonadEmulator m => (CardanoAddress, PaymentPrivateKey) -> CardanoAddress -> C.Value -> m PV2.TxId
 payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
   let buildTx = CardanoBuildTx $ E.emptyTxBodyContent
@@ -168,6 +201,8 @@ payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
   getCardanoTxId <$> submitUnbalancedTx mempty sourceAddr buildTx [sourcePrivKey]
 
 
+-- | Test the number of validated transactions and the total number of transactions.
+-- Returns a failure message if the numbers don't match up.
 hasValidatedTransactionCountOfTotal :: Int -> Int -> Seq E.ChainEvent -> Maybe String
 hasValidatedTransactionCountOfTotal valid total lg =
   let count = \case
@@ -180,5 +215,6 @@ hasValidatedTransactionCountOfTotal valid total lg =
     else if total - valid /= invalidCount then Just $ "Unexpected number of invalid transactions: " ++ show invalidCount
     else Nothing
 
+-- | Render the logs in a format useful for debugging why a test failed.
 renderLogs :: Seq E.ChainEvent -> String
 renderLogs = Text.unpack . Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptions . Pretty.vsep . toList . fmap Pretty.pretty
