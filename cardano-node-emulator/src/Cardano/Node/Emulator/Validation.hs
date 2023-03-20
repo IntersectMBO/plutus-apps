@@ -68,6 +68,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Text qualified as Text
 import GHC.Records (HasField (..))
+import Ledger.Index (genesisTxIn)
 import Ledger.Index.Internal qualified as P
 import Ledger.Slot (Slot)
 import Ledger.Tx (CardanoTx (CardanoEmulatorEraTx))
@@ -252,8 +253,8 @@ validateCardanoTx
   -> UTxO EmulatorEra
   -> CardanoTx
   -> Either P.ValidationErrorInPhase P.ValidationSuccess
-validateCardanoTx params slot utxo@(UTxO utxoMap) (CardanoEmulatorEraTx tx) =
-  if Map.null utxoMap then Right Map.empty else
+validateCardanoTx params slot utxo (CardanoEmulatorEraTx tx@(C.Api.Tx (C.Api.TxBody bodyContent) _)) =
+  if map fst (C.Api.txIns bodyContent) == [genesisTxIn] then Right Map.empty else
     hasValidationErrors params (fromIntegral slot) utxo tx
 
 getTxExUnitsWithLogs :: Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.BabbageEra -> Either P.ValidationErrorInPhase P.ValidationSuccess

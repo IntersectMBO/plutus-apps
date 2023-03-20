@@ -35,6 +35,7 @@ module Ledger.Index(
     pubKeyTxIns,
     scriptTxIns,
     createGenesisTransaction,
+    genesisTxIn,
     PV1.ExBudget(..),
     PV1.ExCPU(..),
     PV1.ExMemory(..),

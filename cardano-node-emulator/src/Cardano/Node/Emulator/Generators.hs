@@ -66,6 +66,7 @@ import Data.ByteString qualified as BS
 import Data.Default (Default (def), def)
 import Data.Either.Combinators (leftToMaybe)
 import Data.Foldable (fold, foldl')
+import Data.Functor (($>))
 import Data.List (sort)
 import Data.List qualified as List
 import Data.Map (Map)
@@ -73,6 +74,7 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.String (fromString)
 import GHC.Stack (HasCallStack)
 import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
@@ -88,15 +90,13 @@ import Cardano.Node.Emulator.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Cardano.Node.Emulator.Validation (validateCardanoTx)
 import Control.Lens.Lens ((<&>))
-import Data.Functor (($>))
-import Data.String (fromString)
-import Gen.Cardano.Api.Typed (genTxIn)
 import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMintingPolicy),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
                TxInType (ConsumePublicKeyAddress, ConsumeSimpleScriptAddress, ScriptAddress), TxInput, TxInputType,
-               TxOut, TxOutRef (TxOutRef), ValidationErrorInPhase, addCardanoTxSignature, maxFee, minAdaTxOutEstimated,
-               minLovelaceTxOutEstimated, pubKeyTxOut, txOutValue, validatorHash)
+               TxOut, TxOutRef (TxOutRef), ValidationErrorInPhase, addCardanoTxSignature, createGenesisTransaction,
+               maxFee, minAdaTxOutEstimated, minLovelaceTxOutEstimated, pubKeyAddress, pubKeyTxOut, txOutValue,
+               validatorHash)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index.Internal qualified as Index (UtxoIndex (UtxoIndex))
 import Ledger.Tx qualified as Tx
@@ -182,23 +182,12 @@ genMockchain = genMockchain' generatorModel
 genInitialTransaction ::
        GeneratorModel
     -> Gen (CardanoTx, [TxOut])
-genInitialTransaction g = do
-    (body, o) <- initialTxBody g
-    (,o) <$> makeTx body
-
-initialTxBody ::
-       GeneratorModel
-    -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra, [TxOut])
-initialTxBody GeneratorModel{..} = do
-    let o = either (error . ("Cannot create outputs: " <>) . show) id
-          $ traverse (\(ppk, v) -> pubKeyTxOut v ppk Nothing) $ Map.toList $ fmap Value.lovelaceToValue gmInitialBalance
-    -- we use a generated tx in input it's unbalanced but it's "fine" as we don't validate this tx
-    txIns <- map (, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending))
-                 <$> Gen.list (Range.constant 1 10) genTxIn
-    pure (Tx.emptyTxBodyContent
-           { C.txIns
-           , C.txOuts = Tx.getTxOut <$> o
-           }, o)
+genInitialTransaction GeneratorModel{..} = do
+    let pkAddr pk = either (error . show) id $ C.toCardanoAddressInEra (C.Testnet $ C.NetworkMagic 1) $ pubKeyAddress pk Nothing
+        initialDist = Map.mapKeys pkAddr $ fmap Value.lovelaceToValue gmInitialBalance
+    let tx@(CardanoEmulatorEraTx (C.Tx (C.TxBody txBodyContent) _)) = createGenesisTransaction initialDist
+        txOuts = Tx.TxOut <$> C.txOuts txBodyContent
+    pure (tx, txOuts)
 
 -- | Generate a valid transaction, using the unspent outputs provided.
 --   Fails if the there are no unspent outputs, or if the total value
