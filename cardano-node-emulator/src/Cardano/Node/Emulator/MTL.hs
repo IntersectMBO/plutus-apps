@@ -4,6 +4,7 @@
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
+-- | If you want to run the node emulator without using the `Contract` monad, this module provides a simple MTL-based interface.
 module Cardano.Node.Emulator.MTL (
   -- * Updating the blockchain
     queueTx
