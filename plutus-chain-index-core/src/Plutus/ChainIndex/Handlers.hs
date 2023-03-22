@@ -35,7 +35,7 @@ import Data.ByteString (ByteString)
 import Data.FingerTree qualified as FT
 import Data.List qualified as List
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
+import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
@@ -73,7 +73,7 @@ type ChainIndexState = UtxoIndex TxUtxoBalance
 
 getResumePoints :: Member (BeamEffect Sqlite) effs => Eff effs [C.ChainPoint]
 getResumePoints
-    = fmap (mapMaybe (toCardanoPoint . tipAsPoint . fromDbValue . Just))
+    = fmap (map (toCardanoPoint . tipAsPoint . fromDbValue . Just))
     . selectList . select . orderBy_ (desc_ . _tipRowSlot) . all_ $ tipRows db
 
 handleQuery ::

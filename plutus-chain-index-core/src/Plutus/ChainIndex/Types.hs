@@ -17,6 +17,7 @@
 module Plutus.ChainIndex.Types(
     ChainIndexTx(..)
     , ChainIndexTxOutputs(..)
+    , chainIndexTxOutputs
     , ChainIndexTxOut(..)
     , ReferenceScript(..)
     , BlockId(..)
@@ -68,7 +69,7 @@ import Codec.Serialise qualified as CBOR
 import Codec.Serialise.Class (Serialise (decode, encode))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
-import Control.Lens (makeLenses, makePrisms, (&), (.~), (?~))
+import Control.Lens (Traversal', makeLenses, makePrisms, traversal, (&), (.~), (?~))
 import Control.Monad (void)
 import Crypto.Hash (SHA256, hash)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.!=), (.:), (.:?), (.=))
@@ -240,6 +241,13 @@ data ChainIndexTxOutputs =
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makePrisms ''ChainIndexTxOutputs
+
+chainIndexTxOutputs :: Traversal' ChainIndexTxOutputs ChainIndexTxOut
+chainIndexTxOutputs = traversal go
+  where
+    go :: Applicative f => (ChainIndexTxOut -> f ChainIndexTxOut) -> ChainIndexTxOutputs -> f ChainIndexTxOutputs
+    go f (InvalidTx x) = InvalidTx <$> traverse f x
+    go f (ValidTx x)   = ValidTx <$> traverse f x
 
 deriving instance OpenApi.ToSchema TxOutRef
 deriving instance OpenApi.ToSchema RedeemerPtr
