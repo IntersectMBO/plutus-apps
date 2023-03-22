@@ -16,7 +16,7 @@ index-state: 2023-02-28T00:00:00Z
 -- See CONTRIBUTING.adoc for how to update index-state
 index-state:
   , hackage.haskell.org 2023-02-28T00:00:00Z
-  , cardano-haskell-packages 2023-02-28T00:00:00Z
+  , cardano-haskell-packages 2023-03-28T00:00:00Z
 
 packages: cardano-node-emulator
           cardano-streaming
@@ -55,7 +55,7 @@ allow-newer:
   -- too restictive upper bounds on aeson, so we relax them here. The hackage
   -- trustees can make a revision to these packages cabal file to solve the
   -- issue permanently.
-  , ekg:aeson
+  ekg:aeson
   , ekg-json:aeson
   , openapi3:aeson
   , servant:aeson
@@ -65,38 +65,10 @@ allow-newer:
   , blockfrost-api:lens
 
 constraints:
-  -- cardano-prelude-0.1.0.0 needs
-  , protolude <0.3.1
-
-  -- cardano-ledger-byron-0.1.0.0 needs
-  , cardano-binary <1.5.0.1
-
-  -- plutus-core-1.0.0.1 needs
-  , cardano-crypto-class >2.0.0.0
-  , algebraic-graphs <0.7
-
-  -- cardano-ledger-core-0.1.0.0 needs
-  , cardano-crypto-class <2.0.0.1
-
-  -- cardano-crypto-class-2.0.0.0.1 needs
-  , cardano-prelude <0.1.0.1
-
   -- dbvar from cardano-wallet needs
-  , io-classes <0.3.0.0
-
-  -- newer typed-protocols need io-classes>=0.3.0.0 which is incompatible with dbvar's constraint above
-  , typed-protocols==0.1.0.0
+  io-classes <0.3.0.0
 
   , aeson >= 2
-
-  , hedgehog >= 1.1
-
-  , resource-pool <0.4.0.0
-
-  , http2 <4.0.0
-
-  -- ouroboros-consensus-shelley-0.1.0.1 needs
-  , ouroboros-consensus-protocol==0.1.0.1
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which

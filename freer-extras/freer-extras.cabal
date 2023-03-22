@@ -73,7 +73,7 @@ library
     , mtl
     , postgresql-simple
     , prettyprinter
-    , resource-pool
+    , resource-pool < 0.4.0.0
     , sqlite-simple
     , streaming
     , text

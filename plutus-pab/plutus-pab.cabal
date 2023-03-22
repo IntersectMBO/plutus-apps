@@ -201,7 +201,7 @@ library
     , QuickCheck
     , quickcheck-instances
     , random
-    , resource-pool
+    , resource-pool < 0.4.0.0
     , row-types
     , servant
     , servant-client
