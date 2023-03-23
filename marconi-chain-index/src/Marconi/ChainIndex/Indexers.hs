@@ -325,13 +325,10 @@ epochStakepoolSizeWorker_
               RollBackward cp _ct ->
                   modifyMVar indexerMVar $ \ix -> do
                   newIndex <- fromMaybe ix <$> Storable.rewind cp ix
-                  -- The possible points from which we can possibly rollback should be available
-                  -- in the buffer events and from the resumable points.
-                  -- For that assumption to be correct, we absolutely need
-                  --    * to make sure that 'EpochSPD.open' was called with the correct
-                  --    'SecurityParam' (k) value of connect Cardano network.
-                  --    * that the resumablePoints correctly returns the points from which we
-                  --    have saved a LedgerState on disk.
+                  -- We query the LedgerState from disk at the point where we need to rollback to.
+                  -- For that to work, we need to be sure that any volatile LedgerState are stored
+                  -- on disk. For immutable LedgerStates, they are only stored on disk at the first
+                  -- slot of an epoch.
                   EpochSPD.LedgerStateAtPointResult maybeLedgerState <-
                       Storable.query Storable.QEverything newIndex (EpochSPD.LedgerStateAtPointQuery cp)
                   case maybeLedgerState of
