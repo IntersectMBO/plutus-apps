@@ -130,7 +130,7 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
   (loop, _indexerMVar) <- liftIO $ Indexers.epochStakepoolSizeWorker_
       (TN.configurationFile runtime)
       (STM.writeChan indexedTxs)
-      123
+      10
       coordinator
       ch
       dbPath
