@@ -74,7 +74,7 @@ import Cardano.Ledger.Shelley.API qualified as Ledger
 import Cardano.Slotting.Slot (EpochNo)
 import Codec.CBOR.Read qualified as CBOR
 import Codec.CBOR.Write qualified as CBOR
-import Control.Monad (forM_, when)
+import Control.Monad (filterM, forM_, when)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy qualified as BS
 import Data.Coerce (coerce)
@@ -86,8 +86,6 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Ord (Down (Down))
-import Data.Set (Set)
-import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Tuple (swap)
@@ -441,23 +439,21 @@ instance Resumable EpochSPDHandle where
         :: EpochSPDHandle
         -> IO [C.ChainPoint]
     resumeFromStorage (EpochSPDHandle c ledgerStateDirPath _) = do
-        epochSPDChainPoints :: Set C.ChainPoint <- Set.fromList . fmap (uncurry C.ChainPoint) <$>
-                SQL.query c
-                    [r|SELECT slotNo, blockHeaderHash
-                       FROM epoch_spd|] ()
-
         ledgerStateFilepaths <- listDirectory ledgerStateDirPath
         let ledgerStateChainPoints =
-                Set.fromList
-                $ fmap (\(_, sn, bhh, _) -> C.ChainPoint sn bhh)
+                fmap (\(_, sn, bhh, _) -> (sn, bhh))
                 $ mapMaybe chainTipsFromLedgerStateFilePath ledgerStateFilepaths
 
-        let resumablePoints =
-                List.sortOn Down
-                $ Set.toList
-                $ Set.intersection epochSPDChainPoints ledgerStateChainPoints
+        resumablePoints <- flip filterM ledgerStateChainPoints $ \(slotNo, _) -> do
+            result :: [[C.SlotNo]] <- SQL.query c
+                [r|SELECT slotNo
+                   FROM epoch_spd
+                   WHERE slotNo = ? LIMIT 1 |] (SQL.Only slotNo)
+            pure $ not $ null result
 
-        pure $ resumablePoints ++ [C.ChainPointAtGenesis]
+        pure
+            $ List.sortOn Down
+            $ fmap (uncurry C.ChainPoint) resumablePoints ++ [C.ChainPointAtGenesis]
 
 chainTipsFromLedgerStateFilePath :: FilePath -> Maybe (Bool, C.SlotNo, C.Hash C.BlockHeader, C.BlockNo)
 chainTipsFromLedgerStateFilePath ledgerStateFilepath =
