@@ -294,7 +294,7 @@ instance Buffered EpochSPDHandle where
               _noLedgerStateOrEpochNo -> pure ()
 
         -- Remove all immutable LedgerStates from the filesystem expect the most recent immutable
-        -- one which is from the last slot of latest epoch.
+        -- one which is from the first slot of latest epoch.
         -- A 'LedgerState' is considered immutable if its 'blockNo' is '< latestBlockNo - securityParam'.
         case NE.nonEmpty eventsList of
           Nothing -> pure ()
