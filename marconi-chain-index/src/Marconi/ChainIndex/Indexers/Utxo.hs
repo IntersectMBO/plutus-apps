@@ -298,6 +298,24 @@ instance Buffered UtxoHandle where
                ( txInTxId, txInTxIx, slotNo, blockHash
                ) VALUES (?,?,?,?)|] spents)))
     -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
+   -------------------------------------------------------------------------------------
+    -- TODO
+    -- We disable this test for the purpos of this PR and the regreation test.
+    -- Although we expect the Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex allqueryUtxosShouldBeUnspent
+    -- to __fail__, we want to make sure the failure is resulto of logic bug and not the `removal` of events
+    --------------------------------------------------------------------------------------
+    -- the next related pr, has intruduced a flag to disable vacuum.
+    -- rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
+    -- when (rndCheck == 42) $ do
+    --   SQL.execute_ c [r|DELETE FROM unspent_transactions
+    --                       WHERE unspent_transactions.rowid IN
+    --                         (SELECT unspent_transactions.rowid
+    --                          FROM unspent_transactions
+    --                            LEFT JOIN spent ON
+    --                              unspent_transactions.txId = spent.txInTxId
+    --                            AND unspent_transactions.txIx = spent.txInTxIx
+    --                          WHERE spent.txInTxId IS NOT NULL)|]
+    --   SQL.execute_ c "VACUUM"
     rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
     when (rndCheck == 42) $ do
       SQL.execute_ c [r|DELETE FROM unspent_transactions

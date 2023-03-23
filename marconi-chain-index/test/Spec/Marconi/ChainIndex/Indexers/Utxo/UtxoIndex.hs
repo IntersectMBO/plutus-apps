@@ -4,7 +4,8 @@
 module Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex (tests) where
 
 import Cardano.Api qualified as C
-import Control.Lens (filtered, folded, toListOf)
+import Control.Lens (each, filtered, folded, toListOf)
+import Control.Lens.Operators ((%~), (&), (^.))
 import Control.Monad (forM, forM_, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson qualified as Aeson
@@ -33,7 +34,13 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
+
     [ testPropertyNamed
+        "marconi-utxo regression, save and retrieve by address must return Utxos. No Utxos should have an Spent"
+        "allqueryUtxosShouldBeUnspent"
+        allqueryUtxosShouldBeUnspent
+
+    , testPropertyNamed
         "filter UtxoEvent for Utxos with address in the TargetAddress"
         "eventsAtAddressTest"
         eventsAtAddressTest
@@ -79,6 +86,59 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
           "propJsonRoundtripUtxoRow"
           propJsonRoundtripUtxoRow
     ]
+
+---------------- Regression test -------------------
+-- | The purpose of thest is to make sure All Queried Utxo's are unSpent.
+--  The Utxo store consists of:
+--  * in-memory store:  UtxoEvents before they're flushed to SQlite
+--  * SQL-database store:  UtxoRows that are stored in SQLite
+--  In this regression test, We want to make sure:
+--    (1) all utxo query results from SQL-database store are unspent
+--    (2) all utxos query results from in-memory store are unspent
+--    (3) the edge case where although we satisfy (1) and (2), one or many of the query results from SQLite store may have `Spent` in in-memory store.
+--    (4) furthermore, we want to prove that there is always at least one utxoRow returned from sotre.
+--  Point (4) is a consequence of the `genShelleyEraUtxoEvents` specifications:  __there is only Spent for previous generated UtxoEvent__
+--
+-- Assumption:  SQLite vacuum is disabled. This is insupport of (4) and may occure for `depth` of such small numbers.
+-- Note:        We expect this test to fail in this branch.
+allqueryUtxosShouldBeUnspent :: Property
+allqueryUtxosShouldBeUnspent = property $ do
+  events <- forAll genShelleyEraUtxoEvents
+  let numOfEvents = length events
+  -- We choose the `depth` so that we can test the bounderies to test point (3) above.
+  -- this will ensure we have adequate coverage where events are in both, in-memory store and SQLite store
+  -- we use constantFrom to make sure we have coverage for more than 1 event in the in-memory-store
+  depth <- forAll $ Gen.int (Range.constantFrom (numOfEvents - 1) 1 (numOfEvents + 1))
+  Hedgehog.classify "Query both in-memory and storage " $ depth < numOfEvents
+  Hedgehog.classify "Query in-memory only" $ depth > numOfEvents
+
+  indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth depth)
+             >>= liftIO . Storable.insertMany events
+  let
+    addressQueries :: [StorableQuery Utxo.UtxoHandle] -- we want to query for all addresses
+    addressQueries
+      = List.nub
+      . fmap (Utxo.UtxoAddress . Utxo._address)
+      . concatMap (Set.toList . Utxo.ueUtxos)
+      $ events
+  results <- liftIO . traverse (Storable.query Storable.QEverything indexer) $ addressQueries
+  let retrievedUtxoRows :: [Utxo.UtxoRow] = concatMap (\(Utxo.UtxoResult rs) -> rs ) results
+      txinsFromRetrievedUtsoRows :: [C.TxIn]  -- get all the TxIn from quried UtxoRows
+        = retrievedUtxoRows & each %~ (\r ->
+                                       C.TxIn (r ^. Utxo.urUtxo . Utxo.txId)(r ^. Utxo.urUtxo . Utxo.txIx))
+      txInsFromGeneratedEvents :: [C.TxIn]    -- get all the TxIn from quried UtxoRows
+        = concatMap (\(Utxo.UtxoEvent _ ins _ ) -> Set.toList ins ) events
+
+  -- A property of the generator is that there is at least one unspent transaction
+  -- this property also ensures that the next test will not succeed for the trivila case
+  -- when retrievedUtxoRows is an empty list
+  Hedgehog.assert (not . null $ retrievedUtxoRows)
+
+-- There should be no `Spent` in the retrieved UtxoRows
+  Hedgehog.footnote "Regression test must return at least one Utxo. Utxo's may not have any Spent in the Orig. event"
+  Hedgehog.assert
+    $ all (== True)
+    [u `notElem` txInsFromGeneratedEvents| u <- txinsFromRetrievedUtsoRows]
 
 eventsToRowsRoundTripTest :: Property
 eventsToRowsRoundTripTest  = property $ do
