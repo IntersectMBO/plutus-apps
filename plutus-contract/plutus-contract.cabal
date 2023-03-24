@@ -148,7 +148,7 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson                 >=1.5.2
+    , aeson                 >=2
     , aeson-pretty
     , base                  >=4.7     && <5
     , bytestring
