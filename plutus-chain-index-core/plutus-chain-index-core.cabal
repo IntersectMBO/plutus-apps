@@ -164,6 +164,7 @@ test-suite plutus-chain-index-test
     , cardano-node-emulator                                                    >=1.2.0
     , freer-extras                                                             >=1.2.0
     , marconi-chain-index:{marconi-chain-index, marconi-chain-index-test-lib}  >=1.2.0
+    , marconi-core                                                             >=1.2.0
     , plutus-chain-index-core                                                  >=1.2.0
     , plutus-ledger                                                            >=1.2.0
     , plutus-script-utils                                                      >=1.2.0
@@ -172,8 +173,9 @@ test-suite plutus-chain-index-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , plutus-ledger-api  >=1.0.0
-    , plutus-tx          >=1.0.0
+    , cardano-api:{cardano-api, gen}  >=1.35
+    , plutus-ledger-api               >=1.0.0
+    , plutus-tx                       >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -196,3 +198,4 @@ test-suite plutus-chain-index-test
     , stm
     , tasty
     , tasty-hedgehog
+    , transformers

@@ -32,7 +32,13 @@ toCardanoPoint (Point slot blockId) =
 tipFromCardanoBlock
   :: BlockInMode CardanoMode
   -> Tip
-tipFromCardanoBlock (BlockInMode (Block (BlockHeader slot hash block) _) _) =
+tipFromCardanoBlock (BlockInMode (Block header _) _) =
+    tipFromCardanoBlockHeader header
+
+tipFromCardanoBlockHeader
+  :: BlockHeader
+  -> Tip
+tipFromCardanoBlockHeader (BlockHeader slot hash block) =
     fromCardanoTip $ ChainTip slot hash block
 
 fromCardanoSlot :: SlotNo -> Slot

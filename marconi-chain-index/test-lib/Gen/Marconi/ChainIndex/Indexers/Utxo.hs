@@ -19,7 +19,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Gen.Cardano.Api.Typed qualified as CGen
-import Gen.Marconi.ChainIndex.Mockchain (MockBlock (MockBlock), MockBlockHeader (MockBlockHeader), genMockchain)
+import Gen.Marconi.ChainIndex.Mockchain (BlockHeader (BlockHeader), MockBlock (MockBlock), genMockchain)
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -57,7 +57,7 @@ genUtxoEventsWithTxs' txOutToUtxo = do
     fmap (\block -> (getStorableEventFromBlock block, block)) <$> genMockchain
   where
     getStorableEventFromBlock :: MockBlock C.BabbageEra -> StorableEvent UtxoHandle
-    getStorableEventFromBlock (MockBlock (MockBlockHeader slotNo blockHeaderHash _blockNo) txs) =
+    getStorableEventFromBlock (MockBlock (BlockHeader slotNo blockHeaderHash _blockNo) txs) =
         let (TxOutBalance utxos spentTxOuts) = foldMap txOutBalanceFromTx txs
             utxoMap = foldMap getUtxosFromTx txs
             resolvedUtxos = Set.fromList

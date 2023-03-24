@@ -138,11 +138,10 @@ getUtxoEvents
   -> C.ChainPoint
   -> StorableEvent UtxoHandle -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
 getUtxoEvents txs cp =
-  let
-    utxosFromCardanoTx (CardanoTx c _) = getUtxos Nothing c
-    inputsFromCardanoTx (CardanoTx c _) = getInputs c
-    utxos = Set.fromList $ concatMap utxosFromCardanoTx txs
-    ins = foldl' Set.union Set.empty $ inputsFromCardanoTx <$> txs
+  let utxosFromCardanoTx (CardanoTx c _) = getUtxos Nothing c
+      inputsFromCardanoTx (CardanoTx c _) = getInputs c
+      utxos = Set.fromList $ concatMap utxosFromCardanoTx txs
+      ins = foldl' Set.union Set.empty $ inputsFromCardanoTx <$> txs
   in UtxoEvent utxos ins cp
 
 -- | The required arguments to run the chain index effects.

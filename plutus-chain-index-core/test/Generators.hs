@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores   #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TupleSections        #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -153,6 +154,8 @@ deleteInputs spent = do
   modify (over txgsUtxoSet (\s -> s `Set.difference` Map.keysSet spent))
   modify (over txgsStxoSet (\s -> s <> spent))
 
+-- toCardanoScript :: ReferenceScript -> Maybe (cardano-api-1.35.4:Cardano.Api.Script.ReferenceScript C.BabbageEra)
+
 -- | Generate a valid 'Tx' that spends some UTXOs and creates some new ones
 genTx ::
     forall effs.
@@ -164,7 +167,7 @@ genTx = do
     newOutputs <-
         let outputGen = ChainIndexTxOut <$> genAddress <*> genNonZeroAdaValue <*> pure NoOutputDatum <*> pure ReferenceScriptNone in
         sendM (Gen.list (Range.linear 1 5) outputGen)
-    outputs <- sendM (Gen.element [ValidTx newOutputs, InvalidTx (listToMaybe newOutputs)])
+    outputs <- sendM $ Gen.element [ValidTx newOutputs, InvalidTx (listToMaybe newOutputs)]
     inputs <- availableInputs
 
     allInputs <-

@@ -1,53 +1,134 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TupleSections     #-}
 module Plutus.ChainIndex.MarconiSpec (tests) where
 
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
-import Generators qualified as Gen
 import Hedgehog.Internal.Property (Property, forAll, property)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
-import Control.Lens (filtered, folded, to, (^..), (^?))
+import Cardano.Api qualified as C
+import Control.Concurrent (readMVar)
+import Control.Lens (_1, folded, to, toListOf, (^.), (^..), (^?))
+import Control.Monad (void)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
+import Gen.Marconi.ChainIndex.Mockchain (MockBlock (MockBlock), genMockchain)
+import Hedgehog (Gen)
 import Hedgehog qualified
+import Ledger (TxIn)
+import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (..), UtxoHandle)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
-import Plutus.ChainIndex (ChainSyncBlock (Block), Tip (TipAtGenesis), appendBlocks, citoAddress, citxOutputs, pageItems,
-                          pageOf, utxoSetAtAddress)
-import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), page)
+import Marconi.Core.Storable qualified as Storable
+import Plutus.ChainIndex (ChainIndexTxOut, ChainSyncBlock (Block), appendBlocks, citoAddress, citxInputs, citxOutputs,
+                          utxoSetAtAddress)
+import Plutus.ChainIndex.Compatibility (tipFromCardanoBlockHeader)
 import Plutus.ChainIndex.Marconi (ChainIndexIndexers (ChainIndexIndexers), ChainIndexIndexersMVar,
-                                  RunRequirements (RunRequirements), boxChainIndexIndexers, runChainIndexEffects)
-import Plutus.ChainIndex.Types (_ValidTx, chainIndexTxOutputs)
+                                  RunRequirements (RunRequirements), boxChainIndexIndexers, runChainIndexEffects,
+                                  utxosIndexerMVar)
+import Plutus.ChainIndex.Types (ChainSyncBlock (blockTxs), chainIndexTxOutputs)
+import Plutus.Contract.CardanoAPI (fromCardanoTx)
 
 tests :: TestTree
 tests = testGroup "Plutus.ChainIndex.MarconiSpec"
     [ testGroup "testSetAtAddress"
-        [ testPropertyNamed "appendQueryLoop" "setAtAddressRoundtripProperty"
-            setAtAddressRoundtripProperty
+        [ testPropertyNamed "Indexer do store blocks txOuts" "checkTxOutStorage"
+            checkTxOutStorage
+        , testPropertyNamed "Indexer do store blocks txIn" "checkTxInStorage"
+            checkTxInStorage
         ]
     ]
 
+genBlocks :: Gen [ChainSyncBlock]
+genBlocks = fmap fromMockBlock <$> genMockchain
+    where
+        fromMockBlock :: MockBlock C.BabbageEra -> ChainSyncBlock
+        fromMockBlock (MockBlock header txs) =
+            Block
+                (tipFromCardanoBlockHeader header)
+                ((,def) . fromCardanoTx C.BabbageEraInCardanoMode <$> txs)
+
 newChainIndexIndexers :: IO ChainIndexIndexersMVar
 newChainIndexIndexers = do
-  indexers <- ChainIndexIndexers
-      <$> Utxo.open ":memory:" (Utxo.Depth 10)
-  boxChainIndexIndexers indexers
+    indexers <- ChainIndexIndexers
+        <$> Utxo.open ":memory:" (Utxo.Depth 10)
+    boxChainIndexIndexers indexers
 
-setAtAddressRoundtripProperty :: Property
-setAtAddressRoundtripProperty = property $ do
-  (tip, block) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
-  indexers <- liftIO newChainIndexIndexers
-  let fstTxAddr = block ^? folded . citxOutputs . chainIndexTxOutputs . to citoAddress
-  let _originalTxOuts = block ^.. folded . citxOutputs
-  _txouts <- maybe
-      (pure $ Right $ UtxosResponse TipAtGenesis $ pageOf def mempty)
-      (\addr -> do
-          liftIO $ runChainIndexEffects (RunRequirements nullTracer indexers) $ do
-              appendBlocks [Block tip (map (, def) block)]
-              utxoSetAtAddress def addr
-      )
-      fstTxAddr
-  -- TODO Check TxOut once we have a working indexer
-  Hedgehog.success
+getUtxoEvents :: MonadIO m => ChainIndexIndexersMVar -> m [StorableEvent UtxoHandle]
+getUtxoEvents indexers =
+    liftIO $ readMVar (indexers ^. utxosIndexerMVar) >>= Storable.getEvents
+
+allTxOuts :: ChainSyncBlock -> [ChainIndexTxOut]
+allTxOuts =
+    toListOf (to blockTxs . folded . _1 . citxOutputs . chainIndexTxOutputs)
+
+allTxIns :: ChainSyncBlock -> [TxIn]
+allTxIns =
+    toListOf (to blockTxs . folded . _1 . citxInputs . folded)
+
+
+checkTxOutStorage :: Property
+checkTxOutStorage = property $ do
+    blocks <- forAll genBlocks
+    indexers <- liftIO newChainIndexIndexers
+    let txOutAddr = blocks ^? folded . to blockTxs . folded . _1
+                  . citxOutputs . chainIndexTxOutputs . to citoAddress
+
+    maybe
+        Hedgehog.success
+        (\addr -> do
+            void $ liftIO $ runChainIndexEffects (RunRequirements nullTracer indexers) $ do
+                 appendBlocks blocks
+                 utxoSetAtAddress def addr
+            events <- getUtxoEvents indexers
+            let originalTxOuts = blocks >>= allTxOuts
+            Hedgehog.annotateShow events
+            Hedgehog.annotateShow originalTxOuts
+            let eventUtxos = events ^.. folded . to ueUtxos . folded
+            length eventUtxos Hedgehog.=== length originalTxOuts
+        )
+        txOutAddr
+
+checkTxInStorage :: Property
+checkTxInStorage = property $ do
+    blocks <- forAll genBlocks
+    indexers <- liftIO newChainIndexIndexers
+    let txOutAddr = blocks ^? folded . to blockTxs . folded . _1
+                  . citxOutputs . chainIndexTxOutputs . to citoAddress
+    maybe
+        Hedgehog.success
+        (\addr -> do
+            void $ liftIO $ runChainIndexEffects (RunRequirements nullTracer indexers) $ do
+                 appendBlocks blocks
+                 utxoSetAtAddress def addr
+            events <- getUtxoEvents indexers
+            let originalTxIns = blocks >>= allTxIns
+            Hedgehog.annotateShow events
+            Hedgehog.annotateShow originalTxIns
+            let eventTxIns = events ^.. folded . to ueInputs . folded
+            length eventTxIns Hedgehog.=== length originalTxIns
+        )
+        txOutAddr
+        {-
+    let blocksTxs = blocks ^.. folded . to blockTxs . folded . _1
+        lastTx = blocksTxs ^? _last
+        lastTxIn = lastTx ^? folded . citxInputs . _last . to txInRef
+        lastTxInAddr = lastTxIn >>= flip findTxOutRefAddr blocksTxs
+    txouts <- maybe
+        (pure $ Right $ UtxosResponse TipAtGenesis $ pageOf def mempty)
+        (\addr -> do
+            liftIO $ runChainIndexEffects (RunRequirements nullTracer indexers) $ do
+                appendBlocks blocks
+                utxoSetAtAddress def addr
+        )
+        lastTxInAddr
+    let indexedTxOuts = pageItems . page <$> txouts
+    events <- getUtxoEvents indexers
+
+    Hedgehog.annotateShow events
+    Hedgehog.annotateShow lastTxIn
+    Hedgehog.annotateShow indexedTxOuts
+    Hedgehog.assert $ either (const False) (not . maybe (const True) elem lastTxIn) indexedTxOuts
+    -}
