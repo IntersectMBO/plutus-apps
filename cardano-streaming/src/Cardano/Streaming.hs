@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
+
 module Cardano.Streaming
   ( withChainSyncEventStream
   , CS.ChainSyncEvent (..)
@@ -180,7 +180,9 @@ ledgerStatesPipelined pipelineSize config socket validationMode = do
 -- keeps waiting for more blocks when chainsync server and client are
 -- fully synchronized.
 foldLedgerState
-  :: C.Env -> LedgerStateHistory -> C.ValidationMode
+  :: C.Env
+  -> LedgerStateHistory
+  -> C.ValidationMode
   -> S.Stream (S.Of (CS.ChainSyncEvent (C.BlockInMode C.CardanoMode))) IO r
   -> S.Stream (S.Of C.LedgerState) IO r
 foldLedgerState env initialLedgerStateHistory validationMode =
@@ -188,7 +190,9 @@ foldLedgerState env initialLedgerStateHistory validationMode =
 
 -- | Like `foldLedgerState`, but also produces blocks and `C.LedgerEvent`s.
 foldLedgerStateEvents
-  :: C.Env -> LedgerStateHistory -> C.ValidationMode
+  :: C.Env
+  -> LedgerStateHistory
+  -> C.ValidationMode
   -> S.Stream (S.Of (CS.ChainSyncEvent (C.BlockInMode C.CardanoMode))) IO r
   -> S.Stream (S.Of (C.BlockInMode C.CardanoMode, LedgerStateEvents)) IO r
 foldLedgerStateEvents env initialLedgerStateHistory validationMode = loop initialLedgerStateHistory
@@ -204,7 +208,7 @@ foldLedgerStateEvents env initialLedgerStateHistory validationMode = loop initia
       Left r -> pure r
       Right (chainSyncEvent, source') -> do
         ledgerStateHistory' <- case chainSyncEvent of
-          CS.RollForward (blockInMode@(C.BlockInMode block _)) _ct -> do
+          CS.RollForward blockInMode@(C.BlockInMode block _) _ct -> do
             newLedgerState <- liftIO $ applyBlock_ (getLastLedgerState ledgerStateHistory) block
             let (ledgerStateHistory', committedStates) = pushLedgerState env ledgerStateHistory (CS.bimSlotNo blockInMode) newLedgerState blockInMode
             forM_ committedStates $ \(_, (ledgerState, ledgerEvents), currBlockMay) -> case currBlockMay of
@@ -224,7 +228,12 @@ getEnvAndInitialLedgerStateHistory configPath = do
   return (env, initialLedgerStateHistory)
 
 
-applyBlockThrow :: C.Env -> C.LedgerState -> C.ValidationMode -> C.Block era -> IO (C.LedgerState, [C.LedgerEvent])
+applyBlockThrow
+    :: C.Env
+    -> C.LedgerState
+    -> C.ValidationMode
+    -> C.Block era
+    -> IO (C.LedgerState, [C.LedgerEvent])
 applyBlockThrow env ledgerState validationMode block = case C.applyBlock env ledgerState validationMode block of
   Left err -> IO.throw err
   Right ls -> pure ls

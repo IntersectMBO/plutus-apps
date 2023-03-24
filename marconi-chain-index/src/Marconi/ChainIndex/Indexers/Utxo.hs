@@ -474,12 +474,16 @@ instance Rewindable UtxoHandle where
 
 -- For resuming we need to provide a list of points where we can resume from.
 instance Resumable UtxoHandle where
-  resumeFromStorage h = do
-    es <- Storable.getStoredEvents h
+  resumeFromStorage (UtxoHandle c _) = do
+    chainPoints <- fmap (uncurry C.ChainPoint) <$>
+            SQL.query c
+                [r|SELECT slotNo, blockHash
+                   FROM unspent_transactions
+                   ORDER BY slotNo DESC|] ()
     -- The ordering here matters. The node will try to find the first point in the
     -- ledger, then move to the next and so on, so we will send the latest point
     -- first.
-    pure $ map ueChainPoint es ++ [C.ChainPointAtGenesis]
+    pure $ chainPoints ++ [C.ChainPointAtGenesis]
 
 -- | Convert from 'AddressInEra' of the 'CurrentEra' to 'AddressAny'.
 toAddr :: C.AddressInEra era -> C.AddressAny

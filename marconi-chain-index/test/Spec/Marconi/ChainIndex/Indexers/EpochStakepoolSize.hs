@@ -5,34 +5,39 @@
 
 module Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize (tests) where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.BM.Configuration.Static (defaultConfigStdout)
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
+import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Control.Concurrent qualified as IO
+import Control.Concurrent qualified as STM
 import Control.Concurrent.Async qualified as IO
+import Control.Concurrent.STM qualified as STM
+import Control.Exception (catch)
 import Control.Monad (forever, void, when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson ((.=))
 import Data.Aeson qualified as J
 import Data.ByteString.Lazy qualified as BL
-import Data.Function ((&))
+import Data.List qualified as List
 import Data.Map qualified as Map
-import Database.SQLite.Simple qualified as SQL
+import Hedgehog qualified as H
+import Hedgehog.Extras.Test qualified as HE
+import Helpers qualified as TN
+import Marconi.ChainIndex.Indexers qualified as Indexers
+import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochStakepoolSize
+import Marconi.Core.Storable qualified as Storable
+import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
 import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
 import System.FilePath.Posix ((</>))
-
-import Hedgehog qualified as H
-import Hedgehog.Extras.Test qualified as HE
 import Test.Base qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Cardano.Streaming qualified as CS
 import Testnet.Cardano qualified as TN
-
-import Helpers qualified as TN
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochStakepoolSize
-
 
 tests :: TestTree
 tests = testGroup "EpochStakepoolSize"
@@ -113,37 +118,63 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
   -- Prepare transaction to register stakepool and stake funds
   (poolVKey :: C.PoolId, tx, txBody) <- registerPool con networkId pparams tempAbsPath keyWitnesses [stakeCredential, stakeCredential2] genesisAddress
 
-  -- start indexer
-  found <- liftIO IO.newEmptyMVar
-  let dbPath = tempAbsPath </> "epoch_stakepool_sizes.db"
-  dbCon <- liftIO $ SQL.open dbPath
-  void $ liftIO $ do
-    chan <- IO.newChan
-    let indexer = CS.ledgerStates (TN.configurationFile runtime) socketPath C.QuickValidation
-          & EpochStakepoolSize.toEvents
-          & EpochStakepoolSize.sqlite dbCon
-          & S.chain (IO.writeChan chan) -- After indexer has written the event to database, we write it to the chan
-    void $ (IO.link =<<) $ IO.async $ void $ S.effects indexer
-
-    -- Consume the channel until an event is found which (1) has the
-    -- pool ID and (2) has the right amount of lovelace staked.
-    (IO.link =<<) $ IO.async $ forever $ do
-      EpochStakepoolSize.Event (_epochNo, stakeMap) <- IO.readChan chan
-      case Map.lookup poolVKey stakeMap of
-        Just lovelace -> when (lovelace == totalStakedLovelace) $ IO.putMVar found () -- Event found!
-        _             -> return ()
-
   -- Submit transaction to create stakepool and stake the funds
   TN.submitAwaitTx con (tx, txBody)
 
+  -- This is the channel we wait on to know if the event has been indexed
+  indexedTxs <- liftIO IO.newChan
+  -- Start indexer
+  coordinator <- liftIO $ Indexers.initialCoordinator 1
+  ch <- liftIO $ STM.atomically . STM.dupTChan $ Indexers._channel coordinator
+  let dbPath = tempAbsPath </> "epoch_stakepool_sizes.db"
+  (loop, _indexerMVar) <- liftIO $ Indexers.epochStakepoolSizeWorker_
+      (TN.configurationFile runtime)
+      (STM.writeChan indexedTxs)
+      10
+      coordinator
+      ch
+      dbPath
+  liftIO $ do
+      void $ IO.async loop
+      -- Receive ChainSyncEvents and pass them on to indexer's channel
+      void $ IO.async $ do
+        let chainPoint = C.ChainPointAtGenesis
+        c <- defaultConfigStdout
+        withTrace c "marconi" $ \trace ->
+            let indexerWorker =
+                    withChainSyncEventStream socketPath networkId [chainPoint]
+                    $ S.mapM_
+                    $ \chainSyncEvent -> STM.atomically $ STM.writeTChan ch chainSyncEvent
+                handleException NoIntersectionFound =
+                    logError trace
+                    $ renderStrict
+                    $ layoutPretty defaultLayoutOptions
+                    $ "No intersection found for chain point" <+> pretty chainPoint <> "."
+             in indexerWorker `catch` handleException :: IO ()
+
+  found <- liftIO IO.newEmptyMVar
+  liftIO $ (IO.link =<<) $ IO.async $ forever $ do
+      (_, event) <- IO.readChan indexedTxs
+      case Map.lookup poolVKey (EpochStakepoolSize.epochSPDEventSPD event) of
+          Just lovelace ->
+              when (lovelace == totalStakedLovelace) $
+                  IO.putMVar found (EpochStakepoolSize.epochSPDEventEpochNo event) -- Event found!
+          Nothing       ->
+              return ()
+
   -- This is filled when the epoch stakepool size has been indexed
-  liftIO $ IO.takeMVar found
+  Just epochNo <- liftIO $ IO.takeMVar found
 
   -- Let's find it in the database as well
-  epochStakes <- liftIO $ EpochStakepoolSize.queryPoolId dbCon poolVKey
-  case epochStakes of
-    ((_, lovelace) : _) -> H.assert $ lovelace == totalStakedLovelace
-    _                   -> fail "Can't find the stake for pool in sqlite!"
+  indexer <- liftIO $ STM.readMVar _indexerMVar
+  queryResult <- liftIO $ Storable.query Storable.QEverything indexer (EpochStakepoolSize.SPDByEpochNoQuery epochNo)
+  case queryResult of
+      EpochStakepoolSize.SPDByEpochNoResult stakeMap ->
+          let actualTotalStakedLovelace =
+                  fmap EpochStakepoolSize.epochSPDRowLovelace
+                       (List.find (\epochSpdRow -> EpochStakepoolSize.epochSPDRowPoolId epochSpdRow == poolVKey) stakeMap)
+           in H.assert $ actualTotalStakedLovelace == Just totalStakedLovelace
+      _otherResult -> fail "Wrong response from the given query"
 
 -- | This is a pure version of `runStakePoolRegistrationCert` defined in /cardano-node/cardano-cli/src/Cardano/CLI/Shelley/Run/Pool.hs::60
 makeStakePoolRegistrationCert_

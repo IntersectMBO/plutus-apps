@@ -23,12 +23,15 @@ module Gen.Marconi.ChainIndex.Types
   , genAssetId
   , genPolicyId
   , genQuantity
+  , genEpochNo
+  , genPoolId
   ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash.Class qualified as CRYPTO
+import Cardano.Ledger.Keys (KeyHash (KeyHash))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -284,10 +287,6 @@ genProtocolParametersForPlutusScripts =
         ratioToRational = toRational
 
     -- Copied from cardano-api. Delete when this function is reexported
-    genEpochNo :: Gen C.EpochNo
-    genEpochNo = C.EpochNo <$> Gen.word64 (Range.linear 0 10)
-
-    -- Copied from cardano-api. Delete when this function is reexported
     genNat :: Gen Natural
     genNat = Gen.integral (Range.linear 0 10)
 
@@ -315,3 +314,13 @@ genPolicyId =
 -- TODO Copied from cardano-api. Delete once reexported
 genQuantity :: Range Integer -> Gen C.Quantity
 genQuantity range = fromInteger <$> Gen.integral range
+
+-- TODO Copied from cardano-api. Delete once reexported
+genEpochNo :: Gen C.EpochNo
+genEpochNo = C.EpochNo <$> Gen.word64 (Range.linear 0 10)
+
+genPoolId :: Gen (C.Hash C.StakePoolKey)
+genPoolId = C.StakePoolKeyHash  . KeyHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
+  where
+    mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
+    mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR

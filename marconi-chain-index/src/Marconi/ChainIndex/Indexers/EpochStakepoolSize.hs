@@ -1,187 +1,498 @@
-{-# OPTIONS_GHC -Wno-orphans      #-}
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE MultiWayIf        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TupleSections      #-}
 
-module Marconi.ChainIndex.Indexers.EpochStakepoolSize where
-
-import Control.Monad.Trans.Class (lift)
-import Data.Coerce (coerce)
-import Data.Foldable (forM_)
-import Data.Function (on, (&))
-import Data.List (groupBy)
-import Data.Map qualified as M
-import Data.Maybe qualified as P
-import Data.Sequence qualified as Seq
-import Data.Tuple (swap)
-import Data.VMap qualified as VMap
-import Database.SQLite.Simple qualified as SQL
-import Database.SQLite.Simple.FromField qualified as SQL
-import Database.SQLite.Simple.ToField qualified as SQL
-import Streaming.Prelude qualified as S
+-- | Module for indexing the stakepool delegation per epoch in the Cardano blockchain.
+--
+-- This module will create the SQL tables:
+--
+-- + table: epoch_spd
+--
+-- @
+--    |---------+--------+----------+--------+-----------------+---------|
+--    | epochNo | poolId | lovelace | slotNo | blockHeaderHash | blockNo |
+--    |---------+--------+----------+--------+-----------------+---------|
+-- @
+--
+-- To create this table, we need to compute the `LedgerState` from `ouroboros-network` (called
+-- `NewEpochState` in `cardano-ledger`) at each 'Rollforward' chain sync event. Using the
+-- 'LegderState', we can easily compute the epochNo as well as the stake pool delegation for that
+-- epoch.
+--
+-- The main issue with this indexer is that building the LedgerState and saving it on disk for being
+-- able to resume is VERY resource intensive. Syncing time for this indexer is over 20h and uses
+-- about ~16GB of RAM (which will keep increasing as the blockchain continues to grow).
+--
+-- Here is a synopsis of what this indexer does.
+--
+-- We assume that the construction of 'LedgerState' is done outside of this indexer (this module).
+--
+--   * the 'Storable.insert' function is called with the *last* event of an epoch (therefore, the
+--   last 'LedgerState' before starting a new epoch). We do that because we only care about the SPD
+--   (Stake Pool Delegation) from the last block before a new epoch.
+--
+-- Once the 'Storable.StorableEvent' is stored on disk, we perform various steps:
+--
+--   1. we save the SPD for the current epoch in the `epoch_spd` table
+--   2. we save the 'LedgerState's in the filesystem as binary files (the ledger state file path has
+--   the format: `ledgerState_<SLOT_NO>_<BLOCK_HEADER_HASH>_<BLOCK_NO>.bin`). We only store a
+--   'LedgerState' if it's rollbackable or if the last one of a given epoch. This step is necessary
+--   for resuming the indexer.
+--   3. we delete immutable 'LedgerState' binary files expect latest one (this step is necessary for
+--
+-- The indexer provides the following queries:
+--
+--   * C.EpochNo -> SPD (the actualy query that clients will be interested in)
+--   * C.ChainPoint -> LedgerState (query that is necessary for resuming)
+module Marconi.ChainIndex.Indexers.EpochStakepoolSize
+  ( -- * EpochSPDIndex
+    EpochSPDIndex
+  , EpochSPDDepth (..)
+  , EpochSPDHandle
+  , EpochSPDRow (..)
+  , StorableEvent(..)
+  , StorableQuery(..)
+  , StorableResult(..)
+  , toStorableEvent
+  , open
+  , getEpochNo
+  ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Streaming qualified as CS
-
-import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Compactible qualified as L
-import Cardano.Ledger.Credential qualified as LC
-import Cardano.Ledger.Era qualified as LE
-import Cardano.Ledger.Keys qualified as LK
-import Cardano.Ledger.Shelley.EpochBoundary qualified as Shelley
-import Cardano.Ledger.Shelley.LedgerState qualified as SL
-import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
+import Cardano.Ledger.Coin qualified as Ledger
+import Cardano.Ledger.Compactible qualified as Ledger
+import Cardano.Ledger.Era qualified as Ledger
+import Cardano.Ledger.Shelley.API qualified as Ledger
+import Cardano.Slotting.Slot (EpochNo)
+import Codec.CBOR.Read qualified as CBOR
+import Codec.CBOR.Write qualified as CBOR
+import Control.Monad (filterM, forM_, when)
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Lazy qualified as BS
+import Data.Coerce (coerce)
+import Data.Data (Proxy (Proxy))
+import Data.Foldable (toList)
+import Data.List qualified as List
+import Data.List.NonEmpty qualified as NE
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (catMaybes, mapMaybe)
+import Data.Ord (Down (Down))
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Tuple (swap)
+import Data.VMap qualified as VMap
+import Data.Word (Word64)
+import Database.SQLite.Simple qualified as SQL
+import GHC.Generics (Generic)
+import Marconi.ChainIndex.Orphans (decodeLedgerState, encodeLedgerState)
+import Marconi.ChainIndex.Utils (isBlockRollbackable)
+import Marconi.Core.Storable (Buffered (persistToStorage), HasPoint (getPoint), QueryInterval, Queryable (queryStorage),
+                              Resumable, Rewindable (rewindStorage), State, StorableEvent, StorableMonad, StorablePoint,
+                              StorableQuery, StorableResult, emptyState)
+import Marconi.Core.Storable qualified as Storable
 import Ouroboros.Consensus.Cardano.Block qualified as O
 import Ouroboros.Consensus.Shelley.Ledger qualified as O
+import System.Directory (listDirectory, removeFile)
+import System.FilePath (dropExtension, (</>))
+import Text.RawString.QQ (r)
+import Text.Read (readMaybe)
 
-import Cardano.Streaming.Helpers (getEpochNo)
+data EpochSPDHandle = EpochSPDHandle
+    { _epochSDPHandleConnection         :: !SQL.Connection
+    , _epochSDPHandleLedgerStateDirPath :: !FilePath
+    , _epochSDPHandleSecurityParam      :: !Word64
+    }
 
--- * Event
+type instance StorableMonad EpochSPDHandle = IO
 
-newtype Event = Event (C.EpochNo, M.Map C.PoolId C.Lovelace)
+data instance StorableEvent EpochSPDHandle =
+    EpochSPDEvent
+        { epochSPDEventLedgerState :: Maybe (O.LedgerState (O.CardanoBlock O.StandardCrypto))
+        , epochSPDEventEpochNo :: Maybe C.EpochNo
+        , epochSPDEventSPD :: Map C.PoolId C.Lovelace
+        , epochSPDEventSlotNo :: C.SlotNo
+        , epochSPDEventBlockHeaderHash :: C.Hash C.BlockHeader
+        , epochSPDEventBlockNo :: C.BlockNo
+        , epochSPDEventChainTip :: C.ChainTip -- ^ Actual tip of the chain
+        , epochSPDEventIsFirstEventOfEpoch :: Bool
+        }
+    deriving (Eq, Show)
 
--- | Convert a stream of ledger states for every block to a stream of
--- ledger states for every epoch. We also skip the Byron era because
--- it doesn't have any staking information.
-toEvents :: S.Stream (S.Of C.LedgerState) IO r -> S.Stream (S.Of Event) IO r
-toEvents source = source
-  & S.mapMaybe toNoByron
-  & firstEventOfEveryEpoch
-  where
-    -- Skip Byron era as it doesn't have staking.
-    toNoByron :: C.LedgerState -> Maybe Event
-    toNoByron ls = if
-      | Just epochNo <- getEpochNo ls
-      , Just m <- getStakeMap ls -> Just $ Event (epochNo, m)
-      | otherwise -> Nothing
+type instance StorablePoint EpochSPDHandle = C.ChainPoint
 
-    -- We get LedgerState at every block from the ledgerStates
-    -- streamer but we only want the first one of every epoch, so we
-    -- zip them and only emit ledger states at epoch boundaries.
-    firstEventOfEveryEpoch :: S.Stream (S.Of Event) IO r -> S.Stream (S.Of Event) IO r
-    firstEventOfEveryEpoch source' = source'
-      & S.slidingWindow 2
-      & S.mapMaybe (\case
-                  (Event (e0, _) Seq.:<| t@(Event (e1, _)) Seq.:<| Seq.Empty)
-                    | succ e0 == e1 -> Just t
-                    | e0 == e1 -> Nothing
-                    | otherwise -> error $ "This should never happen: consequent epochs wider apart than by one: " <> show (e0, e1)
-                  _ -> error "This should never happen"
-              )
+instance HasPoint (StorableEvent EpochSPDHandle) C.ChainPoint where
+  getPoint (EpochSPDEvent _ _ _ s bhh _ _ _) = C.ChainPoint s bhh
 
--- | From LedgerState get epoch stakepool size: a mapping of pool ID
--- to amount staked. We do this by getting the _pstatkeSet stake
--- snapshot and then use _delegations and _stake to resolve it into
--- the desired mapping.
-getStakeMap :: C.LedgerState -> Maybe (M.Map C.PoolId C.Lovelace)
+data instance StorableQuery EpochSPDHandle =
+    SPDByEpochNoQuery C.EpochNo
+  | LedgerStateAtPointQuery C.ChainPoint
+
+data instance StorableResult EpochSPDHandle =
+    SPDByEpochNoResult [EpochSPDRow]
+  | LedgerStateAtPointResult (Maybe (O.LedgerState (O.CardanoBlock O.StandardCrypto)))
+    deriving (Eq, Show)
+
+newtype EpochSPDDepth = EpochSPDDepth Int
+
+type EpochSPDIndex = State EpochSPDHandle
+
+toStorableEvent
+    :: O.LedgerState (O.HardForkBlock (O.CardanoEras O.StandardCrypto))
+    -> C.SlotNo
+    -> C.Hash C.BlockHeader
+    -> C.BlockNo
+    -> C.ChainTip
+    -> Word64 -- ^ Security param
+    -> Bool -- ^ Is the last event of the current epoch
+    -> StorableEvent EpochSPDHandle
+toStorableEvent ledgerState slotNo bhh bn chainTip securityParam isFirstEventOfEpoch = do
+    let doesStoreLedgerState = isBlockRollbackable securityParam bn chainTip || isFirstEventOfEpoch
+    EpochSPDEvent
+        (if doesStoreLedgerState then Just ledgerState else Nothing)
+        (getEpochNo ledgerState)
+        (getStakeMap ledgerState)
+        slotNo
+        bhh
+        bn
+        chainTip
+        isFirstEventOfEpoch
+
+-- | From LedgerState, get epoch stake pool delegation: a mapping of pool ID to amount staked in
+-- lovelace. We do this by getting the '_pstakeSet' stake snapshot and then use '_delegations' and
+-- '_stake' to resolve it into the desired mapping.
+getStakeMap
+    :: O.LedgerState (O.CardanoBlock O.StandardCrypto)
+    -> Map C.PoolId C.Lovelace
 getStakeMap ledgerState' = case ledgerState' of
-  C.LedgerStateByron _st                  -> Nothing
-  C.LedgerStateShelley st                 -> fromState st
-  C.LedgerStateAllegra st                 -> fromState st
-  C.LedgerStateMary st                    -> fromState st
-  C.LedgerStateAlonzo st                  -> fromState st
-  -- TODO Pattern LedgerStateBabbage missing in cardano-node
-  -- https://github.com/input-output-hk/cardano-node/blob/release/1.35/cardano-api/src/Cardano/Api/LedgerState.hs#L252-L281,
-  -- swap this to a pattern when it appears.
-  C.LedgerState (O.LedgerStateBabbage st) -> fromState st
+  O.LedgerStateByron _    -> mempty
+  O.LedgerStateShelley st -> getStakeMapFromShelleyBlock st
+  O.LedgerStateAllegra st -> getStakeMapFromShelleyBlock st
+  O.LedgerStateMary st    -> getStakeMapFromShelleyBlock st
+  O.LedgerStateAlonzo st  -> getStakeMapFromShelleyBlock st
+  O.LedgerStateBabbage st -> getStakeMapFromShelleyBlock st
   where
-    fromState
+    getStakeMapFromShelleyBlock
       :: forall proto era c
-       . (c ~ LE.Crypto era, c ~ O.StandardCrypto)
+       . (c ~ Ledger.Crypto era, c ~ O.StandardCrypto)
       => O.LedgerState (O.ShelleyBlock proto era)
-      -> Maybe (M.Map C.PoolId C.Lovelace)
-    fromState st = Just res
+      -> Map C.PoolId C.Lovelace
+    getStakeMapFromShelleyBlock st = spd
       where
-        nes = O.shelleyLedgerState st :: SL.NewEpochState era
+        nes = O.shelleyLedgerState st :: Ledger.NewEpochState era
 
-        stakeSnapshot = Shelley._pstakeSet . Shelley.esSnapshots . Shelley.nesEs $ nes :: Shelley.SnapShot c
-        stakes = Shelley.unStake $ Shelley._stake stakeSnapshot :: VMap.VMap VMap.VB VMap.VP (LC.Credential 'LK.Staking c) (L.CompactForm L.Coin)
+        stakeSnapshot = Ledger._pstakeSet . Ledger.esSnapshots . Ledger.nesEs $ nes :: Ledger.SnapShot c
 
-        delegations :: VMap.VMap VMap.VB VMap.VB (LC.Credential 'LK.Staking c) (LK.KeyHash 'LK.StakePool c)
-        delegations = Shelley._delegations stakeSnapshot
+        stakes = Ledger.unStake
+               $ Ledger._stake stakeSnapshot
 
-        res :: M.Map C.PoolId C.Lovelace
-        res = M.fromListWith (+) $ map swap $ P.catMaybes $ VMap.elems $
-          VMap.mapWithKey (\cred spkHash -> (\c -> (C.Lovelace $ coerce $ L.fromCompact c, f spkHash)) <$> VMap.lookup cred stakes) delegations
+        delegations :: VMap.VMap VMap.VB VMap.VB (Ledger.Credential 'Ledger.Staking c) (Ledger.KeyHash 'Ledger.StakePool c)
+        delegations = Ledger._delegations stakeSnapshot
 
-        f :: LK.KeyHash 'LK.StakePool c -> C.PoolId
-        f xk = C.StakePoolKeyHash xk
+        spd :: Map C.PoolId C.Lovelace
+        spd = Map.fromListWith (+)
+            $ map swap
+            $ catMaybes
+            $ VMap.elems
+            $ VMap.mapWithKey
+                (\cred spkHash ->
+                    (\c -> ( C.Lovelace $ coerce $ Ledger.fromCompact c
+                           , C.StakePoolKeyHash spkHash
+                           )
+                    )
+                    <$> VMap.lookup cred stakes)
+                delegations
 
-indexer
-  :: FilePath -> FilePath -> SQL.Connection
-  -> S.Stream (S.Of Event) IO r
-indexer conf socket dbCon =
-    CS.ledgerStates conf socket C.QuickValidation
-  & toEvents
-  & sqlite dbCon
-
--- * Sqlite back-end
-
--- | Consume a stream of events and write them to the database. Also
--- passes events on after they are persisted -- useful to knwow when
--- something has been persisted.
-sqlite :: SQL.Connection -> S.Stream (S.Of Event) IO r -> S.Stream (S.Of Event) IO r
-sqlite c source = do
-  lift $ SQL.execute_ c
-      "CREATE TABLE IF NOT EXISTS stakepool_delegation (poolId BLOB NOT NULL, lovelace INT NOT NULL, epochNo INT NOT NULL)"
-  loop source
-
+getEpochNo :: O.LedgerState (O.CardanoBlock O.StandardCrypto) -> Maybe EpochNo
+getEpochNo ledgerState' = case ledgerState' of
+  O.LedgerStateByron _st  -> Nothing
+  O.LedgerStateShelley st -> getEpochNoFromShelleyBlock st
+  O.LedgerStateAllegra st -> getEpochNoFromShelleyBlock st
+  O.LedgerStateMary st    -> getEpochNoFromShelleyBlock st
+  O.LedgerStateAlonzo st  -> getEpochNoFromShelleyBlock st
+  O.LedgerStateBabbage st -> getEpochNoFromShelleyBlock st
   where
-    toRows :: Event -> [(C.EpochNo, C.PoolId, C.Lovelace)]
-    toRows (Event (epochNo, m)) = map (\(keyHash, lovelace) -> (epochNo, keyHash, lovelace)) $ M.toList m
+    getEpochNoFromShelleyBlock = Just . Ledger.nesEL . O.shelleyLedgerState
 
-    loop :: S.Stream (S.Of Event) IO r -> S.Stream (S.Of Event) IO r
-    loop source' = lift (S.next source') >>= \case
-        Left r -> pure r
-        Right (event, source'') -> do
-          lift $ forM_ (toRows event) $ \row ->
-            SQL.execute c "INSERT INTO stakepool_delegation (epochNo, poolId, lovelace) VALUES (?, ?, ?)" row
-          S.yield event
-          loop source''
+data EpochSPDRow = EpochSPDRow
+    { epochSPDRowEpochNo         :: !C.EpochNo
+    , epochSPDRowPoolId          :: !C.PoolId
+    , epochSPDRowLovelace        :: !C.Lovelace
+    , epochSPDRowSlotNo          :: !C.SlotNo
+    , epochSPDRowBlockHeaderHash :: !(C.Hash C.BlockHeader)
+    , epochSPDRowBlockNo         :: !C.BlockNo
+    } deriving (Eq, Ord, Show, Generic, SQL.FromRow, SQL.ToRow)
 
+instance Buffered EpochSPDHandle where
+    -- We should only store on disk SPD from the last slot of each epoch.
+    persistToStorage
+        :: Foldable f
+        => f (StorableEvent EpochSPDHandle)
+        -> EpochSPDHandle
+        -> IO EpochSPDHandle
+    persistToStorage events h@(EpochSPDHandle c ledgerStateDirPath securityParam) = do
+        let eventsList = toList events
 
-instance SQL.ToField C.EpochNo where
-  toField (C.EpochNo word64) = SQL.toField word64
-instance SQL.FromField C.EpochNo where
-  fromField f = C.EpochNo <$> SQL.fromField f
+        SQL.execute_ c "BEGIN"
+        forM_ (concatMap eventToEpochSPDRows $ filter epochSPDEventIsFirstEventOfEpoch eventsList) $ \row ->
+          SQL.execute c
+              [r|INSERT INTO epoch_spd
+                  ( epochNo
+                  , poolId
+                  , lovelace
+                  , slotNo
+                  , blockHeaderHash
+                  , blockNo
+                  ) VALUES (?, ?, ?, ?, ?, ?)|] row
+        SQL.execute_ c "COMMIT"
 
-instance SQL.ToField C.Lovelace where
-  toField = SQL.toField @Integer . coerce
-instance SQL.FromField C.Lovelace where
-  fromField = coerce . SQL.fromField @Integer
+        -- We store the LedgerState if one of following conditions hold:
+        --   * the LedgerState cannot be rollbacked and is the last of an epoch
+        --   * the LedgerState can be rollbacked
+        let writeLedgerState ledgerState (C.SlotNo slotNo) blockHeaderHash (C.BlockNo blockNo) isRollbackable = do
+                let fname = ledgerStateDirPath
+                        </> "ledgerState_"
+                         <> (if isRollbackable then "volatile_" else "")
+                         <> show slotNo
+                         <> "_"
+                         <> Text.unpack (C.serialiseToRawBytesHexText blockHeaderHash)
+                         <> "_"
+                         <> show blockNo
+                         <> ".bin"
+                -- TODO We should delete the file is the write operation was interrumpted by the
+                -- user. Tried using something like `onException`, but it doesn't run the cleanup
+                -- function. Not sure how to do the cleanup here without restoring doing it outside
+                -- the thread where this indexer is running.
+                BS.writeFile fname (CBOR.toLazyByteString $ encodeLedgerState ledgerState)
+        forM_ eventsList
+              $ \(EpochSPDEvent
+                    maybeLedgerState
+                    maybeEpochNo
+                    _
+                    slotNo
+                    blockHeaderHash
+                    blockNo
+                    chainTip
+                    isFirstEventOfEpoch) -> do
+            case (maybeEpochNo, maybeLedgerState) of
+              (Just _, Just ledgerState) -> do
+                  let isRollbackable = isBlockRollbackable securityParam blockNo chainTip
+                  when (isRollbackable || isFirstEventOfEpoch) $ do
+                    writeLedgerState ledgerState slotNo blockHeaderHash blockNo isRollbackable
+              -- We don't store any 'LedgerState' if the era doesn't have epochs (Byron era) or if
+              -- we don't have access to the 'LedgerState'.
+              _noLedgerStateOrEpochNo -> pure ()
 
-instance SQL.FromField C.PoolId where
-  fromField f = do
-    bs <- SQL.fromField f
-    case C.deserialiseFromRawBytes (C.AsHash C.AsStakePoolKey) bs of
-      Just h -> pure h
-      _      -> SQL.returnError SQL.ConversionFailed f " PoolId"
+        -- Remove all immutable LedgerStates from the filesystem expect the most recent immutable
+        -- one which is from the first slot of latest epoch.
+        -- A 'LedgerState' is considered immutable if its 'blockNo' is '< latestBlockNo - securityParam'.
+        case NE.nonEmpty eventsList of
+          Nothing -> pure ()
+          Just nonEmptyEvents -> do
+              let chainTip =
+                      NE.head
+                      $ NE.sortWith (\case C.ChainTipAtGenesis -> Down Nothing;
+                                           C.ChainTip _ _ bn   -> Down (Just bn)
+                                    )
+                      $ fmap epochSPDEventChainTip nonEmptyEvents
 
-instance SQL.ToField C.PoolId where
-  toField = SQL.toField . C.serialiseToRawBytes
+              ledgerStateFilePaths <-
+                  mapMaybe (\fp -> fmap (fp,) $ chainTipsFromLedgerStateFilePath fp)
+                  <$> listDirectory ledgerStateDirPath
 
-queryByEpoch :: SQL.Connection -> C.EpochNo -> IO Event
-queryByEpoch c epochNo = do
-  xs :: [(C.PoolId, C.Lovelace)] <- SQL.query c "SELECT poolId, lovelace FROM stakepool_delegation WHERE epochNo = ?" (SQL.Only epochNo)
-  return $ Event (epochNo, M.fromList xs)
+              -- Delete volatile LedgerState which have become immutable.
+              let oldVolatileLedgerStateFilePaths =
+                      fmap fst
+                      $ filter (\(_, (isVolatile, _, _, blockNo)) ->
+                          isVolatile && not (isBlockRollbackable securityParam blockNo chainTip))
+                      ledgerStateFilePaths
+              forM_ oldVolatileLedgerStateFilePaths $ \fp -> removeFile $ ledgerStateDirPath </> fp
 
-queryPoolId :: SQL.Connection -> C.PoolId -> IO [(C.EpochNo, C.Lovelace)]
-queryPoolId c poolId = do
-  SQL.query c "SELECT epochNo, lovelace FROM stakepool_delegation WHERE poolId = ?" (SQL.Only poolId)
+              -- Delete all immutable LedgerStates expect the latest one
+              let immutableLedgerStateFilePaths =
+                      filter (\(_, (isVolatile, _, _, _)) -> not isVolatile) ledgerStateFilePaths
+              case NE.nonEmpty immutableLedgerStateFilePaths of
+                Nothing -> pure ()
+                Just nonEmptyLedgerStateFilePaths -> do
+                  let oldImmutableLedgerStateFilePaths =
+                          fmap (\(fp, _, _) -> fp)
+                          $ filter (\(_, _, isImmutableBlock) -> isImmutableBlock)
+                          $ NE.tail
+                          $ NE.sortWith (\(_, (_, _, blockNo), isImmutableBlock) ->
+                              Down (blockNo, isImmutableBlock))
+                          $ fmap (\(fp, (_, slotNo, bhh, blockNo)) ->
+                              ( fp
+                              , (slotNo, bhh, blockNo)
+                              , not $ isBlockRollbackable securityParam blockNo chainTip)
+                              )
+                          nonEmptyLedgerStateFilePaths
+                  forM_ oldImmutableLedgerStateFilePaths
+                    $ \fp -> removeFile $ ledgerStateDirPath </> fp
 
-queryAll :: SQL.Connection -> IO [Event]
-queryAll c = do
-  all' :: [(C.EpochNo, C.PoolId, C.Lovelace)] <- SQL.query_ c "SELECT epochNo, poolId, lovelace FROM stakepool_delegation ORDER BY epochNo ASC"
-  let
-    lastTwo (_, a, b) = (a, b)
-    result = all'
-      & groupBy ((==) `on` (\(e, _, _) -> e))
-      & map (\case xs@((e, _, _) : _) -> Just $ Event (e, M.fromList $ map lastTwo xs); _ -> Nothing)
-      & P.catMaybes
-  pure result
+        pure h
+
+    -- | Buffering is not in use in this indexer and we don't need to retrieve stored events in our
+    -- implementation. Therefore, this function returns an empty list.
+    getStoredEvents
+        :: EpochSPDHandle
+        -> IO [StorableEvent EpochSPDHandle]
+    getStoredEvents EpochSPDHandle {} = do
+        pure []
+
+eventToEpochSPDRows
+    :: StorableEvent EpochSPDHandle
+    -> [EpochSPDRow]
+eventToEpochSPDRows (EpochSPDEvent _ maybeEpochNo m slotNo blockHeaderHash blockNo _ _) =
+    mapMaybe
+        (\(keyHash, lovelace) ->
+            fmap (\epochNo -> EpochSPDRow
+                                  epochNo
+                                  keyHash
+                                  lovelace
+                                  slotNo
+                                  blockHeaderHash
+                                  blockNo) maybeEpochNo)
+        $ Map.toList m
+
+instance Queryable EpochSPDHandle where
+    queryStorage
+        :: Foldable f
+        => QueryInterval C.ChainPoint
+        -> f (StorableEvent EpochSPDHandle)
+        -> EpochSPDHandle
+        -> StorableQuery EpochSPDHandle
+        -> IO (StorableResult EpochSPDHandle)
+
+    queryStorage _ events (EpochSPDHandle c _ _) (SPDByEpochNoQuery epochNo) = do
+        case List.find (\e -> epochSPDEventEpochNo e == Just epochNo) (toList events) of
+          Just e ->
+              pure $ SPDByEpochNoResult $ eventToEpochSPDRows e
+          Nothing -> do
+              res :: [EpochSPDRow] <- SQL.query c
+                  [r|SELECT epochNo, poolId, lovelace, slotNo, blockHeaderHash, blockNo
+                     FROM epoch_spd
+                     WHERE epochNo = ?
+                  |] (SQL.Only epochNo)
+              pure $ SPDByEpochNoResult res
+
+    queryStorage _ _ EpochSPDHandle {} (LedgerStateAtPointQuery C.ChainPointAtGenesis) = do
+        pure $ LedgerStateAtPointResult Nothing
+    queryStorage
+            _
+            events
+            (EpochSPDHandle _ ledgerStateDirPath _)
+            (LedgerStateAtPointQuery (C.ChainPoint slotNo _)) = do
+        case List.find (\e -> epochSPDEventSlotNo e == slotNo) (toList events) of
+            Nothing -> do
+                ledgerStateFilePaths <- listDirectory ledgerStateDirPath
+                let ledgerStateFilePath =
+                        List.find
+                            (\fp -> fmap (\(_, sn, _, _) -> sn)
+                                         (chainTipsFromLedgerStateFilePath fp) == Just slotNo
+                            )
+                            ledgerStateFilePaths
+                case ledgerStateFilePath of
+                  Nothing -> pure $ LedgerStateAtPointResult Nothing
+                  Just fp -> do
+                      ledgerStateBs <- BS.readFile $ ledgerStateDirPath </> fp
+                      let ledgerState =
+                              either
+                                (const Nothing)
+                                (Just . snd)
+                                $ CBOR.deserialiseFromBytes decodeLedgerState ledgerStateBs
+                      pure $ LedgerStateAtPointResult ledgerState
+            Just event -> pure $ LedgerStateAtPointResult $ epochSPDEventLedgerState event
+
+instance Rewindable EpochSPDHandle where
+    rewindStorage
+        :: C.ChainPoint
+        -> EpochSPDHandle
+        -> IO (Maybe EpochSPDHandle)
+    rewindStorage C.ChainPointAtGenesis h@(EpochSPDHandle c ledgerStateDirPath _) = do
+        SQL.execute_ c "DELETE FROM epoch_spd"
+
+        ledgerStateFilePaths <- listDirectory ledgerStateDirPath
+        forM_ ledgerStateFilePaths (\f -> removeFile $ ledgerStateDirPath </> f)
+        pure $ Just h
+    rewindStorage (C.ChainPoint sn _) h@(EpochSPDHandle c ledgerStateDirPath _) = do
+        SQL.execute c "DELETE FROM epoch_spd WHERE slotNo > ?" (SQL.Only sn)
+
+        ledgerStateFilePaths <- listDirectory ledgerStateDirPath
+        forM_ ledgerStateFilePaths $ \fp -> do
+            case chainTipsFromLedgerStateFilePath fp of
+              Nothing                              -> pure ()
+              Just (_, slotNo, _, _) | slotNo > sn -> removeFile $ ledgerStateDirPath </> fp
+              Just _                               -> pure ()
+
+        pure $ Just h
+
+instance Resumable EpochSPDHandle where
+    resumeFromStorage
+        :: EpochSPDHandle
+        -> IO [C.ChainPoint]
+    resumeFromStorage (EpochSPDHandle c ledgerStateDirPath _) = do
+        ledgerStateFilepaths <- listDirectory ledgerStateDirPath
+        let ledgerStateChainPoints =
+                fmap (\(_, sn, bhh, _) -> (sn, bhh))
+                $ mapMaybe chainTipsFromLedgerStateFilePath ledgerStateFilepaths
+
+        resumablePoints <- flip filterM ledgerStateChainPoints $ \(slotNo, _) -> do
+            result :: [[C.SlotNo]] <- SQL.query c
+                [r|SELECT slotNo
+                   FROM epoch_spd
+                   WHERE slotNo = ? LIMIT 1 |] (SQL.Only slotNo)
+            pure $ not $ null result
+
+        pure
+            $ List.sortOn Down
+            $ fmap (uncurry C.ChainPoint) resumablePoints ++ [C.ChainPointAtGenesis]
+
+chainTipsFromLedgerStateFilePath :: FilePath -> Maybe (Bool, C.SlotNo, C.Hash C.BlockHeader, C.BlockNo)
+chainTipsFromLedgerStateFilePath ledgerStateFilepath =
+    case Text.splitOn "_" (Text.pack $ dropExtension ledgerStateFilepath) of
+      [_, slotNoStr, bhhStr, blockNoStr] -> do
+          (False,,,)
+            <$> parseSlotNo slotNoStr
+            <*> parseBlockHeaderHash bhhStr
+            <*> parseBlockNo blockNoStr
+      [_, "volatile", slotNoStr, bhhStr, blockNoStr] -> do
+          (True,,,)
+            <$> parseSlotNo slotNoStr
+            <*> parseBlockHeaderHash bhhStr
+            <*> parseBlockNo blockNoStr
+      _anyOtherFailure -> Nothing
+ where
+     parseSlotNo slotNoStr = C.SlotNo <$> readMaybe (Text.unpack slotNoStr)
+     parseBlockHeaderHash bhhStr = do
+          bhhBs <- either (const Nothing) Just $ Base16.decode $ Text.encodeUtf8 bhhStr
+          C.deserialiseFromRawBytes (C.proxyToAsType Proxy) bhhBs
+     parseBlockNo blockNoStr = C.BlockNo <$> readMaybe (Text.unpack blockNoStr)
+
+open
+  :: FilePath
+  -- ^ SQLite database file path
+  -> FilePath
+  -- ^ Directory from which we will save the various 'LedgerState' as different points in time.
+  -> Word64
+  -> IO (State EpochSPDHandle)
+open dbPath ledgerStateDirPath securityParam = do
+    c <- SQL.open dbPath
+    SQL.execute_ c "PRAGMA journal_mode=WAL"
+    SQL.execute_ c
+        [r|CREATE TABLE IF NOT EXISTS epoch_spd
+            ( epochNo INT NOT NULL
+            , poolId BLOB NOT NULL
+            , lovelace INT NOT NULL
+            , slotNo INT NOT NULL
+            , blockHeaderHash BLOB NOT NULL
+            , blockNo INT NOT NULL
+            )|]
+    emptyState 1 (EpochSPDHandle c ledgerStateDirPath securityParam)
