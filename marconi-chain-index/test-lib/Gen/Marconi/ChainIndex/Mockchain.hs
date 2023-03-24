@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TupleSections      #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Gen.Marconi.ChainIndex.Mockchain
     ( Mockchain
@@ -22,10 +23,12 @@ import Helpers (emptyTxBodyContent)
 
 type Mockchain era = [MockBlock era]
 
+deriving stock instance Show C.BlockHeader
+
 data MockBlock era = MockBlock
     { mockBlockChainPoint :: !C.BlockHeader
     , mockBlockTxs        :: ![C.Tx era]
-    }
+    } deriving Show
 
 genMockchain :: Gen (Mockchain C.BabbageEra)
 genMockchain = do

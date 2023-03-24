@@ -30,7 +30,7 @@ import Data.Foldable (foldl')
 import Data.IORef (newIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (Text, unpack)
 import Ledger (Block, Slot (..), TxId (..))
