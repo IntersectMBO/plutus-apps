@@ -45,11 +45,13 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Marconi.Sidechain.Api.HttpServer
+    Marconi.Sidechain.Api.Query.Indexers.EpochSPD
     Marconi.Sidechain.Api.Query.Indexers.Utxo
     Marconi.Sidechain.Api.Routes
     Marconi.Sidechain.Api.Types
     Marconi.Sidechain.Bootstrap
     Marconi.Sidechain.CLI
+    Marconi.Sidechain.Utils
 
   --------------------
   -- Local components
@@ -69,6 +71,7 @@ library
   build-depends:
     , aeson
     , base                  >=4.9 && <5
+    , containers
     , filepath
     , lens
     , optparse-applicative
@@ -77,6 +80,7 @@ library
     , stm                   >=2.5
     , text
     , time
+    , vector
     , warp
 
 executable marconi-sidechain

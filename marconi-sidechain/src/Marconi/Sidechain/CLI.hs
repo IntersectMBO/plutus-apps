@@ -15,6 +15,10 @@ programParser gitSha = Opt.info
 parserCliArgs :: Opt.Parser CliArgs
 parserCliArgs = CliArgs
   <$> Cli.commonSocketPath
+  <*> Opt.strOption
+        (  Opt.long "node-config-path"
+        <> Opt.help "Path to node configuration which you are connecting to."
+        )
   <*> Cli.commonDbDir
   <*> Cli.commonMaybePort
   <*> Cli.pNetworkId
