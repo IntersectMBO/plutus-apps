@@ -198,4 +198,3 @@ test-suite plutus-chain-index-test
     , stm
     , tasty
     , tasty-hedgehog
-    , transformers
