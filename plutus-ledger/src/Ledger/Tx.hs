@@ -165,13 +165,13 @@ makePrisms ''DecoratedTxOut
 
 
 mkDecoratedTxOut
-    :: CardanoAddress -> C.Value -> (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
-    -> DecoratedTxOut
-mkDecoratedTxOut a v dat rs = let
+    :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    -> Maybe DecoratedTxOut
+mkDecoratedTxOut a v md rs = let
   sc = cardanoStakingCredential a
   in case cardanoAddressCredential a of
-  (V2.PubKeyCredential c) -> PublicKeyDecoratedTxOut c sc v (Just dat) rs
-  (V2.ScriptCredential c) -> ScriptDecoratedTxOut c sc v dat rs Nothing
+  (V2.PubKeyCredential c) -> Just (PublicKeyDecoratedTxOut c sc v md rs)
+  (V2.ScriptCredential c) -> (\dt -> ScriptDecoratedTxOut c sc v dt rs Nothing) <$> md
 
 mkPubkeyDecoratedTxOut
     :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)

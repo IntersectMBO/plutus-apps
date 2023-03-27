@@ -32,6 +32,7 @@ library
     Cardano.Node.Emulator.Chain
     Cardano.Node.Emulator.Fee
     Cardano.Node.Emulator.Generators
+    Cardano.Node.Emulator.MTL
     Cardano.Node.Emulator.Params
     Cardano.Node.Emulator.TimeSlot
     Cardano.Node.Emulator.Validation
@@ -56,6 +57,7 @@ library
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
+    , mtl
     , ouroboros-consensus
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
@@ -90,7 +92,9 @@ test-suite cardano-node-emulator-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
-  other-modules:      Cardano.Node.Emulator.GeneratorsSpec
+  other-modules:
+    Cardano.Node.Emulator.GeneratorsSpec
+    Cardano.Node.Emulator.MTLSpec
 
   --------------------
   -- Local components
@@ -111,6 +115,10 @@ test-suite cardano-node-emulator-test
   build-depends:
     , aeson
     , base            >=4.9 && <5
+    , containers
+    , data-default
     , hedgehog
+    , mtl
     , tasty
     , tasty-hedgehog
+    , tasty-hunit

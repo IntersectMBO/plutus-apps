@@ -8,7 +8,6 @@
 -}
 module Main(main) where
 
-import Spec.Balancing qualified
 import Spec.Contract qualified
 import Spec.Contract.Tx.Constraints.Spec qualified
 import Spec.Emulator qualified
@@ -24,15 +23,14 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "plutus-contract" [
-    Spec.Contract.tests,
-    Spec.Emulator.tests,
-    Spec.State.tests,
-    Spec.Rows.tests,
-    Spec.ThreadToken.tests,
-    Spec.Contract.Tx.Constraints.Spec.tests,
-    Spec.Secrets.tests,
-    Spec.ErrorChecking.tests,
-    Spec.Plutus.Contract.Oracle.tests,
-    Spec.Balancing.tests
+tests = testGroup "plutus-contract"
+    [ Spec.Contract.tests
+    , Spec.Emulator.tests
+    , Spec.State.tests
+    , Spec.Rows.tests
+    , Spec.ThreadToken.tests
+    , Spec.Contract.Tx.Constraints.Spec.tests
+    , Spec.Secrets.tests
+    , Spec.ErrorChecking.tests
+    , Spec.Plutus.Contract.Oracle.tests
     ]

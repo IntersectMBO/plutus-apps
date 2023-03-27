@@ -288,8 +288,8 @@ txMintValue = coerced . txMintValue' . iso toMaybe fromMaybe
         fromMaybe ::  (C.Value, Map.Map C.PolicyId (C.ScriptWitness C.WitCtxMint C.BabbageEra)) -> C.TxMintValue C.BuildTx C.BabbageEra
         fromMaybe (c, msc) = C.TxMintValue C.MultiAssetInBabbageEra c (C.BuildTxWith msc)
 
-txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.BabbageEra]
-txOuts = coerced . txOuts'
+txOuts :: Lens' C.CardanoBuildTx [TxOut]
+txOuts = coerced . txOuts' . coerced
 
 txValidityRange :: Lens' C.CardanoBuildTx (C.TxValidityLowerBound C.BabbageEra, C.TxValidityUpperBound C.BabbageEra)
 txValidityRange = coerced . txValidityRange'
@@ -766,7 +766,7 @@ processConstraint = \case
             <*> fmap C.toCardanoTxOutValue (C.toCardanoValue vl)
             <*> pure (toTxOutDatum md)
             <*> pure refScript
-        unbalancedTx . tx . txOuts <>= [ out ]
+        unbalancedTx . tx . txOuts <>= [ Tx.TxOut out ]
 
         valueSpentOutputs <>= provided vl
 
@@ -952,7 +952,7 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
 adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([C.Lovelace], UnbalancedTx)
-adjustUnbalancedTx params = alaf Compose (tx . txOuts . traverse) (fmap (\(l,out) -> (l, Tx.getTxOut out)) . adjustCardanoTxOut params . Tx.TxOut)
+adjustUnbalancedTx params = alaf Compose (tx . txOuts . traverse) (adjustCardanoTxOut params)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
