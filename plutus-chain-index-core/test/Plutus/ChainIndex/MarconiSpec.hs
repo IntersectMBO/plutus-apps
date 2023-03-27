@@ -75,7 +75,6 @@ checkTxOutStorage = property $ do
     indexers <- liftIO newChainIndexIndexers
     let txOutAddr = blocks ^? folded . to blockTxs . folded . _1
                   . citxOutputs . chainIndexTxOutputs . to citoAddress
-
     maybe
         Hedgehog.success
         (\addr -> do
