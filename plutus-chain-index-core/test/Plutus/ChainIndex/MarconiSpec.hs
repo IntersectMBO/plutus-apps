@@ -111,24 +111,4 @@ checkTxInStorage = property $ do
             length eventTxIns Hedgehog.=== length originalTxIns
         )
         txOutAddr
-        {-
-    let blocksTxs = blocks ^.. folded . to blockTxs . folded . _1
-        lastTx = blocksTxs ^? _last
-        lastTxIn = lastTx ^? folded . citxInputs . _last . to txInRef
-        lastTxInAddr = lastTxIn >>= flip findTxOutRefAddr blocksTxs
-    txouts <- maybe
-        (pure $ Right $ UtxosResponse TipAtGenesis $ pageOf def mempty)
-        (\addr -> do
-            liftIO $ runChainIndexEffects (RunRequirements nullTracer indexers) $ do
-                appendBlocks blocks
-                utxoSetAtAddress def addr
-        )
-        lastTxInAddr
-    let indexedTxOuts = pageItems . page <$> txouts
-    events <- getUtxoEvents indexers
 
-    Hedgehog.annotateShow events
-    Hedgehog.annotateShow lastTxIn
-    Hedgehog.annotateShow indexedTxOuts
-    Hedgehog.assert $ either (const False) (not . maybe (const True) elem lastTxIn) indexedTxOuts
-    -}
