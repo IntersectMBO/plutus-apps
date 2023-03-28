@@ -48,8 +48,8 @@ import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef))
     The general idea is to transform `ChainIndexQueryEffect` into a @MarconiEffect@ for an handler,
     and to resolve these effects afterwards with a bunch of calls to `handleMarconiQuery`.
 
-    The  main reason for is that we mutualise he code that query the handlers (see @handleMarconiQuery@) and we have an
-    uniform way to query the different indexer.
+    The  main reason for this is that we mutualise the code that queries the handlers (see @handleMarconiQuery@) and we have a
+    uniform way to query the different indexers.
 
     And a minor one:
 
