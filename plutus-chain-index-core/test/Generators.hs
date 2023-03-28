@@ -154,8 +154,6 @@ deleteInputs spent = do
   modify (over txgsUtxoSet (\s -> s `Set.difference` Map.keysSet spent))
   modify (over txgsStxoSet (\s -> s <> spent))
 
--- toCardanoScript :: ReferenceScript -> Maybe (cardano-api-1.35.4:Cardano.Api.Script.ReferenceScript C.BabbageEra)
-
 -- | Generate a valid 'Tx' that spends some UTXOs and creates some new ones
 genTx ::
     forall effs.
