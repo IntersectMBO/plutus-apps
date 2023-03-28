@@ -6,17 +6,17 @@ module Util where
 
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff, Member)
-import Ledger (TxOutRef, cardanoAddressCredential)
-import Ledger.Credential (Credential)
+import Ledger (TxOutRef)
+import Ledger.Address (CardanoAddress)
 import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), utxoSetAtAddress)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (ChainIndexTxOut, citoAddress), txOuts)
 
 -- | Get all address credentials from a block.
-addrCredsFromBlock :: [ChainIndexTx] -> [Credential]
+addrCredsFromBlock :: [ChainIndexTx] -> [CardanoAddress]
 addrCredsFromBlock =
-  fmap (\ChainIndexTxOut{citoAddress} -> cardanoAddressCredential citoAddress)
+  fmap (\ChainIndexTxOut{citoAddress} -> citoAddress)
   . foldMap txOuts
 
 -- | Get the UTxO set from a block.

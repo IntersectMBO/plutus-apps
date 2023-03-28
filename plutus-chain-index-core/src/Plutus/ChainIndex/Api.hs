@@ -31,6 +31,7 @@ import Data.Default (def)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
+import Ledger.Address (CardanoAddress)
 import Ledger.Credential (Credential)
 import Ledger.Tx (DatumFromQuery, DecoratedTxOut, TxId, TxOutRef, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -115,8 +116,8 @@ deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Page a)
 --   }
 -- }
 data UtxoAtAddressRequest = UtxoAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: Credential
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
@@ -159,8 +160,8 @@ data IsUtxoResponse = IsUtxoResponse
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
 data TxoAtAddressRequest = TxoAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: Credential
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
@@ -172,8 +173,8 @@ data TxosResponse = TxosResponse
 
 
 data QueryAtAddressRequest = QueryAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: Credential
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 

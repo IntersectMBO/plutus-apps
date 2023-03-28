@@ -10,6 +10,7 @@ import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (..))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
 
+import Ledger.Address (cardanoAddressCredential)
 import Plutus.Blockfrost.Queries
 import Plutus.Blockfrost.Responses
 import Plutus.Blockfrost.Types (BlockfrostEnv (..))
@@ -61,9 +62,9 @@ handleBlockfrostClient event = do
             TxFromTxId i                  -> (runClientMaybe . getTxFromTxIdBlockfrost . toBlockfrostTxHash) i      >>= processGetTxFromTxId
             TxsFromTxIds is               -> (runClientWithDef defaultGetList . getTxsFromTxIdsBlockfrost . toBlockfrostTxHashes) is >>= processGetTxsFromTxIds
             UtxoSetMembership r           -> (runClientWithDef defaultIsUtxo  . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
-            UtxoSetAtAddress pq a         -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processGetUtxos pq
+            UtxoSetAtAddress pq a         -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . fromCardanoAddressInEra) a  >>= processGetUtxos pq
             UtxoSetWithCurrency pq a      -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
-            TxoSetAtAddress pq a          -> (runClientWithDef defaultGetList . getTxoAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a >>= processGetTxos pq
+            TxoSetAtAddress pq a          -> (runClientWithDef defaultGetList . getTxoAtAddressBlockfrost pq . fromCardanoAddressInEra) a >>= processGetTxos pq
             GetTip                        -> runClient getTipBlockfrost >>= processTip
-            UnspentTxOutSetAtAddress pq a -> (runClientWithDef defaultGetList . getUnspentAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processUnspentTxOutSetAtAddress pq a
-            DatumsAtAddress pq a          -> (runClientWithDef defaultGetList . getDatumsAtAddressBlockfrost pq . credentialToAddress (envNetworkId bfEnv)) a  >>= processDatumsAtAddress pq a
+            UnspentTxOutSetAtAddress pq a -> (runClientWithDef defaultGetList . getUnspentAtAddressBlockfrost pq . fromCardanoAddressInEra) a  >>= processUnspentTxOutSetAtAddress pq (cardanoAddressCredential a)
+            DatumsAtAddress pq a          -> (runClientWithDef defaultGetList . getDatumsAtAddressBlockfrost pq . fromCardanoAddressInEra) a  >>= processDatumsAtAddress pq (cardanoAddressCredential a)

@@ -19,17 +19,21 @@ data ChainIndexError =
     | QueryFailedNoTip -- ^ Query failed because the chain index does not have a tip (not synchronised with node)
     | BeamEffectError BeamError
     | ToCardanoError ToCardanoError
+    | UnsupportedQuery
+    | UnsupportedControlOperation
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
 instance Pretty ChainIndexError where
   pretty = \case
-    InsertionFailed err -> "Insertion failed" <> colon <+> pretty err
-    RollbackFailed err  -> "Rollback failed" <> colon <+> pretty err
-    ResumeNotSupported  -> "Resume is not supported"
-    QueryFailedNoTip    -> "Query failed" <> colon <+> "No tip."
-    BeamEffectError err -> "Error during Beam operation" <> colon <+> pretty err
-    ToCardanoError err  -> pretty err
+    InsertionFailed err         -> "Insertion failed" <> colon <+> pretty err
+    RollbackFailed err          -> "Rollback failed" <> colon <+> pretty err
+    ResumeNotSupported          -> "Resume is not supported"
+    QueryFailedNoTip            -> "Query failed" <> colon <+> "No tip."
+    BeamEffectError err         -> "Error during Beam operation" <> colon <+> pretty err
+    ToCardanoError err          -> pretty err
+    UnsupportedControlOperation -> "The given control operation is not supported"
+    UnsupportedQuery            -> "The given query is not supported"
 
 
 -- | UTXO state could not be inserted into the chain index

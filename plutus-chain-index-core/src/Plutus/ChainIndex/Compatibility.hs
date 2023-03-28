@@ -1,9 +1,9 @@
 module Plutus.ChainIndex.Compatibility where
 
-import Cardano.Api (AsType (..), Block (..), BlockHeader (..), BlockInMode (..), BlockNo (..), CardanoMode,
-                    ChainPoint (..), ChainTip (..), Hash, SlotNo (..), deserialiseFromRawBytes, proxyToAsType,
-                    serialiseToRawBytes)
-import Data.Proxy (Proxy (..))
+import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), BlockNo (..), CardanoMode, ChainPoint (..),
+                    ChainTip (..), Hash, SlotNo (..))
+import Cardano.Api.Shelley (Hash (HeaderHash))
+import Data.ByteString.Short (fromShort, toShort)
 import Ledger (BlockId (..), Slot (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.ChainIndex.Types (BlockNumber (..), Point (..), Tip (..))
@@ -24,27 +24,33 @@ fromCardanoPoint (ChainPoint slot hash) =
           , pointBlockId = fromCardanoBlockId hash
           }
 
-toCardanoPoint :: Point -> Maybe ChainPoint
-toCardanoPoint PointAtGenesis = Just ChainPointAtGenesis
+toCardanoPoint :: Point -> ChainPoint
+toCardanoPoint PointAtGenesis = ChainPointAtGenesis
 toCardanoPoint (Point slot blockId) =
-    ChainPoint (fromIntegral slot) <$> toCardanoBlockId blockId
+    ChainPoint (fromIntegral slot) $ toCardanoBlockId blockId
 
 tipFromCardanoBlock
   :: BlockInMode CardanoMode
   -> Tip
-tipFromCardanoBlock (BlockInMode (Block (BlockHeader slot hash block) _) _) =
+tipFromCardanoBlock (BlockInMode (Block header _) _) =
+    tipFromCardanoBlockHeader header
+
+tipFromCardanoBlockHeader
+  :: BlockHeader
+  -> Tip
+tipFromCardanoBlockHeader (BlockHeader slot hash block) =
     fromCardanoTip $ ChainTip slot hash block
 
 fromCardanoSlot :: SlotNo -> Slot
 fromCardanoSlot (SlotNo slotNo) = Slot $ toInteger slotNo
 
 fromCardanoBlockId :: Hash BlockHeader -> BlockId
-fromCardanoBlockId hash =
-    BlockId $ serialiseToRawBytes hash
+fromCardanoBlockId (HeaderHash hash) =
+    BlockId $ fromShort hash
 
-toCardanoBlockId :: BlockId -> Maybe (Hash BlockHeader)
+toCardanoBlockId :: BlockId -> Hash BlockHeader
 toCardanoBlockId (BlockId bs) =
-    deserialiseFromRawBytes (AsHash (proxyToAsType (Proxy :: Proxy BlockHeader))) bs
+    HeaderHash $ toShort bs
 
 fromCardanoBlockHeader :: BlockHeader -> Tip
 fromCardanoBlockHeader (BlockHeader slotNo hash blockNo) =

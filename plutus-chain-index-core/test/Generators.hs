@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores   #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TupleSections        #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -164,7 +165,7 @@ genTx = do
     newOutputs <-
         let outputGen = ChainIndexTxOut <$> genAddress <*> genNonZeroAdaValue <*> pure NoOutputDatum <*> pure ReferenceScriptNone in
         sendM (Gen.list (Range.linear 1 5) outputGen)
-    outputs <- sendM (Gen.element [ValidTx newOutputs, InvalidTx (listToMaybe newOutputs)])
+    outputs <- sendM $ Gen.element [ValidTx newOutputs, InvalidTx (listToMaybe newOutputs)]
     inputs <- availableInputs
 
     allInputs <-

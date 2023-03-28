@@ -1,9 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TupleSections      #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Gen.Marconi.ChainIndex.Mockchain
     ( Mockchain
-    , MockBlockHeader(..)
+    , C.BlockHeader(..)
     , MockBlock(..)
     , genMockchain
     )
@@ -22,29 +23,25 @@ import Helpers (emptyTxBodyContent)
 
 type Mockchain era = [MockBlock era]
 
-data MockBlockHeader = MockBlockHeader
-    { mockBlockHeaderSlotNo  :: !C.SlotNo
-    , mockBlockHeaderHash    :: !(C.Hash C.BlockHeader)
-    , mockBlockHeaderBlockNo :: !C.BlockNo
-    } deriving (Show)
+deriving stock instance Show C.BlockHeader
 
 data MockBlock era = MockBlock
-    { mockBlockChainPoint :: !MockBlockHeader
+    { mockBlockChainPoint :: !C.BlockHeader
     , mockBlockTxs        :: ![C.Tx era]
-    } deriving (Show)
+    } deriving Show
 
 genMockchain :: Gen (Mockchain C.BabbageEra)
 genMockchain = do
     maxSlots <- Gen.word64 (Range.linear 1 5)
     blockHeaderHash <- genHashBlockHeader
     let blockHeaders =
-            fmap (\s -> MockBlockHeader (C.SlotNo s) blockHeaderHash (C.BlockNo s))
+            fmap (\s -> C.BlockHeader (C.SlotNo s) blockHeaderHash (C.BlockNo s))
                  [0..maxSlots]
     txIns <- Set.singleton <$> CGen.genTxIn
     snd <$> foldM f (txIns, []) blockHeaders
   where
     f :: (Set C.TxIn, Mockchain C.BabbageEra)
-      -> MockBlockHeader
+      -> C.BlockHeader
       -> Gen (Set C.TxIn, Mockchain C.BabbageEra)
     f (utxoSet, mockchain) bh = do
         utxosAsTxInput <- nonEmptySubset utxoSet

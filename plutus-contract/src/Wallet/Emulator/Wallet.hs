@@ -368,7 +368,7 @@ ownOutputs WalletState{_mockWallet} = do
     allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]
     allUtxoSet Nothing = pure []
     allUtxoSet (Just pq) = do
-      refPage <- page <$> ChainIndex.utxoSetAtAddress pq (cardanoAddressCredential addr)
+      refPage <- page <$> ChainIndex.utxoSetAtAddress pq addr
       nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
       pure $ ChainIndex.pageItems refPage ++ nextItems
 

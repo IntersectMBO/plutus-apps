@@ -134,8 +134,8 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
-               ValidatorHash (ValidatorHash), cardanoAddressCredential, cardanoPubKeyHash,
-               decoratedTxOutReferenceScript, fromMilliSeconds, getScriptHash, scriptHash, txOutRefId)
+               ValidatorHash (ValidatorHash), cardanoPubKeyHash, decoratedTxOutReferenceScript, fromMilliSeconds,
+               getScriptHash, scriptHash, txOutRefId)
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints.OffChain (ScriptLookups, UnbalancedTx)
@@ -364,7 +364,7 @@ queryDatumsAt ::
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [Datum])
 queryDatumsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.DatumsAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("DatumsAtResponse", r)
@@ -486,7 +486,7 @@ utxoRefsAt ::
     -> CardanoAddress
     -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetAtResponse r -> pure r
     r                     -> throwError $ review _ChainIndexContractError ("UtxoSetAtResponse", r)
@@ -528,7 +528,7 @@ queryUnspentTxOutsAt ::
     -> PageQuery TxOutRef
     -> Contract w s e (QueryResponse [(TxOutRef, DecoratedTxOut)])
 queryUnspentTxOutsAt addr pq = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.UnspentTxOutsAtResponse r -> pure r
     r                           -> throwError $ review _ChainIndexContractError ("UnspentTxOutAtResponse", r)
@@ -654,7 +654,7 @@ txoRefsAt ::
     -> CardanoAddress
     -> Contract w s e TxosResponse
 txoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ cardanoAddressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.TxoSetAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("TxoSetAtAddress", r)

@@ -33,7 +33,7 @@ module Plutus.ChainIndex.Effects(
 
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
-import Ledger.Credential (Credential)
+import Ledger.Address (CardanoAddress)
 import Ledger.Tx (DecoratedTxOut, TxId, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -71,15 +71,15 @@ data ChainIndexQueryEffect r where
     -- | Whether a tx output is part of the UTXO set
     UtxoSetMembership :: TxOutRef -> ChainIndexQueryEffect IsUtxoResponse
 
-    -- | Unspent outputs located at addresses with the given credential.
-    UtxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect UtxosResponse
+    -- | Unspent outputs located at addresses with the given address.
+    UtxoSetAtAddress :: PageQuery TxOutRef -> CardanoAddress -> ChainIndexQueryEffect UtxosResponse
 
     -- | Get the unspent txouts located at an address
     -- This is to avoid multiple queries from chain-index when using utxosAt
-    UnspentTxOutSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [(TxOutRef, DecoratedTxOut)])
+    UnspentTxOutSetAtAddress :: PageQuery TxOutRef -> CardanoAddress -> ChainIndexQueryEffect (QueryResponse [(TxOutRef, DecoratedTxOut)])
 
-    -- | get the datums located at addresses with the given credential.
-    DatumsAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [Datum])
+    -- | get the datums located at addresses with the given address.
+    DatumsAtAddress :: PageQuery TxOutRef -> CardanoAddress -> ChainIndexQueryEffect (QueryResponse [Datum])
 
     -- | Unspent outputs containing a specific currency ('AssetClass').
     --
@@ -90,8 +90,8 @@ data ChainIndexQueryEffect r where
     -- | Get the transactions for a list of tx IDs.
     TxsFromTxIds :: [TxId] -> ChainIndexQueryEffect [ChainIndexTx]
 
-    -- | Outputs located at addresses with the given credential.
-    TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect TxosResponse
+    -- | Outputs located at addresses with the given address.
+    TxoSetAtAddress :: PageQuery TxOutRef -> CardanoAddress -> ChainIndexQueryEffect TxosResponse
 
     -- | Get the tip of the chain index
     GetTip :: ChainIndexQueryEffect Tip

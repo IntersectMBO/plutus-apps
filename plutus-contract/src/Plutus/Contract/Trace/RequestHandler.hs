@@ -273,7 +273,7 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         UnspentTxOutSetAtAddress pq c -> UnspentTxOutsAtResponse <$> ChainIndexEff.unspentTxOutSetAtAddress pq c
         DatumsAtAddress pq c          -> DatumsAtResponse <$> ChainIndexEff.datumsAtAddress pq c
         UtxoSetWithCurrency pq ac     -> UtxoSetWithCurrencyResponse <$> ChainIndexEff.utxoSetWithCurrency pq ac
-        TxoSetAtAddress pq c          -> TxoSetAtResponse <$> ChainIndexEff.txoSetAtAddress pq c
+        TxoSetAtAddress pq a          -> TxoSetAtResponse <$> ChainIndexEff.txoSetAtAddress pq a
         TxsFromTxIds txids            -> TxIdsResponse <$> ChainIndexEff.txsFromTxIds txids
         GetTip                        -> GetTipResponse <$> ChainIndexEff.getTip
 

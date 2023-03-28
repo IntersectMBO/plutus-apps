@@ -30,7 +30,7 @@ import Data.Foldable (foldl')
 import Data.IORef (newIORef)
 import Data.List (findIndex)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (Text, unpack)
 import Ledger (Block, Slot (..), TxId (..))
@@ -93,7 +93,7 @@ startNodeClient config instancesState = do
         void $ MockClient.runChainSync socket slotConfig
             (\block slot -> handleSyncAction =<< processMockBlock instancesState env block slot)
       AlonzoNode -> do
-        let resumePoints = maybeToList $ toCardanoPoint resumePoint
+        let resumePoints = pure $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
             (\block -> do
                 -- We store the actual current slot in `BlockchainEnv`. Thus,

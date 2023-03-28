@@ -99,7 +99,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.String (fromString)
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, toPlutusAddress)
-import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
@@ -272,34 +271,34 @@ data ChainIndexQuery =
   | UnspentTxOutFromRef TxOutRef
   | TxFromTxId TxId
   | UtxoSetMembership TxOutRef
-  | UtxoSetAtAddress (PageQuery TxOutRef) Credential
-  | UnspentTxOutSetAtAddress (PageQuery TxOutRef) Credential
-  | DatumsAtAddress (PageQuery TxOutRef) Credential
+  | UtxoSetAtAddress (PageQuery TxOutRef) CardanoAddress
+  | UnspentTxOutSetAtAddress (PageQuery TxOutRef) CardanoAddress
+  | DatumsAtAddress (PageQuery TxOutRef) CardanoAddress
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds [TxId]
-  | TxoSetAtAddress (PageQuery TxOutRef) Credential
+  | TxoSetAtAddress (PageQuery TxOutRef) CardanoAddress
   | GetTip
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty ChainIndexQuery where
     pretty = \case
-        DatumFromHash h              -> "requesting datum from hash" <+> pretty h
-        ValidatorFromHash h          -> "requesting validator from hash" <+> pretty h
-        MintingPolicyFromHash h      -> "requesting minting policy from hash" <+> pretty h
-        StakeValidatorFromHash h     -> "requesting stake validator from hash" <+> pretty h
-        RedeemerFromHash h           -> "requesting redeemer from hash" <+> pretty h
-        TxOutFromRef r               -> "requesting utxo from utxo reference" <+> pretty r
-        UnspentTxOutFromRef r        -> "requesting unspent txos from utxo reference" <+> pretty r
-        TxFromTxId i                 -> "requesting chain index tx from id" <+> pretty i
-        UtxoSetMembership txOutRef   -> "whether tx output is part of the utxo set" <+> pretty txOutRef
-        UtxoSetAtAddress _ c         -> "requesting utxos located at addresses with the credential" <+> pretty c
-        UnspentTxOutSetAtAddress _ c -> "requesting unspent txos located at addresses with the credential" <+> pretty c
-        DatumsAtAddress _ c          -> "requesting datums located at addresses with the credential" <+> pretty c
-        UtxoSetWithCurrency _ ac     -> "requesting utxos containing the asset class" <+> pretty ac
-        TxsFromTxIds i               -> "requesting chain index txs from ids" <+> pretty i
-        TxoSetAtAddress _ c          -> "requesting txos located at addresses with the credential" <+> pretty c
-        GetTip                       -> "requesting the tip of the chain index"
+        DatumFromHash h                 -> "requesting datum from hash" <+> pretty h
+        ValidatorFromHash h             -> "requesting validator from hash" <+> pretty h
+        MintingPolicyFromHash h         -> "requesting minting policy from hash" <+> pretty h
+        StakeValidatorFromHash h        -> "requesting stake validator from hash" <+> pretty h
+        RedeemerFromHash h              -> "requesting redeemer from hash" <+> pretty h
+        TxOutFromRef r                  -> "requesting utxo from utxo reference" <+> pretty r
+        UnspentTxOutFromRef r           -> "requesting unspent txos from utxo reference" <+> pretty r
+        TxFromTxId i                    -> "requesting chain index tx from id" <+> pretty i
+        UtxoSetMembership txOutRef      -> "whether tx output is part of the utxo set" <+> pretty txOutRef
+        UtxoSetAtAddress _ addr         -> "requesting utxos located at addresses with the credential" <+> pretty (toPlutusAddress addr)
+        UnspentTxOutSetAtAddress _ addr -> "requesting unspent txos located at addresses with the credential" <+> pretty (toPlutusAddress addr)
+        DatumsAtAddress _ addr          -> "requesting datums located at addresses with the credential" <+> pretty (toPlutusAddress addr)
+        UtxoSetWithCurrency _ ac        -> "requesting utxos containing the asset class" <+> pretty ac
+        TxsFromTxIds i                  -> "requesting chain index txs from ids" <+> pretty i
+        TxoSetAtAddress _ addr          -> "requesting txos located at addresses with the credential" <+> pretty (toPlutusAddress addr)
+        GetTip                          -> "requesting the tip of the chain index"
 
 -- | Represents all possible responses to chain index queries. Each constructor
 -- contain the output resulting for the chain index query. These possible
